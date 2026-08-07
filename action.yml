@@ -1,0 +1,218 @@
+name: 'CyberReady Check'
+description: 'Run CyberReady evidence gates on a product repo. Prepares human-review evidence — not a conformity assessment.'
+author: 'afelin'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  version:
+    description: 'Release tag to download (e.g. v0.3.0). Empty = build from this checkout if go is available, else latest release.'
+    required: false
+    default: 'latest'
+  packs:
+    description: 'Optional comma-separated pack override for check (empty = .cyberready.json / house-policy default)'
+    required: false
+    default: ''
+  diff:
+    description: 'If true, pass --diff to cyberready check'
+    required: false
+    default: 'false'
+  prepare_release:
+    description: 'If true, also run prepare-release and upload buyer-onepager'
+    required: false
+    default: 'true'
+  comment_pr:
+    description: 'If true and event is pull_request, post/update a claim-safe sticky comment'
+    required: false
+    default: 'true'
+  working_directory:
+    description: 'Product repo path (relative to workspace)'
+    required: false
+    default: '.'
+
+outputs:
+  score:
+    description: 'Readiness score percent from Action Report / cache'
+    value: ${{ steps.score.outputs.score }}
+  passed:
+    description: 'true if check exited 0'
+    value: ${{ steps.run.outputs.passed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve cyberready binary
+      id: bin
+      shell: bash
+      run: |
+        set -euo pipefail
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64|amd64) ARCH=amd64 ;;
+          aarch64|arm64) ARCH=arm64 ;;
+        esac
+        ASSET="cyberready_${OS}_${ARCH}"
+        DEST="${{ github.action_path }}/cyberready"
+        VER="${{ inputs.version }}"
+        if [ -x ./bin/cyberready ]; then
+          cp ./bin/cyberready "$DEST"
+          echo "source=workspace-bin" >> "$GITHUB_OUTPUT"
+        elif command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/cyberready' go.mod 2>/dev/null; then
+          go build -o "$DEST" ./cmd/cyberready
+          echo "source=built" >> "$GITHUB_OUTPUT"
+        else
+          API="https://api.github.com/repos/afelin/cyberready/releases"
+          if [ "$VER" = "latest" ]; then
+            URL=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API/latest" \
+              | sed -n "s/.*\"browser_download_url\": \"\\([^\"]*${ASSET}[^\"]*\\)\".*/\\1/p" | head -n1)
+          else
+            URL="https://github.com/afelin/cyberready/releases/download/${VER}/${ASSET}"
+          fi
+          if [ -z "${URL:-}" ]; then
+            echo "Could not resolve release binary ${ASSET}. Build cyberready or set inputs.version." >&2
+            exit 1
+          fi
+          curl -fsSL -o "$DEST" "$URL"
+          chmod +x "$DEST"
+          echo "source=release" >> "$GITHUB_OUTPUT"
+        fi
+        echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+    - name: Run cyberready check
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        BIN="${{ steps.bin.outputs.path }}"
+        EXTRA=()
+        if [ -n "${{ inputs.packs }}" ]; then
+          EXTRA+=(--packs "${{ inputs.packs }}")
+        fi
+        if [ "${{ inputs.diff }}" = "true" ]; then
+          EXTRA+=(--diff)
+        fi
+        set +e
+        "$BIN" check "${EXTRA[@]}" | tee /tmp/cyberready-check.txt
+        CODE=${PIPESTATUS[0]}
+        set -e
+        if [ "$CODE" -eq 0 ]; then
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "passed=false" >> "$GITHUB_OUTPUT"
+        fi
+        mkdir -p .github/cyberready/cache
+        cp /tmp/cyberready-check.txt .github/cyberready/cache/ci-check-log.txt || true
+        exit 0
+
+    - name: Prepare release artifacts
+      if: inputs.prepare_release == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        BIN="${{ steps.bin.outputs.path }}"
+        EXTRA=()
+        if [ -n "${{ inputs.packs }}" ]; then
+          EXTRA+=(--packs "${{ inputs.packs }}")
+        fi
+        "$BIN" prepare-release "${EXTRA[@]}" || true
+
+    - name: Read score
+      id: score
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        SCORE="0"
+        if [ -f .github/cyberready/cache/latest_failure.json ]; then
+          SCORE=$(python3 -c 'import json;print(json.load(open(".github/cyberready/cache/latest_failure.json")).get("readiness_score",0))' 2>/dev/null || echo 0)
+        elif [ -f .github/cyberready/cache/latest_action_report.md ]; then
+          SCORE=$(sed -n 's/.*Readiness[^0-9]*\([0-9][0-9]*\).*/\1/p' .github/cyberready/cache/latest_action_report.md | head -n1)
+          SCORE=${SCORE:-0}
+        fi
+        echo "score=${SCORE}" >> "$GITHUB_OUTPUT"
+
+    - name: Upload buyer-onepager
+      if: inputs.prepare_release == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cyberready-buyer-onepager
+        path: |
+          ${{ inputs.working_directory }}/review-pack/buyer-onepager.html
+          ${{ inputs.working_directory }}/.github/cyberready/cache/latest_action_report.md
+          ${{ inputs.working_directory }}/.github/cyberready/cache/latest_failure.json
+        if-no-files-found: warn
+
+    - name: PR sticky comment
+      if: inputs.comment_pr == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const root = '${{ inputs.working_directory }}';
+          const score = '${{ steps.score.outputs.score }}' || '0';
+          const passed = '${{ steps.run.outputs.passed }}' === 'true';
+          const claim = 'Prepares evidence for human review — not a conformity assessment or certification.';
+          let report = '';
+          const reportPath = path.join(root, '.github/cyberready/cache/latest_action_report.md');
+          if (fs.existsSync(reportPath)) {
+            report = fs.readFileSync(reportPath, 'utf8').trim();
+          }
+          let fails = [];
+          const failPath = path.join(root, '.github/cyberready/cache/latest_failure.json');
+          if (fs.existsSync(failPath)) {
+            try {
+              const j = JSON.parse(fs.readFileSync(failPath, 'utf8'));
+              fails = (j.failures || []).slice(0, 3).map(f => `- \`${f.gate_id}\` (${f.severity}): ${f.sanitized_description}`);
+            } catch (_) {}
+          }
+          const barFilled = Math.max(0, Math.min(20, Math.floor(Number(score) / 5)));
+          const thermo = '█'.repeat(barFilled) + '·'.repeat(20 - barFilled);
+          const body = [
+            '<!-- cyberready-sticky -->',
+            '## CyberReady check',
+            '',
+            `**Readiness:** ${score}% \`${thermo}\` — ${passed ? 'gates green' : 'gates need attention'}`,
+            '',
+            fails.length ? '### Top findings\n' + fails.join('\n') : '### Top findings\n_No gate failures in cache._',
+            '',
+            report ? '<details><summary>Action Report</summary>\n\n' + report + '\n</details>' : '',
+            '',
+            `> ${claim}`,
+            '',
+            '_Artifact:_ `cyberready-buyer-onepager` (when prepare-release ran).',
+          ].filter(Boolean).join('\n');
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            per_page: 100,
+          });
+          const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- cyberready-sticky -->'));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+    - name: Fail job if check failed
+      if: steps.run.outputs.passed != 'true'
+      shell: bash
+      run: |
+        echo "cyberready check failed (not a certification result — evidence for human review)."
+        exit 1

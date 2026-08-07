@@ -1,0 +1,55 @@
+name: Tester report
+description: Report that you ran cyberready demo or the GitHub Action (activation signal toward 100 happy testers).
+title: "[tester] "
+labels: ["tester"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying CyberReady+. Gate results prepare **evidence for human review** — not certification.
+
+  - type: checkboxes
+    id: activation
+    attributes:
+      label: What did you run?
+      options:
+        - label: `cyberready demo` (sandbox)
+        - label: `cyberready doctor`
+        - label: GitHub Action `cyberready-check`
+        - label: `cyberready check` on my own product repo
+        - label: `init --skill` / `--ide` / `--hooks`
+
+  - type: dropdown
+    id: recommend
+    attributes:
+      label: Would you recommend CyberReady to a peer?
+      options:
+        - "Yes"
+        - "Not yet"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: thermometer
+    attributes:
+      label: Thermometer / score (optional)
+      description: Paste score percent or attach a screenshot. Do not paste secrets.
+    validations:
+      required: false
+
+  - type: textarea
+    id: bugs
+    attributes:
+      label: Bugs or friction
+      description: What blocked you? Keep claim-safe — no certification language.
+    validations:
+      required: false
+
+  - type: input
+    id: org
+    attributes:
+      label: Org or handle (optional, with consent)
+      description: Public acknowledgement only if you want it. Leave blank to stay anonymous.
+    validations:
+      required: false

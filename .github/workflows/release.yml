@@ -1,0 +1,93 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v0.3.0); leave empty to use github.ref_name"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - name: Resolve version
+        id: ver
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          VER="${TAG#v}"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Cross-compile
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for pair in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            GOOS=${pair%/*}
+            GOARCH=${pair#*/}
+            out="dist/cyberready_${GOOS}_${GOARCH}"
+            echo "building $out"
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
+              -trimpath \
+              -ldflags="-s -w -X main.version=${VERSION}" \
+              -o "$out" ./cmd/cyberready
+          done
+          (cd dist && sha256sum cyberready_* > checksums.txt)
+          ls -la dist
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyberready-binaries
+          path: dist/*
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/cyberready_* dist/checksums.txt --clobber
+          else
+            gh release create "$TAG" dist/cyberready_* dist/checksums.txt \
+              --title "CyberReady+ ${TAG}" \
+              --notes "$(cat <<EOF
+          ## CyberReady+ ${TAG}
+
+          Local evidence CLI — prepares review packs for **human review**. Not a conformity assessment or certification.
+
+          ### Install (no Go)
+
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
+          cyberready doctor && cyberready demo
+          \`\`\`
+
+          ### Claim safety
+
+          Gate pass prepares evidence for human review — not CE marking, notified-body approval, or certification.
+          EOF
+          )"
+          fi

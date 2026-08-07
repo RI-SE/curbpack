@@ -1,0 +1,63 @@
+name: scoreboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scoreboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Build
+        run: go build -o bin/cyberready ./cmd/cyberready
+      - name: Offline smoke + scoreboard
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          FIX=$(mktemp -d)
+          ./bin/cyberready doctor | tee /tmp/doctor.txt
+          ./bin/cyberready demo --out "$FIX" --keep | tee /tmp/demo.txt
+          END=$(date +%s)
+          ELAPSED=$((END-START))
+          SCORE=$(python3 -c 'import json,sys; p="'"$FIX"'/.github/cyberready/cache/latest_failure.json";
+          import os
+          print(json.load(open(p)).get("readiness_score",100) if os.path.exists(p) else 100)')
+          mkdir -p artifacts
+          cat > artifacts/scoreboard.json <<EOF
+          {
+            "generated_at_unix": $(date +%s),
+            "time_to_demo_seconds": ${ELAPSED},
+            "packs_tested": ["house-policy", "cra-baseline"],
+            "demo_score": ${SCORE},
+            "claim": "Prepares evidence for human review — not a conformity assessment.",
+            "certification_claimed": false,
+            "install": "curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh",
+            "try": "cyberready doctor && cyberready demo"
+          }
+          EOF
+          cat > artifacts/scoreboard.md <<EOF
+          # CyberReady weekly scoreboard (claim-safe)
+
+          - Time-to-demo: **${ELAPSED}s**
+          - Packs smoked: house-policy (demo), cra-baseline (CI)
+          - Demo readiness score: **${SCORE}%**
+          - Certification claimed: **no**
+
+          > Prepares evidence for human review — not a conformity assessment.
+
+          Try: \`cyberready doctor && cyberready demo\`
+          EOF
+          cat artifacts/scoreboard.md
+          test "$ELAPSED" -lt 120
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cyberready-scoreboard
+          path: artifacts/*

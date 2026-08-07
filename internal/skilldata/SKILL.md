@@ -22,7 +22,7 @@ cyberready init --packs house-policy --hooks --skill --ide
 cyberready init --packs cra-baseline,house-policy
 cyberready check
 cyberready check --diff
-cyberready check --fix-hints
+cyberready check --form-hints
 cyberready check --form-hints --apply-stub
 cyberready validate --json
 cyberready prepare-release

@@ -64,7 +64,7 @@ func ParsePacksFlag(s string) []string {
 	return out
 }
 
-// ResolvePackIDs returns CLI override, else config packs, else default cra-baseline.
+// ResolvePackIDs returns CLI override, else config packs, else default house-policy (cold start).
 func ResolvePackIDs(root string, cli []string) ([]string, error) {
 	if len(cli) > 0 {
 		return cli, nil
@@ -76,5 +76,5 @@ func ResolvePackIDs(root string, cli []string) ([]string, error) {
 	if cfg != nil && len(cfg.Packs) > 0 {
 		return cfg.Packs, nil
 	}
-	return []string{"cra-baseline"}, nil
+	return []string{"house-policy"}, nil
 }
