@@ -1,0 +1,64 @@
+name: gauntlet-nightly
+
+on:
+  schedule:
+    - cron: "17 4 * * *" # ~04:17 UTC
+  workflow_dispatch:
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Build
+        run: go build -o bin/cyberready ./cmd/cyberready
+      - name: Claim safety
+        run: ./scripts/claim-safety.sh
+      - name: Full baseline ratchet
+        run: ./scripts/gauntlet-ratchet.sh
+      - name: UX killers — demo sandbox + init non-destructive + hooks idempotent
+        run: |
+          set -euo pipefail
+          BIN="$GITHUB_WORKSPACE/bin/cyberready"
+          # demo must not touch caller cwd product files
+          MARK=$(mktemp)
+          echo keep > "$MARK"
+          BEFORE=$(pwd)
+          DEMO=$(mktemp -d)
+          "$BIN" demo --out "$DEMO" --keep
+          test -f "$MARK"
+          test "$(pwd)" = "$BEFORE"
+          # init twice is idempotent (does not clobber .cyberready.json)
+          FIX=$(mktemp -d)
+          cd "$FIX"
+          git init -q
+          git config user.email "ci@cyberready.local"
+          git config user.name "CI"
+          git commit --allow-empty -m init -q
+          "$BIN" init --packs house-policy --hooks
+          "$BIN" init --packs house-policy --hooks
+          grep -q house-policy .cyberready.json
+          test -x .git/hooks/pre-commit
+      - name: Optional pinned OSS clone (crash/hang only)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          BIN="$GITHUB_WORKSPACE/bin/cyberready"
+          # Small public Go module — red gates OK; kill only crash/hang.
+          CLONE=$(mktemp -d)
+          timeout 60 git clone --depth 1 https://github.com/google/uuid.git "$CLONE" || exit 0
+          cd "$CLONE"
+          set +e
+          timeout 60 "$BIN" init --packs house-policy
+          timeout 60 "$BIN" check
+          code=$?
+          set -e
+          # 124 = hang (timeout) → fail; other non-zero = red gates OK
+          if [[ "$code" -eq 124 ]]; then
+            echo "OSS clone hung" >&2
+            exit 1
+          fi
+          echo "OSS clone finished exit=$code (red OK)"

@@ -24,6 +24,7 @@ cyberready check
 cyberready check --diff
 cyberready check --form-hints
 cyberready check --form-hints --apply-stub
+cyberready check --heal
 cyberready validate --json
 cyberready prepare-release
 cyberready ask .github/cyberready/cache/latest_failure.json --propose
@@ -35,8 +36,9 @@ cyberready packs list
 
 1. Treat `cyberready check` / `validate` exit code as authoritative for gate pass/fail.
 2. Prefer dual-rep markdown + JSON IR — do not invent legal prose as source of truth.
-3. `ask --propose` and `check --form-hints` suggest edits only; apply in the editor (or `--apply-stub` for missing stubs), then re-check.
+3. `ask --propose` and `check --form-hints` suggest edits only; apply in the editor (or `--apply-stub` / `--heal` for missing stubs), then re-check.
 4. Never claim the product is certified, CE-marked, or notified-body approved.
 5. Coreward is optional (`CYBERREADY_SOCK` + `cyberready sock`); fail-open if absent.
 6. Cold start: prefer `--packs house-policy` unless the user asks for CRA/medtech.
 7. After doc/dep edits in an initialized repo, run `cyberready check`.
+8. `--heal` never auto-attests; remediations cache lives at `.github/cyberready/cache/remediations.json`.

@@ -1,0 +1,5 @@
+{
+  "packs": ["cra-baseline"],
+  "hooks": false,
+  "claim": "Prepares evidence for human review — not a conformity assessment."
+}

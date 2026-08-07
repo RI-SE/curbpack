@@ -1,0 +1,77 @@
+# Launch readiness
+
+Public Apache-2.0 launch checklist for [afelin/cyberready](https://github.com/afelin/cyberready).
+Coreward is **not** required to build, test, launch, or use CyberReady (optional `sock` only).
+
+## Required GitHub checks (merge gate)
+
+Configure these as **required status checks** on `main` (Settings → Branches → branch protection):
+
+| Check | Workflow job | Kill if |
+|-------|--------------|---------|
+| `test` | `.github/workflows/ci.yml` → `test` | `go test ./...` fails |
+| `smoke` | `ci.yml` → `smoke` | doctor/demo or CRA/house happy paths fail |
+| `gauntlet` | `ci.yml` → `gauntlet` | claim-safety, heal smoke, baseline ratchet, dead-ends, install-from-release |
+
+Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet.yml` (realish + adversarial depth + optional OSS clone crash/hang only).
+
+## License hygiene
+
+- `LICENSE` — full Apache-2.0 text (GitHub SPDX)
+- `NOTICE` — attribution
+- `SECURITY.md` — claim-safe disclosure path
+- README license badge → Apache-2.0
+
+After merge, confirm: `gh api repos/afelin/cyberready --jq .license.spdx_id` → `Apache-2.0`.
+If still `NOASSERTION`, wait for GitHub re-detect or tag `v0.3.1` with the hygiene commit.
+
+## Heal (deterministic — not ML)
+
+```bash
+cyberready check --heal
+```
+
+Loop (max 3): check → form-hints → apply-stub (**missing/empty only**) → remediations cache → re-check.
+Cache: `.github/cyberready/cache/remediations.json` keyed by `gate_id`.
+
+**Never** auto-`attest`. Never invents legal prose as approved evidence. Never marks VEX final.
+
+## Claim safety
+
+`scripts/claim-safety.sh` scans docs + runtime CLI captures (doctor/demo/check/prepare-release).
+Deny-list blocks certification theater; negation / claim-safe framing is allowed.
+
+## Tier 3 — human pass (before invite wave)
+
+Before inviting external testers:
+
+1. Fresh machine / no Go: `install.sh` → `doctor` → `demo` in under **60s**
+2. Decision-maker understands: evidence for humans — **not** certification
+3. `SECURITY.md` reporting path is usable
+
+Record the pass date in the pinned Discussions welcome thread.
+
+## Discussions welcome (claim-safe)
+
+Pin a welcome Discussion (Show and tell / General) with:
+
+> Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
+>
+> Try: `curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh && cyberready doctor && cyberready demo`
+>
+> Tester reports: use the **Tester report** issue template.
+
+## Invite wave gate
+
+Invite only when:
+
+1. Tier 0–1 CI green on `main` (required checks above)
+2. SPDX shows Apache-2.0
+3. One Tier-3 human pass recorded
+4. Welcome Discussion pinned
+
+## Non-goals
+
+- Coreward as CI/build requirement
+- LLM auto-attest / auto legal prose
+- License change away from Apache-2.0

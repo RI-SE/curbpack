@@ -131,3 +131,57 @@ jobs:
           "$GITHUB_WORKSPACE/bin/cyberready" attest --allow-dirty >/dev/null
           H2=$(python3 -c 'import json;print(json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))["state_hash"])')
           test "$H1" = "$H2"
+
+  gauntlet:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Build
+        run: go build -o bin/cyberready ./cmd/cyberready
+      - name: Claim safety (docs + runtime)
+        run: ./scripts/claim-safety.sh
+      - name: Heal smoke + baseline ratchet + dead-ends
+        run: ./scripts/gauntlet-ratchet.sh
+      - name: Install-from-release smoke
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          INST=$(mktemp -d)
+          export CYBERREADY_INSTALL_DIR="$INST"
+          export CYBERREADY_VERSION="${CYBERREADY_VERSION:-latest}"
+          # Prefer latest release binary; fall back to workspace build if download fails (fork PRs).
+          if curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh; then
+            export PATH="$INST:$PATH"
+            cyberready doctor
+            DEMO=$(mktemp -d)
+            cyberready demo --out "$DEMO" --keep
+            test -f "$DEMO/review-pack/buyer-onepager.html"
+          else
+            echo "release install unavailable — falling back to workspace binary"
+            "$GITHUB_WORKSPACE/bin/cyberready" doctor
+            DEMO=$(mktemp -d)
+            "$GITHUB_WORKSPACE/bin/cyberready" demo --out "$DEMO" --keep
+            test -f "$DEMO/review-pack/buyer-onepager.html"
+          fi
+      - name: Dead-end — corrupt pack env
+        run: |
+          set -euo pipefail
+          BAD=$(mktemp -d)
+          mkdir -p "$BAD/broken"
+          echo '{not json' > "$BAD/broken/pack.json"
+          FIX=$(mktemp -d)
+          cd "$FIX"
+          git init -q
+          git config user.email "ci@cyberready.local"
+          git config user.name "CI"
+          git commit --allow-empty -m init -q
+          set +e
+          CYBERREADY_PACKS_DIR="$BAD" "$GITHUB_WORKSPACE/bin/cyberready" init --packs broken
+          code=$?
+          set -e
+          test "$code" -ne 0

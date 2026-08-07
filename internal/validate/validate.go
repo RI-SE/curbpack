@@ -172,28 +172,61 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 	}
 }
 
+// safeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
+func safeJoin(root, rel string) (string, string, error) {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return "", "", fmt.Errorf("empty path")
+	}
+	if filepath.IsAbs(rel) {
+		return "", "", fmt.Errorf("absolute path refused")
+	}
+	clean := filepath.Clean(rel)
+	slash := filepath.ToSlash(clean)
+	if slash == ".." || strings.HasPrefix(slash, "../") {
+		return "", "", fmt.Errorf("path traversal refused")
+	}
+	full := filepath.Join(root, clean)
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", "", err
+	}
+	fullAbs, err := filepath.Abs(full)
+	if err != nil {
+		return "", "", err
+	}
+	sep := string(os.PathSeparator)
+	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
+		return "", "", fmt.Errorf("path escapes repository root")
+	}
+	return full, slash, nil
+}
+
 func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
-	path := filepath.Join(root, rule.Path)
+	path, rel, err := safeJoin(root, rule.Path)
+	if err != nil {
+		return []ir.Failure{failFromRule(rule, rule.Path, err.Error())}
+	}
 	info, err := os.Stat(path)
 	min := rule.MinBytes
 	if min <= 0 {
 		min = 50
 	}
 	if os.IsNotExist(err) || (err == nil && info.Size() < int64(min)) {
-		return []ir.Failure{failFromRule(rule, rule.Path, "")}
+		return []ir.Failure{failFromRule(rule, rel, "")}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return []ir.Failure{failFromRule(rule, rule.Path, err.Error())}
+		return []ir.Failure{failFromRule(rule, rel, err.Error())}
 	}
 	content := string(data)
 	for _, h := range rule.RequireHeaders {
 		if !strings.Contains(content, h) {
-			return []ir.Failure{failFromRule(rule, rule.Path, "missing header: "+h)}
+			return []ir.Failure{failFromRule(rule, rel, "missing header: "+h)}
 		}
 	}
 	if rule.MinWords > 0 && wordCount(content) < rule.MinWords {
-		return []ir.Failure{failFromRule(rule, rule.Path, fmt.Sprintf("min_words=%d not met (have %d)", rule.MinWords, wordCount(content)))}
+		return []ir.Failure{failFromRule(rule, rel, fmt.Sprintf("min_words=%d not met (have %d)", rule.MinWords, wordCount(content)))}
 	}
 	return nil
 }
@@ -217,12 +250,17 @@ func wordCount(s string) int {
 func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	var out []ir.Failure
 	for _, rel := range rule.Paths {
-		data, err := os.ReadFile(filepath.Join(root, rel))
+		path, clean, err := safeJoin(root, rel)
+		if err != nil {
+			out = append(out, failFromRule(rule, rel, err.Error()))
+			continue
+		}
+		data, err := os.ReadFile(path)
 		if err != nil {
 			continue // missing handled by file_present / annex_file rules
 		}
 		if placeholderRE.Match(data) {
-			out = append(out, failFromRule(rule, rel, "placeholder pattern matched"))
+			out = append(out, failFromRule(rule, clean, "placeholder pattern matched"))
 		}
 	}
 	return out
@@ -235,12 +273,17 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 	}
 	var out []ir.Failure
 	for _, rel := range rule.Paths {
-		data, err := os.ReadFile(filepath.Join(root, rel))
+		path, clean, err := safeJoin(root, rel)
+		if err != nil {
+			out = append(out, failFromRule(rule, rel, err.Error()))
+			continue
+		}
+		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
 		if re.Match(data) {
-			out = append(out, failFromRule(rule, rel, "forbidden pattern matched"))
+			out = append(out, failFromRule(rule, clean, "forbidden pattern matched"))
 		}
 	}
 	return out
@@ -285,12 +328,16 @@ func failFromRule(rule packs.Rule, file, detail string) ir.Failure {
 	if detail != "" {
 		desc = desc + " (" + detail + ")"
 	}
+	target := filepath.ToSlash(file)
+	if target == "" {
+		target = filepath.Base(rule.Path)
+	}
 	return ir.Failure{
 		GateID:               rule.ID,
 		Severity:             rule.Severity,
 		Type:                 rule.Type,
 		SanitizedDescription: desc,
-		ASTCoordinates:       ir.ASTCoordinates{TargetFile: filepath.Base(file)},
+		ASTCoordinates:       ir.ASTCoordinates{TargetFile: target},
 		Remediation: ir.Remediation{
 			ActionRequired: rule.Remediation,
 			ExpectedState:  rule.Expected,

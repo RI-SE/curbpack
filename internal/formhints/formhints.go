@@ -8,6 +8,7 @@ import (
 
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/cyberready/internal/remediation"
 )
 
 // Hint is a deterministic gate→snippet proposal (Witness-style templates).
@@ -18,35 +19,70 @@ type Hint struct {
 	Action   string
 	Applied  bool
 	Proposed bool
+	FromCache bool
 }
 
 // ForFailures maps each failure to a file + exact scaffold snippet.
+// Optional cache supplies last-good snippets by gate_id (never invents legal prose).
 func ForFailures(failures []ir.Failure) []Hint {
+	return ForFailuresCached(failures, remediation.Cache{})
+}
+
+// ForFailuresCached prefers remediations.json entries when present.
+func ForFailuresCached(failures []ir.Failure, cache remediation.Cache) []Hint {
 	var out []Hint
 	for _, f := range failures {
 		h := Hint{
 			GateID: f.GateID,
-			File:   f.ASTCoordinates.TargetFile,
+			File:   resolveFile(f),
 			Action: f.Remediation.ActionRequired,
 		}
-		if h.File == "" {
-			h.File = guessFile(f.GateID)
+		if e, ok := remediation.Lookup(cache, f.GateID); ok {
+			if e.File != "" {
+				h.File = e.File
+			}
+			if e.Snippet != "" {
+				h.Snippet = e.Snippet
+				h.FromCache = true
+			}
+			if e.Action != "" && h.Action == "" {
+				h.Action = e.Action
+			}
 		}
-		if snip, ok := snippetForGate(f.GateID, h.File); ok {
-			h.Snippet = snip
-		} else if h.File != "" {
-			h.Snippet = packs.DefaultScaffoldBody(h.File)
+		if h.Snippet == "" {
+			if snip, ok := snippetForGate(f.GateID, h.File); ok {
+				h.Snippet = snip
+			} else if h.File != "" {
+				h.Snippet = packs.DefaultScaffoldBody(h.File)
+			}
 		}
 		out = append(out, h)
 	}
 	return out
 }
 
+func resolveFile(f ir.Failure) string {
+	file := strings.TrimSpace(f.ASTCoordinates.TargetFile)
+	guessed := guessFile(f.GateID)
+	if file == "" {
+		return guessed
+	}
+	// Prefer guessed path when IR only has a basename (common for nested stubs).
+	if guessed != "" && !strings.Contains(file, "/") && !strings.Contains(file, string(filepath.Separator)) {
+		base := filepath.Base(guessed)
+		if base == file || strings.HasSuffix(guessed, file) {
+			return guessed
+		}
+	}
+	return filepath.ToSlash(file)
+}
+
 // Format prints human-readable propose-only hints.
 func Format(hints []Hint) string {
 	var b strings.Builder
 	b.WriteString("## Form hints (deterministic — propose-only by default)\n\n")
-	b.WriteString("CyberReady will not invent legal prose. Snippets are structural Witness templates.\n\n")
+	b.WriteString("CyberReady will not invent legal prose. Snippets are structural Witness templates.\n")
+	b.WriteString("Heal never auto-attests and never marks VEX final.\n\n")
 	for _, h := range hints {
 		b.WriteString(fmt.Sprintf("### %s\n", h.GateID))
 		if h.File != "" {
@@ -55,21 +91,25 @@ func Format(hints []Hint) string {
 		if h.Action != "" {
 			b.WriteString(fmt.Sprintf("- Action: %s\n", h.Action))
 		}
+		if h.FromCache {
+			b.WriteString("- Source: remediation cache\n")
+		}
 		if h.Snippet != "" {
 			b.WriteString("\n```\n")
 			b.WriteString(strings.TrimRight(h.Snippet, "\n"))
 			b.WriteString("\n```\n\n")
 		}
 		if h.Applied {
-			b.WriteString("_Written with --apply-stub (overwrite only if missing or empty)._\n\n")
+			b.WriteString("_Written with --apply-stub / --heal (overwrite only if missing or empty)._\n\n")
 		} else {
-			b.WriteString("_Propose-only — pass `--apply-stub` to write missing stubs._\n\n")
+			b.WriteString("_Propose-only — pass `--apply-stub` or `--heal` to write missing stubs._\n\n")
 		}
 	}
 	return b.String()
 }
 
 // ApplyStubs writes missing/empty target files with snippets. Never overwrites non-empty files.
+// Refuses absolute paths and path traversal. Never calls attest.
 func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 	out := make([]Hint, 0, len(hints))
 	for _, h := range hints {
@@ -78,7 +118,12 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 			out = append(out, h)
 			continue
 		}
-		path := filepath.Join(repoRoot, h.File)
+		rel, err := safeRelPath(h.File)
+		if err != nil {
+			return out, err
+		}
+		h.File = rel
+		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
 		if st, err := os.Stat(path); err == nil && st.Size() > 0 {
 			out = append(out, h)
 			continue
@@ -93,6 +138,44 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 		out = append(out, h)
 	}
 	return out, nil
+}
+
+// PersistCache upserts applied/proposed hints into remediations.json.
+func PersistCache(repoRoot string, hints []Hint) error {
+	c, err := remediation.Load(repoRoot)
+	if err != nil {
+		return err
+	}
+	var entries []remediation.Entry
+	for _, h := range hints {
+		if h.GateID == "" || h.Snippet == "" {
+			continue
+		}
+		entries = append(entries, remediation.Entry{
+			GateID:  h.GateID,
+			File:    h.File,
+			Snippet: h.Snippet,
+			Action:  h.Action,
+		})
+	}
+	remediation.Upsert(&c, entries...)
+	return remediation.Save(repoRoot, c)
+}
+
+func safeRelPath(p string) (string, error) {
+	p = strings.TrimSpace(p)
+	p = filepath.ToSlash(p)
+	if p == "" {
+		return "", fmt.Errorf("empty remediation path")
+	}
+	if filepath.IsAbs(p) || strings.HasPrefix(p, "/") {
+		return "", fmt.Errorf("refusing absolute remediation path: %s", p)
+	}
+	clean := filepath.ToSlash(filepath.Clean(p))
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", fmt.Errorf("refusing path traversal in remediation: %s", p)
+	}
+	return clean, nil
 }
 
 func guessFile(gateID string) string {

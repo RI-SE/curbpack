@@ -1,0 +1,17 @@
+{
+  "id": "unknown-check",
+  "name": "Adversarial unknown check",
+  "version": "0.0.1",
+  "description": "Fixture: unsupported check kind must fail pack load.",
+  "rules": [
+    {
+      "id": "ADV-UNKNOWN",
+      "severity": "high",
+      "type": "CONFIG_ERROR",
+      "check": "llm_judge",
+      "description": "Unsupported check for adversarial load test.",
+      "remediation": "Use a supported check kind.",
+      "expected": "Pack refused at load."
+    }
+  ]
+}

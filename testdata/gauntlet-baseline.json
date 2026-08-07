@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "description": "Launch gauntlet baseline ratchet — expected pass/fail for CI. Drift fails the build.",
+  "cases": [
+    {
+      "id": "heal-missing-house-stubs",
+      "kind": "heal_missing_stubs",
+      "expect": "pass",
+      "note": "Missing SECURITY.md + security.txt → check --heal applies stubs and re-checks green. Never attest."
+    },
+    {
+      "id": "dead-end-non-git",
+      "kind": "dead_end_non_git",
+      "expect": "exit_nonzero",
+      "note": "check outside git must exit 1 with clear message"
+    },
+    {
+      "id": "dead-end-placeholders",
+      "kind": "dead_end_placeholders",
+      "expect": "exit_nonzero",
+      "note": "placeholder SECURITY.md fails closed"
+    },
+    {
+      "id": "adv-unknown-check",
+      "kind": "adversarial_pack_load",
+      "pack_dir": "testdata/adversarial/packs",
+      "pack_id": "unknown-check",
+      "expect": "fail_closed",
+      "note": "unsupported check kind refused at pack load"
+    },
+    {
+      "id": "adv-path-traversal",
+      "kind": "adversarial_runtime",
+      "pack_dir": "testdata/adversarial/packs",
+      "pack_id": "path-traversal",
+      "expect": "fail_no_panic",
+      "note": "path traversal in rule.path fails closed without panic"
+    },
+    {
+      "id": "adv-bad-regex",
+      "kind": "adversarial_runtime",
+      "pack_dir": "testdata/adversarial/packs",
+      "pack_id": "bad-regex",
+      "expect": "fail_no_panic",
+      "note": "invalid text_forbid pattern → gate failure, no panic"
+    },
+    {
+      "id": "realish-node-saas",
+      "kind": "realish_tree",
+      "fixture": "testdata/realish/node-saas",
+      "expect": "pass",
+      "timeout_sec": 60
+    },
+    {
+      "id": "realish-cra-device",
+      "kind": "realish_tree",
+      "fixture": "testdata/realish/cra-device",
+      "expect": "pass",
+      "timeout_sec": 60
+    },
+    {
+      "id": "realish-dirty-monorepo",
+      "kind": "realish_tree",
+      "fixture": "testdata/realish/dirty-monorepo",
+      "expect": "fail",
+      "timeout_sec": 60,
+      "note": "banned axios pin + placeholders → red gates (no crash)"
+    },
+    {
+      "id": "diff-skip-untouched",
+      "kind": "diff_skip",
+      "expect": "pass",
+      "note": "covered by go test TestDiffSkipUntouchedRules"
+    }
+  ]
+}

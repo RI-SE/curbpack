@@ -1,0 +1,19 @@
+{
+  "id": "path-traversal",
+  "name": "Adversarial path traversal",
+  "version": "0.0.1",
+  "description": "Fixture: rule path escapes repo — engine must fail closed.",
+  "rules": [
+    {
+      "id": "ADV-TRAVERSAL",
+      "severity": "critical",
+      "type": "CONFIG_ERROR",
+      "check": "file_present",
+      "path": "../../../etc/passwd",
+      "min_bytes": 1,
+      "description": "Path traversal attempt.",
+      "remediation": "Use in-repo relative paths only.",
+      "expected": "Traversal refused."
+    }
+  ]
+}

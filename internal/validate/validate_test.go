@@ -180,6 +180,77 @@ func TestDiffSkipUntouchedRules(t *testing.T) {
 	}
 }
 
+func TestPathTraversalFailClosed(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	wd, _ := os.Getwd()
+	root := filepath.Clean(filepath.Join(wd, "../.."))
+	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"path-traversal"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("expected traversal failure")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "ADV-TRAVERSAL" && strings.Contains(strings.ToLower(f.SanitizedDescription), "traversal") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected ADV-TRAVERSAL traversal fail, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestBadRegexFailNoPanic(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	wd, _ := os.Getwd()
+	root := filepath.Clean(filepath.Join(wd, "../.."))
+	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"bad-regex"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("expected invalid pattern failure")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "ADV-BAD-RE" && strings.Contains(f.SanitizedDescription, "invalid pattern") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected ADV-BAD-RE invalid pattern, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestUnknownCheckPackLoad(t *testing.T) {
+	wd, _ := os.Getwd()
+	root := filepath.Clean(filepath.Join(wd, "../.."))
+	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	_, err := packs.LoadPack("unknown-check")
+	if err == nil {
+		t.Fatal("expected unsupported check load error")
+	}
+	if !strings.Contains(err.Error(), "unsupported check") {
+		t.Fatalf("unexpected err: %v", err)
+	}
+}
+
 func writeGoodHouse(t *testing.T, dir string) {
 	t.Helper()
 	mustWrite(t, filepath.Join(dir, "SECURITY.md"), `# Security

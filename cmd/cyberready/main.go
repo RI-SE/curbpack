@@ -17,6 +17,7 @@ import (
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/packscmd"
 	"github.com/afelin/cyberready/internal/release"
+	"github.com/afelin/cyberready/internal/remediation"
 	"github.com/afelin/cyberready/internal/sbom"
 	"github.com/afelin/cyberready/internal/skilldata"
 	"github.com/afelin/cyberready/internal/sock"
@@ -84,8 +85,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  demo [--keep]                  Safe sandbox: temp git + house-policy check\n")
 	fmt.Fprintf(os.Stderr, "  init [--packs a,b] [--hooks] [--skill] [--ide]\n")
 	fmt.Fprintf(os.Stderr, "                                 Scaffold config + stubs (+ hook/skill/tasks)\n")
-	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub]\n")
-	fmt.Fprintf(os.Stderr, "                                 Daily loop: validate + thermometer + cache\n")
+	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]\n")
+	fmt.Fprintf(os.Stderr, "                                 Daily loop; --heal = hints→stub→re-check (max 3)\n")
 	fmt.Fprintf(os.Stderr, "  validate [--delta] [--json]   Pack gates (JSON + markdown dual-rep)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release               Write review-pack/ + CycloneDX/VEX evidence\n")
 	fmt.Fprintf(os.Stderr, "  packs list|update|import      Embedded packs; update/import helpers\n")
@@ -272,7 +273,7 @@ exit 0
 	return nil
 }
 
-func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub bool) {
+func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool) {
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--pack":
@@ -294,10 +295,16 @@ func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, for
 		case "--apply-stub":
 			applyStub = true
 			formHints = true // apply implies show hints
+		case "--heal":
+			heal = true
+			applyStub = true
+			formHints = true
 		}
 	}
-	return packIDs, jsonOut, diffOnly, formHints, applyStub
+	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal
 }
+
+const healMaxRounds = 3
 
 func cmdCheck(args []string) error {
 	tty.PrintHeader("CYBERREADY CHECK")
@@ -305,11 +312,40 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return fmt.Errorf("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, wantHints, applyStub := parseValidateFlags(args)
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly})
-	if err != nil {
-		return err
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal := parseValidateFlags(args)
+
+	var res validate.Result
+	var lastHints []formhints.Hint
+	for round := 0; round <= healMaxRounds; round++ {
+		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly})
+		if err != nil {
+			return err
+		}
+		if res.Passed || !heal || round == healMaxRounds {
+			break
+		}
+		// Heal: form-hints → apply-stub (missing only) → persist cache → re-check.
+		// Never auto-attest / never invent approved legal prose.
+		cache, _ := remediation.Load(root)
+		hints := formhints.ForFailuresCached(res.Payload.Failures, cache)
+		hints, err = formhints.ApplyStubs(root, hints)
+		if err != nil {
+			return err
+		}
+		_ = formhints.PersistCache(root, hints)
+		lastHints = hints
+		applied := 0
+		for _, h := range hints {
+			if h.Applied {
+				applied++
+			}
+		}
+		fmt.Printf("%s\n", tty.C(tty.Yellow, fmt.Sprintf("heal round %d/%d: applied %d missing stub(s); re-checking…", round+1, healMaxRounds, applied)))
+		if applied == 0 {
+			break // nothing more heal can write
+		}
 	}
+
 	if jsonOut {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -325,12 +361,17 @@ func cmdCheck(args []string) error {
 		fmt.Printf("%s\n", tty.C(tty.Dim, "cache: .github/cyberready/cache/latest_*.json"))
 	}
 
-	if wantHints && len(res.Payload.Failures) > 0 {
-		hints := formhints.ForFailures(res.Payload.Failures)
-		if applyStub {
-			hints, err = formhints.ApplyStubs(root, hints)
-			if err != nil {
-				return err
+	if wantHints && (len(res.Payload.Failures) > 0 || len(lastHints) > 0) {
+		hints := lastHints
+		if len(hints) == 0 && len(res.Payload.Failures) > 0 {
+			cache, _ := remediation.Load(root)
+			hints = formhints.ForFailuresCached(res.Payload.Failures, cache)
+			if applyStub && !heal {
+				hints, err = formhints.ApplyStubs(root, hints)
+				if err != nil {
+					return err
+				}
+				_ = formhints.PersistCache(root, hints)
 			}
 		}
 		fmt.Println()
@@ -350,7 +391,7 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return fmt.Errorf("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, _, _ := parseValidateFlags(args)
+	packIDs, jsonOut, diffOnly, _, _, _ := parseValidateFlags(args)
 	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly})
 	if err != nil {
 		return err

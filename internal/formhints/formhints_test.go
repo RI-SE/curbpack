@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/cyberready/internal/remediation"
 )
 
 func TestForFailuresDeterministic(t *testing.T) {
@@ -81,5 +82,45 @@ func TestApplyStubsProposeOnlyDefault(t *testing.T) {
 	keep, _ := os.ReadFile(filepath.Join(dir, "SECURITY.md"))
 	if strings.Contains(string(keep), "OVERWRITE") {
 		t.Fatal("overwrote existing content")
+	}
+}
+
+func TestApplyStubsRefusesTraversal(t *testing.T) {
+	dir := t.TempDir()
+	_, err := ApplyStubs(dir, []Hint{{
+		GateID:  "X",
+		File:    "../../../etc/passwd",
+		Snippet: "nope\n",
+	}})
+	if err == nil {
+		t.Fatal("expected traversal error")
+	}
+}
+
+func TestCachePreferredSnippet(t *testing.T) {
+	dir := t.TempDir()
+	c := remediation.Cache{Entries: map[string]remediation.Entry{
+		"HOUSE-SECURITY-MD": {
+			GateID:  "HOUSE-SECURITY-MD",
+			File:    "SECURITY.md",
+			Snippet: "# Security\n\nCached reporting body with enough words for house policy gates here.\n",
+		},
+	}}
+	hints := ForFailuresCached([]ir.Failure{{
+		GateID:         "HOUSE-SECURITY-MD",
+		ASTCoordinates: ir.ASTCoordinates{TargetFile: "SECURITY.md"},
+	}}, c)
+	if !hints[0].FromCache || !strings.Contains(hints[0].Snippet, "Cached reporting") {
+		t.Fatalf("want cache hit: %+v", hints[0])
+	}
+	out, err := ApplyStubs(dir, hints)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := PersistCache(dir, out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".github/cyberready/cache/remediations.json")); err != nil {
+		t.Fatal(err)
 	}
 }

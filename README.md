@@ -1,6 +1,7 @@
 # CyberReady+
 
 [![ci](https://github.com/afelin/cyberready/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/cyberready/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![cyberready-check](https://img.shields.io/badge/cyberready-check-2ea44f?logo=github)](https://github.com/afelin/cyberready)
 
 Regulation-agnostic **evidence CLI**. Packs encode CRA, sector standards, or your house rules — the binary does not know any industry.
@@ -43,6 +44,7 @@ cyberready init --packs house-policy --hooks --skill --ide
 cyberready check
 cyberready check --form-hints          # deterministic propose-only stubs
 # cyberready check --form-hints --apply-stub   # write missing stubs only
+cyberready check --heal                     # hints → stub → re-check (max 3; never attest)
 
 # Opt-in regimes
 cyberready init --packs cra-baseline
@@ -77,7 +79,7 @@ Posts a sticky PR comment (thermometer + top fails + disclaimer) and uploads `bu
 | `doctor` | PATH / git / packs / hooks confidence |
 | `demo [--keep]` | Safe sandbox: temp git + house-policy check + one-pager |
 | `init [--packs a,b] [--hooks] [--skill] [--ide]` | Config, stubs, hook, Cursor skill, VS Code tasks |
-| `check [--diff] [--json] [--form-hints] [--apply-stub]` | Daily loop + optional Witness snippets |
+| `check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]` | Daily loop; `--heal` = hints→stub→re-check (max 3) |
 | `validate [--delta]` | Pack gates → GateFailure JSON + semantic markdown |
 | `prepare-release` | `review-pack/` + CycloneDX/VEX under `.github/cyberready/evidence/` |
 | `packs list\|update\|import` | Embedded packs; update/import helpers |
@@ -127,7 +129,12 @@ No spam bots / auto-DM. Humans post from templates.
 ## Claim safety
 
 Do not market gate pass as certification, CE marking, or notified-body approval.
+CI enforces this via `scripts/claim-safety.sh` (docs + runtime captures).
+
+## Launch readiness
+
+See [docs/launch-readiness.md](docs/launch-readiness.md) for required checks, heal semantics, Discussions welcome, and Tier-3 human pass before invite wave.
 
 ## License
 
-Apache-2.0
+Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Security reports: [SECURITY.md](SECURITY.md).

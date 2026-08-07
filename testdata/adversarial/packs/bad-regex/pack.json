@@ -1,0 +1,19 @@
+{
+  "id": "bad-regex",
+  "name": "Adversarial bad regex",
+  "version": "0.0.1",
+  "description": "Fixture: invalid text_forbid pattern must not panic.",
+  "rules": [
+    {
+      "id": "ADV-BAD-RE",
+      "severity": "medium",
+      "type": "CONFIG_ERROR",
+      "check": "text_forbid",
+      "paths": ["README.md"],
+      "pattern": "(?P<unterminated",
+      "description": "Invalid regex pattern.",
+      "remediation": "Fix pack pattern.",
+      "expected": "Gate failure without panic."
+    }
+  ]
+}
