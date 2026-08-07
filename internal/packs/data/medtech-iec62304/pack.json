@@ -1,0 +1,58 @@
+{
+  "id": "medtech-iec62304",
+  "name": "MedTech IEC 62304 Overlay",
+  "version": "0.1.0",
+  "description": "Software lifecycle evidence gates for medical device software (IEC 62304-inspired). Prepares documentation for human review — not a notified-body certification.",
+  "rules": [
+    {
+      "id": "MD-SW-CLASS",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/medtech/software_safety_class.md",
+      "min_bytes": 100,
+      "require_headers": ["# Software Safety Class", "## Classification Rationale"],
+      "description": "IEC 62304 software safety classification rationale missing.",
+      "remediation": "Document Class A/B/C rationale in docs/medtech/software_safety_class.md.",
+      "expected": "Safety class declared with rationale."
+    },
+    {
+      "id": "MD-SOUP",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/medtech/soup_list.md",
+      "min_bytes": 80,
+      "require_headers": ["# SOUP List", "## Items"],
+      "description": "SOUP (software of unknown provenance) inventory missing.",
+      "remediation": "Maintain a SOUP inventory under docs/medtech/soup_list.md.",
+      "expected": "SOUP list present with Items section."
+    },
+    {
+      "id": "MD-PROBLEM-RESOLUTION",
+      "severity": "medium",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/medtech/problem_resolution.md",
+      "min_bytes": 80,
+      "require_headers": ["# Problem Resolution", "## Process"],
+      "description": "Problem resolution process document missing.",
+      "remediation": "Describe defect intake and resolution process.",
+      "expected": "Problem resolution process documented."
+    },
+    {
+      "id": "MD-ANTI-PLACEHOLDER",
+      "severity": "critical",
+      "type": "POLICY_VIOLATION",
+      "check": "anti_placeholder",
+      "paths": [
+        "docs/medtech/software_safety_class.md",
+        "docs/medtech/soup_list.md",
+        "docs/medtech/problem_resolution.md"
+      ],
+      "description": "MedTech evidence drafts contain placeholder text.",
+      "remediation": "Replace placeholders with device-specific content before release review.",
+      "expected": "No placeholder patterns in medtech evidence docs."
+    }
+  ]
+}

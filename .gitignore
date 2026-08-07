@@ -1,0 +1,9 @@
+/bin/
+/cyberready
+/dist/
+*.exe
+.DS_Store
+.github/cyberready/cache/
+/review-pack/
+.tools/
+*.sock

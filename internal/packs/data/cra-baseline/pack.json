@@ -1,0 +1,69 @@
+{
+  "id": "cra-baseline",
+  "name": "EU CRA Baseline",
+  "version": "0.1.0",
+  "description": "Baseline Cyber Resilience Act evidence gates for Annex VII drafts and dependency hygiene. Informational — not a conformity assessment.",
+  "rules": [
+    {
+      "id": "CRA-ANNEX-VII-RISK",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/annex-vii/risk_assessment.md",
+      "min_bytes": 200,
+      "require_headers": ["# Risk Assessment", "## Product Overview", "## Identified Risks"],
+      "description": "CRA Annex VII risk assessment draft missing, too short, or lacking required section headers.",
+      "remediation": "Populate docs/annex-vii/risk_assessment.md with product-specific risk models (no placeholders).",
+      "expected": "Risk assessment exceeds structural thresholds and contains required headers."
+    },
+    {
+      "id": "CRA-ANNEX-VII-SUPPORT",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/annex-vii/support_period.md",
+      "min_bytes": 120,
+      "require_headers": ["# Support Period", "## End of Support"],
+      "description": "Support period rationale missing or incomplete.",
+      "remediation": "Declare a concrete product support period and rationale in docs/annex-vii/support_period.md.",
+      "expected": "Support period document present with End of Support section."
+    },
+    {
+      "id": "CRA-ANNEX-VII-MANUAL",
+      "severity": "medium",
+      "type": "POLICY_VIOLATION",
+      "check": "annex_file",
+      "path": "docs/annex-vii/user_manual_security.md",
+      "min_bytes": 150,
+      "require_headers": ["# User Manual — Security", "## Secure Configuration", "## Product Disposal"],
+      "description": "Security-relevant user manual sections missing.",
+      "remediation": "Add Secure Configuration and Product Disposal guidance.",
+      "expected": "User manual security sections present."
+    },
+    {
+      "id": "CRA-ANTI-PLACEHOLDER",
+      "severity": "critical",
+      "type": "POLICY_VIOLATION",
+      "check": "anti_placeholder",
+      "paths": [
+        "docs/annex-vii/risk_assessment.md",
+        "docs/annex-vii/support_period.md",
+        "docs/annex-vii/user_manual_security.md"
+      ],
+      "description": "Annex VII drafts contain placeholder / boilerplate text.",
+      "remediation": "Replace TODO / lorem ipsum / [insert ...] placeholders with real product content.",
+      "expected": "No placeholder patterns in Annex VII drafts."
+    },
+    {
+      "id": "CRA-DEP-AXIOS-PIN",
+      "severity": "critical",
+      "type": "SYS_TRACE_VIOLATION",
+      "check": "npm_dep_ban",
+      "package": "axios",
+      "banned_versions": ["1.6.0", "^1.6.0", "~1.6.0"],
+      "description": "Vulnerable axios@1.6.0 pin detected in package.json.",
+      "remediation": "Upgrade axios to a patched release (>=1.8.4 recommended) and refresh the lockfile.",
+      "expected": "Dependency tree free of listed unmitigated axios pins."
+    }
+  ]
+}

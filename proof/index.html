@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CyberReady — Proof</title>
+  <style>
+    :root { color-scheme: light dark; font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center;
+      background: linear-gradient(160deg,#0f1117,#1a2233); color:#e8eaed; }
+    main { width:min(640px,92vw); padding:2rem; border:1px solid #2a3142; border-radius:12px; background:#161a24; }
+    h1 { margin:0 0 0.25rem; font-size:1.35rem; }
+    .subtitle { color:#9aa3b2; margin-bottom:1.5rem; }
+    .status { padding:0.75rem 1rem; border-radius:8px; margin-bottom:1.25rem; font-weight:600; }
+    .status.ok { background:#12351f; color:#6ee7a0; border:1px solid #1f6f43; }
+    .status.warn { background:#3a2a12; color:#fbbf24; border:1px solid #92400e; }
+    dl { display:grid; grid-template-columns:7rem 1fr; gap:0.5rem 1rem; margin:0; }
+    dt { color:#9aa3b2; }
+    dd { margin:0; word-break:break-all; font-family:ui-monospace,Menlo,monospace; font-size:0.85rem; }
+    footer { margin-top:1.5rem; color:#9aa3b2; font-size:0.85rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Evidence proof</h1>
+    <p class="subtitle">HPURL fragment: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code></p>
+    <div id="status" class="status warn">Open with a fragment, e.g. #?h=abc&amp;p=def&amp;s=ghi</div>
+    <dl id="fields"></dl>
+    <footer>Client-side only. Not a certification. Coreward aliases: run/capsule/vows.</footer>
+  </main>
+  <script>
+    function parseHashParams() {
+      const hash = location.hash || "";
+      let q = "";
+      if (hash.startsWith("#?")) q = hash.slice(2);
+      else if (hash.startsWith("#")) q = hash.slice(1);
+      if (!q) return null;
+      if (q.startsWith("?")) q = q.slice(1);
+      const params = new URLSearchParams(q);
+      const h = params.get("h") || params.get("capsule") || params.get("bundle");
+      const p = params.get("p") || params.get("run") || params.get("ref") || params.get("pointer");
+      const s = params.get("s") || params.get("vows") || params.get("$");
+      if (!h && !p && !s) return null;
+      return { h, p, s, space: params.get("space") || undefined };
+    }
+    const data = parseHashParams();
+    const status = document.getElementById("status");
+    const dl = document.getElementById("fields");
+    if (!data) {
+      status.textContent = "No receipt in link — append #?h=…&p=…&s=…";
+    } else {
+      status.className = "status ok";
+      status.textContent = "Params loaded (client-side only)";
+      for (const [label, value] of [["Hash (h)", data.h], ["Pointer (p)", data.p], ["Signature (s)", data.s], ["Space", data.space]]) {
+        if (!value) continue;
+        const dt = document.createElement("dt"); dt.textContent = label;
+        const dd = document.createElement("dd"); dd.textContent = value;
+        dl.appendChild(dt); dl.appendChild(dd);
+      }
+    }
+  </script>
+</body>
+</html>

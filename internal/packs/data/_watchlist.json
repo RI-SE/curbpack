@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "updated": "2026-08-07",
+  "note": "Informational only — watchlist entries do not fail validate. Refresh via packs update or air-gap import.",
+  "entries": [
+    {
+      "id": "WL-AXIOS-1.6",
+      "ecosystem": "npm",
+      "package": "axios",
+      "versions": ["1.6.0"],
+      "reason": "Known critical CVEs in 1.6.0 line; prefer >=1.8.4",
+      "refs": ["https://github.com/advisories"]
+    },
+    {
+      "id": "WL-LOG4J-2.14",
+      "ecosystem": "maven",
+      "package": "org.apache.logging.log4j:log4j-core",
+      "versions": ["2.14.0", "2.14.1"],
+      "reason": "Historical Log4Shell class of issues — verify mitigation if present",
+      "refs": []
+    }
+  ]
+}
