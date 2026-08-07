@@ -1,72 +1,92 @@
 # CyberReady+
 
-Standalone Go CLI that prepares **supplier readiness evidence** for human review (EU CRA Annex VII drafts, medtech lifecycle docs, SBOM summaries, buyer one-pager).
+Regulation-agnostic **evidence CLI**. Packs encode CRA, sector standards, NIS2-style baselines, or your house rules — the binary does not know any industry.
 
-It does **not** certify conformity, issue CE marks, or replace a notified body.
+CyberReady prepares review packs for **humans**. It does **not** certify conformity, issue CE marks, or replace a notified body / auditor.
 
 ## Why
 
-- One binary, offline demo, no SaaS, no Coreward required
-- Regulation packs are **embedded JSON** (edit data, not Go)
-- `prepare-release` → open HTML/Markdown in any editor
-- Optional Git Notes attest + HPURL proof page
-- Optional Unix socket for Coreward soft-bridge (`CYBERREADY_SOCK`)
+- One lean Go binary (stdlib-only), offline, no SaaS, no Coreward required
+- Policy change = pack JSON (or air-gap `packs import`), not a Go fork
+- Daily loop: `cyberready check` → gate cache + Action Report
+- Release boundary: CycloneDX 1.5 SBOM, pending OpenVEX, reproducible attest, HPURL verify
 
 ## Install
 
 ```bash
-# Local (this workspace)
-go build -o bin/cyberready ./cmd/cyberready
-
-# Or from GitHub once pushed
 git clone https://github.com/afelin/cyberready.git
 cd cyberready
 go build -o bin/cyberready ./cmd/cyberready
-```
-
-### Push to GitHub
-
-Empty public repo: https://github.com/afelin/cyberready
-
-From this directory (outside restricted agent sandboxes):
-
-```bash
-git add -A
-git commit -m "feat: CyberReady+ standalone CLI (P0–P2)"
-git remote add origin https://github.com/afelin/cyberready.git
-git branch -M main
-git push -u origin main
 ```
 
 ## Quick start (offline)
 
 ```bash
 cd /path/to/your/product/repo   # must be a git repo
-cyberready init --medtech
-cyberready packs list
-cyberready prepare-release
+
+# Pack-first init (compose regimes)
+./bin/cyberready init --packs cra-baseline
+# or house-only:
+./bin/cyberready init --packs house-policy --hooks
+# or stack (CRA + medtech overlay):
+./bin/cyberready init --packs cra-baseline,medtech-iec62304
+
+./bin/cyberready check          # validate + thermometer + cache + Action Report
+./bin/cyberready check --diff   # skip rules whose paths are untouched by git diff
+./bin/cyberready prepare-release
 open review-pack/buyer-onepager.html
-cyberready validate
 ```
 
-Edit `docs/annex-vii/*.md` (and `docs/medtech/*` if enabled), remove placeholders, then re-validate.
+Deprecated: `init --medtech` still works as an alias for `--packs cra-baseline,medtech-iec62304`.
+
+Edit only the files your active packs reference (e.g. `docs/annex-vii/*.md` or `SECURITY.md`), remove placeholders, then re-run `check`.
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `init` | `.cyberready.json`, stubs, `proof/index.html` |
-| `validate` | Pack gates → GateFailure JSON + semantic markdown |
-| `prepare-release` | `review-pack/` three-layer reports + buyer HTML |
-| `packs list\|update\|import` | Embedded packs; update/import stubs |
+| `init --packs a,b [--hooks]` | `.cyberready.json`, pack-path stubs, optional pre-commit → `check` |
+| `check [--diff] [--json]` | Daily muscle memory: validate + cache + Action Report |
+| `validate [--delta]` | Pack gates → GateFailure JSON + semantic markdown |
+| `prepare-release` | `review-pack/` + CycloneDX/VEX under `.github/cyberready/evidence/` |
+| `packs list\|update\|import` | Embedded packs; update/import helpers |
 | `ask [file] [--propose]` | Explain GateFailure JSON (propose-only) |
-| `attest` | Git Notes Merkle capsule; SSH-agent best-effort |
+| `attest` | Reproducible Git Notes capsule; binds SBOM/VEX digests |
 | `view` | Show capsule for HEAD |
-| `sock` | `validate_delta` Unix server for Coreward |
+| `sock` | Optional `validate_delta` Unix server for Coreward |
+
+## Config
+
+`.cyberready.json`:
+
+```json
+{
+  "packs": ["cra-baseline", "house-policy"],
+  "hooks": true,
+  "claim": "Prepares evidence for human review — not a conformity assessment."
+}
+```
+
+## Packs
+
+Embedded examples (equal citizens):
+
+| Pack | Intent |
+|------|--------|
+| `cra-baseline` | EU CRA Annex VII–style evidence gates |
+| `medtech-iec62304` | IEC 62304–inspired lifecycle docs |
+| `house-policy` | Internal: `SECURITY.md`, `security.txt`, banned deps, secret forbids |
+
+Write your own: [docs/write-your-own-pack.md](docs/write-your-own-pack.md).
+
+## Evidence
+
+- **CycloneDX 1.5** JSON from `package-lock.json` / `pnpm-lock.yaml` / `package.json`
+- **Pending OpenVEX** drafts from gate findings (status `draft_pending_attest`)
+- **Attest** hashes `commit|parent|sbom|vex` — no wall-clock in the state hash
+- **HPURL** `proof/index.html` verifies `h=` against `.github/cyberready/evidence/hpurl-pointer.json` client-side
 
 ## HPURL
-
-Static page: `proof/index.html`
 
 Fragment contract:
 
@@ -74,26 +94,11 @@ Fragment contract:
 #?h=<state_hash>&p=<commit_or_pointer>&s=<signature_or_token>
 ```
 
-Coreward-compatible aliases: `run`, `capsule`, `vows`, optional `space`.
-
-## Packs update / air-gap
-
-See [docs/packs-update.md](docs/packs-update.md).
-
-## Coreward (optional)
-
-```bash
-export CYBERREADY_SOCK=/tmp/cyberready.sock
-cyberready sock --path "$CYBERREADY_SOCK"
-```
-
-Protocol: [docs/coreward-bridge.md](docs/coreward-bridge.md). Missing sock ⇒ fail-open `not_installed`.
-
-Coreward repo bridge: `vibe-engine-os/src/release-gate/cyberready-bridge.ts` now performs real `validate_delta` IPC (still fail-open). Commit that change in the Coreward repo separately when convenient.
+Optional Coreward aliases: `run`, `capsule`, `vows`.
 
 ## Claim safety
 
-CyberReady **prepares evidence for human review**. Do not market gate pass as certification.
+Do not market gate pass as certification, CE marking, or notified-body approval.
 
 ## License
 

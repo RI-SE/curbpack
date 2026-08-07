@@ -1,20 +1,21 @@
 # Packs update channel & watchlist refresh
 
-Embedded packs (`cra-baseline`, `medtech-iec62304`) ship inside the binary. Pack rule changes should prefer **JSON data PRs**, not binary releases.
+Embedded packs (`cra-baseline`, `medtech-iec62304`, `house-policy`) ship inside the binary. Pack rule changes should prefer **JSON data PRs**, not binary releases.
 
 ## Offline / air-gap
 
 ```bash
 # Export-like layout (or copy from this repo's packs/ directory)
-mkdir -p /media/usb/cyberready-packs/cra-baseline
+mkdir -p /media/usb/cyberready-packs/{cra-baseline,medtech-iec62304,house-policy}
 cp packs/cra-baseline/pack.json /media/usb/cyberready-packs/cra-baseline/
 cp packs/medtech-iec62304/pack.json /media/usb/cyberready-packs/medtech-iec62304/
+cp packs/house-policy/pack.json /media/usb/cyberready-packs/house-policy/
 cp packs/_watchlist.json /media/usb/cyberready-packs/
 
 # On the air-gapped machine
 cyberready packs import /media/usb/cyberready-packs
 export CYBERREADY_PACKS_DIR="$PWD/.github/cyberready/packs"
-cyberready validate
+cyberready check
 ```
 
 `CYBERREADY_PACKS_DIR` overrides embedded JSON when files are present.

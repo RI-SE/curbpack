@@ -52,6 +52,7 @@ CyberReady embeds packs in the binary. To refresh without a new binary:
   2. Or set CYBERREADY_PACKS_DIR to a directory containing:
        cra-baseline/pack.json
        medtech-iec62304/pack.json
+       house-policy/pack.json
        _watchlist.json
 
   3. Optional online channel (when available):

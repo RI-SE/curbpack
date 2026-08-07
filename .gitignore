@@ -4,6 +4,7 @@
 *.exe
 .DS_Store
 .github/cyberready/cache/
+.github/cyberready/evidence/
 /review-pack/
 .tools/
 *.sock

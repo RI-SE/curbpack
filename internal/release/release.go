@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/afelin/cyberready/internal/config"
 	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/sbom"
 	"github.com/afelin/cyberready/internal/tty"
 	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/cyberready/internal/vex"
 )
 
 // Options for prepare-release.
@@ -65,27 +67,28 @@ func Prepare(opts Options) error {
 		return err
 	}
 
-	// SBOM summary (best-effort from lockfile)
+	// SBOM summary + CycloneDX 1.5 (best-effort from lockfile)
+	evidenceDir := filepath.Join(root, ".github", "cyberready", "evidence")
+	_ = os.MkdirAll(evidenceDir, 0o755)
 	sbomSummary, sbomErr := sbom.FromLockfiles(root)
 	sbomPath := filepath.Join(out, "04-sbom-summary.json")
 	if sbomErr != nil {
 		_ = os.WriteFile(sbomPath, []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"), 0o644)
 	} else {
+		cdxPath := filepath.Join(evidenceDir, "sbom.cdx.json")
+		if _, written, err := sbom.WriteCycloneDX(root, cdxPath); err == nil {
+			sbomSummary.CycloneDXPath = written
+			sbomSummary.Format = "CycloneDX-1.5"
+			_ = copyFile(written, filepath.Join(out, "04-sbom.cdx.json"))
+		}
 		b, _ := json.MarshalIndent(sbomSummary, "", "  ")
 		_ = os.WriteFile(sbomPath, append(b, '\n'), 0o644)
 	}
 
-	// VEX draft (pending attest)
-	vex := map[string]any{
-		"status":           "draft_pending_attest",
-		"schema":           "openvex-stub",
-		"generated_at":     time.Now().UTC().Format(time.RFC3339),
-		"note":             "VEX statements remain draft until cyberready attest binds them to a commit via Git Notes.",
-		"product":          filepath.Base(root),
-		"vulnerability_ids": []string{},
-	}
-	vb, _ := json.MarshalIndent(vex, "", "  ")
-	_ = os.WriteFile(filepath.Join(out, "05-vex-draft.json"), append(vb, '\n'), 0o644)
+	// Pending OpenVEX from gate failures; bind digests at attest time
+	vexDoc := vex.FromGateFailures(filepath.Base(root), res.Payload)
+	vexPath, _ := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
+	_ = copyFile(vexPath, filepath.Join(out, "05-vex-draft.json"))
 
 	// Buyer one-pager HTML
 	htmlDoc := buyerOnePager(root, res)
@@ -115,66 +118,31 @@ func jsonString(s string) string {
 	return string(b)
 }
 
-func ensureWitnessTemplates(root string) error {
-	files := map[string]string{
-		"docs/annex-vii/risk_assessment.md": `# Risk Assessment
-
-## Product Overview
-
-Describe the product, intended use, and operating environment.
-
-## Identified Risks
-
-| Risk ID | Description | Severity | Mitigation |
-|---------|-------------|----------|------------|
-| R-001   |             |          |            |
-
-## Residual Risk Statement
-
-State residual risk after mitigations.
-`,
-		"docs/annex-vii/support_period.md": `# Support Period
-
-## End of Support
-
-Declare the date or duration of security update support.
-
-## Rationale
-
-Explain how the support period was chosen.
-`,
-		"docs/annex-vii/user_manual_security.md": `# User Manual — Security
-
-## Secure Configuration
-
-Document default-secure settings and hardening steps.
-
-## Product Disposal
-
-Explain secure decommissioning and data wiping.
-`,
-		"docs/medtech/software_safety_class.md": `# Software Safety Class
-
-## Classification Rationale
-
-State IEC 62304 Class A/B/C and why.
-`,
-		"docs/medtech/soup_list.md": `# SOUP List
-
-## Items
-
-| Component | Version | Manufacturer | Residual Risk |
-|-----------|---------|--------------|---------------|
-|           |         |              |               |
-`,
-		"docs/medtech/problem_resolution.md": `# Problem Resolution
-
-## Process
-
-Describe intake, triage, fix, verification, and release of corrections.
-`,
+func copyFile(src, dst string) error {
+	if src == "" {
+		return nil
 	}
-	for rel, content := range files {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0o644)
+}
+
+func ensureWitnessTemplates(root string) error {
+	ids, err := config.ResolvePackIDs(root, nil)
+	if err != nil {
+		ids = []string{"cra-baseline"}
+	}
+	paths, err := packs.ScaffoldPaths(ids)
+	if err != nil || len(paths) == 0 {
+		paths = []string{
+			"docs/annex-vii/risk_assessment.md",
+			"docs/annex-vii/support_period.md",
+			"docs/annex-vii/user_manual_security.md",
+		}
+	}
+	for _, rel := range paths {
 		path := filepath.Join(root, rel)
 		if _, err := os.Stat(path); err == nil {
 			continue
@@ -182,7 +150,7 @@ Describe intake, triage, fix, verification, and release of corrections.
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(packs.DefaultScaffoldBody(rel)), 0o644); err != nil {
 			return err
 		}
 	}
@@ -280,7 +248,7 @@ func buyerOnePager(root string, res validate.Result) string {
 		html.EscapeString(res.Payload.Timestamp), html.EscapeString(res.Payload.PackID))
 }
 
-// ProofPageHTML returns static HPURL viewer (h/p/s fragment contract + Coreward aliases).
+// ProofPageHTML returns static HPURL viewer with client-side hash verification.
 func ProofPageHTML() string {
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -299,23 +267,28 @@ func ProofPageHTML() string {
     .status.ok { background:#12351f; color:#6ee7a0; border:1px solid #1f6f43; }
     .status.warn { background:#3a2a12; color:#fbbf24; border:1px solid #92400e; }
     .status.err { background:#3b1212; color:#fca5a5; border:1px solid #991b1b; }
-    dl { display:grid; grid-template-columns:7rem 1fr; gap:0.5rem 1rem; margin:0; }
+    dl { display:grid; grid-template-columns:8.5rem 1fr; gap:0.5rem 1rem; margin:0; }
     dt { color:#9aa3b2; }
     dd { margin:0; word-break:break-all; font-family:ui-monospace,Menlo,monospace; font-size:0.85rem; }
     footer { margin-top:1.5rem; color:#9aa3b2; font-size:0.85rem; }
     code { font-size:0.8rem; }
+    input { width:100%; box-sizing:border-box; margin:0.35rem 0 0.75rem; padding:0.5rem 0.65rem;
+      border-radius:6px; border:1px solid #2a3142; background:#0f1117; color:#e8eaed; font-family:ui-monospace,Menlo,monospace; }
+    button { padding:0.45rem 0.85rem; border-radius:6px; border:1px solid #3a4660; background:#243049; color:#e8eaed; cursor:pointer; }
   </style>
 </head>
 <body>
   <main>
     <h1>Evidence proof</h1>
-    <p class="subtitle">HPURL fragment params stay in the browser hash — they are not sent as a page request path.</p>
+    <p class="subtitle">HPURL fragment stays in the browser hash. Verify <code>h=</code> against the local evidence pointer digest (client-side only).</p>
     <div id="status" class="status warn">Waiting for fragment parameters…</div>
     <dl id="fields"></dl>
+    <label for="expected">Expected state_hash (from <code>.github/cyberready/evidence/hpurl-pointer.json</code>)</label>
+    <input id="expected" placeholder="Paste state_hash to verify…" autocomplete="off" />
+    <button type="button" id="verifyBtn">Verify hash</button>
     <footer>
-      CyberReady contract: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
-      Coreward-compatible aliases also accepted: <code>run</code>, <code>capsule</code>, <code>vows</code> (and optional <code>space</code>).
-      Not a certification.
+      Contract: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
+      Aliases: <code>run</code>, <code>capsule</code>, <code>vows</code>. Local pointer: <code>.github/cyberready/evidence/</code>. Not a certification.
     </footer>
   </main>
   <script>
@@ -331,12 +304,7 @@ func ProofPageHTML() string {
       const p = params.get("p") || params.get("run") || params.get("ref") || params.get("pointer");
       const s = params.get("s") || params.get("vows") || params.get("$");
       if (!h && !p && !s) return null;
-      return {
-        h, p, s,
-        space: params.get("space") || undefined,
-        repo: params.get("repo") || undefined,
-        pub: params.get("@") || undefined,
-      };
+      return { h, p, s, space: params.get("space") || undefined, repo: params.get("repo") || undefined };
     }
     function setStatus(kind, message) {
       const el = document.getElementById("status");
@@ -346,19 +314,23 @@ func ProofPageHTML() string {
     function renderFields(data) {
       const dl = document.getElementById("fields");
       dl.innerHTML = "";
-      const rows = [
-        ["Hash (h)", data.h],
-        ["Pointer (p)", data.p],
-        ["Signature (s)", data.s],
-        ["Space", data.space],
-        ["Repo", data.repo],
-        ["Public key", data.pub ? "(present)" : undefined],
-      ];
-      for (const [label, value] of rows) {
+      for (const [label, value] of [["Hash (h)", data.h], ["Pointer (p)", data.p], ["Signature (s)", data.s], ["Space", data.space], ["Repo", data.repo]]) {
         if (!value) continue;
         const dt = document.createElement("dt"); dt.textContent = label;
         const dd = document.createElement("dd"); dd.textContent = value;
         dl.appendChild(dt); dl.appendChild(dd);
+      }
+    }
+    function normalizeHex(v) { return (v || "").trim().toLowerCase(); }
+    function verify() {
+      const data = parseHashParams();
+      const expected = normalizeHex(document.getElementById("expected").value);
+      if (!data || !data.h) { setStatus("warn", "No h= hash in fragment"); return; }
+      if (!expected) { setStatus("warn", "Paste expected state_hash from hpurl-pointer.json"); return; }
+      if (normalizeHex(data.h) === expected) {
+        setStatus("ok", "Hash match — fragment h= equals local evidence pointer (client-side verify)");
+      } else {
+        setStatus("err", "Hash mismatch — fragment does not match pasted state_hash");
       }
     }
     const data = parseHashParams();
@@ -366,8 +338,17 @@ func ProofPageHTML() string {
       setStatus("warn", "No receipt in link — append #?h=…&p=…&s=…");
     } else {
       renderFields(data);
-      setStatus("ok", "Params loaded (client-side only)");
+      setStatus("ok", "Params loaded — paste state_hash and Verify");
+      if (data.h) document.getElementById("expected").placeholder = "Expected: " + data.h.slice(0, 16) + "…";
     }
+    document.getElementById("verifyBtn").addEventListener("click", verify);
+    // Best-effort: fetch local pointer when served from same origin (file:// may block)
+    fetch("../.github/cyberready/evidence/hpurl-pointer.json").then(r => r.ok ? r.json() : null).then(j => {
+      if (j && j.state_hash) {
+        document.getElementById("expected").value = j.state_hash;
+        verify();
+      }
+    }).catch(() => {});
   </script>
 </body>
 </html>
