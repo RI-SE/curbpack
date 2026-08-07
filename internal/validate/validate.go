@@ -102,7 +102,8 @@ func Run(opts Options) (Result, error) {
 	score := tty.ScoreFromFailures(len(failures))
 	parent, _ := gitutil.HeadSHA(root)
 	payload := ir.GateFailurePayload{
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		SchemaVersion: ir.SchemaVersion,
+		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
 			StateVersionToken:       "v3.33-OCC",
@@ -170,6 +171,11 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 			},
 		}}
 	}
+}
+
+// SafeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
+func SafeJoin(root, rel string) (string, string, error) {
+	return safeJoin(root, rel)
 }
 
 // safeJoin resolves a relative path under root; refuses abs + traversal (fail closed).

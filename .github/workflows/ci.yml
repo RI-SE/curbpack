@@ -7,21 +7,30 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.22.x"
       - name: Go test
         run: go test ./...
+      - name: Fuzz (short)
+        run: |
+          go test ./internal/validate/ -fuzz=FuzzSafeJoin -fuzztime=5s
+          go test ./internal/validate/ -fuzz=FuzzTextForbidRegex -fuzztime=5s
+          go test ./internal/attest/ -fuzz=FuzzParseHPURLFragment -fuzztime=5s
 
   smoke:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.22.x"
       - name: Build
@@ -136,8 +145,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.22.x"
       - name: Build
@@ -185,3 +194,5 @@ jobs:
           code=$?
           set -e
           test "$code" -ne 0
+      - name: Chaos dead-ends
+        run: ./scripts/chaos-deadends.sh "$GITHUB_WORKSPACE/bin/cyberready"

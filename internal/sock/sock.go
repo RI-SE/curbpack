@@ -72,16 +72,21 @@ func handle(conn net.Conn, repoRoot string) {
 		return
 	}
 
+	_ = enc.Encode(ValidateDelta(repoRoot))
+}
+
+// ValidateDelta runs Quiet validate and returns the sock Response shape.
+// gate_id set must match check/validate --json (differential contract).
+func ValidateDelta(repoRoot string) Response {
 	res, err := validate.Run(validate.Options{RepoRoot: repoRoot, Quiet: true})
 	if err != nil {
-		_ = enc.Encode(Response{OK: false, Reason: "unavailable", Detail: err.Error()})
-		return
+		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
 	}
 	p := res.Payload
-	_ = enc.Encode(Response{
+	return Response{
 		OK:       res.Passed,
 		Failures: p.Failures,
 		Payload:  &p,
 		Detail:   fmt.Sprintf("score=%d failures=%d", res.Score, len(p.Failures)),
-	})
+	}
 }

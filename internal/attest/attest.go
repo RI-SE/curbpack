@@ -164,6 +164,46 @@ func truncate(s string, n int) string {
 	return s[:n]
 }
 
+// HPURLParts are the fragment query fields used by proof/index.html verify.
+type HPURLParts struct {
+	StateHash string
+	Commit    string
+	SigHint   string
+}
+
+// ParseHPURLFragment parses "#?h=&p=&s=" (also accepts without leading #).
+// Returns ok=false on malformed input; never panics.
+func ParseHPURLFragment(frag string) (HPURLParts, bool) {
+	frag = strings.TrimSpace(frag)
+	if frag == "" {
+		return HPURLParts{}, false
+	}
+	frag = strings.TrimPrefix(frag, "#")
+	frag = strings.TrimPrefix(frag, "?")
+	parts := HPURLParts{}
+	for _, kv := range strings.Split(frag, "&") {
+		if kv == "" {
+			continue
+		}
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "h":
+			parts.StateHash = v
+		case "p":
+			parts.Commit = v
+		case "s":
+			parts.SigHint = v
+		}
+	}
+	if parts.StateHash == "" {
+		return parts, false
+	}
+	return parts, true
+}
+
 // trySSHAgentSign best-effort signs via ssh-keygen -Y and SSH_AUTH_SOCK.
 func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok bool) {
 	if strings.TrimSpace(os.Getenv("SSH_AUTH_SOCK")) == "" {

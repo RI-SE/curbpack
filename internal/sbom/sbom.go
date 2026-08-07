@@ -78,6 +78,15 @@ func FromLockfiles(root string) (Summary, error) {
 	}, nil
 }
 
+// FileDigest returns sha256 hex of path contents, or "" if unreadable.
+func FileDigest(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
+
 // WriteCycloneDX writes a CycloneDX 1.5 JSON BOM under outPath (or default evidence path).
 func WriteCycloneDX(root, outPath string) (Document, string, error) {
 	pkgs, source, err := CollectPackages(root)

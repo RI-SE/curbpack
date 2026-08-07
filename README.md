@@ -15,7 +15,11 @@ curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/inst
 cyberready doctor && cyberready demo
 ```
 
-`demo` runs in a **temp git sandbox** — it never mutates your product working tree.
+`install.sh` downloads a release binary and **verifies `checksums.txt` (sha256, fail-closed)**.
+
+Supported: **macOS** and **Linux** (amd64/arm64). **Windows is unsupported** (no release binaries; sock bridge is Unix-domain only).
+
+`demo` runs in a **temp git sandbox** — it never mutates your product working tree (`--out` refuses paths under your cwd).
 
 From source (maintainers):
 

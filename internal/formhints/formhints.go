@@ -175,6 +175,21 @@ func safeRelPath(p string) (string, error) {
 	if clean == ".." || strings.HasPrefix(clean, "../") {
 		return "", fmt.Errorf("refusing path traversal in remediation: %s", p)
 	}
+	// Mirror validate.SafeJoin: refuse escape after Abs when joined under a fake root.
+	root := string(os.PathSeparator) + "repo"
+	full := filepath.Join(root, filepath.FromSlash(clean))
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	fullAbs, err := filepath.Abs(full)
+	if err != nil {
+		return "", err
+	}
+	sep := string(os.PathSeparator)
+	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
+		return "", fmt.Errorf("refusing path escape in remediation: %s", p)
+	}
 	return clean, nil
 }
 

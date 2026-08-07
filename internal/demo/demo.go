@@ -29,6 +29,30 @@ type Options struct {
 	Version string
 }
 
+// JailOutDir refuses --out that equals or sits under the caller's cwd (product tree).
+func JailOutDir(out, cwd string) error {
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return nil
+	}
+	outAbs, err := filepath.Abs(out)
+	if err != nil {
+		return err
+	}
+	cwdAbs, err := filepath.Abs(cwd)
+	if err != nil {
+		return err
+	}
+	if outAbs == cwdAbs {
+		return fmt.Errorf("demo --out refuses product cwd (use a temp path or omit --out)")
+	}
+	sep := string(os.PathSeparator)
+	if strings.HasPrefix(outAbs, cwdAbs+sep) {
+		return fmt.Errorf("demo --out refuses paths under product cwd (data-loss jail)")
+	}
+	return nil
+}
+
 // Run copies the embedded demo-app into a temp git repo, inits house-policy, checks, prepares release.
 // It never writes into the caller's product working tree.
 func Run(opts Options) error {
@@ -36,8 +60,15 @@ func Run(opts Options) error {
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Isolated temp git repo — your product cwd is not modified."))
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err := JailOutDir(opts.OutDir, cwd); err != nil {
+		return err
+	}
+
 	dir := opts.OutDir
-	var err error
 	if dir == "" {
 		dir, err = os.MkdirTemp("", "cyberready-demo-*")
 		if err != nil {

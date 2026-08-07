@@ -45,8 +45,12 @@ type Failure struct {
 	Remediation          Remediation    `json:"remediation"`
 }
 
+// SchemaVersion is the GateFailure JSON IR version for agents (stable contract).
+const SchemaVersion = "1"
+
 // GateFailurePayload is the dual-rep IR: JSON for machines, Markdown for agents.
 type GateFailurePayload struct {
+	SchemaVersion      string             `json:"schema_version"`
 	Timestamp          string             `json:"timestamp"`
 	ConcurrencyControl ConcurrencyControl `json:"concurrency_control"`
 	StatechartContext  StatechartContext  `json:"statechart_context"`
