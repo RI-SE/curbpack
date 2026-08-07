@@ -18,12 +18,24 @@ inputs:
     description: 'If true, pass --diff to cyberready check'
     required: false
     default: 'false'
+  heal:
+    description: 'If true, run check --heal (missing stubs only; never attest)'
+    required: false
+    default: 'true'
   prepare_release:
     description: 'If true, also run prepare-release and upload buyer-onepager'
     required: false
     default: 'true'
   comment_pr:
-    description: 'If true and event is pull_request, post/update a claim-safe sticky comment'
+    description: 'Legacy: if false, never comment. Prefer comment_on.'
+    required: false
+    default: 'true'
+  comment_on:
+    description: 'PR comment policy: red (default — only when gates fail or first sticky), always, never'
+    required: false
+    default: 'red'
+  upload_sarif:
+    description: 'If true, write and upload SARIF for gate failures (annotations in PR UI)'
     required: false
     default: 'true'
   working_directory:
@@ -74,7 +86,20 @@ runs:
             echo "Could not resolve release binary ${ASSET}. Build cyberready or set inputs.version." >&2
             exit 1
           fi
+          # Network install: retry once (max 2 attempts) — never retry gate logic.
+          set +e
           curl -fsSL -o "$DEST" "$URL"
+          code=$?
+          if [ "$code" -ne 0 ]; then
+            sleep 2
+            curl -fsSL -o "$DEST" "$URL"
+            code=$?
+          fi
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "download failed for ${ASSET}" >&2
+            exit 1
+          fi
           chmod +x "$DEST"
           echo "source=release" >> "$GITHUB_OUTPUT"
         fi
@@ -94,6 +119,9 @@ runs:
         if [ "${{ inputs.diff }}" = "true" ]; then
           EXTRA+=(--diff)
         fi
+        if [ "${{ inputs.heal }}" = "true" ]; then
+          EXTRA+=(--heal)
+        fi
         set +e
         "$BIN" check "${EXTRA[@]}" | tee /tmp/cyberready-check.txt
         CODE=${PIPESTATUS[0]}
@@ -106,6 +134,83 @@ runs:
         mkdir -p .github/cyberready/cache
         cp /tmp/cyberready-check.txt .github/cyberready/cache/ci-check-log.txt || true
         exit 0
+
+    - name: Annotations + SARIF
+      if: inputs.upload_sarif == 'true'
+      id: sarif
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        python3 <<'PY'
+        import json, os, pathlib
+        root = pathlib.Path(".")
+        fail_path = root / ".github/cyberready/cache/latest_failure.json"
+        out = root / ".github/cyberready/cache/cyberready.sarif"
+        results = []
+        if fail_path.exists():
+            try:
+                data = json.loads(fail_path.read_text())
+            except Exception:
+                data = {}
+            for f in data.get("failures") or []:
+                gate = f.get("gate_id") or "GATE"
+                sev = (f.get("severity") or "warning").lower()
+                level = "error" if sev in ("high", "critical") else "warning"
+                desc = f.get("sanitized_description") or gate
+                file = (f.get("ast_coordinates") or {}).get("target_file") or ""
+                # GitHub Actions annotation (PR Files / Checks UI)
+                if file:
+                    print(f"::{level} file={file},line=1::{gate}: {desc}")
+                else:
+                    print(f"::{level}::{gate}: {desc}")
+                loc = {
+                    "physicalLocation": {
+                        "artifactLocation": {"uri": file or "UNKNOWN"},
+                        "region": {"startLine": 1},
+                    }
+                } if file else None
+                result = {
+                    "ruleId": gate,
+                    "level": level,
+                    "message": {"text": desc},
+                }
+                if loc:
+                    result["locations"] = [loc]
+                results.append(result)
+        sarif = {
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+                "tool": {
+                    "driver": {
+                        "name": "cyberready",
+                        "informationUri": "https://github.com/afelin/cyberready",
+                        "rules": [],
+                    }
+                },
+                "results": results,
+                "invocations": [{
+                    "executionSuccessful": True,
+                    "properties": {
+                        "note": "Prepares evidence for human review — not a conformity assessment.",
+                    },
+                }],
+            }],
+        }
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(sarif, indent=2) + "\n")
+        print(f"wrote {out} results={len(results)}")
+        PY
+        echo "path=.github/cyberready/cache/cyberready.sarif" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF
+      if: inputs.upload_sarif == 'true' && steps.run.outputs.passed != 'true'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+      with:
+        sarif_file: ${{ inputs.working_directory }}/.github/cyberready/cache/cyberready.sarif
+        category: cyberready
 
     - name: Prepare release artifacts
       if: inputs.prepare_release == 'true'
@@ -144,11 +249,14 @@ runs:
           ${{ inputs.working_directory }}/review-pack/buyer-onepager.html
           ${{ inputs.working_directory }}/.github/cyberready/cache/latest_action_report.md
           ${{ inputs.working_directory }}/.github/cyberready/cache/latest_failure.json
+          ${{ inputs.working_directory }}/.github/cyberready/cache/cyberready.sarif
         if-no-files-found: warn
 
-    - name: PR sticky comment
-      if: inputs.comment_pr == 'true' && github.event_name == 'pull_request'
+    - name: PR sticky comment (red-only by default)
+      if: inputs.comment_pr == 'true' && inputs.comment_on != 'never' && github.event_name == 'pull_request'
       uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+      env:
+        COMMENT_ON: ${{ inputs.comment_on }}
       with:
         script: |
           const fs = require('fs');
@@ -156,7 +264,48 @@ runs:
           const root = '${{ inputs.working_directory }}';
           const score = '${{ steps.score.outputs.score }}' || '0';
           const passed = '${{ steps.run.outputs.passed }}' === 'true';
+          const mode = (process.env.COMMENT_ON || 'red').toLowerCase();
           const claim = 'Prepares evidence for human review — not a conformity assessment or certification.';
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            per_page: 100,
+          });
+          const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- cyberready-sticky -->'));
+
+          // Red-only: comment on fail, or first-run sticky; skip noisy green updates.
+          if (mode === 'red' && passed && existing) {
+            core.info('green + sticky exists — skip comment (zero babysitting)');
+            return;
+          }
+          if (mode === 'red' && passed && !existing) {
+            // First-run green: minimal check-mark, no essay.
+            const body = [
+              '<!-- cyberready-sticky -->',
+              '## CyberReady check',
+              '',
+              `✅ Gates green — readiness **${score}%**`,
+              '',
+              `> ${claim}`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+            return;
+          }
+          if (mode !== 'always' && mode !== 'red') {
+            core.info(`unknown comment_on=${mode} — skipping`);
+            return;
+          }
+          if (passed && mode === 'always') {
+            // always + green: still keep it short
+          }
+
           let report = '';
           const reportPath = path.join(root, '.github/cyberready/cache/latest_action_report.md');
           if (fs.existsSync(reportPath)) {
@@ -180,20 +329,13 @@ runs:
             '',
             fails.length ? '### Top findings\n' + fails.join('\n') : '### Top findings\n_No gate failures in cache._',
             '',
-            report ? '<details><summary>Action Report</summary>\n\n' + report + '\n</details>' : '',
+            !passed && report ? '<details><summary>Action Report</summary>\n\n' + report + '\n</details>' : '',
             '',
             `> ${claim}`,
             '',
-            '_Artifact:_ `cyberready-buyer-onepager` (when prepare-release ran).',
+            '_Ask:_ `cyberready ask .github/cyberready/cache/latest_failure.json --propose`',
           ].filter(Boolean).join('\n');
 
-          const { data: comments } = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            per_page: 100,
-          });
-          const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- cyberready-sticky -->'));
           if (existing) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,

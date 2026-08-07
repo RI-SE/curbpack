@@ -33,6 +33,7 @@ jobs:
         uses: ./
         with:
           version: latest
+          heal: "true"
           prepare_release: "true"
-          comment_pr: "true"
-          # DevUX PR will switch default to red-only; for now comment always.
+          comment_on: red
+          upload_sarif: "true"

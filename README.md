@@ -64,24 +64,38 @@ Deprecated: `init --medtech` → `--packs cra-baseline,medtech-iec62304`.
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: afelin/cyberready@main   # pin a tag in production
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: afelin/cyberready@v0.3.0
         with:
-          comment_pr: "true"
+          heal: "true"
+          comment_on: red   # red-only sticky; green = silent after first check-mark
+          upload_sarif: "true"
 ```
 
-Posts a sticky PR comment (thermometer + top fails + disclaimer) and uploads `buyer-onepager` when present. Example: [examples/workflows/cyberready-check.yml](examples/workflows/cyberready-check.yml).
+Posts a sticky PR comment **only on red** (or first-run green check-mark), emits annotations + SARIF, and uploads `buyer-onepager` when present. Example: [examples/workflows/cyberready-check.yml](examples/workflows/cyberready-check.yml).
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
+| *(bare)* `cyberready` | `doctor` if uninitialized, else `check` |
 | `doctor` | PATH / git / packs / hooks confidence |
 | `demo [--keep]` | Safe sandbox: temp git + house-policy check + one-pager |
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| **0** | Pass / success |
+| **1** | Gate failures (or check/validate error) |
+| **2** | Usage / environment (unknown command, not a git repo when required) |
+
+`--json` GateFailure payloads include `schema_version` for agents.
 | `init [--packs a,b] [--hooks] [--skill] [--ide]` | Config, stubs, hook, Cursor skill, VS Code tasks |
 | `check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]` | Daily loop; `--heal` = hints→stub→re-check (max 3) |
 | `validate [--delta]` | Pack gates → GateFailure JSON + semantic markdown |

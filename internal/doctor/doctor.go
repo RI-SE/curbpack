@@ -74,7 +74,11 @@ func Run(opts Options) error {
 				} else if !strings.Contains(string(b), "cyberready") {
 					printCheck("pre-commit hook", false, "present but does not call cyberready")
 				} else {
-					printCheck("pre-commit hook", true, "cyberready check")
+					detail := "cyberready check"
+					if strings.Contains(string(b), "--heal") {
+						detail = "cyberready check --heal"
+					}
+					printCheck("pre-commit hook", true, detail)
 				}
 			} else {
 				printCheck("pre-commit hook", true, "not enabled (optional: init --hooks)")
@@ -105,7 +109,16 @@ func Run(opts Options) error {
 
 	fmt.Println()
 	if ok {
-		fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — try: cyberready demo"))
+		if inRepo {
+			cfg, _ := config.Load(root)
+			if cfg == nil {
+				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready init --packs house-policy"))
+			} else {
+				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready check  (or bare: cyberready)"))
+			}
+		} else {
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — try: cyberready demo"))
+		}
 	} else {
 		fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] Doctor found issues — fix above, then re-run"))
 	}
