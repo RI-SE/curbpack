@@ -10,18 +10,23 @@ import (
 	"github.com/afelin/cyberready/internal/ask"
 	"github.com/afelin/cyberready/internal/attest"
 	"github.com/afelin/cyberready/internal/config"
+	"github.com/afelin/cyberready/internal/demo"
+	"github.com/afelin/cyberready/internal/doctor"
+	"github.com/afelin/cyberready/internal/formhints"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/packscmd"
 	"github.com/afelin/cyberready/internal/release"
 	"github.com/afelin/cyberready/internal/sbom"
+	"github.com/afelin/cyberready/internal/skilldata"
 	"github.com/afelin/cyberready/internal/sock"
 	"github.com/afelin/cyberready/internal/tty"
 	"github.com/afelin/cyberready/internal/validate"
 	"github.com/afelin/cyberready/internal/vex"
 )
 
-const version = "0.2.0"
+// version is set at release build via -ldflags "-X main.version=..."
+var version = "0.3.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -55,6 +60,10 @@ func main() {
 		err = attest.View("")
 	case "sock":
 		err = cmdSock(args)
+	case "doctor":
+		err = doctor.Run(doctor.Options{Version: version})
+	case "demo":
+		err = cmdDemo(args)
 	default:
 		fmt.Printf("%s\n\n", tty.C(tty.Red, "Unknown command '"+cmd+"'"))
 		usage()
@@ -71,8 +80,12 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Regulation-agnostic evidence CLI — packs encode policy. Not a certification product.\n\n")
 	fmt.Fprintf(os.Stderr, "Usage: cyberready <command> [args]\n\n")
 	fmt.Fprintf(os.Stderr, "Commands:\n")
-	fmt.Fprintf(os.Stderr, "  init [--packs a,b] [--hooks]  Scaffold config + pack-path stubs (+ optional pre-commit)\n")
-	fmt.Fprintf(os.Stderr, "  check [--diff] [--json]       Daily loop: validate + thermometer + cache + Action Report\n")
+	fmt.Fprintf(os.Stderr, "  doctor                         Environment confidence (PATH, packs, hooks)\n")
+	fmt.Fprintf(os.Stderr, "  demo [--keep]                  Safe sandbox: temp git + house-policy check\n")
+	fmt.Fprintf(os.Stderr, "  init [--packs a,b] [--hooks] [--skill] [--ide]\n")
+	fmt.Fprintf(os.Stderr, "                                 Scaffold config + stubs (+ hook/skill/tasks)\n")
+	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub]\n")
+	fmt.Fprintf(os.Stderr, "                                 Daily loop: validate + thermometer + cache\n")
 	fmt.Fprintf(os.Stderr, "  validate [--delta] [--json]   Pack gates (JSON + markdown dual-rep)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release               Write review-pack/ + CycloneDX/VEX evidence\n")
 	fmt.Fprintf(os.Stderr, "  packs list|update|import      Embedded packs; update/import helpers\n")
@@ -80,6 +93,23 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  attest                        Reproducible Git Notes capsule + HPURL pointer\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show Git Notes capsule for HEAD\n")
 	fmt.Fprintf(os.Stderr, "  sock                          Unix socket validate_delta server (optional Coreward)\n")
+}
+
+func cmdDemo(args []string) error {
+	keep := false
+	out := ""
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--keep":
+			keep = true
+		case "--out":
+			if i+1 < len(args) {
+				out = args[i+1]
+				i++
+			}
+		}
+	}
+	return demo.Run(demo.Options{KeepDir: keep, OutDir: out, Version: version})
 }
 
 func cmdInit(args []string) error {
@@ -95,8 +125,11 @@ func cmdInit(args []string) error {
 	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
 
-	packList := []string{"cra-baseline"}
+	// Cold-start default: house-policy (lowest regulatory anxiety) unless --packs set.
+	packList := []string{"house-policy"}
 	hooks := false
+	skill := false
+	ide := false
 	explicitPacks := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -109,7 +142,6 @@ func cmdInit(args []string) error {
 			packList = config.ParsePacksFlag(strings.TrimPrefix(a, "--packs="))
 			explicitPacks = true
 		case a == "--medtech":
-			// Deprecated alias → packs list including medtech overlay
 			if !explicitPacks {
 				packList = []string{"cra-baseline", "medtech-iec62304"}
 			} else {
@@ -118,13 +150,16 @@ func cmdInit(args []string) error {
 			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --packs cra-baseline,medtech-iec62304"))
 		case a == "--hooks":
 			hooks = true
+		case a == "--skill":
+			skill = true
+		case a == "--ide":
+			ide = true
 		}
 	}
 	if len(packList) == 0 {
-		packList = []string{"cra-baseline"}
+		packList = []string{"house-policy"}
 	}
 
-	// Validate pack ids early
 	for _, id := range packList {
 		if _, err := packs.LoadPack(id); err != nil {
 			return err
@@ -147,7 +182,6 @@ func cmdInit(args []string) error {
 		tty.PrintStatus(".cyberready.json", true, "exists (not overwritten)")
 	}
 
-	// Scaffold only files referenced by active pack rules (aligned annex paths)
 	paths, err := packs.ScaffoldPaths(packList)
 	if err != nil {
 		return err
@@ -179,7 +213,24 @@ func cmdInit(args []string) error {
 		tty.PrintStatus("pre-commit hook", true, "cyberready check")
 	}
 
+	if skill {
+		dest, err := skilldata.Install(root)
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("Cursor skill", true, dest)
+	}
+
+	if ide {
+		dest, err := skilldata.WriteIDETasks(root)
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("VS Code tasks", true, dest)
+	}
+
 	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Init complete. Next: cyberready check"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 	return nil
 }
 
@@ -214,7 +265,6 @@ exit 0
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		return err
 	}
-	// Reflect hooks=true in config if file exists
 	if cfg, err := config.Load(root); err == nil && cfg != nil {
 		cfg.Hooks = true
 		_ = config.Write(root, *cfg)
@@ -222,7 +272,7 @@ exit 0
 	return nil
 }
 
-func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly bool) {
+func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub bool) {
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--pack":
@@ -239,9 +289,14 @@ func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly bool
 			jsonOut = true
 		case "--diff", "--delta":
 			diffOnly = true
+		case "--form-hints":
+			formHints = true
+		case "--apply-stub":
+			applyStub = true
+			formHints = true // apply implies show hints
 		}
 	}
-	return packIDs, jsonOut, diffOnly
+	return packIDs, jsonOut, diffOnly, formHints, applyStub
 }
 
 func cmdCheck(args []string) error {
@@ -250,7 +305,7 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return fmt.Errorf("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly := parseValidateFlags(args)
+	packIDs, jsonOut, diffOnly, wantHints, applyStub := parseValidateFlags(args)
 	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly})
 	if err != nil {
 		return err
@@ -269,6 +324,20 @@ func cmdCheck(args []string) error {
 		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "cache: .github/cyberready/cache/latest_*.json"))
 	}
+
+	if wantHints && len(res.Payload.Failures) > 0 {
+		hints := formhints.ForFailures(res.Payload.Failures)
+		if applyStub {
+			hints, err = formhints.ApplyStubs(root, hints)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Println()
+		fmt.Print(formhints.Format(hints))
+	}
+
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 	if !res.Passed {
 		os.Exit(1)
 	}
@@ -281,7 +350,7 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return fmt.Errorf("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly := parseValidateFlags(args)
+	packIDs, jsonOut, diffOnly, _, _ := parseValidateFlags(args)
 	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly})
 	if err != nil {
 		return err
@@ -387,7 +456,6 @@ func cmdAttest(args []string) error {
 	if !allowDirty && gitutil.IsDirty(root) {
 		return fmt.Errorf("OCC conflict: working directory has uncommitted files")
 	}
-	// Regenerate evidence digests as part of attest (after dirty gate)
 	_, _, _ = sbom.WriteCycloneDX(root, "")
 	if res, err := validate.Run(validate.Options{RepoRoot: root, Quiet: true}); err == nil {
 		doc := vex.FromGateFailures(filepath.Base(root), res.Payload)

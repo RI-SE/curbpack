@@ -1,0 +1,24 @@
+# Example: drop into a product repo as .github/workflows/cyberready.yml
+name: cyberready-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CyberReady check
+        # Pin to a release tag in real adopters, e.g. afelin/cyberready@v0.3.0
+        uses: afelin/cyberready@main
+        with:
+          version: latest
+          prepare_release: "true"
+          comment_pr: "true"
