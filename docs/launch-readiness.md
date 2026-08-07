@@ -53,7 +53,9 @@ Record the pass date in the pinned Discussions welcome thread.
 
 ## Discussions welcome (claim-safe)
 
-Pin a welcome Discussion (Show and tell / General) with:
+Pinned welcome (created): https://github.com/afelin/cyberready/discussions/4
+
+If not pinned in the UI yet: Discussions → Welcome → Pin. Body must keep:
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
