@@ -24,9 +24,10 @@ const Claim = "Prepares evidence for human review — not a conformity assessmen
 
 // Options for the sandbox demo.
 type Options struct {
-	KeepDir bool   // keep temp dir (print path)
-	OutDir  string // optional fixed output dir (still never mutates caller product cwd)
-	Version string
+	KeepDir     bool   // keep temp dir (print path)
+	OutDir      string // optional fixed output dir (still never mutates caller product cwd)
+	Version     string
+	OpenBrowser bool // opt-in: open buyer-onepager in the system browser (default false)
 }
 
 // JailOutDir refuses --out that equals or sits under the caller's cwd (product tree).
@@ -144,8 +145,11 @@ func Run(opts Options) error {
 	}
 	onepager := filepath.Join(dir, "review-pack", "buyer-onepager.html")
 	tty.PrintStatus("buyer-onepager", true, onepager)
-
-	openOnePager(onepager)
+	if opts.OpenBrowser {
+		openOnePager(onepager)
+	} else {
+		fmt.Printf("%s\n", tty.C(tty.Dim, "one-pager path printed above — open with: cyberready demo --open (or open the file)"))
+	}
 
 	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Demo green in sandbox"))
 	if opts.KeepDir || opts.OutDir != "" {

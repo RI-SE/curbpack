@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afelin/cyberready/internal/release"
 )
@@ -36,6 +37,34 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 	}
 	if !strings.Contains(string(html), "not a certificate") {
 		t.Fatal("buyer html must disclaim certification")
+	}
+}
+
+func TestPrepareSkipsUnchangedOnePager(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(dir, "README.md"), "# x\n")
+	out := filepath.Join(dir, "review-pack")
+	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, OutDir: out}); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(out, "buyer-onepager.html")
+	info1, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, OutDir: out}); err != nil {
+		t.Fatal(err)
+	}
+	info2, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info1.ModTime().Equal(info2.ModTime()) {
+		t.Fatal("unchanged one-pager should not be rewritten (mtime should match)")
 	}
 }
 

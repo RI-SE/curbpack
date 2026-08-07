@@ -1,6 +1,13 @@
 # Coreward soft-bridge protocol
 
-CyberReady listens on a Unix domain socket (`CYBERREADY_SOCK`, default `/tmp/cyberready.sock`).
+CyberReady listens on a Unix domain socket. Path resolution:
+
+1. `CYBERREADY_SOCK` if set
+2. `$XDG_RUNTIME_DIR/cyberready/cyberready.sock`
+3. `$TMPDIR/cyberready-$UID/cyberready.sock`
+4. `.cyberready/cyberready.sock` under the working directory
+
+The socket file is mode `0600`. World-writable parent directories are refused. There is **no** default shared `/tmp/cyberready.sock`.
 
 ## Request
 
@@ -34,5 +41,7 @@ On success with zero failures: `"ok": true`.
 ## Run
 
 ```bash
-cyberready sock --path /tmp/cyberready.sock --repo /path/to/product
+cyberready sock --repo /path/to/product
+# or explicit private path:
+cyberready sock --path "$XDG_RUNTIME_DIR/cyberready/cyberready.sock" --repo /path/to/product
 ```

@@ -20,16 +20,20 @@ cyberready check
 
 `CYBERREADY_PACKS_DIR` overrides embedded JSON when files are present.
 
-## Online stub
+## Online update (pin required)
+
+Network pack updates are **off by default**. Both URL and sha256 pin are required:
 
 ```bash
 cyberready packs update
 # prints instructions when CYBERREADY_PACKS_URL is unset
 
-CYBERREADY_PACKS_URL=https://example.invalid/packs/bundle.json cyberready packs update
+CYBERREADY_PACKS_URL=https://example.invalid/packs/bundle.json \
+CYBERREADY_PACKS_SHA256=<64-hex-chars> \
+cyberready packs update
 ```
 
-No signed CDN is required for P0/P1. Watchlist entries are **informational only** and never fail `validate`.
+Without `CYBERREADY_PACKS_SHA256`, the CLI refuses the fetch (fail closed). Watchlist entries are **informational only** and never fail `validate`.
 
 ## Watchlist refresh
 

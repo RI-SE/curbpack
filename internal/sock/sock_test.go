@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,6 +55,50 @@ func TestValidateDeltaIPC(t *testing.T) {
 	}
 	if resp.Reason == "not_installed" {
 		t.Fatal("server should not return not_installed")
+	}
+
+	info, err := os.Stat(sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("sock should be private (0600), got %04o", info.Mode().Perm())
+	}
+}
+
+func TestDefaultPathNotSharedTmp(t *testing.T) {
+	t.Setenv("CYBERREADY_SOCK", "")
+	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+	p, err := sock.DefaultPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == "/tmp/cyberready.sock" {
+		t.Fatal("must not default to shared /tmp/cyberready.sock")
+	}
+	if !strings.Contains(p, "cyberready") {
+		t.Fatalf("unexpected path %q", p)
+	}
+}
+
+func TestRefuseWorldWritableParent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix sock")
+	}
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "world")
+	if err := os.MkdirAll(bad, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	// Some filesystems ignore sticky/umask — force world-writable.
+	_ = os.Chmod(bad, 0o777)
+	sockPath := filepath.Join(bad, "cyberready.sock")
+	err := sock.Serve(sockPath, dir)
+	if err == nil {
+		t.Fatal("expected refuse world-writable parent")
+	}
+	if !strings.Contains(err.Error(), "world-writable") {
+		t.Fatalf("want world-writable error, got %v", err)
 	}
 }
 

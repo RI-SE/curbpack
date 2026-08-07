@@ -9,7 +9,9 @@ Cold-start default pack: **`house-policy`** (lowest regulatory anxiety). CRA / m
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cyberready doctor
-cyberready demo                          # safe sandbox — never mutates your product
+cyberready demo                          # safe sandbox — prints one-pager path (no browser)
+# cyberready demo --open                 # opt-in: open the one-pager in the OS browser
+# Sample without re-demo: site/samples/onepager.html
 # or on your repo:
 cd my-product && cyberready init --packs house-policy --hooks --skill --ide
 cyberready check
@@ -29,8 +31,8 @@ Agent rule: after doc/dep edits, re-run `check`. Never claim certification.
 
 ## Decision-maker
 
-1. Open `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact).
+1. Open the supplier’s `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact), or the committed sample at `site/samples/onepager.html`.
 2. Or open the HPURL proof page (`proof/index.html`) with a hash fragment.
-3. One screen: thermometer, top gaps, disclaimer — no account required.
+3. One screen: thermometer, top gaps, disclaimer — no account required. Not a certificate.
 
 > Prepares evidence for human review — not a conformity assessment.

@@ -1,6 +1,7 @@
 package packs_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/afelin/cyberready/internal/packs"
@@ -35,5 +36,23 @@ func TestScaffoldPaths(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("missing annex path in %v", paths)
+	}
+}
+
+func TestValidateRegexPatternLimits(t *testing.T) {
+	if err := packs.ValidateRegexPattern(`secret`); err != nil {
+		t.Fatal(err)
+	}
+	long := strings.Repeat("a", packs.MaxRegexPatternLen+1)
+	if err := packs.ValidateRegexPattern(long); err == nil {
+		t.Fatal("expected length reject")
+	}
+	// Deep nesting of groups with quantifiers
+	nested := "((((a*)*)*)*)*"
+	if err := packs.ValidateRegexPattern(nested); err == nil {
+		t.Fatal("expected nested quantifier reject")
+	}
+	if err := packs.ValidateRegexPattern(`(`); err == nil {
+		t.Fatal("expected invalid compile")
 	}
 }

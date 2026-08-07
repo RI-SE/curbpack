@@ -85,10 +85,16 @@ func Run(opts Options) (Capsule, error) {
 	userTouch := "not-verified"
 	sshSig := ""
 
-	if sig, who, ok := trySSHAgentSign(root, stateHash); ok {
+	if sig, who, verified := trySSHAgentSign(root, stateHash); verified {
 		sshSig = sig
 		signer = who
-		userTouch = "ssh-agent-best-effort"
+		userTouch = "ssh-agent-signed"
+	} else if who != "" {
+		// Agent present but sign failed — honest unsigned, never fake "verified".
+		signer = "local-unsigned"
+		userTouch = "not-verified"
+		sshSig = ""
+		tty.PrintStatus("SSH-agent attest", false, "agent present but sign failed — unsigned capsule (not verified)")
 	} else {
 		tty.PrintStatus("SSH-agent attest", false, "no agent / sign failed — writing unsigned capsule")
 	}
@@ -204,8 +210,10 @@ func ParseHPURLFragment(frag string) (HPURLParts, bool) {
 	return parts, true
 }
 
-// trySSHAgentSign best-effort signs via ssh-keygen -Y and SSH_AUTH_SOCK.
-func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok bool) {
+// trySSHAgentSign signs via ssh-keygen -Y when SSH_AUTH_SOCK is set.
+// Returns verified=true only when a real signature file was produced.
+// agent-bind placeholders are never treated as verified signatures.
+func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, verified bool) {
 	if strings.TrimSpace(os.Getenv("SSH_AUTH_SOCK")) == "" {
 		return "", "", false
 	}
@@ -224,7 +232,7 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok 
 
 	tmpIn, err := os.CreateTemp("", "cyberready-attest-*.txt")
 	if err != nil {
-		return "", "", false
+		return "", who, false
 	}
 	defer os.Remove(tmpIn.Name())
 	_, _ = tmpIn.WriteString(payload)
@@ -236,15 +244,18 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok 
 	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", tmpIn.Name(), "-n", "cyberready@attest", tmpIn.Name())
 	cmd.Dir = repoRoot
 	if err := cmd.Run(); err != nil {
-		sum := sha256.Sum256([]byte(first + "|" + payload))
-		return fmt.Sprintf("agent-bind:%x", sum[:8]), who, true
+		return "", who, false
 	}
 	sigBytes, err := os.ReadFile(tmpOut)
-	if err != nil {
-		sum := sha256.Sum256([]byte(first + "|" + payload))
-		return fmt.Sprintf("agent-bind:%x", sum[:8]), who, true
+	if err != nil || len(sigBytes) == 0 {
+		return "", who, false
 	}
-	return strings.TrimSpace(string(sigBytes)), who, true
+	sigStr := strings.TrimSpace(string(sigBytes))
+	if strings.HasPrefix(sigStr, "agent-bind:") {
+		// Never treat synthetic bind tokens as cryptographic signatures.
+		return "", who, false
+	}
+	return sigStr, who, true
 }
 
 // View prints the capsule for HEAD.
@@ -271,6 +282,11 @@ func View(repoRoot string) error {
 	fmt.Println("====================================================================")
 	fmt.Printf("  Signer:          %s\n", cap.Signer)
 	fmt.Printf("  User presence:   %s\n", cap.UserTouch)
+	if cap.UserTouch != "ssh-agent-signed" || cap.SSHSignature == "" || strings.HasPrefix(cap.SSHSignature, "agent-bind:") {
+		fmt.Printf("  Signature:       %s\n", tty.C(tty.Yellow, "UNSIGNED — not cryptographically verified"))
+	} else {
+		fmt.Printf("  Signature:       verified (ssh-agent)\n")
+	}
 	fmt.Printf("  Commit bound:    %s\n", cap.CommitSHA)
 	fmt.Printf("  State hash:      %s\n", cap.StateHash)
 	fmt.Printf("  Parent hash:     %s\n", cap.ParentStateHash)
@@ -279,6 +295,6 @@ func View(repoRoot string) error {
 		fmt.Printf("  Evidence:        %v\n", cap.Evidence)
 	}
 	fmt.Println("====================================================================")
-	fmt.Println(tty.C(tty.Dim, "Not a certification — evidence for human review."))
+	fmt.Println(tty.C(tty.Dim, "Not a certification — evidence for human review. Unsigned ≠ verified."))
 	return nil
 }

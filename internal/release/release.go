@@ -1,6 +1,7 @@
 package release
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -90,10 +91,17 @@ func Prepare(opts Options) error {
 	vexPath, _ := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
 	_ = copyFile(vexPath, filepath.Join(out, "05-vex-draft.json"))
 
-	// Buyer one-pager HTML
+	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
 	htmlDoc := buyerOnePager(root, res)
-	if err := os.WriteFile(filepath.Join(out, "buyer-onepager.html"), []byte(htmlDoc), 0o644); err != nil {
+	onepagerPath := filepath.Join(out, "buyer-onepager.html")
+	wrote, err := writeOnePagerIfChanged(onepagerPath, htmlDoc)
+	if err != nil {
 		return err
+	}
+	if wrote {
+		tty.PrintStatus("Buyer one-pager", true, onepagerPath)
+	} else {
+		tty.PrintStatus("Buyer one-pager", true, onepagerPath+" (unchanged)")
 	}
 
 	// Copy / refresh proof page into review-pack and repo proof/
@@ -103,7 +111,6 @@ func Prepare(opts Options) error {
 	_ = os.WriteFile(filepath.Join(out, "proof-index.html"), []byte(proof), 0o644)
 
 	tty.PrintStatus("Review pack", true, out)
-	tty.PrintStatus("Buyer one-pager", true, filepath.Join(out, "buyer-onepager.html"))
 	if !res.Passed {
 		fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] Gates still failing — pack is for remediation review, not release sign-off."))
 	}
@@ -116,6 +123,63 @@ func Prepare(opts Options) error {
 func jsonString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
+}
+
+// writeIfChanged writes data only when missing or content hash differs. Returns true if written.
+func writeIfChanged(path string, data []byte) (bool, error) {
+	want := sha256.Sum256(data)
+	if prev, err := os.ReadFile(path); err == nil {
+		got := sha256.Sum256(prev)
+		if want == got {
+			return false, nil
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, err
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// writeOnePagerIfChanged skips rewrite when the stable gate fingerprint matches
+// (ignores wall-clock "Generated" timestamps so prepare-release is quiet).
+func writeOnePagerIfChanged(path, htmlDoc string) (bool, error) {
+	fp := onePagerFingerprint(htmlDoc)
+	if prev, err := os.ReadFile(path); err == nil {
+		if onePagerFingerprint(string(prev)) == fp && fp != "" {
+			return false, nil
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, err
+	}
+	if err := os.WriteFile(path, []byte(htmlDoc), 0o644); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func onePagerFingerprint(htmlDoc string) string {
+	// Prefer explicit marker; fall back to hashing body without Generated line.
+	const marker = "<!-- cyberready-onepager-fp:"
+	if i := strings.Index(htmlDoc, marker); i >= 0 {
+		rest := htmlDoc[i+len(marker):]
+		if j := strings.Index(rest, " -->"); j >= 0 {
+			return rest[:j]
+		}
+	}
+	var b strings.Builder
+	for _, line := range strings.Split(htmlDoc, "\n") {
+		if strings.Contains(line, "Generated ") {
+			continue
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	sum := sha256.Sum256([]byte(b.String()))
+	return fmt.Sprintf("%x", sum[:16])
 }
 
 func copyFile(src, dst string) error {
@@ -189,38 +253,43 @@ func buyerOnePager(root string, res validate.Result) string {
 		statusClass = "ok"
 	}
 	var rows strings.Builder
+	var fpSeed strings.Builder
+	fmt.Fprintf(&fpSeed, "%d|%s|%s", res.Score, res.Payload.PackID, status)
 	for _, f := range res.Payload.Failures {
 		fmt.Fprintf(&rows, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n",
 			html.EscapeString(f.GateID), html.EscapeString(f.Severity), html.EscapeString(f.SanitizedDescription))
+		fmt.Fprintf(&fpSeed, "|%s:%s", f.GateID, f.Severity)
 	}
 	if len(res.Payload.Failures) == 0 {
 		rows.WriteString(`<tr><td colspan="3">No open gate findings.</td></tr>`)
 	}
+	fpSum := sha256.Sum256([]byte(fpSeed.String()))
+	fp := fmt.Sprintf("%x", fpSum[:16])
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CyberReady — Buyer One-Pager</title>
+  <!-- cyberready-onepager-fp:%s -->
   <style>
-    :root { --ink:#1a1f2e; --muted:#5c6578; --line:#d8dde8; --ok:#1f6f43; --warn:#92400e; }
-    body { margin:0; font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif; color:var(--ink);
-      background: linear-gradient(165deg, #eef2f7 0%%, #f7f3ec 45%%, #e8eef5 100%%); min-height:100vh; }
+    :root { --ink:#1a1f2e; --muted:#5c6578; --line:#d8dde8; --ok:#1f6f43; --warn:#92400e; --steel:#3d4f66; }
+    body { margin:0; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color:var(--ink);
+      background: linear-gradient(165deg, #e8edf3 0%%, #f2f5f8 50%%, #dde5ee 100%%); min-height:100vh; }
     main { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
-    .brand { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; letter-spacing:0.04em;
-      font-weight:700; font-size:0.85rem; text-transform:uppercase; color:#2a5080; }
-    h1 { font-size:2rem; line-height:1.2; margin:0.4rem 0 0.5rem; font-weight:600; }
+    .brand { letter-spacing:0.06em; font-weight:700; font-size:0.9rem; text-transform:uppercase; color:var(--steel); }
+    h1 { font-family: "Source Serif 4", Georgia, serif; font-size:2rem; line-height:1.2; margin:0.4rem 0 0.5rem; font-weight:600; }
     .lede { color:var(--muted); font-size:1.05rem; margin-bottom:1.5rem; }
-    .status { display:inline-block; padding:0.4rem 0.75rem; border-radius:4px; font-family:"IBM Plex Sans",sans-serif; font-size:0.9rem; font-weight:600; }
+    .status { display:inline-block; padding:0.4rem 0.75rem; border-radius:4px; font-size:0.9rem; font-weight:600; }
     .status.ok { background:#e6f6ec; color:var(--ok); border:1px solid #b7e0c5; }
     .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
-    .meter { margin:1.25rem 0; font-family:"IBM Plex Sans",sans-serif; }
+    .meter { margin:1.25rem 0; }
     .bar { height:12px; background:#dde3ee; border-radius:2px; overflow:hidden; margin-top:0.35rem; }
-    .bar > span { display:block; height:100%%; background:#2a5080; width:%d%%; }
-    table { width:100%%; border-collapse:collapse; margin-top:1.25rem; font-family:"IBM Plex Sans",sans-serif; font-size:0.9rem; }
+    .bar > span { display:block; height:100%%; background:var(--steel); width:%d%%; }
+    table { width:100%%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
     th, td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
     th { color:var(--muted); font-weight:600; }
-    footer { margin-top:2rem; font-size:0.85rem; color:var(--muted); font-family:"IBM Plex Sans",sans-serif; }
+    footer { margin-top:2rem; font-size:0.85rem; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -244,7 +313,7 @@ func buyerOnePager(root string, res validate.Result) string {
   </main>
 </body>
 </html>
-`, res.Score, html.EscapeString(name), statusClass, html.EscapeString(status), res.Score, rows.String(),
+`, fp, res.Score, html.EscapeString(name), statusClass, html.EscapeString(status), res.Score, rows.String(),
 		html.EscapeString(res.Payload.Timestamp), html.EscapeString(res.Payload.PackID))
 }
 

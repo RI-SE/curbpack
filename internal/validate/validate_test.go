@@ -210,31 +210,16 @@ func TestPathTraversalFailClosed(t *testing.T) {
 }
 
 func TestBadRegexFailNoPanic(t *testing.T) {
-	dir := t.TempDir()
-	initGit(t, dir)
 	wd, _ := os.Getwd()
 	root := filepath.Clean(filepath.Join(wd, "../.."))
 	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
-
-	res, err := validate.Run(validate.Options{
-		RepoRoot: dir,
-		PackIDs:  []string{"bad-regex"},
-		Quiet:    true,
-	})
-	if err != nil {
-		t.Fatal(err)
+	// Invalid pack regex is rejected at load (ReDoS / schema fail-closed).
+	_, err := packs.LoadPack("bad-regex")
+	if err == nil {
+		t.Fatal("expected pack load to reject invalid pattern")
 	}
-	if res.Passed {
-		t.Fatal("expected invalid pattern failure")
-	}
-	found := false
-	for _, f := range res.Payload.Failures {
-		if f.GateID == "ADV-BAD-RE" && strings.Contains(f.SanitizedDescription, "invalid pattern") {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected ADV-BAD-RE invalid pattern, got %#v", res.Payload.Failures)
+	if !strings.Contains(err.Error(), "invalid pattern") && !strings.Contains(err.Error(), "pattern") {
+		t.Fatalf("expected pattern error, got %v", err)
 	}
 }
 

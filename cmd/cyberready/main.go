@@ -130,7 +130,9 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  (no command)                  doctor if uninitialized, else check\n\n")
 	fmt.Fprintf(os.Stderr, "Commands:\n")
 	fmt.Fprintf(os.Stderr, "  doctor                         Environment confidence (PATH, packs, hooks)\n")
-	fmt.Fprintf(os.Stderr, "  demo [--keep]                  Safe sandbox: temp git + house-policy check\n")
+	fmt.Fprintf(os.Stderr, "  demo [--keep] [--open] [--out DIR]\n")
+	fmt.Fprintf(os.Stderr, "                                 Safe sandbox: temp git + house-policy check\n")
+	fmt.Fprintf(os.Stderr, "                                 (prints one-pager path; --open opens browser)\n")
 	fmt.Fprintf(os.Stderr, "  init [--packs a,b] [--hooks] [--skill] [--ide]\n")
 	fmt.Fprintf(os.Stderr, "                                 Scaffold config + stubs (+ hook/skill/tasks)\n")
 	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]\n")
@@ -147,11 +149,14 @@ func usage() {
 
 func cmdDemo(args []string) error {
 	keep := false
+	openBrowser := false
 	out := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--keep":
 			keep = true
+		case "--open":
+			openBrowser = true
 		case "--out":
 			if i+1 < len(args) {
 				out = args[i+1]
@@ -159,7 +164,7 @@ func cmdDemo(args []string) error {
 			}
 		}
 	}
-	return demo.Run(demo.Options{KeepDir: keep, OutDir: out, Version: version})
+	return demo.Run(demo.Options{KeepDir: keep, OutDir: out, Version: version, OpenBrowser: openBrowser})
 }
 
 func cmdInit(args []string) error {

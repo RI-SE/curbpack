@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 //go:embed data/cra-baseline/pack.json data/medtech-iec62304/pack.json data/house-policy/pack.json data/_watchlist.json
@@ -159,8 +161,13 @@ func ValidatePack(p Pack) error {
 			if len(r.Paths) == 0 {
 				return fmt.Errorf("pack %q rule %q: paths required for %s", p.ID, r.ID, r.Check)
 			}
-			if r.Check == "text_forbid" && strings.TrimSpace(r.Pattern) == "" {
-				return fmt.Errorf("pack %q rule %q: pattern required for text_forbid", p.ID, r.ID)
+			if r.Check == "text_forbid" {
+				if strings.TrimSpace(r.Pattern) == "" {
+					return fmt.Errorf("pack %q rule %q: pattern required for text_forbid", p.ID, r.ID)
+				}
+				if err := ValidateRegexPattern(r.Pattern); err != nil {
+					return fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
+				}
 			}
 		case "npm_dep_ban", "manifest_dep_ban":
 			if strings.TrimSpace(r.Package) == "" {
@@ -172,6 +179,74 @@ func ValidatePack(p Pack) error {
 		}
 	}
 	return nil
+}
+
+// MaxRegexPatternLen is the hard cap on pack text_forbid patterns (ReDoS hygiene).
+const MaxRegexPatternLen = 256
+
+// MaxRegexMatchBytes caps file bytes scanned by text_forbid Match.
+const MaxRegexMatchBytes = 2 << 20 // 2 MiB
+
+// ValidateRegexPattern rejects oversized / pathological patterns at pack load.
+func ValidateRegexPattern(pattern string) error {
+	if utf8.RuneCountInString(pattern) > MaxRegexPatternLen {
+		return fmt.Errorf("pattern exceeds %d runes (ReDoS limit)", MaxRegexPatternLen)
+	}
+	if nested := countNestedQuantifiers(pattern); nested > 3 {
+		return fmt.Errorf("pattern too nested (%d overlapping quantifiers; ReDoS limit)", nested)
+	}
+	if _, err := regexp.Compile(pattern); err != nil {
+		return fmt.Errorf("invalid pattern: %w", err)
+	}
+	return nil
+}
+
+// countNestedQuantifiers approximates risky *+?{n,} nesting (heuristic, fail-closed).
+func countNestedQuantifiers(pattern string) int {
+	depth := 0
+	max := 0
+	inClass := false
+	escaped := false
+	for _, r := range pattern {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if r == '\\' {
+			escaped = true
+			continue
+		}
+		if r == '[' {
+			inClass = true
+			continue
+		}
+		if r == ']' && inClass {
+			inClass = false
+			continue
+		}
+		if inClass {
+			continue
+		}
+		if r == '(' {
+			depth++
+			if depth > max {
+				max = depth
+			}
+			continue
+		}
+		if r == ')' {
+			if depth > 0 {
+				depth--
+			}
+			continue
+		}
+		if r == '*' || r == '+' || r == '?' {
+			if depth > max {
+				max = depth
+			}
+		}
+	}
+	return max
 }
 
 // LoadWatchlist returns the embedded (or overridden) watchlist.

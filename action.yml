@@ -76,14 +76,21 @@ runs:
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
           API="https://api.github.com/repos/afelin/cyberready/releases"
+          CHECKSUMS_URL=""
           if [ "$VER" = "latest" ]; then
-            URL=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API/latest" \
-              | sed -n "s/.*\"browser_download_url\": \"\\([^\"]*${ASSET}[^\"]*\\)\".*/\\1/p" | head -n1)
+            REL_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API/latest")
+            URL=$(printf '%s' "$REL_JSON" | sed -n "s/.*\"browser_download_url\": \"\\([^\"]*${ASSET}[^\"]*\\)\".*/\\1/p" | head -n1)
+            CHECKSUMS_URL=$(printf '%s' "$REL_JSON" | sed -n 's/.*"browser_download_url": "\([^"]*checksums\.txt\)".*/\1/p' | head -n1)
           else
             URL="https://github.com/afelin/cyberready/releases/download/${VER}/${ASSET}"
+            CHECKSUMS_URL="https://github.com/afelin/cyberready/releases/download/${VER}/checksums.txt"
           fi
           if [ -z "${URL:-}" ]; then
             echo "Could not resolve release binary ${ASSET}. Build cyberready or set inputs.version." >&2
+            exit 1
+          fi
+          if [ -z "${CHECKSUMS_URL:-}" ]; then
+            echo "checksums.txt URL missing — refusing download (fail closed, same as install.sh)" >&2
             exit 1
           fi
           # Network install: retry once (max 2 attempts) — never retry gate logic.
@@ -100,7 +107,30 @@ runs:
             echo "download failed for ${ASSET}" >&2
             exit 1
           fi
+          # Fail-closed sha256 verify (parity with scripts/install.sh)
+          curl -fsSL -o "${DEST}.checksums.txt" "$CHECKSUMS_URL"
+          expected=$(grep -E "[ /]${ASSET}\$" "${DEST}.checksums.txt" | head -n 1 | awk '{print $1}')
+          if [ -z "${expected:-}" ]; then
+            echo "no checksum entry for ${ASSET} in checksums.txt — refusing install" >&2
+            exit 1
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            actual=$(sha256sum "$DEST" | awk '{print $1}')
+          elif command -v shasum >/dev/null 2>&1; then
+            actual=$(shasum -a 256 "$DEST" | awk '{print $1}')
+          else
+            echo "neither sha256sum nor shasum found — refusing install" >&2
+            exit 1
+          fi
+          if [ "$actual" != "$expected" ]; then
+            echo "checksum mismatch for ${ASSET}" >&2
+            echo "  expected: ${expected}" >&2
+            echo "  actual:   ${actual}" >&2
+            exit 1
+          fi
+          echo "Checksum OK (${actual})"
           chmod +x "$DEST"
+          rm -f "${DEST}.checksums.txt"
           echo "source=release" >> "$GITHUB_OUTPUT"
         fi
         echo "path=$DEST" >> "$GITHUB_OUTPUT"
@@ -310,13 +340,21 @@ runs:
           const reportPath = path.join(root, '.github/cyberready/cache/latest_action_report.md');
           if (fs.existsSync(reportPath)) {
             report = fs.readFileSync(reportPath, 'utf8').trim();
+            // Truncate to avoid leaking large doc excerpts into PR comments; prefer annotations/SARIF.
+            const maxReport = 1200;
+            if (report.length > maxReport) {
+              report = report.slice(0, maxReport) + '\n\n_(truncated — see SARIF / annotations / latest_action_report.md)_';
+            }
           }
           let fails = [];
           const failPath = path.join(root, '.github/cyberready/cache/latest_failure.json');
           if (fs.existsSync(failPath)) {
             try {
               const j = JSON.parse(fs.readFileSync(failPath, 'utf8'));
-              fails = (j.failures || []).slice(0, 3).map(f => `- \`${f.gate_id}\` (${f.severity}): ${f.sanitized_description}`);
+              fails = (j.failures || []).slice(0, 3).map(f => {
+                const desc = String(f.sanitized_description || '').slice(0, 160);
+                return `- \`${f.gate_id}\` (${f.severity}): ${desc}`;
+              });
             } catch (_) {}
           }
           const barFilled = Math.max(0, Math.min(20, Math.floor(Number(score) / 5)));
@@ -329,7 +367,9 @@ runs:
             '',
             fails.length ? '### Top findings\n' + fails.join('\n') : '### Top findings\n_No gate failures in cache._',
             '',
-            !passed && report ? '<details><summary>Action Report</summary>\n\n' + report + '\n</details>' : '',
+            !passed && report ? '<details><summary>Action Report (truncated)</summary>\n\n' + report + '\n</details>' : '',
+            '',
+            '_Prefer PR annotations / SARIF over this comment for full detail._',
             '',
             `> ${claim}`,
             '',

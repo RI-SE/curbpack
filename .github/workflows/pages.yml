@@ -1,0 +1,60 @@
+name: github-pages
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Quarantine — refuse ops/gtm paths in site tree
+        run: |
+          set -euo pipefail
+          if find site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) | grep -q .; then
+            echo "ops/gtm/exploit paths must not ship under site/" >&2
+            find site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) >&2
+            exit 1
+          fi
+          # Same claim-safety deny/safe framing as scripts/claim-safety.sh (site HTML only)
+          DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity'
+          SAFE_RE='not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|replace a notified|notified-body approval|not a certificate'
+          python3 - "$DENY_RE" "$SAFE_RE" <<'PY'
+          import pathlib, re, sys
+          deny = re.compile(sys.argv[1], re.I)
+          safe = re.compile(sys.argv[2], re.I)
+          fail = 0
+          for p in pathlib.Path("site").rglob("*"):
+              if p.suffix.lower() not in {".html", ".md"}:
+                  continue
+              for i, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
+                  if safe.search(line):
+                      continue
+                  m = deny.search(line)
+                  if m:
+                      print(f"claim-safety site [{p}:{i}]: /{m.group(0)}/ → {line.strip()[:120]}")
+                      fail = 1
+          sys.exit(fail)
+          PY
+      - uses: actions/configure-pages@983d7736d9b0ae55b6921f5a3ddf6a0f9a8c2b9a # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0ebdac5fa7d1f7e # v4

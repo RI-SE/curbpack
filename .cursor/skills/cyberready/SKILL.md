@@ -55,3 +55,4 @@ JSON payloads include `schema_version` for agents.
 8. **On red:** run `cyberready check --heal` then `cyberready ask … --propose`; never invent certification; `--heal` never auto-attests.
 9. Remediations cache: `.github/cyberready/cache/remediations.json`.
 10. Release path: `prepare-release` then human `attest` — never auto-attest.
+11. **No auto-demo loops.** Do not re-run `cyberready demo` to "show the one-pager." Demo does **not** open a browser unless the user passes `--open`. For a sample review page, link `site/samples/onepager.html` (or the printed path from a single demo). Daily `check` never generates or opens a one-pager.
