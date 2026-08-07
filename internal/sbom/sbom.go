@@ -2,74 +2,166 @@ package sbom
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
 
-// Summary is a lightweight SBOM digest (not full CycloneDX unless expanded later).
+// Summary is a lightweight SBOM digest kept for backward compatibility.
 type Summary struct {
-	Status      string   `json:"status"`
-	Format      string   `json:"format"`
-	GeneratedAt string   `json:"generated_at"`
-	Source      string   `json:"source,omitempty"`
-	PackageCount int     `json:"package_count"`
-	Packages    []string `json:"packages,omitempty"`
-	Note        string   `json:"note"`
+	Status       string   `json:"status"`
+	Format       string   `json:"format"`
+	GeneratedAt  string   `json:"generated_at"`
+	Source       string   `json:"source,omitempty"`
+	PackageCount int      `json:"package_count"`
+	Packages     []string `json:"packages,omitempty"`
+	Note         string   `json:"note"`
+	CycloneDXPath string  `json:"cyclonedx_path,omitempty"`
 }
 
-// FromLockfiles scans npm/pnpm lockfiles if present.
+// Component is one CycloneDX component.
+type Component struct {
+	Type    string `json:"type"`
+	Name    string `json:"name"`
+	Version string `json:"version,omitempty"`
+	PURL    string `json:"purl,omitempty"`
+	BomRef  string `json:"bom-ref,omitempty"`
+}
+
+// Document is a CycloneDX 1.5 BOM (stdlib JSON subset).
+type Document struct {
+	BomFormat    string `json:"bomFormat"`
+	SpecVersion  string `json:"specVersion"`
+	SerialNumber string `json:"serialNumber,omitempty"`
+	Version      int    `json:"version"`
+	Metadata     struct {
+		Timestamp string `json:"timestamp"`
+		Tools     struct {
+			Components []Component `json:"components"`
+		} `json:"tools"`
+		Component Component `json:"component"`
+	} `json:"metadata"`
+	Components []Component `json:"components"`
+}
+
+// Package is a normalized name@version from a lockfile.
+type Package struct {
+	Name    string
+	Version string
+}
+
+// FromLockfiles scans npm/pnpm lockfiles if present (summary view).
 func FromLockfiles(root string) (Summary, error) {
+	pkgs, source, err := CollectPackages(root)
 	now := time.Now().UTC().Format(time.RFC3339)
-	base := Summary{
-		GeneratedAt: now,
-		Note:        "Draft inventory for human review. Not a signed SBOM attestation.",
+	if err != nil {
+		return Summary{}, err
 	}
+	names := make([]string, 0, len(pkgs))
+	for _, p := range pkgs {
+		names = append(names, p.Name+"@"+p.Version)
+	}
+	sort.Strings(names)
+	return Summary{
+		Status:       "ok",
+		Format:       "cyclonedx-1.5-compatible-summary",
+		GeneratedAt:  now,
+		Source:       source,
+		PackageCount: len(pkgs),
+		Packages:     truncate(names, 40),
+		Note:         "Draft inventory for human review. Not a signed SBOM attestation. See CycloneDX JSON for full BOM.",
+	}, nil
+}
 
+// WriteCycloneDX writes a CycloneDX 1.5 JSON BOM under outPath (or default evidence path).
+func WriteCycloneDX(root, outPath string) (Document, string, error) {
+	pkgs, source, err := CollectPackages(root)
+	if err != nil {
+		return Document{}, "", err
+	}
+	doc := BuildCycloneDX(root, pkgs, source)
+	if outPath == "" {
+		outPath = filepath.Join(root, ".github", "cyberready", "evidence", "sbom.cdx.json")
+	}
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return Document{}, "", err
+	}
+	b, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return Document{}, "", err
+	}
+	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
+		return Document{}, "", err
+	}
+	return doc, outPath, nil
+}
+
+// BuildCycloneDX constructs a CycloneDX 1.5 document from packages.
+// Metadata timestamp/serial are derived from package content (not wall clock) so digests are reproducible.
+func BuildCycloneDX(root string, pkgs []Package, source string) Document {
+	product := filepath.Base(root)
+	comps := make([]Component, 0, len(pkgs))
+	for _, p := range pkgs {
+		ref := "pkg:npm/" + p.Name + "@" + p.Version
+		comps = append(comps, Component{
+			Type:    "library",
+			Name:    p.Name,
+			Version: p.Version,
+			PURL:    ref,
+			BomRef:  ref,
+		})
+	}
+	sort.Slice(comps, func(i, j int) bool { return comps[i].BomRef < comps[j].BomRef })
+	var seed strings.Builder
+	seed.WriteString(product)
+	seed.WriteByte('|')
+	seed.WriteString(source)
+	for _, c := range comps {
+		seed.WriteByte('|')
+		seed.WriteString(c.BomRef)
+	}
+	sum := sha256.Sum256([]byte(seed.String()))
+	serial := fmt.Sprintf("urn:uuid:%x-%x-%x-%x-%x", sum[0:4], sum[4:6], sum[6:8], sum[8:10], sum[10:16])
+	var doc Document
+	doc.BomFormat = "CycloneDX"
+	doc.SpecVersion = "1.5"
+	doc.SerialNumber = serial
+	doc.Version = 1
+	doc.Metadata.Timestamp = "2024-01-01T00:00:00Z"
+	doc.Metadata.Tools.Components = []Component{{
+		Type:    "application",
+		Name:    "cyberready",
+		Version: "0.2.0",
+	}}
+	doc.Metadata.Component = Component{
+		Type:   "application",
+		Name:   product,
+		BomRef: "app:" + product,
+	}
+	doc.Components = comps
+	return doc
+}
+
+// CollectPackages returns normalized packages and the source lockfile name.
+func CollectPackages(root string) ([]Package, string, error) {
 	if p := filepath.Join(root, "pnpm-lock.yaml"); fileExists(p) {
-		pkgs, err := parsePnpmLock(p)
-		if err != nil {
-			return Summary{}, err
-		}
-		base.Status = "ok"
-		base.Format = "pnpm-lock-summary"
-		base.Source = "pnpm-lock.yaml"
-		base.PackageCount = len(pkgs)
-		base.Packages = truncate(pkgs, 40)
-		return base, nil
+		pkgs, err := parsePnpmLockPackages(p)
+		return pkgs, "pnpm-lock.yaml", err
 	}
-
 	if p := filepath.Join(root, "package-lock.json"); fileExists(p) {
-		pkgs, err := parseNPMLock(p)
-		if err != nil {
-			return Summary{}, err
-		}
-		base.Status = "ok"
-		base.Format = "npm-lock-summary"
-		base.Source = "package-lock.json"
-		base.PackageCount = len(pkgs)
-		base.Packages = truncate(pkgs, 40)
-		return base, nil
+		pkgs, err := parseNPMLockPackages(p)
+		return pkgs, "package-lock.json", err
 	}
-
 	if p := filepath.Join(root, "package.json"); fileExists(p) {
-		pkgs, err := parsePackageJSONDeps(p)
-		if err != nil {
-			return Summary{}, err
-		}
-		base.Status = "ok"
-		base.Format = "package-json-deps"
-		base.Source = "package.json"
-		base.PackageCount = len(pkgs)
-		base.Packages = pkgs
-		base.Note += " No lockfile found — versions may be ranges."
-		return base, nil
+		pkgs, err := parsePackageJSONPackages(p)
+		return pkgs, "package.json", err
 	}
-
-	return Summary{}, fmt.Errorf("no package-lock.json, pnpm-lock.yaml, or package.json")
+	return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, or package.json")
 }
 
 func fileExists(p string) bool {
@@ -84,7 +176,7 @@ func truncate(in []string, n int) []string {
 	return append(in[:n], fmt.Sprintf("…+%d more", len(in)-n))
 }
 
-func parsePackageJSONDeps(path string) ([]string, error) {
+func parsePackageJSONPackages(path string) ([]Package, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -96,17 +188,17 @@ func parsePackageJSONDeps(path string) ([]string, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, err
 	}
-	var out []string
+	var out []Package
 	for k, v := range m.Dependencies {
-		out = append(out, k+"@"+v)
+		out = append(out, Package{Name: k, Version: v})
 	}
 	for k, v := range m.DevDependencies {
-		out = append(out, k+"@"+v+" (dev)")
+		out = append(out, Package{Name: k, Version: v})
 	}
 	return out, nil
 }
 
-func parseNPMLock(path string) ([]string, error) {
+func parseNPMLockPackages(path string) ([]Package, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -122,7 +214,8 @@ func parseNPMLock(path string) ([]string, error) {
 	if err := json.Unmarshal(data, &lock); err != nil {
 		return nil, err
 	}
-	var out []string
+	var out []Package
+	seen := map[string]struct{}{}
 	if len(lock.Packages) > 0 {
 		for name, meta := range lock.Packages {
 			if name == "" {
@@ -132,23 +225,29 @@ func parseNPMLock(path string) ([]string, error) {
 			if strings.Contains(n, "node_modules/") {
 				continue
 			}
-			out = append(out, n+"@"+meta.Version)
+			key := n + "@" + meta.Version
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, Package{Name: n, Version: meta.Version})
 		}
 		return out, nil
 	}
 	for name, meta := range lock.Dependencies {
-		out = append(out, name+"@"+meta.Version)
+		out = append(out, Package{Name: name, Version: meta.Version})
 	}
 	return out, nil
 }
 
-func parsePnpmLock(path string) ([]string, error) {
+func parsePnpmLockPackages(path string) ([]Package, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	var out []string
+	var out []Package
+	seen := map[string]struct{}{}
 	inPackages := false
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -157,16 +256,44 @@ func parsePnpmLock(path string) ([]string, error) {
 			inPackages = true
 			continue
 		}
-		if inPackages {
-			if len(line) > 0 && line[0] != ' ' && line[0] != '\t' && !strings.HasPrefix(line, "packages") {
-				break
-			}
-			trim := strings.TrimSpace(line)
-			if strings.HasPrefix(trim, "/") && strings.HasSuffix(trim, ":") {
-				pkg := strings.TrimSuffix(trim, ":")
-				out = append(out, pkg)
-			}
+		if !inPackages {
+			continue
 		}
+		if len(line) > 0 && line[0] != ' ' && line[0] != '\t' && !strings.HasPrefix(line, "packages") {
+			break
+		}
+		trim := strings.TrimSpace(line)
+		if !strings.HasPrefix(trim, "/") || !strings.HasSuffix(trim, ":") {
+			continue
+		}
+		pkg := strings.TrimSuffix(trim, ":")
+		name, ver := splitPnpmKey(pkg)
+		if name == "" {
+			continue
+		}
+		key := name + "@" + ver
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, Package{Name: name, Version: ver})
 	}
 	return out, sc.Err()
+}
+
+func splitPnpmKey(key string) (name, version string) {
+	key = strings.TrimPrefix(key, "/")
+	// /axios@1.6.0 or /@scope/pkg@1.0.0
+	if strings.HasPrefix(key, "@") {
+		idx := strings.LastIndex(key, "@")
+		if idx <= 0 {
+			return key, ""
+		}
+		return key[:idx], key[idx+1:]
+	}
+	idx := strings.LastIndex(key, "@")
+	if idx < 0 {
+		return key, ""
+	}
+	return key[:idx], key[idx+1:]
 }

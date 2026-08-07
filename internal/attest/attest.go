@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,22 +16,37 @@ import (
 
 // Capsule is the Git Notes compliance capsule (Merkle + OCC).
 type Capsule struct {
-	SchemaVersion   string `json:"schema_version"`
-	Timestamp       string `json:"timestamp"`
-	CommitSHA       string `json:"commit_sha"`
-	StateHash       string `json:"state_hash"`
-	ParentStateHash string `json:"parent_state_hash,omitempty"`
-	OCCParent       string `json:"expected_parent_commit_sha"`
-	Signer          string `json:"signer"`
-	SSHSignature    string `json:"ssh_signature,omitempty"`
-	UserTouch       string `json:"user_touch"`
-	HPURLFragment   string `json:"hpurl_fragment"`
+	SchemaVersion   string            `json:"schema_version"`
+	Timestamp       string            `json:"timestamp"`
+	CommitSHA       string            `json:"commit_sha"`
+	StateHash       string            `json:"state_hash"`
+	ParentStateHash string            `json:"parent_state_hash,omitempty"`
+	OCCParent       string            `json:"expected_parent_commit_sha"`
+	Signer          string            `json:"signer"`
+	SSHSignature    string            `json:"ssh_signature,omitempty"`
+	UserTouch       string            `json:"user_touch"`
+	HPURLFragment   string            `json:"hpurl_fragment"`
+	Evidence        map[string]string `json:"evidence,omitempty"`
 }
 
 // Options for attest.
 type Options struct {
-	RepoRoot string
+	RepoRoot   string
 	AllowDirty bool
+	// Optional digests to bind (CycloneDX / VEX). Empty strings omitted.
+	SBOMDigest string
+	VEXDigest  string
+}
+
+// StateSeed builds the reproducible hash input (no wall-clock / UnixNano).
+func StateSeed(commit, parentHash, sbomDigest, vexDigest string) string {
+	return fmt.Sprintf("%s|%s|sbom=%s|vex=%s", commit, parentHash, sbomDigest, vexDigest)
+}
+
+// ComputeStateHash returns sha256 hex of the reproducible seed.
+func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest string) string {
+	seed := StateSeed(commit, parentHash, sbomDigest, vexDigest)
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(seed)))
 }
 
 // Run creates a Git Notes capsule with Merkle parent link and best-effort SSH-agent sign.
@@ -53,9 +69,17 @@ func Run(opts Options) (Capsule, error) {
 		return Capsule{}, err
 	}
 
+	sbomDigest := opts.SBOMDigest
+	vexDigest := opts.VEXDigest
+	if sbomDigest == "" {
+		sbomDigest = fileDigest(filepath.Join(root, ".github", "cyberready", "evidence", "sbom.cdx.json"))
+	}
+	if vexDigest == "" {
+		vexDigest = fileDigest(filepath.Join(root, ".github", "cyberready", "evidence", "vex-pending.json"))
+	}
+
 	parentHash := gitutil.ParentNoteHash(root, commit)
-	seed := fmt.Sprintf("%s|%s|%d", commit, parentHash, time.Now().UnixNano())
-	stateHash := fmt.Sprintf("%x", sha256.Sum256([]byte(seed)))
+	stateHash := ComputeStateHash(commit, parentHash, sbomDigest, vexDigest)
 
 	signer := "local-unsigned"
 	userTouch := "not-verified"
@@ -69,9 +93,20 @@ func Run(opts Options) (Capsule, error) {
 		tty.PrintStatus("SSH-agent attest", false, "no agent / sign failed — writing unsigned capsule")
 	}
 
+	evidence := map[string]string{}
+	if sbomDigest != "" {
+		evidence["sbom_digest"] = sbomDigest
+		evidence["sbom_path"] = ".github/cyberready/evidence/sbom.cdx.json"
+	}
+	if vexDigest != "" {
+		evidence["vex_digest"] = vexDigest
+		evidence["vex_path"] = ".github/cyberready/evidence/vex-pending.json"
+	}
+	evidence["local_pointer"] = ".github/cyberready/evidence/"
+
 	cap := Capsule{
-		SchemaVersion:   "v3.29-OCC",
-		Timestamp:       time.Now().UTC().Format(time.RFC3339),
+		SchemaVersion:   "v3.33-OCC",
+		Timestamp:       time.Now().UTC().Format(time.RFC3339), // display-only; not in state_hash
 		CommitSHA:       commit,
 		StateHash:       stateHash,
 		ParentStateHash: parentHash,
@@ -80,6 +115,7 @@ func Run(opts Options) (Capsule, error) {
 		SSHSignature:    sshSig,
 		UserTouch:       userTouch,
 		HPURLFragment:   fmt.Sprintf("#?h=%s&p=%s&s=%s", stateHash, commit, truncate(sshSig, 32)),
+		Evidence:        evidence,
 	}
 
 	body, err := json.MarshalIndent(cap, "", "  ")
@@ -90,9 +126,32 @@ func Run(opts Options) (Capsule, error) {
 		return Capsule{}, fmt.Errorf("git notes write: %w", err)
 	}
 
+	// Local evidence pointer for HPURL verify
+	_ = os.MkdirAll(filepath.Join(root, ".github", "cyberready", "evidence"), 0o755)
+	pointer := map[string]any{
+		"state_hash":    stateHash,
+		"commit_sha":    commit,
+		"hpurl":         cap.HPURLFragment,
+		"sbom_digest":   sbomDigest,
+		"vex_digest":    vexDigest,
+		"note":          "Client-side HPURL verify compares fragment h= to state_hash. Not a certification.",
+		"evidence_root": ".github/cyberready/evidence/",
+	}
+	pb, _ := json.MarshalIndent(pointer, "", "  ")
+	_ = os.WriteFile(filepath.Join(root, ".github", "cyberready", "evidence", "hpurl-pointer.json"), append(pb, '\n'), 0o644)
+
 	tty.PrintStatus("Git Notes capsule", true, "refs/notes/cyberready @ "+truncate(commit, 12))
 	tty.PrintStatus("HPURL fragment", true, cap.HPURLFragment)
+	tty.PrintStatus("Evidence pointer", true, ".github/cyberready/evidence/hpurl-pointer.json")
 	return cap, nil
+}
+
+func fileDigest(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(data))
 }
 
 func truncate(s string, n int) string {
@@ -110,7 +169,6 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok 
 	if strings.TrimSpace(os.Getenv("SSH_AUTH_SOCK")) == "" {
 		return "", "", false
 	}
-	// List identities
 	list := exec.Command("ssh-add", "-L")
 	out, err := list.Output()
 	if err != nil || len(out) == 0 {
@@ -135,12 +193,9 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ok 
 	tmpOut := tmpIn.Name() + ".sig"
 	defer os.Remove(tmpOut)
 
-	// ssh-keygen -Y sign requires allowed signers setup in many environments;
-	// fall back to hashing identity material if sign fails.
 	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", tmpIn.Name(), "-n", "cyberready@attest", tmpIn.Name())
 	cmd.Dir = repoRoot
 	if err := cmd.Run(); err != nil {
-		// Degrade: store fingerprint of public key line as non-crypto binder marker
 		sum := sha256.Sum256([]byte(first + "|" + payload))
 		return fmt.Sprintf("agent-bind:%x", sum[:8]), who, true
 	}
@@ -180,6 +235,9 @@ func View(repoRoot string) error {
 	fmt.Printf("  State hash:      %s\n", cap.StateHash)
 	fmt.Printf("  Parent hash:     %s\n", cap.ParentStateHash)
 	fmt.Printf("  HPURL fragment:  %s\n", cap.HPURLFragment)
+	if len(cap.Evidence) > 0 {
+		fmt.Printf("  Evidence:        %v\n", cap.Evidence)
+	}
 	fmt.Println("====================================================================")
 	fmt.Println(tty.C(tty.Dim, "Not a certification — evidence for human review."))
 	return nil

@@ -10,8 +10,19 @@ import (
 	"strings"
 )
 
-//go:embed data/cra-baseline/pack.json data/medtech-iec62304/pack.json data/_watchlist.json
+//go:embed data/cra-baseline/pack.json data/medtech-iec62304/pack.json data/house-policy/pack.json data/_watchlist.json
 var embedded embed.FS
+
+// Supported check kinds (engine stays industry-agnostic).
+var supportedChecks = map[string]struct{}{
+	"annex_file":       {},
+	"file_present":     {},
+	"anti_placeholder": {},
+	"npm_dep_ban":      {},
+	"manifest_dep_ban": {},
+	"text_forbid":      {},
+	"import_reach":     {},
+}
 
 // Rule is a single pack gate definition (JSON-eval, no OPA).
 type Rule struct {
@@ -22,15 +33,17 @@ type Rule struct {
 	Path           string   `json:"path,omitempty"`
 	Paths          []string `json:"paths,omitempty"`
 	MinBytes       int      `json:"min_bytes,omitempty"`
+	MinWords       int      `json:"min_words,omitempty"`
 	RequireHeaders []string `json:"require_headers,omitempty"`
 	Package        string   `json:"package,omitempty"`
 	BannedVersions []string `json:"banned_versions,omitempty"`
+	Pattern        string   `json:"pattern,omitempty"`
 	Description    string   `json:"description"`
 	Remediation    string   `json:"remediation"`
 	Expected       string   `json:"expected"`
 }
 
-// Pack is an embedded regulation pack.
+// Pack is an embedded regulation / house-policy pack.
 type Pack struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -57,9 +70,9 @@ type WatchlistEntry struct {
 	Refs      []string `json:"refs"`
 }
 
-var builtinIDs = []string{"cra-baseline", "medtech-iec62304"}
+var builtinIDs = []string{"cra-baseline", "medtech-iec62304", "house-policy"}
 
-// LoadEmbedded returns all built-in packs.
+// LoadEmbedded returns all built-in packs (schema-validated).
 func LoadEmbedded() ([]Pack, error) {
 	out := make([]Pack, 0, len(builtinIDs))
 	for _, id := range builtinIDs {
@@ -74,25 +87,91 @@ func LoadEmbedded() ([]Pack, error) {
 
 // LoadPack loads one pack by id from embed, or from CYBERREADY_PACKS_DIR override.
 func LoadPack(id string) (Pack, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return Pack{}, fmt.Errorf("empty pack id")
+	}
 	if dir := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR")); dir != "" {
 		data, err := os.ReadFile(filepath.Join(dir, id, "pack.json"))
 		if err == nil {
-			var p Pack
-			if err := json.Unmarshal(data, &p); err != nil {
-				return Pack{}, err
-			}
-			return p, nil
+			return parseAndValidate(id, data)
 		}
 	}
 	data, err := embedded.ReadFile("data/" + id + "/pack.json")
 	if err != nil {
 		return Pack{}, fmt.Errorf("pack %q not found: %w", id, err)
 	}
+	return parseAndValidate(id, data)
+}
+
+func parseAndValidate(id string, data []byte) (Pack, error) {
 	var p Pack
 	if err := json.Unmarshal(data, &p); err != nil {
+		return Pack{}, fmt.Errorf("pack %q JSON: %w", id, err)
+	}
+	if err := ValidatePack(p); err != nil {
 		return Pack{}, err
 	}
 	return p, nil
+}
+
+// ValidatePack enforces the pack load schema (generic fields only — no industry branches).
+func ValidatePack(p Pack) error {
+	if strings.TrimSpace(p.ID) == "" {
+		return fmt.Errorf("pack schema: missing id")
+	}
+	if strings.TrimSpace(p.Name) == "" {
+		return fmt.Errorf("pack %q schema: missing name", p.ID)
+	}
+	if strings.TrimSpace(p.Version) == "" {
+		return fmt.Errorf("pack %q schema: missing version", p.ID)
+	}
+	if len(p.Rules) == 0 {
+		return fmt.Errorf("pack %q schema: rules must be non-empty", p.ID)
+	}
+	seen := map[string]struct{}{}
+	for i, r := range p.Rules {
+		if strings.TrimSpace(r.ID) == "" {
+			return fmt.Errorf("pack %q schema: rules[%d] missing id", p.ID, i)
+		}
+		if _, ok := seen[r.ID]; ok {
+			return fmt.Errorf("pack %q schema: duplicate rule id %q", p.ID, r.ID)
+		}
+		seen[r.ID] = struct{}{}
+		if strings.TrimSpace(r.Check) == "" {
+			return fmt.Errorf("pack %q rule %q: missing check", p.ID, r.ID)
+		}
+		if _, ok := supportedChecks[r.Check]; !ok {
+			return fmt.Errorf("pack %q rule %q: unsupported check %q", p.ID, r.ID, r.Check)
+		}
+		if strings.TrimSpace(r.Severity) == "" {
+			return fmt.Errorf("pack %q rule %q: missing severity", p.ID, r.ID)
+		}
+		if strings.TrimSpace(r.Description) == "" {
+			return fmt.Errorf("pack %q rule %q: missing description", p.ID, r.ID)
+		}
+		switch r.Check {
+		case "annex_file", "file_present":
+			if strings.TrimSpace(r.Path) == "" {
+				return fmt.Errorf("pack %q rule %q: path required for %s", p.ID, r.ID, r.Check)
+			}
+		case "anti_placeholder", "text_forbid":
+			if len(r.Paths) == 0 {
+				return fmt.Errorf("pack %q rule %q: paths required for %s", p.ID, r.ID, r.Check)
+			}
+			if r.Check == "text_forbid" && strings.TrimSpace(r.Pattern) == "" {
+				return fmt.Errorf("pack %q rule %q: pattern required for text_forbid", p.ID, r.ID)
+			}
+		case "npm_dep_ban", "manifest_dep_ban":
+			if strings.TrimSpace(r.Package) == "" {
+				return fmt.Errorf("pack %q rule %q: package required for %s", p.ID, r.ID, r.Check)
+			}
+			if len(r.BannedVersions) == 0 {
+				return fmt.Errorf("pack %q rule %q: banned_versions required", p.ID, r.ID)
+			}
+		}
+	}
+	return nil
 }
 
 // LoadWatchlist returns the embedded (or overridden) watchlist.
@@ -130,6 +209,164 @@ func ListIDs() ([]string, error) {
 	}
 	sort.Strings(ids)
 	return ids, nil
+}
+
+// ScaffoldPaths returns unique relative file paths referenced by pack rules (for init).
+func ScaffoldPaths(packIDs []string) ([]string, error) {
+	seen := map[string]struct{}{}
+	var out []string
+	add := func(rel string) {
+		rel = strings.TrimSpace(rel)
+		if rel == "" {
+			return
+		}
+		if _, ok := seen[rel]; ok {
+			return
+		}
+		seen[rel] = struct{}{}
+		out = append(out, rel)
+	}
+	for _, id := range packIDs {
+		p, err := LoadPack(id)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range p.Rules {
+			switch r.Check {
+			case "annex_file", "file_present":
+				add(r.Path)
+			case "anti_placeholder", "text_forbid":
+				for _, path := range r.Paths {
+					add(path)
+				}
+			}
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// DefaultScaffoldBody returns a minimal non-placeholder draft for a relative path.
+func DefaultScaffoldBody(rel string) string {
+	base := filepath.Base(rel)
+	switch {
+	case strings.Contains(rel, "risk_assessment"):
+		return `# Risk Assessment
+
+## Product Overview
+
+Describe the product, intended use, and operating environment.
+
+## Identified Risks
+
+| Risk ID | Description | Severity | Mitigation |
+|---------|-------------|----------|------------|
+| R-001   |             |          |            |
+
+## Residual Risk Statement
+
+State residual risk after mitigations.
+`
+	case strings.Contains(rel, "support_period"):
+		return `# Support Period
+
+## End of Support
+
+Declare the date or duration of security update support.
+
+## Rationale
+
+Explain how the support period was chosen.
+`
+	case strings.Contains(rel, "user_manual"):
+		return `# User Manual — Security
+
+## Secure Configuration
+
+Document default-secure settings and hardening steps.
+
+## Product Disposal
+
+Explain secure decommissioning and data wiping.
+`
+	case strings.Contains(rel, "software_safety_class"):
+		return `# Software Safety Class
+
+## Classification Rationale
+
+State IEC 62304 Class A/B/C and why.
+`
+	case strings.Contains(rel, "soup_list"):
+		return `# SOUP List
+
+## Items
+
+| Component | Version | Manufacturer | Residual Risk |
+|-----------|---------|--------------|---------------|
+|           |         |              |               |
+`
+	case strings.Contains(rel, "problem_resolution"):
+		return `# Problem Resolution
+
+## Process
+
+Describe intake, triage, fix, verification, and release of corrections.
+`
+	case base == "SECURITY.md":
+		return `# Security
+
+## Reporting
+
+Email security@example.com with vulnerability details. Do not open public issues for sensitive reports.
+
+## Response
+
+We acknowledge within two business days and coordinate disclosure timelines.
+`
+	case strings.HasSuffix(rel, "security.txt"):
+		return `Contact: mailto:security@example.com
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+`
+	case base == "README.md":
+		return "# Project\n\nDescribe the product briefly.\n"
+	default:
+		title := strings.TrimSuffix(base, filepath.Ext(base))
+		title = strings.ReplaceAll(title, "_", " ")
+		title = strings.ReplaceAll(title, "-", " ")
+		if title == "" {
+			title = "Evidence draft"
+		}
+		return "# " + title + "\n\nDraft content for human review — expand before release.\n"
+	}
+}
+
+// RuleTouchesDiff reports whether a rule's declared paths intersect changed files.
+// Rules without path/paths always run (true).
+func RuleTouchesDiff(rule Rule, changed map[string]struct{}) bool {
+	if len(changed) == 0 {
+		return true
+	}
+	paths := append([]string{}, rule.Paths...)
+	if rule.Path != "" {
+		paths = append(paths, rule.Path)
+	}
+	if len(paths) == 0 {
+		return true // dep bans / global checks always evaluate
+	}
+	for _, p := range paths {
+		p = filepath.ToSlash(p)
+		if _, ok := changed[p]; ok {
+			return true
+		}
+		base := filepath.Base(p)
+		for c := range changed {
+			if c == p || filepath.Base(c) == base {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ExportPackJSON writes a pack JSON to destDir/<id>/pack.json (air-gap helper).

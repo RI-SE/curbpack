@@ -11,7 +11,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
+	"github.com/afelin/cyberready/internal/config"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
@@ -20,18 +22,21 @@ import (
 
 var placeholderRE = regexp.MustCompile(`(?i)(lorem ipsum|\[insert[^\]]*\]|TODO:|FIXME:|placeholder|xxxx|<\s*company\s*>)`)
 
-// Options controls validate.
+// Options controls validate / check.
 type Options struct {
 	RepoRoot string
 	PackIDs  []string
 	Quiet    bool
+	DiffOnly bool // skip rules whose paths are untouched by git diff
 }
 
 // Result is the outcome of a validate run.
 type Result struct {
-	Payload ir.GateFailurePayload
-	Passed  bool
-	Score   int
+	Payload      ir.GateFailurePayload
+	Passed       bool
+	Score        int
+	SkippedRules int
+	ActionReport string
 }
 
 // Run evaluates embedded pack rules against the repo tree.
@@ -45,25 +50,37 @@ func Run(opts Options) (Result, error) {
 		}
 	}
 
-	ids := opts.PackIDs
-	if len(ids) == 0 {
-		ids = []string{"cra-baseline"}
-		// Auto-include medtech if medtech docs exist or .cyberready.json says so
-		if cfg := readConfig(root); cfg != nil && len(cfg.Packs) > 0 {
-			ids = cfg.Packs
-		} else if _, err := os.Stat(filepath.Join(root, "docs", "medtech")); err == nil {
-			ids = append(ids, "medtech-iec62304")
+	ids, err := config.ResolvePackIDs(root, opts.PackIDs)
+	if err != nil {
+		return Result{}, err
+	}
+
+	var changed map[string]struct{}
+	if opts.DiffOnly {
+		changed, err = gitutil.ChangedFiles(root)
+		if err != nil {
+			// Fall back to full scan if git diff unavailable
+			changed = nil
+			opts.DiffOnly = false
 		}
 	}
 
 	var failures []ir.Failure
 	var regions []string
+	skipped := 0
 	for _, id := range ids {
 		pack, err := packs.LoadPack(id)
 		if err != nil {
 			return Result{}, err
 		}
 		for _, rule := range pack.Rules {
+			if opts.DiffOnly && !packs.RuleTouchesDiff(rule, changed) {
+				skipped++
+				if !opts.Quiet {
+					tty.PrintStatus("Gate "+rule.ID, true, "skipped (diff)")
+				}
+				continue
+			}
 			fs := evalRule(root, rule)
 			if len(fs) > 0 {
 				regions = append(regions, rule.ID)
@@ -78,7 +95,9 @@ func Run(opts Options) (Result, error) {
 	}
 
 	// Built-in AST reachability (MVP lift) — only if file exists
-	failures = append(failures, auditASTReachability(root)...)
+	if !opts.DiffOnly || pathChanged(changed, "src/payment.go") {
+		failures = append(failures, auditASTReachability(root)...)
+	}
 
 	score := tty.ScoreFromFailures(len(failures))
 	parent, _ := gitutil.HeadSHA(root)
@@ -86,7 +105,7 @@ func Run(opts Options) (Result, error) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
-			StateVersionToken:       "v3.29-OCC",
+			StateVersionToken:       "v3.33-OCC",
 		},
 		StatechartContext: ir.StatechartContext{
 			ActiveParentStatePath:   []string{"Root", "ActiveVerification", "PackEval"},
@@ -102,39 +121,43 @@ func Run(opts Options) (Result, error) {
 		ReadinessScore: score,
 	}
 
+	action := ActionReportMarkdown(payload, skipped)
 	cacheDir := filepath.Join(root, ".github", "cyberready", "cache")
 	_ = os.MkdirAll(cacheDir, 0o755)
 	b, _ := json.MarshalIndent(payload, "", "  ")
 	_ = os.WriteFile(filepath.Join(cacheDir, "latest_failure.json"), b, 0o644)
 	_ = os.WriteFile(filepath.Join(cacheDir, "latest_result.json"), b, 0o644)
+	_ = os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644)
 
-	return Result{Payload: payload, Passed: len(failures) == 0, Score: score}, nil
+	return Result{
+		Payload:      payload,
+		Passed:       len(failures) == 0,
+		Score:        score,
+		SkippedRules: skipped,
+		ActionReport: action,
+	}, nil
 }
 
-type configFile struct {
-	Packs []string `json:"packs"`
-}
-
-func readConfig(root string) *configFile {
-	data, err := os.ReadFile(filepath.Join(root, ".cyberready.json"))
-	if err != nil {
-		return nil
+func pathChanged(changed map[string]struct{}, rel string) bool {
+	if changed == nil {
+		return true
 	}
-	var c configFile
-	if json.Unmarshal(data, &c) != nil {
-		return nil
-	}
-	return &c
+	_, ok := changed[filepath.ToSlash(rel)]
+	return ok
 }
 
 func evalRule(root string, rule packs.Rule) []ir.Failure {
 	switch rule.Check {
-	case "annex_file":
-		return checkAnnexFile(root, rule)
+	case "annex_file", "file_present":
+		return checkFilePresent(root, rule)
 	case "anti_placeholder":
 		return checkAntiPlaceholder(root, rule)
-	case "npm_dep_ban":
+	case "npm_dep_ban", "manifest_dep_ban":
 		return checkNPMDepBan(root, rule)
+	case "text_forbid":
+		return checkTextForbid(root, rule)
+	case "import_reach":
+		return auditASTReachability(root)
 	default:
 		return []ir.Failure{{
 			GateID:               rule.ID,
@@ -149,7 +172,7 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 	}
 }
 
-func checkAnnexFile(root string, rule packs.Rule) []ir.Failure {
+func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
 	path := filepath.Join(root, rule.Path)
 	info, err := os.Stat(path)
 	min := rule.MinBytes
@@ -166,11 +189,29 @@ func checkAnnexFile(root string, rule packs.Rule) []ir.Failure {
 	content := string(data)
 	for _, h := range rule.RequireHeaders {
 		if !strings.Contains(content, h) {
-			f := failFromRule(rule, rule.Path, "missing header: "+h)
-			return []ir.Failure{f}
+			return []ir.Failure{failFromRule(rule, rule.Path, "missing header: "+h)}
 		}
 	}
+	if rule.MinWords > 0 && wordCount(content) < rule.MinWords {
+		return []ir.Failure{failFromRule(rule, rule.Path, fmt.Sprintf("min_words=%d not met (have %d)", rule.MinWords, wordCount(content)))}
+	}
 	return nil
+}
+
+func wordCount(s string) int {
+	n := 0
+	in := false
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			in = false
+			continue
+		}
+		if !in {
+			n++
+			in = true
+		}
+	}
+	return n
 }
 
 func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
@@ -178,11 +219,28 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	for _, rel := range rule.Paths {
 		data, err := os.ReadFile(filepath.Join(root, rel))
 		if err != nil {
-			continue // missing handled by annex_file rules
+			continue // missing handled by file_present / annex_file rules
 		}
 		if placeholderRE.Match(data) {
-			f := failFromRule(rule, rel, "placeholder pattern matched")
-			out = append(out, f)
+			out = append(out, failFromRule(rule, rel, "placeholder pattern matched"))
+		}
+	}
+	return out
+}
+
+func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
+	re, err := regexp.Compile(rule.Pattern)
+	if err != nil {
+		return []ir.Failure{failFromRule(rule, strings.Join(rule.Paths, ","), "invalid pattern: "+err.Error())}
+	}
+	var out []ir.Failure
+	for _, rel := range rule.Paths {
+		data, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			continue
+		}
+		if re.Match(data) {
+			out = append(out, failFromRule(rule, rel, "forbidden pattern matched"))
 		}
 	}
 	return out
@@ -304,6 +362,34 @@ func unique(in []string) []string {
 		out = append(out, s)
 	}
 	return out
+}
+
+// ActionReportMarkdown is the short QA checklist written by check / validate.
+func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
+	var b strings.Builder
+	b.WriteString("# Action Report\n\n")
+	b.WriteString("> CyberReady prepares evidence for **human review**. Gate pass is not certification.\n\n")
+	fmt.Fprintf(&b, "- **Packs:** %s\n", payload.PackID)
+	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", payload.ReadinessScore)
+	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))
+	if skipped > 0 {
+		fmt.Fprintf(&b, "- **Skipped (diff):** %d rules\n", skipped)
+	}
+	b.WriteString("\n")
+	if len(payload.Failures) == 0 {
+		b.WriteString("All evaluated gates passed. Open buyer one-pager / HPURL after `prepare-release` + `attest`.\n")
+		return b.String()
+	}
+	b.WriteString("## Checklist\n\n")
+	for i, f := range payload.Failures {
+		if i >= 12 {
+			fmt.Fprintf(&b, "\n_…and %d more — see latest_failure.json_\n", len(payload.Failures)-12)
+			break
+		}
+		fmt.Fprintf(&b, "- [ ] **[%s]** (%s) `%s` — %s\n",
+			f.GateID, f.Severity, f.ASTCoordinates.TargetFile, f.Remediation.ActionRequired)
+	}
+	return b.String()
 }
 
 // SemanticMarkdown renders dual-rep agent-facing markdown from a payload.

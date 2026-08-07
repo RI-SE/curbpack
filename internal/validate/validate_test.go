@@ -3,6 +3,7 @@ package validate_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/afelin/cyberready/internal/packs"
@@ -16,8 +17,8 @@ func TestLoadEmbeddedPacks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ps) != 2 {
-		t.Fatalf("expected 2 packs, got %d", len(ps))
+	if len(ps) != 3 {
+		t.Fatalf("expected 3 packs, got %d", len(ps))
 	}
 	wl, err := packs.LoadWatchlist()
 	if err != nil {
@@ -25,6 +26,56 @@ func TestLoadEmbeddedPacks(t *testing.T) {
 	}
 	if len(wl.Entries) < 1 {
 		t.Fatal("watchlist empty")
+	}
+}
+
+func TestHousePolicyPass(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("expected house pass, failures=%v", res.Payload.Failures)
+	}
+}
+
+func TestHousePolicyMinWords(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), `# Security
+
+x x x x x x x x x x
+`+strings.Repeat(" \n", 40))
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), "Contact: mailto:a@b.c\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en\n")
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("expected min_words failure on SECURITY.md")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "HOUSE-SECURITY-MD" && strings.Contains(f.SanitizedDescription, "min_words") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected HOUSE-SECURITY-MD min_words, got %#v", res.Payload.Failures)
 	}
 }
 
@@ -99,6 +150,53 @@ func TestValidatePassFixture(t *testing.T) {
 	if res.Score != 100 {
 		t.Fatalf("score=%d", res.Score)
 	}
+	if res.ActionReport == "" || !strings.Contains(res.ActionReport, "Action Report") {
+		t.Fatal("missing action report")
+	}
+	cache := filepath.Join(dir, ".github/cyberready/cache/latest_action_report.md")
+	if _, err := os.Stat(cache); err != nil {
+		t.Fatal("action report not cached")
+	}
+}
+
+func TestDiffSkipUntouchedRules(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodCRA(t, dir)
+	// Simulate git diff touching only README — CRA annex rules should skip;
+	// npm_dep_ban has no paths so still runs (and passes without package.json).
+	mustWrite(t, filepath.Join(dir, "README.md"), "# fixture changed\n")
+
+	// Without real git status, ChangedFiles may fail → DiffOnly falls back to full scan.
+	// Stub porcelain via fake: we unit-test RuleTouchesDiff instead when git unavailable.
+	rule := packs.Rule{ID: "x", Check: "annex_file", Path: "docs/annex-vii/risk_assessment.md"}
+	changed := map[string]struct{}{"README.md": {}}
+	if packs.RuleTouchesDiff(rule, changed) {
+		t.Fatal("annex rule should not touch README-only diff")
+	}
+	dep := packs.Rule{ID: "y", Check: "npm_dep_ban", Package: "axios", BannedVersions: []string{"1.6.0"}}
+	if !packs.RuleTouchesDiff(dep, changed) {
+		t.Fatal("pathless rules always run")
+	}
+}
+
+func writeGoodHouse(t *testing.T, dir string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), `# Security
+
+## Reporting
+
+Email security@example.com with vulnerability details for coordinated disclosure.
+
+## Response
+
+We acknowledge within two business days and coordinate responsible disclosure timelines carefully.
+`)
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), `Contact: mailto:security@example.com
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+`)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Contoso Gateway\n\nProduct overview for operators.\n")
 }
 
 func writeGoodCRA(t *testing.T, dir string) {

@@ -82,21 +82,57 @@ func NotesAdd(repoRoot, commit, message string) error {
 	return err
 }
 
-// ParentNoteHash reads previous note's state_hash for Merkle chaining, if any.
-func ParentNoteHash(repoRoot, commit string) string {
-	body, err := NotesShow(repoRoot, commit)
-	if err != nil || body == "" {
-		// Try previous commit's note
-		prev, err := runGit(repoRoot, "rev-parse", "HEAD^")
-		if err != nil {
-			return ""
-		}
-		body, err = NotesShow(repoRoot, prev)
-		if err != nil {
-			return ""
+// ChangedFiles returns paths changed vs HEAD (staged + unstaged + untracked).
+// Paths are slash-normalized relative to repo root.
+func ChangedFiles(repoRoot string) (map[string]struct{}, error) {
+	out := map[string]struct{}{}
+	addLines := func(s string) {
+		for _, line := range strings.Split(s, "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			// status --porcelain: XY PATH or XY ORIG -> PATH
+			if len(line) >= 4 {
+				rest := strings.TrimSpace(line[3:])
+				if i := strings.Index(rest, " -> "); i >= 0 {
+					rest = rest[i+4:]
+				}
+				rest = strings.Trim(rest, `"`)
+				out[filepath.ToSlash(rest)] = struct{}{}
+			}
 		}
 	}
-	// Best-effort extract "state_hash" from JSON without full unmarshal dependency here
+	porcelain, err := runGit(repoRoot, "status", "--porcelain")
+	if err != nil {
+		return nil, err
+	}
+	addLines(porcelain)
+	// Also include files differing from merge-base / HEAD for committed-but-local? porcelain covers WD.
+	// For --diff against last commit content changes already staged:
+	diff, err := runGit(repoRoot, "diff", "--name-only", "HEAD")
+	if err == nil {
+		for _, line := range strings.Split(diff, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				out[filepath.ToSlash(line)] = struct{}{}
+			}
+		}
+	}
+	return out, nil
+}
+
+// ParentNoteHash reads the previous commit's note state_hash for Merkle chaining.
+// It intentionally ignores any existing note on the current commit so re-attest is reproducible.
+func ParentNoteHash(repoRoot, commit string) string {
+	prev, err := runGit(repoRoot, "rev-parse", commit+"^")
+	if err != nil {
+		return ""
+	}
+	body, err := NotesShow(repoRoot, prev)
+	if err != nil || body == "" {
+		return ""
+	}
 	const key = `"state_hash"`
 	idx := strings.Index(body, key)
 	if idx < 0 {
