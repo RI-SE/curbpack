@@ -157,9 +157,17 @@ func ValidatePack(p Pack) error {
 			if strings.TrimSpace(r.Path) == "" {
 				return fmt.Errorf("pack %q rule %q: path required for %s", p.ID, r.ID, r.Check)
 			}
+			if err := ValidateRelPath(r.Path); err != nil {
+				return fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
+			}
 		case "anti_placeholder", "text_forbid":
 			if len(r.Paths) == 0 {
 				return fmt.Errorf("pack %q rule %q: paths required for %s", p.ID, r.ID, r.Check)
+			}
+			for _, path := range r.Paths {
+				if err := ValidateRelPath(path); err != nil {
+					return fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
+				}
 			}
 			if r.Check == "text_forbid" {
 				if strings.TrimSpace(r.Pattern) == "" {
@@ -177,6 +185,26 @@ func ValidatePack(p Pack) error {
 				return fmt.Errorf("pack %q rule %q: banned_versions required", p.ID, r.ID)
 			}
 		}
+	}
+	return nil
+}
+
+// ValidateRelPath refuses absolute paths, traversal, and .git/** (pack path jail).
+// Used by ValidatePack and scaffold writers before joining under a repo root.
+func ValidateRelPath(rel string) error {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
+		return fmt.Errorf("empty path")
+	}
+	if filepath.IsAbs(rel) || strings.HasPrefix(filepath.ToSlash(rel), "/") {
+		return fmt.Errorf("absolute path refused")
+	}
+	clean := filepath.ToSlash(filepath.Clean(rel))
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return fmt.Errorf("path traversal refused")
+	}
+	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
+		return fmt.Errorf("path under .git refused")
 	}
 	return nil
 }
@@ -287,19 +315,25 @@ func ListIDs() ([]string, error) {
 }
 
 // ScaffoldPaths returns unique relative file paths referenced by pack rules (for init).
+// Every path is jail-checked via ValidateRelPath (fail closed on escape).
 func ScaffoldPaths(packIDs []string) ([]string, error) {
 	seen := map[string]struct{}{}
 	var out []string
-	add := func(rel string) {
+	add := func(rel string) error {
 		rel = strings.TrimSpace(rel)
 		if rel == "" {
-			return
+			return nil
 		}
-		if _, ok := seen[rel]; ok {
-			return
+		if err := ValidateRelPath(rel); err != nil {
+			return err
 		}
-		seen[rel] = struct{}{}
-		out = append(out, rel)
+		clean := filepath.ToSlash(filepath.Clean(rel))
+		if _, ok := seen[clean]; ok {
+			return nil
+		}
+		seen[clean] = struct{}{}
+		out = append(out, clean)
+		return nil
 	}
 	for _, id := range packIDs {
 		p, err := LoadPack(id)
@@ -309,10 +343,14 @@ func ScaffoldPaths(packIDs []string) ([]string, error) {
 		for _, r := range p.Rules {
 			switch r.Check {
 			case "annex_file", "file_present":
-				add(r.Path)
+				if err := add(r.Path); err != nil {
+					return nil, fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
+				}
 			case "anti_placeholder", "text_forbid":
 				for _, path := range r.Paths {
-					add(path)
+					if err := add(path); err != nil {
+						return nil, fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
+					}
 				}
 			}
 		}

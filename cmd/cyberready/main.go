@@ -137,11 +137,14 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "                                 Scaffold config + stubs (+ hook/skill/tasks)\n")
 	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]\n")
 	fmt.Fprintf(os.Stderr, "                                 Daily loop; --heal = hints→stub→re-check (max 3)\n")
+	fmt.Fprintf(os.Stderr, "                                 --diff/--delta = delta mode — not release-gate safe\n")
 	fmt.Fprintf(os.Stderr, "  validate [--delta] [--json]   Pack gates (JSON + markdown dual-rep)\n")
-	fmt.Fprintf(os.Stderr, "  prepare-release               Write review-pack/ + CycloneDX/VEX evidence\n")
+	fmt.Fprintf(os.Stderr, "                                 --delta = delta mode — not release-gate safe\n")
+	fmt.Fprintf(os.Stderr, "  prepare-release [--allow-failing-gates]\n")
+	fmt.Fprintf(os.Stderr, "                                 Write review-pack/ + CycloneDX/VEX evidence\n")
 	fmt.Fprintf(os.Stderr, "  packs list|update|import      Embedded packs; update/import helpers\n")
 	fmt.Fprintf(os.Stderr, "  ask [file|-] [--propose]      Explain GateFailure JSON (optional --propose)\n")
-	fmt.Fprintf(os.Stderr, "  attest                        Reproducible Git Notes capsule + HPURL pointer\n")
+	fmt.Fprintf(os.Stderr, "  attest [--allow-dirty]        Reproducible Git Notes capsule + HPURL pointer\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show Git Notes capsule for HEAD\n")
 	fmt.Fprintf(os.Stderr, "  sock                          Unix socket validate_delta server (optional Coreward)\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")
@@ -242,19 +245,22 @@ func cmdInit(args []string) error {
 		return err
 	}
 	for _, rel := range paths {
-		p := filepath.Join(root, rel)
+		p, clean, err := validate.SafeJoin(root, rel)
+		if err != nil {
+			return fmt.Errorf("scaffold path refused: %s: %w", rel, err)
+		}
 		if _, err := os.Stat(p); err == nil {
-			tty.PrintStatus("stub "+rel, true, "found")
+			tty.PrintStatus("stub "+clean, true, "found")
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			return err
 		}
-		body := packs.DefaultScaffoldBody(rel)
+		body := packs.DefaultScaffoldBody(clean)
 		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 			return err
 		}
-		tty.PrintStatus("stub "+rel, true, "created")
+		tty.PrintStatus("stub "+clean, true, "created")
 	}
 
 	_ = os.MkdirAll(filepath.Join(root, "proof"), 0o755)
@@ -307,16 +313,17 @@ func installPreCommitHook(root string) error {
 	script := `#!/bin/sh
 # CyberReady — fail commit on high/critical gate findings
 # --heal: create missing stubs only (never overwrite filled docs; never attest)
+# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).
 if command -v cyberready >/dev/null 2>&1; then
-  cyberready check --heal || exit 1
+  exec cyberready check --heal
 elif [ -x ./bin/cyberready ]; then
-  ./bin/cyberready check --heal || exit 1
+  exec ./bin/cyberready check --heal
 elif [ -x ./cyberready ]; then
-  ./cyberready check --heal || exit 1
+  exec ./cyberready check --heal
 else
-  echo "cyberready not on PATH — skip pre-commit check" >&2
+  echo "cyberready not on PATH — refusing commit (hooks enabled)" >&2
+  exit 1
 fi
-exit 0
 `
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		return err
@@ -514,6 +521,7 @@ func cmdPrepareRelease(args []string) error {
 	}
 	var packIDs []string
 	out := ""
+	allowFailing := false
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--pack":
@@ -531,9 +539,16 @@ func cmdPrepareRelease(args []string) error {
 				out = args[i+1]
 				i++
 			}
+		case "--allow-failing-gates":
+			allowFailing = true
 		}
 	}
-	return release.Prepare(release.Options{RepoRoot: root, PackIDs: packIDs, OutDir: out})
+	return release.Prepare(release.Options{
+		RepoRoot:          root,
+		PackIDs:           packIDs,
+		OutDir:            out,
+		AllowFailingGates: allowFailing,
+	})
 }
 
 func cmdPacks(args []string) error {
@@ -584,14 +599,24 @@ func cmdAttest(args []string) error {
 		return usageErr(err.Error())
 	}
 	if !allowDirty && gitutil.IsDirty(root) {
-		return usageErr("OCC conflict: working directory has uncommitted files")
+		return usageErr("OCC conflict: working directory has uncommitted files (pass --allow-dirty to bind digests of uncommitted evidence)")
 	}
-	_, _, _ = sbom.WriteCycloneDX(root, "")
-	if res, err := validate.Run(validate.Options{RepoRoot: root, Quiet: true}); err == nil {
-		doc := vex.FromGateFailures(filepath.Base(root), res.Payload)
-		_, _ = vex.Write(root, doc, "")
+
+	// Best-effort SBOM: missing lockfile/manifest is OK (empty digest). I/O failures are not.
+	if _, _, werr := sbom.WriteCycloneDX(root, ""); werr != nil && !sbom.IsUnavailable(werr) {
+		return fmt.Errorf("SBOM write failed while binding digests: %w", werr)
 	}
-	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: true})
+	res, verr := validate.Run(validate.Options{RepoRoot: root, Quiet: true})
+	if verr != nil {
+		return fmt.Errorf("VEX evidence: validate failed while binding digests: %w", verr)
+	}
+	doc := vex.FromGateFailures(filepath.Base(root), res.Payload)
+	if _, werr := vex.Write(root, doc, ""); werr != nil {
+		return fmt.Errorf("VEX write failed while binding digests: %w", werr)
+	}
+
+	// Self-written evidence dirties the tree — require explicit --allow-dirty (no silent force).
+	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty})
 	return err
 }
 

@@ -173,6 +173,11 @@ func CollectPackages(root string) ([]Package, string, error) {
 	return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, or package.json")
 }
 
+// IsUnavailable reports whether err means no supported lockfile/manifest (not an I/O failure).
+func IsUnavailable(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no package-lock.json, pnpm-lock.yaml, or package.json")
+}
+
 func fileExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil

@@ -20,9 +20,10 @@ import (
 
 // Options for prepare-release.
 type Options struct {
-	RepoRoot string
-	PackIDs  []string
-	OutDir   string
+	RepoRoot          string
+	PackIDs           []string
+	OutDir            string
+	AllowFailingGates bool // if false, non-zero exit when gates fail (after writing review pack)
 }
 
 // Prepare writes the review pack: Annex VII drafts (if missing), three-layer reports, buyer HTML.
@@ -117,6 +118,9 @@ func Prepare(opts Options) error {
 	if tty.IsTerminal {
 		tty.RenderThermometer(res.Score)
 	}
+	if !res.Passed && !opts.AllowFailingGates {
+		return fmt.Errorf("gates failing — pass --allow-failing-gates to accept a remediation review pack")
+	}
 	return nil
 }
 
@@ -207,14 +211,17 @@ func ensureWitnessTemplates(root string) error {
 		}
 	}
 	for _, rel := range paths {
-		path := filepath.Join(root, rel)
+		path, clean, err := validate.SafeJoin(root, rel)
+		if err != nil {
+			return fmt.Errorf("scaffold path refused: %s: %w", rel, err)
+		}
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path, []byte(packs.DefaultScaffoldBody(rel)), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(packs.DefaultScaffoldBody(clean)), 0o644); err != nil {
 			return err
 		}
 	}

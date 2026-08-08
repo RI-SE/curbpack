@@ -23,6 +23,26 @@ func TestValidatePackSchema(t *testing.T) {
 	}
 }
 
+func TestValidatePackRefusesPathEscape(t *testing.T) {
+	bad := packs.Pack{ID: "evil", Name: "Evil", Version: "1", Rules: []packs.Rule{{
+		ID: "ESCAPE", Check: "file_present", Path: "../outside", Severity: "high",
+		Description: "escape", Remediation: "fix", Expected: "inside",
+	}}}
+	if err := packs.ValidatePack(bad); err == nil {
+		t.Fatal("expected path traversal refuse")
+	}
+	bad2 := packs.Pack{ID: "evil", Name: "Evil", Version: "1", Rules: []packs.Rule{{
+		ID: "GIT", Check: "file_present", Path: ".git/hooks/pre-commit", Severity: "high",
+		Description: "git", Remediation: "fix", Expected: "no",
+	}}}
+	if err := packs.ValidatePack(bad2); err == nil {
+		t.Fatal("expected .git path refuse")
+	}
+	if err := packs.ValidateRelPath("../outside"); err == nil {
+		t.Fatal("ValidateRelPath must refuse ../outside")
+	}
+}
+
 func TestScaffoldPaths(t *testing.T) {
 	paths, err := packs.ScaffoldPaths([]string{"cra-baseline"})
 	if err != nil {

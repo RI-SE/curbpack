@@ -31,16 +31,17 @@ type Options struct {
 }
 
 // JailOutDir refuses --out that equals or sits under the caller's cwd (product tree).
+// Resolves symlinks via EvalSymlinks so a link into the product tree cannot bypass the jail.
 func JailOutDir(out, cwd string) error {
 	out = strings.TrimSpace(out)
 	if out == "" {
 		return nil
 	}
-	outAbs, err := filepath.Abs(out)
+	outAbs, err := resolveJailPath(out)
 	if err != nil {
 		return err
 	}
-	cwdAbs, err := filepath.Abs(cwd)
+	cwdAbs, err := resolveJailPath(cwd)
 	if err != nil {
 		return err
 	}
@@ -52,6 +53,26 @@ func JailOutDir(out, cwd string) error {
 		return fmt.Errorf("demo --out refuses paths under product cwd (data-loss jail)")
 	}
 	return nil
+}
+
+func resolveJailPath(p string) (string, error) {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return resolved, nil
+	}
+	// Path may not exist yet — resolve the nearest existing ancestor.
+	dir, base := filepath.Dir(abs), filepath.Base(abs)
+	for dir != filepath.Dir(dir) {
+		if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+			return filepath.Join(resolved, base), nil
+		}
+		base = filepath.Join(filepath.Base(dir), base)
+		dir = filepath.Dir(dir)
+	}
+	return abs, nil
 }
 
 // Run copies the embedded demo-app into a temp git repo, inits house-policy, checks, prepares release.
@@ -112,12 +133,15 @@ func Run(opts Options) error {
 		return err
 	}
 	for _, rel := range paths {
-		p := filepath.Join(dir, rel)
+		p, clean, err := validate.SafeJoin(dir, rel)
+		if err != nil {
+			return fmt.Errorf("demo scaffold path refused: %s: %w", rel, err)
+		}
 		if _, err := os.Stat(p); err == nil {
 			continue
 		}
 		_ = os.MkdirAll(filepath.Dir(p), 0o755)
-		if err := os.WriteFile(p, []byte(packs.DefaultScaffoldBody(rel)), 0o644); err != nil {
+		if err := os.WriteFile(p, []byte(packs.DefaultScaffoldBody(clean)), 0o644); err != nil {
 			return err
 		}
 	}

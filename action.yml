@@ -15,7 +15,7 @@ inputs:
     required: false
     default: ''
   diff:
-    description: 'If true, pass --diff to cyberready check'
+    description: 'Delta mode — not release-gate safe. If true, pass --diff (only changed files; required-file gates still run). Default false for full-scan release gates.'
     required: false
     default: 'false'
   heal:

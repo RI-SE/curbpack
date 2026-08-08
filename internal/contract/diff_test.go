@@ -56,7 +56,7 @@ func TestSBOMDigestPrepareReleaseMatchesAttestBind(t *testing.T) {
 	writeGoodHouse(t, dir)
 	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"demo","dependencies":{"left-pad":"1.3.0"}}`+"\n")
 
-	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}}); err != nil {
+	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, AllowFailingGates: true}); err != nil {
 		t.Fatal(err)
 	}
 	sbomPath := filepath.Join(dir, ".github/cyberready/evidence/sbom.cdx.json")

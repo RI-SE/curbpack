@@ -117,7 +117,7 @@ jobs:
           "$GITHUB_WORKSPACE/bin/cyberready"
           "$GITHUB_WORKSPACE/bin/cyberready" check --form-hints || true
           echo '{"name":"demo","dependencies":{"left-pad":"1.3.0"}}' > package.json
-          "$GITHUB_WORKSPACE/bin/cyberready" prepare-release
+          "$GITHUB_WORKSPACE/bin/cyberready" prepare-release --allow-failing-gates
           test -f .github/cyberready/evidence/sbom.cdx.json
           python3 - <<'PY'
           import json
@@ -128,7 +128,7 @@ jobs:
           print("cyclonedx+vex ok")
           PY
           git add -A && git -c commit.gpgsign=false commit --no-verify -m "evidence" -q
-          "$GITHUB_WORKSPACE/bin/cyberready" attest
+          "$GITHUB_WORKSPACE/bin/cyberready" attest --allow-dirty
           test -f .github/cyberready/evidence/hpurl-pointer.json
           python3 - <<'PY'
           import json
@@ -138,6 +138,7 @@ jobs:
           PY
           # Hook dry-run: script is executable and references check
           head -n 5 .git/hooks/pre-commit
+          grep -q 'refusing commit' .git/hooks/pre-commit
           H1=$(python3 -c 'import json;print(json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))["state_hash"])')
           "$GITHUB_WORKSPACE/bin/cyberready" attest --allow-dirty >/dev/null
           H2=$(python3 -c 'import json;print(json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))["state_hash"])')
@@ -155,6 +156,8 @@ jobs:
         run: go build -o bin/cyberready ./cmd/cyberready
       - name: Claim safety (docs + runtime)
         run: ./scripts/claim-safety.sh
+      - name: Redteam pilot scoreboard
+        run: ./scripts/redteam-pilot.sh
       - name: Heal smoke + baseline ratchet + dead-ends
         run: ./scripts/gauntlet-ratchet.sh
       - name: Install-from-release smoke

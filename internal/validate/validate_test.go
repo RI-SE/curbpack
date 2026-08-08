@@ -193,8 +193,13 @@ func TestPathTraversalFailClosed(t *testing.T) {
 		PackIDs:  []string{"path-traversal"},
 		Quiet:    true,
 	})
+	// Fail closed at pack load (ValidatePack) or as a gate finding — either is OK.
 	if err != nil {
-		t.Fatal(err)
+		if !strings.Contains(strings.ToLower(err.Error()), "traversal") &&
+			!strings.Contains(strings.ToLower(err.Error()), "path") {
+			t.Fatalf("expected path refuse in load error, got %v", err)
+		}
+		return
 	}
 	if res.Passed {
 		t.Fatal("expected traversal failure")
@@ -207,6 +212,35 @@ func TestPathTraversalFailClosed(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected ADV-TRAVERSAL traversal fail, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestInvalidPackageJSONDepBanFail(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+	mustWrite(t, filepath.Join(dir, "package.json"), "{not-json\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("invalid package.json must fail dep-ban / config gate")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if strings.Contains(strings.ToLower(f.SanitizedDescription), "invalid package.json") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected invalid package.json failure, got %#v", res.Payload.Failures)
 	}
 }
 

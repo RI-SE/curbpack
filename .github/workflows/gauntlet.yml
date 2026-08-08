@@ -17,6 +17,8 @@ jobs:
         run: go build -o bin/cyberready ./cmd/cyberready
       - name: Claim safety
         run: ./scripts/claim-safety.sh
+      - name: Redteam pilot scoreboard
+        run: ./scripts/redteam-pilot.sh
       - name: Full baseline ratchet
         run: ./scripts/gauntlet-ratchet.sh
       - name: UX killers — demo sandbox + init non-destructive + hooks idempotent

@@ -329,7 +329,9 @@ func checkNPMDepBan(root string, rule packs.Rule) []ir.Failure {
 	}
 	var manifest ir.PackageManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil
+		f := failFromRule(rule, "package.json", "invalid package.json: "+err.Error())
+		f.ASTCoordinates.NodePath = "."
+		return []ir.Failure{f}
 	}
 	checkMap := func(deps map[string]string) []ir.Failure {
 		if deps == nil {

@@ -6,6 +6,14 @@ Plain language. This is how trust works in CyberReady+ — and what it does **no
 
 A **local-first evidence CLI**. It runs pack rules against files in a git repo, writes review artifacts, and can bind a state hash into Git Notes. Humans review those artifacts. CyberReady does **not** certify conformity, issue CE marks, or replace auditors.
 
+## Pilot-prod contract
+
+Pilot-prod (CLI + Action on other git repos) means exactly these three invariants. `scripts/redteam-pilot.sh` is the adversarial grade.
+
+1. **No adversarial false-green** — a consumer PR cannot make Action/`check` exit 0 via `./bin/cyberready`, skipped required-file gates, or a missing hook binary when hooks are enabled.
+2. **No path escape** — pack/init/heal/demo cannot write outside the repo (or under `.git/`).
+3. **Attest does not lie** — capsule digests are not silently bound to uncommitted self-written evidence without explicit `--allow-dirty`.
+
 ## Trust boundaries
 
 | Boundary | What you can trust | What you must not assume |
