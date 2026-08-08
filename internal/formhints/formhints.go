@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/remediation"
@@ -14,12 +13,12 @@ import (
 
 // Hint is a deterministic gate→snippet proposal (Witness-style templates).
 type Hint struct {
-	GateID   string
-	File     string
-	Snippet  string
-	Action   string
-	Applied  bool
-	Proposed bool
+	GateID    string
+	File      string
+	Snippet   string
+	Action    string
+	Applied   bool
+	Proposed  bool
 	FromCache bool
 }
 
@@ -110,7 +109,7 @@ func Format(hints []Hint) string {
 }
 
 // ApplyStubs writes missing/empty target files with snippets. Never overwrites non-empty files.
-// Refuses absolute paths and path traversal. Never calls attest.
+// Refuses absolute paths, path traversal, .git/**, and symlink targets. Never calls attest.
 func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 	out := make([]Hint, 0, len(hints))
 	for _, h := range hints {
@@ -125,12 +124,9 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 		}
 		h.File = rel
 		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
-		// #region agent log
-		underGit := strings.HasPrefix(rel, ".git/") || rel == ".git"
-		debugagent.Log("H5", "formhints.go:ApplyStubs", "stub write candidate", map[string]any{
-			"rel": rel, "underGit": underGit, "gate": h.GateID,
-		})
-		// #endregion
+		if st, err := os.Lstat(path); err == nil && st.Mode()&os.ModeSymlink != 0 {
+			return out, fmt.Errorf("refusing symlink remediation path: %s", rel)
+		}
 		if st, err := os.Stat(path); err == nil && st.Size() > 0 {
 			out = append(out, h)
 			continue
@@ -142,11 +138,6 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 			return out, err
 		}
 		h.Applied = true
-		// #region agent log
-		if underGit {
-			debugagent.Log("H5", "formhints.go:ApplyStubs", "WROTE under .git", map[string]any{"rel": rel})
-		}
-		// #endregion
 		out = append(out, h)
 	}
 	return out, nil
@@ -187,6 +178,9 @@ func safeRelPath(p string) (string, error) {
 	if clean == ".." || strings.HasPrefix(clean, "../") {
 		return "", fmt.Errorf("refusing path traversal in remediation: %s", p)
 	}
+	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
+		return "", fmt.Errorf("refusing remediation under .git: %s", p)
+	}
 	// Mirror validate.SafeJoin: refuse escape after Abs when joined under a fake root.
 	root := string(os.PathSeparator) + "repo"
 	full := filepath.Join(root, filepath.FromSlash(clean))
@@ -202,11 +196,6 @@ func safeRelPath(p string) (string, error) {
 	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
 		return "", fmt.Errorf("refusing path escape in remediation: %s", p)
 	}
-	// #region agent log
-	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
-		debugagent.Log("H5", "formhints.go:safeRelPath", "ALLOWED path under .git", map[string]any{"clean": clean})
-	}
-	// #endregion
 	return clean, nil
 }
 

@@ -68,10 +68,10 @@ runs:
         ASSET="cyberready_${OS}_${ARCH}"
         DEST="${{ github.action_path }}/cyberready"
         VER="${{ inputs.version }}"
-        if [ -x ./bin/cyberready ]; then
-          cp ./bin/cyberready "$DEST"
-          echo "source=workspace-bin" >> "$GITHUB_OUTPUT"
-        elif command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/cyberready' go.mod 2>/dev/null; then
+        # Never prefer consumer ./bin/cyberready — that skips checksum verification and
+        # lets a PR ship a fake-green binary. Dogfood builds from this module; others
+        # download a release and verify sha256 against checksums.txt (fail-closed).
+        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/cyberready' go.mod 2>/dev/null; then
           go build -o "$DEST" ./cmd/cyberready
           echo "source=built" >> "$GITHUB_OUTPUT"
         else

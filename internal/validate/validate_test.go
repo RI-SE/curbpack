@@ -163,20 +163,21 @@ func TestDiffSkipUntouchedRules(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
 	writeGoodCRA(t, dir)
-	// Simulate git diff touching only README — CRA annex rules should skip;
-	// npm_dep_ban has no paths so still runs (and passes without package.json).
 	mustWrite(t, filepath.Join(dir, "README.md"), "# fixture changed\n")
 
-	// Without real git status, ChangedFiles may fail → DiffOnly falls back to full scan.
-	// Stub porcelain via fake: we unit-test RuleTouchesDiff instead when git unavailable.
+	// file_present / annex_file always evaluate under --diff (missing/short files never appear in porcelain).
 	rule := packs.Rule{ID: "x", Check: "annex_file", Path: "docs/annex-vii/risk_assessment.md"}
 	changed := map[string]struct{}{"README.md": {}}
-	if packs.RuleTouchesDiff(rule, changed) {
-		t.Fatal("annex rule should not touch README-only diff")
+	if !packs.RuleTouchesDiff(rule, changed) {
+		t.Fatal("annex_file must always evaluate under --diff")
 	}
 	dep := packs.Rule{ID: "y", Check: "npm_dep_ban", Package: "axios", BannedVersions: []string{"1.6.0"}}
 	if !packs.RuleTouchesDiff(dep, changed) {
 		t.Fatal("pathless rules always run")
+	}
+	anti := packs.Rule{ID: "z", Check: "anti_placeholder", Paths: []string{"docs/annex-vii/risk_assessment.md"}}
+	if packs.RuleTouchesDiff(anti, changed) {
+		t.Fatal("anti_placeholder on untouched annex may skip under --diff")
 	}
 }
 

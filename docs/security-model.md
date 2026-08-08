@@ -21,6 +21,8 @@ A **local-first evidence CLI**. It runs pack rules against files in a git repo, 
 
 Release installs (shell script and composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Prefer building from a known checkout when dogfooding this repo.
 
+The composite Action does **not** prefer a consumer `./bin/cyberready` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
+
 ## Attestation honesty
 
 - **Signed:** SSH-agent successfully produced a signature → `user_touch=ssh-agent-signed`.

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/tty"
 )
@@ -214,6 +213,9 @@ func ParseHPURLFragment(frag string) (HPURLParts, bool) {
 // trySSHAgentSign signs via ssh-keygen -Y when SSH_AUTH_SOCK is set.
 // Returns verified=true only when a real signature file was produced.
 // agent-bind placeholders are never treated as verified signatures.
+//
+// OpenSSH expects -f to be a key file (public key matching an agent-held private
+// key is enough). Passing the payload path as -f always fails.
 func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, verified bool) {
 	if strings.TrimSpace(os.Getenv("SSH_AUTH_SOCK")) == "" {
 		return "", "", false
@@ -231,38 +233,35 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 		who = "SSH-Agent:" + parts[len(parts)-1]
 	}
 
+	tmpPub, err := os.CreateTemp("", "cyberready-attest-*.pub")
+	if err != nil {
+		return "", who, false
+	}
+	defer os.Remove(tmpPub.Name())
+	if _, err := tmpPub.WriteString(first + "\n"); err != nil {
+		_ = tmpPub.Close()
+		return "", who, false
+	}
+	_ = tmpPub.Close()
+
 	tmpIn, err := os.CreateTemp("", "cyberready-attest-*.txt")
 	if err != nil {
 		return "", who, false
 	}
 	defer os.Remove(tmpIn.Name())
-	_, _ = tmpIn.WriteString(payload)
+	if _, err := tmpIn.WriteString(payload); err != nil {
+		_ = tmpIn.Close()
+		return "", who, false
+	}
 	_ = tmpIn.Close()
 
 	tmpOut := tmpIn.Name() + ".sig"
 	defer os.Remove(tmpOut)
 
-	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", tmpIn.Name(), "-n", "cyberready@attest", tmpIn.Name())
+	// -f = public key (agent resolves private); final arg = data to sign.
+	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", tmpPub.Name(), "-n", "cyberready@attest", tmpIn.Name())
 	cmd.Dir = repoRoot
-	// #region agent log
-	dashF := ""
-	for i, a := range cmd.Args {
-		if a == "-f" && i+1 < len(cmd.Args) {
-			dashF = cmd.Args[i+1]
-			break
-		}
-	}
-	debugagent.Log("H4", "attest.go:trySSHAgentSign", "ssh-keygen argv", map[string]any{
-		"args": cmd.Args, "dashF": dashF, "payloadPath": tmpIn.Name(),
-		"dashFEqualsPayload": dashF == tmpIn.Name(),
-	})
-	// #endregion
 	if err := cmd.Run(); err != nil {
-		// #region agent log
-		debugagent.Log("H4", "attest.go:trySSHAgentSign", "ssh-keygen sign failed", map[string]any{
-			"err": err.Error(), "who": who,
-		})
-		// #endregion
 		return "", who, false
 	}
 	sigBytes, err := os.ReadFile(tmpOut)
@@ -304,7 +303,7 @@ func View(repoRoot string) error {
 	if cap.UserTouch != "ssh-agent-signed" || cap.SSHSignature == "" || strings.HasPrefix(cap.SSHSignature, "agent-bind:") {
 		fmt.Printf("  Signature:       %s\n", tty.C(tty.Yellow, "UNSIGNED — not cryptographically verified"))
 	} else {
-		fmt.Printf("  Signature:       verified (ssh-agent)\n")
+		fmt.Printf("  Signature:       %s\n", tty.C(tty.Yellow, "ssh-agent signature blob present (not independently verified)"))
 	}
 	fmt.Printf("  Commit bound:    %s\n", cap.CommitSHA)
 	fmt.Printf("  State hash:      %s\n", cap.StateHash)

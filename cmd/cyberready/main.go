@@ -11,7 +11,6 @@ import (
 	"github.com/afelin/cyberready/internal/ask"
 	"github.com/afelin/cyberready/internal/attest"
 	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/demo"
 	"github.com/afelin/cyberready/internal/doctor"
 	"github.com/afelin/cyberready/internal/formhints"
@@ -375,8 +374,9 @@ func cmdCheck(args []string) error {
 
 	var res validate.Result
 	var lastHints []formhints.Hint
+	checkDiff := diffOnly
 	for round := 0; round <= healMaxRounds; round++ {
-		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut})
+		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: checkDiff, Quiet: jsonOut})
 		if err != nil {
 			return err
 		}
@@ -405,11 +405,8 @@ func cmdCheck(args []string) error {
 		if applied == 0 {
 			break // nothing more heal can write
 		}
-		// #region agent log
-		debugagent.Log("H3", "main.go:cmdCheckHeal", "heal round applied; next re-check still DiffOnly", map[string]any{
-			"round": round + 1, "applied": applied, "diffOnly": diffOnly,
-		})
-		// #endregion
+		// After any stub write, force a full scan so --diff cannot false-green remaining failures.
+		checkDiff = false
 	}
 
 	if jsonOut {

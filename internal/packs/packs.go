@@ -418,7 +418,13 @@ Preferred-Languages: en
 
 // RuleTouchesDiff reports whether a rule's declared paths intersect changed files.
 // Rules without path/paths always run (true).
+// file_present / annex_file always run under --diff: missing or short required files
+// never appear in porcelain, so skipping them produces false greens.
 func RuleTouchesDiff(rule Rule, changed map[string]struct{}) bool {
+	switch rule.Check {
+	case "file_present", "annex_file":
+		return true
+	}
 	if len(changed) == 0 {
 		return true
 	}

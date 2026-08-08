@@ -14,7 +14,6 @@ import (
 	"unicode"
 
 	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
@@ -77,11 +76,6 @@ func Run(opts Options) (Result, error) {
 		for _, rule := range pack.Rules {
 			if opts.DiffOnly && !packs.RuleTouchesDiff(rule, changed) {
 				skipped++
-				// #region agent log
-				debugagent.Log("H2", "validate.go:DiffOnlySkip", "skipped gate under DiffOnly", map[string]any{
-					"gate": rule.ID, "check": rule.Check, "path": rule.Path, "changedN": len(changed),
-				})
-				// #endregion
 				if !opts.Quiet {
 					tty.PrintStatus("Gate "+rule.ID, true, "skipped (diff)")
 				}

@@ -39,6 +39,18 @@ func TestScaffoldPaths(t *testing.T) {
 	}
 }
 
+func TestRuleTouchesDiffAlwaysRunsFilePresent(t *testing.T) {
+	changed := map[string]struct{}{"README.md": {}}
+	r := packs.Rule{ID: "HOUSE-SECURITY-MD", Check: "file_present", Path: "SECURITY.md"}
+	if !packs.RuleTouchesDiff(r, changed) {
+		t.Fatal("file_present must always evaluate under --diff")
+	}
+	r2 := packs.Rule{ID: "HOUSE-ANTI-PLACEHOLDER", Check: "anti_placeholder", Paths: []string{"SECURITY.md"}}
+	if packs.RuleTouchesDiff(r2, changed) {
+		t.Fatal("anti_placeholder on untouched SECURITY.md may skip under --diff")
+	}
+}
+
 func TestValidateRegexPatternLimits(t *testing.T) {
 	if err := packs.ValidateRegexPattern(`secret`); err != nil {
 		t.Fatal(err)

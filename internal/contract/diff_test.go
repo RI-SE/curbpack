@@ -99,6 +99,49 @@ func TestJSONSchemaVersionPresent(t *testing.T) {
 	}
 }
 
+// --diff must not false-green when required files are missing / failing but untouched in porcelain.
+func TestDiffOnlyStillFailsMissingSecurityMD(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeMinimalHouseFail(t, dir)
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "add", "-A")
+	run("git", "commit", "-m", "base", "-q")
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\ntouched\n")
+
+	diffRes, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, DiffOnly: true, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fullRes, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, DiffOnly: false, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diffRes.Passed {
+		t.Fatal("--diff must not pass when SECURITY.md is missing")
+	}
+	if fullRes.Passed {
+		t.Fatal("full scan should fail")
+	}
+	found := false
+	for _, f := range diffRes.Payload.Failures {
+		if f.GateID == "HOUSE-SECURITY-MD" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected HOUSE-SECURITY-MD under --diff, got %#v", diffRes.Payload.Failures)
+	}
+}
+
 func sortedGateIDs(fs []ir.Failure) []string {
 	out := make([]string, 0, len(fs))
 	for _, f := range fs {
