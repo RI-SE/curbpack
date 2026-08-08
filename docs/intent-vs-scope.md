@@ -1,5 +1,7 @@
 # Intent vs Scope
 
+**Local pack gates. Humans review. Not conformity assessment.**
+
 Sixty-second clarity for buyers, auditors, and agents. Gate pass is **evidence for human review** — not conformity assessment, CE marking, or certification.
 
 | Column | Content |

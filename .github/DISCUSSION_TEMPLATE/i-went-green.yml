@@ -1,0 +1,35 @@
+title: "[green] "
+labels: ["show-and-tell"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share that you hit green. Keep it claim-safe: green means ready for a human to look — **not** certified, CE-marked, or conformity-assessed.
+
+  - type: dropdown
+    id: path
+    attributes:
+      label: Path that went green
+      options:
+        - A — Safe try (install → doctor → demo)
+        - B — Product repo (init → check)
+        - C — CI-only (Action @v0.4.1)
+    validations:
+      required: true
+
+  - type: input
+    id: pin
+    attributes:
+      label: Pin
+      description: e.g. `@v0.4.1`
+      placeholder: v0.4.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes (optional)
+      description: Time-to-green feel, one friction point, or nothing. No secrets; no certification language.
+    validations:
+      required: false
