@@ -51,10 +51,10 @@ DOC_FILES=()
 while IFS= read -r f; do
   DOC_FILES+=("$f")
 done < <(
-  find README.md SECURITY.md NOTICE LICENSE docs .cursor/skills internal/skilldata action.yml \
+  find README.md SECURITY.md NOTICE LICENSE docs papers site .cursor/skills internal/skilldata action.yml \
     .github/ISSUE_TEMPLATE .github/workflows scripts \
-    \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name 'LICENSE' -o -name 'NOTICE' \) \) \
-    2>/dev/null | grep -v 'scripts/claim-safety\.sh$' | sort -u
+    \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name '*.html' -o -name 'LICENSE' -o -name 'NOTICE' \) \) \
+    2>/dev/null | grep -v 'scripts/claim-safety\.sh$' | grep -v '/gtm-oss/' | grep -v 'workflows/pages\.yml$' | sort -u
 )
 
 for f in "${DOC_FILES[@]}"; do

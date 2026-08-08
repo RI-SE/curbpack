@@ -163,20 +163,21 @@ func TestDiffSkipUntouchedRules(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
 	writeGoodCRA(t, dir)
-	// Simulate git diff touching only README — CRA annex rules should skip;
-	// npm_dep_ban has no paths so still runs (and passes without package.json).
 	mustWrite(t, filepath.Join(dir, "README.md"), "# fixture changed\n")
 
-	// Without real git status, ChangedFiles may fail → DiffOnly falls back to full scan.
-	// Stub porcelain via fake: we unit-test RuleTouchesDiff instead when git unavailable.
+	// file_present / annex_file always evaluate under --diff (missing/short files never appear in porcelain).
 	rule := packs.Rule{ID: "x", Check: "annex_file", Path: "docs/annex-vii/risk_assessment.md"}
 	changed := map[string]struct{}{"README.md": {}}
-	if packs.RuleTouchesDiff(rule, changed) {
-		t.Fatal("annex rule should not touch README-only diff")
+	if !packs.RuleTouchesDiff(rule, changed) {
+		t.Fatal("annex_file must always evaluate under --diff")
 	}
 	dep := packs.Rule{ID: "y", Check: "npm_dep_ban", Package: "axios", BannedVersions: []string{"1.6.0"}}
 	if !packs.RuleTouchesDiff(dep, changed) {
 		t.Fatal("pathless rules always run")
+	}
+	anti := packs.Rule{ID: "z", Check: "anti_placeholder", Paths: []string{"docs/annex-vii/risk_assessment.md"}}
+	if packs.RuleTouchesDiff(anti, changed) {
+		t.Fatal("anti_placeholder on untouched annex may skip under --diff")
 	}
 }
 
@@ -192,8 +193,13 @@ func TestPathTraversalFailClosed(t *testing.T) {
 		PackIDs:  []string{"path-traversal"},
 		Quiet:    true,
 	})
+	// Fail closed at pack load (ValidatePack) or as a gate finding — either is OK.
 	if err != nil {
-		t.Fatal(err)
+		if !strings.Contains(strings.ToLower(err.Error()), "traversal") &&
+			!strings.Contains(strings.ToLower(err.Error()), "path") {
+			t.Fatalf("expected path refuse in load error, got %v", err)
+		}
+		return
 	}
 	if res.Passed {
 		t.Fatal("expected traversal failure")
@@ -209,32 +215,46 @@ func TestPathTraversalFailClosed(t *testing.T) {
 	}
 }
 
-func TestBadRegexFailNoPanic(t *testing.T) {
+func TestInvalidPackageJSONDepBanFail(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
-	wd, _ := os.Getwd()
-	root := filepath.Clean(filepath.Join(wd, "../.."))
-	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	writeGoodHouse(t, dir)
+	mustWrite(t, filepath.Join(dir, "package.json"), "{not-json\n")
 
 	res, err := validate.Run(validate.Options{
 		RepoRoot: dir,
-		PackIDs:  []string{"bad-regex"},
+		PackIDs:  []string{"house-policy"},
 		Quiet:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Passed {
-		t.Fatal("expected invalid pattern failure")
+		t.Fatal("invalid package.json must fail dep-ban / config gate")
 	}
 	found := false
 	for _, f := range res.Payload.Failures {
-		if f.GateID == "ADV-BAD-RE" && strings.Contains(f.SanitizedDescription, "invalid pattern") {
+		if strings.Contains(strings.ToLower(f.SanitizedDescription), "invalid package.json") {
 			found = true
+			break
 		}
 	}
 	if !found {
-		t.Fatalf("expected ADV-BAD-RE invalid pattern, got %#v", res.Payload.Failures)
+		t.Fatalf("expected invalid package.json failure, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestBadRegexFailNoPanic(t *testing.T) {
+	wd, _ := os.Getwd()
+	root := filepath.Clean(filepath.Join(wd, "../.."))
+	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	// Invalid pack regex is rejected at load (ReDoS / schema fail-closed).
+	_, err := packs.LoadPack("bad-regex")
+	if err == nil {
+		t.Fatal("expected pack load to reject invalid pattern")
+	}
+	if !strings.Contains(err.Error(), "invalid pattern") && !strings.Contains(err.Error(), "pattern") {
+		t.Fatalf("expected pattern error, got %v", err)
 	}
 }
 

@@ -102,7 +102,8 @@ func Run(opts Options) (Result, error) {
 	score := tty.ScoreFromFailures(len(failures))
 	parent, _ := gitutil.HeadSHA(root)
 	payload := ir.GateFailurePayload{
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		SchemaVersion: ir.SchemaVersion,
+		Timestamp:     time.Now().UTC().Format(time.RFC3339),
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
 			StateVersionToken:       "v3.33-OCC",
@@ -170,6 +171,11 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 			},
 		}}
 	}
+}
+
+// SafeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
+func SafeJoin(root, rel string) (string, string, error) {
+	return safeJoin(root, rel)
 }
 
 // safeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
@@ -267,6 +273,9 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 }
 
 func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
+	if err := packs.ValidateRegexPattern(rule.Pattern); err != nil {
+		return []ir.Failure{failFromRule(rule, strings.Join(rule.Paths, ","), err.Error())}
+	}
 	re, err := regexp.Compile(rule.Pattern)
 	if err != nil {
 		return []ir.Failure{failFromRule(rule, strings.Join(rule.Paths, ","), "invalid pattern: "+err.Error())}
@@ -282,11 +291,34 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 		if err != nil {
 			continue
 		}
-		if re.Match(data) {
+		if len(data) > packs.MaxRegexMatchBytes {
+			data = data[:packs.MaxRegexMatchBytes]
+		}
+		matched, timedOut := matchWithTimeout(re, data, 50*time.Millisecond)
+		if timedOut {
+			out = append(out, failFromRule(rule, clean, "pattern match timed out (ReDoS guard)"))
+			continue
+		}
+		if matched {
 			out = append(out, failFromRule(rule, clean, "forbidden pattern matched"))
 		}
 	}
 	return out
+}
+
+// matchWithTimeout runs re.Match with a soft timeout via goroutine.
+// On timeout returns timedOut=true (treat as failure, not silent pass).
+func matchWithTimeout(re *regexp.Regexp, data []byte, timeout time.Duration) (matched, timedOut bool) {
+	done := make(chan bool, 1)
+	go func() {
+		done <- re.Match(data)
+	}()
+	select {
+	case m := <-done:
+		return m, false
+	case <-time.After(timeout):
+		return false, true
+	}
 }
 
 func checkNPMDepBan(root string, rule packs.Rule) []ir.Failure {
@@ -297,7 +329,9 @@ func checkNPMDepBan(root string, rule packs.Rule) []ir.Failure {
 	}
 	var manifest ir.PackageManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil
+		f := failFromRule(rule, "package.json", "invalid package.json: "+err.Error())
+		f.ASTCoordinates.NodePath = "."
+		return []ir.Failure{f}
 	}
 	checkMap := func(deps map[string]string) []ir.Failure {
 		if deps == nil {

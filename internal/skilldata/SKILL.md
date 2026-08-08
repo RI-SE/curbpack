@@ -16,6 +16,7 @@ Local-first evidence CLI. Prepares review packs for **human review**. Does not c
 ## Commands
 
 ```bash
+cyberready                 # doctor if uninitialized, else check
 cyberready doctor
 cyberready demo
 cyberready init --packs house-policy --hooks --skill --ide
@@ -32,6 +33,16 @@ cyberready attest
 cyberready packs list
 ```
 
+## Exit codes (stable)
+
+| Code | Meaning |
+|------|---------|
+| 0 | Pass / success |
+| 1 | Gate failures (or operational error on check/validate) |
+| 2 | Usage / environment (unknown command, not a git repo when required) |
+
+JSON payloads include `schema_version` for agents.
+
 ## Agent rules
 
 1. Treat `cyberready check` / `validate` exit code as authoritative for gate pass/fail.
@@ -40,5 +51,8 @@ cyberready packs list
 4. Never claim the product is certified, CE-marked, or notified-body approved.
 5. Coreward is optional (`CYBERREADY_SOCK` + `cyberready sock`); fail-open if absent.
 6. Cold start: prefer `--packs house-policy` unless the user asks for CRA/medtech.
-7. After doc/dep edits in an initialized repo, run `cyberready check`.
-8. `--heal` never auto-attests; remediations cache lives at `.github/cyberready/cache/remediations.json`.
+7. After doc/dep edits in an initialized repo, run `cyberready check` (or bare `cyberready`).
+8. **On red:** run `cyberready check --heal` then `cyberready ask … --propose`; never invent certification; `--heal` never auto-attests.
+9. Remediations cache: `.github/cyberready/cache/remediations.json`.
+10. Release path: `prepare-release` then human `attest` — never auto-attest.
+11. **No auto-demo loops.** Do not re-run `cyberready demo` to "show the one-pager." Demo does **not** open a browser unless the user passes `--open`. For a sample review page, link `site/samples/onepager.html` (or the printed path from a single demo). Daily `check` never generates or opens a one-pager.

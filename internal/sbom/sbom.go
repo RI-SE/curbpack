@@ -78,6 +78,15 @@ func FromLockfiles(root string) (Summary, error) {
 	}, nil
 }
 
+// FileDigest returns sha256 hex of path contents, or "" if unreadable.
+func FileDigest(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
+
 // WriteCycloneDX writes a CycloneDX 1.5 JSON BOM under outPath (or default evidence path).
 func WriteCycloneDX(root, outPath string) (Document, string, error) {
 	pkgs, source, err := CollectPackages(root)
@@ -162,6 +171,11 @@ func CollectPackages(root string) ([]Package, string, error) {
 		return pkgs, "package.json", err
 	}
 	return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, or package.json")
+}
+
+// IsUnavailable reports whether err means no supported lockfile/manifest (not an I/O failure).
+func IsUnavailable(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no package-lock.json, pnpm-lock.yaml, or package.json")
 }
 
 func fileExists(p string) bool {

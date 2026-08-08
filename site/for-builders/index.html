@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>For builders — CyberReady+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="mark" href="../">CyberReady+</a>
+      <ul>
+        <li><a href="../how-it-works/">How it works</a></li>
+        <li><a href="./" aria-current="page">Builders</a></li>
+        <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="../security/">Security</a></li>
+        <li><a href="../whitepaper/">White paper</a></li>
+        <li><a href="../samples/onepager.html">Sample</a></li>
+      </ul>
+    </nav>
+
+    <section class="section prose">
+      <h2>For builders</h2>
+      <p class="sub">Install once. Check daily. Open the browser only when you mean to.</p>
+      <ol>
+        <li>Install with the checksum-verified script (macOS/Linux) from the <a href="https://github.com/afelin/cyberready#install-no-go">README</a>.</li>
+        <li><code>cyberready doctor</code> then <code>cyberready demo</code> — prints a one-pager path; add <code>--open</code> only if you want the OS to open it.</li>
+        <li>In your product repo: <code>cyberready init --packs house-policy</code> then <code>cyberready check</code>.</li>
+        <li>Before a review wave: <code>prepare-release</code>, then a human <code>attest</code>.</li>
+      </ol>
+      <p>Agents: use the Cursor skill; never loop on <code>demo</code> to “show the page.” Link the <a href="../samples/onepager.html">static sample</a> instead.</p>
+      <p class="muted">Write your own pack: see repo docs <code>docs/write-your-own-pack.md</code>.</p>
+    </section>
+
+    <footer class="site-footer">
+      <p><a href="../">Home</a> · Prepares evidence for human review — not a conformity assessment.</p>
+    </footer>
+  </div>
+</body>
+</html>

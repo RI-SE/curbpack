@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>White paper — CyberReady+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/site.css" />
+  <style>
+    .paper { max-width: 44rem; padding: 2.5rem 0 4rem; }
+    .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; }
+    .paper h2 { font-family: var(--font-display); margin-top: 2rem; font-size: 1.35rem; }
+    .paper h3 { margin-top: 1.25rem; font-size: 1.05rem; }
+    .paper pre {
+      overflow-x: auto; background: #161a24; color: #e8eaed;
+      padding: 1rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.45;
+    }
+    .paper table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 1rem 0; }
+    .paper th, .paper td { border-bottom: 1px solid var(--line); text-align: left; padding: 0.45rem 0.35rem; vertical-align: top; }
+    .paper blockquote {
+      margin: 1rem 0; padding: 0.75rem 1rem; border-left: 3px solid var(--steel);
+      background: rgba(61, 79, 102, 0.06); color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="mark" href="../">CyberReady+</a>
+      <ul>
+        <li><a href="../how-it-works/">How it works</a></li>
+        <li><a href="../for-builders/">Builders</a></li>
+        <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="../security/">Security</a></li>
+        <li><a href="./" aria-current="page">White paper</a></li>
+        <li><a href="../samples/onepager.html">Sample</a></li>
+      </ul>
+    </nav>
+
+    <article class="paper prose">
+      <h1>CyberReady+ White Paper</h1>
+      <p class="muted">Local evidence preparation for human review — architecture, packs-as-data, dual representation, trust boundaries, limitations.</p>
+      <blockquote>CyberReady prepares evidence for <strong>human review</strong>. It does <strong>not</strong> certify conformity, issue CE marks, or replace a notified body or auditor.</blockquote>
+      <p><a href="https://github.com/afelin/cyberready/blob/main/papers/cyberready-whitepaper.md">Source markdown on GitHub</a></p>
+
+      <h2>1. Problem framing</h2>
+      <p>Software suppliers must show documentation and dependency hygiene against house rules or regulatory-shaped checklists. Spreadsheets drift. Cloud platforms move source of truth off the machine.</p>
+      <p>CyberReady+ is a <strong>local-first CLI</strong>. It evaluates <strong>packs</strong> (JSON rule sets) against a git repository, emits machine- and human-readable findings, and can bind a reproducible state digest into Git Notes. Judgment stays with people.</p>
+
+      <h2>2. Architecture</h2>
+      <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
+                                    ↓
+                         Review pack / evidence + optional attest</pre>
+      <p>The engine is industry-agnostic. Packs are data. No remote policy brain is required for daily check. An optional Unix-domain socket bridge fails open if absent; the socket defaults to a private path mode 0600.</p>
+
+      <h2>3. Packs as data</h2>
+      <p>Packs ship embedded and may be overridden via <code>CYBERREADY_PACKS_DIR</code>. Schema validation rejects unknown checks and pathological regex at load. Network updates require a sha256 pin; air-gap import is preferred.</p>
+
+      <h2>4. Dual representation</h2>
+      <p>Every run produces JSON GateFailure IR and semantic markdown. Exit codes: 0 pass, 1 gates/error, 2 usage/environment.</p>
+
+      <h2>5. Evidence artifacts</h2>
+      <table>
+        <thead><tr><th>Artifact</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Review pack layers</td><td>Gate JSON, action report, executive summary</td></tr>
+          <tr><td>Buyer one-pager</td><td>Single-screen snapshot (not a certificate)</td></tr>
+          <tr><td>CycloneDX / OpenVEX</td><td>Best-effort SBOM; pending VEX drafts</td></tr>
+          <tr><td>HPURL + Git Notes</td><td>Local hash pointer; optional signature</td></tr>
+        </tbody>
+      </table>
+      <p>Daily <code>check</code> does not generate or open the one-pager. <code>prepare-release</code> skips rewrite when the gate fingerprint is unchanged.</p>
+
+      <h2>6. Trust boundaries</h2>
+      <p><strong>Signed</strong> means a real SSH signature. <strong>Unsigned</strong> means not cryptographically verified — never labeled as verified install. Install scripts and the Action verify release checksums fail-closed.</p>
+
+      <h2>7. Non-claims</h2>
+      <p>No conformity certification, CE marking, notified-body replacement, or claim that green gates equal market access.</p>
+
+      <h2>8. Limitations</h2>
+      <p>Pack quality bounds coverage; regex checks are heuristics with size/time guards; Windows is unsupported for release binaries and the sock bridge; client-side HPURL verify is not a remote notary.</p>
+    </article>
+
+    <footer class="site-footer">
+      <p><a href="../">Home</a> · Technical paper only — no ops or GTM runbooks.</p>
+    </footer>
+  </div>
+</body>
+</html>

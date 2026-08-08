@@ -13,32 +13,58 @@ jobs:
   post:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.22.x"
-      - name: Build + demo timing
+          go-version: "1.23.x"
+      - name: Build + demo fingerprint
         id: smoke
         run: |
           set -euo pipefail
           go build -o bin/cyberready ./cmd/cyberready
-          START=$(date +%s)
           FIX=$(mktemp -d)
           ./bin/cyberready demo --out "$FIX" --keep >/tmp/demo.out
-          END=$(date +%s)
-          echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
-      - name: Create Discussion (claim-safe template)
-        uses: actions/github-script@v7
+          SCORE=$(python3 -c "import json;print(json.load(open('${FIX}/.github/cyberready/cache/latest_failure.json')).get('readiness_score',0))")
+          FP="demo_ok=true|score=${SCORE}|packs=house-policy"
+          echo "fp=${FP}" >> "$GITHUB_OUTPUT"
+          echo "score=${SCORE}" >> "$GITHUB_OUTPUT"
+      - name: Create Discussion (silent if unchanged)
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          ELAPSED: ${{ steps.smoke.outputs.elapsed }}
+          FP: ${{ steps.smoke.outputs.fp }}
+          SCORE: ${{ steps.smoke.outputs.score }}
         with:
           script: |
-            const elapsed = process.env.ELAPSED || '?';
-            const title = `Weekly offline smoke — demo green in ${elapsed}s`;
+            const fp = process.env.FP || '';
+            const score = process.env.SCORE || '?';
+            const marker = `<!-- cyberready-weekly-fp:${fp} -->`;
+
+            const repoIdQuery = await github.graphql(`
+              query($owner:String!, $name:String!) {
+                repository(owner:$owner, name:$name) {
+                  id
+                  discussionCategories(first: 20) {
+                    nodes { id name }
+                  }
+                  discussions(first: 10, orderBy:{field:CREATED_AT, direction:DESC}) {
+                    nodes { title body }
+                  }
+                }
+              }`, { owner: context.repo.owner, name: context.repo.repo });
+
+            const recent = repoIdQuery.repository.discussions.nodes || [];
+            const same = recent.find(d => (d.body || '').includes(marker) || (d.body || '').includes(`cyberready-weekly-fp:${fp}`));
+            if (same) {
+              core.info(`scoreboard unchanged (${fp}) — skip Discussion (zero babysitting)`);
+              return;
+            }
+
+            const title = `Weekly offline smoke — demo green (score ${score}%)`;
             const body = [
+              marker,
               '## This week\'s offline smoke',
               '',
-              `House-policy sandbox (\`cyberready demo\`) completed in **${elapsed}s** on GitHub-hosted runners.`,
+              `House-policy sandbox (\`cyberready demo\`) is **green** (readiness **${score}%**).`,
               '',
               '### Try it',
               '```bash',
@@ -49,20 +75,8 @@ jobs:
               '### Claim safety (do not edit away)',
               '> Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.',
               '',
-              'Paste a thermometer screenshot in the replies if you ran the demo (optional; names/orgs only with consent).',
-              '',
-              '_Auto-posted from `.github/workflows/weekly-discussion.yml` — claim-safe template only; no spam bots._',
+              '_Auto-posted from `.github/workflows/weekly-discussion.yml` — skipped when fingerprint unchanged._',
             ].join('\n');
-
-            const repoIdQuery = await github.graphql(`
-              query($owner:String!, $name:String!) {
-                repository(owner:$owner, name:$name) {
-                  id
-                  discussionCategories(first: 20) {
-                    nodes { id name }
-                  }
-                }
-              }`, { owner: context.repo.owner, name: context.repo.repo });
 
             const nodes = repoIdQuery.repository.discussionCategories.nodes || [];
             const show = nodes.find(n => /show/i.test(n.name)) || nodes[0];

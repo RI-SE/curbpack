@@ -1,6 +1,8 @@
 package packscmd
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,19 +36,21 @@ func List() error {
 }
 
 // UpdateStub documents / optionally fetches a pack update channel.
-// Without CYBERREADY_PACKS_URL it only prints instructions (offline-safe).
+// Network fetch is disabled unless BOTH CYBERREADY_PACKS_URL and
+// CYBERREADY_PACKS_SHA256 (hex) are set — fail-closed integrity pin.
 func UpdateStub() error {
 	url := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_URL"))
+	pin := strings.ToLower(strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_SHA256")))
 	dest := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR"))
 	if dest == "" {
 		dest = filepath.Join(".github", "cyberready", "packs")
 	}
 	if url == "" {
-		fmt.Println(`packs update (P2 stub)
+		fmt.Println(`packs update
 
-CyberReady embeds packs in the binary. To refresh without a new binary:
+CyberReady embeds packs in the binary. Network pack updates are OFF by default.
 
-  1. Air-gap import:
+  1. Air-gap import (preferred):
        cyberready packs import ./path/to/packs-bundle
 
   2. Or set CYBERREADY_PACKS_DIR to a directory containing:
@@ -55,12 +59,20 @@ CyberReady embeds packs in the binary. To refresh without a new binary:
        house-policy/pack.json
        _watchlist.json
 
-  3. Optional online channel (when available):
-       CYBERREADY_PACKS_URL=https://… cyberready packs update
+  3. Optional online channel (requires integrity pin):
+       CYBERREADY_PACKS_URL=https://… \
+       CYBERREADY_PACKS_SHA256=<sha256-hex> \
+       cyberready packs update
 
-Watchlist refreshes are informational only and never fail validate.
-No signed CDN is required for P0/P1 demos.`)
+Without CYBERREADY_PACKS_SHA256, network update is refused.
+Watchlist refreshes are informational only and never fail validate.`)
 		return nil
+	}
+	if pin == "" || len(pin) != 64 {
+		return fmt.Errorf("CYBERREADY_PACKS_URL set but CYBERREADY_PACKS_SHA256 missing or not 64 hex chars — refusing network update (fail closed)")
+	}
+	if _, err := hex.DecodeString(pin); err != nil {
+		return fmt.Errorf("CYBERREADY_PACKS_SHA256 is not valid hex: %w", err)
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
@@ -72,9 +84,14 @@ No signed CDN is required for P0/P1 demos.`)
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("packs update HTTP %d", resp.StatusCode)
 	}
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20)) // 32 MiB cap
 	if err != nil {
 		return err
+	}
+	sum := sha256.Sum256(data)
+	actual := hex.EncodeToString(sum[:])
+	if actual != pin {
+		return fmt.Errorf("packs update checksum mismatch: expected %s got %s — refusing write", pin, actual)
 	}
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		return err
@@ -83,7 +100,7 @@ No signed CDN is required for P0/P1 demos.`)
 	if err := os.WriteFile(out, data, 0o644); err != nil {
 		return err
 	}
-	tty.PrintStatus("Packs update", true, "wrote "+out+" — extract pack.json files manually or use packs import")
+	tty.PrintStatus("Packs update", true, "sha256 ok → wrote "+out+" — extract pack.json files manually or use packs import")
 	return nil
 }
 

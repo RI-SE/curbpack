@@ -24,9 +24,55 @@ const Claim = "Prepares evidence for human review — not a conformity assessmen
 
 // Options for the sandbox demo.
 type Options struct {
-	KeepDir bool   // keep temp dir (print path)
-	OutDir  string // optional fixed output dir (still never mutates caller product cwd)
-	Version string
+	KeepDir     bool   // keep temp dir (print path)
+	OutDir      string // optional fixed output dir (still never mutates caller product cwd)
+	Version     string
+	OpenBrowser bool // opt-in: open buyer-onepager in the system browser (default false)
+}
+
+// JailOutDir refuses --out that equals or sits under the caller's cwd (product tree).
+// Resolves symlinks via EvalSymlinks so a link into the product tree cannot bypass the jail.
+func JailOutDir(out, cwd string) error {
+	out = strings.TrimSpace(out)
+	if out == "" {
+		return nil
+	}
+	outAbs, err := resolveJailPath(out)
+	if err != nil {
+		return err
+	}
+	cwdAbs, err := resolveJailPath(cwd)
+	if err != nil {
+		return err
+	}
+	if outAbs == cwdAbs {
+		return fmt.Errorf("demo --out refuses product cwd (use a temp path or omit --out)")
+	}
+	sep := string(os.PathSeparator)
+	if strings.HasPrefix(outAbs, cwdAbs+sep) {
+		return fmt.Errorf("demo --out refuses paths under product cwd (data-loss jail)")
+	}
+	return nil
+}
+
+func resolveJailPath(p string) (string, error) {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		return resolved, nil
+	}
+	// Path may not exist yet — resolve the nearest existing ancestor.
+	dir, base := filepath.Dir(abs), filepath.Base(abs)
+	for dir != filepath.Dir(dir) {
+		if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+			return filepath.Join(resolved, base), nil
+		}
+		base = filepath.Join(filepath.Base(dir), base)
+		dir = filepath.Dir(dir)
+	}
+	return abs, nil
 }
 
 // Run copies the embedded demo-app into a temp git repo, inits house-policy, checks, prepares release.
@@ -36,8 +82,15 @@ func Run(opts Options) error {
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Isolated temp git repo — your product cwd is not modified."))
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err := JailOutDir(opts.OutDir, cwd); err != nil {
+		return err
+	}
+
 	dir := opts.OutDir
-	var err error
 	if dir == "" {
 		dir, err = os.MkdirTemp("", "cyberready-demo-*")
 		if err != nil {
@@ -80,12 +133,15 @@ func Run(opts Options) error {
 		return err
 	}
 	for _, rel := range paths {
-		p := filepath.Join(dir, rel)
+		p, clean, err := validate.SafeJoin(dir, rel)
+		if err != nil {
+			return fmt.Errorf("demo scaffold path refused: %s: %w", rel, err)
+		}
 		if _, err := os.Stat(p); err == nil {
 			continue
 		}
 		_ = os.MkdirAll(filepath.Dir(p), 0o755)
-		if err := os.WriteFile(p, []byte(packs.DefaultScaffoldBody(rel)), 0o644); err != nil {
+		if err := os.WriteFile(p, []byte(packs.DefaultScaffoldBody(clean)), 0o644); err != nil {
 			return err
 		}
 	}
@@ -113,8 +169,11 @@ func Run(opts Options) error {
 	}
 	onepager := filepath.Join(dir, "review-pack", "buyer-onepager.html")
 	tty.PrintStatus("buyer-onepager", true, onepager)
-
-	openOnePager(onepager)
+	if opts.OpenBrowser {
+		openOnePager(onepager)
+	} else {
+		fmt.Printf("%s\n", tty.C(tty.Dim, "one-pager path printed above — open with: cyberready demo --open (or open the file)"))
+	}
 
 	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Demo green in sandbox"))
 	if opts.KeepDir || opts.OutDir != "" {

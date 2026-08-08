@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How it works — CyberReady+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="mark" href="../">CyberReady+</a>
+      <ul>
+        <li><a href="./" aria-current="page">How it works</a></li>
+        <li><a href="../for-builders/">Builders</a></li>
+        <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="../security/">Security</a></li>
+        <li><a href="../whitepaper/">White paper</a></li>
+        <li><a href="../samples/onepager.html">Sample</a></li>
+      </ul>
+    </nav>
+
+    <section class="section prose">
+      <h2>How it works</h2>
+      <p class="sub">Plain speak. Abbreviations expanded once.</p>
+
+      <h3>1. Rule pack</h3>
+      <p>A <strong>rule pack</strong> is a JSON file of checks (files present, banned dependency versions, forbidden text patterns). Packs encode policy: house rules, CRA-style annex drafts, or sector templates. The binary does not hard-code an industry.</p>
+
+      <h3>2. Local check</h3>
+      <p><code>cyberready check</code> evaluates packs against your git repository on disk. Results are dual: machine JSON (Gate Failure list) and markdown humans/agents can read. Exit code 0 means gates green; 1 means findings remain.</p>
+
+      <h3>3. Review pack</h3>
+      <p><code>prepare-release</code> writes a <strong>review pack</strong>: layered reports, optional software bill of materials (SBOM) summary, and a buyer one-pager HTML. Daily <code>check</code> does not open or regenerate that HTML page.</p>
+
+      <h3>4. Human sign-off</h3>
+      <p>A person reads the evidence and may run <code>attest</code> to bind a reproducible state hash into Git Notes. Unsigned attestations are labeled unsigned — not “verified.”</p>
+
+      <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Flow from rule pack through local check to human sign-off">
+        <rect x="16" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
+        <text x="86" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Rule pack</text>
+        <text x="86" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">JSON gates</text>
+
+        <path class="flow-line" d="M164 106 H230"/>
+        <polygon points="230,100 242,106 230,112" fill="#3d4f66"/>
+
+        <rect x="248" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
+        <text x="318" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Local check</text>
+        <text x="318" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">On your machine</text>
+
+        <path class="flow-line" d="M396 106 H462"/>
+        <polygon points="462,100 474,106 462,112" fill="#3d4f66"/>
+
+        <rect x="480" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
+        <text x="550" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Review pack</text>
+        <text x="550" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">Evidence files</text>
+
+        <path class="flow-line" d="M550 150 V178 H318 V150"/>
+        <polygon points="312,150 318,138 324,150" fill="#3d4f66"/>
+
+        <rect x="248" y="8" width="140" height="52" rx="6" fill="#161a24" stroke="#5a7a9a" stroke-width="2"/>
+        <text x="318" y="30" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="700" fill="#e8eaed">Human sign-off</text>
+        <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#9aa3b2">Attest · judgment</text>
+      </svg>
+
+      <p class="muted">See a committed sample one-pager (generated once in-repo): <a href="../samples/onepager.html">samples/onepager.html</a>. Do not re-run demo just to reopen the browser.</p>
+    </section>
+
+    <footer class="site-footer">
+      <p><a href="../">Home</a> · Not a conformity assessment.</p>
+    </footer>
+  </div>
+</body>
+</html>

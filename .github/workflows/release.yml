@@ -18,11 +18,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Resolve version
         id: ver
@@ -56,7 +56,7 @@ jobs:
           ls -la dist
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cyberready-binaries
           path: dist/*
@@ -77,6 +77,12 @@ jobs:
           ## CyberReady+ ${TAG}
 
           Local evidence CLI — prepares review packs for **human review**. Not a conformity assessment or certification.
+
+          ### Provenance
+
+          Built by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          \`install.sh\` verifies \`checksums.txt\` (sha256) fail-closed. Windows binaries are not published (unsupported).
 
           ### Install (no Go)
 
