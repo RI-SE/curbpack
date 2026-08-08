@@ -31,14 +31,17 @@ cyberready attest          # human sign-off; unsigned ≠ verified
 ## GitHub Action
 
 ```yaml
-- uses: afelin/cyberready@v0.3.0
+- uses: afelin/cyberready@v0.3.1
   with:
+    version: v0.3.1
     heal: "true"
     comment_on: red
     upload_sarif: "true"
 ```
 
-Release downloads in the Action verify checksums like `install.sh`. Prefer SARIF/annotations over long PR comments.
+Pin **`@v0.3.1`** (tag + release checksums). For paranoid consumers, also pin the commit SHA of that tag. Release downloads in the Action verify checksums like `install.sh`. Prefer SARIF/annotations over long PR comments.
+
+**Pilot deploy:** run `./scripts/redteam-pilot.sh` before promoting a pin. Trust-surface code (Action resolve, SafeJoin, attest OCC, claim-safety) is under a **30-day feature freeze** after `v0.3.1` — bugfixes only.
 
 ## Commands
 

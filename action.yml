@@ -7,7 +7,7 @@ branding:
 
 inputs:
   version:
-    description: 'Release tag to download (e.g. v0.3.0). Empty = build from this checkout if go is available, else latest release.'
+    description: 'Release tag to download (e.g. v0.3.1). Empty = build from this checkout if go is available, else latest release.'
     required: false
     default: 'latest'
   packs:

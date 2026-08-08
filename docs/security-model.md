@@ -14,6 +14,12 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 2. **No path escape** — pack/init/heal/demo cannot write outside the repo (or under `.git/`).
 3. **Attest does not lie** — capsule digests are not silently bound to uncommitted self-written evidence without explicit `--allow-dirty`.
 
+### Pilot deploy + freeze
+
+- Grade: `./scripts/redteam-pilot.sh` must be green.
+- Pin: Action/consumers use `@v0.3.1` (prefer tag + commit SHA).
+- **30-day trust-surface freeze** after `v0.3.1`: Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, and claim-safety — bugfixes only; no new trust-surface features.
+
 ## Trust boundaries
 
 | Boundary | What you can trust | What you must not assume |

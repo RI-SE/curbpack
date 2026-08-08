@@ -28,7 +28,7 @@ import (
 )
 
 // version is set at release build via -ldflags "-X main.version=..."
-var version = "0.3.0"
+var version = "0.3.1"
 
 // Stable exit codes (document in README):
 //
