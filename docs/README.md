@@ -10,6 +10,8 @@
 | [Coreward bridge](coreward-bridge.md) | Optional tutor IPC + dogfood checklist |
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Getting started](getting-started/60-second-paths.md) | First move — 60-second paths |
+| [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
+| [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Launch readiness](launch-readiness.md) | Internal launch checklist |
 
 ## Ops (not product)
