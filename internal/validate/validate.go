@@ -68,29 +68,27 @@ func Run(opts Options) (Result, error) {
 	var failures []ir.Failure
 	var regions []string
 	skipped := 0
-	for _, id := range ids {
-		pack, err := packs.LoadPack(id)
-		if err != nil {
-			return Result{}, err
+	composed, _, err := packs.Compose(ids)
+	if err != nil {
+		return Result{}, err
+	}
+	for _, rule := range composed.Rules {
+		if opts.DiffOnly && !packs.RuleTouchesDiff(rule, changed) {
+			skipped++
+			if !opts.Quiet {
+				tty.PrintStatus("Gate "+rule.ID, true, "skipped (diff)")
+			}
+			continue
 		}
-		for _, rule := range pack.Rules {
-			if opts.DiffOnly && !packs.RuleTouchesDiff(rule, changed) {
-				skipped++
-				if !opts.Quiet {
-					tty.PrintStatus("Gate "+rule.ID, true, "skipped (diff)")
-				}
-				continue
+		fs := evalRule(root, rule)
+		if len(fs) > 0 {
+			regions = append(regions, rule.ID)
+			failures = append(failures, fs...)
+			if !opts.Quiet {
+				tty.PrintStatus("Gate "+rule.ID, false, rule.Description)
 			}
-			fs := evalRule(root, rule)
-			if len(fs) > 0 {
-				regions = append(regions, rule.ID)
-				failures = append(failures, fs...)
-				if !opts.Quiet {
-					tty.PrintStatus("Gate "+rule.ID, false, rule.Description)
-				}
-			} else if !opts.Quiet {
-				tty.PrintStatus("Gate "+rule.ID, true, "ok")
-			}
+		} else if !opts.Quiet {
+			tty.PrintStatus("Gate "+rule.ID, true, "ok")
 		}
 	}
 
@@ -113,9 +111,9 @@ func Run(opts Options) (Result, error) {
 			FailedOrthogonalRegions: unique(regions),
 		},
 		AgentIdentity: ir.AgentIdentity{
-			AgentID:         "cyberready-cli",
-			ModelHash:       "deterministic",
-			ActiveMandateID: strings.Join(ids, "+"),
+			AgentID:         envOr("CYBERREADY_AGENT_ID", "cyberready-cli"),
+			ModelHash:       envOr("CYBERREADY_MODEL_HASH", "deterministic"),
+			ActiveMandateID: envOr("CYBERREADY_MANDATE_ID", strings.Join(ids, "+")),
 		},
 		Failures:       failures,
 		PackID:         strings.Join(ids, ","),
@@ -430,6 +428,13 @@ func auditASTReachability(gitRoot string) []ir.Failure {
 			ExpectedState:  "No direct unmitigated function calls found in AST.",
 		},
 	}}
+}
+
+func envOr(key, fallback string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func unique(in []string) []string {

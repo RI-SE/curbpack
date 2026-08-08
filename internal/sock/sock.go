@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/afelin/cyberready/internal/exportx"
 	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/validate"
 )
 
@@ -26,6 +28,18 @@ type Response struct {
 	Detail   string                 `json:"detail,omitempty"`
 	Failures []ir.Failure           `json:"failures,omitempty"`
 	Payload  *ir.GateFailurePayload `json:"payload,omitempty"`
+	Graph    *GraphSummary          `json:"graph,omitempty"`
+	Packet   json.RawMessage        `json:"explain_packet,omitempty"`
+}
+
+// GraphSummary is paths-only RKG summary for agents.
+type GraphSummary struct {
+	SchemaVersion string   `json:"schema_version"`
+	Path          string   `json:"path,omitempty"`
+	NodeCount     int      `json:"node_count"`
+	EdgeCount     int      `json:"edge_count"`
+	NodeTypes     []string `json:"node_types,omitempty"`
+	Note          string   `json:"note"`
 }
 
 // DefaultPath returns a private socket path.
@@ -82,9 +96,7 @@ func ensurePrivateDir(dir string) error {
 	return nil
 }
 
-// Serve listens on a Unix domain socket and handles validate_delta.
-// Path defaults via DefaultPath(); socket file mode is 0600.
-// Refuses parent directories that remain world-writable.
+// Serve listens on a Unix domain socket and handles validate_delta / get_latest_failure / graph_summary / explain_packet.
 func Serve(sockPath, repoRoot string) error {
 	var err error
 	if sockPath == "" {
@@ -110,7 +122,7 @@ func Serve(sockPath, repoRoot string) error {
 		_ = ln.Close()
 		_ = os.Remove(sockPath)
 	}()
-	fmt.Fprintf(os.Stderr, "cyberready sock listening on %s mode=0600 (op=validate_delta)\n", sockPath)
+	fmt.Fprintf(os.Stderr, "cyberready sock listening on %s mode=0600 (ops=validate_delta,get_latest_failure,graph_summary,explain_packet)\n", sockPath)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -135,16 +147,21 @@ func handle(conn net.Conn, repoRoot string) {
 	if op == "" {
 		op = "validate_delta"
 	}
-	if op != "validate_delta" {
+	switch op {
+	case "validate_delta":
+		_ = enc.Encode(ValidateDelta(repoRoot))
+	case "get_latest_failure":
+		_ = enc.Encode(GetLatestFailure(repoRoot))
+	case "graph_summary":
+		_ = enc.Encode(GraphSummaryOp(repoRoot))
+	case "explain_packet":
+		_ = enc.Encode(ExplainPacketOp(repoRoot))
+	default:
 		_ = enc.Encode(Response{OK: false, Reason: "unavailable", Detail: "unsupported op: " + op})
-		return
 	}
-
-	_ = enc.Encode(ValidateDelta(repoRoot))
 }
 
 // ValidateDelta runs Quiet validate and returns the sock Response shape.
-// gate_id set must match check/validate --json (differential contract).
 func ValidateDelta(repoRoot string) Response {
 	res, err := validate.Run(validate.Options{RepoRoot: repoRoot, Quiet: true})
 	if err != nil {
@@ -157,4 +174,74 @@ func ValidateDelta(repoRoot string) Response {
 		Payload:  &p,
 		Detail:   fmt.Sprintf("score=%d failures=%d", res.Score, len(p.Failures)),
 	}
+}
+
+// GetLatestFailure reads cache/latest_failure.json without re-running gates.
+func GetLatestFailure(repoRoot string) Response {
+	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_failure.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: "no latest_failure.json — run check first"}
+	}
+	var p ir.GateFailurePayload
+	if err := json.Unmarshal(data, &p); err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: "invalid latest_failure.json"}
+	}
+	return Response{
+		OK:       len(p.Failures) == 0,
+		Failures: p.Failures,
+		Payload:  &p,
+		Detail:   path,
+	}
+}
+
+// GraphSummaryOp returns paths-only graph stats (builds graph if missing).
+func GraphSummaryOp(repoRoot string) Response {
+	path := filepath.Join(repoRoot, ".github", "cyberready", "graph", "policy-graph.json")
+	if _, err := os.Stat(path); err != nil {
+		if _, err := packs.ExportPolicyGraph(repoRoot, nil, path); err != nil {
+			return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
+	}
+	var g packs.PolicyGraph
+	if err := json.Unmarshal(data, &g); err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: "invalid policy-graph.json"}
+	}
+	types := map[string]struct{}{}
+	for _, n := range g.Nodes {
+		types[n.Type] = struct{}{}
+	}
+	typeList := make([]string, 0, len(types))
+	for t := range types {
+		typeList = append(typeList, t)
+	}
+	sum := GraphSummary{
+		SchemaVersion: g.SchemaVersion,
+		Path:          filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+		NodeCount:     len(g.Nodes),
+		EdgeCount:     len(g.Edges),
+		NodeTypes:     typeList,
+		Note:          "Paths only — no raw source. Local RKG for agents.",
+	}
+	return Response{OK: true, Graph: &sum, Detail: sum.Path}
+}
+
+// ExplainPacketOp writes/returns a sanitized explain-packet.
+func ExplainPacketOp(repoRoot string) Response {
+	path, err := exportx.WriteExplainPacket(repoRoot, nil, "")
+	if err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
+	}
+	if err := exportx.PacketLooksAirlocked(data); err != nil {
+		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
+	}
+	return Response{OK: true, Packet: data, Detail: filepath.ToSlash(filepath.Join(".github", "cyberready", "cache", "explain-packet.json"))}
 }

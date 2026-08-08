@@ -51,8 +51,9 @@ type Document struct {
 
 // Package is a normalized name@version from a lockfile.
 type Package struct {
-	Name    string
-	Version string
+	Name      string
+	Version   string
+	Ecosystem string // npm|golang
 }
 
 // FromLockfiles scans npm/pnpm lockfiles if present (summary view).
@@ -116,7 +117,17 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 	product := filepath.Base(root)
 	comps := make([]Component, 0, len(pkgs))
 	for _, p := range pkgs {
-		ref := "pkg:npm/" + p.Name + "@" + p.Version
+		eco := p.Ecosystem
+		if eco == "" {
+			eco = "npm"
+		}
+		var ref string
+		switch eco {
+		case "golang", "go":
+			ref = "pkg:golang/" + p.Name + "@" + p.Version
+		default:
+			ref = "pkg:npm/" + p.Name + "@" + p.Version
+		}
 		comps = append(comps, Component{
 			Type:    "library",
 			Name:    p.Name,
@@ -157,25 +168,75 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 }
 
 // CollectPackages returns normalized packages and the source lockfile name.
+// Prefers npm/pnpm lockfiles; also merges go.mod require lines when present.
 func CollectPackages(root string) ([]Package, string, error) {
+	var out []Package
+	sources := make([]string, 0, 2)
+	seen := map[string]struct{}{}
+	add := func(pkgs []Package) {
+		for _, p := range pkgs {
+			key := p.Ecosystem + "|" + p.Name + "@" + p.Version
+			if p.Ecosystem == "" {
+				key = "npm|" + p.Name + "@" + p.Version
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, p)
+		}
+	}
+
 	if p := filepath.Join(root, "pnpm-lock.yaml"); fileExists(p) {
 		pkgs, err := parsePnpmLockPackages(p)
-		return pkgs, "pnpm-lock.yaml", err
-	}
-	if p := filepath.Join(root, "package-lock.json"); fileExists(p) {
+		if err != nil {
+			return nil, "", err
+		}
+		for i := range pkgs {
+			pkgs[i].Ecosystem = "npm"
+		}
+		add(pkgs)
+		sources = append(sources, "pnpm-lock.yaml")
+	} else if p := filepath.Join(root, "package-lock.json"); fileExists(p) {
 		pkgs, err := parseNPMLockPackages(p)
-		return pkgs, "package-lock.json", err
-	}
-	if p := filepath.Join(root, "package.json"); fileExists(p) {
+		if err != nil {
+			return nil, "", err
+		}
+		for i := range pkgs {
+			pkgs[i].Ecosystem = "npm"
+		}
+		add(pkgs)
+		sources = append(sources, "package-lock.json")
+	} else if p := filepath.Join(root, "package.json"); fileExists(p) {
 		pkgs, err := parsePackageJSONPackages(p)
-		return pkgs, "package.json", err
+		if err != nil {
+			return nil, "", err
+		}
+		for i := range pkgs {
+			pkgs[i].Ecosystem = "npm"
+		}
+		add(pkgs)
+		sources = append(sources, "package.json")
 	}
-	return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, or package.json")
+
+	if p := filepath.Join(root, "go.mod"); fileExists(p) {
+		pkgs, err := parseGoModPackages(p)
+		if err != nil {
+			return nil, "", err
+		}
+		add(pkgs)
+		sources = append(sources, "go.mod")
+	}
+
+	if len(out) == 0 && len(sources) == 0 {
+		return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, package.json, or go.mod")
+	}
+	return out, strings.Join(sources, "+"), nil
 }
 
 // IsUnavailable reports whether err means no supported lockfile/manifest (not an I/O failure).
 func IsUnavailable(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "no package-lock.json, pnpm-lock.yaml, or package.json")
+	return err != nil && strings.Contains(err.Error(), "no package-lock.json, pnpm-lock.yaml, package.json, or go.mod")
 }
 
 func fileExists(p string) bool {
@@ -310,4 +371,45 @@ func splitPnpmKey(key string) (name, version string) {
 		return key, ""
 	}
 	return key[:idx], key[idx+1:]
+}
+
+func parseGoModPackages(path string) ([]Package, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var out []Package
+	inBlock := false
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "//") {
+			continue
+		}
+		if strings.HasPrefix(line, "require (") {
+			inBlock = true
+			continue
+		}
+		if inBlock {
+			if line == ")" {
+				inBlock = false
+				continue
+			}
+			line = strings.TrimSuffix(line, "// indirect")
+			line = strings.TrimSpace(line)
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				out = append(out, Package{Name: fields[0], Version: fields[1], Ecosystem: "golang"})
+			}
+			continue
+		}
+		if strings.HasPrefix(line, "require ") {
+			fields := strings.Fields(line)
+			if len(fields) >= 3 {
+				out = append(out, Package{Name: fields[1], Version: fields[2], Ecosystem: "golang"})
+			}
+		}
+	}
+	return out, sc.Err()
 }

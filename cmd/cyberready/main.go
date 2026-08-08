@@ -13,6 +13,7 @@ import (
 	"github.com/afelin/cyberready/internal/config"
 	"github.com/afelin/cyberready/internal/demo"
 	"github.com/afelin/cyberready/internal/doctor"
+	"github.com/afelin/cyberready/internal/exportx"
 	"github.com/afelin/cyberready/internal/formhints"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/packs"
@@ -87,6 +88,8 @@ func main() {
 			err = doctor.Run(doctor.Options{Version: version})
 		case "demo":
 			err = cmdDemo(rest)
+		case "export":
+			err = cmdExport(rest)
 		default:
 			fmt.Printf("%s\n\n", tty.C(tty.Red, "Unknown command '"+cmd+"'"))
 			usage()
@@ -125,28 +128,25 @@ func cmdDefault() error {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Bold+tty.Cyan, "CyberReady+ "+version))
-	fmt.Fprintf(os.Stderr, "Regulation-agnostic evidence CLI — packs encode policy. Not a certification product.\n\n")
+	fmt.Fprintf(os.Stderr, "Local evidence CLI — packs encode policy. Not a certification product.\n\n")
 	fmt.Fprintf(os.Stderr, "Usage: cyberready [<command>] [args]\n")
-	fmt.Fprintf(os.Stderr, "  (no command)                  doctor if uninitialized, else check\n\n")
-	fmt.Fprintf(os.Stderr, "Commands:\n")
-	fmt.Fprintf(os.Stderr, "  doctor                         Environment confidence (PATH, packs, hooks)\n")
-	fmt.Fprintf(os.Stderr, "  demo [--keep] [--open] [--out DIR]\n")
-	fmt.Fprintf(os.Stderr, "                                 Safe sandbox: temp git + house-policy check\n")
-	fmt.Fprintf(os.Stderr, "                                 (prints one-pager path; --open opens browser)\n")
-	fmt.Fprintf(os.Stderr, "  init [--packs a,b] [--hooks] [--skill] [--ide]\n")
-	fmt.Fprintf(os.Stderr, "                                 Scaffold config + stubs (+ hook/skill/tasks)\n")
-	fmt.Fprintf(os.Stderr, "  check [--diff] [--json] [--form-hints] [--apply-stub] [--heal]\n")
-	fmt.Fprintf(os.Stderr, "                                 Daily loop; --heal = hints→stub→re-check (max 3)\n")
-	fmt.Fprintf(os.Stderr, "                                 --diff/--delta = delta mode — not release-gate safe\n")
-	fmt.Fprintf(os.Stderr, "  validate [--delta] [--json]   Pack gates (JSON + markdown dual-rep)\n")
-	fmt.Fprintf(os.Stderr, "                                 --delta = delta mode — not release-gate safe\n")
-	fmt.Fprintf(os.Stderr, "  prepare-release [--allow-failing-gates]\n")
-	fmt.Fprintf(os.Stderr, "                                 Write review-pack/ + CycloneDX/VEX evidence\n")
-	fmt.Fprintf(os.Stderr, "  packs list|update|import      Embedded packs; update/import helpers\n")
-	fmt.Fprintf(os.Stderr, "  ask [file|-] [--propose]      Explain GateFailure JSON (optional --propose)\n")
-	fmt.Fprintf(os.Stderr, "  attest [--allow-dirty]        Reproducible Git Notes capsule + HPURL pointer\n")
-	fmt.Fprintf(os.Stderr, "  view                          Show Git Notes capsule for HEAD\n")
-	fmt.Fprintf(os.Stderr, "  sock                          Unix socket validate_delta server (optional Coreward)\n\n")
+	fmt.Fprintf(os.Stderr, "  (no command)     doctor if uninitialized, else check\n\n")
+	fmt.Fprintf(os.Stderr, "Ladder:\n")
+	fmt.Fprintf(os.Stderr, "  doctor           Environment confidence\n")
+	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
+	fmt.Fprintf(os.Stderr, "  init [--bare] [--packs a,b]\n")
+	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
+	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
+	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
+	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule\n\n")
+	fmt.Fprintf(os.Stderr, "Advanced:\n")
+	fmt.Fprintf(os.Stderr, "  validate [--json] [--delta]   Dual-rep gates (--delta not release-safe)\n")
+	fmt.Fprintf(os.Stderr, "  check --diff                  Delta mode — not release-gate safe\n")
+	fmt.Fprintf(os.Stderr, "  ask [file] [--propose]        Explain GateFailure JSON\n")
+	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
+	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join [--spdx] [--slsa]\n")
+	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
+	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")
 }
 
@@ -183,15 +183,19 @@ func cmdInit(args []string) error {
 	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
 
-	// Cold-start default: house-policy (lowest regulatory anxiety) unless --packs set.
+	// Opinionated cold start: house-policy + hooks/skill/ide unless --bare.
 	packList := []string{"house-policy"}
-	hooks := false
-	skill := false
-	ide := false
+	hooks := true
+	skill := true
+	ide := true
 	explicitPacks := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
+		case a == "--bare":
+			hooks = false
+			skill = false
+			ide = false
 		case a == "--packs" && i+1 < len(args):
 			packList = config.ParsePacksFlag(args[i+1])
 			explicitPacks = true
@@ -201,17 +205,23 @@ func cmdInit(args []string) error {
 			explicitPacks = true
 		case a == "--medtech":
 			if !explicitPacks {
-				packList = []string{"cra-baseline", "medtech-iec62304"}
+				packList = []string{"medtech-iec62304"}
 			} else {
 				packList = appendUnique(packList, "medtech-iec62304")
 			}
-			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --packs cra-baseline,medtech-iec62304"))
+			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --packs medtech-iec62304 (extends cra-baseline)"))
 		case a == "--hooks":
 			hooks = true
 		case a == "--skill":
 			skill = true
 		case a == "--ide":
 			ide = true
+		case a == "--no-hooks":
+			hooks = false
+		case a == "--no-skill":
+			skill = false
+		case a == "--no-ide":
+			ide = false
 		}
 	}
 	if len(packList) == 0 {
@@ -566,9 +576,103 @@ func cmdPacks(args []string) error {
 			src = args[1]
 		}
 		return packscmd.ImportAirGap(src)
+	case "export-graph":
+		return packscmd.ExportGraph(args[1:])
+	case "doctor":
+		return packscmd.Doctor()
 	default:
-		return usageErr(fmt.Sprintf("unknown packs subcommand %q (list|update|import)", args[0]))
+		return usageErr(fmt.Sprintf("unknown packs subcommand %q (list|update|import|export-graph|doctor)", args[0]))
 	}
+}
+
+func cmdExport(args []string) error {
+	root, err := gitutil.RepoRoot("")
+	if err != nil {
+		return usageErr("must run inside a git repository")
+	}
+	var packIDs []string
+	out := ""
+	wantSARIF := false
+	wantExplain := false
+	wantJoin := false
+	wantSPDX := false
+	wantSLSA := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--sarif":
+			wantSARIF = true
+		case "--explain-packet":
+			wantExplain = true
+		case "--watchlist-join":
+			wantJoin = true
+		case "--spdx":
+			wantSPDX = true
+		case "--slsa":
+			wantSLSA = true
+		case "--out":
+			if i+1 < len(args) {
+				out = args[i+1]
+				i++
+			}
+		case "--packs":
+			if i+1 < len(args) {
+				packIDs = append(packIDs, config.ParsePacksFlag(args[i+1])...)
+				i++
+			}
+		}
+	}
+	if !wantSARIF && !wantExplain && !wantJoin && !wantSPDX && !wantSLSA {
+		return usageErr("export requires --sarif, --explain-packet, --watchlist-join, and/or --spdx/--slsa")
+	}
+	if wantSARIF {
+		path, n, err := exportx.WriteSARIF(root, packIDs, out)
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("SARIF", true, fmt.Sprintf("%s results=%d", path, n))
+		out = "" // don't reuse path for subsequent exporters
+	}
+	if wantJoin {
+		path, err := exportx.WriteWatchlistJoin(root, ternary(wantSARIF || wantExplain, "", out))
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("watchlist∩SBOM", true, path)
+	}
+	if wantExplain {
+		path, err := exportx.WriteExplainPacket(root, packIDs, ternary(wantSARIF || wantJoin, "", out))
+		if err != nil {
+			return err
+		}
+		data, _ := os.ReadFile(path)
+		if err := exportx.PacketLooksAirlocked(data); err != nil {
+			return err
+		}
+		tty.PrintStatus("explain-packet", true, path)
+		fmt.Printf("%s\n", tty.C(tty.Dim, "CYBERREADY_EXPLAIN_ALLOW_CLOUD=0 by default — set =1 only for explicit cloud tutor export"))
+	}
+	if wantSPDX {
+		path, err := exportx.WriteSPDXOptional(root, "")
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("SPDX (optional)", true, path)
+	}
+	if wantSLSA {
+		path, err := exportx.WriteSLSAOptional(root, "")
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("SLSA sidecar (optional)", true, path)
+	}
+	return nil
+}
+
+func ternary(cond bool, a, b string) string {
+	if cond {
+		return a
+	}
+	return b
 }
 
 func cmdAsk(args []string) error {

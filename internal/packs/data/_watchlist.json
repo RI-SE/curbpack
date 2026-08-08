@@ -8,6 +8,7 @@
       "ecosystem": "npm",
       "package": "axios",
       "versions": ["1.6.0"],
+      "purl": "pkg:npm/axios",
       "reason": "Known critical CVEs in 1.6.0 line; prefer >=1.8.4",
       "refs": ["https://github.com/advisories"]
     },
