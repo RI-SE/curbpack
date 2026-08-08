@@ -11,6 +11,7 @@ import (
 	"github.com/afelin/cyberready/internal/ask"
 	"github.com/afelin/cyberready/internal/attest"
 	"github.com/afelin/cyberready/internal/config"
+	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/demo"
 	"github.com/afelin/cyberready/internal/doctor"
 	"github.com/afelin/cyberready/internal/formhints"
@@ -404,6 +405,11 @@ func cmdCheck(args []string) error {
 		if applied == 0 {
 			break // nothing more heal can write
 		}
+		// #region agent log
+		debugagent.Log("H3", "main.go:cmdCheckHeal", "heal round applied; next re-check still DiffOnly", map[string]any{
+			"round": round + 1, "applied": applied, "diffOnly": diffOnly,
+		})
+		// #endregion
 	}
 
 	if jsonOut {

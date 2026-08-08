@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/tty"
 )
@@ -243,7 +244,25 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 
 	cmd := exec.Command("ssh-keygen", "-Y", "sign", "-f", tmpIn.Name(), "-n", "cyberready@attest", tmpIn.Name())
 	cmd.Dir = repoRoot
+	// #region agent log
+	dashF := ""
+	for i, a := range cmd.Args {
+		if a == "-f" && i+1 < len(cmd.Args) {
+			dashF = cmd.Args[i+1]
+			break
+		}
+	}
+	debugagent.Log("H4", "attest.go:trySSHAgentSign", "ssh-keygen argv", map[string]any{
+		"args": cmd.Args, "dashF": dashF, "payloadPath": tmpIn.Name(),
+		"dashFEqualsPayload": dashF == tmpIn.Name(),
+	})
+	// #endregion
 	if err := cmd.Run(); err != nil {
+		// #region agent log
+		debugagent.Log("H4", "attest.go:trySSHAgentSign", "ssh-keygen sign failed", map[string]any{
+			"err": err.Error(), "who": who,
+		})
+		// #endregion
 		return "", who, false
 	}
 	sigBytes, err := os.ReadFile(tmpOut)

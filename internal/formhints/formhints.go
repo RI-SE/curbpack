@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/afelin/cyberready/internal/debugagent"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/remediation"
@@ -124,6 +125,12 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 		}
 		h.File = rel
 		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
+		// #region agent log
+		underGit := strings.HasPrefix(rel, ".git/") || rel == ".git"
+		debugagent.Log("H5", "formhints.go:ApplyStubs", "stub write candidate", map[string]any{
+			"rel": rel, "underGit": underGit, "gate": h.GateID,
+		})
+		// #endregion
 		if st, err := os.Stat(path); err == nil && st.Size() > 0 {
 			out = append(out, h)
 			continue
@@ -135,6 +142,11 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 			return out, err
 		}
 		h.Applied = true
+		// #region agent log
+		if underGit {
+			debugagent.Log("H5", "formhints.go:ApplyStubs", "WROTE under .git", map[string]any{"rel": rel})
+		}
+		// #endregion
 		out = append(out, h)
 	}
 	return out, nil
@@ -190,6 +202,11 @@ func safeRelPath(p string) (string, error) {
 	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
 		return "", fmt.Errorf("refusing path escape in remediation: %s", p)
 	}
+	// #region agent log
+	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
+		debugagent.Log("H5", "formhints.go:safeRelPath", "ALLOWED path under .git", map[string]any{"clean": clean})
+	}
+	// #endregion
 	return clean, nil
 }
 
