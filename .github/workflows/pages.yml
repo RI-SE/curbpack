@@ -52,9 +52,9 @@ jobs:
                       fail = 1
           sys.exit(fail)
           PY
-      - uses: actions/configure-pages@983d7736d9b0ae55b6921f5a3ddf6a0f9a8c2b9a # v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: site
       - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0ebdac5fa7d1f7e # v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
