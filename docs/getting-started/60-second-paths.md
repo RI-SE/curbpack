@@ -58,11 +58,13 @@ Runs deposit cache + review-pack under `.github/cyberready/`; attest when a huma
 
 ## Advanced
 
+Habit after first green: [daily loop](daily-loop.md) (Action every PR · local `check` · quiet `Δ readiness`).
+
 | Flag / path | When |
 |-------------|------|
 | `cyberready init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `cyberready init --packs a,b` | Override default house-policy |
-| `cyberready init --workflow` | Opt-in drop-in Action workflow if missing |
+| `cyberready init --workflow` | Opt-in drop-in Action `@v0.4.1` workflow if missing |
 | `cyberready demo --open` | Opt-in browser for the sandbox one-pager |
 
 > Prepares evidence for human review — not a conformity assessment.
