@@ -31,14 +31,14 @@ cyberready attest          # human sign-off; unsigned ≠ verified
 ## GitHub Action
 
 ```yaml
-- uses: afelin/cyberready@v0.3.1
+- uses: afelin/cyberready@v0.4.0
   with:
     heal: "true"
     comment_on: red
     upload_sarif: "true"
 ```
 
-Pin **`@v0.3.1`** (tag + release checksums). Empty `version` builds from this module when `go` is present, otherwise downloads **v0.3.1** (never floating `latest`). Prefer SARIF/annotations over long PR comments.
+Pin **`@v0.4.0`** (tag + release checksums). Empty `version` builds from this module when `go` is present, otherwise downloads **v0.4.0** (never floating `latest`). Prefer SARIF/annotations over long PR comments.
 
 **Pilot deploy:** run `./scripts/redteam-pilot.sh` before promoting a pin.
 

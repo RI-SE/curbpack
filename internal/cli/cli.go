@@ -29,7 +29,7 @@ import (
 )
 
 // Version is set at release build via -ldflags "-X github.com/afelin/cyberready/internal/cli.Version=..."
-var Version = "0.3.1"
+var Version = "0.4.0"
 
 // Stable exit codes (document in README):
 //

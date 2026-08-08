@@ -23,7 +23,7 @@ Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet
 - README license badge → Apache-2.0
 
 After merge, confirm: `gh api repos/afelin/cyberready --jq .license.spdx_id` → `Apache-2.0`.
-If still `NOASSERTION`, wait for GitHub re-detect or tag `v0.3.1` with the hygiene commit.
+If still `NOASSERTION`, wait for GitHub re-detect or tag `v0.4.0` with the hygiene commit.
 
 ## Heal (deterministic — not ML)
 
