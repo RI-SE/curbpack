@@ -32,3 +32,20 @@ Do **not** send partners to `docs/gtm-oss/` (non-product).
 - Pin / “is this certified?” / main≠tag support → ~0
 
 Stars are not the scoreboard.
+
+## Object-owner cadence checklist
+
+Ship the rhythm in-repo; the calendar is human-operated.
+
+| Cadence | Action |
+|---------|--------|
+| Every merge | `redteam-pilot` required green |
+| Weekly | Run `./scripts/time-to-green.sh`; skim partner notes; **zero** new trust-surface features |
+| Biweekly | Kill/keep on friction from first-move issues |
+| Day 30 of freeze | Explicit freeze review: renew, narrow, or cut `v0.4.2` bugfix only |
+
+### Explicit nos
+
+OPA/LSP/tracers · badge marketplace · `gtm-oss` on site · CE language · second pin · expanding pack catalog before 5 partners have week-2 greens.
+
+Also mirrored in [launch readiness](launch-readiness.md) and [Intent vs Scope](intent-vs-scope.md).

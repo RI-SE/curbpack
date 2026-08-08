@@ -78,6 +78,17 @@ Invite only when:
 3. One Tier-3 human pass recorded
 4. Welcome Discussion pinned
 
+## Object-owner cadence (30-day freeze)
+
+| Cadence | Action |
+|---------|--------|
+| Every merge | Required check **`redteam-pilot`** |
+| Weekly | `./scripts/time-to-green.sh`; skim [design-partner](design-partners.md) notes; no new trust-surface features |
+| Biweekly | Decide kill/keep on first-move friction |
+| Day 30 | Freeze review: renew, narrow, or `v0.4.2` bugfix only |
+
+Explicit nos: OPA/LSP/tracers, badge marketplace, gtm-oss on site, CE language, second pin, pack catalog growth before 5 partners have week-2 greens.
+
 ## Non-goals
 
 - Coreward as CI/build requirement
