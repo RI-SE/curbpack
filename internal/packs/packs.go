@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -28,30 +29,56 @@ var supportedChecks = map[string]struct{}{
 
 // Rule is a single pack gate definition (JSON-eval, no OPA).
 type Rule struct {
-	ID             string   `json:"id"`
-	Severity       string   `json:"severity"`
-	Type           string   `json:"type"`
-	Check          string   `json:"check"`
-	Path           string   `json:"path,omitempty"`
-	Paths          []string `json:"paths,omitempty"`
-	MinBytes       int      `json:"min_bytes,omitempty"`
-	MinWords       int      `json:"min_words,omitempty"`
-	RequireHeaders []string `json:"require_headers,omitempty"`
-	Package        string   `json:"package,omitempty"`
-	BannedVersions []string `json:"banned_versions,omitempty"`
-	Pattern        string   `json:"pattern,omitempty"`
-	Description    string   `json:"description"`
-	Remediation    string   `json:"remediation"`
-	Expected       string   `json:"expected"`
+	ID             string     `json:"id"`
+	Severity       string     `json:"severity"`
+	Type           string     `json:"type"`
+	Check          string     `json:"check"`
+	Path           string     `json:"path,omitempty"`
+	Paths          []string   `json:"paths,omitempty"`
+	MinBytes       int        `json:"min_bytes,omitempty"`
+	MinWords       int        `json:"min_words,omitempty"`
+	RequireHeaders []string   `json:"require_headers,omitempty"`
+	Package        string     `json:"package,omitempty"`
+	BannedVersions []string   `json:"banned_versions,omitempty"`
+	Pattern        string     `json:"pattern,omitempty"`
+	Description    string     `json:"description"`
+	Remediation    string     `json:"remediation"`
+	Expected       string     `json:"expected"`
+	Citations      []Citation `json:"citations,omitempty"`
+}
+
+// Citation links a pack/rule/watchlist entry to a regulatory instrument (informational).
+type Citation struct {
+	Framework     string `json:"framework,omitempty"`
+	Instrument    string `json:"instrument,omitempty"`
+	Article       string `json:"article,omitempty"`
+	Annex         string `json:"annex,omitempty"`
+	URL           string `json:"url,omitempty"`
+	EffectiveFrom string `json:"effective_from,omitempty"`
+	EffectiveTo   string `json:"effective_to,omitempty"`
+}
+
+// Validity is an optional pack-level effective window (YYYY-MM-DD or RFC3339 date).
+type Validity struct {
+	EffectiveFrom string `json:"effective_from,omitempty"`
+	EffectiveTo   string `json:"effective_to,omitempty"`
 }
 
 // Pack is an embedded regulation / house-policy pack.
 type Pack struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
-	Rules       []Rule `json:"rules"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	Version      string          `json:"version"`
+	Description  string          `json:"description"`
+	Extends      string          `json:"extends,omitempty"`
+	Overlays     []string        `json:"overlays,omitempty"`
+	Overlay      json.RawMessage `json:"overlay,omitempty"` // optional RFC 7386 merge-patch on pack object
+	Jurisdiction string          `json:"jurisdiction,omitempty"`
+	Validity     *Validity       `json:"validity,omitempty"`
+	Supersedes   string          `json:"supersedes,omitempty"`
+	SupersededBy string          `json:"superseded_by,omitempty"`
+	Citations    []Citation      `json:"citations,omitempty"`
+	Rules        []Rule          `json:"rules"`
 }
 
 // Watchlist is informational only.
@@ -64,12 +91,14 @@ type Watchlist struct {
 
 // WatchlistEntry is one informational advisory row.
 type WatchlistEntry struct {
-	ID        string   `json:"id"`
-	Ecosystem string   `json:"ecosystem"`
-	Package   string   `json:"package"`
-	Versions  []string `json:"versions"`
-	Reason    string   `json:"reason"`
-	Refs      []string `json:"refs"`
+	ID        string     `json:"id"`
+	Ecosystem string     `json:"ecosystem"`
+	Package   string     `json:"package"`
+	Versions  []string   `json:"versions"`
+	Reason    string     `json:"reason"`
+	Refs      []string   `json:"refs"`
+	Citations []Citation `json:"citations,omitempty"`
+	PURL      string     `json:"purl,omitempty"`
 }
 
 var builtinIDs = []string{"cra-baseline", "medtech-iec62304", "house-policy"}
@@ -93,12 +122,28 @@ func LoadPack(id string) (Pack, error) {
 	if id == "" {
 		return Pack{}, fmt.Errorf("empty pack id")
 	}
-	if dir := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR")); dir != "" {
-		data, err := os.ReadFile(filepath.Join(dir, id, "pack.json"))
-		if err == nil {
-			return parseAndValidate(id, data)
+	if dir := envPacksDir(); dir != "" {
+		packPath := filepath.Join(dir, id, "pack.json")
+		if _, statErr := os.Stat(packPath); statErr == nil {
+			return loadPackFromDir(dir, id) // prefer override; surface validation errors
 		}
 	}
+	return loadPackEmbeddedOnly(id)
+}
+
+func envPacksDir() string {
+	return strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR"))
+}
+
+func loadPackFromDir(dir, id string) (Pack, error) {
+	data, err := os.ReadFile(filepath.Join(dir, id, "pack.json"))
+	if err != nil {
+		return Pack{}, err
+	}
+	return parseAndValidate(id, data)
+}
+
+func loadPackEmbeddedOnly(id string) (Pack, error) {
 	data, err := embedded.ReadFile("data/" + id + "/pack.json")
 	if err != nil {
 		return Pack{}, fmt.Errorf("pack %q not found: %w", id, err)
@@ -131,6 +176,14 @@ func ValidatePack(p Pack) error {
 	if len(p.Rules) == 0 {
 		return fmt.Errorf("pack %q schema: rules must be non-empty", p.ID)
 	}
+	if err := validateCitations(p.Citations, fmt.Sprintf("pack %q", p.ID)); err != nil {
+		return err
+	}
+	if p.Validity != nil {
+		if err := validateDateWindow(p.Validity.EffectiveFrom, p.Validity.EffectiveTo); err != nil {
+			return fmt.Errorf("pack %q validity: %w", p.ID, err)
+		}
+	}
 	seen := map[string]struct{}{}
 	for i, r := range p.Rules {
 		if strings.TrimSpace(r.ID) == "" {
@@ -151,6 +204,9 @@ func ValidatePack(p Pack) error {
 		}
 		if strings.TrimSpace(r.Description) == "" {
 			return fmt.Errorf("pack %q rule %q: missing description", p.ID, r.ID)
+		}
+		if err := validateCitations(r.Citations, fmt.Sprintf("pack %q rule %q", p.ID, r.ID)); err != nil {
+			return err
 		}
 		switch r.Check {
 		case "annex_file", "file_present":
@@ -185,6 +241,48 @@ func ValidatePack(p Pack) error {
 				return fmt.Errorf("pack %q rule %q: banned_versions required", p.ID, r.ID)
 			}
 		}
+	}
+	return nil
+}
+
+func validateCitations(cs []Citation, ctx string) error {
+	for i, c := range cs {
+		if err := validateDateWindow(c.EffectiveFrom, c.EffectiveTo); err != nil {
+			return fmt.Errorf("%s citations[%d]: %w", ctx, i, err)
+		}
+	}
+	return nil
+}
+
+// validateDateWindow accepts empty, YYYY-MM-DD, or RFC3339; refuses inverted windows.
+func validateDateWindow(from, to string) error {
+	from = strings.TrimSpace(from)
+	to = strings.TrimSpace(to)
+	if from == "" && to == "" {
+		return nil
+	}
+	parse := func(s string) (time.Time, error) {
+		if s == "" {
+			return time.Time{}, nil
+		}
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			return t, nil
+		}
+		return time.Time{}, fmt.Errorf("invalid date %q (want YYYY-MM-DD or RFC3339)", s)
+	}
+	ft, err := parse(from)
+	if err != nil {
+		return err
+	}
+	tt, err := parse(to)
+	if err != nil {
+		return err
+	}
+	if !ft.IsZero() && !tt.IsZero() && tt.Before(ft) {
+		return fmt.Errorf("effective_to before effective_from")
 	}
 	return nil
 }
@@ -316,6 +414,7 @@ func ListIDs() ([]string, error) {
 
 // ScaffoldPaths returns unique relative file paths referenced by pack rules (for init).
 // Every path is jail-checked via ValidateRelPath (fail closed on escape).
+// Uses Compose so extends/overlays contribute scaffold paths.
 func ScaffoldPaths(packIDs []string) ([]string, error) {
 	seen := map[string]struct{}{}
 	var out []string
@@ -335,22 +434,20 @@ func ScaffoldPaths(packIDs []string) ([]string, error) {
 		out = append(out, clean)
 		return nil
 	}
-	for _, id := range packIDs {
-		p, err := LoadPack(id)
-		if err != nil {
-			return nil, err
-		}
-		for _, r := range p.Rules {
-			switch r.Check {
-			case "annex_file", "file_present":
-				if err := add(r.Path); err != nil {
-					return nil, fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
-				}
-			case "anti_placeholder", "text_forbid":
-				for _, path := range r.Paths {
-					if err := add(path); err != nil {
-						return nil, fmt.Errorf("pack %q rule %q: %w", p.ID, r.ID, err)
-					}
+	composed, _, err := Compose(packIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range composed.Rules {
+		switch r.Check {
+		case "annex_file", "file_present":
+			if err := add(r.Path); err != nil {
+				return nil, fmt.Errorf("composed rule %q: %w", r.ID, err)
+			}
+		case "anti_placeholder", "text_forbid":
+			for _, path := range r.Paths {
+				if err := add(path); err != nil {
+					return nil, fmt.Errorf("composed rule %q: %w", r.ID, err)
 				}
 			}
 		}

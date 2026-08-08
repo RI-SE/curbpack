@@ -3,6 +3,15 @@
   "name": "EU CRA Baseline",
   "version": "0.1.0",
   "description": "Baseline Cyber Resilience Act evidence gates for Annex VII drafts and dependency hygiene. Informational — not a conformity assessment.",
+  "jurisdiction": "EU",
+  "citations": [
+    {
+      "framework": "EU",
+      "instrument": "CRA",
+      "annex": "VII",
+      "url": "https://eur-lex.europa.eu/"
+    }
+  ],
   "rules": [
     {
       "id": "CRA-ANNEX-VII-RISK",

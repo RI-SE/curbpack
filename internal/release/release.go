@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/afelin/cyberready/internal/config"
+	"github.com/afelin/cyberready/internal/exportx"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/sbom"
@@ -87,11 +88,22 @@ func Prepare(opts Options) error {
 		_ = os.WriteFile(sbomPath, append(b, '\n'), 0o644)
 	}
 
-	// Pending OpenVEX from gate failures; bind digests at attest time
+	// Pending OpenVEX from dependency-shaped findings only (gates stay in IR).
 	vexDoc := vex.FromGateFailures(filepath.Base(root), res.Payload)
 	vexPath, _ := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
 	_ = copyFile(vexPath, filepath.Join(out, "05-vex-draft.json"))
 
+	// SARIF layer (same mapper as CLI export --sarif)
+	sarifDoc := exportx.FromGateFailures(res.Payload)
+	sarifBytes, _ := json.MarshalIndent(sarifDoc, "", "  ")
+	_ = os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644)
+	_ = os.MkdirAll(filepath.Join(root, ".github", "cyberready", "cache"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, ".github", "cyberready", "cache", "cyberready.sarif"), append(sarifBytes, '\n'), 0o644)
+
+	// Informational watchlist ∩ SBOM join
+	if joinPath, err := exportx.WriteWatchlistJoin(root, ""); err == nil {
+		_ = copyFile(joinPath, filepath.Join(out, "07-watchlist-sbom-join.json"))
+	}
 	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
 	htmlDoc := buyerOnePager(root, res)
 	onepagerPath := filepath.Join(out, "buyer-onepager.html")

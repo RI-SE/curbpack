@@ -99,6 +99,7 @@ Public marketing and CI claim-safety scanners enforce this language.
 ## 9. Related surfaces
 
 - Product narrative: public static site under `site/`
+- Adoption clarity: `docs/intent-vs-scope.md` (intent, scope, IP/chat boundary)
 - Security plain language: `docs/security-model.md`
 - Install and commands: repository README
 

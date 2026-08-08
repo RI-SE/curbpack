@@ -38,7 +38,17 @@ func WriteIDETasks(repoRoot string) (string, error) {
       "label": "CyberReady: Check",
       "type": "shell",
       "command": "cyberready check",
-      "problemMatcher": [],
+      "problemMatcher": [
+        {
+          "owner": "cyberready",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^(HOUSE|CRA|MD|CR)-[A-Z0-9-]+:\\s*(.+)$",
+            "file": 1,
+            "message": 2
+          }
+        }
+      ],
       "presentation": {
         "reveal": "always",
         "panel": "shared"
@@ -46,6 +56,24 @@ func WriteIDETasks(repoRoot string) (string, error) {
       "group": {
         "kind": "test",
         "isDefault": false
+      }
+    },
+    {
+      "label": "CyberReady: Export SARIF",
+      "type": "shell",
+      "command": "cyberready export --sarif",
+      "problemMatcher": {
+        "owner": "cyberready-sarif",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "\"ruleId\"\\s*:\\s*\"([^\"]+)\".*\"text\"\\s*:\\s*\"([^\"]*)\"",
+          "file": 1,
+          "message": 2
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
       }
     },
     {

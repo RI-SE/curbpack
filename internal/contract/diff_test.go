@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/afelin/cyberready/internal/attest"
+	"github.com/afelin/cyberready/internal/exportx"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/release"
 	"github.com/afelin/cyberready/internal/sbom"
@@ -96,6 +97,76 @@ func TestJSONSchemaVersionPresent(t *testing.T) {
 	sv, _ := m["schema_version"].(string)
 	if sv == "" {
 		t.Fatalf("schema_version missing: %s", b)
+	}
+}
+
+func TestSARIFRuleIDEqualsGateID(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeMinimalHouseFail(t, dir)
+	path, n, err := exportx.WriteSARIF(dir, []string{"house-policy"}, filepath.Join(dir, "out.sarif"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n == 0 {
+		t.Fatal("expected non-empty SARIF results on failure")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc exportx.SARIFDocument
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatal(err)
+	}
+	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gates := map[string]bool{}
+	for _, f := range res.Payload.Failures {
+		gates[f.GateID] = true
+	}
+	for _, r := range doc.Runs[0].Results {
+		if !gates[r.RuleID] {
+			t.Fatalf("SARIF ruleId %q not in gate_ids", r.RuleID)
+		}
+	}
+}
+
+func TestExplainPacketAirlock(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeMinimalHouseFail(t, dir)
+	path, err := exportx.WriteExplainPacket(dir, []string{"house-policy"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := exportx.PacketLooksAirlocked(data); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "<untrusted_metadata>") {
+		t.Fatal("missing untrusted_metadata wrapper")
+	}
+}
+
+func TestAgentIdentityFromEnv(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeGoodHouse(t, dir)
+	t.Setenv("CYBERREADY_AGENT_ID", "agent-x")
+	t.Setenv("CYBERREADY_MODEL_HASH", "hash-y")
+	t.Setenv("CYBERREADY_MANDATE_ID", "mandate-z")
+	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Payload.AgentIdentity.AgentID != "agent-x" || res.Payload.AgentIdentity.ModelHash != "hash-y" || res.Payload.AgentIdentity.ActiveMandateID != "mandate-z" {
+		t.Fatalf("agent identity env not applied: %#v", res.Payload.AgentIdentity)
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/afelin/cyberready/internal/config"
+	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/tty"
 )
@@ -157,5 +159,74 @@ func ImportAirGap(src string) error {
 	}
 	tty.PrintStatus("Air-gap import", true, fmt.Sprintf("%d items → %s", copied, dest))
 	fmt.Println("Set CYBERREADY_PACKS_DIR=" + dest + " to use imported packs.")
+	return nil
+}
+
+// ExportGraph writes .github/cyberready/graph/policy-graph.json for active packs.
+func ExportGraph(args []string) error {
+	root, err := gitutil.RepoRoot("")
+	if err != nil {
+		return fmt.Errorf("export-graph requires a git repository: %w", err)
+	}
+	packIDs := []string{}
+	out := ""
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--packs":
+			if i+1 < len(args) {
+				packIDs = append(packIDs, strings.Split(args[i+1], ",")...)
+				i++
+			}
+		case "--out":
+			if i+1 < len(args) {
+				out = args[i+1]
+				i++
+			}
+		default:
+			if !strings.HasPrefix(args[i], "-") && out == "" {
+				out = args[i]
+			}
+		}
+	}
+	if len(packIDs) == 0 {
+		if cfg, err := config.Load(root); err == nil && cfg != nil && len(cfg.Packs) > 0 {
+			packIDs = cfg.Packs
+		} else {
+			packIDs = []string{"house-policy"}
+		}
+	}
+	path, err := packs.ExportPolicyGraph(root, packIDs, out)
+	if err != nil {
+		return err
+	}
+	tty.PrintStatus("policy-graph", true, path)
+	fmt.Println(tty.C(tty.Dim, "Local RKG export — not a conformity assessment."))
+	return nil
+}
+
+// Doctor reports expired/superseded/pin-skew pack issues.
+func Doctor() error {
+	f, err := packs.DoctorPacks()
+	if err != nil {
+		return err
+	}
+	fmt.Println(tty.C(tty.Bold+tty.Cyan, "Packs doctor (validity / supersession / pin skew)"))
+	if len(f.Expired) == 0 && len(f.Superseded) == 0 && len(f.PinSkew) == 0 && len(f.UnknownBase) == 0 {
+		tty.PrintStatus("packs doctor", true, "no expired/superseded/pin-skew issues")
+		return nil
+	}
+	for _, e := range f.Expired {
+		tty.PrintStatus("expired", false, e)
+	}
+	for _, e := range f.Superseded {
+		tty.PrintStatus("superseded", false, e)
+	}
+	for _, e := range f.PinSkew {
+		tty.PrintStatus("pin skew", false, e)
+	}
+	for _, e := range f.UnknownBase {
+		tty.PrintStatus("extends", false, e)
+	}
+	fmt.Println(tty.C(tty.Dim, "Refresh via checksummed packs update/import — no unpinned law crawl."))
 	return nil
 }

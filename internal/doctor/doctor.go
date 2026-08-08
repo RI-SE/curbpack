@@ -63,7 +63,7 @@ func Run(opts Options) error {
 		if cfg, err := config.Load(root); err != nil {
 			printCheck(".cyberready.json", false, err.Error())
 		} else if cfg == nil {
-			printCheck(".cyberready.json", false, "missing — run: cyberready init --packs house-policy")
+			printCheck(".cyberready.json", false, "missing — run: cyberready init")
 		} else {
 			printCheck(".cyberready.json", true, "packs="+strings.Join(cfg.Packs, ","))
 			if cfg.Hooks {
@@ -112,7 +112,7 @@ func Run(opts Options) error {
 		if inRepo {
 			cfg, _ := config.Load(root)
 			if cfg == nil {
-				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready init --packs house-policy"))
+				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready init"))
 			} else {
 				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready check  (or bare: cyberready)"))
 			}

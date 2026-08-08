@@ -1,6 +1,8 @@
 package packs_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -86,5 +88,68 @@ func TestValidateRegexPatternLimits(t *testing.T) {
 	}
 	if err := packs.ValidateRegexPattern(`(`); err == nil {
 		t.Fatal("expected invalid compile")
+	}
+}
+
+func TestComposeMedtechExtendsCRA(t *testing.T) {
+	p, sources, err := packs.Compose([]string{"medtech-iec62304"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sources) < 2 {
+		t.Fatalf("expected cra+medtech sources, got %v", sources)
+	}
+	ids := map[string]bool{}
+	for _, r := range p.Rules {
+		ids[r.ID] = true
+	}
+	if !ids["CRA-ANNEX-VII-RISK"] || !ids["MD-SW-CLASS"] {
+		t.Fatalf("composed rules missing CRA or MD: %v", ids)
+	}
+}
+
+func TestComposeExtendsCycle(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CYBERREADY_PACKS_DIR", dir)
+	mustPack(t, dir, "a", `{"id":"a","name":"A","version":"1","extends":"b","rules":[{"id":"A1","severity":"high","type":"POLICY_VIOLATION","check":"file_present","path":"SECURITY.md","description":"d","remediation":"r","expected":"e"}]}`)
+	mustPack(t, dir, "b", `{"id":"b","name":"B","version":"1","extends":"a","rules":[{"id":"B1","severity":"high","type":"POLICY_VIOLATION","check":"file_present","path":"README.md","description":"d","remediation":"r","expected":"e"}]}`)
+	if _, _, err := packs.Compose([]string{"a"}); err == nil {
+		t.Fatal("expected cycle error")
+	}
+}
+
+func TestValidatePackCitationDates(t *testing.T) {
+	bad := packs.Pack{ID: "x", Name: "X", Version: "1", Citations: []packs.Citation{{
+		EffectiveFrom: "2026-12-31", EffectiveTo: "2026-01-01",
+	}}, Rules: []packs.Rule{{
+		ID: "r", Check: "file_present", Path: "SECURITY.md", Severity: "high",
+		Description: "d", Remediation: "r", Expected: "e",
+	}}}
+	if err := packs.ValidatePack(bad); err == nil {
+		t.Fatal("expected inverted citation window error")
+	}
+}
+
+func TestBuildPolicyGraphSchema(t *testing.T) {
+	g, err := packs.BuildPolicyGraph([]string{"house-policy"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.SchemaVersion != packs.GraphSchemaVersion {
+		t.Fatalf("schema_version=%q", g.SchemaVersion)
+	}
+	if len(g.Nodes) == 0 || len(g.Edges) == 0 {
+		t.Fatal("expected nodes and edges")
+	}
+}
+
+func mustPack(t *testing.T, dir, id, body string) {
+	t.Helper()
+	d := filepath.Join(dir, id)
+	if err := os.MkdirAll(d, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(d, "pack.json"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

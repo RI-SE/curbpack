@@ -7,9 +7,9 @@ branding:
 
 inputs:
   version:
-    description: 'Release tag to download (e.g. v0.3.1). Empty = build from this checkout if go is available, else latest release.'
+    description: 'Release tag to download (e.g. v0.3.1). Empty = build from this checkout if go.mod is cyberready, else download v0.3.1 (never floating latest).'
     required: false
-    default: 'latest'
+    default: ''
   packs:
     description: 'Optional comma-separated pack override for check (empty = .cyberready.json / house-policy default)'
     required: false
@@ -27,7 +27,7 @@ inputs:
     required: false
     default: 'true'
   comment_pr:
-    description: 'Legacy: if false, never comment. Prefer comment_on.'
+    description: 'Deprecated — prefer comment_on. If false, never comment (overrides comment_on).'
     required: false
     default: 'true'
   comment_on:
@@ -70,21 +70,20 @@ runs:
         VER="${{ inputs.version }}"
         # Never prefer consumer ./bin/cyberready — that skips checksum verification and
         # lets a PR ship a fake-green binary. Dogfood builds from this module; others
-        # download a release and verify sha256 against checksums.txt (fail-closed).
+        # download a pinned release and verify sha256 against checksums.txt (fail-closed).
         if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/cyberready' go.mod 2>/dev/null; then
           go build -o "$DEST" ./cmd/cyberready
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
-          API="https://api.github.com/repos/afelin/cyberready/releases"
-          CHECKSUMS_URL=""
-          if [ "$VER" = "latest" ]; then
-            REL_JSON=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API/latest")
-            URL=$(printf '%s' "$REL_JSON" | sed -n "s/.*\"browser_download_url\": \"\\([^\"]*${ASSET}[^\"]*\\)\".*/\\1/p" | head -n1)
-            CHECKSUMS_URL=$(printf '%s' "$REL_JSON" | sed -n 's/.*"browser_download_url": "\([^"]*checksums\.txt\)".*/\1/p' | head -n1)
-          else
-            URL="https://github.com/afelin/cyberready/releases/download/${VER}/${ASSET}"
-            CHECKSUMS_URL="https://github.com/afelin/cyberready/releases/download/${VER}/checksums.txt"
+          # Empty version → pin v0.3.1 (never silent floating latest).
+          if [ -z "$VER" ] || [ "$VER" = "latest" ]; then
+            if [ "$VER" = "latest" ]; then
+              echo "inputs.version=latest is deprecated; downloading v0.3.1 instead" >&2
+            fi
+            VER="v0.3.1"
           fi
+          URL="https://github.com/afelin/cyberready/releases/download/${VER}/${ASSET}"
+          CHECKSUMS_URL="https://github.com/afelin/cyberready/releases/download/${VER}/checksums.txt"
           if [ -z "${URL:-}" ]; then
             echo "Could not resolve release binary ${ASSET}. Build cyberready or set inputs.version." >&2
             exit 1
@@ -172,65 +171,37 @@ runs:
       working-directory: ${{ inputs.working_directory }}
       run: |
         set -euo pipefail
+        BIN="${{ steps.bin.outputs.path }}"
+        OUT=".github/cyberready/cache/cyberready.sarif"
+        mkdir -p .github/cyberready/cache
+        # Prefer CLI SARIF (single Go source of truth); fall back to annotations-only if export missing.
+        if "$BIN" export --sarif --out "$OUT" 2>/tmp/cyberready-sarif.err; then
+          :
+        else
+          echo "export --sarif failed; writing empty SARIF shell" >&2
+          cat /tmp/cyberready-sarif.err >&2 || true
+          printf '%s\n' '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"cyberready","informationUri":"https://github.com/afelin/cyberready","rules":[]}},"results":[]}]}' > "$OUT"
+        fi
+        # GitHub Actions annotations from latest_failure.json
         python3 <<'PY'
-        import json, os, pathlib
-        root = pathlib.Path(".")
-        fail_path = root / ".github/cyberready/cache/latest_failure.json"
-        out = root / ".github/cyberready/cache/cyberready.sarif"
-        results = []
-        if fail_path.exists():
-            try:
-                data = json.loads(fail_path.read_text())
-            except Exception:
-                data = {}
-            for f in data.get("failures") or []:
-                gate = f.get("gate_id") or "GATE"
-                sev = (f.get("severity") or "warning").lower()
-                level = "error" if sev in ("high", "critical") else "warning"
-                desc = f.get("sanitized_description") or gate
-                file = (f.get("ast_coordinates") or {}).get("target_file") or ""
-                # GitHub Actions annotation (PR Files / Checks UI)
-                if file:
-                    print(f"::{level} file={file},line=1::{gate}: {desc}")
-                else:
-                    print(f"::{level}::{gate}: {desc}")
-                loc = {
-                    "physicalLocation": {
-                        "artifactLocation": {"uri": file or "UNKNOWN"},
-                        "region": {"startLine": 1},
-                    }
-                } if file else None
-                result = {
-                    "ruleId": gate,
-                    "level": level,
-                    "message": {"text": desc},
-                }
-                if loc:
-                    result["locations"] = [loc]
-                results.append(result)
-        sarif = {
-            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-            "version": "2.1.0",
-            "runs": [{
-                "tool": {
-                    "driver": {
-                        "name": "cyberready",
-                        "informationUri": "https://github.com/afelin/cyberready",
-                        "rules": [],
-                    }
-                },
-                "results": results,
-                "invocations": [{
-                    "executionSuccessful": True,
-                    "properties": {
-                        "note": "Prepares evidence for human review — not a conformity assessment.",
-                    },
-                }],
-            }],
-        }
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(sarif, indent=2) + "\n")
-        print(f"wrote {out} results={len(results)}")
+        import json, pathlib
+        fail_path = pathlib.Path(".github/cyberready/cache/latest_failure.json")
+        if not fail_path.exists():
+            raise SystemExit(0)
+        try:
+            data = json.loads(fail_path.read_text())
+        except Exception:
+            raise SystemExit(0)
+        for f in data.get("failures") or []:
+            gate = f.get("gate_id") or "GATE"
+            sev = (f.get("severity") or "warning").lower()
+            level = "error" if sev in ("high", "critical") else "warning"
+            desc = f.get("sanitized_description") or gate
+            file = (f.get("ast_coordinates") or {}).get("target_file") or ""
+            if file:
+                print(f"::{level} file={file},line=1::{gate}: {desc}")
+            else:
+                print(f"::{level}::{gate}: {desc}")
         PY
         echo "path=.github/cyberready/cache/cyberready.sarif" >> "$GITHUB_OUTPUT"
 

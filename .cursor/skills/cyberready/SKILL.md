@@ -1,5 +1,5 @@
 ---
-description: Run CyberReady+ local compliance gates and explain GateFailure JSON. Use when the user asks about pack gates, prepare-release review packs, or cyberready check/validate/ask/attest/doctor/demo. Propose-only — never claim certification.
+description: Run CyberReady+ local compliance gates and explain GateFailure JSON. Use when the user asks about pack gates, prepare-release review packs, or cyberready check/validate/ask/attest/doctor/demo/export. Propose-only — never claim certification.
 ---
 
 # CyberReady+
@@ -12,6 +12,7 @@ Local-first evidence CLI. Prepares review packs for **human review**. Does not c
 - After editing annex / SECURITY.md / pack-referenced files, re-run `check`
 - Explaining a `GateFailure` JSON payload from `.github/cyberready/cache/`
 - Safe try without touching product: `cyberready demo`
+- Exporting SARIF / RKG / explain-packet for IDEs or tutors
 
 ## Commands
 
@@ -19,18 +20,20 @@ Local-first evidence CLI. Prepares review packs for **human review**. Does not c
 cyberready                 # doctor if uninitialized, else check
 cyberready doctor
 cyberready demo
-cyberready init --packs house-policy --hooks --skill --ide
+cyberready init            # house-policy + hooks + skill + ide (use --bare for minimal)
 cyberready init --packs cra-baseline,house-policy
 cyberready check
-cyberready check --diff
-cyberready check --form-hints
-cyberready check --form-hints --apply-stub
 cyberready check --heal
 cyberready validate --json
 cyberready prepare-release
+cyberready export --sarif
+cyberready export --explain-packet
+cyberready export --watchlist-join
+cyberready packs list
+cyberready packs export-graph
+cyberready packs doctor
 cyberready ask .github/cyberready/cache/latest_failure.json --propose
 cyberready attest
-cyberready packs list
 ```
 
 ## Exit codes (stable)
@@ -41,7 +44,7 @@ cyberready packs list
 | 1 | Gate failures (or operational error on check/validate) |
 | 2 | Usage / environment (unknown command, not a git repo when required) |
 
-JSON payloads include `schema_version` for agents.
+JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_id`.
 
 ## Agent rules
 
@@ -49,10 +52,13 @@ JSON payloads include `schema_version` for agents.
 2. Prefer dual-rep markdown + JSON IR — do not invent legal prose as source of truth.
 3. `ask --propose` and `check --form-hints` suggest edits only; apply in the editor (or `--apply-stub` / `--heal` for missing stubs), then re-check.
 4. Never claim the product is certified, CE-marked, or notified-body approved.
-5. Coreward is optional (`CYBERREADY_SOCK` + `cyberready sock`); fail-open if absent.
-6. Cold start: prefer `--packs house-policy` unless the user asks for CRA/medtech.
+5. Coreward is optional (`CYBERREADY_SOCK` + `cyberready sock`); fail-open if absent. Chat tutors must re-check; they never greenlight.
+6. Cold start: prefer `cyberready init` (house-policy) unless the user asks for CRA/medtech.
 7. After doc/dep edits in an initialized repo, run `cyberready check` (or bare `cyberready`).
 8. **On red:** run `cyberready check --heal` then `cyberready ask … --propose`; never invent certification; `--heal` never auto-attests.
 9. Remediations cache: `.github/cyberready/cache/remediations.json`.
 10. Release path: `prepare-release` then human `attest` — never auto-attest.
-11. **No auto-demo loops.** Do not re-run `cyberready demo` to "show the one-pager." Demo does **not** open a browser unless the user passes `--open`. For a sample review page, link `site/samples/onepager.html` (or the printed path from a single demo). Daily `check` never generates or opens a one-pager.
+11. **No auto-demo loops.** Demo does **not** open a browser unless `--open`.
+12. RKG: `packs export-graph` → `.github/cyberready/graph/policy-graph.json`. Prefer `export --sarif` / `check --json` over inventing findings.
+13. Explain-packets are sanitized teaching surfaces only (`CYBERREADY_EXPLAIN_ALLOW_CLOUD=0` default).
+14. Agent lineage env (optional): `CYBERREADY_AGENT_ID`, `CYBERREADY_MODEL_HASH`, `CYBERREADY_MANDATE_ID`.

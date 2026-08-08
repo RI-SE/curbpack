@@ -1,8 +1,18 @@
 {
   "id": "medtech-iec62304",
   "name": "MedTech IEC 62304 Overlay",
-  "version": "0.1.0",
-  "description": "Software lifecycle evidence gates for medical device software (IEC 62304-inspired). Prepares documentation for human review — not a notified-body certification.",
+  "version": "0.2.0",
+  "description": "Software lifecycle evidence gates for medical device software (IEC 62304-inspired). Extends cra-baseline. Prepares documentation for human review — not a notified-body certification.",
+  "extends": "cra-baseline",
+  "jurisdiction": "EU",
+  "citations": [
+    {
+      "framework": "IEC",
+      "instrument": "IEC 62304",
+      "article": "software lifecycle",
+      "url": "https://www.iso.org/standard/38421.html"
+    }
+  ],
   "rules": [
     {
       "id": "MD-SW-CLASS",
@@ -14,7 +24,15 @@
       "require_headers": ["# Software Safety Class", "## Classification Rationale"],
       "description": "IEC 62304 software safety classification rationale missing.",
       "remediation": "Document Class A/B/C rationale in docs/medtech/software_safety_class.md.",
-      "expected": "Safety class declared with rationale."
+      "expected": "Safety class declared with rationale.",
+      "citations": [
+        {
+          "framework": "IEC",
+          "instrument": "IEC 62304",
+          "article": "4.3",
+          "annex": "software safety class"
+        }
+      ]
     },
     {
       "id": "MD-SOUP",

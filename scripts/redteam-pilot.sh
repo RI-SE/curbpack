@@ -75,6 +75,50 @@ else
   bad "5 claim-safety failed"
 fi
 
+# --- 6) Overlay compose loads medtech+CRA ---
+if go test ./internal/packs/ -run TestComposeMedtechExtendsCRA -count=1 >/dev/null 2>&1; then
+  ok "6 medtech extends cra-baseline compose"
+else
+  bad "6 overlay compose regression"
+fi
+
+# --- 7) SARIF non-empty on failure + ruleId=gate_id ---
+if go test ./internal/contract/ -run TestSARIFRuleIDEqualsGateID -count=1 >/dev/null 2>&1; then
+  ok "7 SARIF ruleId equals gate_id"
+else
+  bad "7 SARIF contract regression"
+fi
+
+# --- 8) policy-graph schema_version present ---
+TMPG="$(mktemp -d)"
+set +e
+(
+  set -e
+  cd "$TMPG"
+  git init -q
+  git config user.email "redteam@cyberready.local"
+  git config user.name "Redteam"
+  git commit --allow-empty -m init -q
+  "$BIN" init --bare --packs house-policy >/dev/null
+  "$BIN" packs export-graph >/dev/null
+  grep -q '"schema_version"' .github/cyberready/graph/policy-graph.json
+)
+graph_code=$?
+set -e
+rm -rf "$TMPG"
+if [[ "$graph_code" -eq 0 ]]; then
+  ok "8 policy-graph schema_version present"
+else
+  bad "8 policy-graph export missing schema_version"
+fi
+
+# --- 9) explain-packet airlock ---
+if go test ./internal/contract/ -run TestExplainPacketAirlock -count=1 >/dev/null 2>&1; then
+  ok "9 explain-packet airlock"
+else
+  bad "9 explain-packet airlock regression"
+fi
+
 echo ""
 echo "redteam-pilot: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -gt 0 ]]; then
