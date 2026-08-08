@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1
+
+Activation polish + one pin truth (trust-surface freeze continues from v0.4.0).
+
+- **Pin truth** — Action/docs/examples/site/`install.sh` default → `@v0.4.1` (no floating `latest` story)
+- **Quiet UX** — activation #12–#16 on the pin: Ladder A defaults, quiet init/attest, Action-only `--workflow`, time-to-green harness, Δ whisper on green
+- **Site CTA** — install link targets working `#install` anchor
+
 ## v0.4.0
 
 Single adoptable pin after Ladder A + RKG + exporters.

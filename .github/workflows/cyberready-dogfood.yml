@@ -32,7 +32,8 @@ jobs:
       - name: CyberReady check (dogfood Action)
         uses: ./
         with:
-          version: latest
+          # Empty = build from this checkout (never advertise floating latest).
+          version: ""
           heal: "true"
           prepare_release: "true"
           comment_on: red
