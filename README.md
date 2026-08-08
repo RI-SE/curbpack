@@ -3,9 +3,9 @@
 [![ci](https://github.com/afelin/cyberready/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/cyberready/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**CyberReady+** — local evidence CLI. Packs encode policy. Humans review. Not a certificate of conformity.
+**Local pack gates. Humans review. Not conformity assessment.**
 
-[Site](https://afelin.github.io/cyberready/) · [**First move (60s)**](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [White paper](papers/cyberready-whitepaper.md) · [Security model](docs/security-model.md)
+[Site](https://afelin.github.io/cyberready/) · [**First move**](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [White paper](papers/cyberready-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
 
 ## Install
 

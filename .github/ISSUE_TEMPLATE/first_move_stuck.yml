@@ -1,0 +1,60 @@
+name: First move stuck
+description: Activation failed at a specific Ladder A step (preferred issue shape).
+title: "[first-move] "
+labels: ["activation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pick **one** path and the **step** that failed. This is how we keep activation unambiguous.
+        Gate pass is evidence for human review — **not** certification.
+
+  - type: dropdown
+    id: path
+    attributes:
+      label: Path
+      description: Ladder A first-move menu
+      options:
+        - A — Safe try (install → doctor → demo)
+        - B — Product repo (init → check)
+        - C — CI-only (Action @v0.4.1)
+    validations:
+      required: true
+
+  - type: input
+    id: step
+    attributes:
+      label: Failed at step
+      description: e.g. "doctor", "check --heal", "Action heal", "install.sh checksum"
+      placeholder: check --heal
+    validations:
+      required: true
+
+  - type: input
+    id: pin
+    attributes:
+      label: Pin / binary
+      description: Tag, commit SHA, or `cyberready version`
+      placeholder: v0.4.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: Exit code, short stderr, or Action annotation. No secrets.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS
+        - Linux
+        - GitHub Actions runner
+        - Other
+    validations:
+      required: true

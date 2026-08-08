@@ -41,11 +41,17 @@ Cache: `.github/cyberready/cache/remediations.json` keyed by `gate_id`.
 `scripts/claim-safety.sh` scans docs + runtime CLI captures (doctor/demo/check/prepare-release).
 Deny-list blocks certification theater; negation / claim-safe framing is allowed.
 
+## How we know activation works
+
+- Market promise: a stranger’s **first green &lt;10 minutes** on pin `@v0.4.1` (safe try / product repo / CI).
+- Maintainer harness: [`scripts/time-to-green.sh`](../scripts/time-to-green.sh) defaults to a **600s** wall-clock bar; use `TTG_MAX_SECONDS=60` for a tight CI smoke.
+- Merge gate: required check **`redteam-pilot`** (`./scripts/redteam-pilot.sh` 9/9). No public vanity counter.
+
 ## Tier 3 — human pass (before invite wave)
 
 Before inviting external testers:
 
-1. Fresh machine / no Go: `install.sh` → `doctor` → `demo` in under **60s**
+1. Fresh machine / no Go: `install.sh` → `doctor` → `demo` — first green in under **10 minutes** (often much faster)
 2. Decision-maker understands: evidence for humans — **not** certification
 3. `SECURITY.md` reporting path is usable
 

@@ -1,0 +1,56 @@
+name: Bug report
+description: Something broke in the CLI, Action, or packs.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gate results prepare **evidence for human review** — not certification.
+        If the failure was “first move stuck,” prefer the **First move stuck** template.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI (doctor / demo / init / check)
+        - GitHub Action
+        - install.sh / release binary
+        - Packs / gates
+        - Docs / site
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / pin
+      description: e.g. `cyberready version` output or Action `@v0.4.1`
+      placeholder: v0.4.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps. No secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output (optional)
+      description: Paste truncated CLI/Action logs. Redact paths/secrets.
+    validations:
+      required: false
