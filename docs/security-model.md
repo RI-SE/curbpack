@@ -20,6 +20,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
 - Pin: Action/consumers use `@v0.4.3` (prefer tag + commit SHA).
 - **30-day trust-surface freeze continues from `v0.4.0` through `v0.4.3`** (`v0.4.3` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
+- **Day-30 freeze review due 2026-09-07** (from `v0.4.0` on 2026-08-08). Until then: **renew freeze**, no `v0.4.4`, no pack unlock. Checklist + outcome log: [launch readiness](launch-readiness.md#freeze-review-day-30-from-v040). Stable nave: [stable contracts](stable-contracts.md).
 
 ## Trust boundaries
 

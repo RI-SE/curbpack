@@ -53,6 +53,8 @@ Gate pass is **not** certification, CE marking, or notified-body approval. CI en
 
 Quiet habit: after `check`, dim Δ readiness / deps / secret-hits lines plus the instrument covenant — see [daily loop](docs/getting-started/daily-loop.md).
 
+**Compose, do not conquer:** CyberReady is an instrument panel / evidence habit for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program; watchlist = look-here, not a CVE product. Boundary: [strategy boundary](docs/strategy-boundary.md).
+
 | Command | Purpose |
 |---------|---------|
 | *(bare)* | `doctor` if uninitialized, else `check` |

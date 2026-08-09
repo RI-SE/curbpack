@@ -68,9 +68,25 @@ cyberready sock --path "$XDG_RUNTIME_DIR/cyberready/cyberready.sock" --repo /pat
 
 Lay-of-land and explain-packet exports are teaching/share surfaces only — after any proposed fix, still re-run `validate_delta` / `cyberready check`. Neither export greenlights gates.
 
-See also: [Intent vs Scope](intent-vs-scope.md) (IP / chat boundary · agentic instrument panel).
+See also: [Intent vs Scope](intent-vs-scope.md) · [Strategy boundary](strategy-boundary.md) · [Stable contracts](stable-contracts.md) (sock ops + airlock freeze).
+
+**Marketing unblock:** do **not** pitch the live tutor loop until a **future Coreward planning round** completes live sock dogfood. This repo freezes public contracts only.
+
+## Next planning round: Coreward
+
+Deferred — **no live Coreward dogfood in this repo round.** Checklist for that later plan:
+
+1. Wire Coreward MCP / Cursor env to `CYBERREADY_SOCK` against a product fixture.
+2. Run explain-packet → propose-only → `validate_delta` recheck end-to-end from Coreward.
+3. Confirm fail-open (`not_installed` / `unavailable`) never blocks promote.
+4. Fill “Last dogfood: DATE” below only after a real Coreward run.
+5. Then — and only then — lift the marketing unblock for the live tutor loop.
+
+**Last dogfood:** _(not yet — awaiting Coreward planning round)_
 
 ## Dogfood checklist (explain-packet ↔ Coreward)
+
+CyberReady-side prep (recorded script). Does **not** replace the Coreward planning round above.
 
 Run once before marketing the tutor loop. Prefer the recorded script (stops before generative chat):
 
