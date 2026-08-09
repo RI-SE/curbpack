@@ -1,6 +1,6 @@
 # Design partners
 
-Product brief for five external repos that keep Action `@v0.4.3` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard.
+Product brief for five external repos that keep Action `@v0.4.3` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard. Public [`ADOPTERS.md`](../ADOPTERS.md) rows only on partner opt-in — never invent entries.
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
@@ -11,13 +11,27 @@ Product brief for five external repos that keep Action `@v0.4.3` or `init`+hooks
 | Forbidden asks | Certification claims; uploading IP to a cloud policy brain |
 | Weekly ritual | 15-min note: path taken (A/B/C), stall step, keep/kill |
 
+## Scoreboard (template)
+
+Object owner fills rows during outreach. Empty slots are fine — **no fake logos**. Update [`ADOPTERS.md`](../ADOPTERS.md) only when a partner opts in.
+
+| Partner | Path (A/B/C) | First green | Second green ≤7d | Judge clicked Y/N | Keep/Kill | Notes |
+|---------|--------------|-------------|------------------|-------------------|-----------|-------|
+| _(slot 1 — OSS)_ | | | | | | |
+| _(slot 2 — OSS)_ | | | | | | |
+| _(slot 3 — SME)_ | | | | | | |
+| _(slot 4 — SME)_ | | | | | | |
+| _(slot 5 — optional later Coreward-as-consumer)_ | | | | | | CyberReady contracts only this round; live Coreward dogfood is a later plan |
+
+Paths: **A** = safe try (`doctor`/`demo`) · **B** = product repo (`init`+hooks) · **C** = CI Action `@v0.4.3`.
+
 ## Target mix
 
 | Slot | Profile |
 |------|---------|
-| 2 | OSS maintainers |
+| 2 | OSS maintainers (CyberReady adopters) |
 | 2 | SME / supplier-ish product repos |
-| 1 | Internal Coreward / vibe-engine-os |
+| 1 | Optional later: Coreward-as-consumer (not required this round) |
 
 ## Partner issue shape
 
