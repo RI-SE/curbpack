@@ -183,6 +183,47 @@ else
 fi
 rm -rf "$THEATER" "$IMPORT_DEST"
 
+# --- 12) Stable contracts nave — sock ops + explain consumer + docs sync ---
+REQUIRED_SOCK_OPS=$'validate_delta\nget_latest_failure\ngraph_summary\nexplain_packet'
+stable_fail=0
+if [[ ! -f docs/stable-contracts.md ]]; then
+  echo "  missing docs/stable-contracts.md" >&2
+  stable_fail=1
+fi
+# Listen banner / Serve comment must advertise the four ops.
+if ! grep -q 'ops=validate_delta,get_latest_failure,graph_summary,explain_packet' internal/sock/sock.go; then
+  echo "  sock listen banner missing four ops" >&2
+  stable_fail=1
+fi
+# Every switch case "op" (except default) must be documented in stable-contracts.md.
+while IFS= read -r op; do
+  [[ -z "$op" ]] && continue
+  if ! grep -q "$op" docs/stable-contracts.md; then
+    echo "  sock op '$op' not documented in docs/stable-contracts.md" >&2
+    stable_fail=1
+  fi
+done < <(grep -E '^\s*case "' internal/sock/sock.go | sed -E 's/.*case "([^"]+)".*/\1/' | grep -v '^default$' || true)
+# Required four must exist as cases.
+while IFS= read -r op; do
+  if ! grep -qE "case \"$op\"" internal/sock/sock.go; then
+    echo "  missing sock case \"$op\"" >&2
+    stable_fail=1
+  fi
+done <<<"$REQUIRED_SOCK_OPS"
+# Explain consumer contract test must exist and pass.
+if [[ ! -f internal/contract/explain_coreward_consumer_test.go ]]; then
+  echo "  missing explain_coreward_consumer_test.go" >&2
+  stable_fail=1
+elif ! go test ./internal/contract/ -run 'TestExplainPacketCorewardConsumer|TestExplainPacketAirlock' -count=1 >/dev/null 2>&1; then
+  echo "  explain consumer / airlock contract tests failed" >&2
+  stable_fail=1
+fi
+if [[ "$stable_fail" -eq 0 ]]; then
+  ok "12 stable contracts (sock ops + explain consumer + docs sync)"
+else
+  bad "12 stable contracts nave — update docs/stable-contracts.md when changing sock ops"
+fi
+
 echo ""
 echo "redteam-pilot: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -gt 0 ]]; then
