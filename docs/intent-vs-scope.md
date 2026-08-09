@@ -10,7 +10,7 @@ Sixty-second clarity for buyers, auditors, and agents. Gate pass is **evidence f
 | **CyberReady+ scope (now)** | Pack JSON gates, `check` / `heal`, review-pack, CycloneDX / OpenVEX drafts, Git Notes attest, HPURL pointer, Action + SARIF, sock `validate_delta`, local regulation knowledge graph export, explain-packets for tutors, `export --lay-of-land` / `instrument.json` instrument map. |
 | **Not in scope (OSS)** | Conformity assessment, CE, OPA/Rego, LSP, syscall tracers, FIDO/EFOS, DNSSEC, cloud policy brain, LLM-as-judge, badge marketplace, gtm-oss on site, second pin, pack catalog growth before partner habit proof. |
 | **Pack catalog freeze** | Only `house-policy`, `cra-baseline`, `medtech-iec62304` (ids). Enforced by `scripts/redteam-pilot.sh` allowlist; unlock only via freeze review + explicit PR (no CI env escape hatch). |
-| **v3.33 spec** | R&D north star / EE backlog — not the adoption contract. |
+| **v3.33 spec** | Internal R&D / EE north star only — **not mirrored** into OSS; not the adoption contract. |
 | **IP / chat boundary** | Raw source and secrets never leave the machine for “compliance chat.” Only sanitized GateFailure / RKG explain-packets may be sent to Coreward or an optional cloud tutor the operator explicitly chooses. |
 | **Promotion bar** | `./scripts/redteam-pilot.sh` green. |
 
@@ -32,6 +32,10 @@ CyberReady decides pass/fail. Chat may draft prose or remediation suggestions. C
 
 Agents and humans share one loop: edit → `cyberready check` → read the instrument panel (covenant + optional Δ readiness/deps/secret-hits) → on red heal/ask; on green optional `--lay-of-land` / `--buyer-questions` for humans. This is **not** an AI security product, SCA/CVE platform, or certification engine. Hooks keep agent PRs honest; tutors still require re-`validate_delta` / re-check before any “fixed” claim.
 
+### Compose with SCA / secret scanners
+
+CyberReady is an **instrument panel / evidence habit** for product repos. Pair it with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth. Explicitly: **not** a security program; watchlist∩SBOM is look-here only — not a CVE product.
+
 **Activate in 60s:** [getting-started / 60-second paths](getting-started/60-second-paths.md).
 
-See also: [Promotion firewall](promotion-firewall.md) · [Coreward bridge](coreward-bridge.md) · [Write your own pack](write-your-own-pack.md) · [Security model](security-model.md)
+See also: [Strategy boundary](strategy-boundary.md) · [Stable contracts](stable-contracts.md) · [Promotion firewall](promotion-firewall.md) · [Coreward bridge](coreward-bridge.md) · [Write your own pack](write-your-own-pack.md) · [Security model](security-model.md)

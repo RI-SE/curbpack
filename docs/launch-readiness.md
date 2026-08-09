@@ -87,6 +87,16 @@ Invite only when:
 | Biweekly | Decide kill/keep on first-move friction |
 | Day 30 | Freeze review: renew, narrow, or next `v0.4.x` bugfix only (`v0.4.3` = current instrument-panel pin) |
 
+### Freeze review (day-30 from v0.4.0)
+
+| Field | Value |
+|-------|--------|
+| Freeze start | `v0.4.0` (2026-08-08) |
+| Day-30 due | **2026-09-07** |
+| Status | **Not yet due** — do not treat this as a completed review |
+| Interim stance (until due) | **Renew freeze**; pin stays `@v0.4.3`; **no `v0.4.4`** cut; **no pack catalog unlock** |
+| Checklist when due | (1) Renew or narrow trust-surface freeze → document outcome here + [security model](security-model.md) (2) Decide docs-only `v0.4.4` pin — default **no** until Action consumers need editorial in the tag (3) Pack unlock only if partner proof + freeze review say deepen content (still no new domains) |
+
 Explicit nos: OPA/LSP/tracers, badge marketplace, gtm-oss on site, CE language, second pin, pack catalog growth before 5 partners have week-2 greens.
 
 ## Non-goals

@@ -33,6 +33,12 @@ Do not introduce certification / CE / notified-body language. Run `scripts/claim
 
 Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety, and explain-packet airlock are under freeze through the **v0.4.x** line — bugfixes only. See `docs/security-model.md`. Pin stays `@v0.4.3` until the next freeze review.
 
+## Strategy boundary (contributors)
+
+- Do **not** port v3.33 EE / R&D surfaces into OSS PRs — v3.33 is internal north star only ([strategy boundary](docs/strategy-boundary.md)).
+- PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or **new pack ids** without freeze unlock will be **rejected**. Pack allowlist is enforced by `scripts/redteam-pilot.sh`.
+- Sock ops + GateFailure / explain-packet shapes are frozen in [stable contracts](docs/stable-contracts.md); breaking them requires a major pin bump.
+
 ## Non-product docs
 
 `docs/gtm-oss/` is quarantined. Do not link it from the product site, README hero, or Action copy.

@@ -19,4 +19,6 @@ Hand the Markdown checklist to the human reviewer. When drafts are ready, `cyber
 
 **Local pack gates. Humans review. Not conformity assessment.** Not CE / not notified-body. Rows carry `assurance_class: structural_draft`. Buyer-questions header includes `attestation_status: none | ssh-agent`.
 
-See also: [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md)
+CyberReady is an instrument panel / evidence habit — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
+
+See also: [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md) · [Strategy boundary](../strategy-boundary.md)
