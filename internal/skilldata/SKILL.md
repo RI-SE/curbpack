@@ -68,3 +68,4 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 14. Explain-packets are sanitized teaching surfaces only (`CYBERREADY_EXPLAIN_ALLOW_CLOUD=0` default).
 15. Keep git hooks from `init` for agent PRs — they force the check loop.
 16. Agent lineage env (optional): `CYBERREADY_AGENT_ID`, `CYBERREADY_MODEL_HASH`, `CYBERREADY_MANDATE_ID`.
+17. Authoring packs: set `assurance_class` (e.g. `structural_draft`); `packs import` refuses missing class / claim-adjacent theater copy.

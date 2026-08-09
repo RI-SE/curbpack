@@ -9,6 +9,7 @@ CyberReady evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 b
   "id": "acme-secure-coding",
   "name": "Acme Secure Coding Std",
   "version": "0.1.0",
+  "assurance_class": "structural_draft",
   "description": "House rules for Acme eng — informational, not a certification.",
   "extends": "house-policy",
   "jurisdiction": "internal",
@@ -37,6 +38,20 @@ CyberReady evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 b
 }
 ```
 
+### Pack-level fields
+
+| Field | Notes |
+|-------|-------|
+| `assurance_class` | **Required on `packs import`.** Use `structural_draft` for informational gates. Import refuses missing class and claim-adjacent names/descriptions (see `internal/packscmd`). |
+| `extends` / `overlays` / `overlay` | Composition — see below |
+
+### Rule binding (hollow-draft defense)
+
+| Field | Behavior |
+|-------|----------|
+| `bind_repo_token` | When true, annex/file draft must mention a resolvable product token (directory name, `package.json` name, or `go.mod` module). |
+| `require_tree_paths` | Listed repo-relative paths must exist (e.g. `["README.md"]`). |
+
 ### Composition (RKG overlays)
 
 - `extends`: base pack id (loaded first; cycles refused)
@@ -55,8 +70,8 @@ cyberready packs doctor                    # expired / superseded / pin skew
 
 | Check | Fields | Behavior |
 |-------|--------|----------|
-| `file_present` / `annex_file` | `path`, `min_bytes`, `min_words`, `require_headers` | File exists, size/words/headers |
-| `anti_placeholder` | `paths` | Reject TODO / lorem / `[insert …]` |
+| `file_present` / `annex_file` | `path`, `min_bytes`, `min_words`, `require_headers`; optional `bind_repo_token`, `require_tree_paths` | File exists, size/words/headers; binding optional |
+| `anti_placeholder` | `paths` | Reject TODO / lorem / `[insert …]` in listed annex drafts |
 | `manifest_dep_ban` / `npm_dep_ban` | `package`, `banned_versions` | Ban pins in `package.json` |
 | `text_forbid` | `paths`, `pattern` | Regex forbid (e.g. secret-like strings) |
 | `import_reach` | — | Optional AST reachability (MVP) |
@@ -65,7 +80,7 @@ cyberready packs doctor                    # expired / superseded / pin skew
 
 1. **Embedded** in the binary (`internal/packs/data/<id>/pack.json`)
 2. **Override dir:** `CYBERREADY_PACKS_DIR=/path` with `<id>/pack.json`
-3. **Air-gap:** `cyberready packs import ./bundle-dir`
+3. **Air-gap:** `cyberready packs import ./bundle-dir` — ValidatePack + `assurance_class` + claim-adjacent refuse; writes `.cyberready-pack.sha256` sidecar
 
 ## Activate
 

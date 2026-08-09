@@ -10,12 +10,16 @@ go test ./...
 ./scripts/redteam-pilot.sh   # required merge check name: redteam-pilot
 ```
 
+Run **claim-safety + redteam-pilot** green before opening a PR that touches docs, CLI strings, packs, or trust-adjacent paths.
+
 Optional activation smoke (maintainer bar defaults to 600s; use `TTG_MAX_SECONDS=60` for a tight local run):
 
 ```bash
 ./scripts/time-to-green.sh
 TTG_MAX_SECONDS=60 ./scripts/time-to-green.sh
 ```
+
+Agent loop (edit → check → instrument → heal/ask; never auto-attest): see the Agentic coding subsection in [`docs/intent-vs-scope.md`](docs/intent-vs-scope.md).
 
 ## First-move failed?
 
@@ -27,7 +31,7 @@ Do not introduce certification / CE / notified-body language. Run `scripts/claim
 
 ## Trust surface
 
-Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety, and explain-packet airlock are under freeze through the v0.4.x line — bugfixes only. See `docs/security-model.md`.
+Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety, and explain-packet airlock are under freeze through the **v0.4.x** line — bugfixes only. See `docs/security-model.md`. Pin stays `@v0.4.3` until the next freeze review.
 
 ## Non-product docs
 
