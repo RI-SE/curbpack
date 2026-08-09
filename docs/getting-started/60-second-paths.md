@@ -58,7 +58,7 @@ Runs deposit cache + review-pack under `.github/cyberready/`; attest when a huma
 
 ## Advanced
 
-Habit after first green: [daily loop](daily-loop.md) (Action every PR · local `check` · quiet `Δ readiness`).
+Habit after first green: [daily loop](daily-loop.md) — Action every PR · local `check` · quiet Δ readiness / deps / secret-hits + covenant. Optional share: [buyer evidence](buyer-evidence.md) (`export --lay-of-land` / `--buyer-questions`).
 
 | Flag / path | When |
 |-------------|------|

@@ -1,5 +1,15 @@
 # Docs index
 
+## Who should read what
+
+| Reader | Start here |
+|--------|------------|
+| Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [README](../README.md) |
+| Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
+| CISO / pack author / partner / agent | [Intent](intent-vs-scope.md) + [security model](security-model.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) |
+
+RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](../NOTICE) — funder, not certifier.
+
 ## Product (adopters)
 
 | Doc | Purpose |
@@ -12,7 +22,7 @@
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Getting started](getting-started/60-second-paths.md) | First move — 60-second paths |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
-| [Buyer evidence](getting-started/buyer-evidence.md) | Quiet `export --buyer-questions` checklist |
+| [Buyer evidence](getting-started/buyer-evidence.md) | Quiet `export --buyer-questions` + `export --lay-of-land` instrument map |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Launch readiness](launch-readiness.md) | Internal launch checklist |
 

@@ -51,6 +51,8 @@ Gate pass is **not** certification, CE marking, or notified-body approval. CI en
 
 ## Advanced
 
+Quiet habit: after `check`, dim Δ readiness / deps / secret-hits lines plus the instrument covenant — see [daily loop](docs/getting-started/daily-loop.md).
+
 | Command | Purpose |
 |---------|---------|
 | *(bare)* | `doctor` if uninitialized, else `check` |
@@ -59,7 +61,7 @@ Gate pass is **not** certification, CE marking, or notified-body approval. CI en
 | `check --diff` | Delta mode — **not** release-gate safe |
 | `ask [file] --propose` | Explain GateFailure JSON (propose-only) |
 | `packs list\|update\|import\|export-graph\|doctor` | Packs, RKG export, validity doctor |
-| `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions` | Standards / airlock / buyer checklist exporters |
+| `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land` | Standards / airlock / buyer checklist / instrument map |
 | `sock` | Optional private Unix IPC (Coreward) |
 | `init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `init --packs a,b` | Override default house-policy packs |
@@ -67,4 +69,4 @@ Gate pass is **not** certification, CE marking, or notified-body approval. CI en
 
 Exit codes: **0** pass · **1** gates/error · **2** usage/env.
 
-Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Coreward bridge](docs/coreward-bridge.md) · [Docs index](docs/README.md).
+Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Coreward bridge](docs/coreward-bridge.md) · [Docs index](docs/README.md).

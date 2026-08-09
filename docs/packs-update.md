@@ -18,6 +18,8 @@ export CYBERREADY_PACKS_DIR="$PWD/.github/cyberready/packs"
 cyberready check
 ```
 
+Import prerequisites (fail closed): each pack must pass `ValidatePack`, set `assurance_class`, and avoid claim-adjacent theater names/descriptions. Successful import writes a `.cyberready-pack.sha256` sidecar next to each `pack.json`.
+
 `CYBERREADY_PACKS_DIR` overrides embedded JSON when files are present.
 
 ## Online update (pin required)

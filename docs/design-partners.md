@@ -44,7 +44,7 @@ Ship the rhythm in-repo; the calendar is human-operated.
 | Every merge | `redteam-pilot` required green |
 | Weekly | Run `./scripts/time-to-green.sh`; skim partner notes; **zero** new trust-surface features |
 | Biweekly | Kill/keep on friction from first-move issues |
-| Day 30 of freeze | Explicit freeze review: renew, narrow, or cut next bugfix-only tag (`v0.4.3` already shipped honesty/SME utility) |
+| Day 30 of freeze | Explicit freeze review: renew, narrow, or cut next bugfix-only tag — `v0.4.3` is the current instrument-panel pin; next cut only after freeze review |
 
 ### Explicit nos
 

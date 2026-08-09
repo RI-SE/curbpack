@@ -149,6 +149,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  ask [file] [--propose]        Explain GateFailure JSON\n")
 	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land [--spdx] [--slsa]\n")
+	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map\n")
 	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")

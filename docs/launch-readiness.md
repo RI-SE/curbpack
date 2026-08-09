@@ -23,7 +23,7 @@ Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet
 - README license badge → Apache-2.0
 
 After merge, confirm: `gh api repos/afelin/cyberready --jq .license.spdx_id` → `Apache-2.0`.
-If still `NOASSERTION`, wait for GitHub re-detect or tag `v0.4.3` with the hygiene commit.
+If still `NOASSERTION`, wait for GitHub re-detect (pin `@v0.4.3` already shipped with license hygiene).
 
 ## Heal (deterministic — not ML)
 
@@ -85,7 +85,7 @@ Invite only when:
 | Every merge | Required check **`redteam-pilot`** |
 | Weekly | `./scripts/time-to-green.sh`; skim [design-partner](design-partners.md) notes; no new trust-surface features |
 | Biweekly | Decide kill/keep on first-move friction |
-| Day 30 | Freeze review: renew, narrow, or `v0.4.3` bugfix only |
+| Day 30 | Freeze review: renew, narrow, or next `v0.4.x` bugfix only (`v0.4.3` = current instrument-panel pin) |
 
 Explicit nos: OPA/LSP/tracers, badge marketplace, gtm-oss on site, CE language, second pin, pack catalog growth before 5 partners have week-2 greens.
 
