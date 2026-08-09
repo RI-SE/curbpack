@@ -45,7 +45,7 @@ Deny-list blocks certification theater; negation / claim-safe framing is allowed
 
 - Market promise: a stranger’s **first green &lt;10 minutes** on pin `@v0.4.3` (safe try / product repo / CI).
 - Maintainer harness: [`scripts/time-to-green.sh`](../scripts/time-to-green.sh) defaults to a **600s** wall-clock bar; use `TTG_MAX_SECONDS=60` for a tight CI smoke.
-- Merge gate: required check **`redteam-pilot`** (`./scripts/redteam-pilot.sh` 9/9). No public vanity counter.
+- Merge gate: required check **`redteam-pilot`** (`./scripts/redteam-pilot.sh` 12/12). No public vanity counter.
 
 ## Tier 3 — human pass (before invite wave)
 
