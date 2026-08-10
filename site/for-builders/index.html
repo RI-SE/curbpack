@@ -28,6 +28,13 @@
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
       <p>Pick <strong>exactly one</strong> first move:</p>
 
+      <h3>Two ways in — same local check</h3>
+      <ol>
+        <li><strong>Write then check</strong> — init (or optional warm-start), draft house docs on pack paths, then check.</li>
+        <li><strong>Bring docs then check</strong> — place existing policies on pack paths, then check. No portal PDF ingest — files in the repo only.</li>
+      </ol>
+      <p class="muted">CI can run check alone. Review pack → human attest either way.</p>
+
       <h3>1. Safe try</h3>
       <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cyberready doctor
@@ -38,7 +45,13 @@ cyberready demo</code></pre>
       <pre class="mono"><code>cd /path/to/your/product
 cyberready init
 cyberready check</code></pre>
-      <p class="muted">Default pack is <strong>house-policy</strong>. Before a review wave: <code>prepare-release</code>, then a human <code>attest</code>.</p>
+      <p class="muted">Default pack is <strong>house-policy</strong>. Opt into regulation-shaped checklists with <code>cyberready init --packs cra-baseline</code> or <code>medtech-iec62304</code> (structural drafts — not legal conformity). Before a review wave: <code>prepare-release</code> (or <code>share</code>), hand the buyer one-pager, then a human <code>attest</code>.</p>
+
+      <h3>Next commands (optional warm-start)</h3>
+      <pre class="mono"><code>cyberready pathway status
+cyberready research
+cyberready research --cite-check SECURITY.md</code></pre>
+      <p class="muted"><code>pathway status</code> prints one next ask. <code>research</code> builds an allowlisted brief (never gates check). Cite-check before you own prose.</p>
 
       <h3>3. CI</h3>
       <pre class="mono"><code>- uses: afelin/cyberready@v0.4.3

@@ -9,7 +9,7 @@ import (
 var completionCommands = []string{
 	"help", "version", "doctor", "demo", "init", "check", "validate",
 	"prepare-release", "packs", "ask", "attest", "view", "sock",
-	"export", "share", "completion",
+	"export", "share", "pathway", "research", "completion",
 }
 
 var completionExportFlags = []string{
@@ -75,6 +75,12 @@ _cyberready() {
     share)
       COMPREPLY=( $(compgen -W "--packs --skip-prepare-release" -- "$cur") )
       ;;
+    pathway)
+      COMPREPLY=( $(compgen -W "status suggest confirm-packs confirm-prose confirm-share note" -- "$cur") )
+      ;;
+    research)
+      COMPREPLY=( $(compgen -W "--fetch --cite-check --list-sources --open-sources --packs --gate-id" -- "$cur") )
+      ;;
   esac
 }
 complete -F _cyberready cyberready
@@ -104,6 +110,8 @@ func zshCompletionScript() string {
 	b.WriteString(" ;;\n")
 	b.WriteString("    completion) _values 'shell' 'bash' 'zsh' 'fish' ;;\n")
 	b.WriteString("    packs) _values 'packs' 'list' 'update' 'import' 'export-graph' 'doctor' ;;\n")
+	b.WriteString("    pathway) _values 'pathway' 'status' 'suggest' 'confirm-packs' 'confirm-prose' 'confirm-share' 'note' ;;\n")
+	b.WriteString("    research) _values 'research' '--fetch' '--cite-check' '--list-sources' '--open-sources' '--packs' '--gate-id' ;;\n")
 	b.WriteString("  esac\n")
 	b.WriteString("}\n")
 	b.WriteString("compdef _cyberready cyberready\n")
@@ -122,6 +130,12 @@ func fishCompletionScript() string {
 	}
 	for _, s := range completionShells {
 		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from completion' -a %q\n", s)
+	}
+	for _, p := range []string{"status", "suggest", "confirm-packs", "confirm-prose", "confirm-share", "note"} {
+		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from pathway' -a %q\n", p)
+	}
+	for _, f := range []string{"--fetch", "--cite-check", "--list-sources", "--open-sources", "--packs", "--gate-id"} {
+		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from research' -a %q\n", f)
 	}
 	return b.String()
 }

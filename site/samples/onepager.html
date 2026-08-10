@@ -24,14 +24,19 @@
     .onepager .bar > span.red { width:62%; background:var(--err); }
     .onepager .bar > span.green { width:100%; background:var(--ok); }
     .onepager table { width:100%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
-    .onepager th, .onepager td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
+    .onepager th, .onepager td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--paper-dark); vertical-align:top; }
     .onepager th { color:var(--muted); font-weight:600; }
     .onepager .sev { font-weight:600; white-space:nowrap; }
     .onepager .sev.high { color:var(--err); }
     .onepager .sev.med { color:#8a5a12; }
     .onepager .sev.low { color:var(--muted); }
     .onepager .snap-foot { font-size:0.85rem; color:var(--muted); margin-top:1.5rem; }
-    .onepager .label { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 0.35rem; }
+    .onepager .label { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 0.35rem; font-family:var(--font-mono); }
+    .onepager .back { margin-top:0.5rem; padding:1.1rem 1.15rem; border:1px solid var(--ink); background:var(--paper-alt); }
+    .onepager .back > p { margin:0 0 0.75rem; font-size:0.9rem; color:var(--muted); }
+    .onepager dl.prov { display:grid; grid-template-columns:9.5rem 1fr; gap:0.45rem 1rem; margin:0; font-size:0.88rem; }
+    .onepager dl.prov dt { color:var(--muted); font-family:var(--font-mono); font-size:0.78rem; }
+    .onepager dl.prov dd { margin:0; word-break:break-all; font-family:var(--font-mono); font-size:0.82rem; }
   </style>
 </head>
 <body>
@@ -90,8 +95,27 @@
         </tbody>
       </table>
 
+      <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
+      <div class="back">
+        <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>cyberready attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
+        <dl class="prov">
+          <dt>Rule packs</dt><dd>house-policy</dd>
+          <dt>Commit</dt><dd>teaching-sample (not a real SHA)</dd>
+          <dt>Attest</dt><dd>UNSIGNED — not cryptographically verified</dd>
+          <dt>Signer</dt><dd>local-unsigned</dd>
+          <dt>User touch</dt><dd>not-verified</dd>
+          <dt>state_hash</dt><dd>(none — run cyberready attest after human review)</dd>
+          <dt>Human sign-off</dt><dd>Pending human review. A reviewer runs cyberready attest; ssh-agent-signed = human-bound on this commit.</dd>
+          <dt>Verify</dt><dd>proof/index.html + hpurl-pointer.json (client-side hash compare)</dd>
+        </dl>
+        <p class="label" style="margin-top:1rem">Sources (informational)</p>
+        <ul style="margin:0;padding-left:1.1rem;font-size:0.9rem">
+          <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847">EUR-Lex CRA (Regulation (EU) 2024/2847)</a> — allowlisted link for human reading; not conformity assessment.</li>
+        </ul>
+      </div>
+
       <div class="snap-foot">
-        Not conformity assessment. Not CE marking. Not a notified-body opinion. Generated as a committed teaching sample · Packs: house-policy · Local gate score ≠ certification.
+        Not conformity assessment. Not CE marking. Not a notified-body opinion. Generated as a committed teaching sample · Local gate score ≠ certification.
       </div>
     </main>
 

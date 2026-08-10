@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>How it works — CyberReady+</title>
-  <meta name="description" content="Rule pack → local check → review pack → human review." />
+  <meta name="description" content="Choose a rule pack, check locally, write a review pack for a buyer or auditor, then human attest." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -24,52 +24,87 @@
 
     <section class="section prose">
       <h2>How it works</h2>
-      <p class="sub">CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</p>
+      <p class="sub">Warm-start and research help you choose a draft; only check decides pass/fail—not certification.</p>
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
 
-      <h3>1. Rule pack</h3>
-      <p>A <strong>rule pack</strong> is a JSON file of checks (files present, banned dependency versions, forbidden text patterns). Packs encode policy: house rules, Cyber Resilience Act (CRA)–style annex drafts, or sector templates. The binary does not hard-code an industry.</p>
+      <h3>Two ways in — same local check</h3>
+      <ol>
+        <li><strong>Write then check</strong> — optional warm-start: choose checklists, draft house docs (always two options with a <strong>Recommended: A or B</strong>), optional <a href="/cyberready/samples/research-brief.html">research brief</a>, then check.</li>
+        <li><strong>Bring docs then check</strong> — put existing policies on the pack paths (or map a partner pack), then check. CyberReady does <strong>not</strong> ingest portal PDFs; Evidence→Check means files in the repo (or custom pack paths).</li>
+      </ol>
+      <p>CI can run <code>check</code> alone anytime. Either way ends in a review pack for a human to judge and optionally <code>attest</code>.</p>
 
-      <h3>2. Local check</h3>
-      <p>First move on a product repo: <code>cyberready init</code> then <code>cyberready check</code>. Check evaluates packs against your git repository on disk. Results are dual: machine-readable findings (JSON) and a short markdown report. Exit code 0 means gates passed on this tree; 1 means findings remain.</p>
+      <svg class="diagram" viewBox="0 0 720 280" role="img" aria-label="Dual doors into local check, dual-draft choice, then human sign-off">
+        <rect x="16" y="20" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="91" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Write→Check</text>
+        <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Warm-start draft</text>
 
-      <h3>3. Review pack</h3>
-      <p><code>prepare-release</code> writes a <strong>review pack</strong>: layered reports, optional software bill of materials (SBOM) summary, and a buyer one-pager HTML. Daily <code>check</code> does not open or regenerate that HTML page.</p>
+        <rect x="16" y="96" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="91" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Bring-docs→Check</text>
+        <text x="91" y="136" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Files on pack paths</text>
 
-      <h3>4. Human review</h3>
-      <p>A person reads the evidence and may run <code>attest</code> to bind a reproducible state hash into Git Notes. Unsigned attestations are labeled unsigned — not “verified.”</p>
+        <rect x="16" y="172" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="91" y="194" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">CI</text>
+        <text x="91" y="212" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">check alone</text>
 
-      <h3>Check → evidence → human</h3>
-      <p>CyberReady decides pass/fail (deterministic). Review pack and buyer one-pager are evidence for humans. Optional tutor packets propose only and must re-check; they never greenlight.</p>
+        <path class="flow-line" d="M166 48 H230"/>
+        <path class="flow-line" d="M166 124 H230"/>
+        <path class="flow-line" d="M166 200 H230"/>
+        <polygon points="230,42 242,48 230,54" fill="#0a0a0b"/>
+        <polygon points="230,118 242,124 230,130" fill="#0a0a0b"/>
+        <polygon points="230,194 242,200 230,206" fill="#0a0a0b"/>
 
-      <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Flow from rule pack through local check to human sign-off">
-        <rect x="16" y="70" width="140" height="72" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="86" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Rule pack</text>
-        <text x="86" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">JSON gates</text>
+        <rect x="248" y="48" width="150" height="72" rx="0" fill="#e6f3f7" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="323" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Two drafts</text>
+        <text x="323" y="98" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Recommended A|B</text>
 
-        <path class="flow-line" d="M164 106 H230"/>
-        <polygon points="230,100 242,106 230,112" fill="#0a0a0b"/>
+        <path class="flow-line" d="M398 84 H454"/>
+        <polygon points="454,78 466,84 454,90" fill="#0a0a0b"/>
 
-        <rect x="248" y="70" width="140" height="72" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="318" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Local check</text>
-        <text x="318" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">On your machine</text>
+        <rect x="472" y="48" width="140" height="72" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="542" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Local check</text>
+        <text x="542" y="98" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">Pass/fail SoR</text>
 
-        <path class="flow-line" d="M396 106 H462"/>
-        <polygon points="462,100 474,106 462,112" fill="#0a0a0b"/>
+        <path class="flow-line" d="M542 120 V168"/>
+        <polygon points="536,168 542,180 548,168" fill="#0a0a0b"/>
 
-        <rect x="480" y="70" width="140" height="72" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="550" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Review pack</text>
-        <text x="550" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">Evidence files</text>
+        <rect x="472" y="188" width="140" height="64" rx="0" fill="#0a0a0b" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="542" y="214" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#fcfcfc">Human review</text>
+        <text x="542" y="232" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#e4e6eb">Share · attest</text>
 
-        <path class="flow-line" d="M550 150 V178 H318 V150"/>
-        <polygon points="312,150 318,138 324,150" fill="#0a0a0b"/>
+        <rect x="248" y="188" width="150" height="64" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="323" y="214" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Review pack</text>
+        <text x="323" y="232" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Hand to buyer</text>
 
-        <rect x="248" y="8" width="140" height="52" rx="0" fill="#0a0a0b" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="318" y="30" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#fcfcfc">Human review</text>
-        <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#e4e6eb">Attest · judgment</text>
+        <path class="flow-line" d="M398 220 H466"/>
+        <polygon points="466,214 478,220 466,226" fill="#0a0a0b"/>
       </svg>
 
-      <p class="muted">Committed sample: <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>. Authorities path: <a href="/cyberready/for-authorities/">for authorities</a>.</p>
+      <h3>1. Choose a rule pack</h3>
+      <p>A <strong>rule pack</strong> is a JSON checklist of structural gates. You pick which packs to run. Frozen catalog today:</p>
+      <ul>
+        <li><code>house-policy</code> — default cold start (house documentation / dependency hygiene)</li>
+        <li><code>cra-baseline</code> — Cyber Resilience Act (CRA)–shaped annex draft structure (informational)</li>
+        <li><code>medtech-iec62304</code> — IEC 62304–shaped overlay (composes with CRA when selected)</li>
+      </ul>
+      <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree — not conformity assessment, not CE marking, and not a notified-body opinion. Compose with <code>cyberready init --packs …</code> or <code>.cyberready.json</code>. Warm-start for Write→Check is optional (<code>cyberready pathway</code>) — prefer “choose checklists,” not “pathway to regulation.”</p>
+
+      <h3>2. Draft choice (Write→Check)</h3>
+      <p>Assistants propose <strong>Option A</strong> and <strong>Option B</strong>, state <strong>Recommended: A or B</strong> with a few reasons, then stop for you. Optional allowlisted <a href="/cyberready/samples/research-brief.html">research brief</a> informs cites; it never changes check pass/fail. After you pick, run cite-check before owning the prose.</p>
+
+      <h3>3. Local check</h3>
+      <p><code>cyberready init</code> then <code>cyberready check</code> evaluates the chosen packs on disk. Dual output: machine-readable findings (JSON) and a short markdown report. Exit 0 = gates passed on this tree; 1 = findings remain. Daily <code>check</code> does not write the buyer one-pager.</p>
+
+      <h3>4. Review pack — hand to a buyer or auditor</h3>
+      <p><code>prepare-release</code> (or <code>cyberready share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources (informational), and human sign-off status.</p>
+
+      <h3>5. Human review and attest</h3>
+      <p>A person judges the evidence. When ready they run <code>cyberready attest</code>, which binds a reproducible state hash into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> After attest, you can open the local <code>proof/index.html</code> page and compare the bound hash from the evidence pointer—still not conformity assessment.</p>
+
+      <h3>Check → evidence → human</h3>
+      <p>CyberReady decides pass/fail (deterministic). Humans decide what to claim. Tutors propose only and must re-check; they never greenlight or attest.</p>
+
+      <p class="muted">Committed sample (front + back): <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>. Research brief sample: <a href="/cyberready/samples/research-brief.html">samples/research-brief.html</a>. Authorities path: <a href="/cyberready/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/cyberready/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
     </section>
 
     <footer class="site-footer">

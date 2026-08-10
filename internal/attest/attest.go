@@ -177,17 +177,25 @@ type HPURLParts struct {
 	SigHint   string
 }
 
-// ParseHPURLFragment parses "#?h=&p=&s=" (also accepts without leading #).
-// Returns ok=false on malformed input; never panics.
+// ParseHPURLFragment parses an HPURL fragment per spec §3–4 shape:
+// take the substring after the first '?' in the fragment, then query-parse.
+// Accepts "#?h=&p=&s=", "#label?h=…", or bare "?h=…" / "h=…".
+// Keys: h (aliases hash, state_hash), p (aliases commit, parent), s (aliases sig, signature).
+// Returns ok=false on malformed input; never panics. Does not implement Ed25519 $/@/! product attest.
 func ParseHPURLFragment(frag string) (HPURLParts, bool) {
 	frag = strings.TrimSpace(frag)
 	if frag == "" {
 		return HPURLParts{}, false
 	}
 	frag = strings.TrimPrefix(frag, "#")
-	frag = strings.TrimPrefix(frag, "?")
+	query := frag
+	if i := strings.IndexByte(frag, '?'); i >= 0 {
+		query = frag[i+1:]
+	} else if !strings.Contains(frag, "=") {
+		return HPURLParts{}, false
+	}
 	parts := HPURLParts{}
-	for _, kv := range strings.Split(frag, "&") {
+	for _, kv := range strings.Split(query, "&") {
 		if kv == "" {
 			continue
 		}
@@ -195,12 +203,14 @@ func ParseHPURLFragment(frag string) (HPURLParts, bool) {
 		if !ok {
 			continue
 		}
+		k = strings.ToLower(strings.TrimSpace(k))
+		v = strings.TrimSpace(v)
 		switch k {
-		case "h":
+		case "h", "hash", "state_hash":
 			parts.StateHash = v
-		case "p":
+		case "p", "commit", "parent":
 			parts.Commit = v
-		case "s":
+		case "s", "sig", "signature":
 			parts.SigHint = v
 		}
 	}

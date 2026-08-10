@@ -41,16 +41,17 @@
   </main>
   <script>
     function parseHashParams() {
-      const hash = location.hash || "";
-      let q = "";
-      if (hash.startsWith("#?")) q = hash.slice(2);
-      else if (hash.startsWith("#")) q = hash.slice(1);
-      if (!q) return null;
-      if (q.startsWith("?")) q = q.slice(1);
+      // Spec-shaped: first '?' in the fragment starts the query (§3–4).
+      const hash = (location.hash || "").replace(/^#/, "");
+      if (!hash) return null;
+      let q = hash;
+      const qi = hash.indexOf("?");
+      if (qi >= 0) q = hash.slice(qi + 1);
+      else if (!hash.includes("=")) return null;
       const params = new URLSearchParams(q);
-      const h = params.get("h") || params.get("capsule") || params.get("bundle");
-      const p = params.get("p") || params.get("run") || params.get("ref") || params.get("pointer");
-      const s = params.get("s") || params.get("vows") || params.get("$");
+      const h = params.get("h") || params.get("hash") || params.get("state_hash") || params.get("capsule") || params.get("bundle");
+      const p = params.get("p") || params.get("commit") || params.get("parent") || params.get("run") || params.get("ref") || params.get("pointer");
+      const s = params.get("s") || params.get("sig") || params.get("signature") || params.get("vows");
       if (!h && !p && !s) return null;
       return { h, p, s, space: params.get("space") || undefined, repo: params.get("repo") || undefined };
     }

@@ -31,6 +31,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
 | [Getting started](getting-started/60-second-paths.md) | First move — 60-second paths |
+| [Pathway (warm-start)](getting-started/pathway.md) | Dual doors, one next ask, dual-draft HITL, research sidecar |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Share recipe: ContextPack + buyer-questions + prepare-release |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |

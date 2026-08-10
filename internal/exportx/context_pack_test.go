@@ -45,6 +45,15 @@ func TestWriteContextPack_FromValidateWash(t *testing.T) {
 	if pack.Paths["context_pack"] == "" {
 		t.Fatal("missing path pointers")
 	}
+	if pack.Paths["pathway_seed"] == "" {
+		t.Fatal("missing pathway_seed path")
+	}
+	if pack.Pathway == nil || pack.Pathway.NextVerb == "" {
+		t.Fatal("expected pathway projection")
+	}
+	if !strings.Contains(pack.Pathway.ParentPath, "Root / Pathway /") {
+		t.Fatalf("pathway parent path=%q", pack.Pathway.ParentPath)
+	}
 	md := strings.TrimSuffix(path, ".json") + ".md"
 	mdBytes, err := os.ReadFile(md)
 	if err != nil {
@@ -52,6 +61,9 @@ func TestWriteContextPack_FromValidateWash(t *testing.T) {
 	}
 	if !strings.Contains(string(mdBytes), "Not a conformity assessment") {
 		t.Fatalf("md missing claim-safe framing: %s", mdBytes)
+	}
+	if !strings.Contains(string(mdBytes), "## Pathway") {
+		t.Fatal("md missing Pathway section")
 	}
 	if strings.Contains(string(data), "/Users/") || strings.Contains(string(data), "/home/") {
 		t.Fatal("absolute home path leaked")
