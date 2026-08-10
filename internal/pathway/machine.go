@@ -247,7 +247,7 @@ func Project(repoRoot string) (Snapshot, error) {
 		snap.Next = NextAction{
 			Verb: "verify HPURL (human)",
 			Cmd:  "open proof/index.html",
-			Note: "paste state_hash from .github/cyberready/evidence/hpurl-pointer.json; client-side h= compare — not certification",
+			Note: "paste state_hash from evidence pointer; client-side h= compare — not certification",
 		}
 	default:
 		snap.Next = NextAction{

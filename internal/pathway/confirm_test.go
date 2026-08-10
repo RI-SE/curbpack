@@ -183,6 +183,9 @@ func TestConfirmShare_OK(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cache, "buyer-questions.md"), []byte("# q\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(cache, "context-pack.json"), []byte(`{"schema_version":"1"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	out, err := ConfirmShare(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -226,5 +229,84 @@ func TestApplySuggest_ResetsTicks(t *testing.T) {
 	}
 	if len(s.ProposedPacks) != 2 {
 		t.Fatalf("packs=%v", s.ProposedPacks)
+	}
+}
+
+func TestConfirmProse_InvalidatesLatestResult(t *testing.T) {
+	dir := t.TempDir()
+	s := Seed{
+		SchemaVersion: SchemaVersion,
+		ProposedPacks: []string{"house-policy"},
+		HumanTicks:    HumanTicks{PacksConfirmed: true},
+		Claim:         ClaimFence,
+	}
+	if err := Write(dir, s); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte("# Security\n\nHouse policy prose.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".well-known"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".well-known", "security.txt"), []byte("Contact: security@example.com\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	if err := os.MkdirAll(cache, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	latest := filepath.Join(cache, "latest_result.json")
+	if err := os.WriteFile(latest, []byte(`{"failures":[]}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ConfirmProse(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(latest); !os.IsNotExist(err) {
+		t.Fatalf("latest_result.json must be invalidated after confirm-prose, err=%v", err)
+	}
+	phase, err := DerivePhase(dir, mustLoadSeed(t, dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if phase != PhaseAwaitCheck {
+		t.Fatalf("want AwaitCheck after prose, got %s", phase)
+	}
+}
+
+func mustLoadSeed(t *testing.T, dir string) *Seed {
+	t.Helper()
+	s, err := Load(dir)
+	if err != nil || s == nil {
+		t.Fatalf("load: %v nil=%v", err, s == nil)
+	}
+	return s
+}
+
+func TestWrite_AtomicAndCorruptSeedHardError(t *testing.T) {
+	dir := t.TempDir()
+	if err := Write(dir, Seed{ProposedPacks: []string{"house-policy"}, Claim: ClaimFence}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(dir); err != nil {
+		t.Fatal(err)
+	}
+	// Corrupt seed must hard-error on note/suggest — never silent overwrite.
+	if err := os.WriteFile(SeedPath(dir), []byte("{not-json\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NoteSet(dir, "hello"); err == nil {
+		t.Fatal("corrupt seed: note must hard-error")
+	}
+	r, err := Suggest(Answers{Product: "hygiene", EuDocs: "no", Medtech: "no", Sector: "none", HouseFirst: "yes", CeContext: "none"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ApplySuggest(dir, r); err == nil {
+		t.Fatal("corrupt seed: suggest must hard-error")
 	}
 }

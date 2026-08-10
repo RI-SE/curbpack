@@ -420,7 +420,8 @@ func provenanceDL(packID string, info attestInfo) string {
 }
 
 // sourcesStrip adds claim-safe allowlisted citation links when a research packet exists
-// (or falls back to composed pack citation URLs). Informational only — not conformity.
+// with PackIDs matching the release packs (or falls back to composed pack citation URLs).
+// Informational only — not conformity.
 func sourcesStrip(root, packIDCSV string) string {
 	var urls []string
 	seen := map[string]struct{}{}
@@ -438,29 +439,29 @@ func sourcesStrip(root, packIDCSV string) string {
 		seen[u] = struct{}{}
 		urls = append(urls, u)
 	}
-	if pkt, err := research.LoadPacket(root); err == nil && pkt != nil {
-		for _, s := range pkt.Sources {
-			add(s.URL)
+	ids := strings.Split(packIDCSV, ",")
+	var clean []string
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			clean = append(clean, id)
 		}
 	}
-	if len(urls) == 0 {
-		ids := strings.Split(packIDCSV, ",")
-		var clean []string
-		for _, id := range ids {
-			id = strings.TrimSpace(id)
-			if id != "" {
-				clean = append(clean, id)
+	if pkt, err := research.LoadPacket(root); err == nil && pkt != nil {
+		if packIDSetsEqual(pkt.PackIDs, clean) {
+			for _, s := range pkt.Sources {
+				add(s.URL)
 			}
 		}
-		if len(clean) > 0 {
-			if composed, _, err := packs.Compose(clean); err == nil {
-				for _, c := range composed.Citations {
+	}
+	if len(urls) == 0 && len(clean) > 0 {
+		if composed, _, err := packs.Compose(clean); err == nil {
+			for _, c := range composed.Citations {
+				add(c.URL)
+			}
+			for _, r := range composed.Rules {
+				for _, c := range r.Citations {
 					add(c.URL)
-				}
-				for _, r := range composed.Rules {
-					for _, c := range r.Citations {
-						add(c.URL)
-					}
 				}
 			}
 		}
@@ -477,6 +478,32 @@ func sourcesStrip(root, packIDCSV string) string {
 	b.WriteString(`</ul>`)
 	b.WriteString(`<p style="margin:0.5rem 0 0;font-size:0.8rem;color:var(--muted)">Allowlisted official links for human reading — not a conformity assessment.</p>`)
 	return b.String()
+}
+
+func packIDSetsEqual(a, b []string) bool {
+	setA := map[string]struct{}{}
+	for _, id := range a {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			setA[id] = struct{}{}
+		}
+	}
+	setB := map[string]struct{}{}
+	for _, id := range b {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			setB[id] = struct{}{}
+		}
+	}
+	if len(setA) != len(setB) {
+		return false
+	}
+	for id := range setA {
+		if _, ok := setB[id]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func truncateSHA(s string) string {

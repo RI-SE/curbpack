@@ -35,5 +35,6 @@ Optional warm-start (`pathway`) and allowlisted `research` help choose a draft; 
 - `cyberready pathway status` — one next ask (human default)
 - `cyberready research` / `--cite-check` — allowlisted brief; never gates check
 - Dual-draft HITL: always Option A + Option B + Recommended A|B; human picks
+- After pick: `pathway note --set last_draft_pick=A|B|edited` then `research --cite-check <draft.md>` before human `confirm-prose --i-am-human`
 
 Optional separate product (tutor/enforce client): https://afelin.github.io/coreward/ — CyberReady is self-sustaining without it.

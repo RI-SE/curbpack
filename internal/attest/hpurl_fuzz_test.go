@@ -45,4 +45,10 @@ func TestParseHPURLFragment(t *testing.T) {
 	if !ok || p3.StateHash != "aa" || p3.Commit != "bb" || p3.SigHint != "cc" {
 		t.Fatalf("aliases: %#v ok=%v", p3, ok)
 	}
+	// QueryEscape round-trip (emit escapes; parse unescapes).
+	escaped := "#?h=ab%2Bcd&p=dead%2Fbeef&s=sig%3D1"
+	p4, ok := ParseHPURLFragment(escaped)
+	if !ok || p4.StateHash != "ab+cd" || p4.Commit != "dead/beef" || p4.SigHint != "sig=1" {
+		t.Fatalf("query-unescape: %#v ok=%v", p4, ok)
+	}
 }

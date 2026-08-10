@@ -103,26 +103,18 @@ func ConfirmShare(repoRoot string) (*Seed, error) {
 }
 
 func shareArtifactsPresent(repoRoot string) bool {
-	candidates := []string{
-		filepath.Join(repoRoot, ".github", "cyberready", "cache", "buyer-questions.md"),
-		filepath.Join(repoRoot, ".github", "cyberready", "cache", "buyer-questions.json"),
-		filepath.Join(repoRoot, ".github", "cyberready", "cache", "context-pack.json"),
-		filepath.Join(repoRoot, "review-pack"),
-	}
-	for _, p := range candidates {
-		if st, err := os.Stat(p); err == nil {
-			if st.IsDir() {
-				// review-pack dir counts if non-empty
-				ents, _ := os.ReadDir(p)
-				if len(ents) > 0 {
-					return true
-				}
-				continue
-			}
-			return true
-		}
-	}
-	return false
+	cache := filepath.Join(repoRoot, ".github", "cyberready", "cache")
+	bqMD := filepath.Join(cache, "buyer-questions.md")
+	bqJSON := filepath.Join(cache, "buyer-questions.json")
+	cp := filepath.Join(cache, "context-pack.json")
+	hasBQ := fileExists(bqMD) || fileExists(bqJSON)
+	hasCP := fileExists(cp)
+	return hasBQ && hasCP
+}
+
+func fileExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && !st.IsDir()
 }
 
 func missingFrom(proposed []string, known map[string]struct{}) []string {
@@ -137,6 +129,7 @@ func missingFrom(proposed []string, known map[string]struct{}) []string {
 
 // ApplySuggest writes a fresh seed from SuggestResult (resets human ticks).
 // Preserves session_notes, corrections, and last_draft_pick when present.
+// Corrupt existing seed is a hard error (never silent overwrite).
 func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 	known, err := KnownPackSet()
 	if err != nil {
@@ -146,6 +139,10 @@ func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 	if len(kept) == 0 {
 		return nil, fmt.Errorf("pathway suggest: no known pack ids after closed-world intersect")
 	}
+	prev, err := Load(repoRoot)
+	if err != nil {
+		return nil, err
+	}
 	s := Seed{
 		SchemaVersion: SchemaVersion,
 		Answers:       r.Answers,
@@ -154,7 +151,7 @@ func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 		HumanTicks:    HumanTicks{},
 		Claim:         ClaimFence,
 	}
-	if prev, err := Load(repoRoot); err == nil && prev != nil {
+	if prev != nil {
 		s.SessionNotes = prev.SessionNotes
 		s.Corrections = prev.Corrections
 		s.LastDraftPick = prev.LastDraftPick

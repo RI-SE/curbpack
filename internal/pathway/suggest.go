@@ -82,7 +82,8 @@ func Suggest(a Answers) (SuggestResult, error) {
 		out.ProposedPacks = []string{"house-policy"}
 	}
 
-	// house-first=yes keeps house-policy first when both house and cra are present (already ordered).
+	// house-first is reserved: accepted for forward-compat, currently a no-op
+	// (does not reorder proposed_packs). Help/docs must say so — honesty > fake feature.
 	_ = a.HouseFirst
 	// ce_context is context-only — never CE-positive packs.
 	_ = a.CeContext

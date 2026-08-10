@@ -20,7 +20,9 @@ var (
 	reCiteComment   = regexp.MustCompile(`<!--\s*cite:([a-zA-Z0-9_-]+)\s*-->`)
 	reSourceLine    = regexp.MustCompile(`(?i)^\s*Source:\s*([a-zA-Z0-9_-]+)\s*$`)
 	reBannedClaims  = regexp.MustCompile(`(?i)\b(we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|we are CRA compliant|CRA compliant|compliant with (the )?CRA|compliant with CE)\b`)
-	reSafeNegation  = regexp.MustCompile(`(?i)not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|not conformity assessment|informational|structural_draft|structural (file/header )?gates`)
+	// Fence-like negation only — bare "informational" / "structural_draft" must NOT
+	// greenlight banned claims (e.g. "We are CRA compliant — informational only.").
+	reSafeNegation = regexp.MustCompile(`(?i)not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|not conformity assessment|structural (file/header )?gates|prepares evidence for human review|not a conformity assessment`)
 	reClaimsHeading = regexp.MustCompile(`(?im)^#{1,3}\s+Claims\s*$`)
 )
 
@@ -120,11 +122,9 @@ func pathMatchesReq(draftRel, reqPath string) bool {
 		if p == "" {
 			continue
 		}
-		if draftRel == p || strings.HasSuffix(draftRel, "/"+p) || strings.HasSuffix(draftRel, p) {
-			return true
-		}
-		base := filepath.Base(draftRel)
-		if base == filepath.Base(p) && strings.Contains(draftRel, filepath.ToSlash(filepath.Dir(p))) {
+		// Exact path, or draft ends with "/"+p (path-segment boundary).
+		// Never basename-only HasSuffix (e.g. "evil_risk_assessment.md" vs "risk_assessment.md").
+		if draftRel == p || strings.HasSuffix(draftRel, "/"+p) {
 			return true
 		}
 	}

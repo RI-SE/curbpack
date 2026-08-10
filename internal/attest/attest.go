@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,7 +121,7 @@ func Run(opts Options) (Capsule, error) {
 		Signer:          signer,
 		SSHSignature:    sshSig,
 		UserTouch:       userTouch,
-		HPURLFragment:   fmt.Sprintf("#?h=%s&p=%s&s=%s", stateHash, commit, truncate(sshSig, 32)),
+		HPURLFragment:   fmt.Sprintf("#?h=%s&p=%s&s=%s", url.QueryEscape(stateHash), url.QueryEscape(commit), url.QueryEscape(truncate(sshSig, 32))),
 		Evidence:        evidence,
 	}
 
@@ -205,6 +206,9 @@ func ParseHPURLFragment(frag string) (HPURLParts, bool) {
 		}
 		k = strings.ToLower(strings.TrimSpace(k))
 		v = strings.TrimSpace(v)
+		if u, err := url.QueryUnescape(v); err == nil {
+			v = u
+		}
 		switch k {
 		case "h", "hash", "state_hash":
 			parts.StateHash = v

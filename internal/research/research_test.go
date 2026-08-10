@@ -176,3 +176,35 @@ We are CRA compliant.
 		t.Fatal("unknown cite should fail")
 	}
 }
+
+func TestCiteCheck_InformationalOnlyDoesNotNegateBannedClaim(t *testing.T) {
+	t.Parallel()
+	pkt := Packet{Sources: []Source{{ID: "src-1", URL: "https://eur-lex.europa.eu/"}}}
+	draft := []byte("We are CRA compliant — informational only.\n")
+	res := CiteCheck(pkt, "x.md", draft)
+	if res.OK {
+		t.Fatal("bare 'informational' must not negate banned CRA claim")
+	}
+	joined := strings.Join(res.Errors, "\n")
+	if !strings.Contains(joined, "banned claim") {
+		t.Fatalf("want banned claim error, got %v", res.Errors)
+	}
+}
+
+func TestPathMatchesReq_NoBasenameTrap(t *testing.T) {
+	t.Parallel()
+	req := "docs/annex-vii/risk_assessment.md"
+	if !pathMatchesReq("docs/annex-vii/risk_assessment.md", req) {
+		t.Fatal("exact path must match")
+	}
+	if !pathMatchesReq("repo/docs/annex-vii/risk_assessment.md", req) {
+		t.Fatal("suffix with /+p must match")
+	}
+	// Basename-only HasSuffix trap: evil_risk_assessment.md ends with risk_assessment.md
+	if pathMatchesReq("docs/annex-vii/evil_risk_assessment.md", "risk_assessment.md") {
+		t.Fatal("basename-only suffix must not match")
+	}
+	if pathMatchesReq("other/risk_assessment.md", "docs/annex-vii/risk_assessment.md") {
+		t.Fatal("different parent path must not match via basename")
+	}
+}
