@@ -141,6 +141,10 @@ a:hover { color: var(--ink); }
 .prose h2, .prose h3 { font-family: var(--font-display); }
 .prose p, .prose li { color: var(--ink); }
 .prose .muted { color: var(--muted); }
+.prose aside.muted { margin: 1.25rem 0 0; padding-top: 1rem; border-top: 1px solid rgba(61, 79, 102, 0.12); font-size: 0.92rem; }
+.prose table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 1rem 0 1.5rem; }
+.prose th, .prose td { border-bottom: 1px solid var(--line); text-align: left; padding: 0.45rem 0.35rem; vertical-align: top; }
+.prose th { color: var(--muted); font-weight: 600; }
 .prose code, .mono {
   font-family: var(--font-mono);
   font-size: 0.9em;

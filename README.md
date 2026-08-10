@@ -5,7 +5,17 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-[Site](https://afelin.github.io/cyberready/) · [**First move**](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [White paper](papers/cyberready-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
+[Site](https://afelin.github.io/cyberready/) · [**First move**](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [White paper](papers/cyberready-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
+
+## Who should read what
+
+| Reader | Start |
+|--------|--------|
+| Builder | [60-second paths](docs/getting-started/60-second-paths.md) · [site builders](site/for-builders/) |
+| Buyer / reviewer | [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
+| CISO / authority / auditor | [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
+| Abbreviations / audience map | [Glossary and audience](docs/glossary-and-audience.md) |
+| Full docs index | [docs/README.md](docs/README.md) |
 
 ## Install
 
@@ -66,11 +76,13 @@ Quiet habit: after `check`, dim Δ readiness / deps / secret-hits lines plus the
 | `ask [file] --propose` | Explain GateFailure JSON (propose-only) |
 | `packs list\|update\|import\|export-graph\|doctor` | Packs, RKG export, validity doctor |
 | `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land` | Standards / airlock / buyer checklist / instrument map |
-| `sock` | Optional private Unix IPC (Coreward) |
+| `sock` | Optional Unix IPC for integrators (fail-open if unused) |
 | `init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/cyberready.yml` if missing |
 
 Exit codes: **0** pass · **1** gates/error · **2** usage/env.
 
-Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Coreward bridge](docs/coreward-bridge.md) · [Docs index](docs/README.md).
+Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Docs index](docs/README.md).
+
+> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/

@@ -31,8 +31,9 @@ CyberReady+ is a **local-first command-line interface (CLI)**. It evaluates **pa
 - **Engine:** industry-agnostic check kinds (`file_present`, `text_forbid`, dependency bans, etc.).
 - **Packs:** data only — CRA-shaped annex drafts, house policy, sector templates.
 - **No remote policy brain** required for daily `check`.
+- Optional Unix-domain socket for IDE/integrator IPC — fail-open if absent; socket defaults to a private path with mode `0600`.
 
-Optional: Unix-domain socket bridge for IDE agents (Coreward). Fail-open if absent. Socket defaults to a private path with mode `0600`.
+> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
 
 ## 3. Packs as data
 
@@ -96,10 +97,31 @@ Public marketing and CI claim-safety scanners enforce this language.
 - Windows is unsupported for release binaries and the sock bridge.
 - Client-side HPURL verify does not imply remote notary services.
 
-## 9. Related surfaces
+## 9. Glossary (abbreviations)
+
+| Term | Meaning in this paper |
+|------|------------------------|
+| **CE** | European conformity marking — CyberReady does not issue CE marks |
+| **CRA** | EU Cyber Resilience Act — shapes some pack drafts; gate green ≠ legal conformity |
+| **SBOM** | Software Bill of Materials (e.g. CycloneDX drafts) |
+| **SARIF** | Static Analysis Results Interchange Format for CI/IDEs |
+| **GRC** | Governance, Risk, Compliance platforms — not what CyberReady is |
+| **HPURL** | Hash Pointer URL — local state hash fragment; not remote notarization |
+| **RKG** | Regulation Knowledge Graph — local export for teaching/navigation |
+| **IR** | Intermediate Representation — `GateFailure` JSON (+ markdown) |
+| **VEX** | Vulnerability Exploitability eXchange — draft OpenVEX at attest |
+| **ReDoS** | Regex denial-of-service — packs are length/time guarded |
+| **OPA** | Open Policy Agent — explicit non-goal for OSS |
+| **Notified body** | Independent conformity-assessment organization — not replaced by this tool |
+| **Conformity assessment** | Formal legal process — CyberReady prepares human-review evidence only |
+
+Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audience.md). Authorities brief: [`docs/for-authorities.md`](../docs/for-authorities.md).
+
+## 10. Related surfaces
 
 - Product narrative: public static site under `site/`
 - Adoption clarity: `docs/intent-vs-scope.md` (intent, scope, IP/chat boundary)
+- Authorities / CISO: `docs/for-authorities.md`
 - Security plain language: `docs/security-model.md`
 - Install and commands: repository README
 

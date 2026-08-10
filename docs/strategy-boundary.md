@@ -1,25 +1,20 @@
-# Strategy boundary (public vs private)
+# Strategy boundary
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-One page so strangers cannot confuse public CyberReady with private Coreward, CE, or a security program.
+CyberReady is a **standalone** public OSS product. Strangers must be able to adopt it without any private sibling tool. This page keeps claim boundaries honest.
 
-| In CyberReady (public) | In Coreward (private) | Never as product claim |
-|------------------------|------------------------|-------------------------|
-| Packs, `check`, IR, SARIF, buyer-questions, lay-of-land, attest honesty, Action, sock **server** | Mandate/KYA/TSS, hosted verify, paid vertical packs, enforce-before-execute | Never claim CE, NIS2-compliant, RISE-certified, or Conformant |
+| In CyberReady (public, enough to adopt) | Never as product claim |
+|-----------------------------------------|-------------------------|
+| Packs, `check`, IR, SARIF, buyer-questions, lay-of-land, attest honesty, Action, optional sock **server** | Never claim CE, NIS2-compliant, RISE-certified, agency-endorsed, or Conformant |
 
-## Public CyberReady
+## Public CyberReady (self-sustaining)
 
-- Deterministic local **judge** + instrument panel + fail-open sock server.
+- Deterministic local **judge** + instrument panel + fail-open optional sock server.
 - Evidence habit for product repos — not CVE management, not a security program.
 - Pin stays `@v0.4.3` unless a contract-breaking change forces a later patch.
 - Pack catalog frozen to three ids until freeze review + partner habit proof unlock.
-
-## Private Coreward (documented only here)
-
-- Optional tutor / enforce **client** that must **re-check** gates.
-- Never greenlights from explain-packets or sock responses alone.
-- Monetization (hosted verify, paid packs, KYA/mandate) stays **out** of this repo.
+- Authorities / CISO brief: [for-authorities](for-authorities.md). Glossary: [glossary-and-audience](glossary-and-audience.md).
 
 ## Explicit non-goals for OSS PRs
 
@@ -33,8 +28,8 @@ Pair CyberReady with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) fo
 
 Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](github-readiness-gaps.md).
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md)
+See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md) · [Coreward pointer](coreward-pointer.md)
 
 ---
 
-Coreward integration work is planned separately; this repo only freezes the public contracts.
+> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
