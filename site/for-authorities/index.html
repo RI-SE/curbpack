@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>For authorities — CyberReady+</title>
+  <meta name="description" content="Sign-off brief for auditors, CISOs, and NCSC/EU-style authorities. Structural evidence for human review — not conformity assessment." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/site.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="mark" href="../">CyberReady+</a>
+      <ul>
+        <li><a href="../how-it-works/">How it works</a></li>
+        <li><a href="../for-builders/">Builders</a></li>
+        <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="./" aria-current="page">Authorities</a></li>
+        <li><a href="../security/">Security</a></li>
+        <li><a href="../whitepaper/">White paper</a></li>
+        <li><a href="../samples/onepager.html">Sample</a></li>
+      </ul>
+    </nav>
+
+    <section class="section prose">
+      <h2>For authorities, auditors, and CISOs</h2>
+      <p class="sub">Local pack gates. Humans review. Not conformity assessment.</p>
+
+      <h3>What it is</h3>
+      <p>A <strong>local-first command-line tool</strong> that evaluates <strong>packs</strong> (JSON rule sets) against a git repository and writes <strong>structural evidence</strong> for human review. An instrument panel / evidence habit — not a full security program. Pair with software composition analysis (SCA) and secret scanners for depth.</p>
+
+      <h3>What it is not</h3>
+      <ul>
+        <li>Not conformity assessment, CE marking, or notified-body approval.</li>
+        <li>Not a claim that green gates equal legal market access or Cyber Resilience Act (CRA) conformity.</li>
+        <li>Not governance-risk-compliance (GRC) SaaS, a cloud policy brain, or LLM-as-judge.</li>
+        <li>Not an official NCSC/FRA/agency product or endorsement.</li>
+        <li>Not dependent on any private tutor product to operate.</li>
+      </ul>
+
+      <h3>Evidence artifacts and trust levels</h3>
+      <table>
+        <thead><tr><th>Artifact</th><th>Trust level (honest)</th></tr></thead>
+        <tbody>
+          <tr><td>Gate JSON / action report</td><td>Structural evidence — reproducible locally; not a legal finding</td></tr>
+          <tr><td>SARIF export</td><td>Same gates in CI/IDE format — not certification</td></tr>
+          <tr><td>Buyer-questions / lay-of-land</td><td>Human checklist and instrument map — not a CVE product</td></tr>
+          <tr><td>Review pack / one-pager</td><td>Procurement snapshot — not a certificate of conformity</td></tr>
+          <tr><td>SBOM / OpenVEX drafts</td><td>Best-effort inventory and draft notes</td></tr>
+          <tr><td>HPURL + Git Notes attest</td><td>Local hash pointer; signed only if ssh-agent signed — unsigned ≠ verified</td></tr>
+          <tr><td>Explain-packet</td><td>Sanitized tutor surface — never greenlights gates</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Institute neutrality</h3>
+      <p>Development may be institute-supported. <strong>RISE is a funder / applied-research supporter — not this product’s certifier.</strong> Never “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims. Repo: <a href="https://github.com/afelin/cyberready/blob/main/docs/promotion-firewall.md">promotion firewall</a>.</p>
+
+      <h3>Air-gap / offline</h3>
+      <p>Daily check needs no remote policy brain. Packs ship embedded; refresh via air-gap import or a sha256-pinned network update. Install verifies release checksums fail-closed.</p>
+
+      <h3>Claim-safe boundaries</h3>
+      <p>Safe: “prepares structural evidence for human review.” Unsafe: that CyberReady certified the product, completed conformity assessment, or that gate green equals CRA-compliant. This page is not certification theater.</p>
+
+      <p class="muted">Full markdown: <a href="https://github.com/afelin/cyberready/blob/main/docs/for-authorities.md">docs/for-authorities.md</a> · Glossary: <a href="https://github.com/afelin/cyberready/blob/main/docs/glossary-and-audience.md">docs/glossary-and-audience.md</a></p>
+
+      <aside class="muted">
+        <strong>Optional, separate product:</strong> Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): <a href="https://afelin.github.io/coreward/">https://afelin.github.io/coreward/</a>
+      </aside>
+    </section>
+
+    <footer class="site-footer">
+      <p><a href="../">Home</a> · Prepares evidence for human review — not a conformity assessment.</p>
+    </footer>
+  </div>
+</body>
+</html>

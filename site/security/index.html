@@ -17,6 +17,7 @@
         <li><a href="../how-it-works/">How it works</a></li>
         <li><a href="../for-builders/">Builders</a></li>
         <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="../for-authorities/">Authorities</a></li>
         <li><a href="./" aria-current="page">Security</a></li>
         <li><a href="../whitepaper/">White paper</a></li>
         <li><a href="../samples/onepager.html">Sample</a></li>
@@ -29,12 +30,15 @@
       <ul>
         <li><strong>Install:</strong> release downloads verify <code>checksums.txt</code> (sha256, fail-closed) in both <code>install.sh</code> and the GitHub Action.</li>
         <li><strong>Attest:</strong> unsigned capsules are labeled unsigned. Fake agent-bind tokens are never treated as verified signatures.</li>
-        <li><strong>Socket:</strong> optional Coreward bridge uses a private path (mode <code>0600</code>), not a shared world-writable <code>/tmp</code> default.</li>
+        <li><strong>Socket:</strong> optional integrator IPC uses a private path (mode <code>0600</code>), not a shared world-writable <code>/tmp</code> default. Fail-open if unused.</li>
         <li><strong>Packs online:</strong> network update requires a sha256 pin; otherwise stay offline / air-gap import.</li>
-        <li><strong>Regex:</strong> pack patterns are length-capped and time-bounded to reduce ReDoS risk.</li>
+        <li><strong>Regex:</strong> pack patterns are length-capped and time-bounded to reduce ReDoS (regular expression denial-of-service) risk.</li>
       </ul>
       <p>Full plain-language write-up in the repo: <a href="https://github.com/afelin/cyberready/blob/main/docs/security-model.md">docs/security-model.md</a>. Co-promotion / RISE-neutral language: <a href="https://github.com/afelin/cyberready/blob/main/docs/promotion-firewall.md">docs/promotion-firewall.md</a>. Report vulnerabilities via <a href="https://github.com/afelin/cyberready/blob/main/SECURITY.md">SECURITY.md</a>.</p>
-      <p class="muted">Pilot pin <code>@v0.4.3</code>. This page is not an incident runbook and not a certification statement.</p>
+      <p class="muted">Pilot pin <code>@v0.4.3</code>. This page is not an incident runbook and not a certification statement. Sign-off brief: <a href="../for-authorities/">for authorities</a>.</p>
+      <aside class="muted">
+        <strong>Optional, separate product:</strong> Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): <a href="https://afelin.github.io/coreward/">https://afelin.github.io/coreward/</a>
+      </aside>
     </section>
 
     <footer class="site-footer">

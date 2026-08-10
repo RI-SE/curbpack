@@ -17,6 +17,7 @@
         <li><a href="./" aria-current="page">How it works</a></li>
         <li><a href="../for-builders/">Builders</a></li>
         <li><a href="../for-reviewers/">Reviewers</a></li>
+        <li><a href="../for-authorities/">Authorities</a></li>
         <li><a href="../security/">Security</a></li>
         <li><a href="../whitepaper/">White paper</a></li>
         <li><a href="../samples/onepager.html">Sample</a></li>
@@ -40,7 +41,7 @@
       <p>A person reads the evidence and may run <code>attest</code> to bind a reproducible state hash into Git Notes. Unsigned attestations are labeled unsigned — not “verified.”</p>
 
       <h3>Judge → evidence → human</h3>
-      <p>CyberReady decides pass/fail (deterministic judge). Review-pack and one-pager are evidence for humans. Optional tutor: an airlocked explain-packet may go to Coreward or local chat — tutors propose only and must re-check; the packet never greenlights.</p>
+      <p>CyberReady decides pass/fail (deterministic judge). Review-pack and one-pager are evidence for humans. Optional tutor: an airlocked explain-packet may go to local chat — tutors propose only and must re-check; the packet never greenlights.</p>
 
       <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Flow from rule pack through local check to human sign-off">
         <rect x="16" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
@@ -69,7 +70,11 @@
         <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#9aa3b2">Attest · judgment</text>
       </svg>
 
-      <p class="muted">See a committed sample one-pager (generated once in-repo): <a href="../samples/onepager.html">samples/onepager.html</a>. Do not re-run demo just to reopen the browser.</p>
+      <p class="muted">See a committed sample one-pager (generated once in-repo): <a href="../samples/onepager.html">samples/onepager.html</a>. Do not re-run demo just to reopen the browser. Authorities path: <a href="../for-authorities/">for authorities</a>.</p>
+
+      <aside class="muted">
+        <strong>Optional, separate product:</strong> Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): <a href="https://afelin.github.io/coreward/">https://afelin.github.io/coreward/</a>
+      </aside>
     </section>
 
     <footer class="site-footer">

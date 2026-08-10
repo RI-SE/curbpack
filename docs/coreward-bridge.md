@@ -1,5 +1,7 @@
 # Coreward soft-bridge protocol
 
+> **Integrators only; adopters do not need this.** CyberReady is fully self-sustaining without Coreward. Public architecture brief: https://afelin.github.io/coreward/ — standardized wording: [coreward-pointer.md](coreward-pointer.md). Authorities/CISO path: [for-authorities.md](for-authorities.md).
+
 CyberReady listens on a Unix domain socket. Path resolution:
 
 1. `CYBERREADY_SOCK` if set

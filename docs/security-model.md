@@ -32,7 +32,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 | `install.sh` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
 | HPURL / proof page | Client-side compare of fragment `h=` to local pointer | Remote server verification or certification |
-| Coreward sock bridge | Optional; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
+| Optional sock IPC | Optional; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
 | Pack network update | Only when `CYBERREADY_PACKS_URL` **and** `CYBERREADY_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
 
 ## Install integrity
@@ -49,7 +49,7 @@ The composite Action does **not** prefer a consumer `./bin/cyberready` (that pat
 
 Unsigned ≠ verified. A green readiness score and an unsigned capsule are compatible — and must be labeled honestly.
 
-## Socket (optional Coreward bridge)
+## Socket (optional integrator IPC)
 
 Default path is **not** a shared `/tmp/cyberready.sock`. Prefer:
 
@@ -78,4 +78,4 @@ Prefer **annotations and SARIF** for full gate detail. Sticky PR comments are tr
 - That gate pass equals legal conformity
 - That unsigned attest is "verified install" or "signed proof"
 
-See also: [Promotion firewall](promotion-firewall.md) · [SECURITY.md](../SECURITY.md) for vulnerability reporting.
+See also: [For authorities](for-authorities.md) · [Promotion firewall](promotion-firewall.md) · [SECURITY.md](../SECURITY.md) for vulnerability reporting · [Coreward pointer](coreward-pointer.md)
