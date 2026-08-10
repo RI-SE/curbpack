@@ -34,7 +34,7 @@ cyberready check --form-hints            # propose-only snippets
 # optional: cyberready check --form-hints --apply-stub   # write missing stubs only
 ```
 
-Agent rule: after doc/dep edits, re-run `check`. Never claim certification.
+Agent rule: after doc/dep edits, re-run `check`. Prefer `export --context-pack`. Never claim certification. Full contract: [assistant-loop](../assistant-loop.md) (Cursor / Copilot / Claude / others).
 
 ## CI-only
 

@@ -253,6 +253,41 @@ runs:
           ${{ inputs.working_directory }}/.github/cyberready/cache/cyberready.sarif
         if-no-files-found: warn
 
+    - name: Export ContextPack (fail soft on older pins)
+      id: contextpack
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        BIN="${{ steps.bin.outputs.path }}"
+        EXTRA=()
+        if [ -n "${{ inputs.packs }}" ]; then
+          EXTRA+=(--packs "${{ inputs.packs }}")
+        fi
+        mkdir -p .github/cyberready/cache
+        set +e
+        "$BIN" export --context-pack "${EXTRA[@]}" 2>/tmp/cyberready-context-pack.err
+        CODE=$?
+        set -e
+        if [ "$CODE" -eq 0 ] && [ -f .github/cyberready/cache/context-pack.json ]; then
+          echo "present=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "present=false" >> "$GITHUB_OUTPUT"
+          echo "context-pack export unavailable (older pin or export failure) — continuing" >&2
+          cat /tmp/cyberready-context-pack.err >&2 || true
+        fi
+
+    - name: Upload ContextPack artifact
+      if: steps.contextpack.outputs.present == 'true'
+      continue-on-error: true
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: cyberready-context-pack
+        path: |
+          ${{ inputs.working_directory }}/.github/cyberready/cache/context-pack.json
+          ${{ inputs.working_directory }}/.github/cyberready/cache/context-pack.md
+        if-no-files-found: warn
+
     - name: PR sticky comment (red-only by default)
       if: inputs.comment_pr == 'true' && inputs.comment_on != 'never' && github.event_name == 'pull_request'
       uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7

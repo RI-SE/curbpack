@@ -14,7 +14,8 @@ Local-first evidence CLI. Prepares review packs for **human review**. Does not c
 - After editing annex / SECURITY.md / pack-referenced files, re-run `check`
 - Explaining a `GateFailure` JSON payload from `.github/cyberready/cache/`
 - Safe try without touching product: `cyberready demo`
-- Exporting SARIF / RKG / explain-packet / lay-of-land for IDEs, tutors, or humans
+- Exporting SARIF / RKG / explain-packet / lay-of-land / **ContextPack** for IDEs, tutors, or humans
+- Canonical assistant contract: `docs/assistant-loop.md` (AGENTS.md / CLAUDE.md / Copilot instructions in this repo)
 
 ## Commands
 
@@ -33,6 +34,9 @@ cyberready export --explain-packet
 cyberready export --watchlist-join
 cyberready export --lay-of-land
 cyberready export --buyer-questions
+cyberready export --context-pack   # one washed assistant artifact (prefer this)
+cyberready share                   # check → context-pack → buyer-questions → prepare-release
+cyberready completion bash|zsh|fish
 cyberready packs list
 cyberready packs export-graph
 cyberready packs doctor
@@ -60,9 +64,10 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 6. Cold start: prefer `cyberready init` (house-policy) unless the user asks for CRA/medtech.
 7. **After edits** (human or agent) in an initialized repo, run `cyberready check` (or bare `cyberready`).
 8. **On red:** run `cyberready check --heal` then `cyberready ask … --propose` (explain-packet optional for tutors); never invent certification; `--heal` never auto-attests; **never attest**.
-9. **On green:** optional `export --lay-of-land` and/or `export --buyer-questions` for human share — not a security program.
-10. Remediations cache: `.github/cyberready/cache/remediations.json`. Instrument map: `.github/cyberready/cache/instrument.json`.
-11. Release path: `prepare-release` then human `attest` — never auto-attest.
+9. **On green:** optional `export --context-pack` (preferred), and/or `--lay-of-land` / `--buyer-questions` for human share — not a security program. Thin recipe: `cyberready share`.
+10. Remediations cache: `.github/cyberready/cache/remediations.json`. Instrument map: `.github/cyberready/cache/instrument.json`. ContextPack: `.github/cyberready/cache/context-pack.json`.
+11. Release path: `prepare-release` then human `attest` — never auto-attest. Optional MCP: `examples/mcp` (CLI remains SoR; no new sock ops).
+
 12. **No auto-demo loops.** Demo does **not** open a browser unless `--open`.
 13. RKG: `packs export-graph` → `.github/cyberready/graph/policy-graph.json`. Prefer `export --sarif` / `check --json` over inventing findings.
 14. Explain-packets are sanitized teaching surfaces only (`CYBERREADY_EXPLAIN_ALLOW_CLOUD=0` default).

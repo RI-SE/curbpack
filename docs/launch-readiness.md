@@ -12,7 +12,7 @@ Coreward is **not** required to build, test, launch, or use CyberReady (optional
 | SPDX | **Apache-2.0** |
 | Release pin | **`@v0.4.3`** (no new tag) |
 | Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
-| Discussion #4 pin | **Human-pending** — not pinned yet (no GraphQL pin mutation; use UI) |
+| Discussion #4 pin | **Human-pending** — GraphQL has no `pinDiscussion` / `isPinned` (re-verified 2026-08-10); pin via GitHub UI only |
 | Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/afelin/cyberready/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.4.3`, isolated HOME/PATH) |
 | Invite wave | **Ready except pin** — items 1–3 done; item 4 (Welcome Discussion pinned) needs human UI |
 
@@ -20,9 +20,12 @@ Gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
 
 ### Human UI still needed — pin Discussion #4
 
+GitHub’s public GraphQL schema does **not** expose a pin mutation for Discussions (confirmed: `pinDiscussion` / `Discussion.isPinned` undefined). Automating the pin is not possible with `gh`/API today.
+
 1. Open https://github.com/afelin/cyberready/discussions/4
 2. Click **⋯** (or Pin) → **Pin discussion**
 3. Confirm it appears under the repo’s pinned Discussions
+4. After pinning, update this Status row to **Pinned** and refresh the tip SHA if needed
 
 ### Branch protection (already set; Settings mirror)
 

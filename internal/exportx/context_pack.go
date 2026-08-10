@@ -1,0 +1,264 @@
+package exportx
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/afelin/cyberready/internal/instrument"
+	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/cyberready/internal/remediation"
+	"github.com/afelin/cyberready/internal/validate"
+)
+
+const (
+	contextPackSchema   = "1"
+	contextPackMaxFails = 12
+	contextPackNote     = "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run cyberready check before claiming fixed."
+)
+
+// ContextFailure is a washed top finding for assistants.
+type ContextFailure struct {
+	GateID      string `json:"gate_id"`
+	Severity    string `json:"severity"`
+	Description string `json:"description"`
+	TargetFile  string `json:"target_file,omitempty"`
+	ActionHint  string `json:"action_hint,omitempty"`
+}
+
+// ContextInstrument is a washed instrument snapshot (+ optional Δ).
+type ContextInstrument struct {
+	DepsCount     int    `json:"deps_count"`
+	DepsFP        string `json:"deps_fp,omitempty"`
+	SecretHits    int    `json:"secret_hits"`
+	DepsAdded     int    `json:"deps_added,omitempty"`
+	DepsRemoved   int    `json:"deps_removed,omitempty"`
+	Note          string `json:"note"`
+}
+
+// ContextRemediationHint is a remediations.json row washed for assistants.
+type ContextRemediationHint struct {
+	GateID  string `json:"gate_id"`
+	File    string `json:"file,omitempty"`
+	Action  string `json:"action,omitempty"`
+	Snippet string `json:"snippet,omitempty"`
+}
+
+// ContextPack is one assistant-facing artifact (JSON + Markdown summary).
+type ContextPack struct {
+	SchemaVersion     string                   `json:"schema_version"`
+	Note              string                   `json:"note"`
+	PackIDs           []string                 `json:"pack_ids"`
+	ReadinessScore    int                      `json:"readiness_score"`
+	OK                bool                     `json:"ok"`
+	Failures          []ContextFailure         `json:"failures"`
+	Instrument        ContextInstrument        `json:"instrument"`
+	RemediationHints  []ContextRemediationHint `json:"remediation_hints"`
+	Paths             map[string]string        `json:"paths"`
+	CertificationClaimed bool                  `json:"certification_claimed"`
+}
+
+// WriteContextPack builds context-pack.json (+ .md) from cache IR when present,
+// otherwise one quiet validate. Reuses explain-packet wash helpers.
+func WriteContextPack(root string, packIDs []string, outPath string) (string, error) {
+	payload, score, ok, usedCache, err := loadOrValidatePayload(root, packIDs)
+	if err != nil {
+		return "", err
+	}
+	_ = usedCache
+
+	ids := packIDs
+	if len(ids) == 0 {
+		ids = nonzeroPacks(strings.Split(payload.PackID, ","))
+	}
+
+	prior, hadPrior := instrument.Load(root)
+	snap := instrument.Compute(root)
+	_ = instrument.Write(root, snap)
+	added, removed := 0, 0
+	if hadPrior {
+		added, removed = instrument.DepDelta(prior, snap)
+	}
+
+	cache, _ := remediation.Load(root)
+	hintIDs := make([]string, 0, len(cache.Entries))
+	for id := range cache.Entries {
+		hintIDs = append(hintIDs, id)
+	}
+	sort.Strings(hintIDs)
+	hints := make([]ContextRemediationHint, 0, len(hintIDs))
+	for _, id := range hintIDs {
+		e := cache.Entries[id]
+		hints = append(hints, ContextRemediationHint{
+			GateID:  e.GateID,
+			File:    relativizePath(e.File),
+			Action:  sanitizeText(e.Action),
+			Snippet: sanitizeText(truncate(e.Snippet, 240)),
+		})
+	}
+
+	failures := sanitizeFailures(payload.Failures)
+	top := make([]ContextFailure, 0, contextPackMaxFails)
+	for i, f := range failures {
+		if i >= contextPackMaxFails {
+			break
+		}
+		top = append(top, ContextFailure{
+			GateID:      f.GateID,
+			Severity:    f.Severity,
+			Description: f.SanitizedDescription,
+			TargetFile:  f.ASTCoordinates.TargetFile,
+			ActionHint:  f.Remediation.ActionRequired,
+		})
+	}
+	if score == 0 && payload.ReadinessScore > 0 {
+		score = payload.ReadinessScore
+	}
+
+	pack := ContextPack{
+		SchemaVersion:        contextPackSchema,
+		Note:                 contextPackNote,
+		PackIDs:              ids,
+		ReadinessScore:       score,
+		OK:                   ok,
+		Failures:             top,
+		Instrument: ContextInstrument{
+			DepsCount:   len(snap.Deps),
+			DepsFP:      snap.DepsFP,
+			SecretHits:  snap.SecretHits,
+			DepsAdded:   added,
+			DepsRemoved: removed,
+			Note:        "Instrument panel map — not a security program · not conformity assessment",
+		},
+		RemediationHints:     hints,
+		Paths:                contextPackPathsMap(root),
+		CertificationClaimed: false,
+	}
+
+	mdPath, jsonPath := contextPackPaths(root, outPath)
+	if err := os.MkdirAll(filepath.Dir(jsonPath), 0o755); err != nil {
+		return "", err
+	}
+	b, err := json.MarshalIndent(pack, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if err := PacketLooksAirlocked(b); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(jsonPath, append(b, '\n'), 0o644); err != nil {
+		return "", err
+	}
+	md := formatContextPackMarkdown(pack)
+	if err := PacketLooksAirlocked([]byte(md)); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
+		return "", err
+	}
+	return jsonPath, nil
+}
+
+func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailurePayload, score int, ok bool, usedCache bool, err error) {
+	cachePath := filepath.Join(root, ".github", "cyberready", "cache", "latest_failure.json")
+	if b, rerr := os.ReadFile(cachePath); rerr == nil {
+		var p ir.GateFailurePayload
+		if json.Unmarshal(b, &p) == nil && (p.SchemaVersion != "" || len(p.Failures) > 0 || p.PackID != "") {
+			ok = len(p.Failures) == 0
+			score = p.ReadinessScore
+			return p, score, ok, true, nil
+		}
+	}
+	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
+	if verr != nil {
+		return ir.GateFailurePayload{}, 0, false, false, verr
+	}
+	p := res.Payload
+	p.ReadinessScore = res.Score
+	return p, res.Score, res.Passed, false, nil
+}
+
+func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {
+	if outPath == "" {
+		base := filepath.Join(root, ".github", "cyberready", "cache", "context-pack")
+		return base + ".md", base + ".json"
+	}
+	ext := strings.ToLower(filepath.Ext(outPath))
+	stem := strings.TrimSuffix(outPath, ext)
+	switch ext {
+	case ".md", ".markdown":
+		return outPath, stem + ".json"
+	case ".json":
+		return stem + ".md", outPath
+	default:
+		return outPath + ".md", outPath + ".json"
+	}
+}
+
+func contextPackPathsMap(root string) map[string]string {
+	base := filepath.ToSlash(filepath.Join(".github", "cyberready", "cache"))
+	return map[string]string{
+		"latest_failure":  base + "/latest_failure.json",
+		"instrument":      base + "/instrument.json",
+		"remediations":    base + "/remediations.json",
+		"context_pack":    base + "/context-pack.json",
+		"context_pack_md": base + "/context-pack.md",
+		"buyer_questions": base + "/buyer-questions.md",
+		"explain_packet":  base + "/explain-packet.json",
+		"policy_graph":    filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+	}
+}
+
+func formatContextPackMarkdown(p ContextPack) string {
+	var b strings.Builder
+	b.WriteString("# CyberReady ContextPack\n\n")
+	b.WriteString("> Structural evidence for human review. Not a conformity assessment, CE mark, or certification.\n\n")
+	fmt.Fprintf(&b, "- **Packs:** %s\n", strings.Join(p.PackIDs, ", "))
+	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
+	fmt.Fprintf(&b, "- **OK:** %v\n", p.OK)
+	fmt.Fprintf(&b, "- **Certification claimed:** no\n\n")
+	fmt.Fprintf(&b, "## Instrument\n\n- deps: %d (fp `%s`)\n- secret-hits: %d\n", p.Instrument.DepsCount, p.Instrument.DepsFP, p.Instrument.SecretHits)
+	if p.Instrument.DepsAdded != 0 || p.Instrument.DepsRemoved != 0 {
+		fmt.Fprintf(&b, "- Δ deps: +%d / −%d\n", p.Instrument.DepsAdded, p.Instrument.DepsRemoved)
+	}
+	b.WriteString("\n## Top failures\n\n")
+	if len(p.Failures) == 0 {
+		b.WriteString("_None in this pack snapshot._\n\n")
+	} else {
+		b.WriteString("| gate_id | severity | description | target_file |\n|---|---|---|---|\n")
+		for _, f := range p.Failures {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+				mdCell(f.GateID), mdCell(f.Severity), mdCell(f.Description), mdCell(f.TargetFile))
+		}
+		b.WriteString("\n")
+	}
+	if len(p.RemediationHints) > 0 {
+		b.WriteString("## Remediation hints (by gate_id)\n\n")
+		for _, h := range p.RemediationHints {
+			fmt.Fprintf(&b, "- `%s`: %s\n", h.GateID, mdCell(h.Action))
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("## Paths\n\n")
+	pathKeys := make([]string, 0, len(p.Paths))
+	for k := range p.Paths {
+		pathKeys = append(pathKeys, k)
+	}
+	sort.Strings(pathKeys)
+	for _, k := range pathKeys {
+		fmt.Fprintf(&b, "- `%s`: `%s`\n", k, p.Paths[k])
+	}
+	b.WriteString("\n_Assistants: run `cyberready check` (exit code authoritative). Never invent gate results or certification claims._\n")
+	return b.String()
+}
+
+func truncate(s string, n int) string {
+	s = strings.TrimSpace(s)
+	if n <= 0 || len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}

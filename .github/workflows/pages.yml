@@ -41,7 +41,7 @@ jobs:
           safe = re.compile(sys.argv[2], re.I)
           fail = 0
           for p in pathlib.Path("site").rglob("*"):
-              if p.suffix.lower() not in {".html", ".md"}:
+              if p.suffix.lower() not in {".html", ".md", ".txt"}:
                   continue
               for i, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
                   if safe.search(line):

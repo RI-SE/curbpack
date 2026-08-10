@@ -1,0 +1,28 @@
+# CyberReady+
+
+> Local pack gates. Humans review. Not a conformity assessment, CE mark, or certification.
+
+## What
+
+CyberReady is a local-first CLI that evaluates pack JSON gates against a git repo and writes structural evidence for human review. Green gates mean “ready for a human to look,” not “approved.”
+
+## What not
+
+- Not conformity assessment / CE / notified-body approval
+- Not a cloud GRC / regulation RAG chat KB
+- Not dependent on Coreward (optional external tutor only)
+
+## Start
+
+- Install: https://github.com/afelin/cyberready#install
+- Builders: https://afelin.github.io/cyberready/for-builders/
+- Authorities: https://afelin.github.io/cyberready/for-authorities/
+- White paper: https://afelin.github.io/cyberready/whitepaper/
+- Assistant contract: https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md
+- ContextPack: `cyberready export --context-pack`
+- Thin MCP example: https://github.com/afelin/cyberready/tree/main/examples/mcp
+- Pin: `@v0.4.3`
+
+## Optional
+
+Optional separate product (tutor/enforce client): https://afelin.github.io/coreward/ — CyberReady is self-sustaining without it.
