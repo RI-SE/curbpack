@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>For builders — CyberReady+</title>
-  <meta name="description" content="Pick a door: write then check, or bring docs then check—green gates in your repo in under ten minutes." />
+  <meta name="description" content="Install, init, and check—green gates in your repo in under ten minutes. Three ways in: Write, Bring, or CI." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -24,11 +24,12 @@
 
     <section class="section prose">
       <h2>For builders</h2>
-      <p class="sub">Start as a builder—green gates in your repo in under ten minutes.</p>
+      <p class="sub">Install, init, and check—green gates in your repo in under ten minutes.</p>
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
-      <p>Pick <strong>exactly one</strong> door:</p>
+      <p>Pick <strong>one</strong> of three ways in:</p>
 
       <h3>Write then check</h3>
+      <p>Assistant proposes A and B → you pick → cite-check → you confirm (TTY or <code>--i-am-human</code>) → check.</p>
       <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cd /path/to/your/product
 cyberready init
@@ -52,7 +53,7 @@ cyberready check</code></pre>
     heal: "true"</code></pre>
       <p class="muted">Drop-in example: repo <code>examples/workflows/cyberready-check.yml</code>.</p>
 
-      <p>Human pathway guide: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/pathway.md">docs/getting-started/pathway.md</a>. Research brief sample: <a href="/cyberready/samples/research-brief.html">samples/research-brief.html</a>. Recipes: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/60-second-paths.md">60-second paths</a>.</p>
+      <p>Human pathway guide: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/pathway.md">docs/getting-started/pathway.md</a>. Recipes: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/60-second-paths.md">60-second paths</a>. Optional writer aid: <a href="/cyberready/samples/research-brief.html">research brief sample</a>.</p>
 
       <p class="muted"><strong>Works with assistants</strong> — run the CLI, then <code>cyberready export --context-pack</code>. Optional thin MCP: repo <code>examples/mcp</code>. Contract: <a href="https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md">docs/assistant-loop.md</a>.</p>
     </section>

@@ -114,31 +114,36 @@
               Local rule packs. <br/>
               <span class="text-rise">A review pack for buyers.</span>
             </h1>
-            <p class="text-lg sm:text-xl text-ink-muted mb-8 max-w-2xl leading-relaxed font-sans">
+            <p class="text-lg sm:text-xl text-ink-muted mb-6 max-w-2xl leading-relaxed font-sans">
               CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
             </p>
             <p class="text-base text-ink-muted mb-6 max-w-2xl leading-relaxed font-sans">
-              Write then check, or bring docs then check—same local check either way. Optional drafts never replace check.
+              Evidence in the repo → checklist runs locally → handout for a person → you still decide claims.
             </p>
 
             <div class="flex flex-col sm:flex-row gap-3 mb-4 text-sm font-medium text-ink-muted">
-              <span class="inline-flex items-center px-3 py-1.5 border border-ink/15 bg-paper">Write→Check</span>
-              <span class="inline-flex items-center px-3 py-1.5 border border-ink/15 bg-paper">Bring-docs→Check</span>
-              <span class="inline-flex items-center px-3 py-1.5 border border-ink/15 bg-paper">CI check alone</span>
+              <span class="inline-flex flex-col sm:flex-row sm:items-center gap-1 px-3 py-1.5 border border-ink/15 bg-paper">
+                <span class="text-ink font-semibold">Write</span>
+                <span class="text-ink-muted font-normal">draft then check</span>
+              </span>
+              <span class="inline-flex flex-col sm:flex-row sm:items-center gap-1 px-3 py-1.5 border border-ink/15 bg-paper">
+                <span class="text-ink font-semibold">Bring</span>
+                <span class="text-ink-muted font-normal">files already there</span>
+              </span>
+              <span class="inline-flex flex-col sm:flex-row sm:items-center gap-1 px-3 py-1.5 border border-ink/15 bg-paper">
+                <span class="text-ink font-semibold">CI</span>
+                <span class="text-ink-muted font-normal">Action alone</span>
+              </span>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 mb-10">
               <a href="/cyberready/for-builders/" class="btn-brutal inline-flex justify-center items-center px-6 py-3 border border-ink text-base font-semibold text-paper bg-ink">
-                Pick a door
+                Pick how you start
               </a>
               <a href="/cyberready/samples/onepager.html" class="btn-brutal inline-flex justify-center items-center px-6 py-3 border border-ink text-base font-semibold text-ink bg-paper hover:bg-paper-alt">
                 Open full sample
               </a>
             </div>
-            <p class="text-sm text-ink-muted mb-8">
-              <a href="/cyberready/samples/research-brief.html" class="underline hover:text-ink">Research brief sample</a>
-              · start as a builder on the builders page.
-            </p>
 
             <div class="inline-flex items-start p-3 bg-status-errBg border border-status-err/20 text-sm text-status-err">
               <svg class="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -211,7 +216,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center max-w-2xl mx-auto mb-16">
           <h2 class="font-serif text-3xl font-semibold text-ink mb-3">How it works</h2>
-          <p class="text-ink-muted text-lg">Write→Check or Bring-docs→Check → local check → review pack → human attest.</p>
+          <p class="text-ink-muted text-lg">Three ways in → local check → review pack → human review.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
@@ -238,13 +243,18 @@
           <div class="bg-ink border border-ink p-6 relative z-10 text-paper">
             <span class="font-mono text-xs text-paper/60 mb-2 block">04</span>
             <h3 class="font-semibold text-lg mb-1">Human review</h3>
-            <p class="text-sm text-paper/80 font-mono">Attest · sign-off</p>
+            <p class="text-sm text-paper/80 font-mono">You decide claims</p>
           </div>
         </div>
 
-        <p class="mt-10 text-center text-sm text-ink-muted">
+        <p class="mt-6 text-center text-sm text-ink-muted">
+          Write path adds draft choice before check. Bring and CI go straight to check.
+        </p>
+
+        <p class="mt-6 text-center text-sm text-ink-muted">
           Detail: <a href="/cyberready/how-it-works/" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">how it works</a>
           · Voice: <a href="https://github.com/afelin/cyberready/blob/main/docs/voice-and-terms.md" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">voice and terms</a>
+          · Optional writer aid: <a href="/cyberready/samples/research-brief.html" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">research brief sample</a>
         </p>
       </div>
     </section>
@@ -260,7 +270,7 @@
               Green checks in your repo in under ten minutes.
             </p>
             <a href="/cyberready/for-builders/" class="font-mono text-sm font-semibold text-ink uppercase tracking-wide group-hover:text-rise transition-colors inline-flex items-center">
-              Three first moves <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+              Three ways in <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
             </a>
           </div>
 
