@@ -100,3 +100,12 @@ Packs are validated on load (id/name/version/rules, supported checks, path jail,
 ## Claim safety
 
 Packs prepare evidence for human review. Passing gates is not certification for any regulation or internal audit regime.
+
+## Diff vs full validate
+
+| Command / op | What it does | Release-gate safe? |
+|--------------|--------------|-------------------|
+| `cyberready check --diff` | Porcelain: evaluates rules that touch the dirty/changed set (`RuleTouchesDiff`; basename match). `file_present` / `annex_file` always run. | **No** — local speed only; do not treat green `--diff` as release evidence |
+| `cyberready validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative |
+
+Do not change `RuleTouchesDiff` matching mid-freeze. Stakeholder matrix: [github-readiness-gaps.md](github-readiness-gaps.md#diff-vs-validate_delta).

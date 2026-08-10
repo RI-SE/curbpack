@@ -8,6 +8,8 @@ Pick **exactly one** first move for your audience.
 
 ## Human — safe try
 
+TTFV ladder (pin **`@v0.4.3`**): `install.sh` → `doctor` → `demo`. Claim-safe: gate green ≠ certification. Doctor soft-exit and ~10 MB binary are accepted (see [gap matrix](../github-readiness-gaps.md)).
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cyberready doctor

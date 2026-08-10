@@ -16,10 +16,12 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 ### Pilot deploy + freeze
 
-- Grade: `./scripts/redteam-pilot.sh` must be green.
+- Grade: `./scripts/redteam-pilot.sh` must be green (**15/15** cases).
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
+- Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, packs SHA256 pin, demo `--out` jail.
 - Pin: Action/consumers use `@v0.4.3` (prefer tag + commit SHA).
 - **30-day trust-surface freeze continues from `v0.4.0` through `v0.4.3`** (`v0.4.3` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
+- Stakeholder gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
 - **Day-30 freeze review due 2026-09-07** (from `v0.4.0` on 2026-08-08). Until then: **renew freeze**, no `v0.4.4`, no pack unlock. Checklist + outcome log: [launch readiness](launch-readiness.md#freeze-review-day-30-from-v040). Stable nave: [stable contracts](stable-contracts.md).
 
 ## Trust boundaries

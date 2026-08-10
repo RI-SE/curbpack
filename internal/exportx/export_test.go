@@ -95,6 +95,48 @@ func TestFromGateFailures_RuleIDEqualsGateID(t *testing.T) {
 	}
 }
 
+func TestFromGateFailures_SARIFLooksAirlocked(t *testing.T) {
+	payload := ir.GateFailurePayload{
+		Failures: []ir.Failure{{
+			GateID:               "HOUSE-LEAK",
+			Severity:             "high",
+			SanitizedDescription: "secret at /Users/adversary/project/SECURITY.md api_key=sk-live-SHOULD-REDACT",
+			ASTCoordinates: ir.ASTCoordinates{
+				TargetFile: "/Users/adversary/project/SECURITY.md",
+			},
+		}, {
+			GateID: "HOUSE-PEM",
+			Severity: "medium",
+			SanitizedDescription: "key material -----BEGIN PRIVATE KEY-----\nABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n-----END PRIVATE KEY-----",
+		}},
+	}
+	doc := exportx.FromGateFailures(payload)
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := exportx.PacketLooksAirlocked(raw); err != nil {
+		t.Fatalf("SARIF must pass airlock: %v\n%s", err, raw)
+	}
+	blob := string(raw)
+	if strings.Contains(blob, "/Users/adversary") {
+		t.Fatal("SARIF retained absolute home path")
+	}
+	if strings.Contains(blob, "BEGIN PRIVATE KEY") {
+		t.Fatal("SARIF retained PEM blob")
+	}
+	if strings.Contains(blob, "sk-live-SHOULD-REDACT") {
+		t.Fatal("SARIF retained secret-looking token")
+	}
+	if len(doc.Runs[0].Results) < 1 {
+		t.Fatal("expected results")
+	}
+	uri := doc.Runs[0].Results[0].Locations[0].PhysicalLocation.ArtifactLocation.URI
+	if uri == "" || strings.Contains(uri, "/Users/") {
+		t.Fatalf("artifact URI not washed: %q", uri)
+	}
+}
+
 func TestWatchlistJoin_Informational(t *testing.T) {
 	dir := t.TempDir()
 	mustWrite(t, filepath.Join(dir, "package-lock.json"), `{

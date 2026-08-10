@@ -17,6 +17,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 |-----|---------|
 | [Intent vs Scope](intent-vs-scope.md) | What CyberReady is / is not |
 | [Strategy boundary](strategy-boundary.md) | Public CyberReady vs private Coreward; never-as-claim |
+| [GitHub-readiness gaps](github-readiness-gaps.md) | Stakeholder demand → Done/Polish/Ops/Reject + Evidence paths |
 | [Stable contracts](stable-contracts.md) | Sock ops, GateFailure IR, explain airlock (nave freeze) |
 | [Security model](security-model.md) | Trust boundaries, required CI, freeze |
 | [Promotion firewall](promotion-firewall.md) | RISE-neutral publish language + MoU checklist |

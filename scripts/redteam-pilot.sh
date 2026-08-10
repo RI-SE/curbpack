@@ -224,6 +224,27 @@ else
   bad "12 stable contracts nave — update docs/stable-contracts.md when changing sock ops"
 fi
 
+# --- 13) Attest refuses dirty tree without --allow-dirty (existing unit invariant) ---
+if go test ./internal/attest/ -run TestAttestRefusesDirtyWithoutAllowDirty -count=1 >/dev/null 2>&1; then
+  ok "13 attest OCC refuses dirty without --allow-dirty"
+else
+  bad "13 attest dirty / --allow-dirty honesty regression"
+fi
+
+# --- 14) Packs update refuses without CYBERREADY_PACKS_SHA256 ---
+if go test ./internal/packscmd/ -run TestUpdateRequiresSHA256Pin -count=1 >/dev/null 2>&1; then
+  ok "14 packs update requires CYBERREADY_PACKS_SHA256"
+else
+  bad "14 packs update SHA256 pin regression"
+fi
+
+# --- 15) Demo --out product-cwd jail ---
+if go test ./internal/invariants/ -run 'TestDemoRefusesProductCwd|TestDemoRefusesPathUnderCwd' -count=1 >/dev/null 2>&1; then
+  ok "15 demo --out jail (product cwd)"
+else
+  bad "15 demo --out jail regression"
+fi
+
 echo ""
 echo "redteam-pilot: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -gt 0 ]]; then

@@ -6,7 +6,7 @@ One page so strangers cannot confuse public CyberReady with private Coreward, CE
 
 | In CyberReady (public) | In Coreward (private) | Never as product claim |
 |------------------------|------------------------|-------------------------|
-| Packs, `check`, IR, SARIF, buyer-questions, lay-of-land, attest honesty, Action, sock **server** | Mandate/KYA/TSS, hosted verify, paid vertical packs, enforce-before-execute | CE, NIS2-compliant, RISE-certified, Conformant |
+| Packs, `check`, IR, SARIF, buyer-questions, lay-of-land, attest honesty, Action, sock **server** | Mandate/KYA/TSS, hosted verify, paid vertical packs, enforce-before-execute | Never claim CE, NIS2-compliant, RISE-certified, or Conformant |
 
 ## Public CyberReady
 
@@ -31,7 +31,9 @@ PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or new pack ids with
 
 Pair CyberReady with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth. Watchlist∩SBOM is look-here only — not a vulnerability product.
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md)
+Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](github-readiness-gaps.md).
+
+See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md)
 
 ---
 

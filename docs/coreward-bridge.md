@@ -70,19 +70,19 @@ Lay-of-land and explain-packet exports are teaching/share surfaces only — afte
 
 See also: [Intent vs Scope](intent-vs-scope.md) · [Strategy boundary](strategy-boundary.md) · [Stable contracts](stable-contracts.md) (sock ops + airlock freeze).
 
-**Marketing unblock:** do **not** pitch the live tutor loop until a **future Coreward planning round** completes live sock dogfood. This repo freezes public contracts only.
+**Marketing unblock:** live Coreward sock dogfood recorded 2026-08-09 (see Last dogfood). Public contracts remain frozen; do not claim Coreward as part of this OSS product face.
 
 ## Next planning round: Coreward
 
-Deferred — **no live Coreward dogfood in this repo round.** Checklist for that later plan:
+Live Coreward dogfood recorded (see Last dogfood). Remaining checklist for operators:
 
 1. Wire Coreward MCP / Cursor env to `CYBERREADY_SOCK` against a product fixture.
 2. Run explain-packet → propose-only → `validate_delta` recheck end-to-end from Coreward.
 3. Confirm fail-open (`not_installed` / `unavailable`) never blocks promote.
-4. Fill “Last dogfood: DATE” below only after a real Coreward run.
-5. Then — and only then — lift the marketing unblock for the live tutor loop.
+4. ~~Fill “Last dogfood: DATE”~~ — done 2026-08-09 (see below).
+5. Marketing unblock for live tutor loop is recorded; still do not co-brand Coreward into this OSS face.
 
-**Last dogfood:** _(not yet — awaiting Coreward planning round)_
+**Last dogfood:** 2026-08-09 — Coreward bridge live sock (cyberready 0.4.3): explain_packet → propose-only → validate_delta still red on incomplete house-policy fixture; get_latest_failure + graph_summary OK; fail-open not_installed without sock. Optional private Coreward sibling — not co-branded.
 
 ## Dogfood checklist (explain-packet ↔ Coreward)
 

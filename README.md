@@ -14,6 +14,8 @@ curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/inst
 cyberready doctor && cyberready demo
 ```
 
+TTFV ladder (pin **`@v0.4.3`**): `install.sh` → `doctor` → `demo`. Gate pass is evidence for humans — **not** certification. Doctor uses soft-exit diagnostics (tips, not a redesigned hard gate). Release binary is ~10 MB (Go CGO=0 `-s -w`) — accepted; sub-MB Zig is out of scope.
+
 `install.sh` verifies release `checksums.txt` (sha256, fail-closed). macOS/Linux only. `demo` prints a one-pager path — it does **not** open a browser unless you pass `--open`. Sample without demo: [site/samples/onepager.html](site/samples/onepager.html).
 
 From source: `go build -o bin/cyberready ./cmd/cyberready`
