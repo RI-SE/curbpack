@@ -42,6 +42,18 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 	if !strings.Contains(string(html), "Structural evidence for human review") {
 		t.Fatal("buyer html must stamp structural evidence honesty")
 	}
+	if !strings.Contains(string(html), "Back — provenance") {
+		t.Fatal("buyer html must include provenance back")
+	}
+	if !strings.Contains(string(html), "Human sign-off") {
+		t.Fatal("buyer html must include human sign-off row")
+	}
+	if !strings.Contains(string(html), "cra-baseline") {
+		t.Fatal("buyer html must show chosen pack id")
+	}
+	if !strings.Contains(string(html), "Hand this one-pager") {
+		t.Fatal("buyer html must say hand to buyer or auditor")
+	}
 	if err := release.Prepare(release.Options{
 		RepoRoot: dir, PackIDs: []string{"cra-baseline"}, OutDir: out, AllowFailingGates: true,
 	}); err != nil {
