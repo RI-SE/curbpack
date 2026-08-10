@@ -26,3 +26,5 @@ cyberready init --packs cra-baseline,house-policy
 ```
 
 Claim safety: gate pass prepares evidence for human review — not certification.
+
+Warm-start (enum seed → HITL ticks): [pathway](pathway.md) — `cyberready pathway status`.

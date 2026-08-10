@@ -31,6 +31,8 @@ import (
 	"github.com/afelin/cyberready/internal/workflowdata"
 )
 
+// research command lives in research.go (allowlisted citation packet; never gates check).
+
 // Version aliases buildinfo.Version for CLI surfaces.
 // Release builds set buildinfo via -ldflags "-X github.com/afelin/cyberready/internal/buildinfo.Version=...".
 var Version = buildinfo.Version
@@ -108,6 +110,10 @@ func Run(args []string) error {
 		return cmdExport(rest)
 	case "share":
 		return cmdShare(rest)
+	case "pathway":
+		return cmdPathway(rest)
+	case "research":
+		return cmdResearch(rest)
 	case "completion":
 		return cmdCompletion(rest)
 	default:
@@ -155,6 +161,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
 	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
 	fmt.Fprintf(os.Stderr, "  share                         Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  pathway status|suggest|confirm-packs|confirm-prose|confirm-share\n")
+	fmt.Fprintf(os.Stderr, "                                Warm-start seed + HITL ticks (sole writer of pathway-seed.json)\n")
+	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
+	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
 	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")

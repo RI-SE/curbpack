@@ -15,6 +15,7 @@ import (
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/cyberready/internal/research"
 	"github.com/afelin/cyberready/internal/sbom"
 	"github.com/afelin/cyberready/internal/tty"
 	"github.com/afelin/cyberready/internal/validate"
@@ -350,6 +351,7 @@ func buyerOnePager(root string, res validate.Result) string {
     <div class="back">
       <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>cyberready attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
       %s
+      %s
     </div>
 
     <footer>
@@ -364,6 +366,7 @@ func buyerOnePager(root string, res validate.Result) string {
 		info.Class, html.EscapeString(info.Line),
 		res.Score, rows.String(),
 		provenanceDL(res.Payload.PackID, info),
+		sourcesStrip(root, res.Payload.PackID),
 		footerHTML(info.Line, info.UnsignedLoud),
 		html.EscapeString(res.Payload.Timestamp))
 }
@@ -413,6 +416,66 @@ func provenanceDL(packID string, info attestInfo) string {
 	fmt.Fprintf(&b, "<dt>Human sign-off</dt><dd>%s</dd>\n", html.EscapeString(signOff))
 	b.WriteString(`<dt>Verify</dt><dd>proof/index.html + hpurl-pointer.json (client-side hash compare)</dd>`)
 	b.WriteString(`</dl>`)
+	return b.String()
+}
+
+// sourcesStrip adds claim-safe allowlisted citation links when a research packet exists
+// (or falls back to composed pack citation URLs). Informational only — not conformity.
+func sourcesStrip(root, packIDCSV string) string {
+	var urls []string
+	seen := map[string]struct{}{}
+	add := func(u string) {
+		u = strings.TrimSpace(u)
+		if u == "" {
+			return
+		}
+		if err := research.ValidateSourceURL(u); err != nil {
+			return
+		}
+		if _, ok := seen[u]; ok {
+			return
+		}
+		seen[u] = struct{}{}
+		urls = append(urls, u)
+	}
+	if pkt, err := research.LoadPacket(root); err == nil && pkt != nil {
+		for _, s := range pkt.Sources {
+			add(s.URL)
+		}
+	}
+	if len(urls) == 0 {
+		ids := strings.Split(packIDCSV, ",")
+		var clean []string
+		for _, id := range ids {
+			id = strings.TrimSpace(id)
+			if id != "" {
+				clean = append(clean, id)
+			}
+		}
+		if len(clean) > 0 {
+			if composed, _, err := packs.Compose(clean); err == nil {
+				for _, c := range composed.Citations {
+					add(c.URL)
+				}
+				for _, r := range composed.Rules {
+					for _, c := range r.Citations {
+						add(c.URL)
+					}
+				}
+			}
+		}
+	}
+	if len(urls) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(`<p style="margin:1rem 0 0.35rem;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);font-family:ui-monospace,Menlo,monospace">Sources (informational)</p>`)
+	b.WriteString(`<ul style="margin:0;padding-left:1.1rem;font-size:0.85rem">`)
+	for _, u := range urls {
+		fmt.Fprintf(&b, `<li><a href="%s">%s</a></li>`, html.EscapeString(u), html.EscapeString(u))
+	}
+	b.WriteString(`</ul>`)
+	b.WriteString(`<p style="margin:0.5rem 0 0;font-size:0.8rem;color:var(--muted)">Allowlisted official links for human reading — not a conformity assessment.</p>`)
 	return b.String()
 }
 

@@ -26,9 +26,12 @@ Thin CLI wrapper (same order; exits non-zero if check is red, still writes Conte
 ```bash
 cyberready share
 # optional: cyberready share --skip-prepare-release
+# human review tick: cyberready pathway confirm-share  — see pathway.md
 ```
 
 Artifacts land under `.github/cyberready/cache/` (`context-pack.json` + `.md`, `buyer-questions.md` + `.json`) and `review-pack/`.
+
+Warm-start before share: [pathway](pathway.md) (`pathway status` → confirms → stop before attest).
 
 ## Individual exports
 

@@ -4,7 +4,7 @@ CyberReady checks your repository against local rule packs and writes a review p
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Cold-start default pack: **`house-policy`**. CRA / medtech are opt-in later via `--packs` (Advanced).
+Cold-start default pack: **`house-policy`**. CRA / medtech are opt-in later via `--packs` (Advanced). Enum warm-start: [pathway](pathway.md) (`cyberready pathway status`). Two ways in: **write then check**, or **bring existing docs onto pack paths then check** (no portal PDF ingest) — same local `check`.
 
 Pick **exactly one** first move for your audience.
 

@@ -36,12 +36,17 @@ cyberready export --lay-of-land
 cyberready export --buyer-questions
 cyberready export --context-pack   # one washed assistant artifact (prefer this)
 cyberready share                   # check → context-pack → buyer-questions → prepare-release
+cyberready pathway status          # one next ask (human default; --technical for phase)
+cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
+# human only: pathway confirm-packs | confirm-prose | confirm-share
+cyberready research [--fetch] [--gate-id=…]   # allowlisted packet + brief; never gates check
+cyberready research --cite-check <draft.md>   # cite-or-refuse before confirm-prose
 cyberready completion bash|zsh|fish
 cyberready packs list
 cyberready packs export-graph
 cyberready packs doctor
 cyberready ask .github/cyberready/cache/latest_failure.json --propose
-cyberready attest
+cyberready attest                  # human only — never auto-attest
 ```
 
 ## Exit codes (stable)
@@ -74,3 +79,5 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 15. Keep git hooks from `init` for agent PRs — they force the check loop.
 16. Agent lineage env (optional): `CYBERREADY_AGENT_ID`, `CYBERREADY_MODEL_HASH`, `CYBERREADY_MANDATE_ID`.
 17. Authoring packs: set `assurance_class` (e.g. `structural_draft`); `packs import` refuses missing class / claim-adjacent theater copy.
+18. **Pathway:** orchestrate via `cyberready pathway status|suggest` only — never hand-write `pathway-seed.json`. Stop and ask a human to run `confirm-packs` / `confirm-prose` / `confirm-share` / `attest`. Never invent pack ids (closed world: suggest ∩ `packs list`). After `confirm-packs`, prefer RKG (`.github/cyberready/graph/policy-graph.json`) + `cyberready research` + form-hints / remediations for L4 drafts — never invent regulation text. Every external factual claim needs a cite id from the research packet; uncited Claims → refuse (`research --cite-check`). Prefer ContextPack `pathway` next over seed spelunking. After attest, status next is HPURL verify (`proof/index.html` + `hpurl-pointer.json`) — human only. MCP never confirms or attests. Seed and research packet do not affect check pass/fail. See `docs/getting-started/pathway.md`.
+19. **Dual entry:** Write→Check (optional warm-start) vs Bring-docs→Check (files on pack paths; no portal PDF ingest). On red, optional `cyberready research --gate-id=<failed_id>`.

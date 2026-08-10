@@ -27,6 +27,13 @@
       <p class="sub">CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</p>
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
 
+      <h3>Two ways in — same local check</h3>
+      <ol>
+        <li><strong>Write then check</strong> — optional warm-start: choose checklists, draft house docs (with an allowlisted research brief if you want), then check.</li>
+        <li><strong>Bring docs then check</strong> — put existing policies on the pack paths (or map a partner pack), then check. CyberReady does <strong>not</strong> ingest portal PDFs; Evidence→Check means files in the repo (or custom pack paths).</li>
+      </ol>
+      <p>CI can run <code>check</code> alone anytime. Either way ends in a review pack for a human to judge and optionally <code>attest</code>.</p>
+
       <h3>1. Choose a rule pack</h3>
       <p>A <strong>rule pack</strong> is a JSON checklist of structural gates. You pick which packs to run. Frozen catalog today:</p>
       <ul>
@@ -34,13 +41,13 @@
         <li><code>cra-baseline</code> — Cyber Resilience Act (CRA)–shaped annex draft structure (informational)</li>
         <li><code>medtech-iec62304</code> — IEC 62304–shaped overlay (composes with CRA when selected)</li>
       </ul>
-      <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree — not that the product is CRA-compliant, CE-marked, or notified-body approved. Compose with <code>cyberready init --packs …</code> or <code>.cyberready.json</code>.</p>
+      <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree — not conformity assessment, not CE marking, and not a notified-body opinion. Compose with <code>cyberready init --packs …</code> or <code>.cyberready.json</code>. Warm-start for Write→Check is optional (<code>cyberready pathway</code>) — prefer “choose checklists,” not “pathway to regulation.”</p>
 
       <h3>2. Local check</h3>
       <p><code>cyberready init</code> then <code>cyberready check</code> evaluates the chosen packs on disk. Dual output: machine-readable findings (JSON) and a short markdown report. Exit 0 = gates passed on this tree; 1 = findings remain. Daily <code>check</code> does not write the buyer one-pager.</p>
 
       <h3>3. Review pack — hand to a buyer or auditor</h3>
-      <p><code>prepare-release</code> (or <code>cyberready share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance and human sign-off status.</p>
+      <p><code>prepare-release</code> (or <code>cyberready share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources, and human sign-off status.</p>
 
       <h3>4. Human review and attest</h3>
       <p>A person judges the evidence. When ready they run <code>cyberready attest</code>, which binds a reproducible <code>state_hash</code> into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> ssh-agent-signed means a human bound this tree — still not conformity assessment. Verify with <code>proof/index.html</code> and <code>.github/cyberready/evidence/hpurl-pointer.json</code>.</p>
@@ -75,7 +82,7 @@
         <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#e4e6eb">Attest · sign-off</text>
       </svg>
 
-      <p class="muted">Committed sample (front + back): <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>. Authorities path: <a href="/cyberready/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/cyberready/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
+      <p class="muted">Committed sample (front + back): <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>. Research brief sample: <a href="/cyberready/samples/research-brief.html">samples/research-brief.html</a>. Authorities path: <a href="/cyberready/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/cyberready/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
     </section>
 
     <footer class="site-footer">

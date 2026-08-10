@@ -43,11 +43,17 @@ Consumers may rely on (`schema_version` = `"1"`):
 | `schema_version` | IR version for agents |
 | `timestamp` | ISO-ish run time |
 | `concurrency_control` | OCC parent / state token |
-| `statechart_context` | Optional state path |
+| `statechart_context` | Parent path + pack-eval regions (see below) |
 | `agent_identity` | Optional agent/mandate ids |
 | `failures[]` | `gate_id`, `severity`, `type`, `sanitized_description`, `ast_coordinates`, `remediation` |
 | `pack_id` | Composed pack id(s) |
 | `readiness_score` | Optional numeric readiness |
+
+### `statechart_context` semantics (clarified, additive)
+
+- `active_parent_state_path` — when `.github/cyberready/cache/pathway-seed.json` exists, the path is `Root / Pathway / {phase}` (shared pathway vocabulary). Without a seed, the legacy path `Root / ActiveVerification / PackEval` remains.
+- `failed_orthogonal_regions` — pack-eval / rule regions only (unchanged). Pathway ticks are parent path, not fake pack regions.
+- Pathway seed is **not** a check pass/fail input; exit code still comes from gate failures only.
 
 Sock `Response` also exposes top-level `ok`, `reason`, `detail`, `failures`, `payload`, optional `graph`, optional `explain_packet`.
 

@@ -17,6 +17,7 @@ import (
 	"github.com/afelin/cyberready/internal/gitutil"
 	"github.com/afelin/cyberready/internal/ir"
 	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/cyberready/internal/pathway"
 	"github.com/afelin/cyberready/internal/tty"
 )
 
@@ -100,6 +101,12 @@ func Run(opts Options) (Result, error) {
 
 	score := tty.ScoreFromFailures(len(failures))
 	parent, _ := gitutil.HeadSHA(root)
+	parentPath := []string{"Root", "ActiveVerification", "PackEval"}
+	if seed, serr := pathway.Load(root); serr == nil && seed != nil {
+		if phase, perr := pathway.DerivePhase(root, seed); perr == nil {
+			parentPath = pathway.ParentStatePath(phase)
+		}
+	}
 	payload := ir.GateFailurePayload{
 		SchemaVersion: ir.SchemaVersion,
 		Timestamp:     time.Now().UTC().Format(time.RFC3339),
@@ -108,7 +115,7 @@ func Run(opts Options) (Result, error) {
 			StateVersionToken:       "v3.33-OCC",
 		},
 		StatechartContext: ir.StatechartContext{
-			ActiveParentStatePath:   []string{"Root", "ActiveVerification", "PackEval"},
+			ActiveParentStatePath:   parentPath,
 			FailedOrthogonalRegions: unique(regions),
 		},
 		AgentIdentity: ir.AgentIdentity{

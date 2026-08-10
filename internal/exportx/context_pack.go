@@ -10,14 +10,16 @@ import (
 
 	"github.com/afelin/cyberready/internal/instrument"
 	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/cyberready/internal/pathway"
 	"github.com/afelin/cyberready/internal/remediation"
+	"github.com/afelin/cyberready/internal/research"
 	"github.com/afelin/cyberready/internal/validate"
 )
 
 const (
 	contextPackSchema   = "1"
 	contextPackMaxFails = 12
-	contextPackNote     = "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run cyberready check before claiming fixed."
+	contextPackNote     = "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run cyberready check before claiming fixed. Pathway confirms/attest are human-only."
 )
 
 // ContextFailure is a washed top finding for assistants.
@@ -31,12 +33,12 @@ type ContextFailure struct {
 
 // ContextInstrument is a washed instrument snapshot (+ optional Δ).
 type ContextInstrument struct {
-	DepsCount     int    `json:"deps_count"`
-	DepsFP        string `json:"deps_fp,omitempty"`
-	SecretHits    int    `json:"secret_hits"`
-	DepsAdded     int    `json:"deps_added,omitempty"`
-	DepsRemoved   int    `json:"deps_removed,omitempty"`
-	Note          string `json:"note"`
+	DepsCount   int    `json:"deps_count"`
+	DepsFP      string `json:"deps_fp,omitempty"`
+	SecretHits  int    `json:"secret_hits"`
+	DepsAdded   int    `json:"deps_added,omitempty"`
+	DepsRemoved int    `json:"deps_removed,omitempty"`
+	Note        string `json:"note"`
 }
 
 // ContextRemediationHint is a remediations.json row washed for assistants.
@@ -47,18 +49,32 @@ type ContextRemediationHint struct {
 	Snippet string `json:"snippet,omitempty"`
 }
 
+// ContextPathway is additive warm-start status for assistants (not a gate input).
+type ContextPathway struct {
+	Phase          string `json:"phase,omitempty"`
+	ParentPath     string `json:"parent_path,omitempty"`
+	NextVerb       string `json:"next_verb,omitempty"`
+	NextCmd        string `json:"next_cmd,omitempty"`
+	NextNote       string `json:"next_note,omitempty"`
+	PacksConfirmed bool   `json:"packs_confirmed"`
+	ProseOwned     bool   `json:"prose_owned"`
+	ShareReviewed  bool   `json:"share_reviewed"`
+	Note           string `json:"note"`
+}
+
 // ContextPack is one assistant-facing artifact (JSON + Markdown summary).
 type ContextPack struct {
-	SchemaVersion     string                   `json:"schema_version"`
-	Note              string                   `json:"note"`
-	PackIDs           []string                 `json:"pack_ids"`
-	ReadinessScore    int                      `json:"readiness_score"`
-	OK                bool                     `json:"ok"`
-	Failures          []ContextFailure         `json:"failures"`
-	Instrument        ContextInstrument        `json:"instrument"`
-	RemediationHints  []ContextRemediationHint `json:"remediation_hints"`
-	Paths             map[string]string        `json:"paths"`
-	CertificationClaimed bool                  `json:"certification_claimed"`
+	SchemaVersion        string                   `json:"schema_version"`
+	Note                 string                   `json:"note"`
+	PackIDs              []string                 `json:"pack_ids"`
+	ReadinessScore       int                      `json:"readiness_score"`
+	OK                   bool                     `json:"ok"`
+	Failures             []ContextFailure         `json:"failures"`
+	Instrument           ContextInstrument        `json:"instrument"`
+	RemediationHints     []ContextRemediationHint `json:"remediation_hints"`
+	Pathway              *ContextPathway          `json:"pathway,omitempty"`
+	Paths                map[string]string        `json:"paths"`
+	CertificationClaimed bool                     `json:"certification_claimed"`
 }
 
 // WriteContextPack builds context-pack.json (+ .md) from cache IR when present,
@@ -119,12 +135,12 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 	}
 
 	pack := ContextPack{
-		SchemaVersion:        contextPackSchema,
-		Note:                 contextPackNote,
-		PackIDs:              ids,
-		ReadinessScore:       score,
-		OK:                   ok,
-		Failures:             top,
+		SchemaVersion:  contextPackSchema,
+		Note:           contextPackNote,
+		PackIDs:        ids,
+		ReadinessScore: score,
+		OK:             ok,
+		Failures:       top,
 		Instrument: ContextInstrument{
 			DepsCount:   len(snap.Deps),
 			DepsFP:      snap.DepsFP,
@@ -134,6 +150,7 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 			Note:        "Instrument panel map — not a security program · not conformity assessment",
 		},
 		RemediationHints:     hints,
+		Pathway:              buildContextPathway(root),
 		Paths:                contextPackPathsMap(root),
 		CertificationClaimed: false,
 	}
@@ -200,16 +217,56 @@ func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {
 
 func contextPackPathsMap(root string) map[string]string {
 	base := filepath.ToSlash(filepath.Join(".github", "cyberready", "cache"))
-	return map[string]string{
-		"latest_failure":  base + "/latest_failure.json",
-		"instrument":      base + "/instrument.json",
-		"remediations":    base + "/remediations.json",
-		"context_pack":    base + "/context-pack.json",
-		"context_pack_md": base + "/context-pack.md",
-		"buyer_questions": base + "/buyer-questions.md",
-		"explain_packet":  base + "/explain-packet.json",
-		"policy_graph":    filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+	m := map[string]string{
+		"latest_failure":   base + "/latest_failure.json",
+		"instrument":       base + "/instrument.json",
+		"remediations":     base + "/remediations.json",
+		"context_pack":     base + "/context-pack.json",
+		"context_pack_md":  base + "/context-pack.md",
+		"buyer_questions":  base + "/buyer-questions.md",
+		"explain_packet":   base + "/explain-packet.json",
+		"policy_graph":     filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+		"pathway_seed":     base + "/pathway-seed.json",
+		"research_packet":  base + "/research-packet.json",
+		"research_brief":   base + "/research-brief.md",
 	}
+	if snap, err := pathway.Project(root); err == nil {
+		m["pathway_status_hint"] = snap.Next.Cmd
+	}
+	if research.PacketPresent(root) {
+		m["research_packet_present"] = "true"
+		if pkt, err := research.LoadPacket(root); err == nil && pkt != nil {
+			m["research_sources"] = fmt.Sprintf("%d", len(pkt.Sources))
+		}
+	} else {
+		m["research_packet_present"] = "false"
+	}
+	return m
+}
+
+func buildContextPathway(root string) *ContextPathway {
+	seed, err := pathway.Load(root)
+	if err != nil {
+		return nil
+	}
+	snap, err := pathway.Project(root)
+	if err != nil {
+		return nil
+	}
+	cp := &ContextPathway{
+		Phase:      string(snap.Phase),
+		ParentPath: pathway.FormatParentPath(snap.Path),
+		NextVerb:   snap.Next.Verb,
+		NextCmd:    snap.Next.Cmd,
+		NextNote:   snap.Next.Note,
+		Note:       "Re-check locally. Not certification. confirm-* / attest are human-only. Seed is not a gate input.",
+	}
+	if seed != nil {
+		cp.PacksConfirmed = seed.HumanTicks.PacksConfirmed
+		cp.ProseOwned = seed.HumanTicks.ProseOwned
+		cp.ShareReviewed = seed.HumanTicks.ShareReviewed
+	}
+	return cp
 }
 
 func formatContextPackMarkdown(p ContextPack) string {
@@ -220,6 +277,16 @@ func formatContextPackMarkdown(p ContextPack) string {
 	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
 	fmt.Fprintf(&b, "- **OK:** %v\n", p.OK)
 	fmt.Fprintf(&b, "- **Certification claimed:** no\n\n")
+	if p.Pathway != nil {
+		b.WriteString("## Pathway\n\n")
+		fmt.Fprintf(&b, "- **Phase:** `%s`\n", p.Pathway.ParentPath)
+		fmt.Fprintf(&b, "- **Next:** %s\n", p.Pathway.NextVerb)
+		fmt.Fprintf(&b, "- **Run:** `%s`\n", p.Pathway.NextCmd)
+		if strings.TrimSpace(p.Pathway.NextNote) != "" {
+			fmt.Fprintf(&b, "- **Note:** %s\n", p.Pathway.NextNote)
+		}
+		b.WriteString("\n_Agents: prefer this section over spelunking pathway-seed.json. Stop at human confirms/attest._\n\n")
+	}
 	fmt.Fprintf(&b, "## Instrument\n\n- deps: %d (fp `%s`)\n- secret-hits: %d\n", p.Instrument.DepsCount, p.Instrument.DepsFP, p.Instrument.SecretHits)
 	if p.Instrument.DepsAdded != 0 || p.Instrument.DepsRemoved != 0 {
 		fmt.Fprintf(&b, "- Δ deps: +%d / −%d\n", p.Instrument.DepsAdded, p.Instrument.DepsRemoved)

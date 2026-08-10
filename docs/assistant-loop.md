@@ -17,16 +17,22 @@ doc/dep edits → cyberready check (exit code authoritative)
 
 Thin share recipe (same steps): `cyberready share` — see [buyer evidence](getting-started/buyer-evidence.md).
 
+Warm-start pack chooser (enum seed → guarded HITL ticks → RKG → research sidecar → ContextPack → HPURL): `cyberready pathway status` — see [pathway](getting-started/pathway.md). Agents stop at confirms/attest; never invent pack ids. Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail).
+
 ## Memory map (on-disk IR — not embeddings)
 
 | Primitive | Path | Use |
 |-----------|------|-----|
-| GateFailure IR | `.github/cyberready/cache/latest_failure.json` | Authoritative findings |
+| GateFailure IR | `.github/cyberready/cache/latest_failure.json` | Authoritative findings; `statechart_context.active_parent_state_path` = pathway phase when seed exists |
 | instrument.json | same cache dir | Δ deps / secret-hits whisper |
 | remediations.json | same | Reuse gate_id hints |
-| **ContextPack** | `.github/cyberready/cache/context-pack.json` (+ `.md`) | One washed assistant artifact |
-| RKG | `.github/cyberready/graph/policy-graph.json` | Pack→rule navigation |
+| **ContextPack** | `.github/cyberready/cache/context-pack.json` (+ `.md`) | One washed assistant artifact (+ pathway next) |
+| **pathway-seed.json** | same cache dir | Warm-start enums + HITL ticks (CLI-only writer; not a gate input) |
+| **research-packet.json** | same cache dir | Allowlisted citation trail + requirements (not a gate input) |
+| **research-brief.md** | same cache dir | One-screen human brief |
+| RKG | `.github/cyberready/graph/policy-graph.json` | Pack→rule navigation (exported on `confirm-packs`) |
 | buyer-questions / lay-of-land | export outputs | Human share |
+| HPURL pointer | `.github/cyberready/evidence/hpurl-pointer.json` | Post-attest client-side verify via `proof/index.html` |
 | hooks + Action | `init` / `@v0.4.3` | Force re-check loop |
 
 ```bash
@@ -35,6 +41,8 @@ cyberready export --context-pack
 ```
 
 ## Pack chooser (cold start)
+
+Prefer `cyberready pathway status` / `pathway suggest` for enum-driven warm start — see [pathway](getting-started/pathway.md). Manual override:
 
 | Situation | Pack |
 |-----------|------|
@@ -70,5 +78,5 @@ Regulation prose and raw source stay off the default tutor path. Dual-rep IR + C
 
 ## Related
 
-- [60-second paths](getting-started/60-second-paths.md) · [Buyer evidence](getting-started/buyer-evidence.md) · [Daily loop](getting-started/daily-loop.md)
+- [60-second paths](getting-started/60-second-paths.md) · [Buyer evidence](getting-started/buyer-evidence.md) · [Pathway](getting-started/pathway.md) · [Daily loop](getting-started/daily-loop.md)
 - [Stable contracts](stable-contracts.md) · [For authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md)

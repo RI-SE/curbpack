@@ -74,5 +74,6 @@ Cursor MCP settings (`.cursor/mcp.json` or UI):
 2. After proposed edits, re-run `cyberready_check`.
 3. Never claim CE / notified-body / certification.
 4. Prefer ContextPack over guessing which cache files to open.
+5. **No** pathway confirm / attest MCP tools — humans run `cyberready pathway confirm-*` and `cyberready attest` in a terminal. Agents may call CLI `pathway status|suggest` only. Optional CLI `cyberready research` / `--cite-check` is read/propose-only — never a confirm stamp.
 
-See [docs/assistant-loop.md](../../docs/assistant-loop.md).
+See [docs/assistant-loop.md](../../docs/assistant-loop.md) and [pathway](../../docs/getting-started/pathway.md).

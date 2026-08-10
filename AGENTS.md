@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `cyberready init`).
+Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `cyberready init`).
 
 ## Rules (short)
 
@@ -11,6 +11,8 @@ Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Cursor skill s
 3. On green → optional `cyberready export --context-pack` / `--buyer-questions` for humans.
 4. Prefer ContextPack + dual-rep IR over guessing cache files.
 5. Pin Action / examples at **`@v0.4.3`**. Never claim CE / notified-body approval.
+6. **Pathway:** call `cyberready pathway status|suggest` only — never forge `pathway-seed.json` or invent pack ids. Stop for human `confirm-*` and `attest`. Prefer ContextPack pathway next + RKG after confirm-packs; post-attest next is HPURL verify (human). MCP never confirms/attests. Seed is not a gate input.
+7. **Research (optional sidecar):** `cyberready research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every external claim needs a cite id (`[^src-N]` / `<!-- cite:src-N -->`); refuse uncited Claims. Run `cyberready research --cite-check <draft.md>` before asking a human for `confirm-prose`. On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
 

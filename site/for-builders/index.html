@@ -28,6 +28,13 @@
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
       <p>Pick <strong>exactly one</strong> first move:</p>
 
+      <h3>Two ways in — same local check</h3>
+      <ol>
+        <li><strong>Write then check</strong> — init (or optional warm-start), draft house docs on pack paths, then check.</li>
+        <li><strong>Bring docs then check</strong> — place existing policies on pack paths, then check. No portal PDF ingest — files in the repo only.</li>
+      </ol>
+      <p class="muted">CI can run check alone. Review pack → human attest either way.</p>
+
       <h3>1. Safe try</h3>
       <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cyberready doctor
