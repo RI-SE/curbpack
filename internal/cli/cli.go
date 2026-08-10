@@ -106,6 +106,10 @@ func Run(args []string) error {
 		return cmdDemo(rest)
 	case "export":
 		return cmdExport(rest)
+	case "share":
+		return cmdShare(rest)
+	case "completion":
+		return cmdCompletion(rest)
 	default:
 		fmt.Printf("%s\n\n", tty.C(tty.Red, "Unknown command '"+cmd+"'"))
 		usage()
@@ -148,8 +152,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  check --diff                  Delta mode — not release-gate safe\n")
 	fmt.Fprintf(os.Stderr, "  ask [file] [--propose]        Explain GateFailure JSON\n")
 	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
-	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land [--spdx] [--slsa]\n")
-	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map\n")
+	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
+	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
+	fmt.Fprintf(os.Stderr, "  share                         Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
 	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")
@@ -632,6 +638,7 @@ func cmdExport(args []string) error {
 	wantJoin := false
 	wantBuyerQ := false
 	wantLayOfLand := false
+	wantContextPack := false
 	wantSPDX := false
 	wantSLSA := false
 	for i := 0; i < len(args); i++ {
@@ -646,6 +653,8 @@ func cmdExport(args []string) error {
 			wantBuyerQ = true
 		case "--lay-of-land":
 			wantLayOfLand = true
+		case "--context-pack":
+			wantContextPack = true
 		case "--spdx":
 			wantSPDX = true
 		case "--slsa":
@@ -662,8 +671,8 @@ func cmdExport(args []string) error {
 			}
 		}
 	}
-	if !wantSARIF && !wantExplain && !wantJoin && !wantBuyerQ && !wantLayOfLand && !wantSPDX && !wantSLSA {
-		return usageErr("export requires --sarif, --explain-packet, --watchlist-join, --buyer-questions, --lay-of-land, and/or --spdx/--slsa")
+	if !wantSARIF && !wantExplain && !wantJoin && !wantBuyerQ && !wantLayOfLand && !wantContextPack && !wantSPDX && !wantSLSA {
+		return usageErr("export requires --sarif, --explain-packet, --watchlist-join, --buyer-questions, --lay-of-land, --context-pack, and/or --spdx/--slsa")
 	}
 	usedOut := false
 	takeOut := func() string {
@@ -712,6 +721,17 @@ func cmdExport(args []string) error {
 			return err
 		}
 		tty.PrintStatus("lay-of-land", true, path)
+	}
+	if wantContextPack {
+		path, err := exportx.WriteContextPack(root, packIDs, takeOut())
+		if err != nil {
+			return err
+		}
+		data, _ := os.ReadFile(path)
+		if err := exportx.PacketLooksAirlocked(data); err != nil {
+			return err
+		}
+		tty.PrintStatus("context-pack", true, path)
 	}
 	if wantSPDX {
 		path, err := exportx.WriteSPDXOptional(root, "")

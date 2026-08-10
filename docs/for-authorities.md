@@ -29,6 +29,7 @@ Gate pass means: deterministic pack rules did not fail on the files present — 
 | Gate JSON / action report (`check`, `validate`) | Local deterministic pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
 | SARIF export | `export --sarif` / Action upload | Same findings in IDE/CI format; still pack gates, not certification |
 | Buyer-questions checklist | `export --buyer-questions` | Human Q&A aid; rows carry `assurance_class: structural_draft` |
+| ContextPack | `export --context-pack` (or `share`) | One washed assistant/auditor snapshot (failures + instrument + path pointers) — still structural evidence, not certification |
 | Lay-of-land / instrument map | `export --lay-of-land` | Shareable map (deps summary, secret-hit count, informational watchlist∩SBOM) — **not** a CVE product |
 | Review pack + buyer one-pager | `prepare-release` | Procurement snapshot; **not** a certificate of conformity |
 | CycloneDX SBOM (best-effort) | From common lockfiles when present | Inventory draft; completeness depends on lockfiles |
@@ -69,12 +70,16 @@ Unsafe / forbidden as product claims:
 
 CI enforces wording via `scripts/claim-safety.sh`. This page is **not** certification theater and does not replace legal counsel or a notified body.
 
+## Pack chooser (what suppliers should run)
+
+Default cold start is **`house-policy`**. CRA-style (`cra-baseline`) and medtech (`medtech-iec62304`) are **opt-in** via `--packs` — catalog frozen until freeze review. Assistants and auditors should ask which pack ids were composed (see ContextPack `pack_ids` / GateFailure `pack_id`). Details: [assistant-loop pack chooser](assistant-loop.md#pack-chooser-cold-start).
+
 ## Suggested reviewer path
 
 1. Read this page + [Intent vs Scope](intent-vs-scope.md).
-2. Ask the supplier for buyer-questions / one-pager + attest status.
+2. Ask the supplier for ContextPack / buyer-questions / one-pager + attest status (`cyberready share` recipe).
 3. Optionally deep-read [security model](security-model.md) and the [white paper](../papers/cyberready-whitepaper.md).
-4. Do **not** require [coreward-bridge.md](coreward-bridge.md) — that file is for integrators only.
+4. Do **not** require [coreward-bridge.md](coreward-bridge.md) — that file is for integrators only. Coreward stays an external optional pointer — not in activation.
 
 Site mirror: [for-authorities on Pages](../site/for-authorities/).
 

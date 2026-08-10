@@ -75,13 +75,17 @@ Quiet habit: after `check`, dim Δ readiness / deps / secret-hits lines plus the
 | `check --diff` | Delta mode — **not** release-gate safe |
 | `ask [file] --propose` | Explain GateFailure JSON (propose-only) |
 | `packs list\|update\|import\|export-graph\|doctor` | Packs, RKG export, validity doctor |
-| `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land` | Standards / airlock / buyer checklist / instrument map |
+| `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land\|--context-pack` | Standards / airlock / buyer checklist / instrument map / ContextPack |
+| `share` | Thin recipe: check → context-pack → buyer-questions → prepare-release |
+| `completion bash\|zsh\|fish` | Print shell completions (`eval "$(cyberready completion bash)"`) |
 | `sock` | Optional Unix IPC for integrators (fail-open if unused) |
 | `init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/cyberready.yml` if missing |
 
 Exit codes: **0** pass · **1** gates/error · **2** usage/env.
+
+Assistants (Cursor, Copilot, Claude, …): [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 
 Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Docs index](docs/README.md).
 

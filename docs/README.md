@@ -7,7 +7,7 @@
 | Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [README](../README.md) · [glossary](glossary-and-audience.md) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
-| Pack author / partner / agent | [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
+| Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
 | Integrator / tutor author | [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Coreward pointer](coreward-pointer.md) |
 
 Full audience table: [glossary and audience](glossary-and-audience.md).
@@ -28,9 +28,10 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Promotion firewall](promotion-firewall.md) | RISE-neutral publish language + MoU checklist |
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
+| [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
 | [Getting started](getting-started/60-second-paths.md) | First move — 60-second paths |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
-| [Buyer evidence](getting-started/buyer-evidence.md) | Quiet `export --buyer-questions` + `export --lay-of-land` instrument map |
+| [Buyer evidence](getting-started/buyer-evidence.md) | Share recipe: ContextPack + buyer-questions + prepare-release |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Launch readiness](launch-readiness.md) | Internal launch checklist |
 | [Coreward pointer](coreward-pointer.md) | Standardized optional-product aside + URL |
