@@ -23,13 +23,41 @@
     </nav>
 
     <header class="hero">
-      <p class="brand">CyberReady+</p>
-      <h1>CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</h1>
-      <p class="lede">Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
-      <div class="cta-row">
-        <a class="btn" href="for-builders/">Three first moves</a>
-        <a class="btn ghost" href="samples/onepager.html">Sample buyer one-pager</a>
+      <div class="hero-copy">
+        <p class="brand">CyberReady+</p>
+        <h1>Local rule packs. A review pack for buyers and auditors.</h1>
+        <p class="lede">CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</p>
+        <p class="fence">Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
+        <div class="cta-row">
+          <a class="btn" href="for-builders/">Three first moves</a>
+          <a class="btn ghost" href="samples/onepager.html">Open full sample</a>
+        </div>
       </div>
+      <aside class="hero-sample" aria-label="Teaching sample of a buyer one-pager">
+        <p class="sample-caption">Teaching sample — not a certificate</p>
+        <div class="sample-card">
+          <p class="sample-kicker">Buyer one-pager</p>
+          <p class="sample-title">sample-app</p>
+          <p class="sample-status">UNSIGNED — not cryptographically verified</p>
+          <p class="sample-score">Local gate score on this tree — not certification</p>
+          <table class="sample-findings">
+            <thead>
+              <tr><th>Gate</th><th>Finding</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>SECURITY.md</td>
+                <td>Missing file — add a disclosure path, then re-check</td>
+              </tr>
+              <tr>
+                <td>Forbidden text</td>
+                <td>Claim-adjacent phrase in README — remove or reframe</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="sample-foot">After fix: gates passed on this tree. Human still judges risk.</p>
+        </div>
+      </aside>
     </header>
 
     <section class="section" id="pain">
