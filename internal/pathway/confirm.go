@@ -136,6 +136,7 @@ func missingFrom(proposed []string, known map[string]struct{}) []string {
 }
 
 // ApplySuggest writes a fresh seed from SuggestResult (resets human ticks).
+// Preserves session_notes, corrections, and last_draft_pick when present.
 func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 	known, err := KnownPackSet()
 	if err != nil {
@@ -152,6 +153,11 @@ func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 		NextHint:      r.NextHint,
 		HumanTicks:    HumanTicks{},
 		Claim:         ClaimFence,
+	}
+	if prev, err := Load(repoRoot); err == nil && prev != nil {
+		s.SessionNotes = prev.SessionNotes
+		s.Corrections = prev.Corrections
+		s.LastDraftPick = prev.LastDraftPick
 	}
 	if err := Write(repoRoot, s); err != nil {
 		return nil, err

@@ -29,6 +29,12 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **Rule pack** / **pack** | JSON rule set (house-policy by default; CRA-shaped annex drafts or sector templates when opted in). Data, not hard-coded industry law. |
 | **Review pack** | Folder of evidence for human review from `prepare-release` (JSON, markdown, optional buyer one-pager). |
 | **Buyer one-pager** | Supplier evidence summary HTML — local gate score on this tree, not a certificate. |
+| **Warm-start** / **pathway** | Optional Write→Check interview (`cyberready pathway`) that seeds packs + HITL ticks; not a gate input. |
+| **Research brief** | Allowlisted human brief from `cyberready research` — informational; never check pass/fail. |
+| **Cite-check** | `cyberready research --cite-check <draft.md>` — refuse uncited Claims before `confirm-prose`. |
+| **Write→Check** | Door: draft house docs (optional warm-start), then check. |
+| **Bring-docs→Check** | Door: place existing policies on pack paths, then check (no portal PDF ingest). |
+| **Dual-draft** | Always propose Option A and Option B plus **Recommended: A\|B** (≤3 reasons); human picks. |
 | **Structural evidence** | Documentation and dependency checks produced locally for human judgment. |
 | **Attest** | Human-driven binding of a state hash into Git Notes. Unsigned ≠ cryptographically verified. |
 | **Explain-packet** | Sanitized teaching surface for optional tutors; never greenlights gates. |

@@ -32,6 +32,11 @@ Footer / authorities / NOTICE-aligned. Never endorsement:
 | human review / human judgment | attest when ready | “audit complete”, “sign-off as compliant” |
 | unsigned ≠ verified | ssh-agent signed | “verified compliant” |
 | house-policy (default) | CRA-shaped pack only when opted in | Never claim “CRA compliant” or “EU CRA Baseline” as a product claim |
+| warm-start / pathway | one next ask (`pathway status`) | “pathway to regulation”, compliance journey |
+| research brief | allowlisted Sources (informational) | regulation chat KB / open-web RAG as SoR |
+| cite-check | cite-or-refuse before confirm-prose | inventing regulation text |
+| Write→Check / Bring-docs→Check | dual doors, same local check | portal PDF ingest |
+| dual-draft + Recommended A\|B | human pick; record last_draft_pick | auto-apply / auto-attest |
 
 ## Stakeholder first sentences
 
@@ -48,7 +53,7 @@ On authorities pages, use EU-familiar nouns: *structural evidence*, *human revie
 
 ## Builder register
 
-Short verbs: install, init, check, prepare-release, attest, share. No soft-exit / Zig / TTFV on the first screen. Pin `@v0.4.3` under Install / Builders—not in the hero.
+Short verbs: install, init, check, prepare-release, attest, share, pathway status, research. No soft-exit / Zig / TTFV on the first screen. Pin `@v0.4.3` under Install / Builders—not in the hero.
 
 ## Writing rules
 

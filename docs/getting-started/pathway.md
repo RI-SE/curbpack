@@ -1,16 +1,83 @@
-# Warm-start regulatory pathway
+# Warm-start pathway
 
-One shared phase vocabulary across seed → GateFailure statechart → ContextPack → `pathway status` → HPURL verify.
+**Warm-start and research help you choose a draft; only check decides pass/fail—not certification.**
 
-Deterministic closed-world pack suggest → guarded HITL confirms → RKG house draft → check/share → human attest → client-side HPURL verify.
-
-CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.4.3`**.
-
-Prepares evidence for human review — not a conformity assessment.
+One next ask. Optional two drafts with a recommendation. Then check. Humans confirm and attest—agents never stamp those.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-## Phase vocabulary (canonical)
+## Dual doors → one check
+
+| Door | Meaning |
+|------|---------|
+| **Write→Check** | Optional warm-start: answer a few enums, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check, then check. |
+| **Bring-docs→Check** | Put existing policies on pack paths (or map a partner pack), then check. No portal PDF ingest. |
+| **CI** | Run `check` alone anytime. |
+
+Either door ends in a review pack for a human to judge and optionally `attest`.
+
+```mermaid
+flowchart TD
+  start[Start]
+  door{Which door?}
+  interview[Enum interview]
+  seed[pathway_seed session]
+  packs[HITL confirm packs]
+  research[research brief]
+  ab[Two drafts plus recommendation]
+  pick[HITL pick or edit]
+  cite[cite-check]
+  check[cyberready check]
+  share[share and attest HITL]
+
+  start --> door
+  door -->|"Write then check"| interview
+  door -->|"Bring docs"| check
+  door -->|"CI"| check
+  interview --> seed --> packs --> research --> ab --> pick --> cite --> check
+  check -->|red| ab
+  check -->|green| share
+  pick -->|"record last_pick"| seed
+```
+
+## What you run (human)
+
+```bash
+cyberready pathway status          # one plain-English next ask (default)
+cyberready pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
+# human: pathway confirm-packs
+cyberready research                # optional allowlisted brief — never gates check
+# agent/human: two drafts + Recommended A|B → you pick → cite-check
+cyberready research --cite-check <draft.md>
+# human: pathway confirm-prose
+cyberready check
+cyberready share
+# human: pathway confirm-share → attest → verify bound hash in proof/index.html
+```
+
+Optional session memory (not a gate input): `cyberready pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.
+
+## Dual-draft HITL (always)
+
+When drafting house prose (or remediating red checks with external claims):
+
+1. Read seed (notes / corrections / last pick) + research packet + ContextPack failures.
+2. Propose **Option A** and **Option B** (concise; cite ids from the packet).
+3. State **Recommended: A|B** with ≤3 reasons.
+4. Stop for human pick or edit; then `research --cite-check`; record pick via `pathway note --set last_draft_pick=A|B|edited`.
+5. Never invent pack ids or legal conformity.
+
+---
+
+## For agents (below the fold)
+
+Shared phase vocabulary: seed → GateFailure statechart → ContextPack → `pathway status` → local proof verify.
+
+Deterministic closed-world pack suggest → guarded HITL confirms → RKG house draft → check/share → human attest → client-side proof verify.
+
+CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.4.3`**.
+
+### Phase vocabulary (canonical)
 
 Parent path (emit everywhere):
 
@@ -18,9 +85,9 @@ Parent path (emit everywhere):
 
 Orthogonal regions under pack eval (unchanged): `PackEval` / rule regions in GateFailure. Pathway ticks are **parent path**, not fake pack regions.
 
-Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. Agents may `suggest` / `status` / `check` / `share` / heal / propose only. Illegal confirm order → usage exit 2.
+Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. Agents may `suggest` / `status` / `note` / `check` / `share` / heal / propose only. Illegal confirm order → usage exit 2.
 
-## Layers (L0–L10)
+### Layers (L0–L10)
 
 | Layer | Job | Machine | Human |
 |-------|-----|---------|-------|
@@ -29,30 +96,15 @@ Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. 
 | **L2** | Tick packs | `pathway confirm-packs` (+ RKG export) | Yes / change / house-only |
 | **L2.5** | Research sidecar | `cyberready research` (+ optional `--fetch`) | Read brief; not a gate |
 | **L3** | Activate | `init --packs` / `check --heal` | — |
-| **L4** | House draft | RKG + research packet `requirements[]`/`sources[]`; `ask --propose` / form-hints; cite-or-refuse | Edit real prose |
+| **L4** | House draft | RKG + research packet; **dual draft + recommend**; cite-or-refuse | Pick A/B/edit |
 | **L5** | Tick prose | `cite-check` green → `pathway confirm-prose` | “I own this wording” |
 | **L6** | Check | `check` (+ hooks); GateFailure path = pathway phase | Fix on red |
 | **L7** | Share | `share` (ContextPack includes pathway next) | — |
 | **L8** | Tick share | `pathway confirm-share` | Review buyer-Qs / one-pager |
 | **L9** | Sign | — | `attest` (OCC / `--allow-dirty`) |
-| **L10** | Verify | status → `open proof/index.html` | Paste `hpurl-pointer.json` `state_hash` |
+| **L10** | Verify | status → open `proof/index.html` | Paste pointer `state_hash` |
 
-## Composed loop
-
-```bash
-cyberready pathway status          # human next ask (default); --technical for phase path
-cyberready pathway suggest --product=…   # closed-world
-# human: confirm-packs → research (optional) → init/heal → edit prose → cite-check → confirm-prose
-cyberready research                # allowlisted packet + brief; never gates check
-cyberready check                   # GateFailure statechart = pathway phase + pack regions
-cyberready share                   # ContextPack includes pathway next + research paths
-# human: confirm-share → attest
-cyberready pathway status          # next: verify HPURL client-side
-```
-
-Agents: read ContextPack + `pathway status`; never invent packs/findings; stop at human gates. Prefer ContextPack over spelunking `pathway-seed.json`. Dual public entry: **Write→Check** (optional warm-start) vs **Bring-docs→Check** (files on pack paths — no portal PDF ingest).
-
-## Closed-world suggest map
+### Closed-world suggest map
 
 | Inputs | `proposed_packs` |
 |--------|------------------|
@@ -63,8 +115,6 @@ Agents: read ContextPack + `pathway status`; never invent packs/findings; stop a
 
 `--ce-context` is **context only** — never changes packs to CE-positive. Never invent pack ids. Confirm intersects with `packs list` ∪ imported.
 
-Multi-industry (Depth B): `sector=other` → house-policy + [write-your-own-pack](../write-your-own-pack.md) / overlays / `packs import`. No new embedded packs; freeze closed.
-
 ```bash
 cyberready pathway suggest \
   --product=hygiene \
@@ -74,41 +124,39 @@ cyberready pathway suggest \
   --house-first=yes
 ```
 
-## Anti-hallucination + passive chat
+### Anti-hallucination + passive chat
 
 1. **Pack ids:** only from `pathway suggest` / `packs list` — never invent.
 2. **Findings:** only from check JSON / ContextPack / SARIF `ruleId` — never invent gate results.
-3. **Law:** no regulation-text KB; L4 navigates **RKG** + **research packet** allowlisted URLs (optional `--fetch` excerpts) — never invented regulation text; cite-or-refuse.
-4. **Prose:** propose diffs; human applies; heal = stubs only; Claims section lines need cite markers.
-5. **Ticks / attest:** human CLI only; not MCP; not “user said OK in chat” without `confirm-*`. Cite-check refuse blocks `confirm-prose` when packet present.
+3. **Law:** no regulation-text KB; L4 navigates **RKG** + **research packet** allowlisted URLs — cite-or-refuse.
+4. **Prose:** always two drafts + recommendation; human picks; heal = stubs only.
+5. **Ticks / attest:** human CLI only; not MCP. Cite-check refuse blocks `confirm-prose` when packet present.
 6. **Claims:** claim-safety + fixed fence on seed + exports.
 7. **Enums:** suggest flags are closed sets; reject free strings.
-8. **Passive chat (Play INV-04):** MCP/chat propose only; phase from ContextPack / `pathway status` — never forge seed or greenlight.
+8. **Session notes:** `pathway note` only; never forge seed; notes are **not** check inputs.
+9. **Passive chat:** MCP/chat propose only; phase from ContextPack / `pathway status`.
 
-Residual risk (accepted): human-accepted but wrong SECURITY.md — mitigated by review ticks + attest + buyer-questions, not model cleverness.
+### HITL checklist
 
-## HITL checklist
-
-- [ ] `pathway suggest` (enums) → review `proposed_packs`
+- [ ] `pathway suggest` → review `proposed_packs`
 - [ ] Human: `pathway confirm-packs` (exports RKG)
-- [ ] `cyberready research` (optional `--fetch`) — human brief; never gates check
-- [ ] `init --packs …` + `check --heal` + edit real prose via RKG / research requirements + cite markers
+- [ ] `cyberready research` (optional `--fetch`) — never gates check
+- [ ] Dual draft + Recommended A|B → human pick → `pathway note --set last_draft_pick=…`
+- [ ] `init --packs …` + `check --heal` + edit with cite markers
 - [ ] `cyberready research --cite-check <draft.md>` green
 - [ ] Human: `pathway confirm-prose`
 - [ ] `check` green (or shareable red with ContextPack)
 - [ ] `share` → human: `pathway confirm-share`
 - [ ] Human: `attest` (agents **stop** here)
-- [ ] Human: open `proof/index.html` + paste `hpurl-pointer.json` `state_hash`
+- [ ] Human: open `proof/index.html` + paste pointer `state_hash`
 
-`pathway status` prints a **plain-English next ask** by default (`--technical` for phase path + next). Use it as the only status UI.
-
-## Claim fence
+### Claim fence
 
 Fixed string on every seed write:
 
 > Prepares evidence for human review — not a conformity assessment.
 
-## Seed schema
+### Seed schema
 
 **Path:** `.github/cyberready/cache/pathway-seed.json`  
 **Writer:** only `cyberready pathway`  
@@ -131,34 +179,38 @@ Fixed string on every seed write:
     "prose_owned": false,
     "share_reviewed": false
   },
+  "session_notes": [],
+  "corrections": {},
+  "last_draft_pick": "",
   "claim": "Prepares evidence for human review — not a conformity assessment."
 }
 ```
 
-## Smoke path (to HPURL verify stop)
+`session_notes`, `corrections`, and `last_draft_pick` are local session IP (preference trail). They never change gate pass/fail. Deferred later: separate weights file / overlay graph CLI / draft generator.
+
+### Smoke path
 
 ```bash
 cyberready pathway status
 cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
 # human:
 cyberready pathway confirm-packs
-cyberready init --packs house-policy   # if not already configured
-cyberready research                    # optional allowlisted brief
+cyberready init --packs house-policy
+cyberready research
 cyberready check --heal
-# edit prose with cite markers; then:
-cyberready research --cite-check SECURITY.md   # example path
+# dual draft + recommend → human pick →:
+cyberready pathway note --set last_draft_pick=A
+cyberready research --cite-check SECURITY.md
 # human:
 cyberready pathway confirm-prose
 cyberready check
 cyberready share
 # human:
 cyberready pathway confirm-share
-# STOP — human only:
-# cyberready attest
-# cyberready pathway status   # → verify HPURL (human) / open proof/index.html
+# STOP — human only: attest → proof/index.html verify
 ```
 
-Agents print the next `pathway status` line and wait. MCP has **no** confirm/attest tools. HPURL stays off home/builders — pathway / proof / for-reviewers only.
+Agents print the next `pathway status` line and wait. MCP has **no** confirm/attest tools. Proof verify stays off home/builders — pathway / proof / for-reviewers only.
 
 ## Related
 

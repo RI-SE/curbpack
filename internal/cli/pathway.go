@@ -23,7 +23,7 @@ func pathwayErr(err error) error {
 
 func cmdPathway(args []string) error {
 	if len(args) == 0 {
-		return usageErr("pathway requires subcommand: status|suggest|confirm-packs|confirm-prose|confirm-share")
+		return usageErr("pathway requires subcommand: status|suggest|confirm-packs|confirm-prose|confirm-share|note")
 	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
@@ -40,11 +40,13 @@ func cmdPathway(args []string) error {
 		return cmdPathwayConfirmProse(root)
 	case "confirm-share":
 		return cmdPathwayConfirmShare(root)
+	case "note":
+		return cmdPathwayNote(root, args[1:])
 	case "help", "-h", "--help":
 		pathwayUsage()
 		return nil
 	default:
-		return usageErr(fmt.Sprintf("unknown pathway subcommand %q (status|suggest|confirm-packs|confirm-prose|confirm-share)", args[0]))
+		return usageErr(fmt.Sprintf("unknown pathway subcommand %q (status|suggest|confirm-packs|confirm-prose|confirm-share|note)", args[0]))
 	}
 }
 
@@ -55,10 +57,80 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "                                  Closed-world proposed_packs (enums only)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-packs                   Human: stamp packs_confirmed (+ RKG; next may be research)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-prose                   Human: stamp prose_owned (cite-check if packet present)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-share                   Human: stamp share_reviewed\n\n")
+	fmt.Fprintf(os.Stderr, "  confirm-share                   Human: stamp share_reviewed\n")
+	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
 	fmt.Fprintf(os.Stderr, "Sole writer of .github/cyberready/cache/pathway-seed.json.\n")
 	fmt.Fprintf(os.Stderr, "Does not affect check pass/fail. Agents stop at confirms/attest.\n")
 	fmt.Fprintf(os.Stderr, "%s\n", pathway.ClaimFence)
+}
+
+func cmdPathwayNote(root string, args []string) error {
+	if len(args) == 0 {
+		return usageErr("pathway note requires --set <text|key=value> or --forget <key|text>")
+	}
+	var setVal, forgetVal string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--set" || arg == "-s":
+			if i+1 >= len(args) {
+				return usageErr("pathway note --set needs a value")
+			}
+			setVal = args[i+1]
+			i++
+		case strings.HasPrefix(arg, "--set="):
+			setVal = strings.TrimPrefix(arg, "--set=")
+		case arg == "--forget" || arg == "-f":
+			if i+1 >= len(args) {
+				return usageErr("pathway note --forget needs a value")
+			}
+			forgetVal = args[i+1]
+			i++
+		case strings.HasPrefix(arg, "--forget="):
+			forgetVal = strings.TrimPrefix(arg, "--forget=")
+		case arg == "-h" || arg == "--help":
+			pathwayUsage()
+			return nil
+		default:
+			return usageErr(fmt.Sprintf("pathway note: unknown flag %q (use --set or --forget)", arg))
+		}
+	}
+	if setVal != "" && forgetVal != "" {
+		return usageErr("pathway note: use either --set or --forget, not both")
+	}
+	if setVal == "" && forgetVal == "" {
+		return usageErr("pathway note requires --set <text|key=value> or --forget <key|text>")
+	}
+	var (
+		seed *pathway.Seed
+		err  error
+	)
+	if setVal != "" {
+		seed, err = pathway.NoteSet(root, setVal)
+	} else {
+		seed, err = pathway.NoteForget(root, forgetVal)
+	}
+	if err != nil {
+		return pathwayErr(err)
+	}
+	tty.PrintHeader("cyberready pathway note")
+	if setVal != "" {
+		fmt.Printf("set: %s\n", setVal)
+	} else {
+		fmt.Printf("forgot: %s\n", forgetVal)
+	}
+	if seed.LastDraftPick != "" {
+		fmt.Printf("last_draft_pick: %s\n", seed.LastDraftPick)
+	}
+	if len(seed.Corrections) > 0 {
+		fmt.Printf("corrections: %d\n", len(seed.Corrections))
+	}
+	if len(seed.SessionNotes) > 0 {
+		fmt.Printf("session_notes: %d\n", len(seed.SessionNotes))
+	}
+	fmt.Printf("%s\n", tty.C(tty.Dim, "session memory only — does not affect check pass/fail"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
+	return nil
 }
 
 func cmdPathwayStatus(root string, args []string) error {

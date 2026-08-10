@@ -47,6 +47,12 @@ cyberready init
 cyberready check</code></pre>
       <p class="muted">Default pack is <strong>house-policy</strong>. Opt into regulation-shaped checklists with <code>cyberready init --packs cra-baseline</code> or <code>medtech-iec62304</code> (structural drafts — not legal conformity). Before a review wave: <code>prepare-release</code> (or <code>share</code>), hand the buyer one-pager, then a human <code>attest</code>.</p>
 
+      <h3>Next commands (optional warm-start)</h3>
+      <pre class="mono"><code>cyberready pathway status
+cyberready research
+cyberready research --cite-check SECURITY.md</code></pre>
+      <p class="muted"><code>pathway status</code> prints one next ask. <code>research</code> builds an allowlisted brief (never gates check). Cite-check before you own prose.</p>
+
       <h3>3. CI</h3>
       <pre class="mono"><code>- uses: afelin/cyberready@v0.4.3
   with:

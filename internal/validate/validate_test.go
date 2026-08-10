@@ -354,6 +354,54 @@ func TestUnknownCheckPackLoad(t *testing.T) {
 	}
 }
 
+func TestSessionNotesDoNotAffectCheckPassFail(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	baseline, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	seedPath := filepath.Join(dir, ".github", "cyberready", "cache", "pathway-seed.json")
+	mustWrite(t, seedPath, `{
+  "schema_version": 1,
+  "answers": {"product":"hygiene","eu_docs":"no","medtech":"no","sector":"none","house_first":"yes","ce_context":"none"},
+  "proposed_packs": ["house-policy"],
+  "human_ticks": {"packs_confirmed": false, "prose_owned": false, "share_reviewed": false},
+  "session_notes": ["ignore this for gates", "product prefers short SECURITY.md"],
+  "corrections": {"product_name": "Acme"},
+  "last_draft_pick": "A",
+  "claim": "Prepares evidence for human review — not a conformity assessment."
+}
+`)
+
+	withNotes, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if baseline.Passed != withNotes.Passed {
+		t.Fatalf("pass/fail diverged: baseline=%v withNotes=%v", baseline.Passed, withNotes.Passed)
+	}
+	if len(baseline.Payload.Failures) != len(withNotes.Payload.Failures) {
+		t.Fatalf("failure count diverged: %d vs %d", len(baseline.Payload.Failures), len(withNotes.Payload.Failures))
+	}
+	for i := range baseline.Payload.Failures {
+		if baseline.Payload.Failures[i].GateID != withNotes.Payload.Failures[i].GateID {
+			t.Fatalf("gate ids diverged at %d: %q vs %q", i, baseline.Payload.Failures[i].GateID, withNotes.Payload.Failures[i].GateID)
+		}
+	}
+}
+
 func writeGoodHouse(t *testing.T, dir string) {
 	t.Helper()
 	mustWrite(t, filepath.Join(dir, "SECURITY.md"), `# Security

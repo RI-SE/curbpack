@@ -27,7 +27,7 @@ Warm-start pack chooser (enum seed → guarded HITL ticks → RKG → research s
 | instrument.json | same cache dir | Δ deps / secret-hits whisper |
 | remediations.json | same | Reuse gate_id hints |
 | **ContextPack** | `.github/cyberready/cache/context-pack.json` (+ `.md`) | One washed assistant artifact (+ pathway next) |
-| **pathway-seed.json** | same cache dir | Warm-start enums + HITL ticks (CLI-only writer; not a gate input) |
+| **pathway-seed.json** | same cache dir | Warm-start enums + HITL ticks + session_notes/corrections/last_draft_pick (CLI-only writer; not a gate input) |
 | **research-packet.json** | same cache dir | Allowlisted citation trail + requirements (not a gate input) |
 | **research-brief.md** | same cache dir | One-screen human brief |
 | RKG | `.github/cyberready/graph/policy-graph.json` | Pack→rule navigation (exported on `confirm-packs`) |
