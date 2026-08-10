@@ -1,16 +1,34 @@
 # For authorities, auditors, and CISOs
 
-**Local pack gates. Humans review. Not conformity assessment.**
+CyberReady prepares **structural evidence** for **human review**; it does not perform **conformity assessment**.
 
 Sign-off oriented brief for NCSC/EU-style authorities, internal auditors, and CISOs who need to know what CyberReady is — without reading integrator notes or any optional sibling product.
 
-Abbreviations: see [glossary and audience](glossary-and-audience.md) (CE, CRA, SBOM, SARIF, GRC, HPURL, RKG, IR, VEX, notified body, conformity assessment, RISE, NCSC).
+Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audience](glossary-and-audience.md) (CE, CRA, SBOM, SARIF, GRC, notified body, conformity assessment, RISE, NCSC).
 
 ## What CyberReady is
 
-- A **local-first command-line tool** that evaluates **packs** (JSON rule sets) against a git repository on the supplier’s machine.
-- A producer of **structural evidence** (JSON + markdown + optional HTML one-pager) for **human review**.
-- An **instrument panel / evidence habit** for product repos — pair with SCA and secret scanners for depth; not a full security program.
+- A **local-first command-line tool** that evaluates **rule packs** (JSON checklists shaped like regulatory annex drafts—not law) against a git repository on the supplier’s machine.
+- A producer of **structural evidence** (JSON + markdown + optional buyer one-pager) for **human review**.
+- Documentation and dependency checks for product repos — pair with SCA and secret scanners for depth; not a full security program.
+- Default pack is **house-policy**. Cyber Resilience Act (CRA)–shaped packs are opt-in only.
+
+## Evidence artifact catalog (trust levels)
+
+| Artifact | How produced | Trust level (honest) |
+|----------|--------------|----------------------|
+| Gate JSON / action report (`check`, `validate`) | Local deterministic pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
+| SARIF export | `export --sarif` / Action upload | Same findings in IDE/CI format; still pack gates, not certification |
+| Buyer-questions checklist | `export --buyer-questions` | Human Q&A aid; rows carry `assurance_class: structural_draft` |
+| ContextPack | `export --context-pack` (or `share`) | One washed assistant/auditor snapshot — still structural evidence, not certification |
+| Lay-of-land | `export --lay-of-land` | Shareable map (deps summary, secret-hit count, informational watchlist∩SBOM) — **not** a CVE product |
+| Review pack + buyer one-pager | `prepare-release` | Procurement snapshot; **not** a certificate of conformity |
+| CycloneDX SBOM (best-effort) | From common lockfiles when present | Inventory draft; completeness depends on lockfiles |
+| OpenVEX draft | Bound at attest time when applicable | Draft exploitability notes — not a vulnerability program |
+| Git Notes attest capsule | Human `attest` | **ssh-agent-signed** = cryptographic signature present; **unsigned** = present but **not** cryptographically verified |
+| Explain-packet | `export --explain-packet` | Sanitized tutor surface; **never** greenlights gates |
+
+**Unsigned ≠ verified.** Local gate score on this tree is not a certification score.
 
 ## What CyberReady is not
 
@@ -22,35 +40,16 @@ Abbreviations: see [glossary and audience](glossary-and-audience.md) (CE, CRA, S
 
 Gate pass means: deterministic pack rules did not fail on the files present — a human still judges risk, annex drafts, and legal posture.
 
-## Evidence artifact catalog (trust levels)
-
-| Artifact | How produced | Trust level (honest) |
-|----------|--------------|----------------------|
-| Gate JSON / action report (`check`, `validate`) | Local deterministic pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
-| SARIF export | `export --sarif` / Action upload | Same findings in IDE/CI format; still pack gates, not certification |
-| Buyer-questions checklist | `export --buyer-questions` | Human Q&A aid; rows carry `assurance_class: structural_draft` |
-| ContextPack | `export --context-pack` (or `share`) | One washed assistant/auditor snapshot (failures + instrument + path pointers) — still structural evidence, not certification |
-| Lay-of-land / instrument map | `export --lay-of-land` | Shareable map (deps summary, secret-hit count, informational watchlist∩SBOM) — **not** a CVE product |
-| Review pack + buyer one-pager | `prepare-release` | Procurement snapshot; **not** a certificate of conformity |
-| CycloneDX SBOM (best-effort) | From common lockfiles when present | Inventory draft; completeness depends on lockfiles |
-| OpenVEX draft | Bound at attest time when applicable | Draft exploitability notes — not a vulnerability program |
-| HPURL pointer | Local `state_hash` fragment | Client-side hash compare only — not remote notarization |
-| Git Notes attest capsule | Human `attest` | **ssh-agent-signed** = cryptographic signature present; **unsigned** = present but **not** cryptographically verified |
-| RKG (`policy-graph.json`) | `packs export-graph` | Local teaching/navigation graph — not a legal oracle |
-| Explain-packet | `export --explain-packet` | Sanitized tutor surface; **never** greenlights gates |
-
-**Unsigned ≠ verified.** Green readiness % is a local gate score, not a certification score.
-
 ## Institute neutrality
 
-Development may be institute-supported (see [`NOTICE`](../NOTICE)). **RISE is a funder / applied-research supporter — not this product’s certifier.** Public language must stay claim-safe: never “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.
+Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.
 
 Full MoU / co-promotion boundary: [promotion firewall](promotion-firewall.md).
 
-## Air-gap / offline
+## Offline
 
-- Daily `check` needs **no** remote policy brain.
-- Packs ship **embedded**; refresh via air-gap `packs import`, or network update only with an explicit sha256 pin.
+- Daily `check` needs **no** remote policy service.
+- Packs ship **embedded**; refresh via offline `packs import`, or network update only with an explicit sha256 pin.
 - Install / Action downloads verify release `checksums.txt` (sha256, fail-closed).
 - Optional tutors (any chat) receive only sanitized explain-packets; raw source is not the default export path.
 
@@ -64,9 +63,9 @@ Safe to say:
 
 Unsafe / forbidden as product claims:
 
-- That CyberReady certified the product, completed conformity assessment, or issued CE marking.
-- That gate green equals CRA-compliant, NIS2-compliant, or market-ready by law.
-- That RISE, NCSC, FRA, or any agency endorses or approves the tool as official guidance.
+- Never claim that CyberReady certified the product, completed conformity assessment, or issued CE marking.
+- Never claim that gate green equals CRA-compliant, NIS2-compliant, or market-ready by law.
+- Never claim that RISE, NCSC, FRA, or any agency endorses or approves the tool as official guidance.
 
 CI enforces wording via `scripts/claim-safety.sh`. This page is **not** certification theater and does not replace legal counsel or a notified body.
 

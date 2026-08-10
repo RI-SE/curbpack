@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Security — CyberReady+</title>
+  <meta name="description" content="Install checksums, unsigned vs signed, offline packs, optional socket, regex limits." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -24,20 +25,21 @@
     <section class="section prose">
       <h2>Security model</h2>
       <p class="sub">What you can trust — and what unsigned does not mean.</p>
+      <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
       <ul>
-        <li><strong>Install:</strong> release downloads verify <code>checksums.txt</code> (sha256, fail-closed) in both <code>install.sh</code> and the GitHub Action.</li>
-        <li><strong>Attest:</strong> unsigned capsules are labeled unsigned. Fake agent-bind tokens are never treated as verified signatures.</li>
-        <li><strong>Socket:</strong> optional integrator IPC uses a private path (mode <code>0600</code>), not a shared world-writable <code>/tmp</code> default. Fail-open if unused.</li>
-        <li><strong>Packs online:</strong> network update requires a sha256 pin; otherwise stay offline / air-gap import.</li>
-        <li><strong>Regex:</strong> pack patterns are length-capped and time-bounded to reduce ReDoS (regular expression denial-of-service) risk.</li>
+        <li><strong>Install checksums:</strong> release downloads verify <code>checksums.txt</code> (sha256, fail-closed) in both <code>install.sh</code> and the GitHub Action.</li>
+        <li><strong>Unsigned vs signed:</strong> unsigned capsules are labeled unsigned. Fake agent-bind tokens are never treated as verified signatures. Unsigned ≠ verified.</li>
+        <li><strong>Offline packs:</strong> daily check needs no network. Network pack update requires a sha256 pin; otherwise stay offline / import locally.</li>
+        <li><strong>Optional socket:</strong> integrator IPC uses a private path (mode <code>0600</code>), not a shared world-writable <code>/tmp</code> default. Continues if unused.</li>
+        <li><strong>Regex limits:</strong> pack patterns are length-capped and time-bounded to reduce regular expression denial-of-service (ReDoS) risk.</li>
       </ul>
-      <p>Full plain-language write-up in the repo: <a href="https://github.com/afelin/cyberready/blob/main/docs/security-model.md">docs/security-model.md</a>. Co-promotion / RISE-neutral language: <a href="https://github.com/afelin/cyberready/blob/main/docs/promotion-firewall.md">docs/promotion-firewall.md</a>. Report vulnerabilities via <a href="https://github.com/afelin/cyberready/blob/main/SECURITY.md">SECURITY.md</a>.</p>
-      <p class="muted">Pilot pin <code>@v0.4.3</code>. This page is not an incident runbook and not a certification statement. Sign-off brief: <a href="../for-authorities/">for authorities</a>.</p>
+      <p>Full write-up: <a href="https://github.com/afelin/cyberready/blob/main/docs/security-model.md">docs/security-model.md</a>. Co-promotion / RISE-neutral language: <a href="https://github.com/afelin/cyberready/blob/main/docs/promotion-firewall.md">docs/promotion-firewall.md</a>. Report vulnerabilities via <a href="https://github.com/afelin/cyberready/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+      <p class="muted">Pin <code>@v0.4.3</code>. This page is not an incident runbook and not a certification statement. Sign-off brief: <a href="../for-authorities/">for authorities</a>.</p>
     </section>
 
     <footer class="site-footer">
       <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="../samples/onepager.html">Sample</a> · <a href="../whitepaper/">White paper</a> · <a href="./">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
-      <p>Prepares evidence for human review — not a conformity assessment. Local-first · fail closed on install integrity.</p>
+      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>

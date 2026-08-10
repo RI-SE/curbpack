@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>For reviewers — CyberReady+</title>
+  <meta name="description" content="Ask the supplier for a buyer one-pager and, if needed, the review pack—then use the trust table." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -23,35 +24,34 @@
 
     <section class="section prose">
       <h2>For reviewers</h2>
-      <p class="sub">One screen to decide whether to dig deeper — not a stamp of approval.</p>
-      <p>Ask the supplier for their <strong>buyer one-pager</strong> (HTML) and, if needed, the review-pack folder (JSON + markdown layers). A sample of what that page looks like:</p>
+      <p class="sub">Ask the supplier for a <strong>buyer one-pager</strong> (supplier evidence summary) and, if needed, the <strong>review pack</strong> (JSON + markdown). Then decide whether to dig deeper.</p>
+      <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
       <p><a class="btn" href="../samples/onepager.html">Open sample review page</a></p>
       <ul>
-        <li><strong>Readiness %</strong> is a local gate score, not a certification score.</li>
-        <li><strong>Gates passed</strong> means deterministic pack rules did not fail — humans still judge annex drafts and risk.</li>
-        <li><strong>Attest / HPURL</strong> (hash pointer URL) binds a hash to a commit; <strong>UNSIGNED — not cryptographically verified</strong> until ssh-agent attest. Unsigned ≠ verified.</li>
-        <li><strong>Not conformity assessment</strong> — one-pagers prepare evidence for human review; they are not a stamp of approval.</li>
+        <li><strong>Local gate score on this tree</strong> is not a certification score.</li>
+        <li><strong>Gates passed</strong> means deterministic rule-pack checks did not fail — humans still judge annex drafts and risk.</li>
+        <li><strong>UNSIGNED — not cryptographically verified</strong> until an ssh-agent signed attest. Unsigned ≠ verified.</li>
       </ul>
 
       <h3>Artifact trust table</h3>
       <table>
         <thead><tr><th>Artifact</th><th>What you can trust</th><th>What you must not assume</th></tr></thead>
         <tbody>
-          <tr><td>Gate JSON / action report</td><td>Structural pack results on the tree shown</td><td>Legal conformity or CE readiness</td></tr>
-          <tr><td>SARIF</td><td>Same findings in CI/IDE form</td><td>A security audit complete</td></tr>
-          <tr><td>Buyer-questions / lay-of-land</td><td>Honest checklist and instrument map</td><td>A CVE or GRC program</td></tr>
-          <tr><td>One-pager / review pack</td><td>Shareable evidence snapshot</td><td>A certificate of conformity</td></tr>
+          <tr><td>Gate JSON / action report</td><td>Structural evidence on the tree shown</td><td>Legal conformity or CE readiness</td></tr>
+          <tr><td>SARIF (Static Analysis Results Interchange Format)</td><td>Same findings in CI/IDE form</td><td>A security audit complete</td></tr>
+          <tr><td>Buyer-questions / lay-of-land</td><td>Honest checklist and map</td><td>A CVE or GRC program</td></tr>
+          <tr><td>Buyer one-pager / review pack</td><td>Shareable evidence snapshot</td><td>A certificate of conformity</td></tr>
           <tr><td>SBOM / OpenVEX drafts</td><td>Best-effort inventory / draft notes</td><td>Complete vulnerability status</td></tr>
           <tr><td>Attest capsule</td><td>Signed only if ssh-agent signed</td><td>Unsigned equals verified</td></tr>
         </tbody>
       </table>
 
-      <p class="muted">Procurement language must stay claim-safe: never equate gate pass with CE marking or notified-body approval. Deeper sign-off brief: <a href="../for-authorities/">for authorities</a>.</p>
+      <p class="muted">Procurement language must stay claim-safe: never equate gate pass with CE marking or notified-body approval. Deeper brief: <a href="../for-authorities/">for authorities</a>. Voice: <a href="https://github.com/afelin/cyberready/blob/main/docs/voice-and-terms.md">voice and terms</a>.</p>
     </section>
 
     <footer class="site-footer">
       <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="../samples/onepager.html">Sample</a> · <a href="../whitepaper/">White paper</a> · <a href="../security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
-      <p>Prepares evidence for human review — not a conformity assessment.</p>
+      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>

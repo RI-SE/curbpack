@@ -1,6 +1,8 @@
 # 60-second paths
 
-CyberReady prepares evidence for **human review**. It does **not** certify conformity.
+CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
+
+Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 Cold-start default pack: **`house-policy`**. CRA / medtech are opt-in later via `--packs` (Advanced).
 
@@ -8,7 +10,7 @@ Pick **exactly one** first move for your audience.
 
 ## Human — safe try
 
-TTFV ladder (pin **`@v0.4.3`**): `install.sh` → `doctor` → `demo`. Claim-safe: gate green ≠ certification. Doctor soft-exit and ~10 MB binary are accepted (see [gap matrix](../github-readiness-gaps.md)).
+Under ten minutes (pin **`@v0.4.3`**): `install.sh` → `doctor` → `demo`. Gate green ≠ certification.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
@@ -53,14 +55,14 @@ Maintainer bar: `./scripts/time-to-green.sh` (demo + init→check wall-clock; fa
 ## Decision-maker
 
 1. Open the supplier’s `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact), or the committed sample at `site/samples/onepager.html`.
-2. Or open the HPURL proof page (`proof/index.html`) with a hash fragment.
-3. One screen: thermometer, top gaps, disclaimer — no account required. Not a certificate.
+2. Or open the proof page (`proof/index.html`) with a hash fragment.
+3. One screen: local gate score, top gaps, disclaimer — no account required. Not a certificate.
 
 Runs deposit cache + review-pack under `.github/cyberready/`; attest when a human is ready.
 
 ## Advanced
 
-Habit after first green: [daily loop](daily-loop.md) — Action every PR · local `check` · quiet Δ readiness / deps / secret-hits + covenant. Optional share: [buyer evidence](buyer-evidence.md) (`export --lay-of-land` / `--buyer-questions`).
+Habit after first green: [daily loop](daily-loop.md). Optional share: [buyer evidence](buyer-evidence.md) (`export --lay-of-land` / `--buyer-questions`). Doctor soft-exit tips and binary size notes: README Advanced.
 
 | Flag / path | When |
 |-------------|------|
