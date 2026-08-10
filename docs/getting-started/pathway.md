@@ -2,6 +2,8 @@
 
 **Warm-start and research help you choose a draft; only check decides pass/fail—not certification.**
 
+> **Humans above the fold.** Agents may `status` / `suggest` / `note` / `check` / `share` only. Confirms and attest are human-run: use a TTY, pass `--i-am-human`, or set `CYBERREADY_ALLOW_CONFIRM=1`. Agents stop — never forge ticks.
+
 One next ask. Optional two drafts with a recommendation. Then check. Humans confirm and attest—agents never stamp those.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
@@ -45,14 +47,15 @@ flowchart TD
 ```bash
 cyberready pathway status          # one plain-English next ask (default)
 cyberready pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
-# human: pathway confirm-packs
+# --house-first is reserved (accepted, currently a no-op)
+# human: pathway confirm-packs --i-am-human
 cyberready research                # optional allowlisted brief — never gates check
 # agent/human: two drafts + Recommended A|B → you pick → cite-check
 cyberready research --cite-check <draft.md>
-# human: pathway confirm-prose
+# human: pathway confirm-prose --i-am-human
 cyberready check
 cyberready share
-# human: pathway confirm-share → attest → verify bound hash in proof/index.html
+# human: pathway confirm-share --i-am-human → attest → open proof/index.html
 ```
 
 Optional session memory (not a gate input): `cyberready pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.

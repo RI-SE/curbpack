@@ -18,6 +18,10 @@ func pathwayErr(err error) error {
 	if errors.Is(err, pathway.ErrUsage) {
 		return usageErr(err.Error())
 	}
+	if errors.Is(err, pathway.ErrCiteRefuse) {
+		// Cite refuse is exit 1 (gates), not usage 2.
+		return &exitError{code: ExitGates, msg: err.Error()}
+	}
 	return err
 }
 
@@ -35,11 +39,11 @@ func cmdPathway(args []string) error {
 	case "suggest":
 		return cmdPathwaySuggest(root, args[1:])
 	case "confirm-packs":
-		return cmdPathwayConfirmPacks(root)
+		return cmdPathwayConfirmPacks(root, args[1:])
 	case "confirm-prose":
-		return cmdPathwayConfirmProse(root)
+		return cmdPathwayConfirmProse(root, args[1:])
 	case "confirm-share":
-		return cmdPathwayConfirmShare(root)
+		return cmdPathwayConfirmShare(root, args[1:])
 	case "note":
 		return cmdPathwayNote(root, args[1:])
 	case "help", "-h", "--help":
@@ -55,13 +59,31 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "  status [--human|--technical]   One next ask (human default) or phase+next\n")
 	fmt.Fprintf(os.Stderr, "  suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=… [--ce-context=…]\n")
 	fmt.Fprintf(os.Stderr, "                                  Closed-world proposed_packs (enums only)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-packs                   Human: stamp packs_confirmed (+ RKG; next may be research)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-prose                   Human: stamp prose_owned (cite-check if packet present)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-share                   Human: stamp share_reviewed\n")
+	fmt.Fprintf(os.Stderr, "                                  --house-first is reserved (accepted, currently a no-op)\n")
+	fmt.Fprintf(os.Stderr, "  confirm-packs [--i-am-human]    Human: stamp packs_confirmed (TTY or --i-am-human)\n")
+	fmt.Fprintf(os.Stderr, "  confirm-prose [--i-am-human]    Human: stamp prose_owned (cite-check if packet present)\n")
+	fmt.Fprintf(os.Stderr, "  confirm-share [--i-am-human]    Human: stamp share_reviewed\n")
 	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
 	fmt.Fprintf(os.Stderr, "Sole writer of .github/cyberready/cache/pathway-seed.json.\n")
 	fmt.Fprintf(os.Stderr, "Does not affect check pass/fail. Agents stop at confirms/attest.\n")
+	fmt.Fprintf(os.Stderr, "Confirms require a TTY, --i-am-human, or CYBERREADY_ALLOW_CONFIRM=1.\n")
 	fmt.Fprintf(os.Stderr, "%s\n", pathway.ClaimFence)
+}
+
+// requireHumanConfirm blocks agent/non-interactive confirm forgery.
+func requireHumanConfirm(args []string) error {
+	if tty.IsTerminal {
+		return nil
+	}
+	if os.Getenv("CYBERREADY_ALLOW_CONFIRM") == "1" {
+		return nil
+	}
+	for _, a := range args {
+		if a == "--i-am-human" {
+			return nil
+		}
+	}
+	return usageErr("pathway confirm-*: requires a TTY or --i-am-human (or CYBERREADY_ALLOW_CONFIRM=1); agents must stop for a human")
 }
 
 func cmdPathwayNote(root string, args []string) error {
@@ -184,7 +206,10 @@ func cmdPathwaySuggest(root string, args []string) error {
 	return nil
 }
 
-func cmdPathwayConfirmPacks(root string) error {
+func cmdPathwayConfirmPacks(root string, args []string) error {
+	if err := requireHumanConfirm(args); err != nil {
+		return err
+	}
 	seed, err := pathway.ConfirmPacks(root)
 	if err != nil {
 		return pathwayErr(err)
@@ -197,7 +222,10 @@ func cmdPathwayConfirmPacks(root string) error {
 	return nil
 }
 
-func cmdPathwayConfirmProse(root string) error {
+func cmdPathwayConfirmProse(root string, args []string) error {
+	if err := requireHumanConfirm(args); err != nil {
+		return err
+	}
 	_, err := pathway.ConfirmProse(root)
 	if err != nil {
 		return pathwayErr(err)
@@ -210,7 +238,10 @@ func cmdPathwayConfirmProse(root string) error {
 	return nil
 }
 
-func cmdPathwayConfirmShare(root string) error {
+func cmdPathwayConfirmShare(root string, args []string) error {
+	if err := requireHumanConfirm(args); err != nil {
+		return err
+	}
 	_, err := pathway.ConfirmShare(root)
 	if err != nil {
 		return pathwayErr(err)

@@ -74,11 +74,12 @@ func Load(repoRoot string) (*Seed, error) {
 	return &s, nil
 }
 
-// Write persists seed (sole writer API for pathway CLI).
+// Write persists seed atomically (temp + rename). Sole writer API for pathway CLI.
 func Write(repoRoot string, s Seed) error {
 	s.SchemaVersion = SchemaVersion
 	s.Claim = ClaimFence
-	dir := filepath.Dir(SeedPath(repoRoot))
+	path := SeedPath(repoRoot)
+	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -86,7 +87,23 @@ func Write(repoRoot string, s Seed) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(SeedPath(repoRoot), append(b, '\n'), 0o644)
+	tmp, err := os.CreateTemp(dir, "pathway-seed-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+	if _, err := tmp.Write(append(b, '\n')); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NoteSet applies --set: key=value → corrections (or last_draft_pick); bare text → session_notes.

@@ -75,7 +75,9 @@ Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals
 | `packs list\|update\|import\|export-graph\|doctor` | Packs, graph export, validity doctor |
 | `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land\|--context-pack` | Standards / tutor packet / buyer checklist / map / ContextPack |
 | `share` | Thin recipe: check → context-pack → buyer-questions → prepare-release |
-| `pathway status\|suggest\|…\|note` | Warm-start seed + HITL ticks + session notes ([pathway](docs/getting-started/pathway.md)) — not a gate input |
+| `pathway status` | One next ask (human default; `--technical` for phase path) |
+| `pathway suggest\|note` | Warm-start seed + session notes ([pathway](docs/getting-started/pathway.md)) — not a gate input |
+| `pathway confirm-*` | Human only — TTY or `--i-am-human` / `CYBERREADY_ALLOW_CONFIRM=1` |
 | `research [--fetch]\|--cite-check` | Allowlisted citation packet + human brief — never gates check |
 | `completion bash\|zsh\|fish` | Print shell completions (`eval "$(cyberready completion bash)"`) |
 | `sock` | Optional Unix IPC for integrators (continues if unused) |

@@ -1,6 +1,7 @@
 package pathway
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,9 @@ import (
 	"github.com/afelin/cyberready/internal/packs"
 	"github.com/afelin/cyberready/internal/research"
 )
+
+// ErrCiteRefuse marks confirm-prose blocked by research cite-check (CLI → exit 1).
+var ErrCiteRefuse = errors.New("pathway cite-check refuse")
 
 // ProsePaths returns documentation targets that must exist before confirm-prose
 // (annex_file / file_present / anti_placeholder). Excludes text_forbid ban paths
@@ -95,12 +99,22 @@ func ConfirmProse(repoRoot string) (*Seed, error) {
 					msg += fmt.Sprintf(" (+%d more)", len(res.Errors)-1)
 				}
 			}
-			return nil, usagef("%s", msg)
+			return nil, fmt.Errorf("%w: %s", ErrCiteRefuse, msg)
 		}
 	}
 	s.HumanTicks.ProseOwned = true
 	if err := Write(repoRoot, *s); err != nil {
 		return nil, err
 	}
+	// Force AwaitCheck: stale green latest_result must not skip re-check after prose ownership.
+	_ = invalidateLatestResult(repoRoot)
 	return s, nil
+}
+
+func invalidateLatestResult(repoRoot string) error {
+	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_result.json")
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

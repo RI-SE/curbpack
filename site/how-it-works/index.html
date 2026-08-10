@@ -34,7 +34,7 @@
       </ol>
       <p>CI can run <code>check</code> alone anytime. Either way ends in a review pack for a human to judge and optionally <code>attest</code>.</p>
 
-      <svg class="diagram" viewBox="0 0 720 280" role="img" aria-label="Dual doors into local check, dual-draft choice, then human sign-off">
+      <svg class="diagram" viewBox="0 0 720 280" role="img" aria-label="Write door through drafts to local check; Bring and CI go straight to check">
         <rect x="16" y="20" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
         <text x="91" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Write→Check</text>
         <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Warm-start draft</text>
@@ -47,37 +47,32 @@
         <text x="91" y="194" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">CI</text>
         <text x="91" y="212" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">check alone</text>
 
+        <!-- Write → drafts -->
         <path class="flow-line" d="M166 48 H230"/>
-        <path class="flow-line" d="M166 124 H230"/>
-        <path class="flow-line" d="M166 200 H230"/>
         <polygon points="230,42 242,48 230,54" fill="#0a0a0b"/>
-        <polygon points="230,118 242,124 230,130" fill="#0a0a0b"/>
-        <polygon points="230,194 242,200 230,206" fill="#0a0a0b"/>
 
-        <rect x="248" y="48" width="150" height="72" rx="0" fill="#e6f3f7" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="323" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Two drafts</text>
-        <text x="323" y="98" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Recommended A|B</text>
+        <rect x="248" y="20" width="150" height="56" rx="0" fill="#e6f3f7" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="323" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Two drafts</text>
+        <text x="323" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Recommended A|B</text>
 
-        <path class="flow-line" d="M398 84 H454"/>
-        <polygon points="454,78 466,84 454,90" fill="#0a0a0b"/>
+        <path class="flow-line" d="M398 48 H454"/>
+        <polygon points="454,42 466,48 454,54" fill="#0a0a0b"/>
 
-        <rect x="472" y="48" width="140" height="72" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="542" y="78" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Local check</text>
-        <text x="542" y="98" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">Pass/fail SoR</text>
+        <!-- Bring + CI → check only -->
+        <path class="flow-line" d="M166 124 H454"/>
+        <polygon points="454,118 466,124 454,130" fill="#0a0a0b"/>
+        <path class="flow-line" d="M166 200 H454"/>
+        <polygon points="454,194 466,200 454,206" fill="#0a0a0b"/>
 
-        <path class="flow-line" d="M542 120 V168"/>
-        <polygon points="536,168 542,180 548,168" fill="#0a0a0b"/>
+        <rect x="472" y="80" width="140" height="88" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="542" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Local check</text>
+        <text x="542" y="138" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">Pass/fail (local)</text>
 
-        <rect x="472" y="188" width="140" height="64" rx="0" fill="#0a0a0b" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="542" y="214" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#fcfcfc">Human review</text>
-        <text x="542" y="232" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#e4e6eb">Share · attest</text>
+        <path class="flow-line" d="M542 168 V200"/>
+        <polygon points="536,200 542,212 548,200" fill="#0a0a0b"/>
 
-        <rect x="248" y="188" width="150" height="64" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
-        <text x="323" y="214" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Review pack</text>
-        <text x="323" y="232" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Hand to buyer</text>
-
-        <path class="flow-line" d="M398 220 H466"/>
-        <polygon points="466,214 478,220 466,226" fill="#0a0a0b"/>
+        <rect x="472" y="220" width="140" height="48" rx="0" fill="#0a0a0b" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="542" y="248" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#fcfcfc">Human review</text>
       </svg>
 
       <h3>1. Choose a rule pack</h3>

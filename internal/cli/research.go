@@ -108,6 +108,7 @@ func cmdResearch(args []string) error {
 	fmt.Printf("brief:  %s\n", mdPath)
 	fmt.Printf("%s\n", tty.C(tty.Dim, research.PacketNote))
 	fmt.Printf("%s\n", tty.C(tty.Dim, research.ClaimFence))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "next: edit top files in research-brief.md → dual-draft → cyberready research --cite-check <draft.md>"))
 	return nil
 }
 
@@ -128,6 +129,7 @@ func cmdResearchCiteCheck(root, draft string) error {
 	if res.OK {
 		fmt.Printf("%s\n", tty.C(tty.Green, "cite-check: ok"))
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Still not conformity assessment — human confirm-prose / attest only."))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "next: human cyberready pathway confirm-prose --i-am-human"))
 		return nil
 	}
 	fmt.Printf("%s\n", tty.C(tty.Red, "cite-check: refuse"))

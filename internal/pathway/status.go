@@ -42,18 +42,89 @@ func FormatSnapshot(snap Snapshot) string {
 	return b.String()
 }
 
-// FormatHumanStatus prints a plain-English next ask (no statechart path).
+// FormatHumanStatus prints a plain-English next ask (no statechart path, no HPURL/RKG/OCC).
 // Default surface for human / site recipes.
 func FormatHumanStatus(snap Snapshot) string {
 	ask := humanAsk(snap)
+	why := humanWhy(snap)
 	var b strings.Builder
 	fmt.Fprintf(&b, "next ask: %s\n", ask)
-	fmt.Fprintf(&b, "run:      %s\n", snap.Next.Cmd)
-	if strings.TrimSpace(snap.Next.Note) != "" {
-		fmt.Fprintf(&b, "why:      %s\n", snap.Next.Note)
+	fmt.Fprintf(&b, "run:      %s\n", humanCmd(snap))
+	if why != "" {
+		fmt.Fprintf(&b, "why:      %s\n", why)
 	}
-	fmt.Fprintf(&b, "fence:    %s\n", ClaimFence)
+	fmt.Fprintf(&b, "note:     %s\n", ClaimFence)
 	return b.String()
+}
+
+func humanCmd(snap Snapshot) string {
+	switch snap.Phase {
+	case PhaseAwaitHPURLVerify, PhaseComplete:
+		return "open proof/index.html"
+	default:
+		return snap.Next.Cmd
+	}
+}
+
+func humanWhy(snap Snapshot) string {
+	switch snap.Phase {
+	case PhaseAwaitSuggest:
+		return "Closed questions only — not a regulation pathway."
+	case PhaseAwaitPackConfirm:
+		return "Human confirms checklists; agents never stamp this."
+	case PhaseAwaitActivate:
+		return "Match .cyberready.json packs to the confirmed propose."
+	case PhaseAwaitHealOrProse:
+		if strings.Contains(snap.Next.Cmd, "research") {
+			return "Allowlisted links + brief; research never changes check pass/fail."
+		}
+		return "Heal stubs, then write real product wording."
+	case PhaseAwaitProseConfirm:
+		if researchPacketNote(snap) {
+			return "Cite-check drafts first; then confirm you own the wording."
+		}
+		return "Confirm you own the wording — then re-check."
+	case PhaseAwaitCheck:
+		if snap.GateID != "" {
+			return "Fix the top finding, then re-check. Chat never greenlights."
+		}
+		return "Exit code is authoritative. Chat never greenlights."
+	case PhaseAwaitShare:
+		return "Build buyer questions + context pack for a human reviewer."
+	case PhaseAwaitShareConfirm:
+		return "Confirm you reviewed the buyer one-pager / questions."
+	case PhaseAwaitAttest:
+		if gitDirtyNote(snap.Next.Note) {
+			return "Working tree has uncommitted changes — commit or attest with --allow-dirty."
+		}
+		return ClaimFence
+	case PhaseAwaitHPURLVerify, PhaseComplete:
+		return "Compare the bound hash from the local evidence pointer — still not certification."
+	default:
+		return sanitizeHumanNote(snap.Next.Note)
+	}
+}
+
+func researchPacketNote(snap Snapshot) bool {
+	return strings.Contains(snap.Next.Note, "cite-check")
+}
+
+func gitDirtyNote(note string) bool {
+	return strings.Contains(note, "OCC") || strings.Contains(strings.ToLower(note), "dirty")
+}
+
+func sanitizeHumanNote(note string) string {
+	note = strings.TrimSpace(note)
+	if note == "" {
+		return ""
+	}
+	lower := strings.ToLower(note)
+	for _, bad := range []string{"hpurl", "rkg", "occ:", "await", "enum "} {
+		if strings.Contains(lower, bad) {
+			return ""
+		}
+	}
+	return note
 }
 
 func humanAsk(snap Snapshot) string {
@@ -83,7 +154,7 @@ func humanAsk(snap Snapshot) string {
 	case PhaseAwaitAttest:
 		return "A human signs this tree with attest when ready (agents stop)."
 	case PhaseAwaitHPURLVerify, PhaseComplete:
-		return "Verify the HPURL hash in the browser (human only) — still not certification."
+		return "Done — open the local proof page to compare the bound hash"
 	default:
 		return snap.Next.Verb
 	}

@@ -26,4 +26,34 @@ func TestFormatHumanStatus_NoPhasePath(t *testing.T) {
 	if !strings.Contains(out, ClaimFence) {
 		t.Fatal("want claim fence")
 	}
+	if strings.Contains(out, "fence:") {
+		t.Fatal("human status must not use opaque fence: label")
+	}
+	for _, bad := range []string{"HPURL", "RKG", "OCC"} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("human status must not contain %s:\n%s", bad, out)
+		}
+	}
+}
+
+func TestFormatHumanStatus_DoneProofPage(t *testing.T) {
+	t.Parallel()
+	snap := Snapshot{
+		Phase: PhaseAwaitHPURLVerify,
+		Path:  ParentStatePath(PhaseAwaitHPURLVerify),
+		Next: NextAction{
+			Verb: "verify HPURL (human)",
+			Cmd:  "open proof/index.html",
+			Note: "paste state_hash from evidence pointer; HPURL compare",
+		},
+	}
+	out := FormatHumanStatus(snap)
+	if !strings.Contains(out, "Done — open the local proof page to compare the bound hash") {
+		t.Fatalf("want Done proof-page ask:\n%s", out)
+	}
+	for _, bad := range []string{"HPURL", "RKG", "OCC", "fence:"} {
+		if strings.Contains(out, bad) {
+			t.Fatalf("human status must not contain %q:\n%s", bad, out)
+		}
+	}
 }
