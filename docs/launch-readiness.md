@@ -3,15 +3,52 @@
 Public Apache-2.0 launch checklist for [afelin/cyberready](https://github.com/afelin/cyberready).
 Coreward is **not** required to build, test, launch, or use CyberReady (optional `sock` only).
 
+## Status (2026-08-10)
+
+| Item | State |
+|------|--------|
+| CI on `main` | **Verified green** at tip `04587cd` — `test (ubuntu-latest)`, `test (macos-latest)`, `smoke`, `gauntlet`, `redteam-pilot` (+ dogfood/scoreboard) |
+| Required checks on `main` | **Configured via API** — exact names below; `strict` (branches up to date) **on**; `enforce_admins` **on** |
+| SPDX | **Apache-2.0** |
+| Release pin | **`@v0.4.3`** (no new tag) |
+| Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
+| Discussion #4 pin | **Human-pending** — not pinned yet (no GraphQL pin mutation; use UI) |
+| Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/afelin/cyberready/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.4.3`, isolated HOME/PATH) |
+| Invite wave | **Ready except pin** — items 1–3 done; item 4 (Welcome Discussion pinned) needs human UI |
+
+Gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
+
+### Human UI still needed — pin Discussion #4
+
+1. Open https://github.com/afelin/cyberready/discussions/4
+2. Click **⋯** (or Pin) → **Pin discussion**
+3. Confirm it appears under the repo’s pinned Discussions
+
+### Branch protection (already set; Settings mirror)
+
+Settings → Branches → `main` rule should require:
+
+- `test (ubuntu-latest)`
+- `test (macos-latest)`
+- `smoke`
+- `gauntlet`
+- `redteam-pilot`
+- Require branches to be up to date before merging
+- Do not bypass for admins on routine pushes (`enforce_admins`)
+
+Verify: `gh api repos/afelin/cyberready/branches/main/protection --jq '.required_status_checks'`
+
 ## Required GitHub checks (merge gate)
 
-Configure these as **required status checks** on `main` (Settings → Branches → branch protection):
+Configure these as **required status checks** on `main` (Settings → Branches → branch protection). Names must match CI check-run strings exactly:
 
 | Check | Workflow job | Kill if |
 |-------|--------------|---------|
-| `test` | `.github/workflows/ci.yml` → `test` | `go test ./...` fails |
+| `test (ubuntu-latest)` | `.github/workflows/ci.yml` → `test` (ubuntu) | `go test ./...` fails |
+| `test (macos-latest)` | `ci.yml` → `test` (macos) | `go test ./...` fails |
 | `smoke` | `ci.yml` → `smoke` | doctor/demo or CRA/house happy paths fail |
 | `gauntlet` | `ci.yml` → `gauntlet` | claim-safety, heal smoke, baseline ratchet, dead-ends, install-from-release |
+| `redteam-pilot` | `ci.yml` → `redteam-pilot` | `./scripts/redteam-pilot.sh` not 15/15 |
 
 Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet.yml` (realish + adversarial depth + optional OSS clone crash/hang only).
 
@@ -56,13 +93,13 @@ Before inviting external testers:
 2. Decision-maker understands: evidence for humans — **not** certification
 3. `SECURITY.md` reporting path is usable
 
-Record the pass date in the pinned Discussions welcome thread.
+**Pass recorded:** 2026-08-10 on pinned Discussions welcome thread ([comment](https://github.com/afelin/cyberready/discussions/4#discussioncomment-17960761)). Pin of the thread itself is still human-pending (see Status).
 
 ## Discussions welcome (claim-safe)
 
-Pinned welcome (created): https://github.com/afelin/cyberready/discussions/4
+Welcome thread: https://github.com/afelin/cyberready/discussions/4
 
-If not pinned in the UI yet: Discussions → Welcome → Pin. Body must keep:
+**Pin:** human UI (not yet pinned as of 2026-08-10 Status stamp). Body must keep:
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
@@ -74,10 +111,10 @@ If not pinned in the UI yet: Discussions → Welcome → Pin. Body must keep:
 
 Invite only when:
 
-1. Tier 0–1 CI green on `main` (required checks above)
-2. SPDX shows Apache-2.0
-3. One Tier-3 human pass recorded
-4. Welcome Discussion pinned
+1. Tier 0–1 CI green on `main` (required checks above) — **done**
+2. SPDX shows Apache-2.0 — **done**
+3. One Tier-3 human pass recorded — **done (2026-08-10)**
+4. Welcome Discussion pinned — **human-pending**
 
 ## Object-owner cadence (30-day freeze)
 
