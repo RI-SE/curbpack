@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>For builders — CyberReady+</title>
+  <meta name="description" content="Install, init, and check—green gates in your repo in under ten minutes." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -23,23 +24,36 @@
 
     <section class="section prose">
       <h2>For builders</h2>
-      <p class="sub">One first move. Under ten minutes to green. Open the browser only when you mean to.</p>
-      <p><strong>First move</strong> — pick exactly one:</p>
-      <ol>
-        <li><strong>Safe try:</strong> install → <code>cyberready doctor</code> → <code>cyberready demo</code> (prints a one-pager path; add <code>--open</code> only if you want the OS to open it).</li>
-        <li><strong>Product repo:</strong> <code>cyberready init</code> then <code>cyberready check</code> (defaults: house-policy + hooks + skill + ide).</li>
-        <li><strong>CI-only:</strong> drop the example workflow pinned <code>@v0.4.3</code> with <code>heal: true</code>.</li>
-      </ol>
-      <p>Before a review wave: <code>prepare-release</code>, then a human <code>attest</code>.</p>
-      <p>Daily habit: <code>cyberready check</code> is the instrument panel (Δ readiness / deps / secret-hits + covenant). Pin stays <code>@v0.4.3</code>.</p>
-      <p><strong>Works with Cursor, Copilot, Claude, and other assistants</strong> — run the CLI, then read ContextPack (<code>cyberready export --context-pack</code>). Optional thin MCP: repo <code>examples/mcp</code>. Contract: <a href="https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md">docs/assistant-loop.md</a>.</p>
-      <p>Agents: use the Cursor skill; never loop on <code>demo</code> to “show the page.” Link the <a href="../samples/onepager.html">static sample</a> instead.</p>
-      <p class="muted">Recipes: repo <code>docs/getting-started/60-second-paths.md</code>. Packs: <code>docs/write-your-own-pack.md</code>.</p>
+      <p class="sub">Install, init, and check—green gates in your repo in under ten minutes.</p>
+      <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
+      <p>Pick <strong>exactly one</strong> first move:</p>
+
+      <h3>1. Safe try</h3>
+      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
+cyberready doctor
+cyberready demo</code></pre>
+      <p class="muted"><code>demo</code> prints a one-pager path. Add <code>--open</code> only if you want the OS to open it. Pin <code>@v0.4.3</code>.</p>
+
+      <h3>2. Product repo</h3>
+      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>cd /path/to/your/product
+cyberready init
+cyberready check</code></pre>
+      <p class="muted">Default pack is <strong>house-policy</strong>. Before a review wave: <code>prepare-release</code>, then a human <code>attest</code>.</p>
+
+      <h3>3. CI</h3>
+      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>- uses: afelin/cyberready@v0.4.3
+  with:
+    heal: "true"</code></pre>
+      <p class="muted">Drop-in example: repo <code>examples/workflows/cyberready-check.yml</code>.</p>
+
+      <p>Recipes: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/60-second-paths.md">60-second paths</a>. Sample without demo: <a href="../samples/onepager.html">buyer one-pager</a>.</p>
+
+      <p class="muted"><strong>Works with assistants</strong> — run the CLI, then <code>cyberready export --context-pack</code>. Optional thin MCP: repo <code>examples/mcp</code>. Contract: <a href="https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md">docs/assistant-loop.md</a>.</p>
     </section>
 
     <footer class="site-footer">
       <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="../samples/onepager.html">Sample</a> · <a href="../whitepaper/">White paper</a> · <a href="../security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
-      <p>Prepares evidence for human review — not a conformity assessment.</p>
+      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>

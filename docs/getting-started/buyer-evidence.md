@@ -1,6 +1,15 @@
 # Buyer evidence (quiet path)
 
-Share structural gate evidence with a buyer or auditor without GRC SaaS.
+Ask the supplier for a **buyer one-pager** (supplier evidence summary) and, if needed, the **review pack**—structural gate evidence without GRC SaaS.
+
+What the buyer receives:
+
+- A one-screen HTML snapshot (local gate score on this tree — not certification)
+- Optional review-pack folder (JSON + markdown layers)
+- Optional ContextPack / buyer-questions checklist for deeper human Q&A
+- Attest status: **UNSIGNED — not cryptographically verified** until ssh-agent attest
+
+Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 ## One-breath share recipe
 
@@ -36,10 +45,10 @@ cyberready export --lay-of-land
 # → .github/cyberready/cache/lay-of-land.md (+ .json)
 ```
 
-Hand the Markdown checklist / ContextPack to the human reviewer. When drafts are ready, `cyberready prepare-release` then human `cyberready attest`. Unsigned one-pagers say **UNSIGNED — not cryptographically verified** until ssh-agent attest.
+Hand the Markdown checklist / ContextPack to the human reviewer. When drafts are ready, `cyberready prepare-release` then human `cyberready attest`.
 
-**Local pack gates. Humans review. Not conformity assessment.** Not CE / not notified-body. Rows carry `assurance_class: structural_draft`. Buyer-questions header includes `attestation_status: none | ssh-agent`.
+Rows carry `assurance_class: structural_draft`. Buyer-questions header includes `attestation_status: none | ssh-agent`.
 
-CyberReady is an instrument panel / evidence habit — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
+CyberReady prepares structural evidence for product repos — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
 
-See also: [Assistant loop](../assistant-loop.md) · [For authorities](../for-authorities.md) · [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md) · [Strategy boundary](../strategy-boundary.md) · [Glossary](../glossary-and-audience.md)
+See also: [Voice and terms](../voice-and-terms.md) · [Assistant loop](../assistant-loop.md) · [For authorities](../for-authorities.md) · [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md) · [Strategy boundary](../strategy-boundary.md) · [Glossary](../glossary-and-audience.md)

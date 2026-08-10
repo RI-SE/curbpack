@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sample buyer one-pager — CyberReady+</title>
-  <!-- cyberready-onepager-fp:d755735264bbff6de2931ad780502844 -->
+  <!-- cyberready-onepager-fp:teaching-sample-red-path-2026-08-10 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -13,17 +13,25 @@
     .onepager { max-width: 720px; margin: 0 auto; padding: 2rem 0 1rem; }
     .onepager .brand-line { letter-spacing:0.06em; font-weight:700; font-size:0.9rem; text-transform:uppercase; color:var(--steel); }
     .onepager h1 { font-family: var(--font-display); font-size:2rem; line-height:1.2; margin:0.4rem 0 0.5rem; font-weight:650; }
+    .onepager h2 { font-family: var(--font-display); font-size:1.25rem; margin:2rem 0 0.75rem; font-weight:650; }
     .onepager .lede { color:var(--muted); font-size:1.05rem; margin-bottom:1.5rem; }
-    .onepager .status { display:inline-block; padding:0.4rem 0.75rem; border-radius:4px; font-size:0.9rem; font-weight:600; margin:0 0.5rem 0.5rem 0; }
+    .onepager .status { display:inline-block; padding:0.4rem 0.75rem; border-radius:4px; font-size:0.9rem; font-weight:600; margin:0 0 1rem 0; }
     .onepager .status.unsigned { background:#fee2e2; color:#7f1d1d; border:2px solid #b91c1c; font-size:1.05rem; letter-spacing:0.02em; }
+    .onepager .status.ok { background:#e6f6ec; color:#14532d; border:1px solid #1f6f43; }
     .onepager .meter { margin:1.25rem 0; }
     .onepager .bar { height:12px; background:#dde3ee; border-radius:2px; overflow:hidden; margin-top:0.35rem; }
-    .onepager .bar > span { display:block; height:100%; background:var(--steel); width:100%; }
+    .onepager .bar > span { display:block; height:100%; background:var(--steel); }
+    .onepager .bar > span.red { width:62%; background:var(--warn); }
+    .onepager .bar > span.green { width:100%; background:var(--ok); }
     .onepager table { width:100%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
     .onepager th, .onepager td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
     .onepager th { color:var(--muted); font-weight:600; }
-    .onepager .unsigned-foot { color:#7f1d1d; font-weight:700; font-size:1rem; display:block; margin-bottom:0.5rem; }
+    .onepager .sev { font-weight:600; white-space:nowrap; }
+    .onepager .sev.high { color:#7f1d1d; }
+    .onepager .sev.med { color:#8a5a12; }
+    .onepager .sev.low { color:var(--muted); }
     .onepager .snap-foot { font-size:0.85rem; color:var(--muted); margin-top:1.5rem; }
+    .onepager .label { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin:0 0 0.35rem; }
   </style>
 </head>
 <body>
@@ -41,27 +49,55 @@
     <main class="onepager">
       <div class="brand-line">CyberReady+</div>
       <h1>sample-app</h1>
-      <p class="lede">UNSIGNED — not cryptographically verified. Structural evidence for human review — not conformity assessment. Supplier readiness snapshot for procurement review. Evidence is prepared locally — this page is not a certificate of conformity.</p>
-      <div class="status unsigned">UNSIGNED — not cryptographically verified · Gates passed — pending human review &amp; attest</div>
+      <p class="lede">Teaching sample: open findings, then after-fix. Supplier evidence summary for procurement review — not a certificate of conformity.</p>
       <div class="status unsigned">UNSIGNED — not cryptographically verified</div>
-      <div class="meter">Readiness score: <strong>100%</strong>
-        <div class="bar"><span></span></div>
+
+      <p class="label">Before fix — findings remain</p>
+      <div class="meter">Local gate score on this tree: <strong>62%</strong>
+        <div class="bar"><span class="red"></span></div>
+      </div>
+      <table>
+        <thead><tr><th>Gate</th><th>Severity</th><th>Finding / remediation</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>security_md_present</code></td>
+            <td class="sev high">high</td>
+            <td>Missing <code>SECURITY.md</code>. Add a vulnerability disclosure path (even a short stub), then re-run <code>cyberready check</code>.</td>
+          </tr>
+          <tr>
+            <td><code>text_forbid_cert_theater</code></td>
+            <td class="sev high">high</td>
+            <td>Forbidden claim-adjacent wording in docs. Remove certification theater; keep “not conformity assessment” framing. Re-check.</td>
+          </tr>
+          <tr>
+            <td><code>dep_pin_note</code></td>
+            <td class="sev med">medium</td>
+            <td>Lockfile / pin note incomplete for a watched dependency. Record the intended pin or justify the range, then re-check.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>After fix — gates passed on this tree</h2>
+      <p class="label">Same sample, after remediations</p>
+      <div class="status ok">Gates passed — pending human review &amp; attest</div>
+      <div class="meter">Local gate score on this tree: <strong>100%</strong>
+        <div class="bar"><span class="green"></span></div>
       </div>
       <table>
         <thead><tr><th>Gate</th><th>Severity</th><th>Finding</th></tr></thead>
         <tbody>
-<tr><td colspan="3">No open gate findings.</td></tr>
+          <tr><td colspan="3">No open gate findings. Human still judges annex drafts and risk; attest when ready.</td></tr>
         </tbody>
       </table>
+
       <div class="snap-foot">
-        <span class="unsigned-foot">UNSIGNED — not cryptographically verified</span>
-        Structural evidence for human review — not conformity assessment. Generated 2026-08-07T23:45:11Z · Packs: house-policy · Open <code>proof/index.html</code> for HPURL fragment inspection.
+        Not conformity assessment. Not CE marking. Not a notified-body opinion. Generated as a committed teaching sample · Packs: house-policy · Local gate score ≠ certification.
       </div>
     </main>
 
     <footer class="site-footer">
       <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="./onepager.html">Sample</a> · <a href="../whitepaper/">White paper</a> · <a href="../security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
-      <p>Prepares evidence for human review — not a conformity assessment.</p>
+      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>

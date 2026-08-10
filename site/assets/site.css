@@ -122,6 +122,32 @@ a:hover { color: var(--ink); }
 }
 .section .sub { color: var(--muted); max-width: 36rem; margin: 0 0 1.5rem; }
 
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  margin: 1.5rem 0 0;
+  list-style: none;
+  padding: 0;
+}
+.audience-grid a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 1rem 0;
+  border-top: 2px solid var(--steel);
+}
+.audience-grid a:hover { color: var(--steel); }
+.audience-grid strong {
+  display: block;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+.audience-grid span { color: var(--muted); font-size: 0.95rem; }
+@media (max-width: 720px) {
+  .audience-grid { grid-template-columns: 1fr; }
+}
+
 .diagram {
   width: 100%;
   max-width: 52rem;

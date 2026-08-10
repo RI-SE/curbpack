@@ -15,8 +15,20 @@ Coreward is **not** required to build, test, launch, or use CyberReady (optional
 | Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to CyberReady+](https://github.com/afelin/cyberready/discussions/4) |
 | Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/afelin/cyberready/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.4.3`, isolated HOME/PATH) |
 | Invite wave | **Ready/open** — items 1–4 done (Welcome Discussion pinned) |
+| Understandability (cold-reader four-question bar) | **Done** (2026-08-10) — public rewrite shipped; `scripts/claim-safety.sh` OK; home/builders free of TTFV/HPURL/RKG/IR/airlock/covenant/Δ; sample one-pager shows before/after findings; voice: [voice and terms](voice-and-terms.md) |
 
 Gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
+
+### Cold-reader bar (understandability)
+
+From the public home alone, under two minutes, a builder / buyer / CISO each answer:
+
+1. What is it? — Local rule packs → review pack for buyers/auditors; no certification claim.
+2. What do I run? — Three first moves (safe try / product repo / CI) via Builders.
+3. What do I get? — Gate results + review pack / buyer one-pager for human review.
+4. What must I not claim? — Not conformity assessment / CE / notified-body (fence + RISE does not certify).
+
+**Recorded:** Done after public language rewrite (2026-08-10).
 
 ### Branch protection (already set; Settings mirror)
 

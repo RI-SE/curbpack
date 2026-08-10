@@ -10,7 +10,7 @@
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
 | Integrator / tutor author | [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Coreward pointer](coreward-pointer.md) |
 
-Full audience table: [glossary and audience](glossary-and-audience.md).
+Full audience table: [glossary and audience](glossary-and-audience.md). Public sentence voice: [voice and terms](voice-and-terms.md).
 
 RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](../NOTICE) — funder, not certifier.
 
@@ -18,6 +18,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 
 | Doc | Purpose |
 |-----|---------|
+| [Voice and terms](voice-and-terms.md) | Locked public sentences + preferred terms |
 | [Glossary and audience](glossary-and-audience.md) | Abbreviations + who reads what |
 | [For authorities](for-authorities.md) | NCSC/EU-style, auditor, CISO sign-off brief |
 | [Intent vs Scope](intent-vs-scope.md) | What CyberReady is / is not |

@@ -6,7 +6,8 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 
 | Stakeholder demand | Status | Evidence |
 |--------------------|--------|----------|
-| Claim-safe public language (no CE / notified-body theater) | Done | [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) · [promotion firewall](promotion-firewall.md) |
+| Claim-safe public language (no CE / notified-body theater) | Done | [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) · [promotion firewall](promotion-firewall.md) · [voice and terms](voice-and-terms.md) |
+| Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
 | Institute / agency endorsement refuse (never claim `RISE-approved` / `FRA-approved` / `NCSC-approved` / `agency-endorsed`) | Done | DENY list in `claim-safety.sh` · [promotion firewall](promotion-firewall.md) |
 | Adversarial false-green scoreboard | Done | [`scripts/redteam-pilot.sh`](../scripts/redteam-pilot.sh) · [security model](security-model.md) |
 | Action must not prefer workspace `./bin/cyberready` | Done | `action.yml` resolve · redteam case 1 |

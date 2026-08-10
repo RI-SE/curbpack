@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Canonical abbreviations and “who reads what.” Expand each term on first use in new prose; this page is the shared dictionary.
+Canonical abbreviations and “who reads what.” Expand each term on first use in new prose; this page is the shared dictionary. Public sentence voice and preferred terms: [voice and terms](voice-and-terms.md).
 
 ## Glossary
 
@@ -25,9 +25,11 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.4.3`. |
 | **SCA** | Software Composition Analysis — pair CyberReady with tools such as Trivy/OSV for depth; CyberReady is not an SCA platform. |
 | **CVE** | Common Vulnerabilities and Exposures — watchlist∩SBOM is look-here only, not CVE management. |
-| **Gate** | A deterministic pack rule evaluation. Exit `0` = gates green for human review — **not** certification. |
-| **Pack** | JSON rule set (house policy, CRA-shaped annex drafts, sector templates). Data, not hard-coded industry law. |
-| **Review pack** | Folder of evidence artifacts from `prepare-release` (JSON, markdown, optional one-pager). |
+| **Gate** / **check** | A deterministic rule-pack evaluation. Exit `0` = gates passed on this tree for human review — **not** certification. |
+| **Rule pack** / **pack** | JSON rule set (house-policy by default; CRA-shaped annex drafts or sector templates when opted in). Data, not hard-coded industry law. |
+| **Review pack** | Folder of evidence for human review from `prepare-release` (JSON, markdown, optional buyer one-pager). |
+| **Buyer one-pager** | Supplier evidence summary HTML — local gate score on this tree, not a certificate. |
+| **Structural evidence** | Documentation and dependency checks produced locally for human judgment. |
 | **Attest** | Human-driven binding of a state hash into Git Notes. Unsigned ≠ cryptographically verified. |
 | **Explain-packet** | Sanitized teaching surface for optional tutors; never greenlights gates. |
 | **Notified body** | Independent organization designated for certain conformity assessment tasks under EU product rules. CyberReady does **not** replace a notified body. |
@@ -41,14 +43,14 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 
 ## Who should read what
 
-| Audience | Start here | Then | Skip by default |
-|----------|------------|------|-----------------|
-| **Builder** (product engineer) | [60-second paths](getting-started/60-second-paths.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
-| **Buyer / reviewer** | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) | Sample [one-pager](../site/samples/onepager.html) | Pack authoring, sock bridge |
-| **CISO** | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
-| **Authority / auditor** (NCSC/EU-style, internal audit) | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](promotion-firewall.md) · white paper | Coreward bridge, GTM folders |
-| **Integrator / tutor author** | [Stable contracts](stable-contracts.md) · [coreward-bridge](coreward-bridge.md) | [coreward-pointer](coreward-pointer.md) (aside wording) | Buyer one-pager as “certificate” |
+| Audience | First sentence | Start here | Then | Skip by default |
+|----------|----------------|------------|------|-----------------|
+| **Builder** (product engineer) | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
+| **Buyer / reviewer** | Ask the supplier for a buyer one-pager and, if needed, the review pack—then use the trust table. | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) | Sample [one-pager](../site/samples/onepager.html) | Pack authoring, sock bridge |
+| **CISO** | CyberReady prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
+| **Authority / auditor** (NCSC/EU-style, internal audit) | CyberReady prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](promotion-firewall.md) · white paper | Coreward bridge, GTM folders |
+| **Integrator / tutor author** | Optional socket and explain-packets for integrators—CyberReady stays self-sustaining without them. | [Stable contracts](stable-contracts.md) · [coreward-bridge](coreward-bridge.md) | [coreward-pointer](coreward-pointer.md) (aside wording) | Buyer one-pager as “certificate” |
 
 Non-technical readers: stay on [for-authorities](for-authorities.md) and the [site home](../site/) — those pages expand terms and avoid integrator jargon.
 
-See also: [Docs index](README.md) · [Intent vs Scope](intent-vs-scope.md) · [for-authorities](for-authorities.md)
+See also: [Voice and terms](voice-and-terms.md) · [Docs index](README.md) · [Intent vs Scope](intent-vs-scope.md) · [for-authorities](for-authorities.md)

@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Repo anchor for MoUs and co-promotion. Keep public language institute-neutral and claim-safe.
+Repo anchor for MoUs and co-promotion. Keep public language institute-neutral and claim-safe. Shared public sentences and preferred terms: [voice and terms](voice-and-terms.md).
 
 ## Forbidden phrases
 
