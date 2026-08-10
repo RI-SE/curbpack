@@ -7,13 +7,13 @@
   <meta name="description" content="Rule pack → local check → review pack → human review." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../assets/site.css" />
 </head>
 <body>
   <div class="wrap">
     <nav class="site-nav" aria-label="Primary">
-      <a class="mark" href="../">CyberReady+</a>
+      <a class="mark" href="../">CyberReady<span>+</span></a>
       <ul>
         <li><a href="../for-builders/">Builders</a></li>
         <li><a href="../for-reviewers/">Reviewers</a></li>
@@ -43,30 +43,30 @@
       <p>CyberReady decides pass/fail (deterministic). Review pack and buyer one-pager are evidence for humans. Optional tutor packets propose only and must re-check; they never greenlight.</p>
 
       <svg class="diagram" viewBox="0 0 720 220" role="img" aria-label="Flow from rule pack through local check to human sign-off">
-        <rect x="16" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
-        <text x="86" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Rule pack</text>
-        <text x="86" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">JSON gates</text>
+        <rect x="16" y="70" width="140" height="72" rx="0" fill="#f2f3f5" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="86" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Rule pack</text>
+        <text x="86" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">JSON gates</text>
 
         <path class="flow-line" d="M164 106 H230"/>
-        <polygon points="230,100 242,106 230,112" fill="#3d4f66"/>
+        <polygon points="230,100 242,106 230,112" fill="#0a0a0b"/>
 
-        <rect x="248" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
-        <text x="318" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Local check</text>
-        <text x="318" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">On your machine</text>
+        <rect x="248" y="70" width="140" height="72" rx="0" fill="#f2f3f5" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="318" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Local check</text>
+        <text x="318" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">On your machine</text>
 
         <path class="flow-line" d="M396 106 H462"/>
-        <polygon points="462,100 474,106 462,112" fill="#3d4f66"/>
+        <polygon points="462,100 474,106 462,112" fill="#0a0a0b"/>
 
-        <rect x="480" y="70" width="140" height="72" rx="6" fill="#f4f6f8" stroke="#3d4f66" stroke-width="2"/>
-        <text x="550" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="700" fill="#0f1419">Review pack</text>
-        <text x="550" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#5a6573">Evidence files</text>
+        <rect x="480" y="70" width="140" height="72" rx="0" fill="#f2f3f5" stroke="#0a0a0b" stroke-width="2"/>
+        <text x="550" y="100" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600" fill="#0a0a0b">Review pack</text>
+        <text x="550" y="122" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#4a4a52">Evidence files</text>
 
         <path class="flow-line" d="M550 150 V178 H318 V150"/>
-        <polygon points="312,150 318,138 324,150" fill="#3d4f66"/>
+        <polygon points="312,150 318,138 324,150" fill="#0a0a0b"/>
 
-        <rect x="248" y="8" width="140" height="52" rx="6" fill="#161a24" stroke="#5a7a9a" stroke-width="2"/>
-        <text x="318" y="30" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="700" fill="#e8eaed">Human review</text>
-        <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#9aa3b2">Attest · judgment</text>
+        <rect x="248" y="8" width="140" height="52" rx="0" fill="#0a0a0b" stroke="#005073" stroke-width="2"/>
+        <text x="318" y="30" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#fcfcfc">Human review</text>
+        <text x="318" y="48" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#e4e6eb">Attest · judgment</text>
       </svg>
 
       <p class="muted">Committed sample: <a href="../samples/onepager.html">samples/onepager.html</a>. Authorities path: <a href="../for-authorities/">for authorities</a>.</p>

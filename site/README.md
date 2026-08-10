@@ -10,6 +10,8 @@ Pilot pin: `@v0.4.3` (current instrument-panel honesty cut). Adversarial grade: 
 
 Public IA only: home, how-it-works, for-builders, for-reviewers, for-authorities, security, whitepaper, samples, `llms.txt` (agent index).
 
+Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). Subpages share the same tokens via `assets/site.css`.
+
 ## Ops quarantine
 
 Do **not** deploy or link from Pages:
