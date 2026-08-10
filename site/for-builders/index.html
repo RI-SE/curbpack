@@ -7,18 +7,18 @@
   <meta name="description" content="Install, init, and check—green gates in your repo in under ten minutes." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../assets/site.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/cyberready/assets/site.css" />
 </head>
 <body>
   <div class="wrap">
     <nav class="site-nav" aria-label="Primary">
-      <a class="mark" href="../">CyberReady+</a>
+      <a class="mark" href="/cyberready/">CyberReady<span>+</span></a>
       <ul>
-        <li><a href="./" aria-current="page">Builders</a></li>
-        <li><a href="../for-reviewers/">Reviewers</a></li>
-        <li><a href="../for-authorities/">Authorities</a></li>
-        <li><a href="../how-it-works/">How it works</a></li>
+        <li><a href="/cyberready/for-builders/" aria-current="page">Builders</a></li>
+        <li><a href="/cyberready/for-reviewers/">Reviewers</a></li>
+        <li><a href="/cyberready/for-authorities/">Authorities</a></li>
+        <li><a href="/cyberready/how-it-works/">How it works</a></li>
       </ul>
     </nav>
 
@@ -29,30 +29,30 @@
       <p>Pick <strong>exactly one</strong> first move:</p>
 
       <h3>1. Safe try</h3>
-      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
+      <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
 cyberready doctor
 cyberready demo</code></pre>
       <p class="muted"><code>demo</code> prints a one-pager path. Add <code>--open</code> only if you want the OS to open it. Pin <code>@v0.4.3</code>.</p>
 
       <h3>2. Product repo</h3>
-      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>cd /path/to/your/product
+      <pre class="mono"><code>cd /path/to/your/product
 cyberready init
 cyberready check</code></pre>
       <p class="muted">Default pack is <strong>house-policy</strong>. Before a review wave: <code>prepare-release</code>, then a human <code>attest</code>.</p>
 
       <h3>3. CI</h3>
-      <pre class="mono" style="display:block;padding:0.85rem 1rem;overflow-x:auto;background:rgba(61,79,102,0.08);"><code>- uses: afelin/cyberready@v0.4.3
+      <pre class="mono"><code>- uses: afelin/cyberready@v0.4.3
   with:
     heal: "true"</code></pre>
       <p class="muted">Drop-in example: repo <code>examples/workflows/cyberready-check.yml</code>.</p>
 
-      <p>Recipes: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/60-second-paths.md">60-second paths</a>. Sample without demo: <a href="../samples/onepager.html">buyer one-pager</a>.</p>
+      <p>Recipes: <a href="https://github.com/afelin/cyberready/blob/main/docs/getting-started/60-second-paths.md">60-second paths</a>. Sample without demo: <a href="/cyberready/samples/onepager.html">buyer one-pager</a>.</p>
 
       <p class="muted"><strong>Works with assistants</strong> — run the CLI, then <code>cyberready export --context-pack</code>. Optional thin MCP: repo <code>examples/mcp</code>. Contract: <a href="https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md">docs/assistant-loop.md</a>.</p>
     </section>
 
     <footer class="site-footer">
-      <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="../samples/onepager.html">Sample</a> · <a href="../whitepaper/">White paper</a> · <a href="../security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
+      <p><a href="/cyberready/">Home</a> · <a href="/cyberready/llms.txt">llms.txt</a> · <a href="/cyberready/samples/onepager.html">Sample</a> · <a href="/cyberready/whitepaper/">White paper</a> · <a href="/cyberready/security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>

@@ -7,22 +7,23 @@
   <meta name="description" content="CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Sans:wght@400;560;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../assets/site.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/cyberready/assets/site.css" />
   <style>
     .paper { max-width: 44rem; padding: 2.5rem 0 4rem; }
-    .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; }
-    .paper h2 { font-family: var(--font-display); margin-top: 2rem; font-size: 1.35rem; }
+    .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; font-weight: 600; }
+    .paper h2 { font-family: var(--font-display); margin-top: 2rem; font-size: 1.35rem; font-weight: 600; }
     .paper h3 { margin-top: 1.25rem; font-size: 1.05rem; }
     .paper pre {
-      overflow-x: auto; background: #161a24; color: #e8eaed;
+      overflow-x: auto; background: var(--ink); color: var(--paper);
       padding: 1rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.45;
+      border: 1px solid var(--ink);
     }
     .paper table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 1rem 0; }
-    .paper th, .paper td { border-bottom: 1px solid var(--line); text-align: left; padding: 0.45rem 0.35rem; vertical-align: top; }
+    .paper th, .paper td { border-bottom: 1px solid var(--paper-dark); text-align: left; padding: 0.45rem 0.35rem; vertical-align: top; }
     .paper blockquote {
-      margin: 1rem 0; padding: 0.75rem 1rem; border-left: 3px solid var(--steel);
-      background: rgba(61, 79, 102, 0.06); color: var(--muted);
+      margin: 1rem 0; padding: 0.75rem 1rem; border-left: 2px solid var(--ink);
+      background: var(--paper-alt); color: var(--muted);
     }
     .paper ol { padding-left: 1.25rem; }
   </style>
@@ -30,12 +31,12 @@
 <body>
   <div class="wrap">
     <nav class="site-nav" aria-label="Primary">
-      <a class="mark" href="../">CyberReady+</a>
+      <a class="mark" href="/cyberready/">CyberReady<span>+</span></a>
       <ul>
-        <li><a href="../for-builders/">Builders</a></li>
-        <li><a href="../for-reviewers/">Reviewers</a></li>
-        <li><a href="../for-authorities/">Authorities</a></li>
-        <li><a href="../how-it-works/">How it works</a></li>
+        <li><a href="/cyberready/for-builders/">Builders</a></li>
+        <li><a href="/cyberready/for-reviewers/">Reviewers</a></li>
+        <li><a href="/cyberready/for-authorities/">Authorities</a></li>
+        <li><a href="/cyberready/how-it-works/">How it works</a></li>
       </ul>
     </nav>
 
@@ -72,7 +73,7 @@
         <li><strong>Review pack</strong> — <code>prepare-release</code> writes layered reports and a buyer one-pager (supplier evidence summary).</li>
         <li><strong>Optional attest</strong> — a human runs <code>attest</code> when ready. Until ssh-agent signed: <strong>UNSIGNED — not cryptographically verified</strong>.</li>
       </ol>
-      <p>Committed teaching sample (before/after): <a href="../samples/onepager.html">samples/onepager.html</a>.</p>
+      <p>Committed teaching sample (before/after): <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>.</p>
 
       <h2>5. Evidence catalog and trust levels</h2>
       <table>
@@ -132,15 +133,15 @@
       <ul>
         <li>Product narrative: this static site</li>
         <li>Adoption clarity: <a href="https://github.com/afelin/cyberready/blob/main/docs/intent-vs-scope.md">docs/intent-vs-scope.md</a></li>
-        <li>Authorities / CISO: <a href="../for-authorities/">for authorities</a></li>
-        <li>Security: <a href="../security/">security</a></li>
+        <li>Authorities / CISO: <a href="/cyberready/for-authorities/">for authorities</a></li>
+        <li>Security: <a href="/cyberready/security/">security</a></li>
         <li>Install and commands: <a href="https://github.com/afelin/cyberready">repository README</a></li>
       </ul>
       <p class="muted">Technical paper only — no ops or GTM runbooks.</p>
     </article>
 
     <footer class="site-footer">
-      <p><a href="../">Home</a> · <a href="../llms.txt">llms.txt</a> · <a href="../samples/onepager.html">Sample</a> · <a href="./">White paper</a> · <a href="../security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
+      <p><a href="/cyberready/">Home</a> · <a href="/cyberready/llms.txt">llms.txt</a> · <a href="/cyberready/samples/onepager.html">Sample</a> · <a href="/cyberready/whitepaper/">White paper</a> · <a href="/cyberready/security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
