@@ -17,13 +17,13 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 | Page | Audience | Story |
 |------|----------|--------|
 | `index.html` | Anyone | Primary sentence, plain ladder, **three ways in** chips (Write / Bring / CI), CTA **Pick how you start** |
-| `how-it-works/` | Anyone | Same three ways → stages (Write adds draft choice) → local check → review pack → human review |
+| `how-it-works/` | Anyone | Same three ways → curb outlines on Write → drafts → local check → review pack → human review |
 | `for-builders/` | Builders | Install / init / check; Write HITL line; Bring; CI pin `@v0.5.0`; **Daily loop** (`curb` alias, heal/ask, share, attest/proof) |
 | `for-reviewers/` | Buyers / reviewers | Buyer one-pager + trust table; research brief demoted (supplier writer aid) |
 | `for-authorities/` | CISO / auditors | Structural evidence for human review; not conformity assessment |
 | `samples/onepager.html` | Reviewers / teaching | Buyer one-pager sample; Sources informational ≠ gate input |
 | `samples/research-brief.html` | Builders (optional) | Allowlisted research brief sample — never a gate input |
-| `whitepaper/` | Deep readers | Intent / loop / trust / non-claims |
+| `whitepaper/` | Deep readers | Intent / curb outlines + pathway / feature surface / trust / non-claims |
 | `security/` | Builders / CISO | Trust surface pointer |
 | `llms.txt` | Agents | Machine-readable index |
 

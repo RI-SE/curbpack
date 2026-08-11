@@ -6,7 +6,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md).
+Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/) (optional mirror: [afelin.github.io/curbpack](https://afelin.github.io/curbpack/)). Pin Action / examples at **`@v0.5.0`**.
 
 ---
 
@@ -23,6 +23,7 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
 - Packs are **data** (checklists shaped like regulatory annex drafts—not law).
 - Default cold start is **house-policy**. Cyber Resilience Act (CRA)–shaped packs are opt-in only.
 - Humans retain judgment; gate pass means gates passed on this tree for human review.
+- Development is supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE funds and hosts credibility surfaces; it does **not** certify products that use Curbpack gate results.
 
 ## 3. Architecture
 
@@ -44,31 +45,65 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
 - **No remote policy service** required for daily `check`.
 - Optional Unix-domain socket for IDE/integrator IPC — continues if unused; socket defaults to a private path with mode `0600`.
 
-## 4. Worked example
+## 4. Three ways in and curb outlines
 
-1. **Red findings** — e.g. missing `SECURITY.md`, forbidden claim-adjacent wording, incomplete dependency pin note. `curbpack check` exits non-zero; machine-readable findings (JSON) and a short markdown report list severity and remediation.
-2. **Remediate** — add the disclosure path, remove certification theater, record the pin; optionally `curbpack check --heal` for missing stubs only.
-3. **Re-check** — gates passed on this tree (exit 0). Local gate score is not certification.
-4. **Review pack** — `prepare-release` writes layered reports and a buyer one-pager (supplier evidence summary).
-5. **Optional attest** — a human runs `attest` when ready. Until ssh-agent signed: **UNSIGNED — not cryptographically verified**.
+Every path ends in the same local `check`. Optional drafts never replace check.
 
-A committed teaching sample (before/after): [`site/samples/onepager.html`](../site/samples/onepager.html).
+| Way | Meaning |
+|-----|---------|
+| **Write→Check** | Build **curb outlines** via the pathway warm-start (answer a few enums; CLI suggests closed-world packs), human `confirm-packs`, optional research brief, **dual drafts** with **Recommended: A\|B**, cite-check (refuses uncited Claims), human `confirm-prose`, then check. |
+| **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
+| **CI** | Run `check` alone (Action `@v0.5.0` or local). **Skips curb outlines.** |
 
-## 5. Evidence catalog and trust levels
+**Curb outlines** are the first Write-path step: a local sketch of *what you are curbing* (product posture, house-first, sector)—not a pathway to regulation and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
+
+Mnemonic: *Curb outlines → packs → check → hand off.*
+
+## 5. Feature surface (shipped)
+
+| Area | What it does |
+|------|----------------|
+| **Init / doctor / demo** | Scaffold house-policy (hooks, skill, IDE); environment confidence; sandbox check (`demo` opens a browser only with `--open`) |
+| **check / validate** | Daily gates; `--heal` adds missing stubs only; dual-rep JSON + markdown |
+| **ask --propose** | Explain GateFailure JSON; propose-only remediations |
+| **pathway** | Warm-start: `status`, `suggest`, `note`, human `confirm-*` |
+| **research / cite-check** | Allowlisted citation packet + human brief; never gates check; cite-or-refuse before `confirm-prose` |
+| **export / share** | SARIF, ContextPack, buyer-questions, lay-of-land, explain-packet; `share` = check → context-pack → buyer-questions → prepare-release |
+| **prepare-release / attest** | Review pack + buyer one-pager; human Git Notes capsule (never auto-attest) |
+| **proof verify** | After attest, open local `proof/index.html` and compare the evidence pointer hash—still human judgment |
+| **packs** | `list` / `import` / `export-graph` (policy graph) / `doctor` |
+| **Action / alias** | `afelin/curbpack@v0.5.0`; short alias `curb` = `curbpack` |
+| **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
+
+Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/env.
+
+## 6. Worked example
+
+1. **Curb outlines (Write path)** — `curbpack pathway status` → `pathway suggest …` → human `confirm-packs` → optional `research` → dual drafts + Recommended A\|B → human pick → `research --cite-check` → human `confirm-prose`.
+2. **Red findings** — e.g. missing `SECURITY.md`, forbidden claim-adjacent wording, incomplete dependency pin note. `curbpack check` exits non-zero; machine-readable findings (JSON) and a short markdown report list severity and remediation.
+3. **Remediate** — add the disclosure path, remove certification theater, record the pin; optionally `curbpack check --heal` for missing stubs only; `curbpack ask … --propose` for propose-only hints.
+4. **Re-check** — gates passed on this tree (exit 0). Local gate score is not certification.
+5. **Review pack** — `curbpack share` (or `prepare-release`) writes layered reports and a buyer one-pager (supplier evidence summary). Human `confirm-share` when reviewing handoff.
+6. **Optional attest** — a human runs `attest` when ready. Until ssh-agent signed: **UNSIGNED — not cryptographically verified**. Then open `proof/index.html` vs the evidence pointer.
+
+Bring and CI skip step 1 and go straight to check. A committed teaching sample (before/after): [`site/samples/onepager.html`](../site/samples/onepager.html).
+
+## 7. Evidence catalog and trust levels
 
 | Artifact | Trust level (honest) |
 |----------|----------------------|
 | Gate JSON / action report | Structural evidence — reproducible locally; not a legal finding |
 | SARIF export | Same gates in CI/IDE format — not certification |
 | Buyer-questions / ContextPack / lay-of-land | Human checklist, washed assistant snapshot, map — not a CVE product |
+| Pathway seed / research packet | Session + citation trail — informational; not gate inputs |
 | Review pack / buyer one-pager | Procurement snapshot — not a certificate of conformity |
 | CycloneDX SBOM / OpenVEX drafts | Best-effort inventory and draft notes |
 | Git Notes attest capsule | **ssh-agent-signed** = signature present; **unsigned** ≠ verified |
 | Explain-packet | Sanitized tutor surface — never greenlights gates |
 
-**Unsigned ≠ verified.** Green readiness % is a **local gate score on this tree**, not a certification score.
+**Unsigned ≠ verified.** Green readiness % is a **local gate score on this tree**, not a certification score. Daily `check` does not generate or open the one-pager.
 
-## 6. Attestation and install integrity
+## 8. Attestation and install integrity
 
 State hash seed: `commit|parent|sbom_digest|vex_digest` (no wall-clock in the hash).
 
@@ -81,7 +116,7 @@ Synthetic `agent-bind:` tokens are never accepted as verified signatures.
 
 Install paths (`install.sh`, GitHub Action) verify release `checksums.txt` with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred.
 
-## 7. Non-claims and RISE neutrality
+## 9. Non-claims and RISE neutrality
 
 Curbpack does not:
 
@@ -90,30 +125,37 @@ Curbpack does not:
 - Guarantee absence of vulnerabilities
 - Claim that green gates equal market access
 
-Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.
+Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Public Pages under RI-SE are a credibility home—not an endorsement of adopter products.
 
 Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims. Public wording: [promotion firewall](../docs/promotion-firewall.md) · [voice and terms](../docs/voice-and-terms.md). CI enforces via `scripts/claim-safety.sh`.
 
-## 8. Limitations
+## 10. Limitations
 
 - Pack coverage is only as good as pack authors; thin packs create false confidence.
 - Regex and text checks are heuristics with size/time guards — not full program analysis.
 - SBOM/VEX generation is best-effort from common Node lockfiles.
 - Windows is unsupported for release binaries and the sock bridge.
 - Client-side hash-pointer verify does not imply remote notary services.
+- Pathway suggest is closed-world (frozen catalog + imported partner packs); it does not invent regulation text or pack ids.
 
-## 9. Glossary
+## 11. Glossary
 
 | Term | Meaning in this paper |
 |------|------------------------|
 | **CE** | European conformity marking — Curbpack does not issue CE marks |
 | **CRA** | EU Cyber Resilience Act — shapes some pack drafts; gate green ≠ legal conformity |
+| **Curb outlines** | Write-path warm-start sketch (pathway enums / suggested packs)—not the law |
+| **Pathway** | Optional warm-start CLI (`pathway status\|suggest\|confirm-*\|note`); seed is not a gate input |
+| **Dual-draft HITL** | Option A + Option B + Recommended A\|B; human picks; then cite-check |
+| **Cite-check** | Refuses uncited Claims against the research packet before `confirm-prose` |
+| **Research brief** | Allowlisted Sources for writers — never gates check |
 | **SBOM** | Software Bill of Materials (e.g. CycloneDX drafts) |
 | **SARIF** | Static Analysis Results Interchange Format for CI/IDEs |
 | **GRC** | Governance, Risk, Compliance platforms — not what Curbpack is |
 | **Rule pack** | JSON checklist of gates; data, not hard-coded law |
 | **Review pack** | Evidence folder for human review |
 | **Buyer one-pager** | Supplier evidence summary HTML |
+| **ContextPack** | Washed assistant snapshot (`export --context-pack`) |
 | **Structural evidence** | Documentation and dependency checks for humans |
 | **Notified body** | Independent conformity-assessment organization — not replaced by this tool |
 | **Conformity assessment** | Formal legal process — Curbpack prepares human-review evidence only |
@@ -121,19 +163,21 @@ Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product
 | **ReDoS** | Regular expression denial-of-service — packs are length/time guarded |
 | **OPA** | Open Policy Agent — explicit non-goal for OSS |
 
-Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audience.md). Authorities brief: [`docs/for-authorities.md`](../docs/for-authorities.md).
+Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audience.md). Authorities brief: [`docs/for-authorities.md`](../docs/for-authorities.md). Pathway depth: [`docs/getting-started/pathway.md`](../docs/getting-started/pathway.md).
 
-## 10. Related surfaces
+## 12. Related surfaces
 
-- Product narrative: public static site under `site/`
+- Product narrative: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/) (optional mirror: [afelin.github.io/curbpack](https://afelin.github.io/curbpack/))
+- How it works / builders: site `how-it-works/` · `for-builders/`
 - Adoption clarity: `docs/intent-vs-scope.md`
 - Authorities / CISO: `docs/for-authorities.md`
 - Security plain language: `docs/security-model.md`
 - Install and commands: repository README
 - Voice canon: `docs/voice-and-terms.md`
+- Assistant contract: `docs/assistant-loop.md`
 
 ---
 
-*Document version aligned with Curbpack open-source line. No go-to-market playbooks or CI runbooks are included here by design.*
+*Document version aligned with Curbpack open-source line `@v0.5.0`. No go-to-market playbooks or CI runbooks are included here by design.*
 
 > **Optional, separate product:** Coreward is a private tutor/enforce client that may consume Curbpack explain-packets over an optional Unix socket. Curbpack is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
