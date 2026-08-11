@@ -19,6 +19,7 @@
         <li><a href="/curbpack/for-reviewers/">Reviewers</a></li>
         <li><a href="/curbpack/for-authorities/">Authorities</a></li>
         <li><a href="/curbpack/how-it-works/" aria-current="page">How it works</a></li>
+        <li><a href="https://github.com/RI-SE/curbpack" rel="noopener">Source</a></li>
       </ul>
     </nav>
 
@@ -38,7 +39,7 @@
       <svg class="diagram" viewBox="0 0 720 280" role="img" aria-label="Write path through drafts to local check; Bring and CI go straight to check">
         <rect x="16" y="20" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
         <text x="91" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Write→Check</text>
-        <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Curb outlines</text>
+        <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">outlines → map → drafts</text>
 
         <rect x="16" y="96" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
         <text x="91" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Bring-docs→Check</text>
@@ -85,6 +86,9 @@
       </ul>
       <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree. Compose with <code>curbpack init --packs …</code> or <code>.curbpack.json</code>. Pathway for Write is optional — prefer “choose checklists,” not “pathway to regulation.”</p>
 
+      <h3>Local pack→rule map (after confirm-packs)</h3>
+      <p>On the Write path, after you confirm packs, Curbpack exports a <strong>local pack→rule map</strong> that helps navigate house drafts. It is not regulation text and does not replace <code>check</code>. Optional refresh anytime: <code>curbpack packs export-graph</code>.</p>
+
       <h3>2. Draft choice (Write path only)</h3>
       <p>Assistants propose <strong>Option A</strong> and <strong>Option B</strong>, state <strong>Recommended: A or B</strong> with a few reasons, then stop for you. Optional allowlisted <a href="/curbpack/samples/research-brief.html">research brief</a> informs cites; it never changes check pass/fail. After you pick, run cite-check before owning the prose. Bring and CI skip this stage.</p>
 
@@ -104,7 +108,7 @@
     </section>
 
     <footer class="site-footer">
-      <p><a href="/curbpack/">Home</a> · <a href="/curbpack/llms.txt">llms.txt</a> · <a href="/curbpack/samples/onepager.html">Sample</a> · <a href="/curbpack/whitepaper/">White paper</a> · <a href="/curbpack/security/">Security</a> · <a href="https://github.com/afelin/curbpack">GitHub</a></p>
+      <p><a href="/curbpack/">Home</a> · <a href="/curbpack/llms.txt">llms.txt</a> · <a href="/curbpack/samples/onepager.html">Sample</a> · <a href="/curbpack/whitepaper/">White paper</a> · <a href="/curbpack/security/">Security</a> · <a href="https://github.com/RI-SE/curbpack" rel="noopener">Source (RI-SE)</a> · <a href="https://github.com/afelin/curbpack" rel="noopener">Mirror</a></p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>

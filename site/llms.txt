@@ -10,7 +10,7 @@ Local-first CLI. Rule packs on disk. Review pack for human review. Green gates m
 
 ## Three ways in
 
-Write (optional pathway interview that suggests checklists → dual drafts → cite-check refuses uncited Claims), Bring existing docs onto pack paths, or CI alone — same local `check`. Human confirms use a TTY or `--i-am-human`. Research briefs never gate pass/fail.
+Write starts with **curb outlines** (your pathway sketch). After pack confirm, a **local pack→rule map** steers drafting—not a legal oracle—then dual drafts → cite-check refuses uncited Claims. Bring existing docs onto pack paths, or CI alone — same local `check`. Human confirms use a TTY or `--i-am-human`. Research briefs never gate pass/fail.
 
 ## What not
 
@@ -20,22 +20,23 @@ Write (optional pathway interview that suggests checklists → dual drafts → c
 
 ## Start
 
+- Repo (primary): https://github.com/RI-SE/curbpack — mirror: https://github.com/afelin/curbpack
 - Site (credibility home): https://ri-se.github.io/curbpack/ — optional mirror: https://afelin.github.io/curbpack/
-- Install: https://github.com/afelin/curbpack#install
+- Install: https://github.com/RI-SE/curbpack#install
 - Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
-- Pathway (Write depth): https://github.com/afelin/curbpack/blob/main/docs/getting-started/pathway.md
+- Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
 - White paper: https://ri-se.github.io/curbpack/whitepaper/
-- Voice: https://github.com/afelin/curbpack/blob/main/docs/voice-and-terms.md
-- Assistant contract: https://github.com/afelin/curbpack/blob/main/docs/assistant-loop.md
+- Voice: https://github.com/RI-SE/curbpack/blob/main/docs/voice-and-terms.md
+- Assistant contract: https://github.com/RI-SE/curbpack/blob/main/docs/assistant-loop.md
 - `curb` = short alias for `curbpack` (same binary)
 - Red: `curb check --heal` then `curb ask … --propose`, then re-check — never invent green
 - Green handoff: `curb share` (check → context-pack → buyer-questions → prepare-release)
 - ContextPack: `curbpack export --context-pack`
-- Thin MCP example: https://github.com/afelin/curbpack/tree/main/examples/mcp
+- Thin MCP example: https://github.com/RI-SE/curbpack/tree/main/examples/mcp
 - Pin: `@v0.5.0`
 
 ## Optional
 
-- Pathway / research / dual-draft / cite-check: https://github.com/afelin/curbpack/blob/main/docs/getting-started/pathway.md (research never gates check; cite-check before confirm-prose)
+- Pathway / research / dual-draft / cite-check: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md (research never gates check; cite-check before confirm-prose)
 - Optional separate product (tutor/enforce client): https://afelin.github.io/coreward/ — Curbpack is self-sustaining without it.
