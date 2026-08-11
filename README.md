@@ -13,7 +13,7 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 | Reader | Start |
 |--------|--------|
-| Builder | Three ways in — [60-second paths](docs/getting-started/60-second-paths.md) · [pathway](docs/getting-started/pathway.md) · [site builders](site/for-builders/) |
+| Builder | Three ways in — [60-second paths](docs/getting-started/60-second-paths.md) · [pathway](docs/getting-started/pathway.md) · [sync both remotes](docs/getting-started/sync-both-remotes.md) · [site builders](site/for-builders/) |
 | Buyer / reviewer | Buyer one-pager + trust table — [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
 | CISO / authority / auditor | What artifacts mean — [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
 | Abbreviations / audience map | [Glossary and audience](docs/glossary-and-audience.md) |
