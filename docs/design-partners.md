@@ -1,12 +1,12 @@
 # Design partners
 
-Product brief for five external repos that keep Action `@v0.4.3` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard. Public [`ADOPTERS.md`](../ADOPTERS.md) rows only on partner opt-in — never invent entries.
+Product brief for five external repos that keep Action `@v0.5.0` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard. Public [`ADOPTERS.md`](../ADOPTERS.md) rows only on partner opt-in — never invent entries.
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
 | Field | Content |
 |-------|---------|
-| Ask | Add Action `@v0.4.3` **or** `cyberready init` + hooks; keep for 14 days |
+| Ask | Add Action `@v0.5.0` **or** `curbpack init` + hooks; keep for 14 days |
 | Success | First green &lt;10 min; second green ≤7 days; “judge clicked without pitch?” Y/N |
 | Forbidden asks | Certification claims; uploading IP to a cloud policy brain |
 | Weekly ritual | 15-min note: path taken (A/B/C), stall step, keep/kill |
@@ -21,15 +21,15 @@ Object owner fills rows during outreach. Empty slots are fine — **no fake logo
 | _(slot 2 — OSS)_ | | | | | | |
 | _(slot 3 — SME)_ | | | | | | |
 | _(slot 4 — SME)_ | | | | | | |
-| _(slot 5 — optional later Coreward-as-consumer)_ | | | | | | CyberReady contracts only this round; live Coreward dogfood is a later plan |
+| _(slot 5 — optional later Coreward-as-consumer)_ | | | | | | Curbpack contracts only this round; live Coreward dogfood is a later plan |
 
-Paths: **A** = safe try (`doctor`/`demo`) · **B** = product repo (`init`+hooks) · **C** = CI Action `@v0.4.3`.
+Paths: **A** = safe try (`doctor`/`demo`) · **B** = product repo (`init`+hooks) · **C** = CI Action `@v0.5.0`.
 
 ## Target mix
 
 | Slot | Profile |
 |------|---------|
-| 2 | OSS maintainers (CyberReady adopters) |
+| 2 | OSS maintainers (Curbpack adopters) |
 | 2 | SME / supplier-ish product repos |
 | 1 | Optional later: Coreward-as-consumer (not required this round) |
 
@@ -47,7 +47,7 @@ Do **not** send partners to `docs/gtm-oss/` (non-product).
 
 Stars are not the scoreboard.
 
-**Look here (not a CVE product):** after green, `cyberready export --lay-of-land` surfaces an informational watchlist∩SBOM join inside the shareable map. Point partners at that file when they ask “what should I look at?” — do not pitch vulnerability management.
+**Look here (not a CVE product):** after green, `curbpack export --lay-of-land` surfaces an informational watchlist∩SBOM join inside the shareable map. Point partners at that file when they ask “what should I look at?” — do not pitch vulnerability management.
 
 ## Object-owner cadence checklist
 
@@ -58,7 +58,7 @@ Ship the rhythm in-repo; the calendar is human-operated.
 | Every merge | `redteam-pilot` required green |
 | Weekly | Run `./scripts/time-to-green.sh`; skim partner notes; **zero** new trust-surface features |
 | Biweekly | Kill/keep on friction from first-move issues |
-| Day 30 of freeze | Explicit freeze review: renew, narrow, or cut next bugfix-only tag — `v0.4.3` is the current instrument-panel pin; next cut only after freeze review |
+| Day 30 of freeze | Explicit freeze review: renew, narrow, or cut next bugfix-only tag — `v0.5.0` is the current instrument-panel pin; next cut only after freeze review |
 
 ### Explicit nos
 

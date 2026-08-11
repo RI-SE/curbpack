@@ -3,8 +3,8 @@
 For internal IT / engineering teams who want evidence gates **without** EU CRA framing on day one.
 
 ```bash
-cyberready init
-cyberready check
+curbpack init
+curbpack check
 ```
 
 `init` defaults (one line):
@@ -12,8 +12,8 @@ cyberready check
 | Default | What you get |
 |---------|----------------|
 | Pack | `house-policy` |
-| Hooks | pre-commit → `cyberready check` |
-| Skill | `.cursor/skills/cyberready/SKILL.md` |
+| Hooks | pre-commit → `curbpack check` |
+| Skill | `.cursor/skills/curbpack/SKILL.md` |
 | IDE | VS Code / Cursor tasks |
 
 Use `--bare` to skip hooks/skill/ide. Override packs with `--packs` only when you need CRA/medtech on day one.
@@ -21,10 +21,10 @@ Use `--bare` to skip hooks/skill/ide. Override packs with `--packs` only when yo
 Add CRA or medtech later:
 
 ```bash
-# edit .cyberready.json packs array, or re-init in a fresh branch:
-cyberready init --packs cra-baseline,house-policy
+# edit .curbpack.json packs array, or re-init in a fresh branch:
+curbpack init --packs cra-baseline,house-policy
 ```
 
 Claim safety: gate pass prepares evidence for human review — not certification.
 
-Warm-start (enum seed → HITL ticks): [pathway](pathway.md) — `cyberready pathway status`.
+Warm-start (enum seed → HITL ticks): [pathway](pathway.md) — `curbpack pathway status`.

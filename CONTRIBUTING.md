@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. CyberReady+ prepares **evidence for human review** — not a conformity assessment.
+Thanks for helping. Curbpack prepares **evidence for human review** — not a conformity assessment.
 
 ## Dev loop
 
@@ -31,7 +31,7 @@ Do not introduce certification / CE / notified-body language. Run `scripts/claim
 
 ## Trust surface
 
-Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety, and explain-packet airlock are under freeze through the **v0.4.x** line — bugfixes only. See `docs/security-model.md`. Pin stays `@v0.4.3` until the next freeze review.
+Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety, and explain-packet airlock are under freeze through the **v0.4.x** line — bugfixes only. See `docs/security-model.md`. Pin stays `@v0.5.0` until the next freeze review.
 
 ## Strategy boundary (contributors)
 

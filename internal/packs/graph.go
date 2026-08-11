@@ -158,7 +158,7 @@ func citationAttrs(c Citation) map[string]string {
 	}
 }
 
-// ExportPolicyGraph writes .github/cyberready/graph/policy-graph.json (or outPath).
+// ExportPolicyGraph writes .github/curbpack/graph/policy-graph.json (or outPath).
 func ExportPolicyGraph(root string, packIDs []string, outPath string) (string, error) {
 	if len(packIDs) == 0 {
 		packIDs = []string{"house-policy"}
@@ -168,7 +168,7 @@ func ExportPolicyGraph(root string, packIDs []string, outPath string) (string, e
 		return "", err
 	}
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "graph", "policy-graph.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "graph", "policy-graph.json")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", err

@@ -2,12 +2,12 @@
 
 ```bash
 # Magic path (no product mutation)
-curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
-cyberready doctor && cyberready demo
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curbpack doctor && curbpack demo
 
 # Or build from source
-go build -o bin/cyberready ./cmd/cyberready
-./bin/cyberready demo --keep
+go build -o bin/curbpack ./cmd/curbpack
+./bin/curbpack demo --keep
 ```
 
 ## Layout

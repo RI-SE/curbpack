@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build (e.g. v0.4.3); leave empty to use github.ref_name"
+        description: "Tag to build (e.g. v0.5.0); leave empty to use github.ref_name"
         required: false
         default: ""
 
@@ -45,20 +45,20 @@ jobs:
           for pair in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
             GOOS=${pair%/*}
             GOARCH=${pair#*/}
-            out="dist/cyberready_${GOOS}_${GOARCH}"
+            out="dist/curbpack_${GOOS}_${GOARCH}"
             echo "building $out"
             CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
               -trimpath \
-              -ldflags="-s -w -X github.com/afelin/cyberready/internal/buildinfo.Version=${VERSION}" \
-              -o "$out" ./cmd/cyberready
+              -ldflags="-s -w -X github.com/afelin/curbpack/internal/buildinfo.Version=${VERSION}" \
+              -o "$out" ./cmd/curbpack
           done
-          (cd dist && sha256sum cyberready_* > checksums.txt)
+          (cd dist && sha256sum curbpack_* > checksums.txt)
           ls -la dist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: cyberready-binaries
+          name: curbpack-binaries
           path: dist/*
 
       - name: Create GitHub Release
@@ -69,12 +69,12 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/cyberready_* dist/checksums.txt --clobber
+            gh release upload "$TAG" dist/curbpack_* dist/checksums.txt --clobber
           else
-            gh release create "$TAG" dist/cyberready_* dist/checksums.txt \
-              --title "CyberReady+ ${TAG}" \
+            gh release create "$TAG" dist/curbpack_* dist/checksums.txt \
+              --title "Curbpack ${TAG}" \
               --notes "$(cat <<EOF
-          ## CyberReady+ ${TAG}
+          ## Curbpack ${TAG}
 
           Local evidence CLI — prepares review packs for **human review**. Not a conformity assessment or certification.
 
@@ -87,8 +87,8 @@ jobs:
           ### Install (no Go)
 
           \`\`\`bash
-          curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
-          cyberready doctor && cyberready demo
+          curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+          curbpack doctor && curbpack demo
           \`\`\`
 
           ### Claim safety

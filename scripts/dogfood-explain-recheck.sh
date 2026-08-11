@@ -4,20 +4,20 @@
 #
 # Usage (from repo root):
 #   ./scripts/dogfood-explain-recheck.sh
-#   CYBERREADY_BIN=./bin/cyberready ./scripts/dogfood-explain-recheck.sh
+#   CURBPACK_BIN=./bin/curbpack ./scripts/dogfood-explain-recheck.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BIN="${CYBERREADY_BIN:-}"
+BIN="${CURBPACK_BIN:-}"
 if [[ -z "$BIN" ]]; then
   mkdir -p "$ROOT/bin"
-  go build -o "$ROOT/bin/cyberready" ./cmd/cyberready
-  BIN="$ROOT/bin/cyberready"
+  go build -o "$ROOT/bin/curbpack" ./cmd/curbpack
+  BIN="$ROOT/bin/curbpack"
 fi
 if [[ ! -x "$BIN" ]]; then
-  echo "dogfood-explain-recheck: CYBERREADY_BIN not executable: $BIN" >&2
+  echo "dogfood-explain-recheck: CURBPACK_BIN not executable: $BIN" >&2
   exit 1
 fi
 
@@ -62,7 +62,7 @@ echo "PASS  1 check red (exit=$CHECK_RED)"
   cd "$WORKDIR"
   "$BIN" export --explain-packet >/dev/null
 )
-PKT="$WORKDIR/.github/cyberready/cache/explain-packet.json"
+PKT="$WORKDIR/.github/curbpack/cache/explain-packet.json"
 test -f "$PKT"
 if ! grep -q '<untrusted_metadata>' "$PKT"; then
   echo "FAIL: missing untrusted_metadata wrapper" >&2
@@ -87,7 +87,7 @@ echo "PASS  3 contract consumer + refuse PEM/home"
 
 # 4) Sock explain_packet + validate_delta (still red)
 SOCK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cr-sock.XXXXXX")"
-SOCK="$SOCK_DIR/cyberready.sock"
+SOCK="$SOCK_DIR/curbpack.sock"
 "$BIN" sock --path "$SOCK" --repo "$WORKDIR" >/tmp/cr-sock-dogfood.log 2>&1 &
 SOCK_PID=$!
 sock_cleanup() {
@@ -146,7 +146,7 @@ cat <<EOF
 
 --- CHAT HANDOFF (manual) ---
 Packet: $PKT
-Sock:   $SOCK  (CYBERREADY_SOCK=$SOCK)
+Sock:   $SOCK  (CURBPACK_SOCK=$SOCK)
 Rules:  summarize only; never attest; never claim fixed from the packet.
 Next:   apply a fix in the editor, then re-run validate_delta / check.
 This script continues with heal → green without generative chat.

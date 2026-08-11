@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/packs"
 )
 
 const (
@@ -44,7 +44,7 @@ type Requirement struct {
 	Remediation    string   `json:"remediation,omitempty"`
 }
 
-// Packet is the research IR written under .github/cyberready/cache/.
+// Packet is the research IR written under .github/curbpack/cache/.
 type Packet struct {
 	SchemaVersion string        `json:"schema_version"`
 	PackIDs       []string      `json:"pack_ids"`
@@ -69,12 +69,12 @@ type Options struct {
 
 // PacketJSONPath returns the default research-packet.json path.
 func PacketJSONPath(repoRoot string) string {
-	return filepath.Join(repoRoot, ".github", "cyberready", "cache", "research-packet.json")
+	return filepath.Join(repoRoot, ".github", "curbpack", "cache", "research-packet.json")
 }
 
 // PacketMDPath returns the human brief path.
 func PacketMDPath(repoRoot string) string {
-	return filepath.Join(repoRoot, ".github", "cyberready", "cache", "research-brief.md")
+	return filepath.Join(repoRoot, ".github", "curbpack", "cache", "research-brief.md")
 }
 
 // PacketPresent reports whether research-packet.json exists.
@@ -99,7 +99,7 @@ func LoadPacket(repoRoot string) (*Packet, error) {
 	return &p, nil
 }
 
-// ResolvePackIDs picks packs from opts, then .cyberready.json, then pathway seed, else house-policy.
+// ResolvePackIDs picks packs from opts, then .curbpack.json, then pathway seed, else house-policy.
 func ResolvePackIDs(repoRoot string, explicit []string) ([]string, error) {
 	if len(explicit) > 0 {
 		return explicit, nil
@@ -116,7 +116,7 @@ func ResolvePackIDs(repoRoot string, explicit []string) ([]string, error) {
 // readPathwayProposedPacks best-effort reads pathway-seed.json without importing pathway
 // (avoids import cycle: pathway → research).
 func readPathwayProposedPacks(repoRoot string) []string {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "pathway-seed.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "cache", "pathway-seed.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil

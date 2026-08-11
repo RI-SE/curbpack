@@ -1,16 +1,18 @@
 #!/bin/sh
-# CyberReady+ one-click install — downloads a GitHub Release binary (no Go required).
-# Usage: curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh
-# Env: CYBERREADY_VERSION (default: v0.4.3), CYBERREADY_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
+# Curbpack one-click install — downloads a GitHub Release binary (no Go required).
+# Usage: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+# Env: CURBPACK_VERSION (default: v0.5.0), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
+# Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).
 set -eu
 
-REPO="${CYBERREADY_REPO:-afelin/cyberready}"
-VERSION="${CYBERREADY_VERSION:-v0.4.3}"
-INSTALL_DIR="${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}"
+# Dual-read: CURBPACK_* preferred; CYBERREADY_* accepted during cutover.
+REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-afelin/curbpack}}"
+VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-v0.5.0}}"
+INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}}"
 
 claim='Prepares evidence for human review — not a conformity assessment.'
-echo "CyberReady+ installer"
+echo "Curbpack installer"
 echo "  ${claim}"
 echo
 
@@ -37,7 +39,7 @@ case "$arch" in
     ;;
 esac
 
-asset="cyberready_${os}_${arch}"
+asset="curbpack_${os}_${arch}"
 api="https://api.github.com/repos/${REPO}/releases"
 auth_hdr=""
 if [ -n "${GITHUB_TOKEN:-}" ]; then
@@ -65,7 +67,7 @@ fi
 
 if [ -z "${url:-}" ]; then
   echo "could not resolve download URL for ${asset} (tag=${tag:-unknown})" >&2
-  echo "Build from source: go install github.com/afelin/cyberready/cmd/cyberready@latest" >&2
+  echo "Build from source: go install github.com/afelin/curbpack/cmd/curbpack@latest" >&2
   exit 1
 fi
 
@@ -77,8 +79,8 @@ fi
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 echo "Downloading ${tag:-latest} → ${asset}"
-curl -fsSL -o "${tmpdir}/cyberready" "$url"
-chmod +x "${tmpdir}/cyberready"
+curl -fsSL -o "${tmpdir}/curbpack" "$url"
+chmod +x "${tmpdir}/curbpack"
 
 echo "Verifying checksums.txt"
 curl -fsSL -o "${tmpdir}/checksums.txt" "$checksums_url"
@@ -92,9 +94,9 @@ if [ -z "${expected:-}" ]; then
 fi
 
 if command -v sha256sum >/dev/null 2>&1; then
-  actual=$(sha256sum "${tmpdir}/cyberready" | awk '{print $1}')
+  actual=$(sha256sum "${tmpdir}/curbpack" | awk '{print $1}')
 elif command -v shasum >/dev/null 2>&1; then
-  actual=$(shasum -a 256 "${tmpdir}/cyberready" | awk '{print $1}')
+  actual=$(shasum -a 256 "${tmpdir}/curbpack" | awk '{print $1}')
 else
   echo "neither sha256sum nor shasum found — refusing install" >&2
   exit 1
@@ -109,8 +111,10 @@ fi
 echo "Checksum OK (${actual})"
 
 mkdir -p "$INSTALL_DIR"
-mv "${tmpdir}/cyberready" "${INSTALL_DIR}/cyberready"
-echo "Installed: ${INSTALL_DIR}/cyberready"
+mv "${tmpdir}/curbpack" "${INSTALL_DIR}/curbpack"
+ln -sfn curbpack "${INSTALL_DIR}/curb"
+echo "Installed: ${INSTALL_DIR}/curbpack"
+echo "Alias:     ${INSTALL_DIR}/curb → curbpack"
 
 case ":$PATH:" in
   *":${INSTALL_DIR}:"*) ;;
@@ -123,7 +127,7 @@ esac
 
 echo
 echo "Next (safe sandbox, never touches your product):"
-echo "  cyberready doctor"
-echo "  cyberready demo"
+echo "  curb doctor"
+echo "  curb demo"
 echo
 echo "${claim}"

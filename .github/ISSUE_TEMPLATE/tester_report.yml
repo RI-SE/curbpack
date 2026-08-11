@@ -1,28 +1,28 @@
 name: Tester report
-description: Report that you ran cyberready demo or the GitHub Action (activation signal toward 100 happy testers).
+description: Report that you ran curbpack demo or the GitHub Action (activation signal toward 100 happy testers).
 title: "[tester] "
 labels: ["tester"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for trying CyberReady+. Gate results prepare **evidence for human review** — not certification.
+        Thanks for trying Curbpack. Gate results prepare **evidence for human review** — not certification.
 
   - type: checkboxes
     id: activation
     attributes:
       label: What did you run?
       options:
-        - label: `cyberready demo` (sandbox)
-        - label: `cyberready doctor`
-        - label: GitHub Action `cyberready-check`
-        - label: `cyberready check` on my own product repo
+        - label: `curbpack demo` (sandbox)
+        - label: `curbpack doctor`
+        - label: GitHub Action `curbpack-check`
+        - label: `curbpack check` on my own product repo
         - label: `init --skill` / `--ide` / `--hooks`
 
   - type: dropdown
     id: recommend
     attributes:
-      label: Would you recommend CyberReady to a peer?
+      label: Would you recommend Curbpack to a peer?
       options:
         - "Yes"
         - "Not yet"

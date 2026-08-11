@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/attest"
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/release"
-	"github.com/afelin/cyberready/internal/sbom"
-	"github.com/afelin/cyberready/internal/sock"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/release"
+	"github.com/afelin/curbpack/internal/sbom"
+	"github.com/afelin/curbpack/internal/sock"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 func TestGateIDSetsEqualCheckValidateSock(t *testing.T) {
@@ -60,7 +60,7 @@ func TestSBOMDigestPrepareReleaseMatchesAttestBind(t *testing.T) {
 	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, AllowFailingGates: true}); err != nil {
 		t.Fatal(err)
 	}
-	sbomPath := filepath.Join(dir, ".github/cyberready/evidence/sbom.cdx.json")
+	sbomPath := filepath.Join(dir, ".github/curbpack/evidence/sbom.cdx.json")
 	d1 := sbom.FileDigest(sbomPath)
 	if d1 == "" {
 		t.Fatal("missing sbom digest after prepare-release")
@@ -158,9 +158,9 @@ func TestAgentIdentityFromEnv(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeGoodHouse(t, dir)
-	t.Setenv("CYBERREADY_AGENT_ID", "agent-x")
-	t.Setenv("CYBERREADY_MODEL_HASH", "hash-y")
-	t.Setenv("CYBERREADY_MANDATE_ID", "mandate-z")
+	t.Setenv("CURBPACK_AGENT_ID", "agent-x")
+	t.Setenv("CURBPACK_MODEL_HASH", "hash-y")
+	t.Setenv("CURBPACK_MANDATE_ID", "mandate-z")
 	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
 	if err != nil {
 		t.Fatal(err)
@@ -234,7 +234,7 @@ func mustRealGit(t *testing.T, dir string) {
 		}
 	}
 	run("git", "init", "-q")
-	run("git", "config", "user.email", "contract@cyberready.local")
+	run("git", "config", "user.email", "contract@curbpack.local")
 	run("git", "config", "user.name", "Contract")
 	run("git", "commit", "--allow-empty", "-m", "init", "-q")
 }

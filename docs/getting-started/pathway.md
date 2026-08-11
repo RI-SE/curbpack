@@ -2,7 +2,7 @@
 
 **Warm-start and research help you choose a draft; only check decides pass/fail—not certification.**
 
-> **Humans above the fold.** Agents may `status` / `suggest` / `note` / `check` / `share` only. Confirms and attest are human-run: use a TTY, pass `--i-am-human`, or set `CYBERREADY_ALLOW_CONFIRM=1`. Agents stop — never forge ticks.
+> **Humans above the fold.** Agents may `status` / `suggest` / `note` / `check` / `share` only. Confirms and attest are human-run: use a TTY, pass `--i-am-human`, or set `CURBPACK_ALLOW_CONFIRM=1`. Agents stop — never forge ticks.
 
 One next ask. Optional two drafts with a recommendation. Then check. Humans confirm and attest—agents never stamp those.
 
@@ -13,30 +13,32 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 | Way | Meaning |
 |-----|---------|
 | **Write→Check** | Optional pathway interview that suggests checklists: answer a few questions, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check (refuses uncited Claims), then check. |
-| **Bring-docs→Check** | Put existing policies on pack paths (or point a custom pack JSON at your paths), then check. No portal PDF ingest. |
-| **CI** | Run `check` alone anytime (Action or local). |
+| **Bring-docs→Check** | Put existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
+| **CI** | Run `check` alone anytime (Action or local). **Skips curb outlines.** |
 
-Any way in ends in a review pack for a human to judge and optionally `attest`. Confirms need a TTY, `--i-am-human`, or `CYBERREADY_ALLOW_CONFIRM=1`.
+> First build **curb outlines** (optional warm-start). Then choose packs, write or bring docs, run **curb check**. Assistants may draft; only check decides pass/fail. Bring/CI skip outlines.
+
+Any way in ends in a review pack for a human to judge and optionally `attest`. Confirms need a TTY, `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`.
 
 ```mermaid
 flowchart TD
   start[Start]
   ways{Three ways in?}
-  interview[Short interview]
+  outlines[Curb outlines]
   session[Remember your answers]
   packs[You confirm packs]
   research[Optional research brief]
   ab[Two drafts plus recommendation]
   pick[You pick or edit]
   cite[Cite-check]
-  check[Local check]
+  check[Local curb check]
   share[You share and attest]
 
   start --> ways
-  ways -->|"Write then check"| interview
+  ways -->|"Write then check"| outlines
   ways -->|"Bring docs"| check
   ways -->|"CI"| check
-  interview --> session --> packs --> research --> ab --> pick --> cite --> check
+  outlines --> session --> packs --> research --> ab --> pick --> cite --> check
   check -->|red| ab
   check -->|green| share
   pick -->|"record your pick"| session
@@ -45,20 +47,20 @@ flowchart TD
 ## What you run (human)
 
 ```bash
-cyberready pathway status          # one plain-English next ask (default)
-cyberready pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
+curbpack pathway status          # one plain-English next ask (default)
+curbpack pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
 # --house-first is reserved (accepted, currently a no-op)
 # human (TTY or --i-am-human): pathway confirm-packs --i-am-human
-cyberready research                # optional allowlisted brief — never gates check
+curbpack research                # optional allowlisted brief — never gates check
 # agent/human: two drafts + Recommended A|B → you pick → cite-check
-cyberready research --cite-check <draft.md>
+curbpack research --cite-check <draft.md>
 # human (TTY or --i-am-human): pathway confirm-prose --i-am-human
-cyberready check
-cyberready share
+curbpack check
+curbpack share
 # human (TTY or --i-am-human): pathway confirm-share --i-am-human → attest → open proof/index.html
 ```
 
-Optional session memory (not a gate input): `cyberready pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.
+Optional session memory (not a gate input): `curbpack pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.
 
 ## Dual-draft HITL (always)
 
@@ -78,7 +80,7 @@ Shared phase vocabulary: seed → GateFailure statechart → ContextPack → `pa
 
 Deterministic closed-world pack suggest → guarded HITL confirms → RKG house draft → check/share → human attest → client-side proof verify.
 
-CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.4.3`**.
+CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.5.0`**.
 
 ### Phase vocabulary (canonical)
 
@@ -97,7 +99,7 @@ Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. 
 | **L0** | Enum seed | `pathway suggest` flags | Answer ≤6 enum questions |
 | **L1** | Closed-world packs | Go lookup → frozen trio (+ partner note) | — |
 | **L2** | Tick packs | `pathway confirm-packs` (+ RKG export) | Yes / change / house-only |
-| **L2.5** | Research sidecar | `cyberready research` (+ optional `--fetch`) | Read brief; not a gate |
+| **L2.5** | Research sidecar | `curbpack research` (+ optional `--fetch`) | Read brief; not a gate |
 | **L3** | Activate | `init --packs` / `check --heal` | — |
 | **L4** | House draft | RKG + research packet; **dual draft + recommend**; cite-or-refuse | Pick A/B/edit |
 | **L5** | Tick prose | `cite-check` green → `pathway confirm-prose` | “I own this wording” |
@@ -119,7 +121,7 @@ Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. 
 `--ce-context` is **context only** — never changes packs to CE-positive. Never invent pack ids. Confirm intersects with `packs list` ∪ imported.
 
 ```bash
-cyberready pathway suggest \
+curbpack pathway suggest \
   --product=hygiene \
   --eu-docs=no \
   --medtech=no \
@@ -143,10 +145,10 @@ cyberready pathway suggest \
 
 - [ ] `pathway suggest` → review `proposed_packs`
 - [ ] Human: `pathway confirm-packs --i-am-human` (or TTY; exports RKG)
-- [ ] `cyberready research` (optional `--fetch`) — never gates check
+- [ ] `curbpack research` (optional `--fetch`) — never gates check
 - [ ] Dual draft + Recommended A|B → human pick → `pathway note --set last_draft_pick=…`
 - [ ] `init --packs …` + `check --heal` + edit with cite markers
-- [ ] `cyberready research --cite-check <draft.md>` green (refuses uncited Claims)
+- [ ] `curbpack research --cite-check <draft.md>` green (refuses uncited Claims)
 - [ ] Human: `pathway confirm-prose --i-am-human` (or TTY)
 - [ ] `check` green (or shareable red with ContextPack)
 - [ ] `share` → human: `pathway confirm-share --i-am-human` (or TTY)
@@ -161,8 +163,8 @@ Fixed string on every seed write:
 
 ### Seed schema
 
-**Path:** `.github/cyberready/cache/pathway-seed.json`  
-**Writer:** only `cyberready pathway`  
+**Path:** `.github/curbpack/cache/pathway-seed.json`  
+**Writer:** only `curbpack pathway`  
 **Not** a check pass/fail input.
 
 ```json
@@ -194,22 +196,22 @@ Fixed string on every seed write:
 ### Smoke path
 
 ```bash
-cyberready pathway status
-cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
+curbpack pathway status
+curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
 # human (TTY or --i-am-human):
-cyberready pathway confirm-packs --i-am-human
-cyberready init --packs house-policy
-cyberready research
-cyberready check --heal
+curbpack pathway confirm-packs --i-am-human
+curbpack init --packs house-policy
+curbpack research
+curbpack check --heal
 # dual draft + recommend → human pick →:
-cyberready pathway note --set last_draft_pick=A
-cyberready research --cite-check SECURITY.md
+curbpack pathway note --set last_draft_pick=A
+curbpack research --cite-check SECURITY.md
 # human (TTY or --i-am-human):
-cyberready pathway confirm-prose --i-am-human
-cyberready check
-cyberready share
+curbpack pathway confirm-prose --i-am-human
+curbpack check
+curbpack share
 # human (TTY or --i-am-human):
-cyberready pathway confirm-share --i-am-human
+curbpack pathway confirm-share --i-am-human
 # STOP — human only: attest → proof/index.html verify
 ```
 

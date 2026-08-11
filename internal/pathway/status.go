@@ -73,7 +73,7 @@ func humanWhy(snap Snapshot) string {
 	case PhaseAwaitPackConfirm:
 		return "Human confirms checklists; agents never stamp this."
 	case PhaseAwaitActivate:
-		return "Match .cyberready.json packs to the confirmed propose."
+		return "Match .curbpack.json packs to the confirmed propose."
 	case PhaseAwaitHealOrProse:
 		if strings.Contains(snap.Next.Cmd, "research") {
 			return "Allowlisted links + brief; research never changes check pass/fail."

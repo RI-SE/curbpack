@@ -164,7 +164,7 @@ func TestStatus_GoldenPhases(t *testing.T) {
 					Claim:         ClaimFence,
 				})
 				writeLatestFailure(t, dir, "", true)
-				cache := filepath.Join(dir, ".github", "cyberready", "cache")
+				cache := filepath.Join(dir, ".github", "curbpack", "cache")
 				_ = os.MkdirAll(cache, 0o755)
 				_ = os.WriteFile(filepath.Join(cache, "buyer-questions.md"), []byte("# q\n"), 0o644)
 			},
@@ -182,7 +182,7 @@ func TestStatus_GoldenPhases(t *testing.T) {
 					Claim:         ClaimFence,
 				})
 				writeLatestFailure(t, dir, "", true)
-				ev := filepath.Join(dir, ".github", "cyberready", "evidence")
+				ev := filepath.Join(dir, ".github", "curbpack", "evidence")
 				_ = os.MkdirAll(ev, 0o755)
 				_ = os.WriteFile(filepath.Join(ev, "hpurl-pointer.json"), []byte(`{"state_hash":"abc"}\n`), 0o644)
 			},
@@ -194,8 +194,8 @@ func TestStatus_GoldenPhases(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Reset dir contents lightly by removing seed/cache between cases.
-			_ = os.RemoveAll(filepath.Join(dir, ".github", "cyberready", "cache"))
-			_ = os.RemoveAll(filepath.Join(dir, ".github", "cyberready", "evidence"))
+			_ = os.RemoveAll(filepath.Join(dir, ".github", "curbpack", "cache"))
+			_ = os.RemoveAll(filepath.Join(dir, ".github", "curbpack", "evidence"))
 			tc.setup(t)
 			snap, err := Project(dir)
 			if err != nil {
@@ -244,7 +244,7 @@ func writeSeed(t *testing.T, dir string, s Seed) {
 func mustWriteCyberreadyJSON(t *testing.T, dir string, packs []string) {
 	t.Helper()
 	b, _ := json.Marshal(map[string]any{"packs": packs})
-	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), append(b, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), append(b, '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -264,7 +264,7 @@ func writeHouseDocs(t *testing.T, dir string) {
 
 func writeLatestFailure(t *testing.T, dir, gateID string, green bool) {
 	t.Helper()
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}

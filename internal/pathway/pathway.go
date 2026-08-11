@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 // SchemaVersion is the on-disk pathway-seed.json version.
@@ -21,9 +23,9 @@ var ValidDraftPicks = map[string]struct{}{
 	"A": {}, "B": {}, "edited": {},
 }
 
-// SeedPath returns .github/cyberready/cache/pathway-seed.json under repo root.
+// SeedPath returns the write path for pathway-seed.json under repo root.
 func SeedPath(repoRoot string) string {
-	return filepath.Join(repoRoot, ".github", "cyberready", "cache", "pathway-seed.json")
+	return filepath.Join(paths.CacheDir(repoRoot), "pathway-seed.json")
 }
 
 // Answers are closed enum answers from pathway suggest flags.
@@ -59,7 +61,7 @@ type Seed struct {
 
 // Load reads pathway-seed.json. Returns nil, nil if missing.
 func Load(repoRoot string) (*Seed, error) {
-	path := SeedPath(repoRoot)
+	path := paths.ResolveUnderCache(repoRoot, "pathway-seed.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

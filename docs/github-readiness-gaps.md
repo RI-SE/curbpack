@@ -1,6 +1,6 @@
 # GitHub-readiness gap matrix
 
-Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are real; Reject rows match [strategy boundary](strategy-boundary.md). This is not a second strategy narrative.
+Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are real; Reject rows match [strategy boundary](strategy-boundary.md). This is not a second strategy narrative.
 
 **Stack reuse:** `claim-safety.sh`, `redteam-pilot.sh`, `exportx` airlock, packs RKG + `RuleTouchesDiff`, `attest.ComputeStateHash` tests, install/doctor/demo — not parallel systems.
 
@@ -10,7 +10,7 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 | Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
 | Institute / agency endorsement refuse (never claim `RISE-approved` / `FRA-approved` / `NCSC-approved` / `agency-endorsed`) | Done | DENY list in `claim-safety.sh` · [promotion firewall](promotion-firewall.md) |
 | Adversarial false-green scoreboard | Done | [`scripts/redteam-pilot.sh`](../scripts/redteam-pilot.sh) · [security model](security-model.md) |
-| Action must not prefer workspace `./bin/cyberready` | Done | `action.yml` resolve · redteam case 1 |
+| Action must not prefer workspace `./bin/curbpack` | Done | `action.yml` resolve · redteam case 1 |
 | Pack path jail / `.git` refuse | Done | `SafeJoin` · `internal/formhints` ApplyStubs · redteam cases 3–4 |
 | Attest OCC / `--allow-dirty` honesty | Done | `internal/attest` · redteam case (attest dirty) |
 | Packs network update requires sha256 pin | Done | `internal/packscmd` · redteam case (SHA256) |
@@ -21,7 +21,7 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 | CycloneDX / watchlist∩SBOM informational join | Done | `export --watchlist-join` · `internal/exportx` |
 | Optional SLSA sidecar / provenance theater | Ops | Launch checklist only — [launch readiness](launch-readiness.md); no L3/4 claim |
 | Sock ops (`validate_delta`, …) frozen nave | Done | [stable contracts](stable-contracts.md) · redteam case 12 |
-| CapBAC / C2PA / SLSA L3–4 product claims | Reject | Out of public CyberReady · [strategy boundary](strategy-boundary.md) |
+| CapBAC / C2PA / SLSA L3–4 product claims | Reject | Out of public Curbpack · [strategy boundary](strategy-boundary.md) |
 | `check --diff` as release gate | Reject (honesty) | Porcelain rule-skip only — see [Δ honesty](#diff-vs-validate_delta); use `validate` / sock `validate_delta` |
 | Sock `validate_delta` = full quiet validate | Done | [stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) |
 | RKG export + digest | Done | `packs export-graph` · `internal/packs/graph.go` |
@@ -32,8 +32,8 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 | Full local AST / SQLite regulation graph | Reject | RKG JSON export only |
 | Legal-metrology / CE / never claim RISE-certified product | Reject | [promotion firewall](promotion-firewall.md) |
 | Enforce-before-execute | Reject | Private Coreward only |
-| Doctor soft-exit (non-blocking tips) | Done (accepted) | `cyberready doctor` — soft diagnostics; not a hard gate redesign |
-| First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.4.3` |
+| Doctor soft-exit (non-blocking tips) | Done (accepted) | `curbpack doctor` — soft diagnostics; not a hard gate redesign |
+| First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.5.0` |
 | Install checksum fail-closed | Done | [`scripts/install.sh`](../scripts/install.sh) · [security model](security-model.md) |
 | Action binary cache via consumer `hashFiles` + checksum-skip | Reject | Trust regression — keep download/`checksums.txt` fail-closed · [security model](security-model.md#install-integrity) |
 
@@ -41,8 +41,8 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 
 | Surface | Behavior | Release-gate safe? |
 |---------|----------|-------------------|
-| `cyberready check --diff` | Porcelain: skip rules whose paths do not intersect the dirty/changed set (`RuleTouchesDiff`). Basename match semantics stay frozen. | **No** — local speed / PR feedback only |
-| `cyberready validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative pass/fail |
+| `curbpack check --diff` | Porcelain: skip rules whose paths do not intersect the dirty/changed set (`RuleTouchesDiff`). Basename match semantics stay frozen. | **No** — local speed / PR feedback only |
+| `curbpack validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative pass/fail |
 
 Do **not** retarget sock `validate_delta` to `--diff`. Changing `RuleTouchesDiff` mid-freeze is out of scope (false-green risk). Pack authoring note: [write your own pack](write-your-own-pack.md#diff-vs-full-validate).
 

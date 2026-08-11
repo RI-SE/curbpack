@@ -34,7 +34,7 @@ body:
     id: pin
     attributes:
       label: Pin / binary
-      description: Tag, commit SHA, or `cyberready version`
+      description: Tag, commit SHA, or `curbpack version`
       placeholder: v0.4.1
     validations:
       required: true

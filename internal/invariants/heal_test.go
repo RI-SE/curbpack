@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/formhints"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/formhints"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // Heal / --apply-stub must never write Git Notes capsules (fake self-certification).
@@ -43,7 +43,7 @@ func TestHealNeverAttests(t *testing.T) {
 	}
 
 	// No Git Notes ref / capsule after heal.
-	out, _ := exec.Command("git", "-C", dir, "notes", "--ref=cyberready", "list").CombinedOutput()
+	out, _ := exec.Command("git", "-C", dir, "notes", "--ref=curbpack", "list").CombinedOutput()
 	if strings.TrimSpace(string(out)) != "" && !strings.Contains(string(out), "No notes") {
 		// Empty list is OK; any note object is not.
 		if lines := strings.TrimSpace(string(out)); lines != "" && !strings.Contains(lines, "fatal") {
@@ -55,7 +55,7 @@ func TestHealNeverAttests(t *testing.T) {
 			}
 		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".github/cyberready/evidence/hpurl-pointer.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(dir, ".github/curbpack/evidence/hpurl-pointer.json")); err == nil {
 		t.Fatal("heal must not write hpurl-pointer (attest artifact)")
 	}
 }
@@ -117,7 +117,7 @@ func mustGit(t *testing.T, dir string) {
 		}
 	}
 	run("git", "init", "-q")
-	run("git", "config", "user.email", "inv@cyberready.local")
+	run("git", "config", "user.email", "inv@curbpack.local")
 	run("git", "config", "user.name", "Invariants")
 	run("git", "commit", "--allow-empty", "-m", "init", "-q")
 }

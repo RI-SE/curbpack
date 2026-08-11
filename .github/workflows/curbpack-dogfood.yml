@@ -1,5 +1,5 @@
-# Dogfood: run the CyberReady composite Action against this repo.
-name: cyberready-dogfood
+# Dogfood: run the Curbpack composite Action against this repo.
+name: curbpack-dogfood
 
 on:
   pull_request:
@@ -23,13 +23,13 @@ jobs:
       - name: Build workspace binary for Action
         run: |
           mkdir -p bin
-          go build -o bin/cyberready ./cmd/cyberready
+          go build -o bin/curbpack ./cmd/curbpack
       - name: Init house-policy if missing
         run: |
-          if [ ! -f .cyberready.json ]; then
-            ./bin/cyberready init --packs house-policy
+          if [ ! -f .curbpack.json ]; then
+            ./bin/curbpack init --packs house-policy
           fi
-      - name: CyberReady check (dogfood Action)
+      - name: Curbpack check (dogfood Action)
         uses: ./
         with:
           # Empty = build from this checkout (never advertise floating latest).

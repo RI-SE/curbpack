@@ -29,7 +29,7 @@ func TestRunSandbox(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "review-pack", "buyer-onepager.html")); err != nil {
 		t.Fatalf("onepager: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".cyberready.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".curbpack.json")); err != nil {
 		t.Fatalf("config: %v", err)
 	}
 }
@@ -41,10 +41,10 @@ func TestRunPrintsProductNextLine(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	if !strings.Contains(out, "next on your repo: cyberready init && cyberready check") {
+	if !strings.Contains(out, "next on your repo: curbpack init && curbpack check") {
 		t.Fatalf("missing product next-line in output:\n%s", out)
 	}
-	if !strings.Contains(out, "afelin/cyberready@v0.4.3") {
+	if !strings.Contains(out, "afelin/curbpack@v0.5.0") {
 		t.Fatalf("missing Action pin pointer in output:\n%s", out)
 	}
 	if strings.Contains(out, "init --packs house-policy --hooks") {

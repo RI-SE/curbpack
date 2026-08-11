@@ -1,6 +1,6 @@
-# Drop-in GitHub Action workflow for CyberReady.
-# Copy to .github/workflows/cyberready.yml — pin stays @v0.4.3.
-name: cyberready-check
+# Drop-in GitHub Action workflow for Curbpack.
+# Copy to .github/workflows/curbpack.yml — pin stays @v0.5.0.
+name: curbpack-check
 
 on:
   pull_request:
@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: CyberReady check
-        uses: afelin/cyberready@v0.4.3
+      - name: Curbpack check
+        uses: afelin/curbpack@v0.5.0
         with:
-          version: v0.4.3
+          version: v0.5.0
           heal: "true"
           prepare_release: "true"
           comment_on: red

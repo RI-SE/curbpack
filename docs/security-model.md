@@ -1,16 +1,16 @@
-# CyberReady security model
+# Curbpack security model
 
-Plain language. This is how trust works in CyberReady+ — and what it does **not** claim.
+Plain language. This is how trust works in Curbpack — and what it does **not** claim.
 
-## What CyberReady is
+## What Curbpack is
 
-A **local-first evidence CLI**. It runs pack rules against files in a git repo, writes review artifacts, and can bind a state hash into Git Notes. Humans review those artifacts. CyberReady does **not** certify conformity, issue CE marks, or replace auditors.
+A **local-first evidence CLI**. It runs pack rules against files in a git repo, writes review artifacts, and can bind a state hash into Git Notes. Humans review those artifacts. Curbpack does **not** certify conformity, issue CE marks, or replace auditors.
 
 ## Pilot-prod contract
 
 Pilot-prod (CLI + Action on other git repos) means exactly these three invariants. `scripts/redteam-pilot.sh` is the adversarial grade.
 
-1. **No adversarial false-green** — a consumer PR cannot make Action/`check` exit 0 via `./bin/cyberready`, skipped required-file gates, or a missing hook binary when hooks are enabled.
+1. **No adversarial false-green** — a consumer PR cannot make Action/`check` exit 0 via `./bin/curbpack`, skipped required-file gates, or a missing hook binary when hooks are enabled.
 2. **No path escape** — pack/init/heal/demo cannot write outside the repo (or under `.git/`).
 3. **Attest does not lie** — capsule digests are not silently bound to uncommitted self-written evidence without explicit `--allow-dirty`.
 
@@ -19,8 +19,8 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 - Grade: `./scripts/redteam-pilot.sh` must be green (**15/15** cases).
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
 - Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, packs SHA256 pin, demo `--out` jail.
-- Pin: Action/consumers use `@v0.4.3` (prefer tag + commit SHA).
-- **30-day trust-surface freeze continues from `v0.4.0` through `v0.4.3`** (`v0.4.3` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
+- Pin: Action/consumers use `@v0.5.0` (prefer tag + commit SHA).
+- **30-day trust-surface freeze continues from `v0.4.0` through `v0.5.0`** (`v0.5.0` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
 - Stakeholder gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
 - **Day-30 freeze review due 2026-09-07** (from `v0.4.0` on 2026-08-08). Until then: **renew freeze**, no `v0.4.4`, no pack unlock. Checklist + outcome log: [launch readiness](launch-readiness.md#freeze-review-day-30-from-v040). Stable nave: [stable contracts](stable-contracts.md).
 
@@ -33,13 +33,13 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
 | HPURL / proof page | Client-side compare of fragment `h=` to local pointer | Remote server verification or certification |
 | Optional sock IPC | Optional; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
-| Pack network update | Only when `CYBERREADY_PACKS_URL` **and** `CYBERREADY_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
+| Pack network update | Only when `CURBPACK_PACKS_URL` **and** `CURBPACK_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
 
 ## Install integrity
 
 Release installs (shell script and composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Prefer building from a known checkout when dogfooding this repo.
 
-The composite Action does **not** prefer a consumer `./bin/cyberready` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
+The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
 
 **Rejected: Action cache-as-written.** A proposed consumer `hashFiles('**/*.go')` cache key plus skipping checksum verify on cache hit is a trust regression. Keep fail-closed download + `checksums.txt` verify (or dogfood `go build`). Any future cache must key on version + expected sha256 and **re-verify** before exec — not land in this track.
 
@@ -53,18 +53,18 @@ Unsigned ≠ verified. A green readiness score and an unsigned capsule are compa
 
 ## Socket (optional integrator IPC)
 
-Default path is **not** a shared `/tmp/cyberready.sock`. Prefer:
+Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
 
-1. `CYBERREADY_SOCK` if set
-2. `$XDG_RUNTIME_DIR/cyberready/cyberready.sock`
-3. `$TMPDIR/cyberready-$UID/cyberready.sock`
-4. `.cyberready/cyberready.sock` under the working directory
+1. `CURBPACK_SOCK` if set
+2. `$XDG_RUNTIME_DIR/curbpack/curbpack.sock`
+3. `$TMPDIR/curbpack-$UID/curbpack.sock`
+4. `.curbpack/curbpack.sock` under the working directory
 
 Parent directories are created mode `0700`. The socket file is `0600`. World-writable parents are refused.
 
 ## Pack updates
 
-Embedded packs ship in the binary. Air-gap: `cyberready packs import`. Network update requires an explicit sha256 pin; without it, network update is refused (offline-safe default).
+Embedded packs ship in the binary. Air-gap: `curbpack packs import`. Network update requires an explicit sha256 pin; without it, network update is refused (offline-safe default).
 
 ## Pack regex (ReDoS)
 

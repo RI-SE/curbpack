@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/research"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/research"
 )
 
 // ErrCiteRefuse marks confirm-prose blocked by research cite-check (CLI → exit 1).
@@ -84,7 +84,7 @@ func ConfirmProse(repoRoot string) (*Seed, error) {
 		}
 	}
 	if len(missing) > 0 {
-		return nil, usagef("pathway confirm-prose: missing scaffold file(s): %s — run cyberready check --heal then edit real prose", strings.Join(missing, ", "))
+		return nil, usagef("pathway confirm-prose: missing scaffold file(s): %s — run curbpack check --heal then edit real prose", strings.Join(missing, ", "))
 	}
 	// Cite-or-refuse when research packet is present (Write→Check HITL). Bring-docs may skip research.
 	if pkt, err := research.LoadPacket(repoRoot); err != nil {
@@ -92,7 +92,7 @@ func ConfirmProse(repoRoot string) (*Seed, error) {
 	} else if pkt != nil {
 		res := research.CiteCheckProsePaths(repoRoot, *pkt, paths)
 		if !res.OK {
-			msg := "pathway confirm-prose: cite-check refuse — fix drafts or run cyberready research --cite-check <file>"
+			msg := "pathway confirm-prose: cite-check refuse — fix drafts or run curbpack research --cite-check <file>"
 			if len(res.Errors) > 0 {
 				msg += ": " + res.Errors[0]
 				if len(res.Errors) > 1 {
@@ -112,7 +112,7 @@ func ConfirmProse(repoRoot string) (*Seed, error) {
 }
 
 func invalidateLatestResult(repoRoot string) error {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_result.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "cache", "latest_result.json")
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}

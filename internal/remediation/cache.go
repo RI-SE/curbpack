@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-)
 
-const relativePath = ".github/cyberready/cache/remediations.json"
+	"github.com/afelin/curbpack/internal/paths"
+)
 
 // Entry is one cached remediation for a gate.
 type Entry struct {
@@ -27,15 +27,15 @@ type Cache struct {
 	Entries map[string]Entry `json:"entries"`
 }
 
-// Path returns the remediations.json path under repoRoot.
+// Path returns the write path for remediations.json under repoRoot.
 func Path(repoRoot string) string {
-	return filepath.Join(repoRoot, filepath.FromSlash(relativePath))
+	return filepath.Join(paths.CacheDir(repoRoot), "remediations.json")
 }
 
-// Load reads remediations.json; missing file yields empty cache.
+// Load reads remediations.json (new or legacy cache); missing file yields empty cache.
 func Load(repoRoot string) (Cache, error) {
 	c := Cache{Version: 1, Entries: map[string]Entry{}}
-	data, err := os.ReadFile(Path(repoRoot))
+	data, err := os.ReadFile(paths.ResolveUnderCache(repoRoot, "remediations.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return c, nil

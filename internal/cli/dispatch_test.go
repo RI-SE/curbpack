@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/cli"
+	"github.com/afelin/curbpack/internal/cli"
 )
 
 func TestRun_Version(t *testing.T) {
@@ -21,7 +21,7 @@ func TestRun_Version(t *testing.T) {
 		}
 	})
 	_ = stderr
-	if !strings.Contains(stdout, "cyberready") {
+	if !strings.Contains(stdout, "curbpack") {
 		t.Fatalf("stdout=%q", stdout)
 	}
 	if !strings.Contains(stdout, cli.Version) {
@@ -35,7 +35,7 @@ func TestRun_Help(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	if !strings.Contains(stderr, "Usage: cyberready") {
+	if !strings.Contains(stderr, "Usage: curbpack") {
 		t.Fatalf("help stderr=%q", stderr)
 	}
 }
@@ -47,7 +47,7 @@ func TestRun_UnknownCommandExit2(t *testing.T) {
 			t.Fatalf("want exit 2, got %d (%v)", cli.ExitCode(err), err)
 		}
 	})
-	if !strings.Contains(stderr, "Usage: cyberready") {
+	if !strings.Contains(stderr, "Usage: curbpack") {
 		t.Fatalf("unknown should print usage; stderr=%q", stderr)
 	}
 }

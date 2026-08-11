@@ -17,6 +17,6 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Chaos dead-ends
-        run: ./scripts/chaos-deadends.sh ./bin/cyberready
+        run: ./scripts/chaos-deadends.sh ./bin/curbpack

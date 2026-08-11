@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/afelin/cyberready/internal/instrument"
+	"github.com/afelin/curbpack/internal/instrument"
 )
 
 // instrumentPanelCovenant is always printed after the check thermometer (green and red).
@@ -20,11 +20,11 @@ type priorCacheSnapshot struct {
 }
 
 func loadPriorCache(root string) priorCacheSnapshot {
-	path := filepath.Join(root, ".github", "cyberready", "cache", "latest_result.json")
+	path := filepath.Join(root, ".github", "curbpack", "cache", "latest_result.json")
 	b, err := os.ReadFile(path)
 	if err != nil {
 		// Fall back to latest_failure.json (same payload shape).
-		path = filepath.Join(root, ".github", "cyberready", "cache", "latest_failure.json")
+		path = filepath.Join(root, ".github", "curbpack", "cache", "latest_failure.json")
 		b, err = os.ReadFile(path)
 		if err != nil {
 			return priorCacheSnapshot{}

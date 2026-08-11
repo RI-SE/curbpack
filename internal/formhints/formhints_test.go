@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/remediation"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/remediation"
 )
 
 func TestForFailuresDeterministic(t *testing.T) {
@@ -170,7 +170,7 @@ func TestCachePreferredSnippet(t *testing.T) {
 	if err := PersistCache(dir, out); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".github/cyberready/cache/remediations.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, ".github/curbpack/cache/remediations.json")); err != nil {
 		t.Fatal(err)
 	}
 }

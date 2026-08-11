@@ -1,10 +1,10 @@
-# CyberReady site (GitHub Pages)
+# Curbpack site (GitHub Pages)
 
-Static explainer for https://afelin.github.io/cyberready/
+Static explainer for https://afelin.github.io/curbpack/
 
 Deploy via `.github/workflows/pages.yml` (Actions → Pages). Enable **GitHub Pages → Source: GitHub Actions** in repo settings if the site 404s.
 
-Pilot pin: `@v0.4.3` (current instrument-panel honesty cut). Adversarial grade: `scripts/redteam-pilot.sh`. Trust-surface freeze through v0.4.x: see `docs/security-model.md`.
+Pilot pin: `@v0.5.0` (current instrument-panel honesty cut). Adversarial grade: `scripts/redteam-pilot.sh`. Trust-surface freeze through v0.4.x: see `docs/security-model.md`.
 
 ## Contents
 
@@ -18,7 +18,7 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 |------|----------|--------|
 | `index.html` | Anyone | Primary sentence, plain ladder, **three ways in** chips (Write / Bring / CI), CTA **Pick how you start** |
 | `how-it-works/` | Anyone | Same three ways → stages (Write adds draft choice) → local check → review pack → human review |
-| `for-builders/` | Builders | Install / init / check; Write HITL line; Bring; CI pin `@v0.4.3` |
+| `for-builders/` | Builders | Install / init / check; Write HITL line; Bring; CI pin `@v0.5.0` |
 | `for-reviewers/` | Buyers / reviewers | Buyer one-pager + trust table; research brief demoted (supplier writer aid) |
 | `for-authorities/` | CISO / auditors | Structural evidence for human review; not conformity assessment |
 | `samples/onepager.html` | Reviewers / teaching | Buyer one-pager sample; Sources informational ≠ gate input |
@@ -31,7 +31,7 @@ Nav on every public page: Builders | Reviewers | Authorities | How it works. Foo
 
 ## Link rule
 
-Internal HTML navigation and asset `href`s use **site-root-relative** `/cyberready/…` paths (not `../` or bare `samples/…`). That matches GitHub project Pages and works with or without trailing slashes on the page URL.
+Internal HTML navigation and asset `href`s use **site-root-relative** `/curbpack/…` paths (not `../` or bare `samples/…`). That matches GitHub project Pages and works with or without trailing slashes on the page URL.
 
 ## Ops quarantine
 
@@ -45,10 +45,10 @@ Claim-safety applies to site HTML copy the same as docs.
 
 ## Local preview
 
-Serve under a `/cyberready/` base so root-relative links resolve like production:
+Serve under a `/curbpack/` base so root-relative links resolve like production:
 
 ```bash
-rm -rf /tmp/cr-pages && mkdir -p /tmp/cr-pages && cp -R site /tmp/cr-pages/cyberready
+rm -rf /tmp/cr-pages && mkdir -p /tmp/cr-pages && cp -R site /tmp/cr-pages/curbpack
 python3 -m http.server -d /tmp/cr-pages 8080
-# open http://localhost:8080/cyberready/
+# open http://localhost:8080/curbpack/
 ```

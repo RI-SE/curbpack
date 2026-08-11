@@ -5,9 +5,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BIN="${CYBERREADY_BIN:-$ROOT/bin/cyberready}"
+BIN="${CURBPACK_BIN:-$ROOT/bin/curbpack}"
 if [[ ! -x "$BIN" ]]; then
-  go build -o "$BIN" ./cmd/cyberready
+  go build -o "$BIN" ./cmd/curbpack
 fi
 
 BASELINE="${GAUNTLET_BASELINE:-$ROOT/testdata/gauntlet-baseline.json}"
@@ -50,7 +50,7 @@ for case in cases:
     try:
         if kind == "heal_missing_stubs":
             subprocess.check_call(["git", "init", "-q"], cwd=tmp)
-            subprocess.check_call(["git", "config", "user.email", "ci@cyberready.local"], cwd=tmp)
+            subprocess.check_call(["git", "config", "user.email", "ci@curbpack.local"], cwd=tmp)
             subprocess.check_call(["git", "config", "user.name", "CI"], cwd=tmp)
             subprocess.check_call(["git", "commit", "--allow-empty", "-m", "init", "-q"], cwd=tmp)
             code, out = run([bin_path, "init", "--packs", "house-policy"], cwd=tmp)
@@ -60,7 +60,7 @@ for case in cases:
                     os.remove(p)
             code, out = run([bin_path, "check", "--heal"], cwd=tmp)
             ok = (code == 0) if expect == "pass" else (code != 0)
-            cache = os.path.join(tmp, ".github/cyberready/cache/remediations.json")
+            cache = os.path.join(tmp, ".github/curbpack/cache/remediations.json")
             if expect == "pass" and not os.path.isfile(cache):
                 ok = False
                 out += "\nmissing remediations.json"
@@ -85,7 +85,7 @@ for case in cases:
 
         elif kind == "dead_end_placeholders":
             subprocess.check_call(["git", "init", "-q"], cwd=tmp)
-            subprocess.check_call(["git", "config", "user.email", "ci@cyberready.local"], cwd=tmp)
+            subprocess.check_call(["git", "config", "user.email", "ci@curbpack.local"], cwd=tmp)
             subprocess.check_call(["git", "config", "user.name", "CI"], cwd=tmp)
             subprocess.check_call(["git", "commit", "--allow-empty", "-m", "init", "-q"], cwd=tmp)
             run([bin_path, "init", "--packs", "house-policy"], cwd=tmp)
@@ -102,7 +102,7 @@ for case in cases:
 
         elif kind == "adversarial_pack_load":
             pack_dir = os.path.join(root, case["pack_dir"])
-            env = {"CYBERREADY_PACKS_DIR": pack_dir}
+            env = {"CURBPACK_PACKS_DIR": pack_dir}
             # Load via packs list / validate using override — expect fail-closed load or gate fail
             code, out = run([bin_path, "packs", "list"], env=env)
             # unknown check should fail LoadEmbedded when listing if that pack is requested;
@@ -110,7 +110,7 @@ for case in cases:
             pack_id = case.get("pack_id", "")
             if pack_id:
                 subprocess.check_call(["git", "init", "-q"], cwd=tmp)
-                subprocess.check_call(["git", "config", "user.email", "ci@cyberready.local"], cwd=tmp)
+                subprocess.check_call(["git", "config", "user.email", "ci@curbpack.local"], cwd=tmp)
                 subprocess.check_call(["git", "config", "user.name", "CI"], cwd=tmp)
                 subprocess.check_call(["git", "commit", "--allow-empty", "-m", "init", "-q"], cwd=tmp)
                 code, out = run([bin_path, "init", "--packs", pack_id], cwd=tmp, env=env)
@@ -130,13 +130,13 @@ for case in cases:
         elif kind == "adversarial_runtime":
             pack_dir = os.path.join(root, case["pack_dir"])
             pack_id = case["pack_id"]
-            env = {"CYBERREADY_PACKS_DIR": pack_dir}
+            env = {"CURBPACK_PACKS_DIR": pack_dir}
             subprocess.check_call(["git", "init", "-q"], cwd=tmp)
-            subprocess.check_call(["git", "config", "user.email", "ci@cyberready.local"], cwd=tmp)
+            subprocess.check_call(["git", "config", "user.email", "ci@curbpack.local"], cwd=tmp)
             subprocess.check_call(["git", "config", "user.name", "CI"], cwd=tmp)
             subprocess.check_call(["git", "commit", "--allow-empty", "-m", "init", "-q"], cwd=tmp)
             # Write config pointing at adversarial pack without init scaffold when load fails
-            with open(os.path.join(tmp, ".cyberready.json"), "w") as fh:
+            with open(os.path.join(tmp, ".curbpack.json"), "w") as fh:
                 json.dump({"packs": [pack_id]}, fh)
             # Ensure pack is loadable for runtime cases (path traversal / bad regex)
             code, out = run([bin_path, "check", "--packs", pack_id], cwd=tmp, env=env)
@@ -160,7 +160,7 @@ for case in cases:
             shutil.copytree(src, tmp, dirs_exist_ok=True)
             if not os.path.isdir(os.path.join(tmp, ".git")):
                 subprocess.check_call(["git", "init", "-q"], cwd=tmp)
-                subprocess.check_call(["git", "config", "user.email", "ci@cyberready.local"], cwd=tmp)
+                subprocess.check_call(["git", "config", "user.email", "ci@curbpack.local"], cwd=tmp)
                 subprocess.check_call(["git", "config", "user.name", "CI"], cwd=tmp)
                 subprocess.check_call(["git", "add", "-A"], cwd=tmp)
                 subprocess.check_call(["git", "-c", "commit.gpgsign=false", "commit", "--allow-empty", "-m", "fixture", "-q"], cwd=tmp)

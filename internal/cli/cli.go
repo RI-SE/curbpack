@@ -8,33 +8,33 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/ask"
-	"github.com/afelin/cyberready/internal/attest"
-	"github.com/afelin/cyberready/internal/buildinfo"
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/demo"
-	"github.com/afelin/cyberready/internal/doctor"
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/formhints"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/instrument"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/packscmd"
-	"github.com/afelin/cyberready/internal/release"
-	"github.com/afelin/cyberready/internal/remediation"
-	"github.com/afelin/cyberready/internal/sbom"
-	"github.com/afelin/cyberready/internal/skilldata"
-	"github.com/afelin/cyberready/internal/sock"
-	"github.com/afelin/cyberready/internal/tty"
-	"github.com/afelin/cyberready/internal/validate"
-	"github.com/afelin/cyberready/internal/vex"
-	"github.com/afelin/cyberready/internal/workflowdata"
+	"github.com/afelin/curbpack/internal/ask"
+	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/buildinfo"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/demo"
+	"github.com/afelin/curbpack/internal/doctor"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/formhints"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/packscmd"
+	"github.com/afelin/curbpack/internal/release"
+	"github.com/afelin/curbpack/internal/remediation"
+	"github.com/afelin/curbpack/internal/sbom"
+	"github.com/afelin/curbpack/internal/skilldata"
+	"github.com/afelin/curbpack/internal/sock"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/validate"
+	"github.com/afelin/curbpack/internal/vex"
+	"github.com/afelin/curbpack/internal/workflowdata"
 )
 
 // research command lives in research.go (allowlisted citation packet; never gates check).
 
 // Version aliases buildinfo.Version for CLI surfaces.
-// Release builds set buildinfo via -ldflags "-X github.com/afelin/cyberready/internal/buildinfo.Version=...".
+// Release builds set buildinfo via -ldflags "-X github.com/afelin/curbpack/internal/buildinfo.Version=...".
 var Version = buildinfo.Version
 
 // Stable exit codes (document in README):
@@ -82,7 +82,7 @@ func Run(args []string) error {
 		usage()
 		return nil
 	case "version", "-v", "--version":
-		fmt.Println("cyberready", Version)
+		fmt.Println("curbpack", Version)
 		return nil
 	case "init":
 		return cmdInit(rest)
@@ -123,7 +123,7 @@ func Run(args []string) error {
 	}
 }
 
-// cmdDefault: bare `cyberready` → doctor if not inited, else check (one mental model).
+// cmdDefault: bare `curbpack` → doctor if not inited, else check (one mental model).
 func cmdDefault() error {
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
@@ -140,16 +140,16 @@ func cmdDefault() error {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Bold+tty.Cyan, "CyberReady+ "+Version))
+	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Bold+tty.Cyan, "Curbpack "+Version))
 	fmt.Fprintf(os.Stderr, "Local evidence CLI — packs encode policy. Not a certification product.\n\n")
-	fmt.Fprintf(os.Stderr, "Usage: cyberready [<command>] [args]\n")
+	fmt.Fprintf(os.Stderr, "Usage: curbpack [<command>] [args]\n")
 	fmt.Fprintf(os.Stderr, "  (no command)     doctor if uninitialized, else check\n\n")
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
 	fmt.Fprintf(os.Stderr, "  doctor           Environment confidence\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
 	fmt.Fprintf(os.Stderr, "  init [--bare] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
-	fmt.Fprintf(os.Stderr, "                   --workflow: write .github/workflows/cyberready.yml if missing\n")
+	fmt.Fprintf(os.Stderr, "                   --workflow: write .github/workflows/curbpack.yml if missing\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
 	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule\n\n")
@@ -192,14 +192,14 @@ func cmdDemo(args []string) error {
 }
 
 func cmdInit(args []string) error {
-	tty.PrintHeader("cyberready init")
+	tty.PrintHeader("curbpack init")
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr("workspace is not a git repository")
 	}
 	tty.PrintStatus("Git repository", true, root)
 
-	crPath := filepath.Join(root, ".github", "cyberready")
+	crPath := filepath.Join(root, ".github", "curbpack")
 	_ = os.MkdirAll(filepath.Join(crPath, "policies"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
@@ -266,14 +266,14 @@ func cmdInit(args []string) error {
 		Version: Version,
 		Claim:   "Prepares evidence for human review — not a conformity assessment.",
 	}
-	cfgPath := filepath.Join(root, ".cyberready.json")
+	cfgPath := filepath.Join(root, ".curbpack.json")
 	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 		if err := config.Write(root, cfg); err != nil {
 			return err
 		}
-		tty.PrintStatus(".cyberready.json", true, "created packs="+strings.Join(packList, ","))
+		tty.PrintStatus(".curbpack.json", true, "created packs="+strings.Join(packList, ","))
 	} else {
-		tty.PrintStatus(".cyberready.json", true, "exists (not overwritten)")
+		tty.PrintStatus(".curbpack.json", true, "exists (not overwritten)")
 	}
 
 	paths, err := packs.ScaffoldPaths(packList)
@@ -307,7 +307,7 @@ func cmdInit(args []string) error {
 		if err := installPreCommitHook(root); err != nil {
 			return err
 		}
-		tty.PrintStatus("pre-commit hook", true, "cyberready check --heal")
+		tty.PrintStatus("pre-commit hook", true, "curbpack check --heal")
 	}
 
 	if skill {
@@ -338,7 +338,7 @@ func cmdInit(args []string) error {
 		}
 	}
 
-	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Init complete. Next: cyberready check"))
+	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Init complete. Next: curbpack check"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 	return nil
 }
@@ -359,17 +359,17 @@ func installPreCommitHook(root string) error {
 	}
 	path := filepath.Join(hookDir, "pre-commit")
 	script := `#!/bin/sh
-# CyberReady — fail commit on high/critical gate findings
+# Curbpack — fail commit on high/critical gate findings
 # --heal: create missing stubs only (never overwrite filled docs; never attest)
 # Hooks enabled ⇒ missing binary is fail-closed (no silent skip).
-if command -v cyberready >/dev/null 2>&1; then
-  exec cyberready check --heal
-elif [ -x ./bin/cyberready ]; then
-  exec ./bin/cyberready check --heal
-elif [ -x ./cyberready ]; then
-  exec ./cyberready check --heal
+if command -v curbpack >/dev/null 2>&1; then
+  exec curbpack check --heal
+elif [ -x ./bin/curbpack ]; then
+  exec ./bin/curbpack check --heal
+elif [ -x ./curbpack ]; then
+  exec ./curbpack check --heal
 else
-  echo "cyberready not on PATH — refusing commit (hooks enabled)" >&2
+  echo "curbpack not on PATH — refusing commit (hooks enabled)" >&2
   exit 1
 fi
 `
@@ -428,7 +428,7 @@ func cmdCheck(args []string) error {
 	priorInst, priorInstOK := instrument.Load(root)
 
 	if !jsonOut {
-		tty.PrintHeader("CYBERREADY CHECK")
+		tty.PrintHeader("CURBPACK CHECK")
 	}
 
 	var res validate.Result
@@ -494,8 +494,8 @@ func cmdCheck(args []string) error {
 		}
 		// Failures: top 3 + ask pointer (no log archaeology).
 		fmt.Println(topFailuresSummary(res, 3))
-		fmt.Printf("%s\n", tty.C(tty.Dim, "ask: cyberready ask .github/cyberready/cache/latest_failure.json --propose"))
-		fmt.Printf("%s\n", tty.C(tty.Dim, "cache: .github/cyberready/cache/latest_*.json"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "ask: curbpack ask .github/curbpack/cache/latest_failure.json --propose"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "cache: .github/curbpack/cache/latest_*.json"))
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
 	}
@@ -716,7 +716,7 @@ func cmdExport(args []string) error {
 			return err
 		}
 		tty.PrintStatus("explain-packet", true, path)
-		fmt.Printf("%s\n", tty.C(tty.Dim, "CYBERREADY_EXPLAIN_ALLOW_CLOUD=0 by default — set =1 only for explicit cloud tutor export"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "CURBPACK_EXPLAIN_ALLOW_CLOUD=0 by default — set =1 only for explicit cloud tutor export"))
 	}
 	if wantBuyerQ {
 		path, n, err := exportx.WriteBuyerQuestions(root, packIDs, takeOut())
@@ -776,7 +776,7 @@ func cmdAsk(args []string) error {
 }
 
 func cmdAttest(args []string) error {
-	tty.PrintHeader("cyberready attest")
+	tty.PrintHeader("curbpack attest")
 	allowDirty := false
 	for _, a := range args {
 		if a == "--allow-dirty" {

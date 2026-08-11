@@ -1,5 +1,5 @@
-name: 'CyberReady Check'
-description: 'Run CyberReady evidence gates on a product repo. Prepares human-review evidence — not a conformity assessment.'
+name: 'Curbpack Check'
+description: 'Run Curbpack evidence gates on a product repo. Prepares human-review evidence — not a conformity assessment.'
 author: 'afelin'
 branding:
   icon: 'shield'
@@ -7,11 +7,11 @@ branding:
 
 inputs:
   version:
-    description: 'Release tag to download (e.g. v0.4.3). Empty = build from this checkout if go.mod is cyberready, else download v0.4.3 (never floating latest).'
+    description: 'Release tag to download (e.g. v0.5.0). Empty = build from this checkout if go.mod is curbpack, else download v0.5.0 (never floating latest).'
     required: false
     default: ''
   packs:
-    description: 'Optional comma-separated pack override for check (empty = .cyberready.json / house-policy default)'
+    description: 'Optional comma-separated pack override for check (empty = .curbpack.json / house-policy default)'
     required: false
     default: ''
   diff:
@@ -54,7 +54,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Resolve cyberready binary
+    - name: Resolve curbpack binary
       id: bin
       shell: bash
       run: |
@@ -65,27 +65,27 @@ runs:
           x86_64|amd64) ARCH=amd64 ;;
           aarch64|arm64) ARCH=arm64 ;;
         esac
-        ASSET="cyberready_${OS}_${ARCH}"
-        DEST="${{ github.action_path }}/cyberready"
+        ASSET="curbpack_${OS}_${ARCH}"
+        DEST="${{ github.action_path }}/curbpack"
         VER="${{ inputs.version }}"
-        # Never prefer consumer ./bin/cyberready — that skips checksum verification and
+        # Never prefer consumer ./bin/curbpack — that skips checksum verification and
         # lets a PR ship a fake-green binary. Dogfood builds from this module; others
         # download a pinned release and verify sha256 against checksums.txt (fail-closed).
-        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/cyberready' go.mod 2>/dev/null; then
-          go build -o "$DEST" ./cmd/cyberready
+        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/curbpack' go.mod 2>/dev/null; then
+          go build -o "$DEST" ./cmd/curbpack
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
-          # Empty version → pin v0.4.3 (never silent floating latest).
+          # Empty version → pin v0.5.0 (never silent floating latest).
           if [ -z "$VER" ] || [ "$VER" = "latest" ]; then
             if [ "$VER" = "latest" ]; then
-              echo "inputs.version=latest is deprecated; downloading v0.4.3 instead" >&2
+              echo "inputs.version=latest is deprecated; downloading v0.5.0 instead" >&2
             fi
-            VER="v0.4.3"
+            VER="v0.5.0"
           fi
-          URL="https://github.com/afelin/cyberready/releases/download/${VER}/${ASSET}"
-          CHECKSUMS_URL="https://github.com/afelin/cyberready/releases/download/${VER}/checksums.txt"
+          URL="https://github.com/afelin/curbpack/releases/download/${VER}/${ASSET}"
+          CHECKSUMS_URL="https://github.com/afelin/curbpack/releases/download/${VER}/checksums.txt"
           if [ -z "${URL:-}" ]; then
-            echo "Could not resolve release binary ${ASSET}. Build cyberready or set inputs.version." >&2
+            echo "Could not resolve release binary ${ASSET}. Build curbpack or set inputs.version." >&2
             exit 1
           fi
           if [ -z "${CHECKSUMS_URL:-}" ]; then
@@ -134,7 +134,7 @@ runs:
         fi
         echo "path=$DEST" >> "$GITHUB_OUTPUT"
 
-    - name: Run cyberready check
+    - name: Run curbpack check
       id: run
       shell: bash
       working-directory: ${{ inputs.working_directory }}
@@ -152,7 +152,7 @@ runs:
           EXTRA+=(--heal)
         fi
         set +e
-        "$BIN" check "${EXTRA[@]}" | tee /tmp/cyberready-check.txt
+        "$BIN" check "${EXTRA[@]}" | tee /tmp/curbpack-check.txt
         CODE=${PIPESTATUS[0]}
         set -e
         if [ "$CODE" -eq 0 ]; then
@@ -160,8 +160,8 @@ runs:
         else
           echo "passed=false" >> "$GITHUB_OUTPUT"
         fi
-        mkdir -p .github/cyberready/cache
-        cp /tmp/cyberready-check.txt .github/cyberready/cache/ci-check-log.txt || true
+        mkdir -p .github/curbpack/cache
+        cp /tmp/curbpack-check.txt .github/curbpack/cache/ci-check-log.txt || true
         exit 0
 
     - name: Annotations + SARIF
@@ -172,20 +172,20 @@ runs:
       run: |
         set -euo pipefail
         BIN="${{ steps.bin.outputs.path }}"
-        OUT=".github/cyberready/cache/cyberready.sarif"
-        mkdir -p .github/cyberready/cache
+        OUT=".github/curbpack/cache/curbpack.sarif"
+        mkdir -p .github/curbpack/cache
         # Prefer CLI SARIF (single Go source of truth); fall back to annotations-only if export missing.
-        if "$BIN" export --sarif --out "$OUT" 2>/tmp/cyberready-sarif.err; then
+        if "$BIN" export --sarif --out "$OUT" 2>/tmp/curbpack-sarif.err; then
           :
         else
           echo "export --sarif failed; writing empty SARIF shell" >&2
-          cat /tmp/cyberready-sarif.err >&2 || true
-          printf '%s\n' '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"cyberready","informationUri":"https://github.com/afelin/cyberready","rules":[]}},"results":[]}]}' > "$OUT"
+          cat /tmp/curbpack-sarif.err >&2 || true
+          printf '%s\n' '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"curbpack","informationUri":"https://github.com/afelin/curbpack","rules":[]}},"results":[]}]}' > "$OUT"
         fi
         # GitHub Actions annotations from latest_failure.json
         python3 <<'PY'
         import json, pathlib
-        fail_path = pathlib.Path(".github/cyberready/cache/latest_failure.json")
+        fail_path = pathlib.Path(".github/curbpack/cache/latest_failure.json")
         if not fail_path.exists():
             raise SystemExit(0)
         try:
@@ -203,15 +203,15 @@ runs:
             else:
                 print(f"::{level}::{gate}: {desc}")
         PY
-        echo "path=.github/cyberready/cache/cyberready.sarif" >> "$GITHUB_OUTPUT"
+        echo "path=.github/curbpack/cache/curbpack.sarif" >> "$GITHUB_OUTPUT"
 
     - name: Upload SARIF
       if: inputs.upload_sarif == 'true' && steps.run.outputs.passed != 'true'
       continue-on-error: true
       uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
       with:
-        sarif_file: ${{ inputs.working_directory }}/.github/cyberready/cache/cyberready.sarif
-        category: cyberready
+        sarif_file: ${{ inputs.working_directory }}/.github/curbpack/cache/curbpack.sarif
+        category: curbpack
 
     - name: Prepare release artifacts
       if: inputs.prepare_release == 'true'
@@ -233,10 +233,10 @@ runs:
       run: |
         set -euo pipefail
         SCORE="0"
-        if [ -f .github/cyberready/cache/latest_failure.json ]; then
-          SCORE=$(python3 -c 'import json;print(json.load(open(".github/cyberready/cache/latest_failure.json")).get("readiness_score",0))' 2>/dev/null || echo 0)
-        elif [ -f .github/cyberready/cache/latest_action_report.md ]; then
-          SCORE=$(sed -n 's/.*Readiness[^0-9]*\([0-9][0-9]*\).*/\1/p' .github/cyberready/cache/latest_action_report.md | head -n1)
+        if [ -f .github/curbpack/cache/latest_failure.json ]; then
+          SCORE=$(python3 -c 'import json;print(json.load(open(".github/curbpack/cache/latest_failure.json")).get("readiness_score",0))' 2>/dev/null || echo 0)
+        elif [ -f .github/curbpack/cache/latest_action_report.md ]; then
+          SCORE=$(sed -n 's/.*Readiness[^0-9]*\([0-9][0-9]*\).*/\1/p' .github/curbpack/cache/latest_action_report.md | head -n1)
           SCORE=${SCORE:-0}
         fi
         echo "score=${SCORE}" >> "$GITHUB_OUTPUT"
@@ -245,12 +245,12 @@ runs:
       if: inputs.prepare_release == 'true'
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        name: cyberready-buyer-onepager
+        name: curbpack-buyer-onepager
         path: |
           ${{ inputs.working_directory }}/review-pack/buyer-onepager.html
-          ${{ inputs.working_directory }}/.github/cyberready/cache/latest_action_report.md
-          ${{ inputs.working_directory }}/.github/cyberready/cache/latest_failure.json
-          ${{ inputs.working_directory }}/.github/cyberready/cache/cyberready.sarif
+          ${{ inputs.working_directory }}/.github/curbpack/cache/latest_action_report.md
+          ${{ inputs.working_directory }}/.github/curbpack/cache/latest_failure.json
+          ${{ inputs.working_directory }}/.github/curbpack/cache/curbpack.sarif
         if-no-files-found: warn
 
     - name: Export ContextPack (fail soft on older pins)
@@ -264,17 +264,17 @@ runs:
         if [ -n "${{ inputs.packs }}" ]; then
           EXTRA+=(--packs "${{ inputs.packs }}")
         fi
-        mkdir -p .github/cyberready/cache
+        mkdir -p .github/curbpack/cache
         set +e
-        "$BIN" export --context-pack "${EXTRA[@]}" 2>/tmp/cyberready-context-pack.err
+        "$BIN" export --context-pack "${EXTRA[@]}" 2>/tmp/curbpack-context-pack.err
         CODE=$?
         set -e
-        if [ "$CODE" -eq 0 ] && [ -f .github/cyberready/cache/context-pack.json ]; then
+        if [ "$CODE" -eq 0 ] && [ -f .github/curbpack/cache/context-pack.json ]; then
           echo "present=true" >> "$GITHUB_OUTPUT"
         else
           echo "present=false" >> "$GITHUB_OUTPUT"
           echo "context-pack export unavailable (older pin or export failure) — continuing" >&2
-          cat /tmp/cyberready-context-pack.err >&2 || true
+          cat /tmp/curbpack-context-pack.err >&2 || true
         fi
 
     - name: Upload ContextPack artifact
@@ -282,10 +282,10 @@ runs:
       continue-on-error: true
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
-        name: cyberready-context-pack
+        name: curbpack-context-pack
         path: |
-          ${{ inputs.working_directory }}/.github/cyberready/cache/context-pack.json
-          ${{ inputs.working_directory }}/.github/cyberready/cache/context-pack.md
+          ${{ inputs.working_directory }}/.github/curbpack/cache/context-pack.json
+          ${{ inputs.working_directory }}/.github/curbpack/cache/context-pack.md
         if-no-files-found: warn
 
     - name: PR sticky comment (red-only by default)
@@ -309,7 +309,7 @@ runs:
             issue_number: context.issue.number,
             per_page: 100,
           });
-          const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- cyberready-sticky -->'));
+          const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- curbpack-sticky -->'));
 
           // Red-only: comment on fail, or first-run sticky; skip noisy green updates.
           if (mode === 'red' && passed && existing) {
@@ -319,8 +319,8 @@ runs:
           if (mode === 'red' && passed && !existing) {
             // First-run green: minimal check-mark, no essay.
             const body = [
-              '<!-- cyberready-sticky -->',
-              '## CyberReady check',
+              '<!-- curbpack-sticky -->',
+              '## Curbpack check',
               '',
               `✅ Gates green — readiness **${score}%**`,
               '',
@@ -343,7 +343,7 @@ runs:
           }
 
           let report = '';
-          const reportPath = path.join(root, '.github/cyberready/cache/latest_action_report.md');
+          const reportPath = path.join(root, '.github/curbpack/cache/latest_action_report.md');
           if (fs.existsSync(reportPath)) {
             report = fs.readFileSync(reportPath, 'utf8').trim();
             // Truncate to avoid leaking large doc excerpts into PR comments; prefer annotations/SARIF.
@@ -353,7 +353,7 @@ runs:
             }
           }
           let fails = [];
-          const failPath = path.join(root, '.github/cyberready/cache/latest_failure.json');
+          const failPath = path.join(root, '.github/curbpack/cache/latest_failure.json');
           if (fs.existsSync(failPath)) {
             try {
               const j = JSON.parse(fs.readFileSync(failPath, 'utf8'));
@@ -366,8 +366,8 @@ runs:
           const barFilled = Math.max(0, Math.min(20, Math.floor(Number(score) / 5)));
           const thermo = '█'.repeat(barFilled) + '·'.repeat(20 - barFilled);
           const body = [
-            '<!-- cyberready-sticky -->',
-            '## CyberReady check',
+            '<!-- curbpack-sticky -->',
+            '## Curbpack check',
             '',
             `**Readiness:** ${score}% \`${thermo}\` — ${passed ? 'gates green' : 'gates need attention'}`,
             '',
@@ -379,7 +379,7 @@ runs:
             '',
             `> ${claim}`,
             '',
-            '_Ask:_ `cyberready ask .github/cyberready/cache/latest_failure.json --propose`',
+            '_Ask:_ `curbpack ask .github/curbpack/cache/latest_failure.json --propose`',
           ].filter(Boolean).join('\n');
 
           if (existing) {
@@ -402,5 +402,5 @@ runs:
       if: steps.run.outputs.passed != 'true'
       shell: bash
       run: |
-        echo "cyberready check failed (not a certification result — evidence for human review)."
+        echo "curbpack check failed (not a certification result — evidence for human review)."
         exit 1

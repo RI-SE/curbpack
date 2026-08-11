@@ -1,3 +1,3 @@
-module github.com/afelin/cyberready
+module github.com/afelin/curbpack
 
 go 1.23

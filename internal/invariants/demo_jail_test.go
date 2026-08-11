@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/demo"
+	"github.com/afelin/curbpack/internal/demo"
 )
 
 func TestDemoRefusesProductCwd(t *testing.T) {
@@ -22,7 +22,7 @@ func TestDemoRefusesProductCwd(t *testing.T) {
 func TestDemoRefusesPathUnderCwd(t *testing.T) {
 	sub := filepath.Join(t.TempDir(), "nested") // may not be under cwd
 	// Create a dir under the real cwd.
-	jail := filepath.Join(".", ".cyberready-demo-jail-test")
+	jail := filepath.Join(".", ".curbpack-demo-jail-test")
 	_ = os.RemoveAll(jail)
 	if err := os.MkdirAll(jail, 0o755); err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func TestDemoSandboxDoesNotTouchCwdMarker(t *testing.T) {
 	if err != nil || string(b) != "keep\n" {
 		t.Fatalf("product cwd marker mutated: %v %q", err, b)
 	}
-	if _, err := os.Stat(filepath.Join(out, ".cyberready.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(out, ".curbpack.json")); err != nil {
 		t.Fatal(err)
 	}
 }

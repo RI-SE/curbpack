@@ -1,12 +1,12 @@
 # Adopters
 
-Opt-in list. Add your org or project if you run CyberReady+ Action `@v0.4.3` or `cyberready init` + hooks and want a public nod.
+Opt-in list. Add your org or project if you run Curbpack Action `@v0.5.0` or `curbpack init` + hooks and want a public nod.
 
 Gate green means **ready for human review** — not certification.
 
 | Adopter | How | Notes |
 |---------|-----|-------|
-| [afelin/cyberready](https://github.com/afelin/cyberready) | Action dogfood + house-policy | This repo |
-| Coreward / vibe-engine-os | Optional sock + explain-packet consumer | **Not required** for CyberReady adoption; tutor must re-check; never greenlights. Brief: https://afelin.github.io/coreward/ |
+| [afelin/curbpack](https://github.com/afelin/curbpack) | Action dogfood + house-policy | This repo |
+| Coreward / vibe-engine-os | Optional sock + explain-packet consumer | **Not required** for Curbpack adoption; tutor must re-check; never greenlights. Brief: https://afelin.github.io/coreward/ |
 
 To join: open a PR adding one row, or ask in Discussions. Anonymous use is fine — this list is never required.

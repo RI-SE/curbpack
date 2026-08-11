@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 //go:embed data/cra-baseline/pack.json data/medtech-iec62304/pack.json data/house-policy/pack.json data/_watchlist.json
@@ -135,7 +136,7 @@ func LoadPack(id string) (Pack, error) {
 }
 
 func envPacksDir() string {
-	return strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR"))
+	return strings.TrimSpace(paths.Env("PACKS_DIR"))
 }
 
 func loadPackFromDir(dir, id string) (Pack, error) {
@@ -334,7 +335,7 @@ func ValidateRegexPattern(pattern string) error {
 
 // LoadWatchlist returns the embedded (or overridden) watchlist.
 func LoadWatchlist() (Watchlist, error) {
-	if dir := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR")); dir != "" {
+	if dir := strings.TrimSpace(paths.Env("PACKS_DIR")); dir != "" {
 		data, err := os.ReadFile(filepath.Join(dir, "_watchlist.json"))
 		if err == nil {
 			var w Watchlist

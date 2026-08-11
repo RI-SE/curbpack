@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/sbom"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/sbom"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // SARIFDocument is SARIF 2.1.0 subset.
@@ -79,7 +79,7 @@ func WriteSARIF(root string, packIDs []string, outPath string) (string, int, err
 	}
 	doc := FromGateFailures(res.Payload, root)
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "cache", "cyberready.sarif")
+		outPath = filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", 0, err
@@ -150,8 +150,8 @@ func FromGateFailures(payload ir.GateFailurePayload, repoRoot string) SARIFDocum
 		Version: "2.1.0",
 		Runs: []SARIFRun{{
 			Tool: SARIFTool{Driver: SARIFDriver{
-				Name:           "cyberready",
-				InformationURI: "https://github.com/afelin/cyberready",
+				Name:           "curbpack",
+				InformationURI: "https://github.com/afelin/curbpack",
 				Rules:          rules,
 			}},
 			Results: results,
@@ -236,7 +236,7 @@ func WriteWatchlistJoin(root, outPath string) (string, error) {
 		})
 	}
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "cache", "watchlist-sbom-join.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "cache", "watchlist-sbom-join.json")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", err

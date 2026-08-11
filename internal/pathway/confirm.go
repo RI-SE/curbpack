@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 // KnownPackSet returns allowlisted embedded ids ∪ loadable imported ids.
@@ -21,8 +22,8 @@ func KnownPackSet() (map[string]struct{}, error) {
 	for _, id := range ids {
 		out[id] = struct{}{}
 	}
-	// Imported / override packs under CYBERREADY_PACKS_DIR.
-	if dir := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR")); dir != "" {
+	// Imported / override packs under CURBPACK_PACKS_DIR.
+	if dir := strings.TrimSpace(paths.Env("PACKS_DIR")); dir != "" {
 		entries, err := os.ReadDir(dir)
 		if err == nil {
 			for _, e := range entries {
@@ -40,7 +41,7 @@ func KnownPackSet() (map[string]struct{}, error) {
 }
 
 // ErrNoSuggest is returned when confirm runs before suggest.
-var ErrNoSuggest = usagef("pathway: run cyberready pathway suggest first")
+var ErrNoSuggest = usagef("pathway: run curbpack pathway suggest first")
 
 // ConfirmPacks stamps packs_confirmed after validating proposed ids ∈ known set.
 // On success, exports policy-graph.json (RKG) for confirmed packs (best-effort).
@@ -93,7 +94,7 @@ func ConfirmShare(repoRoot string) (*Seed, error) {
 		return nil, ErrNoSuggest
 	}
 	if !shareArtifactsPresent(repoRoot) {
-		return nil, usagef("pathway confirm-share: no share artifacts — run cyberready share first")
+		return nil, usagef("pathway confirm-share: no share artifacts — run curbpack share first")
 	}
 	s.HumanTicks.ShareReviewed = true
 	if err := Write(repoRoot, *s); err != nil {
@@ -103,7 +104,7 @@ func ConfirmShare(repoRoot string) (*Seed, error) {
 }
 
 func shareArtifactsPresent(repoRoot string) bool {
-	cache := filepath.Join(repoRoot, ".github", "cyberready", "cache")
+	cache := filepath.Join(repoRoot, ".github", "curbpack", "cache")
 	bqMD := filepath.Join(cache, "buyer-questions.md")
 	bqJSON := filepath.Join(cache, "buyer-questions.json")
 	cp := filepath.Join(cache, "context-pack.json")
@@ -162,7 +163,7 @@ func ApplySuggest(repoRoot string, r SuggestResult) (*Seed, error) {
 	return &s, nil
 }
 
-// ConfiguredPacks reports packs from .cyberready.json if present.
+// ConfiguredPacks reports packs from .curbpack.json if present.
 func ConfiguredPacks(repoRoot string) ([]string, bool) {
 	cfg, err := config.Load(repoRoot)
 	if err != nil || cfg == nil || len(cfg.Packs) == 0 {
@@ -173,7 +174,7 @@ func ConfiguredPacks(repoRoot string) ([]string, bool) {
 
 // LastCheckGreen reads latest_result.json failures; missing file → false, false.
 func LastCheckGreen(repoRoot string) (green bool, ok bool) {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_result.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "cache", "latest_result.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, false

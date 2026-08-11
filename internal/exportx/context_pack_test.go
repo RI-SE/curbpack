@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
+	"github.com/afelin/curbpack/internal/exportx"
 )
 
 func TestWriteContextPack_FromValidateWash(t *testing.T) {
@@ -76,7 +76,7 @@ func TestWriteContextPack_PrefersCache(t *testing.T) {
 	writeGoodHouse(t, dir)
 
 	// Seed cache without calling validate again via WriteContextPack first path.
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}

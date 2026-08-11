@@ -18,13 +18,13 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Time-to-green smoke
         run: ./scripts/time-to-green.sh
       - name: Forced failure (broken BIN)
         run: |
           set +e
-          CYBERREADY_BIN=/nonexistent/cyberready ./scripts/time-to-green.sh
+          CURBPACK_BIN=/nonexistent/curbpack ./scripts/time-to-green.sh
           code=$?
           set -e
           test "$code" -ne 0

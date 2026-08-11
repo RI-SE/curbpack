@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 )
 
-//go:embed cyberready-check.yml
+//go:embed curbpack-check.yml
 var workflowYAML []byte
 
 // DestRel is the adopter path written by init --workflow.
-const DestRel = ".github/workflows/cyberready.yml"
+const DestRel = ".github/workflows/curbpack.yml"
 
 // Install writes the drop-in Action workflow if missing.
 // Never overwrites an existing workflow. Opt-in only (callers gate on --workflow).

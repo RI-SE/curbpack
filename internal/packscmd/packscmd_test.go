@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/packscmd"
+	"github.com/afelin/curbpack/internal/packscmd"
 )
 
 func TestImportAirGapRequiresAssuranceClass(t *testing.T) {
 	src := t.TempDir()
 	dest := t.TempDir()
-	t.Setenv("CYBERREADY_PACKS_DIR", dest)
+	t.Setenv("CURBPACK_PACKS_DIR", dest)
 	mustWrite(t, filepath.Join(src, "theater-pack", "pack.json"), `{
   "id": "theater-pack",
   "name": "Theater pack",
@@ -38,7 +38,7 @@ func TestImportAirGapRequiresAssuranceClass(t *testing.T) {
 func TestImportAirGapWritesDigest(t *testing.T) {
 	src := t.TempDir()
 	dest := t.TempDir()
-	t.Setenv("CYBERREADY_PACKS_DIR", dest)
+	t.Setenv("CURBPACK_PACKS_DIR", dest)
 	body := `{
   "id": "ok-pack",
   "name": "OK pack",
@@ -60,7 +60,7 @@ func TestImportAirGapWritesDigest(t *testing.T) {
 	if err := packscmd.ImportAirGap(src); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dest, "ok-pack", ".cyberready-pack.sha256")); err != nil {
+	if _, err := os.Stat(filepath.Join(dest, "ok-pack", ".curbpack-pack.sha256")); err != nil {
 		t.Fatal("missing digest sidecar")
 	}
 }
@@ -76,20 +76,20 @@ func mustWrite(t *testing.T, path, body string) {
 }
 
 func TestUpdateRequiresSHA256Pin(t *testing.T) {
-	t.Setenv("CYBERREADY_PACKS_URL", "https://example.invalid/bundle.json")
-	t.Setenv("CYBERREADY_PACKS_SHA256", "")
+	t.Setenv("CURBPACK_PACKS_URL", "https://example.invalid/bundle.json")
+	t.Setenv("CURBPACK_PACKS_SHA256", "")
 	err := packscmd.UpdateStub()
 	if err == nil {
 		t.Fatal("expected refuse without sha256 pin")
 	}
-	if !strings.Contains(err.Error(), "CYBERREADY_PACKS_SHA256") {
+	if !strings.Contains(err.Error(), "CURBPACK_PACKS_SHA256") {
 		t.Fatalf("got %v", err)
 	}
 }
 
 func TestUpdateOfflineInstructions(t *testing.T) {
-	t.Setenv("CYBERREADY_PACKS_URL", "")
-	t.Setenv("CYBERREADY_PACKS_SHA256", "")
+	t.Setenv("CURBPACK_PACKS_URL", "")
+	t.Setenv("CURBPACK_PACKS_SHA256", "")
 	// Capture via ensuring no panic / nil error when URL unset.
 	if err := packscmd.UpdateStub(); err != nil {
 		t.Fatal(err)

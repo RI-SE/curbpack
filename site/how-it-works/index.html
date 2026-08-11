@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>How it works — CyberReady+</title>
+  <title>How it works — Curbpack</title>
   <meta name="description" content="Three ways in (Write, Bring, or CI), same local check, then a review pack for human review." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/cyberready/assets/site.css" />
+  <link rel="stylesheet" href="/curbpack/assets/site.css" />
 </head>
 <body>
   <div class="wrap">
     <nav class="site-nav" aria-label="Primary">
-      <a class="mark" href="/cyberready/">CyberReady<span>+</span></a>
+      <a class="mark" href="/curbpack/">Curbpack</a>
       <ul>
-        <li><a href="/cyberready/for-builders/">Builders</a></li>
-        <li><a href="/cyberready/for-reviewers/">Reviewers</a></li>
-        <li><a href="/cyberready/for-authorities/">Authorities</a></li>
-        <li><a href="/cyberready/how-it-works/" aria-current="page">How it works</a></li>
+        <li><a href="/curbpack/for-builders/">Builders</a></li>
+        <li><a href="/curbpack/for-reviewers/">Reviewers</a></li>
+        <li><a href="/curbpack/for-authorities/">Authorities</a></li>
+        <li><a href="/curbpack/how-it-works/" aria-current="page">How it works</a></li>
       </ul>
     </nav>
 
@@ -29,16 +29,16 @@
 
       <h3>Three ways in — same local check</h3>
       <ol>
-        <li><strong>Write then check</strong> — optional <strong>pathway</strong> (an interview that suggests checklists), dual drafts with a <strong>Recommended: A or B</strong>, optional <a href="/cyberready/samples/research-brief.html">research brief</a>, then <strong>cite-check</strong> (refuses uncited Claims), then check.</li>
-        <li><strong>Bring docs then check</strong> — put existing policies on the pack paths (or point a custom pack JSON at your paths), then check. CyberReady does <strong>not</strong> ingest portal PDFs; evidence means files in the repo.</li>
-        <li><strong>CI check alone</strong> — run <code>check</code> in GitHub Actions anytime. No draft step.</li>
+        <li><strong>Write then check</strong> — start with <strong>curb outlines</strong> (pathway warm-start interview), then dual drafts with a <strong>Recommended: A or B</strong>, optional <a href="/curbpack/samples/research-brief.html">research brief</a>, then <strong>cite-check</strong> (refuses uncited Claims), then check.</li>
+        <li><strong>Bring docs then check</strong> — put existing policies on the pack paths (or point a custom pack JSON at your paths), then check. <strong>Skips curb outlines.</strong> Curbpack does <strong>not</strong> ingest portal PDFs; evidence means files in the repo.</li>
+        <li><strong>CI check alone</strong> — run <code>check</code> in GitHub Actions anytime. <strong>Skips curb outlines.</strong> No draft step.</li>
       </ol>
       <p>Write adds draft choice before check; Bring and CI go straight to check. Every path ends in a review pack for a human to judge.</p>
 
       <svg class="diagram" viewBox="0 0 720 280" role="img" aria-label="Write path through drafts to local check; Bring and CI go straight to check">
         <rect x="16" y="20" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
         <text x="91" y="42" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Write→Check</text>
-        <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Warm-start draft</text>
+        <text x="91" y="60" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#4a4a52">Curb outlines</text>
 
         <rect x="16" y="96" width="150" height="56" rx="0" fill="#fcfcfc" stroke="#0a0a0b" stroke-width="2"/>
         <text x="91" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600" fill="#0a0a0b">Bring-docs→Check</text>
@@ -83,28 +83,28 @@
         <li><code>cra-baseline</code> — Cyber Resilience Act (CRA)–shaped annex draft structure (informational)</li>
         <li><code>medtech-iec62304</code> — IEC 62304–shaped overlay (composes with CRA when selected)</li>
       </ul>
-      <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree. Compose with <code>cyberready init --packs …</code> or <code>.cyberready.json</code>. Pathway for Write is optional — prefer “choose checklists,” not “pathway to regulation.”</p>
+      <p>Packs are <strong>checklists shaped like regulatory annex drafts</strong>, not the law itself. Green gates mean the pack rules passed on this tree. Compose with <code>curbpack init --packs …</code> or <code>.curbpack.json</code>. Pathway for Write is optional — prefer “choose checklists,” not “pathway to regulation.”</p>
 
       <h3>2. Draft choice (Write path only)</h3>
-      <p>Assistants propose <strong>Option A</strong> and <strong>Option B</strong>, state <strong>Recommended: A or B</strong> with a few reasons, then stop for you. Optional allowlisted <a href="/cyberready/samples/research-brief.html">research brief</a> informs cites; it never changes check pass/fail. After you pick, run cite-check before owning the prose. Bring and CI skip this stage.</p>
+      <p>Assistants propose <strong>Option A</strong> and <strong>Option B</strong>, state <strong>Recommended: A or B</strong> with a few reasons, then stop for you. Optional allowlisted <a href="/curbpack/samples/research-brief.html">research brief</a> informs cites; it never changes check pass/fail. After you pick, run cite-check before owning the prose. Bring and CI skip this stage.</p>
 
       <h3>3. Local check</h3>
-      <p><code>cyberready init</code> then <code>cyberready check</code> evaluates the chosen packs on disk. Dual output: machine-readable findings (JSON) and a short markdown report. Exit 0 = gates passed on this tree; 1 = findings remain. Daily <code>check</code> does not write the buyer one-pager.</p>
+      <p><code>curbpack init</code> then <code>curbpack check</code> evaluates the chosen packs on disk. Dual output: machine-readable findings (JSON) and a short markdown report. Exit 0 = gates passed on this tree; 1 = findings remain. Daily <code>check</code> does not write the buyer one-pager.</p>
 
       <h3>4. Review pack — hand to a buyer or auditor</h3>
-      <p><code>prepare-release</code> (or <code>cyberready share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources (informational — not a gate input), and human sign-off status.</p>
+      <p><code>prepare-release</code> (or <code>curbpack share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources (informational — not a gate input), and human sign-off status.</p>
 
       <h3>5. Human review (when ready)</h3>
-      <p>A person judges the evidence. When you are ready to bind a hash, run <code>cyberready attest</code> into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> After attest, you can open the local <code>proof/index.html</code> page and compare the bound hash from the evidence pointer—still human judgment, not conformity assessment.</p>
+      <p>A person judges the evidence. When you are ready to bind a hash, run <code>curbpack attest</code> into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> After attest, you can open the local <code>proof/index.html</code> page and compare the bound hash from the evidence pointer—still human judgment, not conformity assessment.</p>
 
-      <p>CyberReady decides pass/fail (deterministic). Humans decide what to claim. Tutors propose only and must re-check; they never greenlight or attest.</p>
+      <p>Curbpack decides pass/fail (deterministic). Humans decide what to claim. Tutors propose only and must re-check; they never greenlight or attest.</p>
 
-      <p class="muted">Committed sample (front + back): <a href="/cyberready/samples/onepager.html">samples/onepager.html</a>. Optional writer aid: <a href="/cyberready/samples/research-brief.html">research brief sample</a>. Authorities path: <a href="/cyberready/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/cyberready/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
+      <p class="muted">Committed sample (front + back): <a href="/curbpack/samples/onepager.html">samples/onepager.html</a>. Optional writer aid: <a href="/curbpack/samples/research-brief.html">research brief sample</a>. Authorities path: <a href="/curbpack/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/curbpack/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
     </section>
 
     <footer class="site-footer">
-      <p><a href="/cyberready/">Home</a> · <a href="/cyberready/llms.txt">llms.txt</a> · <a href="/cyberready/samples/onepager.html">Sample</a> · <a href="/cyberready/whitepaper/">White paper</a> · <a href="/cyberready/security/">Security</a> · <a href="https://github.com/afelin/cyberready">GitHub</a></p>
-      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.</p>
+      <p><a href="/curbpack/">Home</a> · <a href="/curbpack/llms.txt">llms.txt</a> · <a href="/curbpack/samples/onepager.html">Sample</a> · <a href="/curbpack/whitepaper/">White paper</a> · <a href="/curbpack/security/">Security</a> · <a href="https://github.com/afelin/curbpack">GitHub</a></p>
+      <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.</p>
       <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>

@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // Run explains a GateFailure payload from stdin or path. Propose-only — never writes.
@@ -47,7 +47,7 @@ func Run(path string, propose bool) error {
 			fmt.Printf("- Proposed change: %s\n", f.Remediation.ActionRequired)
 			fmt.Printf("- Expected state: %s\n\n", f.Remediation.ExpectedState)
 		}
-		fmt.Println("Re-run `cyberready validate` after editing. CyberReady will not apply diffs automatically.")
+		fmt.Println("Re-run `curbpack validate` after editing. Curbpack will not apply diffs automatically.")
 	}
 	return nil
 }

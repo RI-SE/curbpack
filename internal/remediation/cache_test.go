@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/remediation"
+	"github.com/afelin/curbpack/internal/remediation"
 )
 
 func TestCacheRoundTrip(t *testing.T) {
@@ -20,7 +20,7 @@ func TestCacheRoundTrip(t *testing.T) {
 	if err := remediation.Save(dir, c); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, ".github", "cyberready", "cache", "remediations.json")
+	path := filepath.Join(dir, ".github", "curbpack", "cache", "remediations.json")
 	if _, err := os.Stat(path); err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afelin/cyberready/internal/release"
+	"github.com/afelin/curbpack/internal/release"
 )
 
 func TestPrepareReleaseWritesPack(t *testing.T) {
@@ -33,7 +33,7 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 		}
 	}
 	html, _ := os.ReadFile(filepath.Join(out, "buyer-onepager.html"))
-	if !strings.Contains(string(html), "CyberReady+") {
+	if !strings.Contains(string(html), "Curbpack") {
 		t.Fatal("buyer html missing brand")
 	}
 	if !strings.Contains(string(html), "not a certificate") {

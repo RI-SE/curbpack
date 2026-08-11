@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/curbpack/internal/ir"
 )
 
 func TestGateFailureRoundTrip(t *testing.T) {

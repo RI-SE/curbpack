@@ -34,25 +34,25 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Doctor + demo sandbox
         run: |
           set -euo pipefail
-          "$GITHUB_WORKSPACE/bin/cyberready" doctor
+          "$GITHUB_WORKSPACE/bin/curbpack" doctor
           DEMO=$(mktemp -d)
-          "$GITHUB_WORKSPACE/bin/cyberready" demo --out "$DEMO" --keep
+          "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
           test -f "$DEMO/review-pack/buyer-onepager.html"
-          test -f "$DEMO/.cyberready.json"
+          test -f "$DEMO/.curbpack.json"
       - name: Offline smoke — CRA fixture
         run: |
           set -euo pipefail
           FIX=$(mktemp -d)
           cd "$FIX"
           git init -q
-          git config user.email "ci@cyberready.local"
+          git config user.email "ci@curbpack.local"
           git config user.name "CI"
           git commit --allow-empty -m init -q
-          "$GITHUB_WORKSPACE/bin/cyberready" init --packs cra-baseline
+          "$GITHUB_WORKSPACE/bin/curbpack" init --packs cra-baseline
           # Bind annex drafts to a resolvable product token (package.json name).
           # CRA-ANNEX-VII-RISK also require_tree_paths README.md (always present post-init/heal in product repos).
           printf '%s\n' '# contoso-gateway' > README.md
@@ -97,10 +97,10 @@ jobs:
 
           Factory-reset the appliance, shred exported key material, and confirm cloud tenant deletion.
           EOF
-          "$GITHUB_WORKSPACE/bin/cyberready" check
-          "$GITHUB_WORKSPACE/bin/cyberready" prepare-release
+          "$GITHUB_WORKSPACE/bin/curbpack" check
+          "$GITHUB_WORKSPACE/bin/curbpack" prepare-release
           test -f review-pack/buyer-onepager.html
-          test -f .github/cyberready/cache/latest_action_report.md
+          test -f .github/curbpack/cache/latest_action_report.md
 
       - name: Offline smoke — house-policy fixture
         run: |
@@ -108,44 +108,44 @@ jobs:
           FIX=$(mktemp -d)
           cd "$FIX"
           git init -q
-          git config user.email "ci@cyberready.local"
+          git config user.email "ci@curbpack.local"
           git config user.name "CI"
           git commit --allow-empty -m init -q
-          "$GITHUB_WORKSPACE/bin/cyberready" init --packs house-policy --hooks --skill --ide
+          "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy --hooks --skill --ide
           test -x .git/hooks/pre-commit
-          grep -q 'cyberready check --heal' .git/hooks/pre-commit
-          test -f .cursor/skills/cyberready/SKILL.md
+          grep -q 'curbpack check --heal' .git/hooks/pre-commit
+          test -f .cursor/skills/curbpack/SKILL.md
           test -f .vscode/tasks.json
-          "$GITHUB_WORKSPACE/bin/cyberready" check
-          # bare cyberready defaults to check when inited
-          "$GITHUB_WORKSPACE/bin/cyberready"
-          "$GITHUB_WORKSPACE/bin/cyberready" check --form-hints || true
+          "$GITHUB_WORKSPACE/bin/curbpack" check
+          # bare curbpack defaults to check when inited
+          "$GITHUB_WORKSPACE/bin/curbpack"
+          "$GITHUB_WORKSPACE/bin/curbpack" check --form-hints || true
           echo '{"name":"demo","dependencies":{"left-pad":"1.3.0"}}' > package.json
-          "$GITHUB_WORKSPACE/bin/cyberready" prepare-release --allow-failing-gates
-          test -f .github/cyberready/evidence/sbom.cdx.json
+          "$GITHUB_WORKSPACE/bin/curbpack" prepare-release --allow-failing-gates
+          test -f .github/curbpack/evidence/sbom.cdx.json
           python3 - <<'PY'
           import json
-          d=json.load(open(".github/cyberready/evidence/sbom.cdx.json"))
+          d=json.load(open(".github/curbpack/evidence/sbom.cdx.json"))
           assert d["bomFormat"]=="CycloneDX" and d["specVersion"]=="1.5"
-          v=json.load(open(".github/cyberready/evidence/vex-pending.json"))
+          v=json.load(open(".github/curbpack/evidence/vex-pending.json"))
           assert v["status"]=="draft_pending_attest"
           print("cyclonedx+vex ok")
           PY
           git add -A && git -c commit.gpgsign=false commit --no-verify -m "evidence" -q
-          "$GITHUB_WORKSPACE/bin/cyberready" attest --allow-dirty
-          test -f .github/cyberready/evidence/hpurl-pointer.json
+          "$GITHUB_WORKSPACE/bin/curbpack" attest --allow-dirty
+          test -f .github/curbpack/evidence/hpurl-pointer.json
           python3 - <<'PY'
           import json
-          p=json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))
+          p=json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))
           assert p.get("state_hash") and p["state_hash"] in p.get("hpurl","")
           print("hpurl pointer ok", p["state_hash"][:12])
           PY
           # Hook dry-run: script is executable and references check
           head -n 5 .git/hooks/pre-commit
           grep -q 'refusing commit' .git/hooks/pre-commit
-          H1=$(python3 -c 'import json;print(json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))["state_hash"])')
-          "$GITHUB_WORKSPACE/bin/cyberready" attest --allow-dirty >/dev/null
-          H2=$(python3 -c 'import json;print(json.load(open(".github/cyberready/evidence/hpurl-pointer.json"))["state_hash"])')
+          H1=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')
+          "$GITHUB_WORKSPACE/bin/curbpack" attest --allow-dirty >/dev/null
+          H2=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')
           test "$H1" = "$H2"
 
   redteam-pilot:
@@ -159,7 +159,7 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Redteam pilot scoreboard (required)
         run: ./scripts/redteam-pilot.sh
 
@@ -172,7 +172,7 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Claim safety (docs + runtime)
         run: ./scripts/claim-safety.sh
       - name: Heal smoke + baseline ratchet + dead-ends
@@ -183,20 +183,23 @@ jobs:
         run: |
           set -euo pipefail
           INST=$(mktemp -d)
-          export CYBERREADY_INSTALL_DIR="$INST"
-          export CYBERREADY_VERSION="${CYBERREADY_VERSION:-latest}"
-          # Prefer latest release binary; fall back to workspace build if download fails (fork PRs).
-          if curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh; then
+          export CURBPACK_INSTALL_DIR="$INST"
+          export CURBPACK_VERSION="${CURBPACK_VERSION:-latest}"
+          # Prefer branch install.sh (tests cutover checksum path). Until curbpack_*
+          # release assets publish, install fails closed — fall back to workspace build.
+          # Do not curl main's installer here: it still installs the pre-rebrand binary
+          # name and chicken-eggs this job (exit 127).
+          if sh "$GITHUB_WORKSPACE/scripts/install.sh"; then
             export PATH="$INST:$PATH"
-            cyberready doctor
+            curbpack doctor
             DEMO=$(mktemp -d)
-            cyberready demo --out "$DEMO" --keep
+            curbpack demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"
           else
             echo "release install unavailable — falling back to workspace binary"
-            "$GITHUB_WORKSPACE/bin/cyberready" doctor
+            "$GITHUB_WORKSPACE/bin/curbpack" doctor
             DEMO=$(mktemp -d)
-            "$GITHUB_WORKSPACE/bin/cyberready" demo --out "$DEMO" --keep
+            "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"
           fi
       - name: Dead-end — corrupt pack env
@@ -208,13 +211,13 @@ jobs:
           FIX=$(mktemp -d)
           cd "$FIX"
           git init -q
-          git config user.email "ci@cyberready.local"
+          git config user.email "ci@curbpack.local"
           git config user.name "CI"
           git commit --allow-empty -m init -q
           set +e
-          CYBERREADY_PACKS_DIR="$BAD" "$GITHUB_WORKSPACE/bin/cyberready" init --packs broken
+          CURBPACK_PACKS_DIR="$BAD" "$GITHUB_WORKSPACE/bin/curbpack" init --packs broken
           code=$?
           set -e
           test "$code" -ne 0
       - name: Chaos dead-ends
-        run: ./scripts/chaos-deadends.sh "$GITHUB_WORKSPACE/bin/cyberready"
+        run: ./scripts/chaos-deadends.sh "$GITHUB_WORKSPACE/bin/curbpack"

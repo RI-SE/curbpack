@@ -61,7 +61,7 @@ func TestConfirmPacks_OK(t *testing.T) {
 	if out.Claim != ClaimFence {
 		t.Fatalf("claim fence=%q", out.Claim)
 	}
-	graph := filepath.Join(dir, ".github", "cyberready", "graph", "policy-graph.json")
+	graph := filepath.Join(dir, ".github", "curbpack", "graph", "policy-graph.json")
 	if _, err := os.Stat(graph); err != nil {
 		t.Fatalf("confirm-packs should export RKG: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestConfirmProse_OKWithDocs(t *testing.T) {
 	if err := Write(dir, s); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte("# Security\n\nHouse policy prose.\n"), 0o644); err != nil {
@@ -144,11 +144,11 @@ func TestConfirmShare_RefuseWithoutArtifacts(t *testing.T) {
 	if err := Write(dir, s); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// Green check so phase is AwaitShare (not AwaitCheck) — still no share artifacts.
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -170,10 +170,10 @@ func TestConfirmShare_OK(t *testing.T) {
 	if err := Write(dir, s); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestConfirmProse_InvalidatesLatestResult(t *testing.T) {
 	if err := Write(dir, s); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".cyberready.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte("# Security\n\nHouse policy prose.\n"), 0o644); err != nil {
@@ -255,7 +255,7 @@ func TestConfirmProse_InvalidatesLatestResult(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".well-known", "security.txt"), []byte("Contact: security@example.com\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}

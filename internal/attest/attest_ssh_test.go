@@ -51,7 +51,7 @@ func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	argv := strings.TrimSpace(string(raw))
-	// Confirm production argv shape: -Y sign -f <key> -n cyberready@attest <payload>
+	// Confirm production argv shape: -Y sign -f <key> -n curbpack@attest <payload>
 	if !strings.Contains(argv, "-Y sign") && !strings.Contains(argv, "-Y\nsign") {
 		// argv is space-joined
 		if !strings.Contains(argv, "-Y") || !strings.Contains(argv, "sign") {
@@ -70,7 +70,7 @@ func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 		t.Fatalf("-f missing from argv: %q", argv)
 	}
 	fPath := fields[fIdx]
-	if !strings.HasSuffix(fPath, ".pub") && !strings.Contains(fPath, "cyberready-attest-") {
+	if !strings.HasSuffix(fPath, ".pub") && !strings.Contains(fPath, "curbpack-attest-") {
 		t.Fatalf("-f must be key file, got %q", fPath)
 	}
 	// Last arg is payload path; must differ from -f.
@@ -85,7 +85,7 @@ func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 
 func TestTrySSHAgentSign_RejectsAgentBindOutput(t *testing.T) {
 	bin := t.TempDir()
-	installFakeSSH(t, bin, true, `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests fake@cyberready`)
+	installFakeSSH(t, bin, true, `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests fake@cyberready`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
 
@@ -110,7 +110,7 @@ func TestIdentityFromSSHAddLine_MultiWordComment(t *testing.T) {
 }
 
 func TestIdentityFromSSHAddLine_UnnamedKey(t *testing.T) {
-	got := identityFromSSHAddLine("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests")
+	got := identityFromSSHAddLine("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests")
 	want := "SSH-Agent:unnamed-key"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
@@ -119,7 +119,7 @@ func TestIdentityFromSSHAddLine_UnnamedKey(t *testing.T) {
 
 func TestTrySSHAgentSign_MultiWordCommentIdentity(t *testing.T) {
 	bin := t.TempDir()
-	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests yubi key laptop"
+	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests yubi key laptop"
 	installFakeSSH(t, bin, false, line)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
@@ -135,7 +135,7 @@ func TestTrySSHAgentSign_MultiWordCommentIdentity(t *testing.T) {
 
 func TestTrySSHAgentSign_UnnamedKeyIdentity(t *testing.T) {
 	bin := t.TempDir()
-	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests"
+	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests"
 	installFakeSSH(t, bin, false, line)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
@@ -152,7 +152,7 @@ func TestTrySSHAgentSign_UnnamedKeyIdentity(t *testing.T) {
 func installFakeSSH(t *testing.T, bin string, emitAgentBind bool, addLine string) {
 	t.Helper()
 	if addLine == "" {
-		addLine = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests fake@cyberready"
+		addLine = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests fake@cyberready"
 	}
 	sshAdd := "#!/bin/sh\necho '" + addLine + "'\n"
 	mode := "honest"
@@ -184,7 +184,7 @@ if [ "$f" = "$data" ]; then
   exit 3
 fi
 case "$f" in
-  *.pub|*/cyberready-attest-*) ;;
+  *.pub|*/curbpack-attest-*) ;;
   *)
     # still accept temp key paths without .pub suffix if they differ from data
     if [ ! -f "$f" ]; then

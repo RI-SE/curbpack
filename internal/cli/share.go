@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/release"
-	"github.com/afelin/cyberready/internal/tty"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/release"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // cmdShare is a thin recipe wrapper: check → context-pack → buyer-questions → prepare-release.
@@ -33,7 +33,7 @@ func cmdShare(args []string) error {
 		}
 	}
 
-	tty.PrintHeader("cyberready share")
+	tty.PrintHeader("curbpack share")
 	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: false})
 	checkFailed := verr != nil || !res.Passed
 	if verr != nil {

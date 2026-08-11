@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/afelin/curbpack/internal/paths"
 )
 
-// File is the on-disk .cyberready.json shape.
+// File is the on-disk .curbpack.json shape (legacy .cyberready.json still readable).
 type File struct {
 	Packs   []string `json:"packs"`
 	Hooks   bool     `json:"hooks,omitempty"`
@@ -16,9 +17,10 @@ type File struct {
 	Claim   string   `json:"claim,omitempty"`
 }
 
-// Load reads .cyberready.json from repo root. Returns nil, nil if missing.
+// Load reads .curbpack.json, or legacy .cyberready.json if new is missing.
+// Returns nil, nil if neither exists.
 func Load(root string) (*File, error) {
-	path := filepath.Join(root, ".cyberready.json")
+	path := paths.ResolveConfigPath(root)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -28,12 +30,12 @@ func Load(root string) (*File, error) {
 	}
 	var c File
 	if err := json.Unmarshal(data, &c); err != nil {
-		return nil, fmt.Errorf("parse .cyberready.json: %w", err)
+		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	return &c, nil
 }
 
-// Write creates or overwrites .cyberready.json.
+// Write creates or overwrites .curbpack.json (never writes legacy path).
 func Write(root string, c File) error {
 	if c.Claim == "" {
 		c.Claim = "Prepares evidence for human review — not a conformity assessment."
@@ -42,7 +44,7 @@ func Write(root string, c File) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(root, ".cyberready.json"), append(b, '\n'), 0o644)
+	return os.WriteFile(paths.ConfigPath(root), append(b, '\n'), 0o644)
 }
 
 // ParsePacksFlag splits a comma-separated --packs value.

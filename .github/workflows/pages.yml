@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
           # Same claim-safety deny/safe framing as scripts/claim-safety.sh (site HTML only)
-          DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity'
+          DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|curbpack certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity'
           SAFE_RE='not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|replace a notified|notified-body approval|not a certificate'
           python3 - "$DENY_RE" "$SAFE_RE" <<'PY'
           import pathlib, re, sys
@@ -58,7 +58,7 @@ jobs:
           bad=0
           while IFS= read -r f; do
             if grep -nE 'href="\.\./|href="samples/' "$f"; then
-              echo "site HTML must use /cyberready/ root-relative hrefs (found in $f)" >&2
+              echo "site HTML must use /curbpack/ root-relative hrefs (found in $f)" >&2
               bad=1
             fi
           done < <(find site -type f -name '*.html')

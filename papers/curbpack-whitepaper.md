@@ -1,8 +1,8 @@
-# CyberReady+ White Paper
+# Curbpack White Paper
 
 **Local evidence preparation for human review**
 
-CyberReady checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
+Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
@@ -18,7 +18,7 @@ Teams need a local habit: check the tree, write evidence humans can hand to a bu
 
 ## 2. Position
 
-CyberReady+ is a **local-first command-line interface (CLI)**. It evaluates **rule packs** (JSON rule sets) against a git repository, emits machine- and human-readable findings, and can bind a reproducible state digest into Git Notes.
+Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule packs** (JSON rule sets) against a git repository, emits machine- and human-readable findings, and can bind a reproducible state digest into Git Notes.
 
 - Packs are **data** (checklists shaped like regulatory annex drafts—not law).
 - Default cold start is **house-policy**. Cyber Resilience Act (CRA)–shaped packs are opt-in only.
@@ -46,8 +46,8 @@ CyberReady+ is a **local-first command-line interface (CLI)**. It evaluates **ru
 
 ## 4. Worked example
 
-1. **Red findings** — e.g. missing `SECURITY.md`, forbidden claim-adjacent wording, incomplete dependency pin note. `cyberready check` exits non-zero; machine-readable findings (JSON) and a short markdown report list severity and remediation.
-2. **Remediate** — add the disclosure path, remove certification theater, record the pin; optionally `cyberready check --heal` for missing stubs only.
+1. **Red findings** — e.g. missing `SECURITY.md`, forbidden claim-adjacent wording, incomplete dependency pin note. `curbpack check` exits non-zero; machine-readable findings (JSON) and a short markdown report list severity and remediation.
+2. **Remediate** — add the disclosure path, remove certification theater, record the pin; optionally `curbpack check --heal` for missing stubs only.
 3. **Re-check** — gates passed on this tree (exit 0). Local gate score is not certification.
 4. **Review pack** — `prepare-release` writes layered reports and a buyer one-pager (supplier evidence summary).
 5. **Optional attest** — a human runs `attest` when ready. Until ssh-agent signed: **UNSIGNED — not cryptographically verified**.
@@ -83,14 +83,14 @@ Install paths (`install.sh`, GitHub Action) verify release `checksums.txt` with 
 
 ## 7. Non-claims and RISE neutrality
 
-CyberReady does not:
+Curbpack does not:
 
 - Certify conformity or grant CE marking
 - Replace notified bodies, auditors, or legal counsel
 - Guarantee absence of vulnerabilities
 - Claim that green gates equal market access
 
-Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results.
+Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.
 
 Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims. Public wording: [promotion firewall](../docs/promotion-firewall.md) · [voice and terms](../docs/voice-and-terms.md). CI enforces via `scripts/claim-safety.sh`.
 
@@ -106,17 +106,17 @@ Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product
 
 | Term | Meaning in this paper |
 |------|------------------------|
-| **CE** | European conformity marking — CyberReady does not issue CE marks |
+| **CE** | European conformity marking — Curbpack does not issue CE marks |
 | **CRA** | EU Cyber Resilience Act — shapes some pack drafts; gate green ≠ legal conformity |
 | **SBOM** | Software Bill of Materials (e.g. CycloneDX drafts) |
 | **SARIF** | Static Analysis Results Interchange Format for CI/IDEs |
-| **GRC** | Governance, Risk, Compliance platforms — not what CyberReady is |
+| **GRC** | Governance, Risk, Compliance platforms — not what Curbpack is |
 | **Rule pack** | JSON checklist of gates; data, not hard-coded law |
 | **Review pack** | Evidence folder for human review |
 | **Buyer one-pager** | Supplier evidence summary HTML |
 | **Structural evidence** | Documentation and dependency checks for humans |
 | **Notified body** | Independent conformity-assessment organization — not replaced by this tool |
-| **Conformity assessment** | Formal legal process — CyberReady prepares human-review evidence only |
+| **Conformity assessment** | Formal legal process — Curbpack prepares human-review evidence only |
 | **VEX** | Vulnerability Exploitability eXchange — draft OpenVEX at attest |
 | **ReDoS** | Regular expression denial-of-service — packs are length/time guarded |
 | **OPA** | Open Policy Agent — explicit non-goal for OSS |
@@ -134,6 +134,6 @@ Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audien
 
 ---
 
-*Document version aligned with CyberReady+ open-source line. No go-to-market playbooks or CI runbooks are included here by design.*
+*Document version aligned with Curbpack open-source line. No go-to-market playbooks or CI runbooks are included here by design.*
 
-> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
+> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume Curbpack explain-packets over an optional Unix socket. Curbpack is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/

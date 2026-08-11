@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/validate"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 // Request is the Coreward bridge IPC envelope.
@@ -43,36 +44,36 @@ type GraphSummary struct {
 }
 
 // DefaultPath returns a private socket path.
-// Order: CYBERREADY_SOCK → XDG_RUNTIME_DIR/cyberready/cyberready.sock →
-// $TMPDIR/cyberready-$UID/cyberready.sock → .cyberready/cyberready.sock under cwd.
-// Never defaults to a world-writable shared path like /tmp/cyberready.sock.
+// Order: CURBPACK_SOCK / CYBERREADY_SOCK → XDG_RUNTIME_DIR/curbpack/curbpack.sock →
+// $TMPDIR/curbpack-$UID/curbpack.sock → .curbpack/curbpack.sock under cwd.
+// Never defaults to a world-writable shared path like /tmp/curbpack.sock.
 func DefaultPath() (string, error) {
-	if p := strings.TrimSpace(os.Getenv("CYBERREADY_SOCK")); p != "" {
+	if p := strings.TrimSpace(paths.Env("SOCK")); p != "" {
 		return p, nil
 	}
 	if xdg := strings.TrimSpace(os.Getenv("XDG_RUNTIME_DIR")); xdg != "" {
-		dir := filepath.Join(xdg, "cyberready")
+		dir := filepath.Join(xdg, "curbpack")
 		if err := ensurePrivateDir(dir); err != nil {
 			return "", err
 		}
-		return filepath.Join(dir, "cyberready.sock"), nil
+		return filepath.Join(dir, "curbpack.sock"), nil
 	}
 	uid := os.Getuid()
 	tmpBase := os.TempDir()
-	dir := filepath.Join(tmpBase, fmt.Sprintf("cyberready-%d", uid))
+	dir := filepath.Join(tmpBase, fmt.Sprintf("curbpack-%d", uid))
 	if err := ensurePrivateDir(dir); err != nil {
-		// Fall back to repo-local .cyberready/
+		// Fall back to repo-local .curbpack/
 		cwd, err2 := os.Getwd()
 		if err2 != nil {
 			return "", fmt.Errorf("sock path: %w (and cwd: %v)", err, err2)
 		}
-		dir = filepath.Join(cwd, ".cyberready")
+		dir = filepath.Join(cwd, ".curbpack")
 		if err := ensurePrivateDir(dir); err != nil {
 			return "", err
 		}
-		return filepath.Join(dir, "cyberready.sock"), nil
+		return filepath.Join(dir, "curbpack.sock"), nil
 	}
-	return filepath.Join(dir, "cyberready.sock"), nil
+	return filepath.Join(dir, "curbpack.sock"), nil
 }
 
 func ensurePrivateDir(dir string) error {
@@ -122,7 +123,7 @@ func Serve(sockPath, repoRoot string) error {
 		_ = ln.Close()
 		_ = os.Remove(sockPath)
 	}()
-	fmt.Fprintf(os.Stderr, "cyberready sock listening on %s mode=0600 (ops=validate_delta,get_latest_failure,graph_summary,explain_packet)\n", sockPath)
+	fmt.Fprintf(os.Stderr, "curbpack sock listening on %s mode=0600 (ops=validate_delta,get_latest_failure,graph_summary,explain_packet)\n", sockPath)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -178,7 +179,7 @@ func ValidateDelta(repoRoot string) Response {
 
 // GetLatestFailure reads cache/latest_failure.json without re-running gates.
 func GetLatestFailure(repoRoot string) Response {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_failure.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "cache", "latest_failure.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Response{OK: false, Reason: "unavailable", Detail: "no latest_failure.json — run check first"}
@@ -197,7 +198,7 @@ func GetLatestFailure(repoRoot string) Response {
 
 // GraphSummaryOp returns paths-only graph stats (builds graph if missing).
 func GraphSummaryOp(repoRoot string) Response {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "graph", "policy-graph.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "graph", "policy-graph.json")
 	if _, err := os.Stat(path); err != nil {
 		if _, err := packs.ExportPolicyGraph(repoRoot, nil, path); err != nil {
 			return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
@@ -221,7 +222,7 @@ func GraphSummaryOp(repoRoot string) Response {
 	}
 	sum := GraphSummary{
 		SchemaVersion: g.SchemaVersion,
-		Path:          filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+		Path:          filepath.ToSlash(filepath.Join(".github", "curbpack", "graph", "policy-graph.json")),
 		NodeCount:     len(g.Nodes),
 		EdgeCount:     len(g.Edges),
 		NodeTypes:     typeList,
@@ -243,5 +244,5 @@ func ExplainPacketOp(repoRoot string) Response {
 	if err := exportx.PacketLooksAirlocked(data); err != nil {
 		return Response{OK: false, Reason: "unavailable", Detail: err.Error()}
 	}
-	return Response{OK: true, Packet: data, Detail: filepath.ToSlash(filepath.Join(".github", "cyberready", "cache", "explain-packet.json"))}
+	return Response{OK: true, Packet: data, Detail: filepath.ToSlash(filepath.Join(".github", "curbpack", "cache", "explain-packet.json"))}
 }

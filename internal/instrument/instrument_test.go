@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/instrument"
+	"github.com/afelin/curbpack/internal/instrument"
 )
 
 func TestComputeWriteLoadAndDepDelta(t *testing.T) {

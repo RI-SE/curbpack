@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/workflowdata"
+	"github.com/afelin/curbpack/internal/workflowdata"
 )
 
 func TestEmbedMatchesExample(t *testing.T) {
@@ -15,7 +15,7 @@ func TestEmbedMatchesExample(t *testing.T) {
 		t.Fatal("runtime.Caller failed")
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
-	example := filepath.Join(root, "examples", "workflows", "cyberready-check.yml")
+	example := filepath.Join(root, "examples", "workflows", "curbpack-check.yml")
 	if err := workflowdata.MustMatchExample(example); err != nil {
 		t.Fatal(err)
 	}

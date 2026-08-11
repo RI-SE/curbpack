@@ -8,7 +8,7 @@
 #
 # Usage:
 #   ./scripts/time-to-green.sh
-#   CYBERREADY_BIN=/path/to/cyberready ./scripts/time-to-green.sh
+#   CURBPACK_BIN=/path/to/curbpack ./scripts/time-to-green.sh
 #   TTG_MAX_SECONDS=60 ./scripts/time-to-green.sh   # tighter local bar
 set -euo pipefail
 
@@ -16,20 +16,20 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 MAX_SECONDS="${TTG_MAX_SECONDS:-600}"
-BIN="${CYBERREADY_BIN:-}"
+BIN="${CURBPACK_BIN:-}"
 
 resolve_bin() {
   if [[ -n "$BIN" ]]; then
     if [[ ! -x "$BIN" ]]; then
-      echo "time-to-green: CYBERREADY_BIN not executable: $BIN" >&2
+      echo "time-to-green: CURBPACK_BIN not executable: $BIN" >&2
       exit 1
     fi
     return
   fi
   # Prefer a freshly built workspace binary so TTG measures current tree.
   mkdir -p "$ROOT/bin"
-  go build -o "$ROOT/bin/cyberready" ./cmd/cyberready
-  BIN="$ROOT/bin/cyberready"
+  go build -o "$ROOT/bin/curbpack" ./cmd/curbpack
+  BIN="$ROOT/bin/curbpack"
 }
 
 elapsed() {
@@ -60,7 +60,7 @@ REPO_DIR="$(mktemp -d)"
   set -euo pipefail
   cd "$REPO_DIR"
   git init -q
-  git config user.email "ttg@cyberready.local"
+  git config user.email "ttg@curbpack.local"
   git config user.name "TTG"
   git commit --allow-empty -m init -q
   echo '# product' > README.md

@@ -6,40 +6,40 @@ Embedded packs (`cra-baseline`, `medtech-iec62304`, `house-policy`) ship inside 
 
 ```bash
 # Export-like layout (or copy from this repo's packs/ directory)
-mkdir -p /media/usb/cyberready-packs/{cra-baseline,medtech-iec62304,house-policy}
-cp packs/cra-baseline/pack.json /media/usb/cyberready-packs/cra-baseline/
-cp packs/medtech-iec62304/pack.json /media/usb/cyberready-packs/medtech-iec62304/
-cp packs/house-policy/pack.json /media/usb/cyberready-packs/house-policy/
-cp packs/_watchlist.json /media/usb/cyberready-packs/
+mkdir -p /media/usb/curbpack-packs/{cra-baseline,medtech-iec62304,house-policy}
+cp packs/cra-baseline/pack.json /media/usb/curbpack-packs/cra-baseline/
+cp packs/medtech-iec62304/pack.json /media/usb/curbpack-packs/medtech-iec62304/
+cp packs/house-policy/pack.json /media/usb/curbpack-packs/house-policy/
+cp packs/_watchlist.json /media/usb/curbpack-packs/
 
 # On the air-gapped machine
-cyberready packs import /media/usb/cyberready-packs
-export CYBERREADY_PACKS_DIR="$PWD/.github/cyberready/packs"
-cyberready check
+curbpack packs import /media/usb/curbpack-packs
+export CURBPACK_PACKS_DIR="$PWD/.github/curbpack/packs"
+curbpack check
 ```
 
-Import prerequisites (fail closed): each pack must pass `ValidatePack`, set `assurance_class`, and avoid claim-adjacent theater names/descriptions. Successful import writes a `.cyberready-pack.sha256` sidecar next to each `pack.json`.
+Import prerequisites (fail closed): each pack must pass `ValidatePack`, set `assurance_class`, and avoid claim-adjacent theater names/descriptions. Successful import writes a `.curbpack-pack.sha256` sidecar next to each `pack.json`.
 
-`CYBERREADY_PACKS_DIR` overrides embedded JSON when files are present.
+`CURBPACK_PACKS_DIR` overrides embedded JSON when files are present.
 
 ## Online update (pin required)
 
 Network pack updates are **off by default**. Both URL and sha256 pin are required:
 
 ```bash
-cyberready packs update
-# prints instructions when CYBERREADY_PACKS_URL is unset
+curbpack packs update
+# prints instructions when CURBPACK_PACKS_URL is unset
 
-CYBERREADY_PACKS_URL=https://example.invalid/packs/bundle.json \
-CYBERREADY_PACKS_SHA256=<64-hex-chars> \
-cyberready packs update
+CURBPACK_PACKS_URL=https://example.invalid/packs/bundle.json \
+CURBPACK_PACKS_SHA256=<64-hex-chars> \
+curbpack packs update
 ```
 
-Without `CYBERREADY_PACKS_SHA256`, the CLI refuses the fetch (fail closed). Watchlist entries are **informational only** and never fail `validate`.
+Without `CURBPACK_PACKS_SHA256`, the CLI refuses the fetch (fail closed). Watchlist entries are **informational only** and never fail `validate`.
 
 ## Watchlist refresh
 
 1. Edit `packs/_watchlist.json` (or imported copy).
 2. Bump `updated` date.
 3. Import or rebuild the binary to embed.
-4. Confirm with `cyberready packs list`.
+4. Confirm with `curbpack packs list`.

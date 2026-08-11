@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # cite-check wrapper — RAGChecker-lite groundedness against research-packet.json.
-# Preserves the Go CLI exit code (1 on refuse). Never changes cyberready check pass/fail.
+# Preserves the Go CLI exit code (1 on refuse). Never changes curbpack check pass/fail.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${CYBERREADY_BIN:-$ROOT/bin/cyberready}"
+BIN="${CURBPACK_BIN:-$ROOT/bin/curbpack}"
 if [[ ! -x "$BIN" ]]; then
-  (cd "$ROOT" && go build -o "$BIN" ./cmd/cyberready)
+  (cd "$ROOT" && go build -o "$BIN" ./cmd/curbpack)
 fi
 
 if [[ $# -lt 1 ]]; then
