@@ -1,6 +1,7 @@
 package formhints
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -109,7 +110,9 @@ func Format(hints []Hint) string {
 }
 
 // ApplyStubs writes missing/empty target files with snippets. Never overwrites non-empty files.
-// Refuses absolute paths, path traversal, .git/**, and symlink targets. Never calls attest.
+// Missing paths use O_CREATE|O_EXCL (atomic create). Empty non-symlink files are healed via
+// Lstat-proven write/trunc. Refuses absolute paths, path traversal, .git/**, and symlink targets.
+// Never calls attest.
 func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 	out := make([]Hint, 0, len(hints))
 	for _, h := range hints {
@@ -124,23 +127,86 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 		}
 		h.File = rel
 		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
-		if st, err := os.Lstat(path); err == nil && st.Mode()&os.ModeSymlink != 0 {
-			return out, fmt.Errorf("refusing symlink remediation path: %s", rel)
-		}
-		if st, err := os.Stat(path); err == nil && st.Size() > 0 {
-			out = append(out, h)
-			continue
-		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		applied, err := applyStubAt(path, rel, []byte(h.Snippet))
+		if err != nil {
 			return out, err
 		}
-		if err := os.WriteFile(path, []byte(h.Snippet), 0o644); err != nil {
-			return out, err
-		}
-		h.Applied = true
+		h.Applied = applied
 		out = append(out, h)
 	}
 	return out, nil
+}
+
+// applyStubAt creates or heals a single stub path. Returns applied=false when a
+// non-empty existing file is left untouched.
+func applyStubAt(path, rel string, snippet []byte) (applied bool, err error) {
+	st, err := os.Lstat(path)
+	switch {
+	case err == nil:
+		if st.Mode()&os.ModeSymlink != 0 {
+			return false, fmt.Errorf("refusing symlink remediation path: %s", rel)
+		}
+		if st.Size() > 0 {
+			return false, nil
+		}
+		// Empty non-symlink: heal with write/trunc after Lstat proved safe.
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return false, err
+		}
+		return writeTruncAfterLstat(path, rel, snippet)
+	case os.IsNotExist(err):
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return false, err
+		}
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err != nil {
+			if errors.Is(err, os.ErrExist) {
+				// Race: path appeared — do not skip-all; re-Lstat and heal empty only.
+				return applyStubAt(path, rel, snippet)
+			}
+			return false, err
+		}
+		_, werr := f.Write(snippet)
+		cerr := f.Close()
+		if werr != nil {
+			return false, werr
+		}
+		if cerr != nil {
+			return false, cerr
+		}
+		return true, nil
+	default:
+		return false, err
+	}
+}
+
+// writeTruncAfterLstat opens an existing non-symlink path for truncate+write.
+// Re-Lstats immediately before open to refuse a symlink swap. Returns wrote=false
+// if the file became non-empty between checks (leave content untouched).
+func writeTruncAfterLstat(path, rel string, snippet []byte) (wrote bool, err error) {
+	st, err := os.Lstat(path)
+	if err != nil {
+		return false, err
+	}
+	if st.Mode()&os.ModeSymlink != 0 {
+		return false, fmt.Errorf("refusing symlink remediation path: %s", rel)
+	}
+	if st.Size() > 0 {
+		return false, nil
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return false, err
+	}
+	_, werr := f.Write(snippet)
+	cerr := f.Close()
+	if werr != nil {
+		return false, werr
+	}
+	if cerr != nil {
+		return false, cerr
+	}
+	return true, nil
 }
 
 // PersistCache upserts applied/proposed hints into remediations.json.

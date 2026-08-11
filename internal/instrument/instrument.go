@@ -3,11 +3,13 @@
 package instrument
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -18,12 +20,14 @@ import (
 )
 
 const (
-	schemaVersion     = "1"
-	maxFileBytes      = 256 * 1024
-	maxFilesScanned   = 200
-	maxWalkDepth      = 8
-	cacheRelDir       = ".github/cyberready/cache"
-	instrumentFile    = "instrument.json"
+	schemaVersion   = "1"
+	maxFileBytes    = 256 * 1024
+	maxFilesScanned = 200
+	maxWalkDepth    = 8
+	cacheRelDir     = ".github/cyberready/cache"
+	instrumentFile  = "instrument.json"
+	// Bytes that appear in high-signal secretRE families (PEM -, AKIA A, api_key =/_).
+	secretPrefilter = "-Aa="
 )
 
 // Same high-signal families as house-policy text_forbid (count-only whisper).
@@ -126,10 +130,56 @@ func fingerprintDeps(deps []Dep) string {
 }
 
 // CountSecretHits walks capped high-signal paths and counts pattern matches.
+// Prefers git ls-files when available; on git failure falls back to WalkDir
+// (never returns 0 solely because git failed).
 func CountSecretHits(root string) int {
+	root = filepath.Clean(root)
+	if paths, ok := gitTrackedCandidates(root); ok {
+		return countSecretHitsFiles(root, paths)
+	}
+	return countSecretHitsWalk(root)
+}
+
+func gitTrackedCandidates(root string) ([]string, bool) {
+	cmd := exec.Command("git", "-C", root, "ls-files", "-z")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, false
+	}
+	parts := bytes.Split(out, []byte{0})
+	cands := make([]string, 0, 32)
+	for _, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+		slash := filepath.ToSlash(string(p))
+		if secretScanCandidate(slash) {
+			cands = append(cands, slash)
+			if len(cands) >= maxFilesScanned {
+				break
+			}
+		}
+	}
+	return cands, true
+}
+
+func countSecretHitsFiles(root string, rels []string) int {
+	hits := 0
+	for i, rel := range rels {
+		if i >= maxFilesScanned {
+			break
+		}
+		path := filepath.Join(root, filepath.FromSlash(rel))
+		if matchSecretFile(path) {
+			hits++
+		}
+	}
+	return hits
+}
+
+func countSecretHitsWalk(root string) int {
 	hits := 0
 	scanned := 0
-	root = filepath.Clean(root)
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || scanned >= maxFilesScanned {
 			if scanned >= maxFilesScanned {
@@ -157,19 +207,26 @@ func CountSecretHits(root string) int {
 			return nil
 		}
 		scanned++
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-		if len(data) > maxFileBytes {
-			data = data[:maxFileBytes]
-		}
-		if secretRE.Match(data) {
+		if matchSecretFile(path) {
 			hits++
 		}
 		return nil
 	})
 	return hits
+}
+
+func matchSecretFile(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	if len(data) > maxFileBytes {
+		data = data[:maxFileBytes]
+	}
+	if !bytes.ContainsAny(data, secretPrefilter) {
+		return false
+	}
+	return secretRE.Match(data)
 }
 
 func secretScanCandidate(rel string) bool {

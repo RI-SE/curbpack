@@ -28,13 +28,16 @@ func TestAgentBindNeverVerified(t *testing.T) {
 
 func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 	bin := t.TempDir()
-	installFakeSSH(t, bin, false)
+	installFakeSSH(t, bin, false, "")
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
 
 	sig, who, verified := trySSHAgentSign(t.TempDir(), "state-hash-payload")
 	if !verified {
 		t.Fatalf("expected verified with honest fake sig; who=%q sig=%q", who, sig)
+	}
+	if who != "SSH-Agent:fake@cyberready" {
+		t.Fatalf("identity: got %q", who)
 	}
 	if strings.HasPrefix(sig, "agent-bind:") {
 		t.Fatal("honest fake must not emit agent-bind")
@@ -82,7 +85,7 @@ func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 
 func TestTrySSHAgentSign_RejectsAgentBindOutput(t *testing.T) {
 	bin := t.TempDir()
-	installFakeSSH(t, bin, true)
+	installFakeSSH(t, bin, true, `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests fake@cyberready`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
 
@@ -98,11 +101,60 @@ func TestTrySSHAgentSign_RejectsAgentBindOutput(t *testing.T) {
 	}
 }
 
-func installFakeSSH(t *testing.T, bin string, emitAgentBind bool) {
+func TestIdentityFromSSHAddLine_MultiWordComment(t *testing.T) {
+	got := identityFromSSHAddLine("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFake yubi key laptop")
+	want := "SSH-Agent:yubi key laptop"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestIdentityFromSSHAddLine_UnnamedKey(t *testing.T) {
+	got := identityFromSSHAddLine("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests")
+	want := "SSH-Agent:unnamed-key"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestTrySSHAgentSign_MultiWordCommentIdentity(t *testing.T) {
+	bin := t.TempDir()
+	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests yubi key laptop"
+	installFakeSSH(t, bin, false, line)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
+
+	_, who, verified := trySSHAgentSign(t.TempDir(), "state-hash-payload")
+	if !verified {
+		t.Fatal("expected verified")
+	}
+	if who != "SSH-Agent:yubi key laptop" {
+		t.Fatalf("multi-word comment identity: got %q", who)
+	}
+}
+
+func TestTrySSHAgentSign_UnnamedKeyIdentity(t *testing.T) {
+	bin := t.TempDir()
+	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests"
+	installFakeSSH(t, bin, false, line)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "agent.sock"))
+
+	_, who, verified := trySSHAgentSign(t.TempDir(), "state-hash-payload")
+	if !verified {
+		t.Fatal("expected verified")
+	}
+	if who != "SSH-Agent:unnamed-key" {
+		t.Fatalf("unnamed key identity: got %q", who)
+	}
+}
+
+func installFakeSSH(t *testing.T, bin string, emitAgentBind bool, addLine string) {
 	t.Helper()
-	sshAdd := `#!/bin/sh
-echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests fake@cyberready"
-`
+	if addLine == "" {
+		addLine = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCyberReadyTests fake@cyberready"
+	}
+	sshAdd := "#!/bin/sh\necho '" + addLine + "'\n"
 	mode := "honest"
 	if emitAgentBind {
 		mode = "agent-bind"

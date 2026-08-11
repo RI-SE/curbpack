@@ -124,7 +124,7 @@ func TestCorewardRefusePacket_InjectedPEM(t *testing.T) {
 				"34567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345\n" +
 				"-----END RSA PRIVATE KEY-----",
 		}},
-	}, nil, nil, false)
+	}, nil, nil, false, "")
 	// Assemble strips PEM — packet should pass airlock after sanitize.
 	raw, _ := json.Marshal(pkt)
 	if err := CorewardRefusePacket(raw); err != nil {

@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"hash"
+	"io"
 	"net/url"
 	"os"
 	"os/exec"
@@ -39,15 +41,23 @@ type Options struct {
 	VEXDigest  string
 }
 
-// StateSeed builds the reproducible hash input (no wall-clock / UnixNano).
-func StateSeed(commit, parentHash, sbomDigest, vexDigest string) string {
-	return fmt.Sprintf("%s|%s|sbom=%s|vex=%s", commit, parentHash, sbomDigest, vexDigest)
+// ComputeStateHash returns sha256 hex of the length-prefixed field stream.
+// Sole authority for capsule state_hash. Field order is frozen: commit,
+// parentHash, sbomDigest, vexDigest. No wall-clock / UnixNano.
+// Length-prefixing avoids pipe-delimiter ambiguity across field boundaries.
+func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest string) string {
+	h := sha256.New()
+	writeLenPrefixed(h, commit)
+	writeLenPrefixed(h, parentHash)
+	writeLenPrefixed(h, sbomDigest)
+	writeLenPrefixed(h, vexDigest)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// ComputeStateHash returns sha256 hex of the reproducible seed.
-func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest string) string {
-	seed := StateSeed(commit, parentHash, sbomDigest, vexDigest)
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(seed)))
+// writeLenPrefixed streams a netstring-style "%d:" + bytes field into h.
+func writeLenPrefixed(h hash.Hash, s string) {
+	_, _ = fmt.Fprintf(h, "%d:", len(s))
+	_, _ = io.WriteString(h, s)
 }
 
 // Run creates a Git Notes capsule with Merkle parent link and best-effort SSH-agent sign.
@@ -244,11 +254,7 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	first := lines[0]
-	parts := strings.Fields(first)
-	who := "SSH-Agent"
-	if len(parts) >= 3 {
-		who = "SSH-Agent:" + parts[len(parts)-1]
-	}
+	who := identityFromSSHAddLine(first)
 
 	tmpPub, err := os.CreateTemp("", "cyberready-attest-*.pub")
 	if err != nil {
@@ -291,6 +297,21 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 		return "", who, false
 	}
 	return sigStr, who, true
+}
+
+// identityFromSSHAddLine builds a human-readable SSH-agent identity from one
+// ssh-add -L line ("type key [comment…]"). Multi-word comments are preserved;
+// comment-free keys (type + material only) use unnamed-key.
+func identityFromSSHAddLine(line string) string {
+	parts := strings.Fields(strings.TrimSpace(line))
+	switch {
+	case len(parts) >= 3:
+		return "SSH-Agent:" + strings.Join(parts[2:], " ")
+	case len(parts) == 2:
+		return "SSH-Agent:unnamed-key"
+	default:
+		return "SSH-Agent"
+	}
 }
 
 // View prints the capsule for HEAD.

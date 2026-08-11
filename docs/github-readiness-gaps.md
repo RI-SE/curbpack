@@ -35,6 +35,7 @@ Stakeholder asks mapped to the **current** CyberReady stack. Evidence paths are 
 | Doctor soft-exit (non-blocking tips) | Done (accepted) | `cyberready doctor` — soft diagnostics; not a hard gate redesign |
 | First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.4.3` |
 | Install checksum fail-closed | Done | [`scripts/install.sh`](../scripts/install.sh) · [security model](security-model.md) |
+| Action binary cache via consumer `hashFiles` + checksum-skip | Reject | Trust regression — keep download/`checksums.txt` fail-closed · [security model](security-model.md#install-integrity) |
 
 ## Δ honesty: `--diff` vs `validate_delta`
 
@@ -47,6 +48,6 @@ Do **not** retarget sock `validate_delta` to `--diff`. Changing `RuleTouchesDiff
 
 ## Explicit rejects (do not build in OSS)
 
-Sub-MB Zig binary · OPA evaluator · `events.ndjson` SoR · full local AST/SQLite graph · legal-metrology / CE / never claim RISE-certified product · enforce-before-execute.
+Sub-MB Zig binary · OPA evaluator · `events.ndjson` SoR · full local AST/SQLite graph · legal-metrology / CE / never claim RISE-certified product · enforce-before-execute · Action cache that skips sha256 verify (consumer `hashFiles` key).
 
 See also: [strategy boundary](strategy-boundary.md) · [launch readiness](launch-readiness.md) · [security model](security-model.md)

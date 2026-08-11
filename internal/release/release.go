@@ -97,7 +97,7 @@ func Prepare(opts Options) error {
 	_ = copyFile(vexPath, filepath.Join(out, "05-vex-draft.json"))
 
 	// SARIF layer (same mapper as CLI export --sarif)
-	sarifDoc := exportx.FromGateFailures(res.Payload)
+	sarifDoc := exportx.FromGateFailures(res.Payload, root)
 	sarifBytes, _ := json.MarshalIndent(sarifDoc, "", "  ")
 	_ = os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644)
 	_ = os.MkdirAll(filepath.Join(root, ".github", "cyberready", "cache"), 0o755)

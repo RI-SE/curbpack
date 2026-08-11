@@ -321,66 +321,15 @@ const MaxRegexPatternLen = 256
 // MaxRegexMatchBytes caps file bytes scanned by text_forbid Match.
 const MaxRegexMatchBytes = 2 << 20 // 2 MiB
 
-// ValidateRegexPattern rejects oversized / pathological patterns at pack load.
+// ValidateRegexPattern rejects oversized / invalid patterns at pack load.
 func ValidateRegexPattern(pattern string) error {
 	if utf8.RuneCountInString(pattern) > MaxRegexPatternLen {
 		return fmt.Errorf("pattern exceeds %d runes (ReDoS limit)", MaxRegexPatternLen)
-	}
-	if nested := countNestedQuantifiers(pattern); nested > 3 {
-		return fmt.Errorf("pattern too nested (%d overlapping quantifiers; ReDoS limit)", nested)
 	}
 	if _, err := regexp.Compile(pattern); err != nil {
 		return fmt.Errorf("invalid pattern: %w", err)
 	}
 	return nil
-}
-
-// countNestedQuantifiers approximates risky *+?{n,} nesting (heuristic, fail-closed).
-func countNestedQuantifiers(pattern string) int {
-	depth := 0
-	max := 0
-	inClass := false
-	escaped := false
-	for _, r := range pattern {
-		if escaped {
-			escaped = false
-			continue
-		}
-		if r == '\\' {
-			escaped = true
-			continue
-		}
-		if r == '[' {
-			inClass = true
-			continue
-		}
-		if r == ']' && inClass {
-			inClass = false
-			continue
-		}
-		if inClass {
-			continue
-		}
-		if r == '(' {
-			depth++
-			if depth > max {
-				max = depth
-			}
-			continue
-		}
-		if r == ')' {
-			if depth > 0 {
-				depth--
-			}
-			continue
-		}
-		if r == '*' || r == '+' || r == '?' {
-			if depth > max {
-				max = depth
-			}
-		}
-	}
-	return max
 }
 
 // LoadWatchlist returns the embedded (or overridden) watchlist.

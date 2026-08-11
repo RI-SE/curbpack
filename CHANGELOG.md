@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Attest `state_hash` algorithm** — length-prefixed field stream (commit, parent, sbom, vex) replaces pipe-joined seed. Same inputs produce a new `state_hash`. Existing Git Notes capsules remain historically readable; **humans must re-attest** after upgrade so new capsules match the current algorithm. No silent migration.
+
 ## v0.4.3
 
 Instrument-panel honesty (trust-surface freeze **continues** from v0.4.0 — no Action resolve / SafeJoin / attest OCC rewrite). Pack ids unchanged.

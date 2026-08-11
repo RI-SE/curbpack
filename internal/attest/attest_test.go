@@ -20,9 +20,34 @@ func TestReproducibleStateHash(t *testing.T) {
 	if a == c {
 		t.Fatal("sbom digest must affect hash")
 	}
-	seed := attest.StateSeed("abc", "parent", "sbom1", "vex1")
-	if seed != "abc|parent|sbom=sbom1|vex=vex1" {
-		t.Fatalf("seed=%q", seed)
+}
+
+func TestStateHashFieldBoundaryCollision(t *testing.T) {
+	// Pipe (or other delimiter) ambiguity must not collide under length-prefixing.
+	pairs := [][2][4]string{
+		{
+			{"a", "b", "c|d", "e"},
+			{"a|b", "c", "d", "e"},
+		},
+		{
+			{"ab", "c", "d", "e"},
+			{"a", "bc", "d", "e"},
+		},
+		{
+			{"", "x", "y", "z"},
+			{"x", "", "y", "z"},
+		},
+		{
+			{"commit", "parent", "sbom=x", "vex"},
+			{"commit", "parent", "sbom", "=xvex"},
+		},
+	}
+	for i, p := range pairs {
+		left := attest.ComputeStateHash(p[0][0], p[0][1], p[0][2], p[0][3])
+		right := attest.ComputeStateHash(p[1][0], p[1][1], p[1][2], p[1][3])
+		if left == right {
+			t.Fatalf("pair %d: boundary inputs must not collide: %q vs %q → %s", i, p[0], p[1], left)
+		}
 	}
 }
 

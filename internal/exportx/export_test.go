@@ -89,7 +89,7 @@ func TestFromGateFailures_RuleIDEqualsGateID(t *testing.T) {
 			SanitizedDescription: "missing SECURITY.md",
 		}},
 	}
-	doc := exportx.FromGateFailures(payload)
+	doc := exportx.FromGateFailures(payload, "")
 	if len(doc.Runs[0].Results) != 1 || doc.Runs[0].Results[0].RuleID != "HOUSE-SECURITY-MD" {
 		t.Fatalf("ruleId mismatch: %+v", doc.Runs[0].Results)
 	}
@@ -110,7 +110,7 @@ func TestFromGateFailures_SARIFLooksAirlocked(t *testing.T) {
 			SanitizedDescription: "key material -----BEGIN PRIVATE KEY-----\nABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n-----END PRIVATE KEY-----",
 		}},
 	}
-	doc := exportx.FromGateFailures(payload)
+	doc := exportx.FromGateFailures(payload, "")
 	raw, err := json.Marshal(doc)
 	if err != nil {
 		t.Fatal(err)

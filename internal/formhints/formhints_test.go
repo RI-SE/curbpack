@@ -97,6 +97,56 @@ func TestApplyStubsRefusesTraversal(t *testing.T) {
 	}
 }
 
+func TestApplyStubsHealsEmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "SECURITY.md")
+	if err := os.WriteFile(path, []byte{}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := ApplyStubs(dir, []Hint{{
+		GateID:  "HOUSE-SECURITY-MD",
+		File:    "SECURITY.md",
+		Snippet: "# Security\n\nhealed\n",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out[0].Applied {
+		t.Fatal("expected empty file healed")
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "healed") {
+		t.Fatalf("empty heal missing content: %q", b)
+	}
+}
+
+func TestApplyStubsRefusesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "outside.md")
+	if err := os.WriteFile(target, []byte("secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "SECURITY.md")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ApplyStubs(dir, []Hint{{
+		GateID:  "HOUSE-SECURITY-MD",
+		File:    "SECURITY.md",
+		Snippet: "OVERWRITE\n",
+	}})
+	if err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Fatalf("want symlink refuse, got %v", err)
+	}
+	keep, _ := os.ReadFile(target)
+	if strings.Contains(string(keep), "OVERWRITE") {
+		t.Fatal("must not follow symlink and overwrite target")
+	}
+}
+
 func TestCachePreferredSnippet(t *testing.T) {
 	dir := t.TempDir()
 	c := remediation.Cache{Entries: map[string]remediation.Entry{
