@@ -183,22 +183,40 @@ jobs:
         run: |
           set -euo pipefail
           INST=$(mktemp -d)
+          # Dual-read cutover: new installer + legacy cyberready installer env.
           export CURBPACK_INSTALL_DIR="$INST"
+          export CYBERREADY_INSTALL_DIR="$INST"
           export CURBPACK_VERSION="${CURBPACK_VERSION:-latest}"
-          # Prefer latest release binary; fall back to workspace build if download fails (fork PRs).
-          if curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh; then
-            export PATH="$INST:$PATH"
-            curbpack doctor
-            DEMO=$(mktemp -d)
-            curbpack demo --out "$DEMO" --keep
-            test -f "$DEMO/review-pack/buyer-onepager.html"
-          else
-            echo "release install unavailable — falling back to workspace binary"
-            "$GITHUB_WORKSPACE/bin/curbpack" doctor
-            DEMO=$(mktemp -d)
-            "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
-            test -f "$DEMO/review-pack/buyer-onepager.html"
+          export CYBERREADY_VERSION="${CYBERREADY_VERSION:-latest}"
+          export PATH="$INST:${HOME}/.local/bin:$PATH"
+
+          # Prefer PR/branch install.sh (tests cutover). Fall back to main curl.
+          # Until v0.5.0 publishes curbpack_* assets, branch install fails closed and
+          # main may still install legacy cyberready — accept either binary name.
+          if [ -f "$GITHUB_WORKSPACE/scripts/install.sh" ]; then
+            sh "$GITHUB_WORKSPACE/scripts/install.sh" || true
           fi
+          if ! command -v curbpack >/dev/null 2>&1 && ! command -v cyberready >/dev/null 2>&1; then
+            curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh || true
+          fi
+
+          if command -v curbpack >/dev/null 2>&1; then
+            BIN="$(command -v curbpack)"
+          elif command -v cyberready >/dev/null 2>&1; then
+            echo "note: release still ships cyberready — using it until curbpack_* assets publish"
+            BIN="$(command -v cyberready)"
+          elif [ -x "$GITHUB_WORKSPACE/bin/curbpack" ]; then
+            echo "release install unavailable — falling back to workspace binary"
+            BIN="$GITHUB_WORKSPACE/bin/curbpack"
+          else
+            echo "no curbpack/cyberready binary available after install smoke" >&2
+            exit 1
+          fi
+
+          "$BIN" doctor
+          DEMO=$(mktemp -d)
+          "$BIN" demo --out "$DEMO" --keep
+          test -f "$DEMO/review-pack/buyer-onepager.html"
       - name: Dead-end — corrupt pack env
         run: |
           set -euo pipefail

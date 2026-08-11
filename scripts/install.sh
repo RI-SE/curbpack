@@ -2,13 +2,14 @@
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
 # Usage: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 # Env: CURBPACK_VERSION (default: v0.5.0), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
-# Legacy CURBPACK_* env names are still read if CURBPACK_* is unset.
+# Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).
 set -eu
 
-REPO="${CURBPACK_REPO:-${CURBPACK_REPO:-afelin/curbpack}}"
-VERSION="${CURBPACK_VERSION:-${CURBPACK_VERSION:-v0.5.0}}"
-INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CURBPACK_INSTALL_DIR:-${HOME}/.local/bin}}"
+# Dual-read: CURBPACK_* preferred; CYBERREADY_* accepted during cutover.
+REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-afelin/curbpack}}"
+VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-v0.5.0}}"
+INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}}"
 
 claim='Prepares evidence for human review — not a conformity assessment.'
 echo "Curbpack installer"
