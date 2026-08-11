@@ -7,7 +7,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://afelin.github.io/curbpack/) · [Voice and terms](docs/voice-and-terms.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [First move](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [White paper](papers/curbpack-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
+[Site](https://ri-se.github.io/curbpack/) · [Mirror](https://afelin.github.io/curbpack/) · [Voice and terms](docs/voice-and-terms.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [First move](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [White paper](papers/curbpack-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
 
 ## Who should read what
 
