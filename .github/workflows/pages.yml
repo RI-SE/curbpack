@@ -24,6 +24,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      # configure-pages 404s until a Pages site exists. Works for afelin + RI-SE org repos.
+      # Project Pages base path is /curbpack/ (repo name) — site HTML already uses that.
+      - name: Ensure GitHub Pages uses GitHub Actions (workflow)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.event.repository.default_branch }}"
+          if ! gh api "repos/${REPO}/pages" --silent >/dev/null 2>&1; then
+            echo "Pages: creating site (workflow build) for ${REPO}…"
+            jq -n --arg branch "$BRANCH" '{build_type:"workflow",source:{branch:$branch,path:"/"}}' \
+              | gh api -X POST "repos/${REPO}/pages" --input -
+          else
+            BT="$(gh api "repos/${REPO}/pages" --jq .build_type)"
+            if [ "$BT" != "workflow" ]; then
+              echo "Pages: switching build type to workflow…"
+              gh api -X PUT "repos/${REPO}/pages" -f build_type=workflow
+            else
+              echo "Pages: already configured for GitHub Actions (workflow)."
+            fi
+          fi
       - name: Quarantine — refuse ops/gtm paths in site tree
         run: |
           set -euo pipefail

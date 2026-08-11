@@ -24,7 +24,7 @@ Footer / authorities / NOTICE-aligned. Never endorsement:
 
 | Prefer | Say once, then reuse | Do not lead with |
 |--------|----------------------|------------------|
-| **Curb outlines** | first pathway warm-start step (sketch *what* you are curbing—enums, house-first, sector; not the law) | “pathway to regulation”, compliance journey as product |
+| **Curb outlines** | first pathway warm-start step; say once “curb outlines (your pathway sketch)” (enums, house-first, sector; not pack gates / not the law) | “curb rules” as a brand; “pathway to regulation”; compliance journey as product |
 | **curb** / **curbpack** | CLI (`curb check`, `curbpack share`) | long-lived legacy binary names |
 | **pack** | rule pack you run / review pack you hand off | “policy brain”, “compliance engine” |
 | **curb check** | local gate pass/fail on this tree | “instrument panel”, “Δ readiness”, TTFV |

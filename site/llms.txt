@@ -20,11 +20,12 @@ Write (optional pathway interview that suggests checklists → dual drafts → c
 
 ## Start
 
+- Site (credibility home): https://ri-se.github.io/curbpack/ — optional mirror: https://afelin.github.io/curbpack/
 - Install: https://github.com/afelin/curbpack#install
-- Three ways in / builders: https://afelin.github.io/curbpack/for-builders/
+- Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
 - Pathway (Write depth): https://github.com/afelin/curbpack/blob/main/docs/getting-started/pathway.md
-- Authorities: https://afelin.github.io/curbpack/for-authorities/
-- White paper: https://afelin.github.io/curbpack/whitepaper/
+- Authorities: https://ri-se.github.io/curbpack/for-authorities/
+- White paper: https://ri-se.github.io/curbpack/whitepaper/
 - Voice: https://github.com/afelin/curbpack/blob/main/docs/voice-and-terms.md
 - Assistant contract: https://github.com/afelin/curbpack/blob/main/docs/assistant-loop.md
 - `curb` = short alias for `curbpack` (same binary)

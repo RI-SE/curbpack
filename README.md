@@ -7,13 +7,13 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://afelin.github.io/curbpack/) · [Voice and terms](docs/voice-and-terms.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [First move](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [White paper](papers/curbpack-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
+[Site](https://ri-se.github.io/curbpack/) · [Mirror](https://afelin.github.io/curbpack/) · [Voice and terms](docs/voice-and-terms.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [First move](docs/getting-started/60-second-paths.md) · [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [White paper](papers/curbpack-whitepaper.md) · [Security model](docs/security-model.md) · [Adopters](ADOPTERS.md)
 
 ## Who should read what
 
 | Reader | Start |
 |--------|--------|
-| Builder | Three ways in — [60-second paths](docs/getting-started/60-second-paths.md) · [pathway](docs/getting-started/pathway.md) · [site builders](site/for-builders/) |
+| Builder | Three ways in — [60-second paths](docs/getting-started/60-second-paths.md) · [pathway](docs/getting-started/pathway.md) · [sync both remotes](docs/getting-started/sync-both-remotes.md) · [site builders](site/for-builders/) |
 | Buyer / reviewer | Buyer one-pager + trust table — [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
 | CISO / authority / auditor | What artifacts mean — [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
 | Abbreviations / audience map | [Glossary and audience](docs/glossary-and-audience.md) |

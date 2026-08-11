@@ -4,7 +4,7 @@
 
 | Reader | Start here |
 |--------|------------|
-| Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [Pathway](getting-started/pathway.md) · [site builders](../site/for-builders/) |
+| Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [Pathway](getting-started/pathway.md) · [Sync both remotes](getting-started/sync-both-remotes.md) · [site builders](../site/for-builders/) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
@@ -34,6 +34,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Getting started](getting-started/60-second-paths.md) | First move — three ways in (Write / Bring / CI) |
 | [Pathway (warm-start)](getting-started/pathway.md) | Three ways in, one next ask, dual-draft HITL, research sidecar |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
+| [Sync both remotes](getting-started/sync-both-remotes.md) | One Cursor phrase to keep afelin ↔ RI-SE `main` matching |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Share recipe: ContextPack + buyer-questions + prepare-release |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Launch readiness](launch-readiness.md) | Internal launch checklist |

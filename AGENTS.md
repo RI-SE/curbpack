@@ -14,6 +14,7 @@ Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pat
 6. **Pathway:** call `curbpack pathway status|suggest|note` only — never forge `pathway-seed.json` or invent pack ids. Stop for human `confirm-*` and `attest`. Prefer ContextPack pathway next + RKG after confirm-packs; post-attest next is local proof verify (human). MCP never confirms/attests. Seed is not a gate input.
 7. **Research (optional sidecar):** `curbpack research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every external claim needs a cite id (`[^src-N]` / `<!-- cite:src-N -->`); refuse uncited Claims. Run `curbpack research --cite-check <draft.md>` before asking a human for `confirm-prose`. On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
+9. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
 
