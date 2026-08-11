@@ -55,7 +55,7 @@ Every path ends in the same local `check`. Optional drafts never replace check.
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
 | **CI** | Run `check` alone (Action `@v0.5.0` or local). **Skips curb outlines.** |
 
-**Curb outlines** are the first Write-path step: a local sketch of *what you are curbing* (product posture, house-first, sector)—not a pathway to regulation and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
+**Curb outlines** (your pathway sketch) are the first Write-path step: a soft local sketch of *what you are curbing* (product posture, house-first, sector)—not pack gates, not regulation, and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
 
 Mnemonic: *Curb outlines → packs → check → hand off.*
 
@@ -144,7 +144,7 @@ Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product
 |------|------------------------|
 | **CE** | European conformity marking — Curbpack does not issue CE marks |
 | **CRA** | EU Cyber Resilience Act — shapes some pack drafts; gate green ≠ legal conformity |
-| **Curb outlines** | Write-path warm-start sketch (pathway enums / suggested packs)—not the law |
+| **Curb outlines** | Write-path warm-start pathway sketch (enums / suggested packs)—not pack gates and not the law |
 | **Pathway** | Optional warm-start CLI (`pathway status\|suggest\|confirm-*\|note`); seed is not a gate input |
 | **Dual-draft HITL** | Option A + Option B + Recommended A\|B; human picks; then cite-check |
 | **Cite-check** | Refuses uncited Claims against the research packet before `confirm-prose` |
