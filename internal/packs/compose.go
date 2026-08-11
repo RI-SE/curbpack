@@ -238,7 +238,7 @@ func DoctorPacks() (DoctorFindings, error) {
 			}
 		}
 	}
-	// Pin skew: CYBERREADY_PACKS_DIR present but versions differ from embed for same id.
+	// Pin skew: CURBPACK_PACKS_DIR / legacy CYBERREADY_PACKS_DIR present but versions differ from embed for same id.
 	if dir := strings.TrimSpace(envPacksDir()); dir != "" {
 		for _, id := range builtinIDs {
 			override, err := loadPackFromDir(dir, id)

@@ -1,4 +1,5 @@
 ---
+name: curbpack
 description: Run Curbpack local compliance gates and explain GateFailure JSON. Use when the user asks about pack gates, prepare-release review packs, or curbpack check/validate/ask/attest/doctor/demo/export. Propose-only — never claim certification.
 ---
 

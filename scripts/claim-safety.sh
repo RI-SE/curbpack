@@ -134,12 +134,15 @@ done
 echo "== claim-safety: runtime CLI captures =="
 "$BIN" doctor >"$TMP/doctor.out" 2>&1 || true
 scan_text "doctor" "$TMP/doctor.out" || FAIL=1
+scan_brand "doctor" "$TMP/doctor.out" || FAIL=1
 
 DEMO="$TMP/demo"
 "$BIN" demo --out "$DEMO" --keep >"$TMP/demo.out" 2>&1
 scan_text "demo" "$TMP/demo.out" || FAIL=1
+scan_brand "demo" "$TMP/demo.out" || FAIL=1
 if [[ -f "$DEMO/review-pack/buyer-onepager.html" ]]; then
   scan_text "buyer-onepager" "$DEMO/review-pack/buyer-onepager.html" || FAIL=1
+  scan_brand "buyer-onepager" "$DEMO/review-pack/buyer-onepager.html" || FAIL=1
 fi
 
 FIX="$TMP/fix"
@@ -155,17 +158,35 @@ mkdir -p "$FIX"
   "$BIN" prepare-release >"$TMP/prepare.out" 2>&1 || true
 )
 scan_text "init" "$TMP/init.out" || FAIL=1
+scan_brand "init" "$TMP/init.out" || FAIL=1
 scan_text "check" "$TMP/check.out" || FAIL=1
+scan_brand "check" "$TMP/check.out" || FAIL=1
 scan_text "prepare-release" "$TMP/prepare.out" || FAIL=1
+scan_brand "prepare-release" "$TMP/prepare.out" || FAIL=1
 if [[ -f "$FIX/review-pack/buyer-onepager.html" ]]; then
   scan_text "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
+  scan_brand "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
 fi
 if [[ -f "$FIX/.github/curbpack/cache/latest_action_report.md" ]]; then
   scan_text "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
+  scan_brand "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
 fi
 
 "$BIN" help >"$TMP/help.out" 2>&1 || true
 scan_text "help" "$TMP/help.out" || FAIL=1
+scan_brand "help" "$TMP/help.out" || FAIL=1
+
+# Skill install path must be curbpack (not legacy cyberready skill dir name in output).
+if [[ -f "$FIX/.cursor/skills/curbpack/SKILL.md" ]]; then
+  if ! grep -q '^name: curbpack$' "$FIX/.cursor/skills/curbpack/SKILL.md"; then
+    echo "BRAND-SAFETY FAIL [skill]: missing frontmatter name: curbpack" >&2
+    FAIL=1
+  fi
+fi
+if [[ -d "$FIX/.cursor/skills/cyberready" ]]; then
+  echo "BRAND-SAFETY FAIL [skill]: init wrote legacy .cursor/skills/cyberready/" >&2
+  FAIL=1
+fi
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "claim-safety: FAILED — certification theater or brand leftovers detected" >&2

@@ -27,7 +27,7 @@ type Options struct {
 
 // Run prints environment confidence checks. Always exits 0 from CLI unless fatal I/O.
 func Run(opts Options) error {
-	tty.PrintHeader("CYBERREADY DOCTOR")
+	tty.PrintHeader("CURBPACK DOCTOR")
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	fmt.Printf("%s\n\n", tty.C(tty.Dim, InstrumentPanelCovenant))
 
