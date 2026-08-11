@@ -57,6 +57,8 @@ Every path ends in the same local `check`. Optional drafts never replace check.
 
 **Curb outlines** (your pathway sketch) are the first Write-path step: a soft local sketch of *what you are curbing* (product posture, house-first, sector)—not pack gates, not regulation, and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
 
+After human `confirm-packs`, Curbpack builds a **local pack→rule map** (closed-world suggest → confirm → local map → drafts). Use it to navigate house drafting; it is not regulation text and does not replace check. Optional refresh: `curbpack packs export-graph`.
+
 Mnemonic: *Curb outlines → packs → check → hand off.*
 
 ## 5. Feature surface (shipped)
@@ -71,7 +73,7 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | **export / share** | SARIF, ContextPack, buyer-questions, lay-of-land, explain-packet; `share` = check → context-pack → buyer-questions → prepare-release |
 | **prepare-release / attest** | Review pack + buyer one-pager; human Git Notes capsule (never auto-attest) |
 | **proof verify** | After attest, open local `proof/index.html` and compare the evidence pointer hash—still human judgment |
-| **packs** | `list` / `import` / `export-graph` (policy graph) / `doctor` |
+| **packs** | `list` / `import` / local pack→rule map (`export-graph`) / `doctor` |
 | **Action / alias** | `afelin/curbpack@v0.5.0`; short alias `curb` = `curbpack` |
 | **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
 

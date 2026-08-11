@@ -66,6 +66,10 @@ a:hover { color: var(--ink); }
 }
 .site-nav a { text-decoration: none; color: var(--muted); }
 .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--ink); }
+.site-nav a[href*="github.com"] { font-weight: 600; color: var(--ink-light); }
+.site-nav a[href*="github.com"]:hover { color: var(--rise); }
+.site-nav a[href*="github.com"] { font-weight: 600; color: var(--ink-light); }
+.site-nav a[href*="github.com"]:hover { color: var(--rise); }
 
 .hero {
   display: grid;
