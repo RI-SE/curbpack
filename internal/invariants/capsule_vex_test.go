@@ -17,9 +17,9 @@ func TestCapsuleHashReproducibleNoWallClock(t *testing.T) {
 	if a != b {
 		t.Fatal("state_hash must ignore wall clock")
 	}
-	seed := attest.StateSeed("c1", "p1", "sbom", "vex")
-	if seed != "c1|p1|sbom=sbom|vex=vex" {
-		t.Fatalf("unexpected seed %q", seed)
+	// Boundary fields must not collide under length-prefixed hashing.
+	if attest.ComputeStateHash("a", "b", "c|d", "e") == attest.ComputeStateHash("a|b", "c", "d", "e") {
+		t.Fatal("length-prefixed state_hash must reject delimiter ambiguity")
 	}
 }
 

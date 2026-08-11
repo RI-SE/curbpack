@@ -72,9 +72,9 @@ func TestSBOMDigestPrepareReleaseMatchesAttestBind(t *testing.T) {
 	if cap.Evidence["sbom_digest"] != d1 {
 		t.Fatalf("attest sbom_digest=%q want %q", cap.Evidence["sbom_digest"], d1)
 	}
-	seed := attest.StateSeed(cap.CommitSHA, cap.ParentStateHash, d1, cap.Evidence["vex_digest"])
-	if !strings.Contains(seed, "sbom="+d1) {
-		t.Fatalf("seed missing sbom digest: %s", seed)
+	want := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, d1, cap.Evidence["vex_digest"])
+	if cap.StateHash != want {
+		t.Fatalf("state_hash=%q want %q (ComputeStateHash sole authority)", cap.StateHash, want)
 	}
 }
 

@@ -41,6 +41,8 @@ Release installs (shell script and composite Action) download the binary **and**
 
 The composite Action does **not** prefer a consumer `./bin/cyberready` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
 
+**Rejected: Action cache-as-written.** A proposed consumer `hashFiles('**/*.go')` cache key plus skipping checksum verify on cache hit is a trust regression. Keep fail-closed download + `checksums.txt` verify (or dogfood `go build`). Any future cache must key on version + expected sha256 and **re-verify** before exec — not land in this track.
+
 ## Attestation honesty
 
 - **Signed:** SSH-agent successfully produced a signature → `user_touch=ssh-agent-signed`.
@@ -66,7 +68,7 @@ Embedded packs ship in the binary. Air-gap: `cyberready packs import`. Network u
 
 ## Pack regex (ReDoS)
 
-`text_forbid` patterns are length-capped and validated at pack load. Matching uses a size cap and a short timeout. Pathological packs fail closed at load or emit a timeout finding — they do not hang the CLI forever.
+`text_forbid` patterns are length-capped (`MaxRegexPatternLen`) and compiled at pack load. Matching uses a size cap (`MaxRegexMatchBytes`) and a short timeout. Invalid patterns fail closed at load or emit a timeout finding — they do not hang the CLI forever. Nested quantifiers that RE2 accepts under the length cap are allowed (no separate nesting heuristic).
 
 ## CI / PR surfaces
 

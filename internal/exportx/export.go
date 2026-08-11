@@ -77,7 +77,7 @@ func WriteSARIF(root string, packIDs []string, outPath string) (string, int, err
 	if err != nil {
 		return "", 0, err
 	}
-	doc := FromGateFailures(res.Payload)
+	doc := FromGateFailures(res.Payload, root)
 	if outPath == "" {
 		outPath = filepath.Join(root, ".github", "cyberready", "cache", "cyberready.sarif")
 	}
@@ -100,7 +100,8 @@ func WriteSARIF(root string, packIDs []string, outPath string) (string, int, err
 
 // FromGateFailures maps GateFailure IR to SARIF (ruleId == gate_id).
 // Text and path fields reuse the same exportx sanitize helpers as explain-packet.
-func FromGateFailures(payload ir.GateFailurePayload) SARIFDocument {
+// repoRoot enables repo-relative path rewrite when non-empty.
+func FromGateFailures(payload ir.GateFailurePayload, repoRoot string) SARIFDocument {
 	rulesByID := map[string]SARIFRule{}
 	results := make([]SARIFResult, 0, len(payload.Failures))
 	for _, f := range payload.Failures {
@@ -109,7 +110,7 @@ func FromGateFailures(payload ir.GateFailurePayload) SARIFDocument {
 		if sev == "high" || sev == "critical" {
 			level = "error"
 		}
-		desc := sanitizeText(f.SanitizedDescription)
+		desc := sanitizeText(f.SanitizedDescription, repoRoot)
 		if _, ok := rulesByID[f.GateID]; !ok {
 			r := SARIFRule{ID: f.GateID}
 			r.ShortDescription.Text = desc
@@ -129,7 +130,7 @@ func FromGateFailures(payload ir.GateFailurePayload) SARIFDocument {
 		file := strings.TrimSpace(f.ASTCoordinates.TargetFile)
 		if file != "" {
 			var loc SARIFLocation
-			loc.PhysicalLocation.ArtifactLocation.URI = relativizePath(file)
+			loc.PhysicalLocation.ArtifactLocation.URI = relativizePath(file, repoRoot)
 			loc.PhysicalLocation.Region.StartLine = 1
 			res.Locations = []SARIFLocation{loc}
 		}

@@ -81,10 +81,10 @@ func TestValidateRegexPatternLimits(t *testing.T) {
 	if err := packs.ValidateRegexPattern(long); err == nil {
 		t.Fatal("expected length reject")
 	}
-	// Deep nesting of groups with quantifiers
+	// Deep nesting of groups with quantifiers is accepted when RE2-valid and under length.
 	nested := "((((a*)*)*)*)*"
-	if err := packs.ValidateRegexPattern(nested); err == nil {
-		t.Fatal("expected nested quantifier reject")
+	if err := packs.ValidateRegexPattern(nested); err != nil {
+		t.Fatalf("expected nested pattern under length to accept: %v", err)
 	}
 	if err := packs.ValidateRegexPattern(`(`); err == nil {
 		t.Fatal("expected invalid compile")

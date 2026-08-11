@@ -110,13 +110,13 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		e := cache.Entries[id]
 		hints = append(hints, ContextRemediationHint{
 			GateID:  e.GateID,
-			File:    relativizePath(e.File),
-			Action:  sanitizeText(e.Action),
-			Snippet: sanitizeText(truncate(e.Snippet, 240)),
+			File:    relativizePath(e.File, root),
+			Action:  sanitizeText(e.Action, root),
+			Snippet: sanitizeText(truncate(e.Snippet, 240), root),
 		})
 	}
 
-	failures := sanitizeFailures(payload.Failures)
+	failures := sanitizeFailures(payload.Failures, root)
 	top := make([]ContextFailure, 0, contextPackMaxFails)
 	for i, f := range failures {
 		if i >= contextPackMaxFails {
