@@ -18,7 +18,7 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 |------|----------|--------|
 | `index.html` | Anyone | Primary sentence, plain ladder, **three ways in** chips (Write / Bring / CI), CTA **Pick how you start** |
 | `how-it-works/` | Anyone | Same three ways → stages (Write adds draft choice) → local check → review pack → human review |
-| `for-builders/` | Builders | Install / init / check; Write HITL line; Bring; CI pin `@v0.5.0` |
+| `for-builders/` | Builders | Install / init / check; Write HITL line; Bring; CI pin `@v0.5.0`; **Daily loop** (`curb` alias, heal/ask, share, attest/proof) |
 | `for-reviewers/` | Buyers / reviewers | Buyer one-pager + trust table; research brief demoted (supplier writer aid) |
 | `for-authorities/` | CISO / auditors | Structural evidence for human review; not conformity assessment |
 | `samples/onepager.html` | Reviewers / teaching | Buyer one-pager sample; Sources informational ≠ gate input |

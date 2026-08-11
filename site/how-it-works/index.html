@@ -90,9 +90,10 @@
 
       <h3>3. Local check</h3>
       <p><code>curbpack init</code> then <code>curbpack check</code> evaluates the chosen packs on disk. Dual output: machine-readable findings (JSON) and a short markdown report. Exit 0 = gates passed on this tree; 1 = findings remain. Daily <code>check</code> does not write the buyer one-pager.</p>
+      <p>On red: <code>curbpack check --heal</code>, then <code>curbpack ask … --propose</code>, then re-check — never invent green.</p>
 
       <h3>4. Review pack — hand to a buyer or auditor</h3>
-      <p><code>prepare-release</code> (or <code>curbpack share</code>) writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources (informational — not a gate input), and human sign-off status.</p>
+      <p><strong>After green:</strong> <code>curbpack share</code> is the handoff verb (check → context-pack → buyer-questions → prepare-release). It writes a <strong>review pack</strong>: gate JSON, action report, executive summary, optional SBOM/VEX drafts, and a <strong>buyer one-pager</strong> HTML. That is the artifact you hand over. Front = findings. Back = provenance, optional allowlisted Sources (informational — not a gate input), and human sign-off status.</p>
 
       <h3>5. Human review (when ready)</h3>
       <p>A person judges the evidence. When you are ready to bind a hash, run <code>curbpack attest</code> into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> After attest, you can open the local <code>proof/index.html</code> page and compare the bound hash from the evidence pointer—still human judgment, not conformity assessment.</p>

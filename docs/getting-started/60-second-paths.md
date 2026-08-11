@@ -34,8 +34,10 @@ curbpack demo                          # sandbox green + one-pager path (no brow
 ```bash
 cd my-product
 curbpack init                          # house-policy + hooks + skill + ide
-curbpack check                         # or bare: curbpack
+curbpack check                         # or bare: curbpack / curb
 ```
+
+On red: `curbpack check --heal` then `curbpack ask … --propose`, then re-check. After first green: `curbpack share` for the handoff recipe (review pack + buyer one-pager).
 
 ## Agent
 
@@ -46,7 +48,7 @@ curbpack check --form-hints            # propose-only snippets
 # optional: curbpack check --form-hints --apply-stub   # write missing stubs only
 ```
 
-Agent rule: after doc/dep edits, re-run `check`. Prefer `export --context-pack`. Never claim certification. Full contract: [assistant-loop](../assistant-loop.md) (Cursor / Copilot / Claude / others).
+Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On green: prefer `share` or `export --context-pack`. Never claim certification. Full contract: [assistant-loop](../assistant-loop.md) (Cursor / Copilot / Claude / others).
 
 ## CI-only
 
