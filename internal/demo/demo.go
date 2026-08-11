@@ -78,7 +78,7 @@ func resolveJailPath(p string) (string, error) {
 // Run copies the embedded demo-app into a temp git repo, inits house-policy, checks, prepares release.
 // It never writes into the caller's product working tree.
 func Run(opts Options) error {
-	tty.PrintHeader("CYBERREADY DEMO (SANDBOX)")
+	tty.PrintHeader("CURBPACK DEMO (SANDBOX)")
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Isolated temp git repo — your product cwd is not modified."))
 

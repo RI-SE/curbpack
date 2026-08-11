@@ -67,7 +67,7 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
 	fmt.Fprintf(os.Stderr, "Sole writer of .github/curbpack/cache/pathway-seed.json.\n")
 	fmt.Fprintf(os.Stderr, "Does not affect check pass/fail. Agents stop at confirms/attest.\n")
-	fmt.Fprintf(os.Stderr, "Confirms require a TTY, --i-am-human, or CYBERREADY_ALLOW_CONFIRM=1.\n")
+	fmt.Fprintf(os.Stderr, "Confirms require a TTY, --i-am-human, or CURBPACK_ALLOW_CONFIRM=1.\n")
 	fmt.Fprintf(os.Stderr, "%s\n", pathway.ClaimFence)
 }
 
@@ -84,7 +84,7 @@ func requireHumanConfirm(args []string) error {
 			return nil
 		}
 	}
-	return usageErr("pathway confirm-*: requires a TTY or --i-am-human (or CYBERREADY_ALLOW_CONFIRM=1); agents must stop for a human")
+	return usageErr("pathway confirm-*: requires a TTY or --i-am-human (or CURBPACK_ALLOW_CONFIRM=1); agents must stop for a human")
 }
 
 func cmdPathwayNote(root string, args []string) error {

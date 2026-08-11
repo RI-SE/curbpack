@@ -120,7 +120,7 @@ func LoadEmbedded() ([]Pack, error) {
 	return out, nil
 }
 
-// LoadPack loads one pack by id from embed, or from CYBERREADY_PACKS_DIR override.
+// LoadPack loads one pack by id from embed, or from CURBPACK_PACKS_DIR / legacy CYBERREADY_PACKS_DIR override.
 func LoadPack(id string) (Pack, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {

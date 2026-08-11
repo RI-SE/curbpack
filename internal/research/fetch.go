@@ -69,7 +69,7 @@ func fetchOne(client HTTPDoer, rawURL string) (excerpt, digest string, err error
 	if err != nil {
 		return "", "", err
 	}
-	req.Header.Set("User-Agent", "cyberready-research/1 (+local allowlisted fetch; not a crawler)")
+	req.Header.Set("User-Agent", "curbpack-research/1 (+local allowlisted fetch; not a crawler)")
 	req.Header.Set("Accept", "text/html,text/plain,application/xhtml+xml;q=0.9,*/*;q=0.1")
 
 	resp, err := client.Do(req)

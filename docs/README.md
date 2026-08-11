@@ -19,7 +19,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | Doc | Purpose |
 |-----|---------|
 | [Voice and terms](voice-and-terms.md) | Locked public sentences + preferred terms |
-| [Migration (CyberReady → Curbpack)](migration-cyberready-to-curbpack.md) | Dual-read legacy paths; pin `@v0.5.0` |
+| [Migration guide](migration-cyberready-to-curbpack.md) | Prior-name cutover; dual-read legacy paths; pin `@v0.5.0` |
 | [Glossary and audience](glossary-and-audience.md) | Abbreviations + who reads what |
 | [For authorities](for-authorities.md) | NCSC/EU-style, auditor, CISO sign-off brief |
 | [Intent vs Scope](intent-vs-scope.md) | What Curbpack is / is not |
