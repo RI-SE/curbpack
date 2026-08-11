@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Claim-safety killer: deny certification theater in docs + runtime CLI captures.
 # Tool does not prevent regulatory action; it must not present as conformity.
+# Brand: product mark is Curbpack. "CyberReady" allowed only in migration / NOTICE /
+# changelog historical lines (and this script's allowlist).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BIN="${CYBERREADY_BIN:-$ROOT/bin/cyberready}"
+BIN="${CURBPACK_BIN:-${CYBERREADY_BIN:-$ROOT/bin/curbpack}}"
 if [[ ! -x "$BIN" ]]; then
-  go build -o "$BIN" ./cmd/cyberready
+  go build -o "$BIN" ./cmd/curbpack
 fi
 
 TMP="$(mktemp -d)"
@@ -16,7 +18,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 # Combined deny patterns (positive certification theater).
 # Lines with claim-safe negation framing are filtered out in Python.
-DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|EU CRA Baseline|we are CRA compliant|CRA compliant|RISE[- ]approved|RISE[- ]certified|FRA[- ]approved|NCSC[- ]approved|agency[- ]endorsed'
+DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|curbpack certifies|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|EU CRA Baseline|we are CRA compliant|CRA compliant|RISE[- ]approved|RISE[- ]certified|FRA[- ]approved|NCSC[- ]approved|agency[- ]endorsed'
 
 SAFE_RE='not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|replace a notified|notified-body approval|certification_claimed.: false|Certification claimed: \*\*no\*\*|not a certification product|Not a certification|informational|draft structure|not essential-requirements|structural_draft|structural (file/header )?gates|not conformity assessment|funder, not certifier|not product certifier|not (this product.s )?certifier'
 
@@ -44,6 +46,54 @@ sys.exit(hit)
 PY
 }
 
+# Brand fence: CyberReady / CyberReady+ only in historical allowlist files.
+scan_brand() {
+  local file="$2"
+  local label="$1"
+  python3 - "$label" "$file" <<'PY'
+import re, sys
+label, path = sys.argv[1:3]
+# Allow migration/NOTICE/CHANGELOG wholly; elsewhere forbid brand leftovers.
+allow_names = {
+    "docs/migration-cyberready-to-curbpack.md",
+    "NOTICE",
+    "CHANGELOG.md",
+    "scripts/claim-safety.sh",
+}
+rel = path
+# normalize
+if rel.startswith("./"):
+    rel = rel[2:]
+if rel in allow_names or rel.endswith("/migration-cyberready-to-curbpack.md"):
+    sys.exit(0)
+pat = re.compile(r"CyberReady\+?|cyberready", re.I)
+hit = 0
+try:
+    text = open(path, errors="replace").read()
+except FileNotFoundError:
+    sys.exit(0)
+for i, line in enumerate(text.splitlines(), 1):
+    # allow links / titles pointing at the migration doc
+    if "migration-cyberready-to-curbpack" in line:
+        continue
+    # allow code comments that document dual-read legacy keys explicitly
+    if "legacy" in line.lower() and ("cyberready" in line.lower() or "CYBERREADY" in line):
+        continue
+    if "dual-read" in line.lower() or "fallback" in line.lower():
+        if "CYBERREADY" in line or "cyberready" in line.lower():
+            continue
+    if ".cyberready.json" in line or ".github/cyberready" in line or "refs/notes/cyberready" in line:
+        continue
+    if "CYBERREADY_" in line and ("CURBPACK_" in line or "legacy" in line.lower() or "fallback" in line.lower()):
+        continue
+    m = pat.search(line)
+    if m:
+        print(f"BRAND-SAFETY FAIL [{label}:{i}]: /{m.group(0)}/ → {line}", file=sys.stderr)
+        hit = 1
+sys.exit(hit)
+PY
+}
+
 FAIL=0
 
 echo "== claim-safety: docs/README/skills =="
@@ -59,6 +109,9 @@ done < <(
 
 for f in "${DOC_FILES[@]}"; do
   if ! scan_text "$f" "$f"; then
+    FAIL=1
+  fi
+  if ! scan_brand "$f" "$f"; then
     FAIL=1
   fi
 done
@@ -94,7 +147,7 @@ mkdir -p "$FIX"
 (
   cd "$FIX"
   git init -q
-  git config user.email "ci@cyberready.local"
+  git config user.email "ci@curbpack.local"
   git config user.name "CI"
   git commit --allow-empty -m init -q
   "$BIN" init --packs house-policy >"$TMP/init.out" 2>&1
@@ -107,15 +160,15 @@ scan_text "prepare-release" "$TMP/prepare.out" || FAIL=1
 if [[ -f "$FIX/review-pack/buyer-onepager.html" ]]; then
   scan_text "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
 fi
-if [[ -f "$FIX/.github/cyberready/cache/latest_action_report.md" ]]; then
-  scan_text "action-report" "$FIX/.github/cyberready/cache/latest_action_report.md" || FAIL=1
+if [[ -f "$FIX/.github/curbpack/cache/latest_action_report.md" ]]; then
+  scan_text "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
 fi
 
 "$BIN" help >"$TMP/help.out" 2>&1 || true
 scan_text "help" "$TMP/help.out" || FAIL=1
 
 if [[ "$FAIL" -ne 0 ]]; then
-  echo "claim-safety: FAILED — certification theater detected" >&2
+  echo "claim-safety: FAILED — certification theater or brand leftovers detected" >&2
   exit 1
 fi
 echo "claim-safety: OK"

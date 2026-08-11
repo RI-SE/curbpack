@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/packs"
+	"github.com/afelin/curbpack/internal/packs"
 )
 
 func TestValidatePackSchema(t *testing.T) {
@@ -110,7 +110,7 @@ func TestComposeMedtechExtendsCRA(t *testing.T) {
 
 func TestComposeExtendsCycle(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("CYBERREADY_PACKS_DIR", dir)
+	t.Setenv("CURBPACK_PACKS_DIR", dir)
 	mustPack(t, dir, "a", `{"id":"a","name":"A","version":"1","extends":"b","rules":[{"id":"A1","severity":"high","type":"POLICY_VIOLATION","check":"file_present","path":"SECURITY.md","description":"d","remediation":"r","expected":"e"}]}`)
 	mustPack(t, dir, "b", `{"id":"b","name":"B","version":"1","extends":"a","rules":[{"id":"B1","severity":"high","type":"POLICY_VIOLATION","check":"file_present","path":"README.md","description":"d","remediation":"r","expected":"e"}]}`)
 	if _, _, err := packs.Compose([]string{"a"}); err == nil {

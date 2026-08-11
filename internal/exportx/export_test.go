@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 func TestWriteSARIF_RuleIDsMatchGates(t *testing.T) {
@@ -199,7 +199,7 @@ func mustRealGit(t *testing.T, dir string) {
 		}
 	}
 	run("git", "init", "-q")
-	run("git", "config", "user.email", "exportx@cyberready.local")
+	run("git", "config", "user.email", "exportx@curbpack.local")
 	run("git", "config", "user.name", "ExportX")
 	run("git", "commit", "--allow-empty", "-m", "init", "-q")
 }

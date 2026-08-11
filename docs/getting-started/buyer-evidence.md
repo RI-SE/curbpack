@@ -16,44 +16,44 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 ## One-breath share recipe
 
 ```bash
-cyberready check
-cyberready export --context-pack      # washed assistant/auditor snapshot
-cyberready export --buyer-questions   # human Q&A checklist
-cyberready prepare-release            # review-pack / one-pager
-# human: cyberready attest            # never auto-attest
+curbpack check
+curbpack export --context-pack      # washed assistant/auditor snapshot
+curbpack export --buyer-questions   # human Q&A checklist
+curbpack prepare-release            # review-pack / one-pager
+# human: curbpack attest            # never auto-attest
 ```
 
 Thin CLI wrapper (same order; exits non-zero if check is red, still writes ContextPack for the red state):
 
 ```bash
-cyberready share
-# optional: cyberready share --skip-prepare-release
-# human review tick: cyberready pathway confirm-share  — see pathway.md
+curbpack share
+# optional: curbpack share --skip-prepare-release
+# human review tick: curbpack pathway confirm-share  — see pathway.md
 ```
 
-Artifacts land under `.github/cyberready/cache/` (`context-pack.json` + `.md`, `buyer-questions.md` + `.json`) and `review-pack/`.
+Artifacts land under `.github/curbpack/cache/` (`context-pack.json` + `.md`, `buyer-questions.md` + `.json`) and `review-pack/`.
 
 Warm-start before share: [pathway](pathway.md) (`pathway status` → confirms → stop before attest).
 
 ## Individual exports
 
 ```bash
-cyberready check
-cyberready export --buyer-questions
-# → .github/cyberready/cache/buyer-questions.md (+ .json)
+curbpack check
+curbpack export --buyer-questions
+# → .github/curbpack/cache/buyer-questions.md (+ .json)
 ```
 
 Optional shareable map (deps summary, secret-hit count, informational watchlist∩SBOM — not a CVE product):
 
 ```bash
-cyberready export --lay-of-land
-# → .github/cyberready/cache/lay-of-land.md (+ .json)
+curbpack export --lay-of-land
+# → .github/curbpack/cache/lay-of-land.md (+ .json)
 ```
 
-Hand the Markdown checklist / ContextPack to the human reviewer. When drafts are ready, `cyberready prepare-release` then human `cyberready attest`.
+Hand the Markdown checklist / ContextPack to the human reviewer. When drafts are ready, `curbpack prepare-release` then human `curbpack attest`.
 
 Rows carry `assurance_class: structural_draft`. Buyer-questions header includes `attestation_status: none | ssh-agent`.
 
-CyberReady prepares structural evidence for product repos — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
+Curbpack prepares structural evidence for product repos — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
 
 See also: [Voice and terms](../voice-and-terms.md) · [Assistant loop](../assistant-loop.md) · [For authorities](../for-authorities.md) · [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md) · [Strategy boundary](../strategy-boundary.md) · [Glossary](../glossary-and-audience.md)

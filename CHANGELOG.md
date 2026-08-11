@@ -2,7 +2,17 @@
 
 ## Unreleased
 
-- **Attest `state_hash` algorithm** — length-prefixed field stream (commit, parent, sbom, vex) replaces pipe-joined seed. Same inputs produce a new `state_hash`. Existing Git Notes capsules remain historically readable; **humans must re-attest** after upgrade so new capsules match the current algorithm. No silent migration.
+## v0.5.0
+
+**Curbpack rebrand** (formerly CyberReady / CyberReady+). Same local pack gates and human-review loop; new product mark, module, and CLI.
+
+- **Identity** — module `github.com/afelin/curbpack`; CLI `curbpack` + alias `curb` (no long-lived `cyberready` binary)
+- **Dual-read / write-new** — reads legacy `.cyberready.json`, `.github/cyberready/`, `CYBERREADY_*`, `refs/notes/cyberready`; writes `.curbpack.json`, `.github/curbpack/`, `CURBPACK_*`, `refs/notes/curbpack`
+- **Pin** — Action / install / docs → `@v0.5.0`; release assets `curbpack_*`
+- **Pedagogy** — **Curb outlines** = pathway warm-start entry (Write→Check); Bring/CI skip outlines
+- **Pages** — base `/curbpack/`; migration note `docs/migration-cyberready-to-curbpack.md`
+- **Attest** — if you used old notes ref, **re-attest** so new capsules land on `refs/notes/curbpack`
+- **Attest `state_hash` algorithm** — length-prefixed field stream (commit, parent, sbom, vex) replaces pipe-joined seed (from Unreleased). Existing capsules remain historically readable; re-attest after upgrade.
 
 ## v0.4.3
 

@@ -10,11 +10,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/release"
-	"github.com/afelin/cyberready/internal/tty"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/release"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 //go:embed data/*
@@ -92,7 +92,7 @@ func Run(opts Options) error {
 
 	dir := opts.OutDir
 	if dir == "" {
-		dir, err = os.MkdirTemp("", "cyberready-demo-*")
+		dir, err = os.MkdirTemp("", "curbpack-demo-*")
 		if err != nil {
 			return err
 		}
@@ -147,8 +147,8 @@ func Run(opts Options) error {
 	}
 	_ = os.MkdirAll(filepath.Join(dir, "proof"), 0o755)
 	_ = os.WriteFile(filepath.Join(dir, "proof", "index.html"), []byte(release.ProofPageHTML()), 0o644)
-	_ = os.MkdirAll(filepath.Join(dir, ".github", "cyberready", "cache"), 0o755)
-	_ = os.MkdirAll(filepath.Join(dir, ".github", "cyberready", "evidence"), 0o755)
+	_ = os.MkdirAll(filepath.Join(dir, ".github", "curbpack", "cache"), 0o755)
+	_ = os.MkdirAll(filepath.Join(dir, ".github", "curbpack", "evidence"), 0o755)
 	tty.PrintStatus("init", true, "packs=house-policy")
 
 	res, err := validate.Run(validate.Options{RepoRoot: dir})
@@ -172,16 +172,16 @@ func Run(opts Options) error {
 	if opts.OpenBrowser {
 		openOnePager(onepager)
 	} else {
-		fmt.Printf("%s\n", tty.C(tty.Dim, "one-pager path printed above — open with: cyberready demo --open (or open the file)"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "one-pager path printed above — open with: curbpack demo --open (or open the file)"))
 	}
 
 	fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Green, "[+] Demo green in sandbox"))
 	if opts.KeepDir || opts.OutDir != "" {
 		fmt.Printf("%s\n", tty.C(tty.Dim, "sandbox kept at: "+dir))
 	}
-	fmt.Printf("%s\n", tty.C(tty.Dim, "next on your repo: cyberready init && cyberready check"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "next on your repo: curbpack init && curbpack check"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, "habit: check → instrument Δ + covenant · docs/getting-started/daily-loop.md"))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/cyberready@v0.4.3  (heal: true)"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/curbpack@v0.5.0  (heal: true)"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	return nil
 }
@@ -216,10 +216,10 @@ func copyEmbedded(dest string) error {
 func gitInit(dir string) error {
 	cmds := [][]string{
 		{"git", "init", "-q"},
-		{"git", "config", "user.email", "demo@cyberready.local"},
-		{"git", "config", "user.name", "CyberReady Demo"},
+		{"git", "config", "user.email", "demo@curbpack.local"},
+		{"git", "config", "user.name", "Curbpack Demo"},
 		{"git", "add", "-A"},
-		{"git", "commit", "--allow-empty", "-m", "cyberready demo sandbox", "-q"},
+		{"git", "commit", "--allow-empty", "-m", "curbpack demo sandbox", "-q"},
 	}
 	for _, c := range cmds {
 		cmd := exec.Command(c[0], c[1:]...)

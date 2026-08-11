@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/curbpack/internal/ir"
 )
 
 // Document is a pending OpenVEX draft for dependency/advisory rows only.
@@ -60,7 +60,7 @@ type Advisory struct {
 func FromAdvisories(product string, advisories []Advisory) Document {
 	stmts := make([]Statement, 0, len(advisories))
 	for _, a := range advisories {
-		id := "https://cyberready.local/advisory/" + a.ID
+		id := "https://curbpack.local/advisory/" + a.ID
 		prod := "pkg:generic/" + product
 		if strings.TrimSpace(a.PURL) != "" {
 			prod = a.PURL
@@ -84,8 +84,8 @@ func FromAdvisories(product string, advisories []Advisory) Document {
 	}
 	return Document{
 		Context:    "https://openvex.dev/ns/v0.2.0",
-		ID:         "https://cyberready.local/vex/" + seed,
-		Author:     "cyberready",
+		ID:         "https://curbpack.local/vex/" + seed,
+		Author:     "curbpack",
 		Timestamp:  "2024-01-01T00:00:00Z",
 		Version:    1,
 		Statements: stmts,
@@ -144,7 +144,7 @@ func firstNonEmpty(a, b string) string {
 // Write writes the VEX draft JSON to path (default evidence dir).
 func Write(root string, doc Document, outPath string) (string, error) {
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "evidence", "vex-pending.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "vex-pending.json")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", err

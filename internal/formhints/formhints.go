@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/remediation"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/remediation"
 )
 
 // Hint is a deterministic gate→snippet proposal (Witness-style templates).
@@ -82,7 +82,7 @@ func resolveFile(f ir.Failure) string {
 func Format(hints []Hint) string {
 	var b strings.Builder
 	b.WriteString("## Form hints (deterministic — propose-only by default)\n\n")
-	b.WriteString("CyberReady will not invent legal prose. Snippets are structural Witness templates.\n")
+	b.WriteString("Curbpack will not invent legal prose. Snippets are structural Witness templates.\n")
 	b.WriteString("Heal never auto-attests and never marks VEX final.\n\n")
 	for _, h := range hints {
 		b.WriteString(fmt.Sprintf("### %s\n", h.GateID))

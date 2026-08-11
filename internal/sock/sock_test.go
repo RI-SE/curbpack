@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afelin/cyberready/internal/sock"
+	"github.com/afelin/curbpack/internal/sock"
 )
 
 func TestValidateDeltaIPC(t *testing.T) {
@@ -67,16 +67,16 @@ func TestValidateDeltaIPC(t *testing.T) {
 }
 
 func TestDefaultPathNotSharedTmp(t *testing.T) {
-	t.Setenv("CYBERREADY_SOCK", "")
+	t.Setenv("CURBPACK_SOCK", "")
 	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
 	p, err := sock.DefaultPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p == "/tmp/cyberready.sock" {
-		t.Fatal("must not default to shared /tmp/cyberready.sock")
+	if p == "/tmp/curbpack.sock" {
+		t.Fatal("must not default to shared /tmp/curbpack.sock")
 	}
-	if !strings.Contains(p, "cyberready") {
+	if !strings.Contains(p, "curbpack") {
 		t.Fatalf("unexpected path %q", p)
 	}
 }
@@ -87,7 +87,7 @@ func TestExplainPacketIPC(t *testing.T) {
 		t.Fatal(err)
 	}
 	mustWrite(t, filepath.Join(dir, "README.md"), "# x\n")
-	mustWrite(t, filepath.Join(dir, ".cyberready.json"), "{\n  \"packs\": [\"house-policy\"],\n  \"version\": \"0.4.1\"\n}\n")
+	mustWrite(t, filepath.Join(dir, ".curbpack.json"), "{\n  \"packs\": [\"house-policy\"],\n  \"version\": \"0.4.1\"\n}\n")
 
 	sockPath := filepath.Join(dir, "cr-explain.sock")
 	go func() {
@@ -157,7 +157,7 @@ func TestRefuseWorldWritableParent(t *testing.T) {
 	}
 	// Some filesystems ignore sticky/umask — force world-writable.
 	_ = os.Chmod(bad, 0o777)
-	sockPath := filepath.Join(bad, "cyberready.sock")
+	sockPath := filepath.Join(bad, "curbpack.sock")
 	err := sock.Serve(sockPath, dir)
 	if err == nil {
 		t.Fatal("expected refuse world-writable parent")

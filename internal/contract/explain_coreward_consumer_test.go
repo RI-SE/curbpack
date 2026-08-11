@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // TestExplainPacketCorewardConsumer simulates a Coreward-shaped tutor consumer:

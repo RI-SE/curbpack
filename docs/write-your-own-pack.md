@@ -1,6 +1,6 @@
 # Write your own pack
 
-CyberReady evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 branches — only generic check kinds.
+Curbpack evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 branches — only generic check kinds.
 
 ## Pack shape
 
@@ -61,9 +61,9 @@ CyberReady evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 b
 - `medtech-iec62304` is a real overlay: `"extends": "cra-baseline"`
 
 ```bash
-cyberready init --packs medtech-iec62304   # composes CRA + medtech rules
-cyberready packs export-graph              # writes .github/cyberready/graph/policy-graph.json
-cyberready packs doctor                    # expired / superseded / pin skew
+curbpack init --packs medtech-iec62304   # composes CRA + medtech rules
+curbpack packs export-graph              # writes .github/curbpack/graph/policy-graph.json
+curbpack packs doctor                    # expired / superseded / pin skew
 ```
 
 ## Supported `check` values
@@ -79,16 +79,16 @@ cyberready packs doctor                    # expired / superseded / pin skew
 ## Load paths
 
 1. **Embedded** in the binary (`internal/packs/data/<id>/pack.json`)
-2. **Override dir:** `CYBERREADY_PACKS_DIR=/path` with `<id>/pack.json`
-3. **Air-gap:** `cyberready packs import ./bundle-dir` — ValidatePack + `assurance_class` + claim-adjacent refuse; writes `.cyberready-pack.sha256` sidecar
+2. **Override dir:** `CURBPACK_PACKS_DIR=/path` with `<id>/pack.json`
+3. **Air-gap:** `curbpack packs import ./bundle-dir` — ValidatePack + `assurance_class` + claim-adjacent refuse; writes `.curbpack-pack.sha256` sidecar
 
 ## Activate
 
 ```bash
-cyberready init --packs acme-secure-coding
-# or edit .cyberready.json:
+curbpack init --packs acme-secure-coding
+# or edit .curbpack.json:
 # { "packs": ["acme-secure-coding"] }
-cyberready check
+curbpack check
 ```
 
 `init` scaffolds **only** paths referenced by composed pack rules (includes `extends` bases).
@@ -105,7 +105,7 @@ Packs prepare evidence for human review. Passing gates is not certification for 
 
 | Command / op | What it does | Release-gate safe? |
 |--------------|--------------|-------------------|
-| `cyberready check --diff` | Porcelain: evaluates rules that touch the dirty/changed set (`RuleTouchesDiff`; basename match). `file_present` / `annex_file` always run. | **No** — local speed only; do not treat green `--diff` as release evidence |
-| `cyberready validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative |
+| `curbpack check --diff` | Porcelain: evaluates rules that touch the dirty/changed set (`RuleTouchesDiff`; basename match). `file_present` / `annex_file` always run. | **No** — local speed only; do not treat green `--diff` as release evidence |
+| `curbpack validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative |
 
 Do not change `RuleTouchesDiff` matching mid-freeze. Stakeholder matrix: [github-readiness-gaps.md](github-readiness-gaps.md#diff-vs-validate_delta).

@@ -21,10 +21,10 @@ jobs:
         id: smoke
         run: |
           set -euo pipefail
-          go build -o bin/cyberready ./cmd/cyberready
+          go build -o bin/curbpack ./cmd/curbpack
           FIX=$(mktemp -d)
-          ./bin/cyberready demo --out "$FIX" --keep >/tmp/demo.out
-          SCORE=$(python3 -c "import json;print(json.load(open('${FIX}/.github/cyberready/cache/latest_failure.json')).get('readiness_score',0))")
+          ./bin/curbpack demo --out "$FIX" --keep >/tmp/demo.out
+          SCORE=$(python3 -c "import json;print(json.load(open('${FIX}/.github/curbpack/cache/latest_failure.json')).get('readiness_score',0))")
           FP="demo_ok=true|score=${SCORE}|packs=house-policy"
           echo "fp=${FP}" >> "$GITHUB_OUTPUT"
           echo "score=${SCORE}" >> "$GITHUB_OUTPUT"
@@ -37,7 +37,7 @@ jobs:
           script: |
             const fp = process.env.FP || '';
             const score = process.env.SCORE || '?';
-            const marker = `<!-- cyberready-weekly-fp:${fp} -->`;
+            const marker = `<!-- curbpack-weekly-fp:${fp} -->`;
 
             const repoIdQuery = await github.graphql(`
               query($owner:String!, $name:String!) {
@@ -53,7 +53,7 @@ jobs:
               }`, { owner: context.repo.owner, name: context.repo.repo });
 
             const recent = repoIdQuery.repository.discussions.nodes || [];
-            const same = recent.find(d => (d.body || '').includes(marker) || (d.body || '').includes(`cyberready-weekly-fp:${fp}`));
+            const same = recent.find(d => (d.body || '').includes(marker) || (d.body || '').includes(`curbpack-weekly-fp:${fp}`));
             if (same) {
               core.info(`scoreboard unchanged (${fp}) — skip Discussion (zero babysitting)`);
               return;
@@ -64,12 +64,12 @@ jobs:
               marker,
               '## This week\'s offline smoke',
               '',
-              `House-policy sandbox (\`cyberready demo\`) is **green** (readiness **${score}%**).`,
+              `House-policy sandbox (\`curbpack demo\`) is **green** (readiness **${score}%**).`,
               '',
               '### Try it',
               '```bash',
-              'curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh',
-              'cyberready doctor && cyberready demo',
+              'curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh',
+              'curbpack doctor && curbpack demo',
               '```',
               '',
               '### Claim safety (do not edit away)',

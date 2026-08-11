@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 // Capsule is the Git Notes compliance capsule (Merkle + OCC).
@@ -83,10 +83,10 @@ func Run(opts Options) (Capsule, error) {
 	sbomDigest := opts.SBOMDigest
 	vexDigest := opts.VEXDigest
 	if sbomDigest == "" {
-		sbomDigest = fileDigest(filepath.Join(root, ".github", "cyberready", "evidence", "sbom.cdx.json"))
+		sbomDigest = fileDigest(filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json"))
 	}
 	if vexDigest == "" {
-		vexDigest = fileDigest(filepath.Join(root, ".github", "cyberready", "evidence", "vex-pending.json"))
+		vexDigest = fileDigest(filepath.Join(root, ".github", "curbpack", "evidence", "vex-pending.json"))
 	}
 
 	parentHash := gitutil.ParentNoteHash(root, commit)
@@ -113,13 +113,13 @@ func Run(opts Options) (Capsule, error) {
 	evidence := map[string]string{}
 	if sbomDigest != "" {
 		evidence["sbom_digest"] = sbomDigest
-		evidence["sbom_path"] = ".github/cyberready/evidence/sbom.cdx.json"
+		evidence["sbom_path"] = ".github/curbpack/evidence/sbom.cdx.json"
 	}
 	if vexDigest != "" {
 		evidence["vex_digest"] = vexDigest
-		evidence["vex_path"] = ".github/cyberready/evidence/vex-pending.json"
+		evidence["vex_path"] = ".github/curbpack/evidence/vex-pending.json"
 	}
-	evidence["local_pointer"] = ".github/cyberready/evidence/"
+	evidence["local_pointer"] = ".github/curbpack/evidence/"
 
 	cap := Capsule{
 		SchemaVersion:   "v3.33-OCC",
@@ -144,7 +144,7 @@ func Run(opts Options) (Capsule, error) {
 	}
 
 	// Local evidence pointer for HPURL verify
-	_ = os.MkdirAll(filepath.Join(root, ".github", "cyberready", "evidence"), 0o755)
+	_ = os.MkdirAll(filepath.Join(root, ".github", "curbpack", "evidence"), 0o755)
 	pointer := map[string]any{
 		"state_hash":    stateHash,
 		"commit_sha":    commit,
@@ -152,14 +152,14 @@ func Run(opts Options) (Capsule, error) {
 		"sbom_digest":   sbomDigest,
 		"vex_digest":    vexDigest,
 		"note":          "Client-side HPURL verify compares fragment h= to state_hash. Not a certification.",
-		"evidence_root": ".github/cyberready/evidence/",
+		"evidence_root": ".github/curbpack/evidence/",
 	}
 	pb, _ := json.MarshalIndent(pointer, "", "  ")
-	_ = os.WriteFile(filepath.Join(root, ".github", "cyberready", "evidence", "hpurl-pointer.json"), append(pb, '\n'), 0o644)
+	_ = os.WriteFile(filepath.Join(root, ".github", "curbpack", "evidence", "hpurl-pointer.json"), append(pb, '\n'), 0o644)
 
-	tty.PrintStatus("Git Notes capsule", true, "refs/notes/cyberready @ "+truncate(commit, 12))
+	tty.PrintStatus("Git Notes capsule", true, "refs/notes/curbpack @ "+truncate(commit, 12))
 	tty.PrintStatus("HPURL fragment", true, cap.HPURLFragment)
-	tty.PrintStatus("Evidence pointer", true, ".github/cyberready/evidence/hpurl-pointer.json")
+	tty.PrintStatus("Evidence pointer", true, ".github/curbpack/evidence/hpurl-pointer.json")
 	return cap, nil
 }
 
@@ -256,7 +256,7 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 	first := lines[0]
 	who := identityFromSSHAddLine(first)
 
-	tmpPub, err := os.CreateTemp("", "cyberready-attest-*.pub")
+	tmpPub, err := os.CreateTemp("", "curbpack-attest-*.pub")
 	if err != nil {
 		return "", who, false
 	}
@@ -267,7 +267,7 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 	}
 	_ = tmpPub.Close()
 
-	tmpIn, err := os.CreateTemp("", "cyberready-attest-*.txt")
+	tmpIn, err := os.CreateTemp("", "curbpack-attest-*.txt")
 	if err != nil {
 		return "", who, false
 	}
@@ -282,7 +282,7 @@ func trySSHAgentSign(repoRoot, payload string) (sig string, identity string, ver
 	defer os.Remove(tmpOut)
 
 	// -f = public key (agent resolves private); final arg = data to sign.
-	cmd := command("ssh-keygen", "-Y", "sign", "-f", tmpPub.Name(), "-n", "cyberready@attest", tmpIn.Name())
+	cmd := command("ssh-keygen", "-Y", "sign", "-f", tmpPub.Name(), "-n", "curbpack@attest", tmpIn.Name())
 	cmd.Dir = repoRoot
 	if err := cmd.Run(); err != nil {
 		return "", who, false

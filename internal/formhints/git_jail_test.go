@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/formhints"
+	"github.com/afelin/curbpack/internal/formhints"
 )
 
 func TestApplyStubsRefusesDotGit(t *testing.T) {

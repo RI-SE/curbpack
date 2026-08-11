@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/afelin/cyberready/internal/sbom"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/sbom"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // WriteSPDXOptional writes a minimal SPDX-JSON mirror of components (opt-in; default off).
@@ -19,17 +19,17 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 		return "", err
 	}
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "evidence", "sbom.spdx.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "sbom.spdx.json")
 	}
 	docs := map[string]any{
 		"spdxVersion":       "SPDX-2.3",
 		"dataLicense":       "CC0-1.0",
 		"SPDXID":            "SPDXRef-DOCUMENT",
 		"name":              filepath.Base(root) + "-sbom",
-		"documentNamespace": "https://cyberready.local/spdx/" + filepath.Base(root),
+		"documentNamespace": "https://curbpack.local/spdx/" + filepath.Base(root),
 		"creationInfo": map[string]any{
 			"created":  "2024-01-01T00:00:00Z",
-			"creators": []string{"Tool: cyberready"},
+			"creators": []string{"Tool: curbpack"},
 			"comment":  "Optional SPDX mirror of component list — not a certification. Source=" + source,
 		},
 		"packages": spdxPackages(pkgs),
@@ -68,12 +68,12 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 	}
 	gateBytes, _ := json.Marshal(res.Payload.Failures)
 	gateDigest := fmt.Sprintf("%x", sha256.Sum256(gateBytes))
-	sbomPath := filepath.Join(root, ".github", "cyberready", "evidence", "sbom.cdx.json")
+	sbomPath := filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json")
 	sbomDig := sbom.FileDigest(sbomPath)
 	predicate := map[string]any{
 		"_type": "https://slsa.dev/provenance/v0.2",
-		"buildType": "https://cyberready.local/slsa/prepare-release",
-		"builder": map[string]any{"id": "cyberready"},
+		"buildType": "https://curbpack.local/slsa/prepare-release",
+		"builder": map[string]any{"id": "curbpack"},
 		"invocation": map[string]any{
 			"configSource": map[string]any{"uri": "local", "digest": map[string]string{"sha256": gateDigest}},
 		},
@@ -96,7 +96,7 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 		"predicate":     predicate,
 	}
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "evidence", "slsa-sidecar.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "slsa-sidecar.json")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", err

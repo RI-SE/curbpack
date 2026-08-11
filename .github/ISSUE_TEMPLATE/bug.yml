@@ -27,7 +27,7 @@ body:
     id: version
     attributes:
       label: Version / pin
-      description: e.g. `cyberready version` output or Action `@v0.4.1`
+      description: e.g. `curbpack version` output or Action `@v0.4.1`
       placeholder: v0.4.1
     validations:
       required: true

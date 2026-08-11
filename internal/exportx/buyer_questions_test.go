@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
+	"github.com/afelin/curbpack/internal/exportx"
 )
 
 func TestWriteBuyerQuestions_HousePolicy(t *testing.T) {

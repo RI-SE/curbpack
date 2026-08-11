@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/instrument"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/sbom"
+	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/sbom"
 )
 
 const layOfLandCovenant = "Instrument panel · not a security program · not conformity assessment"
@@ -46,7 +46,7 @@ func WriteLayOfLand(root, outPath string) (string, error) {
 		SecretHits:    snap.SecretHits,
 		WatchlistHits: wlHits,
 		WatchlistNote: wlNote,
-		BuyerPointer:  "cyberready export --buyer-questions",
+		BuyerPointer:  "curbpack export --buyer-questions",
 	}
 
 	mdPath, jsonPath := layOfLandPaths(root, outPath)
@@ -70,7 +70,7 @@ func WriteLayOfLand(root, outPath string) (string, error) {
 
 func layOfLandPaths(root, outPath string) (mdPath, jsonPath string) {
 	if outPath == "" {
-		base := filepath.Join(root, ".github", "cyberready", "cache", "lay-of-land")
+		base := filepath.Join(root, ".github", "curbpack", "cache", "lay-of-land")
 		return base + ".md", base + ".json"
 	}
 	ext := strings.ToLower(filepath.Ext(outPath))

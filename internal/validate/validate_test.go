@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // Note: tests avoid `git init` so they run under restricted sandboxes.
@@ -236,7 +236,7 @@ func TestValidatePassFixture(t *testing.T) {
 	if res.ActionReport == "" || !strings.Contains(res.ActionReport, "Action Report") {
 		t.Fatal("missing action report")
 	}
-	cache := filepath.Join(dir, ".github/cyberready/cache/latest_action_report.md")
+	cache := filepath.Join(dir, ".github/curbpack/cache/latest_action_report.md")
 	if _, err := os.Stat(cache); err != nil {
 		t.Fatal("action report not cached")
 	}
@@ -269,7 +269,7 @@ func TestPathTraversalFailClosed(t *testing.T) {
 	initGit(t, dir)
 	wd, _ := os.Getwd()
 	root := filepath.Clean(filepath.Join(wd, "../.."))
-	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	t.Setenv("CURBPACK_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
 
 	res, err := validate.Run(validate.Options{
 		RepoRoot: dir,
@@ -330,7 +330,7 @@ func TestInvalidPackageJSONDepBanFail(t *testing.T) {
 func TestBadRegexFailNoPanic(t *testing.T) {
 	wd, _ := os.Getwd()
 	root := filepath.Clean(filepath.Join(wd, "../.."))
-	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	t.Setenv("CURBPACK_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
 	// Invalid pack regex is rejected at load (ReDoS / schema fail-closed).
 	_, err := packs.LoadPack("bad-regex")
 	if err == nil {
@@ -344,7 +344,7 @@ func TestBadRegexFailNoPanic(t *testing.T) {
 func TestUnknownCheckPackLoad(t *testing.T) {
 	wd, _ := os.Getwd()
 	root := filepath.Clean(filepath.Join(wd, "../.."))
-	t.Setenv("CYBERREADY_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
+	t.Setenv("CURBPACK_PACKS_DIR", filepath.Join(root, "testdata/adversarial/packs"))
 	_, err := packs.LoadPack("unknown-check")
 	if err == nil {
 		t.Fatal("expected unsupported check load error")
@@ -368,7 +368,7 @@ func TestSessionNotesDoNotAffectCheckPassFail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	seedPath := filepath.Join(dir, ".github", "cyberready", "cache", "pathway-seed.json")
+	seedPath := filepath.Join(dir, ".github", "curbpack", "cache", "pathway-seed.json")
 	mustWrite(t, seedPath, `{
   "schema_version": 1,
   "answers": {"product":"hygiene","eu_docs":"no","medtech":"no","sector":"none","house_first":"yes","ce_context":"none"},

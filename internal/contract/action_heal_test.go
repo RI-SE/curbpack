@@ -6,21 +6,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/formhints"
-	"github.com/afelin/cyberready/internal/remediation"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/formhints"
+	"github.com/afelin/curbpack/internal/remediation"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
-// Action-equivalent smoke: uninitialized repo (no .cyberready.json) + heal stubs.
+// Action-equivalent smoke: uninitialized repo (no .curbpack.json) + heal stubs.
 // Mirrors Action heal:true — ResolvePackIDs falls back to house-policy.
 func TestUninitializedHealGreensOrDeterministicRed(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# Product\n")
 
-	if _, err := os.Stat(filepath.Join(dir, ".cyberready.json")); err == nil {
-		t.Fatal("fixture must start without .cyberready.json")
+	if _, err := os.Stat(filepath.Join(dir, ".curbpack.json")); err == nil {
+		t.Fatal("fixture must start without .curbpack.json")
 	}
 
 	ids, err := config.ResolvePackIDs(dir, nil)
@@ -71,8 +71,8 @@ func TestUninitializedHealGreensOrDeterministicRed(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "SECURITY.md")); err != nil {
 		t.Fatalf("expected SECURITY.md stub after heal: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".cyberready.json")); err == nil {
-		t.Fatal("heal must not invent .cyberready.json (Action path stays config-free)")
+	if _, err := os.Stat(filepath.Join(dir, ".curbpack.json")); err == nil {
+		t.Fatal("heal must not invent .curbpack.json (Action path stays config-free)")
 	}
 }
 
@@ -100,8 +100,8 @@ func TestCLICheckHealUninitialized(t *testing.T) {
 
 func buildCyberready(t *testing.T) string {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "cyberready")
-	cmd := exec.Command("go", "build", "-o", bin, "./cmd/cyberready")
+	bin := filepath.Join(t.TempDir(), "curbpack")
+	cmd := exec.Command("go", "build", "-o", bin, "./cmd/curbpack")
 	cmd.Dir = repoRoot(t)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)

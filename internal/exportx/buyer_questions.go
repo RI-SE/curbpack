@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/attest"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 const buyerQuestionsAssuranceClass = "structural_draft"
@@ -112,7 +112,7 @@ func WriteBuyerQuestions(root string, packIDs []string, outPath string) (string,
 
 func buyerQuestionsPaths(root, outPath string) (mdPath, jsonPath string) {
 	if outPath == "" {
-		base := filepath.Join(root, ".github", "cyberready", "cache", "buyer-questions")
+		base := filepath.Join(root, ".github", "curbpack", "cache", "buyer-questions")
 		return base + ".md", base + ".json"
 	}
 	ext := strings.ToLower(filepath.Ext(outPath))

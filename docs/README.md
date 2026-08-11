@@ -19,10 +19,11 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | Doc | Purpose |
 |-----|---------|
 | [Voice and terms](voice-and-terms.md) | Locked public sentences + preferred terms |
+| [Migration (CyberReady → Curbpack)](migration-cyberready-to-curbpack.md) | Dual-read legacy paths; pin `@v0.5.0` |
 | [Glossary and audience](glossary-and-audience.md) | Abbreviations + who reads what |
 | [For authorities](for-authorities.md) | NCSC/EU-style, auditor, CISO sign-off brief |
-| [Intent vs Scope](intent-vs-scope.md) | What CyberReady is / is not |
-| [Strategy boundary](strategy-boundary.md) | CyberReady standalone; claim boundaries |
+| [Intent vs Scope](intent-vs-scope.md) | What Curbpack is / is not |
+| [Strategy boundary](strategy-boundary.md) | Curbpack standalone; claim boundaries |
 | [GitHub-readiness gaps](github-readiness-gaps.md) | Stakeholder demand → Done/Polish/Ops/Reject + Evidence paths |
 | [Stable contracts](stable-contracts.md) | Sock ops, GateFailure IR, explain airlock (nave freeze) |
 | [Security model](security-model.md) | Trust boundaries, required CI, freeze |

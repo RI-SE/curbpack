@@ -65,20 +65,25 @@ func IsDirty(repoRoot string) bool {
 	return out != ""
 }
 
-const NotesRef = "refs/notes/cyberready"
+// NotesRef is the write ref for attestation capsules.
+const NotesRef = "refs/notes/curbpack"
 
-// NotesShow returns note body for commit, or empty if missing.
+// NotesShow returns note body for commit from curbpack notes, else legacy cyberready notes.
 func NotesShow(repoRoot, commit string) (string, error) {
-	out, err := runGit(repoRoot, "notes", "--ref=cyberready", "show", commit)
-	if err != nil {
+	out, err := runGit(repoRoot, "notes", "--ref=curbpack", "show", commit)
+	if err == nil {
+		return out, nil
+	}
+	out, err2 := runGit(repoRoot, "notes", "--ref=cyberready", "show", commit)
+	if err2 != nil {
 		return "", err
 	}
 	return out, nil
 }
 
-// NotesAdd writes (force) a note on commit.
+// NotesAdd writes (force) a note on commit under refs/notes/curbpack only.
 func NotesAdd(repoRoot, commit, message string) error {
-	_, err := runGit(repoRoot, "notes", "--ref=cyberready", "add", "-f", "-m", message, commit)
+	_, err := runGit(repoRoot, "notes", "--ref=curbpack", "add", "-f", "-m", message, commit)
 	return err
 }
 

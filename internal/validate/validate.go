@@ -13,12 +13,13 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/pathway"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 // High-signal placeholders / LLM boilerplate — alternation kept short for ReDoS safety.
@@ -119,9 +120,9 @@ func Run(opts Options) (Result, error) {
 			FailedOrthogonalRegions: unique(regions),
 		},
 		AgentIdentity: ir.AgentIdentity{
-			AgentID:         envOr("CYBERREADY_AGENT_ID", "cyberready-cli"),
-			ModelHash:       envOr("CYBERREADY_MODEL_HASH", "deterministic"),
-			ActiveMandateID: envOr("CYBERREADY_MANDATE_ID", strings.Join(ids, "+")),
+			AgentID:         envOrPath("AGENT_ID", "curbpack-cli"),
+			ModelHash:       envOrPath("MODEL_HASH", "deterministic"),
+			ActiveMandateID: envOrPath("MANDATE_ID", strings.Join(ids, "+")),
 		},
 		Failures:       failures,
 		PackID:         strings.Join(ids, ","),
@@ -129,7 +130,7 @@ func Run(opts Options) (Result, error) {
 	}
 
 	action := ActionReportMarkdown(payload, skipped)
-	cacheDir := filepath.Join(root, ".github", "cyberready", "cache")
+	cacheDir := filepath.Join(root, ".github", "curbpack", "cache")
 	_ = os.MkdirAll(cacheDir, 0o755)
 	b, _ := json.MarshalIndent(payload, "", "  ")
 	_ = os.WriteFile(filepath.Join(cacheDir, "latest_failure.json"), b, 0o644)
@@ -514,6 +515,14 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// envOrPath reads CURBPACK_<key> / CYBERREADY_<key> via paths.Env.
+func envOrPath(key, fallback string) string {
+	if v := paths.Env(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func unique(in []string) []string {
 	seen := map[string]struct{}{}
 	var out []string
@@ -531,7 +540,7 @@ func unique(in []string) []string {
 func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	var b strings.Builder
 	b.WriteString("# Action Report\n\n")
-	b.WriteString("> CyberReady prepares evidence for **human review**. Gate pass is not certification.\n\n")
+	b.WriteString("> Curbpack prepares evidence for **human review**. Gate pass is not certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", payload.PackID)
 	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", payload.ReadinessScore)
 	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))

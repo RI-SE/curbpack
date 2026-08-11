@@ -6,9 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/pathway"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 func pathwayErr(err error) error {
@@ -55,7 +56,7 @@ func cmdPathway(args []string) error {
 }
 
 func pathwayUsage() {
-	fmt.Fprintf(os.Stderr, "cyberready pathway — warm-start pack seed + HITL ticks\n\n")
+	fmt.Fprintf(os.Stderr, "curbpack pathway — warm-start pack seed + HITL ticks\n\n")
 	fmt.Fprintf(os.Stderr, "  status [--human|--technical]   One next ask (human default) or phase+next\n")
 	fmt.Fprintf(os.Stderr, "  suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=… [--ce-context=…]\n")
 	fmt.Fprintf(os.Stderr, "                                  Closed-world proposed_packs (enums only)\n")
@@ -64,7 +65,7 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "  confirm-prose [--i-am-human]    Human: stamp prose_owned (cite-check if packet present)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-share [--i-am-human]    Human: stamp share_reviewed\n")
 	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
-	fmt.Fprintf(os.Stderr, "Sole writer of .github/cyberready/cache/pathway-seed.json.\n")
+	fmt.Fprintf(os.Stderr, "Sole writer of .github/curbpack/cache/pathway-seed.json.\n")
 	fmt.Fprintf(os.Stderr, "Does not affect check pass/fail. Agents stop at confirms/attest.\n")
 	fmt.Fprintf(os.Stderr, "Confirms require a TTY, --i-am-human, or CYBERREADY_ALLOW_CONFIRM=1.\n")
 	fmt.Fprintf(os.Stderr, "%s\n", pathway.ClaimFence)
@@ -75,7 +76,7 @@ func requireHumanConfirm(args []string) error {
 	if tty.IsTerminal {
 		return nil
 	}
-	if os.Getenv("CYBERREADY_ALLOW_CONFIRM") == "1" {
+	if paths.Env("ALLOW_CONFIRM") == "1" {
 		return nil
 	}
 	for _, a := range args {
@@ -135,7 +136,7 @@ func cmdPathwayNote(root string, args []string) error {
 	if err != nil {
 		return pathwayErr(err)
 	}
-	tty.PrintHeader("cyberready pathway note")
+	tty.PrintHeader("curbpack pathway note")
 	if setVal != "" {
 		fmt.Printf("set: %s\n", setVal)
 	} else {
@@ -195,14 +196,14 @@ func cmdPathwaySuggest(root string, args []string) error {
 	if err != nil {
 		return pathwayErr(err)
 	}
-	tty.PrintHeader("cyberready pathway suggest")
+	tty.PrintHeader("curbpack pathway suggest")
 	fmt.Printf("proposed_packs: %s\n", strings.Join(seed.ProposedPacks, ", "))
 	if seed.NextHint != "" {
 		fmt.Printf("next_hint: %s (see docs/write-your-own-pack.md)\n", seed.NextHint)
 	}
 	fmt.Printf("seed: %s\n", pathway.SeedPath(root))
 	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "next: human cyberready pathway confirm-packs"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "next: human curbpack pathway confirm-packs"))
 	return nil
 }
 
@@ -214,7 +215,7 @@ func cmdPathwayConfirmPacks(root string, args []string) error {
 	if err != nil {
 		return pathwayErr(err)
 	}
-	tty.PrintHeader("cyberready pathway confirm-packs")
+	tty.PrintHeader("curbpack pathway confirm-packs")
 	fmt.Printf("packs_confirmed: %s\n", strings.Join(seed.ProposedPacks, ", "))
 	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
 	snap, _ := pathway.Project(root)
@@ -230,7 +231,7 @@ func cmdPathwayConfirmProse(root string, args []string) error {
 	if err != nil {
 		return pathwayErr(err)
 	}
-	tty.PrintHeader("cyberready pathway confirm-prose")
+	tty.PrintHeader("curbpack pathway confirm-prose")
 	fmt.Printf("%s\n", tty.C(tty.Dim, "prose_owned stamped — re-check before share"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
 	snap, _ := pathway.Project(root)
@@ -246,7 +247,7 @@ func cmdPathwayConfirmShare(root string, args []string) error {
 	if err != nil {
 		return pathwayErr(err)
 	}
-	tty.PrintHeader("cyberready pathway confirm-share")
+	tty.PrintHeader("curbpack pathway confirm-share")
 	fmt.Printf("%s\n", tty.C(tty.Dim, "share_reviewed stamped — human attest next; agents stop"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
 	snap, _ := pathway.Project(root)

@@ -8,7 +8,7 @@
 
 Manual amplify kit for X, LinkedIn, and README badges. **No auto-DM. No spam bots.**
 
-Copy numbers from the latest `cyberready-scoreboard` CI artifact or weekly Discussion.
+Copy numbers from the latest `curbpack-scoreboard` CI artifact or weekly Discussion.
 
 Every post must keep this disclaimer:
 
@@ -24,7 +24,7 @@ Every post must keep this disclaimer:
 Stranger path, no Go:
 
 curl -fsSL …/scripts/install.sh | sh
-cyberready doctor && cyberready demo
+curbpack doctor && curbpack demo
 
 Sandbox green in ~{N}s. Evidence for humans — not certification.
 ```
@@ -34,9 +34,9 @@ Sandbox green in ~{N}s. Evidence for humans — not certification.
 ```
 5 lines of YAML → PR comment with readiness thermometer + top fails.
 
-uses: afelin/cyberready@vX
+uses: afelin/curbpack@vX
 
-Claim-safe by design. Try the Action or `cyberready demo`.
+Claim-safe by design. Try the Action or `curbpack demo`.
 ```
 
 ### C — House-policy cold start
@@ -44,8 +44,8 @@ Claim-safe by design. Try the Action or `cyberready demo`.
 ```
 Cold start without EU-law framing:
 
-cyberready init --packs house-policy --hooks --skill --ide
-cyberready check
+curbpack init --packs house-policy --hooks --skill --ide
+curbpack check
 
 Packs encode policy. The binary stays industry-agnostic.
 ```
@@ -55,9 +55,9 @@ Packs encode policy. The binary stays industry-agnostic.
 ## LinkedIn (1 post)
 
 ```
-We open-sourced CyberReady+: a local evidence CLI for CRA / house policy / sector packs.
+We open-sourced Curbpack: a local evidence CLI for CRA / house policy / sector packs.
 
-Goal isn’t vanity stars — it’s ~100 people who actually ran `cyberready demo` or the GitHub Action and can say whether they’d recommend it.
+Goal isn’t vanity stars — it’s ~100 people who actually ran `curbpack demo` or the GitHub Action and can say whether they’d recommend it.
 
 Install (no Go): curl install.sh | sh → doctor → demo (temp sandbox, never touches your product).
 
@@ -71,13 +71,13 @@ If you try it, open a “Tester report” issue or drop a thermometer screenshot
 ## README badge
 
 ```markdown
-[![cyberready-check](https://img.shields.io/badge/cyberready-check-2ea44f?logo=github)](https://github.com/afelin/cyberready)
+[![curbpack-check](https://img.shields.io/badge/curbpack-check-2ea44f?logo=github)](https://github.com/afelin/curbpack)
 ```
 
 Optional shields.io workflow badge once the Action runs on your repo:
 
 ```markdown
-[![CyberReady](https://github.com/OWNER/REPO/actions/workflows/cyberready.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/cyberready.yml)
+[![Curbpack](https://github.com/OWNER/REPO/actions/workflows/curbpack.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/curbpack.yml)
 ```
 
 ---

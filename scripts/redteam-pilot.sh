@@ -6,9 +6,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-BIN="${CYBERREADY_BIN:-$ROOT/bin/cyberready}"
+BIN="${CURBPACK_BIN:-$ROOT/bin/curbpack}"
 if [[ ! -x "$BIN" ]]; then
-  go build -o "$BIN" ./cmd/cyberready
+  go build -o "$BIN" ./cmd/curbpack
 fi
 
 PASS=0
@@ -19,13 +19,13 @@ bad() { echo "  FAIL  $*"; FAIL=$((FAIL + 1)); }
 
 echo "== redteam-pilot (pilot-prod contract) =="
 
-# --- 1) Fake ./bin/cyberready must not be preferred by Action resolve ---
-if grep -q 'Never prefer consumer \./bin/cyberready' action.yml && \
-   ! grep -E '^\s*if \[ -x (\./)?bin/cyberready' action.yml && \
+# --- 1) Fake ./bin/curbpack must not be preferred by Action resolve ---
+if grep -q 'Never prefer consumer \./bin/curbpack' action.yml && \
+   ! grep -E '^\s*if \[ -x (\./)?bin/curbpack' action.yml && \
    grep -q 'source=built\|source=release' action.yml; then
-  ok "1 Action resolve does not prefer workspace ./bin/cyberready"
+  ok "1 Action resolve does not prefer workspace ./bin/curbpack"
 else
-  bad "1 Action resolve must not prefer unverified ./bin/cyberready"
+  bad "1 Action resolve must not prefer unverified ./bin/curbpack"
 fi
 
 # --- 2) Missing SECURITY.md + dirty README — check --diff fails ---
@@ -37,7 +37,7 @@ set +e
   set -e
   cd "$TMP2"
   git init -q
-  git config user.email "redteam@cyberready.local"
+  git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
   "$BIN" init --packs house-policy >/dev/null
@@ -96,12 +96,12 @@ set +e
   set -e
   cd "$TMPG"
   git init -q
-  git config user.email "redteam@cyberready.local"
+  git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
   "$BIN" init --bare --packs house-policy >/dev/null
   "$BIN" packs export-graph >/dev/null
-  grep -q '"schema_version"' .github/cyberready/graph/policy-graph.json
+  grep -q '"schema_version"' .github/curbpack/graph/policy-graph.json
 )
 graph_code=$?
 set -e
@@ -172,7 +172,7 @@ cat >"$THEATER/theater-pack/pack.json" <<'EOF'
 EOF
 IMPORT_DEST="$(mktemp -d)"
 set +e
-IMPORT_OUT="$(CYBERREADY_PACKS_DIR="$IMPORT_DEST" "$BIN" packs import "$THEATER" 2>&1)"
+IMPORT_OUT="$(CURBPACK_PACKS_DIR="$IMPORT_DEST" "$BIN" packs import "$THEATER" 2>&1)"
 IMPORT_RC=$?
 set -e
 if [[ "$IMPORT_RC" -ne 0 ]] && echo "$IMPORT_OUT" | grep -qi 'assurance_class'; then
@@ -231,9 +231,9 @@ else
   bad "13 attest dirty / --allow-dirty honesty regression"
 fi
 
-# --- 14) Packs update refuses without CYBERREADY_PACKS_SHA256 ---
+# --- 14) Packs update refuses without CURBPACK_PACKS_SHA256 ---
 if go test ./internal/packscmd/ -run TestUpdateRequiresSHA256Pin -count=1 >/dev/null 2>&1; then
-  ok "14 packs update requires CYBERREADY_PACKS_SHA256"
+  ok "14 packs update requires CURBPACK_PACKS_SHA256"
 else
   bad "14 packs update SHA256 pin regression"
 fi

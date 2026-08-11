@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/instrument"
+	"github.com/afelin/curbpack/internal/instrument"
 )
 
 func TestAccumulationDeltaLineNoPrior(t *testing.T) {
@@ -59,7 +59,7 @@ func TestLoadPriorCacheAndGreenCheckWhisper(t *testing.T) {
 	mustGit(t, dir)
 	writeGreenHouse(t, dir)
 
-	cache := filepath.Join(dir, ".github", "cyberready", "cache")
+	cache := filepath.Join(dir, ".github", "curbpack", "cache")
 	if err := os.MkdirAll(cache, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ We support the latest major release with security patches for twelve months.
 
 Coordinated disclosure within 90 days after fix availability.
 `+strings.Repeat("word ", 40)+"\n")
-	mustWriteFile(t, filepath.Join(dir, ".cyberready.json"), `{"packs":["house-policy"],"claim":"Prepares evidence for human review — not a conformity assessment."}`+"\n")
+	mustWriteFile(t, filepath.Join(dir, ".curbpack.json"), `{"packs":["house-policy"],"claim":"Prepares evidence for human review — not a conformity assessment."}`+"\n")
 }
 
 func captureCLIStdout(t *testing.T, fn func()) string {
@@ -184,7 +184,7 @@ func mustGit(t *testing.T, dir string) {
 		}
 	}
 	run("git", "init", "-q")
-	run("git", "config", "user.email", "accum@cyberready.local")
+	run("git", "config", "user.email", "accum@curbpack.local")
 	run("git", "config", "user.name", "Accum")
 	run("git", "commit", "--allow-empty", "-m", "init", "-q")
 }

@@ -1,3 +1,3 @@
 # Demo App
 
-Minimal house-policy fixture for `cyberready demo`. Not a real product.
+Minimal house-policy fixture for `curbpack demo`. Not a real product.

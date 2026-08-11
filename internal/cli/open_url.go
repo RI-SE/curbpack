@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/afelin/cyberready/internal/research"
+	"github.com/afelin/curbpack/internal/research"
 )
 
 func openAllowlistedURL(raw string) error {

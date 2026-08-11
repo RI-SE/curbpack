@@ -1,8 +1,11 @@
 /bin/
+/curbpack
 /cyberready
 /dist/
 *.exe
 .DS_Store
+.github/curbpack/cache/
+.github/curbpack/evidence/
 .github/cyberready/cache/
 .github/cyberready/evidence/
 /review-pack/

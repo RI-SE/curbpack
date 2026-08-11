@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/afelin/cyberready/internal/cli"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/cli"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 // Thin dispatcher — command logic lives in internal/cli.

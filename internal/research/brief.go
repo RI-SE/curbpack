@@ -18,8 +18,8 @@ func FormatBrief(pkt Packet) string {
 	b.WriteString("1. Open the official links below (allowlisted only).\n")
 	b.WriteString("2. Edit the top files listed here (structural headers/paths).\n")
 	b.WriteString("3. Tag every external factual claim with a source id (`[^src-1]` or `<!-- cite:src-1 -->`).\n")
-	b.WriteString("4. Run `cyberready research --cite-check <draft.md>` before human `pathway confirm-prose`.\n")
-	b.WriteString("5. Re-run `cyberready check` — research never changes pass/fail.\n\n")
+	b.WriteString("4. Run `curbpack research --cite-check <draft.md>` before human `pathway confirm-prose`.\n")
+	b.WriteString("5. Re-run `curbpack check` — research never changes pass/fail.\n\n")
 
 	files := topEditFiles(pkt, 5)
 	b.WriteString("## Files to edit (top 5)\n\n")

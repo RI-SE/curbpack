@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/ir"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
 )
 
 func TestWriteExplainPacket_NoAbsHome(t *testing.T) {

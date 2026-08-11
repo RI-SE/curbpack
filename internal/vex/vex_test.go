@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/vex"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/vex"
 )
 
 func TestPendingOpenVEX(t *testing.T) {

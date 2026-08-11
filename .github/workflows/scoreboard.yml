@@ -17,17 +17,17 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Build
-        run: go build -o bin/cyberready ./cmd/cyberready
+        run: go build -o bin/curbpack ./cmd/curbpack
       - name: Offline smoke + scoreboard
         run: |
           set -euo pipefail
           START=$(date +%s)
           FIX=$(mktemp -d)
-          ./bin/cyberready doctor | tee /tmp/doctor.txt
-          ./bin/cyberready demo --out "$FIX" --keep | tee /tmp/demo.txt
+          ./bin/curbpack doctor | tee /tmp/doctor.txt
+          ./bin/curbpack demo --out "$FIX" --keep | tee /tmp/demo.txt
           END=$(date +%s)
           ELAPSED=$((END-START))
-          SCORE=$(python3 -c 'import json,sys; p="'"$FIX"'/.github/cyberready/cache/latest_failure.json";
+          SCORE=$(python3 -c 'import json,sys; p="'"$FIX"'/.github/curbpack/cache/latest_failure.json";
           import os
           print(json.load(open(p)).get("readiness_score",100) if os.path.exists(p) else 100)')
           mkdir -p artifacts
@@ -39,12 +39,12 @@ jobs:
             "demo_score": ${SCORE},
             "claim": "Prepares evidence for human review — not a conformity assessment.",
             "certification_claimed": false,
-            "install": "curl -fsSL https://raw.githubusercontent.com/afelin/cyberready/main/scripts/install.sh | sh",
-            "try": "cyberready doctor && cyberready demo"
+            "install": "curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh",
+            "try": "curbpack doctor && curbpack demo"
           }
           EOF
           cat > artifacts/scoreboard.md <<EOF
-          # CyberReady weekly scoreboard (claim-safe)
+          # Curbpack weekly scoreboard (claim-safe)
 
           - Time-to-demo: **${ELAPSED}s**
           - Packs smoked: house-policy (demo), cra-baseline (CI)
@@ -53,11 +53,11 @@ jobs:
 
           > Prepares evidence for human review — not a conformity assessment.
 
-          Try: \`cyberready doctor && cyberready demo\`
+          Try: \`curbpack doctor && curbpack demo\`
           EOF
           cat artifacts/scoreboard.md
           test "$ELAPSED" -lt 120
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: cyberready-scoreboard
+          name: curbpack-scoreboard
           path: artifacts/*

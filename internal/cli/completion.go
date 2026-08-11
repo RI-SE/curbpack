@@ -40,8 +40,8 @@ func cmdCompletion(args []string) error {
 func bashCompletionScript() string {
 	cmds := strings.Join(completionCommands, " ")
 	exports := strings.Join(completionExportFlags, " ")
-	return `# cyberready bash completion — eval "$(cyberready completion bash)"
-_cyberready() {
+	return `# curbpack bash completion — eval "$(curbpack completion bash)"
+_curbpack() {
   local cur prev
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
@@ -83,15 +83,15 @@ _cyberready() {
       ;;
   esac
 }
-complete -F _cyberready cyberready
+complete -F _curbpack curbpack
 `
 }
 
 func zshCompletionScript() string {
 	var b strings.Builder
-	b.WriteString("#compdef cyberready\n")
-	b.WriteString("# cyberready zsh completion — eval \"$(cyberready completion zsh)\"\n")
-	b.WriteString("_cyberready() {\n")
+	b.WriteString("#compdef curbpack\n")
+	b.WriteString("# curbpack zsh completion — eval \"$(curbpack completion zsh)\"\n")
+	b.WriteString("_curbpack() {\n")
 	b.WriteString("  local -a cmds\n")
 	b.WriteString("  cmds=(")
 	for _, c := range completionCommands {
@@ -114,28 +114,28 @@ func zshCompletionScript() string {
 	b.WriteString("    research) _values 'research' '--fetch' '--cite-check' '--list-sources' '--open-sources' '--packs' '--gate-id' ;;\n")
 	b.WriteString("  esac\n")
 	b.WriteString("}\n")
-	b.WriteString("compdef _cyberready cyberready\n")
+	b.WriteString("compdef _curbpack curbpack\n")
 	return b.String()
 }
 
 func fishCompletionScript() string {
 	var b strings.Builder
-	b.WriteString("# cyberready fish completion — cyberready completion fish | source\n")
-	b.WriteString("complete -c cyberready -f\n")
+	b.WriteString("# curbpack fish completion — curbpack completion fish | source\n")
+	b.WriteString("complete -c curbpack -f\n")
 	for _, c := range completionCommands {
-		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_use_subcommand' -a %q\n", c)
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_use_subcommand' -a %q\n", c)
 	}
 	for _, f := range completionExportFlags {
-		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from export' -a %q\n", f)
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from export' -a %q\n", f)
 	}
 	for _, s := range completionShells {
-		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from completion' -a %q\n", s)
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from completion' -a %q\n", s)
 	}
 	for _, p := range []string{"status", "suggest", "confirm-packs", "confirm-prose", "confirm-share", "note"} {
-		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from pathway' -a %q\n", p)
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from pathway' -a %q\n", p)
 	}
 	for _, f := range []string{"--fetch", "--cite-check", "--list-sources", "--open-sources", "--packs", "--gate-id"} {
-		fmt.Fprintf(&b, "complete -c cyberready -n '__fish_seen_subcommand_from research' -a %q\n", f)
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from research' -a %q\n", f)
 	}
 	return b.String()
 }

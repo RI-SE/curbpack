@@ -12,7 +12,7 @@ func TestFormatHumanStatus_NoPhasePath(t *testing.T) {
 		Path:  ParentStatePath(PhaseAwaitSuggest),
 		Next: NextAction{
 			Verb: "suggest packs",
-			Cmd:  "cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
+			Cmd:  "curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
 			Note: "enum seed only",
 		},
 	}

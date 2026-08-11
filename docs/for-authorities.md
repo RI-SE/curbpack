@@ -1,12 +1,12 @@
 # For authorities, auditors, and CISOs
 
-CyberReady prepares **structural evidence** for **human review**; it does not perform **conformity assessment**.
+Curbpack prepares **structural evidence** for **human review**; it does not perform **conformity assessment**.
 
-Sign-off oriented brief for NCSC/EU-style authorities, internal auditors, and CISOs who need to know what CyberReady is — without reading integrator notes or any optional sibling product.
+Sign-off oriented brief for NCSC/EU-style authorities, internal auditors, and CISOs who need to know what Curbpack is — without reading integrator notes or any optional sibling product.
 
 Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audience](glossary-and-audience.md) (CE, CRA, SBOM, SARIF, GRC, notified body, conformity assessment, RISE, NCSC).
 
-## What CyberReady is
+## What Curbpack is
 
 - A **local-first command-line tool** that evaluates **rule packs** (JSON checklists shaped like regulatory annex drafts—not law) against a git repository on the supplier’s machine.
 - A producer of **structural evidence** (JSON + markdown + optional buyer one-pager) for **human review**.
@@ -30,7 +30,7 @@ Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audie
 
 **Unsigned ≠ verified.** Local gate score on this tree is not a certification score.
 
-## What CyberReady is not
+## What Curbpack is not
 
 - **Not** conformity assessment, CE marking, or notified-body approval.
 - **Not** a certificate that green gates equal legal market access or CRA conformity.
@@ -42,7 +42,7 @@ Gate pass means: deterministic pack rules did not fail on the files present — 
 
 ## Institute neutrality
 
-Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use CyberReady gate results. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.
+Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.
 
 Full MoU / co-promotion boundary: [promotion firewall](promotion-firewall.md).
 
@@ -63,7 +63,7 @@ Safe to say:
 
 Unsafe / forbidden as product claims:
 
-- Never claim that CyberReady certified the product, completed conformity assessment, or issued CE marking.
+- Never claim that Curbpack certified the product, completed conformity assessment, or issued CE marking.
 - Never claim that gate green equals CRA-compliant, NIS2-compliant, or market-ready by law.
 - Never claim that RISE, NCSC, FRA, or any agency endorses or approves the tool as official guidance.
 
@@ -76,14 +76,14 @@ Default cold start is **`house-policy`**. CRA-style (`cra-baseline`) and medtech
 ## Suggested reviewer path
 
 1. Read this page + [Intent vs Scope](intent-vs-scope.md).
-2. Ask the supplier for ContextPack / buyer-questions / one-pager + attest status (`cyberready share` recipe).
-3. Optionally deep-read [security model](security-model.md) and the [white paper](../papers/cyberready-whitepaper.md).
+2. Ask the supplier for ContextPack / buyer-questions / one-pager + attest status (`curbpack share` recipe).
+3. Optionally deep-read [security model](security-model.md) and the [white paper](../papers/curbpack-whitepaper.md).
 4. Do **not** require [coreward-bridge.md](coreward-bridge.md) — that file is for integrators only. Coreward stays an external optional pointer — not in activation.
 
 Site mirror: [for-authorities on Pages](../site/for-authorities/).
 
 ---
 
-> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
+> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume Curbpack explain-packets over an optional Unix socket. Curbpack is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
 
 (Wording source: [coreward-pointer.md](coreward-pointer.md).)

@@ -8,18 +8,18 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/instrument"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/pathway"
-	"github.com/afelin/cyberready/internal/remediation"
-	"github.com/afelin/cyberready/internal/research"
-	"github.com/afelin/cyberready/internal/validate"
+	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/remediation"
+	"github.com/afelin/curbpack/internal/research"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 const (
 	contextPackSchema   = "1"
 	contextPackMaxFails = 12
-	contextPackNote     = "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run cyberready check before claiming fixed. Pathway confirms/attest are human-only."
+	contextPackNote     = "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run curbpack check before claiming fixed. Pathway confirms/attest are human-only."
 )
 
 // ContextFailure is a washed top finding for assistants.
@@ -180,7 +180,7 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 }
 
 func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailurePayload, score int, ok bool, usedCache bool, err error) {
-	cachePath := filepath.Join(root, ".github", "cyberready", "cache", "latest_failure.json")
+	cachePath := filepath.Join(root, ".github", "curbpack", "cache", "latest_failure.json")
 	if b, rerr := os.ReadFile(cachePath); rerr == nil {
 		var p ir.GateFailurePayload
 		if json.Unmarshal(b, &p) == nil && (p.SchemaVersion != "" || len(p.Failures) > 0 || p.PackID != "") {
@@ -200,7 +200,7 @@ func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailur
 
 func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {
 	if outPath == "" {
-		base := filepath.Join(root, ".github", "cyberready", "cache", "context-pack")
+		base := filepath.Join(root, ".github", "curbpack", "cache", "context-pack")
 		return base + ".md", base + ".json"
 	}
 	ext := strings.ToLower(filepath.Ext(outPath))
@@ -216,7 +216,7 @@ func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {
 }
 
 func contextPackPathsMap(root string) map[string]string {
-	base := filepath.ToSlash(filepath.Join(".github", "cyberready", "cache"))
+	base := filepath.ToSlash(filepath.Join(".github", "curbpack", "cache"))
 	m := map[string]string{
 		"latest_failure":   base + "/latest_failure.json",
 		"instrument":       base + "/instrument.json",
@@ -225,7 +225,7 @@ func contextPackPathsMap(root string) map[string]string {
 		"context_pack_md":  base + "/context-pack.md",
 		"buyer_questions":  base + "/buyer-questions.md",
 		"explain_packet":   base + "/explain-packet.json",
-		"policy_graph":     filepath.ToSlash(filepath.Join(".github", "cyberready", "graph", "policy-graph.json")),
+		"policy_graph":     filepath.ToSlash(filepath.Join(".github", "curbpack", "graph", "policy-graph.json")),
 		"pathway_seed":     base + "/pathway-seed.json",
 		"research_packet":  base + "/research-packet.json",
 		"research_brief":   base + "/research-brief.md",
@@ -271,7 +271,7 @@ func buildContextPathway(root string) *ContextPathway {
 
 func formatContextPackMarkdown(p ContextPack) string {
 	var b strings.Builder
-	b.WriteString("# CyberReady ContextPack\n\n")
+	b.WriteString("# Curbpack ContextPack\n\n")
 	b.WriteString("> Structural evidence for human review. Not a conformity assessment, CE mark, or certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", strings.Join(p.PackIDs, ", "))
 	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
@@ -318,7 +318,7 @@ func formatContextPackMarkdown(p ContextPack) string {
 	for _, k := range pathKeys {
 		fmt.Fprintf(&b, "- `%s`: `%s`\n", k, p.Paths[k])
 	}
-	b.WriteString("\n_Assistants: run `cyberready check` (exit code authoritative). Never invent gate results or certification claims._\n")
+	b.WriteString("\n_Assistants: run `curbpack check` (exit code authoritative). Never invent gate results or certification claims._\n")
 	return b.String()
 }
 

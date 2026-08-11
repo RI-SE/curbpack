@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/buildinfo"
+	"github.com/afelin/curbpack/internal/buildinfo"
 )
 
 // Summary is a lightweight SBOM digest kept for backward compatibility.
@@ -98,7 +98,7 @@ func WriteCycloneDX(root, outPath string) (Document, string, error) {
 	}
 	doc := BuildCycloneDX(root, pkgs, source)
 	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "cyberready", "evidence", "sbom.cdx.json")
+		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json")
 	}
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return Document{}, "", err
@@ -157,7 +157,7 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 	doc.Metadata.Timestamp = "2024-01-01T00:00:00Z"
 	doc.Metadata.Tools.Components = []Component{{
 		Type:    "application",
-		Name:    "cyberready",
+		Name:    "curbpack",
 		Version: buildinfo.Version,
 	}}
 	doc.Metadata.Component = Component{

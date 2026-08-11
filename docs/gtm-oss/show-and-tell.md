@@ -4,7 +4,7 @@ Enable **GitHub Discussions** on the repo. Prefer a category named **Show and te
 
 ## What to post
 
-- Thermometer screenshot or readiness % from `cyberready demo` / Action
+- Thermometer screenshot or readiness % from `curbpack demo` / Action
 - Whether you’d recommend it (yes / not yet / no)
 - Org or handle **only with consent**
 

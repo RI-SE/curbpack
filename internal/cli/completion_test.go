@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/cli"
+	"github.com/afelin/curbpack/internal/cli"
 )
 
 func TestRun_CompletionBash(t *testing.T) {
@@ -13,7 +13,7 @@ func TestRun_CompletionBash(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
-	if !strings.Contains(stdout, "complete -F _cyberready cyberready") {
+	if !strings.Contains(stdout, "complete -F _curbpack curbpack") {
 		t.Fatalf("bash completion missing complete line: %q", stdout)
 	}
 	if !strings.Contains(stdout, "--context-pack") {

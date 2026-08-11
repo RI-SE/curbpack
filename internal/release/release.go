@@ -9,17 +9,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/attest"
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/exportx"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/research"
-	"github.com/afelin/cyberready/internal/sbom"
-	"github.com/afelin/cyberready/internal/tty"
-	"github.com/afelin/cyberready/internal/validate"
-	"github.com/afelin/cyberready/internal/vex"
+	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/research"
+	"github.com/afelin/curbpack/internal/sbom"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/validate"
+	"github.com/afelin/curbpack/internal/vex"
 )
 
 // Options for prepare-release.
@@ -74,7 +74,7 @@ func Prepare(opts Options) error {
 	}
 
 	// SBOM summary + CycloneDX 1.5 (best-effort from lockfile)
-	evidenceDir := filepath.Join(root, ".github", "cyberready", "evidence")
+	evidenceDir := filepath.Join(root, ".github", "curbpack", "evidence")
 	_ = os.MkdirAll(evidenceDir, 0o755)
 	sbomSummary, sbomErr := sbom.FromLockfiles(root)
 	sbomPath := filepath.Join(out, "04-sbom-summary.json")
@@ -100,8 +100,8 @@ func Prepare(opts Options) error {
 	sarifDoc := exportx.FromGateFailures(res.Payload, root)
 	sarifBytes, _ := json.MarshalIndent(sarifDoc, "", "  ")
 	_ = os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644)
-	_ = os.MkdirAll(filepath.Join(root, ".github", "cyberready", "cache"), 0o755)
-	_ = os.WriteFile(filepath.Join(root, ".github", "cyberready", "cache", "cyberready.sarif"), append(sarifBytes, '\n'), 0o644)
+	_ = os.MkdirAll(filepath.Join(root, ".github", "curbpack", "cache"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif"), append(sarifBytes, '\n'), 0o644)
 
 	// Informational watchlist ∩ SBOM join
 	if joinPath, err := exportx.WriteWatchlistJoin(root, ""); err == nil {
@@ -182,7 +182,7 @@ func writeOnePagerIfChanged(path, htmlDoc string) (bool, error) {
 
 func onePagerFingerprint(htmlDoc string) string {
 	// Prefer explicit marker; fall back to hashing body without Generated line.
-	const marker = "<!-- cyberready-onepager-fp:"
+	const marker = "<!-- curbpack-onepager-fp:"
 	if i := strings.Index(htmlDoc, marker); i >= 0 {
 		rest := htmlDoc[i+len(marker):]
 		if j := strings.Index(rest, " -->"); j >= 0 {
@@ -246,13 +246,13 @@ func ensureWitnessTemplates(root string) error {
 func executiveSummary(res validate.Result) string {
 	var b strings.Builder
 	b.WriteString("# Executive Summary — Supplier Readiness\n\n")
-	b.WriteString("> CyberReady prepares evidence for **human review**. It does not certify conformity.\n\n")
+	b.WriteString("> Curbpack prepares evidence for **human review**. It does not certify conformity.\n\n")
 	fmt.Fprintf(&b, "- **Generated:** %s\n", res.Payload.Timestamp)
 	fmt.Fprintf(&b, "- **Packs:** %s\n", res.Payload.PackID)
 	fmt.Fprintf(&b, "- **Readiness score:** %d%%\n", res.Score)
 	fmt.Fprintf(&b, "- **Open findings:** %d\n\n", len(res.Payload.Failures))
 	if res.Passed {
-		b.WriteString("All deterministic gates passed. Proceed to human review of Annex VII / medtech drafts, then `cyberready attest`.\n")
+		b.WriteString("All deterministic gates passed. Proceed to human review of Annex VII / medtech drafts, then `curbpack attest`.\n")
 		return b.String()
 	}
 	b.WriteString("## Top actions\n\n")
@@ -301,8 +301,8 @@ func buyerOnePager(root string, res validate.Result) string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CyberReady — Buyer One-Pager</title>
-  <!-- cyberready-onepager-fp:%s -->
+  <title>Curbpack — Buyer One-Pager</title>
+  <!-- curbpack-onepager-fp:%s -->
   <style>
     :root { --ink:#0a0a0b; --muted:#4a4a52; --line:#e4e6eb; --ok:#15803d; --warn:#92400e; --paper:#fcfcfc; --unsigned:#b91c1c; }
     body { margin:0; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color:var(--ink); background:var(--paper); min-height:100vh; }
@@ -332,7 +332,7 @@ func buyerOnePager(root string, res validate.Result) string {
 </head>
 <body>
   <main>
-    <div class="brand">CyberReady+ · Front</div>
+    <div class="brand">Curbpack · Front</div>
     <h1>%s</h1>
     <p class="lede">%s</p>
     <div class="status %s">%s</div>
@@ -349,14 +349,14 @@ func buyerOnePager(root string, res validate.Result) string {
 
     <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
     <div class="back">
-      <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>cyberready attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
+      <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>curbpack attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
       %s
       %s
     </div>
 
     <footer>
       %s
-      Structural evidence for human review — not conformity assessment. Generated %s · Open <code>proof/index.html</code> to verify the HPURL fragment against <code>.github/cyberready/evidence/hpurl-pointer.json</code>.
+      Structural evidence for human review — not conformity assessment. Generated %s · Open <code>proof/index.html</code> to verify the HPURL fragment against <code>.github/curbpack/evidence/hpurl-pointer.json</code>.
     </footer>
   </main>
 </body>
@@ -385,7 +385,7 @@ func provenanceDL(packID string, info attestInfo) string {
 	}
 	state := info.StateHash
 	if state == "" {
-		state = "(none — run cyberready attest after human review)"
+		state = "(none — run curbpack attest after human review)"
 	}
 	signer := info.Signer
 	if signer == "" {
@@ -395,7 +395,7 @@ func provenanceDL(packID string, info attestInfo) string {
 	if touch == "" {
 		touch = "not-verified"
 	}
-	signOff := "Pending human review. A reviewer runs cyberready attest; ssh-agent-signed = human-bound on this commit."
+	signOff := "Pending human review. A reviewer runs curbpack attest; ssh-agent-signed = human-bound on this commit."
 	if !info.UnsignedLoud {
 		signOff = "Human-bound on this commit (ssh-agent-signed). Still not conformity assessment."
 	}
@@ -571,7 +571,7 @@ func ProofPageHTML() string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CyberReady — Proof</title>
+  <title>Curbpack — Proof</title>
   <style>
     :root { color-scheme: light dark; font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5; }
     body { margin:0; min-height:100vh; display:grid; place-items:center;
@@ -599,12 +599,12 @@ func ProofPageHTML() string {
     <p class="subtitle">HPURL fragment stays in the browser hash. Verify <code>h=</code> against the local evidence pointer digest (client-side only).</p>
     <div id="status" class="status warn">Waiting for fragment parameters…</div>
     <dl id="fields"></dl>
-    <label for="expected">Expected state_hash (from <code>.github/cyberready/evidence/hpurl-pointer.json</code>)</label>
+    <label for="expected">Expected state_hash (from <code>.github/curbpack/evidence/hpurl-pointer.json</code>)</label>
     <input id="expected" placeholder="Paste state_hash to verify…" autocomplete="off" />
     <button type="button" id="verifyBtn">Verify hash</button>
     <footer>
       Contract: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
-      Aliases: <code>run</code>, <code>capsule</code>, <code>vows</code>. Local pointer: <code>.github/cyberready/evidence/</code>. Not a certification.
+      Aliases: <code>run</code>, <code>capsule</code>, <code>vows</code>. Local pointer: <code>.github/curbpack/evidence/</code>. Not a certification.
     </footer>
   </main>
   <script>
@@ -659,7 +659,7 @@ func ProofPageHTML() string {
     }
     document.getElementById("verifyBtn").addEventListener("click", verify);
     // Best-effort: fetch local pointer when served from same origin (file:// may block)
-    fetch("../.github/cyberready/evidence/hpurl-pointer.json").then(r => r.ok ? r.json() : null).then(j => {
+    fetch("../.github/curbpack/evidence/hpurl-pointer.json").then(r => r.ok ? r.json() : null).then(j => {
       if (j && j.state_hash) {
         document.getElementById("expected").value = j.state_hash;
         verify();

@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 const Claim = "Prepares evidence for human review — not a conformity assessment."
@@ -39,7 +39,7 @@ func Run(opts Options) error {
 		}
 	}
 
-	printCheck("binary", true, fmt.Sprintf("cyberready %s (%s/%s)", opts.Version, runtime.GOOS, runtime.GOARCH))
+	printCheck("binary", true, fmt.Sprintf("curbpack %s (%s/%s)", opts.Version, runtime.GOOS, runtime.GOARCH))
 	printCheck("Go toolchain", true, "not required for released binaries (stdlib build only)")
 
 	if _, err := exec.LookPath("git"); err != nil {
@@ -65,43 +65,43 @@ func Run(opts Options) error {
 	if inRepo {
 		printCheck("git repository", true, root)
 		if cfg, err := config.Load(root); err != nil {
-			printCheck(".cyberready.json", false, err.Error())
+			printCheck(".curbpack.json", false, err.Error())
 		} else if cfg == nil {
-			printCheck(".cyberready.json", false, "missing — run: cyberready init")
+			printCheck(".curbpack.json", false, "missing — run: curbpack init")
 		} else {
-			printCheck(".cyberready.json", true, "packs="+strings.Join(cfg.Packs, ","))
+			printCheck(".curbpack.json", true, "packs="+strings.Join(cfg.Packs, ","))
 			if cfg.Hooks {
 				hook := filepath.Join(root, ".git", "hooks", "pre-commit")
 				b, err := os.ReadFile(hook)
 				if err != nil {
 					printCheck("pre-commit hook", false, "hooks=true but hook missing")
-				} else if !strings.Contains(string(b), "cyberready") {
-					printCheck("pre-commit hook", false, "present but does not call cyberready")
+				} else if !strings.Contains(string(b), "curbpack") {
+					printCheck("pre-commit hook", false, "present but does not call curbpack")
 				} else {
-					detail := "cyberready check"
+					detail := "curbpack check"
 					if strings.Contains(string(b), "--heal") {
-						detail = "cyberready check --heal"
+						detail = "curbpack check --heal"
 					}
 					printCheck("pre-commit hook", true, detail)
 				}
 			} else {
-				printCheck("pre-commit hook", true, "not enabled (optional: cyberready init)")
+				printCheck("pre-commit hook", true, "not enabled (optional: curbpack init)")
 			}
 		}
-		skill := filepath.Join(root, ".cursor", "skills", "cyberready", "SKILL.md")
+		skill := filepath.Join(root, ".cursor", "skills", "curbpack", "SKILL.md")
 		if _, err := os.Stat(skill); err == nil {
 			printCheck("Cursor skill", true, skill)
 		} else {
-			printCheck("Cursor skill", true, "absent (optional: cyberready init)")
+			printCheck("Cursor skill", true, "absent (optional: curbpack init)")
 		}
 		tasks := filepath.Join(root, ".vscode", "tasks.json")
 		if _, err := os.Stat(tasks); err == nil {
 			printCheck("VS Code/Cursor tasks", true, tasks)
 		} else {
-			printCheck("VS Code/Cursor tasks", true, "absent (optional: cyberready init)")
+			printCheck("VS Code/Cursor tasks", true, "absent (optional: curbpack init)")
 		}
 	} else {
-		printCheck("git repository", true, "cwd is not a product repo (ok — use cyberready demo)")
+		printCheck("git repository", true, "cwd is not a product repo (ok — use curbpack demo)")
 	}
 
 	ids, err := packs.ListIDs()
@@ -116,12 +116,12 @@ func Run(opts Options) error {
 		if inRepo {
 			cfg, _ := config.Load(root)
 			if cfg == nil {
-				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready init"))
+				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: curbpack init"))
 			} else {
-				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: cyberready check  (or bare: cyberready)"))
+				fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — next: curbpack check  (or bare: curbpack)"))
 			}
 		} else {
-			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — try: cyberready demo"))
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Green, "[+] Doctor OK — try: curbpack demo"))
 		}
 	} else {
 		fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] Doctor found issues — fix above, then re-run"))

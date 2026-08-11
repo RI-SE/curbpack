@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/packs"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/tty"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 // List prints embedded packs and watchlist summary.
@@ -38,43 +39,43 @@ func List() error {
 }
 
 // UpdateStub documents / optionally fetches a pack update channel.
-// Network fetch is disabled unless BOTH CYBERREADY_PACKS_URL and
-// CYBERREADY_PACKS_SHA256 (hex) are set — fail-closed integrity pin.
+// Network fetch is disabled unless BOTH CURBPACK_PACKS_URL and
+// CURBPACK_PACKS_SHA256 (hex) are set — fail-closed integrity pin.
 func UpdateStub() error {
-	url := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_URL"))
-	pin := strings.ToLower(strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_SHA256")))
-	dest := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR"))
+	url := strings.TrimSpace(paths.Env("PACKS_URL"))
+	pin := strings.ToLower(strings.TrimSpace(paths.Env("PACKS_SHA256")))
+	dest := strings.TrimSpace(paths.Env("PACKS_DIR"))
 	if dest == "" {
-		dest = filepath.Join(".github", "cyberready", "packs")
+		dest = filepath.Join(".github", "curbpack", "packs")
 	}
 	if url == "" {
 		fmt.Println(`packs update
 
-CyberReady embeds packs in the binary. Network pack updates are OFF by default.
+Curbpack embeds packs in the binary. Network pack updates are OFF by default.
 
   1. Air-gap import (preferred):
-       cyberready packs import ./path/to/packs-bundle
+       curbpack packs import ./path/to/packs-bundle
 
-  2. Or set CYBERREADY_PACKS_DIR to a directory containing:
+  2. Or set CURBPACK_PACKS_DIR to a directory containing:
        cra-baseline/pack.json
        medtech-iec62304/pack.json
        house-policy/pack.json
        _watchlist.json
 
   3. Optional online channel (requires integrity pin):
-       CYBERREADY_PACKS_URL=https://… \
-       CYBERREADY_PACKS_SHA256=<sha256-hex> \
-       cyberready packs update
+       CURBPACK_PACKS_URL=https://… \
+       CURBPACK_PACKS_SHA256=<sha256-hex> \
+       curbpack packs update
 
-Without CYBERREADY_PACKS_SHA256, network update is refused.
+Without CURBPACK_PACKS_SHA256, network update is refused.
 Watchlist refreshes are informational only and never fail validate.`)
 		return nil
 	}
 	if pin == "" || len(pin) != 64 {
-		return fmt.Errorf("CYBERREADY_PACKS_URL set but CYBERREADY_PACKS_SHA256 missing or not 64 hex chars — refusing network update (fail closed)")
+		return fmt.Errorf("CURBPACK_PACKS_URL set but CURBPACK_PACKS_SHA256 missing or not 64 hex chars — refusing network update (fail closed)")
 	}
 	if _, err := hex.DecodeString(pin); err != nil {
-		return fmt.Errorf("CYBERREADY_PACKS_SHA256 is not valid hex: %w", err)
+		return fmt.Errorf("CURBPACK_PACKS_SHA256 is not valid hex: %w", err)
 	}
 
 	client := &http.Client{Timeout: 15 * time.Second}
@@ -106,15 +107,15 @@ Watchlist refreshes are informational only and never fail validate.`)
 	return nil
 }
 
-// ImportAirGap copies pack.json files from a local directory into CYBERREADY_PACKS_DIR / dest.
+// ImportAirGap copies pack.json files from a local directory into CURBPACK_PACKS_DIR / dest.
 // Import-only honesty: ValidatePack, require assurance_class, refuse claim-adjacent theater copy.
 func ImportAirGap(src string) error {
 	if src == "" {
-		return fmt.Errorf("usage: cyberready packs import <directory>")
+		return fmt.Errorf("usage: curbpack packs import <directory>")
 	}
-	dest := strings.TrimSpace(os.Getenv("CYBERREADY_PACKS_DIR"))
+	dest := strings.TrimSpace(paths.Env("PACKS_DIR"))
 	if dest == "" {
-		dest = filepath.Join(".github", "cyberready", "packs")
+		dest = filepath.Join(".github", "curbpack", "packs")
 	}
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		return err
@@ -167,13 +168,13 @@ func ImportAirGap(src string) error {
 		}
 		sum := sha256.Sum256(data)
 		digest := hex.EncodeToString(sum[:])
-		if err := os.WriteFile(filepath.Join(outDir, ".cyberready-pack.sha256"), []byte(digest+"\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(outDir, ".curbpack-pack.sha256"), []byte(digest+"\n"), 0o644); err != nil {
 			return err
 		}
 		copied++
 	}
 	tty.PrintStatus("Air-gap import", true, fmt.Sprintf("%d items → %s", copied, dest))
-	fmt.Println("Set CYBERREADY_PACKS_DIR=" + dest + " to use imported packs.")
+	fmt.Println("Set CURBPACK_PACKS_DIR=" + dest + " to use imported packs.")
 	return nil
 }
 
@@ -185,7 +186,7 @@ func claimAdjacentHit(name, description string) string {
 		"we are certified",
 		"product is certified",
 		"officially certified",
-		"cyberready certifies",
+		"curbpack certifies",
 		"notified-body approved",
 		"notified body approved",
 		"conformity assessment complete",
@@ -205,7 +206,7 @@ func claimAdjacentHit(name, description string) string {
 	return ""
 }
 
-// ExportGraph writes .github/cyberready/graph/policy-graph.json for active packs.
+// ExportGraph writes .github/curbpack/graph/policy-graph.json for active packs.
 func ExportGraph(args []string) error {
 	root, err := gitutil.RepoRoot("")
 	if err != nil {

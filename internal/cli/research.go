@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/config"
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/research"
-	"github.com/afelin/cyberready/internal/tty"
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/research"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 func cmdResearch(args []string) error {
@@ -95,7 +95,7 @@ func cmdResearch(args []string) error {
 	if err != nil {
 		return err
 	}
-	tty.PrintHeader("cyberready research")
+	tty.PrintHeader("curbpack research")
 	fmt.Printf("packs: %s\n", strings.Join(pkt.PackIDs, ", "))
 	fmt.Printf("sources: %d\n", len(pkt.Sources))
 	fmt.Printf("requirements: %d\n", len(pkt.Requirements))
@@ -108,7 +108,7 @@ func cmdResearch(args []string) error {
 	fmt.Printf("brief:  %s\n", mdPath)
 	fmt.Printf("%s\n", tty.C(tty.Dim, research.PacketNote))
 	fmt.Printf("%s\n", tty.C(tty.Dim, research.ClaimFence))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "next: edit top files in research-brief.md → dual-draft → cyberready research --cite-check <draft.md>"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "next: edit top files in research-brief.md → dual-draft → curbpack research --cite-check <draft.md>"))
 	return nil
 }
 
@@ -118,18 +118,18 @@ func cmdResearchCiteCheck(root, draft string) error {
 		return err
 	}
 	if pkt == nil {
-		return usageErr("research --cite-check: missing research-packet.json — run cyberready research first")
+		return usageErr("research --cite-check: missing research-packet.json — run curbpack research first")
 	}
 	res, err := research.CiteCheckFile(*pkt, root, draft)
 	if err != nil {
 		return err
 	}
-	tty.PrintHeader("cyberready research --cite-check")
+	tty.PrintHeader("curbpack research --cite-check")
 	fmt.Printf("draft: %s\n", draft)
 	if res.OK {
 		fmt.Printf("%s\n", tty.C(tty.Green, "cite-check: ok"))
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Still not conformity assessment — human confirm-prose / attest only."))
-		fmt.Printf("%s\n", tty.C(tty.Dim, "next: human cyberready pathway confirm-prose --i-am-human"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "next: human curbpack pathway confirm-prose --i-am-human"))
 		return nil
 	}
 	fmt.Printf("%s\n", tty.C(tty.Red, "cite-check: refuse"))
@@ -145,7 +145,7 @@ func cmdResearchSources(root string, open bool) error {
 		return err
 	}
 	if pkt == nil {
-		return usageErr("no research-packet.json — run cyberready research first")
+		return usageErr("no research-packet.json — run curbpack research first")
 	}
 	fmt.Print(research.FormatSourcesList(*pkt))
 	if open {
@@ -161,12 +161,12 @@ func cmdResearchSources(root string, open bool) error {
 }
 
 func researchUsage() {
-	fmt.Fprintf(os.Stderr, "cyberready research — allowlisted citation packet + human brief\n\n")
+	fmt.Fprintf(os.Stderr, "curbpack research — allowlisted citation packet + human brief\n\n")
 	fmt.Fprintf(os.Stderr, "  research [--packs a,b] [--gate-id ID] [--fetch]\n")
 	fmt.Fprintf(os.Stderr, "                                  Build research-packet.json + research-brief.md\n")
 	fmt.Fprintf(os.Stderr, "  research --cite-check <draft.md> Cite-or-refuse groundedness (RAGChecker-lite)\n")
 	fmt.Fprintf(os.Stderr, "  research --list-sources          Print allowlisted source ids + URLs\n")
 	fmt.Fprintf(os.Stderr, "  research --open-sources          List and best-effort open allowlisted URLs\n\n")
-	fmt.Fprintf(os.Stderr, "Never affects cyberready check pass/fail. Hosts: eur-lex.europa.eu, iso.org, …\n")
+	fmt.Fprintf(os.Stderr, "Never affects curbpack check pass/fail. Hosts: eur-lex.europa.eu, iso.org, …\n")
 	fmt.Fprintf(os.Stderr, "%s\n", research.ClaimFence)
 }

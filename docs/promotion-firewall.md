@@ -11,7 +11,7 @@ Never claim institute or agency endorsement (examples that must not appear as pr
 - Never claim “RISE-approved”, “RISE-certified”, or “agency-endorsed”
 - Never claim “NCSC-approved”, “FRA-approved”, or that this tool is official guidance
 - Never claim CE certification theater, completed conformity assessment, or notified-body approval
-- Never claim that CyberReady+ gate green equals legal conformity
+- Never claim that Curbpack gate green equals legal conformity
 
 ## Allowed phrases
 
@@ -25,17 +25,17 @@ Never claim institute or agency endorsement (examples that must not appear as pr
 
 | Line | Role |
 |------|------|
-| **CyberReady+ (this repo)** | Local deterministic judge + human-review evidence packs. Apache-2.0 AS IS. |
+| **Curbpack (this repo)** | Local deterministic judge + human-review evidence packs. Apache-2.0 AS IS. |
 | **RISE Center for Cybersecurity (accreditation / services)** | Separate commercial/accreditation services — **not** this product’s certifier. |
 | **NCSC / FRA promotion** | Awareness only. Do not imply official product endorsement. |
 
-RISE funding acknowledgment lives in [`NOTICE`](../NOTICE). Copyright remains with CyberReady+ contributors unless counsel assigns otherwise.
+RISE funding acknowledgment lives in [`NOTICE`](../NOTICE). Copyright remains with Curbpack contributors unless counsel assigns otherwise.
 
 ## MoU exhibit checklist (1 page)
 
 1. Cite this file + Intent vs Scope as the public claim boundary.
 2. State RISE is funder / applied-research supporter — **not** product certifier.
-3. State CyberReady+ does not perform conformity assessment or CE marking.
+3. State Curbpack does not perform conformity assessment or CE marking.
 4. Name pack catalog freeze (`house-policy`, `cra-baseline`, `medtech-iec62304`) and trust-surface freeze.
 5. Prefer pin tag + checksum verify over floating `latest`.
 6. Any co-branded materials must pass `scripts/claim-safety.sh` wording.

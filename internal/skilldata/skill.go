@@ -9,9 +9,9 @@ import (
 //go:embed SKILL.md
 var skillMD []byte
 
-// Install copies the embedded Cursor skill into .cursor/skills/cyberready/SKILL.md.
+// Install copies the embedded Cursor skill into .cursor/skills/curbpack/SKILL.md.
 func Install(repoRoot string) (string, error) {
-	dest := filepath.Join(repoRoot, ".cursor", "skills", "cyberready", "SKILL.md")
+	dest := filepath.Join(repoRoot, ".cursor", "skills", "curbpack", "SKILL.md")
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return "", err
 	}
@@ -21,7 +21,7 @@ func Install(repoRoot string) (string, error) {
 	return dest, nil
 }
 
-// WriteIDETasks writes .vscode/tasks.json for F1 → CyberReady: Check.
+// WriteIDETasks writes .vscode/tasks.json for F1 → Curbpack: Check.
 // If the file already exists, returns dest without overwriting (ok, nil).
 func WriteIDETasks(repoRoot string) (string, error) {
 	dest := filepath.Join(repoRoot, ".vscode", "tasks.json")
@@ -35,12 +35,12 @@ func WriteIDETasks(repoRoot string) (string, error) {
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "CyberReady: Check",
+      "label": "Curbpack: Check",
       "type": "shell",
-      "command": "cyberready check",
+      "command": "curbpack check",
       "problemMatcher": [
         {
-          "owner": "cyberready",
+          "owner": "curbpack",
           "fileLocation": ["relative", "${workspaceFolder}"],
           "pattern": {
             "regexp": "^(HOUSE|CRA|MD|CR)-[A-Z0-9-]+:\\s*(.+)$",
@@ -59,11 +59,11 @@ func WriteIDETasks(repoRoot string) (string, error) {
       }
     },
     {
-      "label": "CyberReady: Export SARIF",
+      "label": "Curbpack: Export SARIF",
       "type": "shell",
-      "command": "cyberready export --sarif",
+      "command": "curbpack export --sarif",
       "problemMatcher": {
-        "owner": "cyberready-sarif",
+        "owner": "curbpack-sarif",
         "fileLocation": ["relative", "${workspaceFolder}"],
         "pattern": {
           "regexp": "\"ruleId\"\\s*:\\s*\"([^\"]+)\".*\"text\"\\s*:\\s*\"([^\"]*)\"",
@@ -77,9 +77,9 @@ func WriteIDETasks(repoRoot string) (string, error) {
       }
     },
     {
-      "label": "CyberReady: Doctor",
+      "label": "Curbpack: Doctor",
       "type": "shell",
-      "command": "cyberready doctor",
+      "command": "curbpack doctor",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
@@ -87,9 +87,9 @@ func WriteIDETasks(repoRoot string) (string, error) {
       }
     },
     {
-      "label": "CyberReady: Demo (sandbox)",
+      "label": "Curbpack: Demo (sandbox)",
       "type": "shell",
-      "command": "cyberready demo --keep",
+      "command": "curbpack demo --keep",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",

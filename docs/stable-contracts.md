@@ -11,7 +11,7 @@ Four ops only. Listen banner lists them: `validate_delta`, `get_latest_failure`,
 | Op | Semantics |
 |----|-----------|
 | `validate_delta` (default if `op` omitted) | Quiet validate; GateFailure-shaped response (`ok`, `failures`, `payload`, `detail`) |
-| `get_latest_failure` | Read `.github/cyberready/cache/latest_failure.json` without re-running gates |
+| `get_latest_failure` | Read `.github/curbpack/cache/latest_failure.json` without re-running gates |
 | `graph_summary` | Paths-only RKG stats from `policy-graph.json` (builds if missing) |
 | `explain_packet` | Sanitized teach packet; body wrapped in `<untrusted_metadata>…</untrusted_metadata>` |
 
@@ -19,7 +19,7 @@ Four ops only. Listen banner lists them: `validate_delta`, `get_latest_failure`,
 
 | Reason | When |
 |--------|------|
-| `not_installed` | Client has no `CYBERREADY_SOCK` / CyberReady absent — never block promote |
+| `not_installed` | Client has no `CURBPACK_SOCK` / Curbpack absent — never block promote |
 | `unavailable` | Sock set but connect fails, invalid JSON, unsupported op, or op-level error |
 
 Unsupported `op` → `{ ok: false, reason: "unavailable", detail: "unsupported op: …" }`.
@@ -31,8 +31,8 @@ Invariants consumers and CI enforce:
 - No absolute home paths (`/Users/…`, `/home/…`, `C:\Users\…`)
 - No PEM blobs
 - `untrusted_metadata` field contains literal `<untrusted_metadata>…</untrusted_metadata>`
-- Packet **never** greenlights — tutors must re-run `validate_delta` / `cyberready check` before any “fixed” claim
-- Cloud export only when `CYBERREADY_EXPLAIN_ALLOW_CLOUD=1` (default `0`)
+- Packet **never** greenlights — tutors must re-run `validate_delta` / `curbpack check` before any “fixed” claim
+- Cloud export only when `CURBPACK_EXPLAIN_ALLOW_CLOUD=1` (default `0`)
 
 ## GateFailure / dual-rep IR
 
@@ -51,7 +51,7 @@ Consumers may rely on (`schema_version` = `"1"`):
 
 ### `statechart_context` semantics (clarified, additive)
 
-- `active_parent_state_path` — when `.github/cyberready/cache/pathway-seed.json` exists, the path is `Root / Pathway / {phase}` (shared pathway vocabulary). Without a seed, the legacy path `Root / ActiveVerification / PackEval` remains.
+- `active_parent_state_path` — when `.github/curbpack/cache/pathway-seed.json` exists, the path is `Root / Pathway / {phase}` (shared pathway vocabulary). Without a seed, the legacy path `Root / ActiveVerification / PackEval` remains.
 - `failed_orthogonal_regions` — pack-eval / rule regions only (unchanged). Pathway ticks are parent path, not fake pack regions.
 - Pathway seed is **not** a check pass/fail input; exit code still comes from gate failures only.
 
@@ -59,7 +59,7 @@ Sock `Response` also exposes top-level `ok`, `reason`, `detail`, `failures`, `pa
 
 ## Instrument cache path
 
-`.github/cyberready/cache/instrument.json` — additive, best-effort Δ map beside IR cache. Missing/corrupt → treat as absent; never a gate.
+`.github/curbpack/cache/instrument.json` — additive, best-effort Δ map beside IR cache. Missing/corrupt → treat as absent; never a gate.
 
 ## Compatibility rule
 

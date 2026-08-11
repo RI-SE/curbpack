@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/exportx"
+	"github.com/afelin/curbpack/internal/exportx"
 )
 
 func TestWriteLayOfLand(t *testing.T) {

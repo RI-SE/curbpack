@@ -16,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afelin/cyberready/internal/sbom"
+	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/sbom"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 	maxFileBytes    = 256 * 1024
 	maxFilesScanned = 200
 	maxWalkDepth    = 8
-	cacheRelDir     = ".github/cyberready/cache"
+	cacheRelDir     = ".github/curbpack/cache"
 	instrumentFile  = "instrument.json"
 	// Bytes that appear in high-signal secretRE families (PEM -, AKIA A, api_key =/_).
 	secretPrefilter = "-Aa="
@@ -50,14 +51,14 @@ type Snapshot struct {
 	Note          string `json:"note"`
 }
 
-// Path returns the default instrument.json path under root.
+// Path returns the write path for instrument.json under root.
 func Path(root string) string {
-	return filepath.Join(root, cacheRelDir, instrumentFile)
+	return filepath.Join(paths.CacheDir(root), instrumentFile)
 }
 
-// Load reads prior instrument.json; OK=false when missing/corrupt.
+// Load reads prior instrument.json (new or legacy cache); OK=false when missing/corrupt.
 func Load(root string) (Snapshot, bool) {
-	b, err := os.ReadFile(Path(root))
+	b, err := os.ReadFile(paths.ResolveUnderCache(root, instrumentFile))
 	if err != nil {
 		return Snapshot{}, false
 	}

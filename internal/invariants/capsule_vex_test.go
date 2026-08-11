@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/attest"
-	"github.com/afelin/cyberready/internal/ir"
-	"github.com/afelin/cyberready/internal/validate"
-	"github.com/afelin/cyberready/internal/vex"
+	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/validate"
+	"github.com/afelin/curbpack/internal/vex"
 )
 
 func TestCapsuleHashReproducibleNoWallClock(t *testing.T) {

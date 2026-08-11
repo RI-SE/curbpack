@@ -1,3 +1,3 @@
 # Node SaaS (synthetic)
 
-Synthetic product fixture for CyberReady gauntlet — not a real product.
+Synthetic product fixture for Curbpack gauntlet — not a real product.

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afelin/cyberready/internal/gitutil"
-	"github.com/afelin/cyberready/internal/research"
+	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/research"
 )
 
 // Phase is the pathway parent-path leaf (one shared vocabulary across seed / status / IR / ContextPack).
@@ -137,7 +137,7 @@ func Guard(repoRoot string, event Event) (Phase, error) {
 		return "", err
 	}
 	if !Allow(phase, event) {
-		return phase, usagef("pathway: illegal transition %s from phase %s (run: cyberready pathway status)", event, phase)
+		return phase, usagef("pathway: illegal transition %s from phase %s (run: curbpack pathway status)", event, phase)
 	}
 	return phase, nil
 }
@@ -157,7 +157,7 @@ func Project(repoRoot string) (Snapshot, error) {
 	case PhaseAwaitSuggest:
 		snap.Next = NextAction{
 			Verb: "suggest packs",
-			Cmd:  "cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
+			Cmd:  "curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
 			Note: "enum seed only — see docs/getting-started/pathway.md",
 		}
 	case PhaseAwaitPackConfirm:
@@ -168,41 +168,41 @@ func Project(repoRoot string) (Snapshot, error) {
 		}
 		snap.Next = NextAction{
 			Verb: "confirm packs (human)",
-			Cmd:  "cyberready pathway confirm-packs",
+			Cmd:  "curbpack pathway confirm-packs",
 			Note: note,
 		}
 	case PhaseAwaitActivate:
-		note := "or edit .cyberready.json packs to match confirmed propose"
+		note := "or edit .curbpack.json packs to match confirmed propose"
 		if !policyGraphPresent(repoRoot) {
-			note += "; optional: cyberready packs export-graph"
+			note += "; optional: curbpack packs export-graph"
 		}
 		snap.Next = NextAction{
 			Verb: "activate packs",
-			Cmd:  "cyberready init --packs " + strings.Join(s.ProposedPacks, ","),
+			Cmd:  "curbpack init --packs " + strings.Join(s.ProposedPacks, ","),
 			Note: note,
 		}
 	case PhaseAwaitHealOrProse:
 		if !research.PacketPresent(repoRoot) {
 			snap.Next = NextAction{
 				Verb: "build research packet",
-				Cmd:  "cyberready research",
+				Cmd:  "curbpack research",
 				Note: "allowlisted sources + human brief; optional --fetch; then check --heal — research never gates check",
 			}
 		} else {
 			snap.Next = NextAction{
 				Verb: "heal stubs",
-				Cmd:  "cyberready check --heal",
+				Cmd:  "curbpack check --heal",
 				Note: "then edit real prose from research-brief.md; cite-or-refuse; RKG / form-hints",
 			}
 		}
 	case PhaseAwaitProseConfirm:
 		note := "I own this wording — then re-check"
 		if research.PacketPresent(repoRoot) {
-			note = "run cyberready research --cite-check on drafts first; then human confirm — cite-check refuse blocks confirm-prose"
+			note = "run curbpack research --cite-check on drafts first; then human confirm — cite-check refuse blocks confirm-prose"
 		}
 		snap.Next = NextAction{
 			Verb: "confirm prose (human)",
-			Cmd:  "cyberready pathway confirm-prose",
+			Cmd:  "curbpack pathway confirm-prose",
 			Note: note,
 		}
 	case PhaseAwaitCheck:
@@ -211,36 +211,36 @@ func Project(repoRoot string) (Snapshot, error) {
 		if gateID != "" {
 			snap.Next = NextAction{
 				Verb: "heal then propose",
-				Cmd:  "cyberready check --heal",
-				Note: fmt.Sprintf("top gate_id=%s; then cyberready research --gate-id=%s (optional) + ask … --propose", gateID, gateID),
+				Cmd:  "curbpack check --heal",
+				Note: fmt.Sprintf("top gate_id=%s; then curbpack research --gate-id=%s (optional) + ask … --propose", gateID, gateID),
 			}
 		} else {
 			snap.Next = NextAction{
 				Verb: "run check",
-				Cmd:  "cyberready check",
+				Cmd:  "curbpack check",
 				Note: "red → check --heal + ask --propose; chat never greenlights",
 			}
 		}
 	case PhaseAwaitShare:
 		snap.Next = NextAction{
 			Verb: "share review pack",
-			Cmd:  "cyberready share",
+			Cmd:  "curbpack share",
 			Note: "then human confirm-share",
 		}
 	case PhaseAwaitShareConfirm:
 		snap.Next = NextAction{
 			Verb: "confirm share (human)",
-			Cmd:  "cyberready pathway confirm-share",
+			Cmd:  "curbpack pathway confirm-share",
 			Note: "review buyer-questions / one-pager",
 		}
 	case PhaseAwaitAttest:
 		note := ClaimFence
 		if gitutil.IsDirty(repoRoot) {
-			note = "OCC: working tree dirty — commit or cyberready attest --allow-dirty; " + ClaimFence
+			note = "OCC: working tree dirty — commit or curbpack attest --allow-dirty; " + ClaimFence
 		}
 		snap.Next = NextAction{
 			Verb: "human attest (agents stop)",
-			Cmd:  "cyberready attest",
+			Cmd:  "curbpack attest",
 			Note: note,
 		}
 	case PhaseAwaitHPURLVerify, PhaseComplete:
@@ -252,7 +252,7 @@ func Project(repoRoot string) (Snapshot, error) {
 	default:
 		snap.Next = NextAction{
 			Verb: "suggest packs",
-			Cmd:  "cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
+			Cmd:  "curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
 		}
 	}
 	return snap, nil
@@ -260,7 +260,7 @@ func Project(repoRoot string) (Snapshot, error) {
 
 // TopGateID reads the first failure gate_id from latest_failure.json (never invents).
 func TopGateID(repoRoot string) string {
-	path := filepath.Join(repoRoot, ".github", "cyberready", "cache", "latest_failure.json")
+	path := filepath.Join(repoRoot, ".github", "curbpack", "cache", "latest_failure.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
@@ -283,13 +283,13 @@ func TopGateID(repoRoot string) string {
 }
 
 func hpurlPointerPresent(repoRoot string) bool {
-	p := filepath.Join(repoRoot, ".github", "cyberready", "evidence", "hpurl-pointer.json")
+	p := filepath.Join(repoRoot, ".github", "curbpack", "evidence", "hpurl-pointer.json")
 	st, err := os.Stat(p)
 	return err == nil && !st.IsDir()
 }
 
 func policyGraphPresent(repoRoot string) bool {
-	p := filepath.Join(repoRoot, ".github", "cyberready", "graph", "policy-graph.json")
+	p := filepath.Join(repoRoot, ".github", "curbpack", "graph", "policy-graph.json")
 	st, err := os.Stat(p)
 	return err == nil && !st.IsDir()
 }

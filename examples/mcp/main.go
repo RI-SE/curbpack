@@ -1,5 +1,5 @@
-// Command cyberready-mcp is a thin MCP stdio server that shells out to PATH `cyberready`.
-// Optional CYBERREADY_SOCK enables sock-backed tools; no new sock ops.
+// Command curbpack-mcp is a thin MCP stdio server that shells out to PATH `curbpack`.
+// Optional CURBPACK_SOCK enables sock-backed tools; no new sock ops.
 // Claim-safe: tools never certify conformity.
 package main
 
@@ -16,9 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
-const serverName = "cyberready-mcp"
+const serverName = "curbpack-mcp"
 const serverVersion = "0.1.0"
 
 type rpcReq struct {
@@ -89,7 +90,7 @@ func handle(req rpcReq) *rpcResp {
 			"protocolVersion": "2024-11-05",
 			"capabilities":    map[string]any{"tools": map[string]any{}},
 			"serverInfo":      map[string]any{"name": serverName, "version": serverVersion},
-			"instructions":    "CyberReady MCP wraps the local cyberready CLI. Exit codes and IR are authoritative. Never claim certification or conformity assessment.",
+			"instructions":    "Curbpack MCP wraps the local curbpack CLI. Exit codes and IR are authoritative. Never claim certification or conformity assessment.",
 		}}
 	case "notifications/initialized", "initialized":
 		return nil
@@ -116,26 +117,26 @@ func handle(req rpcReq) *rpcResp {
 func toolDefs() []map[string]any {
 	claim := "Structural evidence only — not a conformity assessment or certification."
 	return []map[string]any{
-		tool("cyberready_check", "Run cyberready check (exit code authoritative). "+claim, map[string]any{
+		tool("curbpack_check", "Run curbpack check (exit code authoritative). "+claim, map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"packs": map[string]any{"type": "string", "description": "Optional comma-separated pack ids"},
 				"heal":  map[string]any{"type": "boolean", "description": "If true, pass --heal (missing stubs only; never attest)"},
 			},
 		}),
-		tool("cyberready_context_pack", "Run cyberready export --context-pack and return the washed ContextPack path/summary. "+claim, map[string]any{
+		tool("curbpack_context_pack", "Run curbpack export --context-pack and return the washed ContextPack path/summary. "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"packs": map[string]any{"type": "string"}},
 		}),
-		tool("cyberready_ask_propose", "Run cyberready ask … --propose on latest_failure.json (propose-only). "+claim, map[string]any{
+		tool("curbpack_ask_propose", "Run curbpack ask … --propose on latest_failure.json (propose-only). "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"path": map[string]any{"type": "string", "description": "Optional GateFailure JSON path"}},
 		}),
-		tool("cyberready_explain_packet", "Export explain-packet (CLI) or sock explain_packet when CYBERREADY_SOCK is set. "+claim, map[string]any{
+		tool("curbpack_explain_packet", "Export explain-packet (CLI) or sock explain_packet when CURBPACK_SOCK is set. "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"packs": map[string]any{"type": "string"}},
 		}),
-		tool("cyberready_validate_delta", "Sock validate_delta when CYBERREADY_SOCK is set; else cyberready validate --json. "+claim, map[string]any{
+		tool("curbpack_validate_delta", "Sock validate_delta when CURBPACK_SOCK is set; else curbpack validate --json. "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"packs": map[string]any{"type": "string"}},
 		}),
@@ -151,14 +152,14 @@ func tool(name, desc string, schema map[string]any) map[string]any {
 }
 
 func callTool(name string, args map[string]any) (string, bool) {
-	bin, err := lookCyberready()
+	bin, err := lookCurbpack()
 	if err != nil {
-		return "cyberready not found on PATH — install from https://github.com/afelin/cyberready (fail-open; not blocking promote). " + err.Error(), true
+		return "curbpack not found on PATH — install from https://github.com/afelin/curbpack (fail-open; not blocking promote). " + err.Error(), true
 	}
 	root, _ := os.Getwd()
 	packs := strArg(args, "packs")
 	switch name {
-	case "cyberready_check":
+	case "curbpack_check":
 		argv := []string{"check"}
 		if packs != "" {
 			argv = append(argv, "--packs", packs)
@@ -167,25 +168,25 @@ func callTool(name string, args map[string]any) (string, bool) {
 			argv = append(argv, "--heal")
 		}
 		return runCLI(bin, argv)
-	case "cyberready_context_pack":
+	case "curbpack_context_pack":
 		argv := []string{"export", "--context-pack"}
 		if packs != "" {
 			argv = append(argv, "--packs", packs)
 		}
 		out, isErr := runCLI(bin, argv)
-		path := filepath.Join(root, ".github", "cyberready", "cache", "context-pack.json")
+		path := filepath.Join(root, ".github", "curbpack", "cache", "context-pack.json")
 		if b, rerr := os.ReadFile(path); rerr == nil {
 			return out + "\n\n" + string(b), isErr
 		}
 		return out, isErr
-	case "cyberready_ask_propose":
+	case "curbpack_ask_propose":
 		path := strArg(args, "path")
 		if path == "" {
-			path = filepath.Join(root, ".github", "cyberready", "cache", "latest_failure.json")
+			path = filepath.Join(root, ".github", "curbpack", "cache", "latest_failure.json")
 		}
 		return runCLI(bin, []string{"ask", path, "--propose"})
-	case "cyberready_explain_packet":
-		if sock := strings.TrimSpace(os.Getenv("CYBERREADY_SOCK")); sock != "" {
+	case "curbpack_explain_packet":
+		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
 			if body, serr := sockOp(sock, "explain_packet", nil); serr == nil {
 				return body, false
 			}
@@ -195,8 +196,8 @@ func callTool(name string, args map[string]any) (string, bool) {
 			argv = append(argv, "--packs", packs)
 		}
 		return runCLI(bin, argv)
-	case "cyberready_validate_delta":
-		if sock := strings.TrimSpace(os.Getenv("CYBERREADY_SOCK")); sock != "" {
+	case "curbpack_validate_delta":
+		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
 			if body, serr := sockOp(sock, "validate_delta", nil); serr == nil {
 				return body, false
 			}
@@ -211,11 +212,11 @@ func callTool(name string, args map[string]any) (string, bool) {
 	}
 }
 
-func lookCyberready() (string, error) {
-	if p := strings.TrimSpace(os.Getenv("CYBERREADY_BIN")); p != "" {
+func lookCurbpack() (string, error) {
+	if p := strings.TrimSpace(paths.Env("BIN")); p != "" {
 		return p, nil
 	}
-	return exec.LookPath("cyberready")
+	return exec.LookPath("curbpack")
 }
 
 func runCLI(bin string, argv []string) (string, bool) {
@@ -230,7 +231,7 @@ func runCLI(bin string, argv []string) (string, bool) {
 	if len(out) > 64*1024 {
 		out = out[:64*1024] + "\n…(truncated)"
 	}
-	disclaimer := "\n\n[cyberready-mcp] Structural evidence for human review — not a conformity assessment. Exit code authoritative; never invent certification."
+	disclaimer := "\n\n[curbpack-mcp] Structural evidence for human review — not a conformity assessment. Exit code authoritative; never invent certification."
 	if err != nil {
 		return out + "\n" + err.Error() + disclaimer, true
 	}

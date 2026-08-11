@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/buildinfo"
-	"github.com/afelin/cyberready/internal/sbom"
+	"github.com/afelin/curbpack/internal/buildinfo"
+	"github.com/afelin/curbpack/internal/sbom"
 )
 
 func TestCycloneDXFromPackageJSON(t *testing.T) {

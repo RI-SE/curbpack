@@ -2,7 +2,7 @@
 
 ## Reporting
 
-Email security@demo.cyberready.local with vulnerability details. Do not open public issues for sensitive reports.
+Email security@demo.curbpack.local with vulnerability details. Do not open public issues for sensitive reports.
 
 ## Response
 

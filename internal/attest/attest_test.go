@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afelin/cyberready/internal/attest"
+	"github.com/afelin/curbpack/internal/attest"
 )
 
 func TestReproducibleStateHash(t *testing.T) {
@@ -63,7 +63,7 @@ func TestAttestRefusesDirtyWithoutAllowDirty(t *testing.T) {
 		}
 	}
 	run("git", "init", "-q")
-	run("git", "config", "user.email", "attest@cyberready.local")
+	run("git", "config", "user.email", "attest@curbpack.local")
 	run("git", "config", "user.name", "Attest")
 	run("git", "commit", "--allow-empty", "-m", "init", "-q")
 	if err := os.WriteFile(filepath.Join(dir, "dirty.txt"), []byte("uncommitted\n"), 0o644); err != nil {
