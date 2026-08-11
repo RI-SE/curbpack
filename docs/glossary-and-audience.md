@@ -29,11 +29,12 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **Rule pack** / **pack** | JSON rule set (house-policy by default; CRA-shaped annex drafts or sector templates when opted in). Data, not hard-coded industry law. |
 | **Review pack** | Folder of evidence for human review from `prepare-release` (JSON, markdown, optional buyer one-pager). |
 | **Buyer one-pager** | Supplier evidence summary HTML — local gate score on this tree, not a certificate. |
-| **Warm-start** / **pathway** | Optional Write→Check interview (`cyberready pathway`) that seeds packs + HITL ticks; not a gate input. |
+| **Warm-start** / **pathway** | Optional interview that suggests checklists (`cyberready pathway`); seeds packs + human ticks — not a gate input. |
 | **Research brief** | Allowlisted human brief from `cyberready research` — informational; never check pass/fail. |
-| **Cite-check** | `cyberready research --cite-check <draft.md>` — refuse uncited Claims before `confirm-prose`. |
-| **Write→Check** | Door: draft house docs (optional warm-start), then check. |
-| **Bring-docs→Check** | Door: place existing policies on pack paths, then check (no portal PDF ingest). |
+| **Cite-check** | `cyberready research --cite-check <draft.md>` — refuses uncited Claims before `confirm-prose`. |
+| **Three ways in** | Write→Check, Bring-docs→Check, or CI — same local `check`. |
+| **Write→Check** | Way in: draft house docs (optional pathway), then check. |
+| **Bring-docs→Check** | Way in: place existing policies on pack paths, then check (no portal PDF ingest). |
 | **Dual-draft** | Always propose Option A and Option B plus **Recommended: A\|B** (≤3 reasons); human picks. |
 | **Structural evidence** | Documentation and dependency checks produced locally for human judgment. |
 | **Attest** | Human-driven binding of a state hash into Git Notes. Unsigned ≠ cryptographically verified. |
@@ -51,7 +52,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 
 | Audience | First sentence | Start here | Then | Skip by default |
 |----------|----------------|------------|------|-----------------|
-| **Builder** (product engineer) | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
+| **Builder** (product engineer) | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [pathway](getting-started/pathway.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
 | **Buyer / reviewer** | Ask the supplier for a buyer one-pager and, if needed, the review pack—then use the trust table. | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) | Sample [one-pager](../site/samples/onepager.html) | Pack authoring, sock bridge |
 | **CISO** | CyberReady prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
 | **Authority / auditor** (NCSC/EU-style, internal audit) | CyberReady prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](promotion-firewall.md) · white paper | Coreward bridge, GTM folders |

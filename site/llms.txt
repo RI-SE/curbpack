@@ -8,7 +8,9 @@
 
 Local-first CLI. Rule packs on disk. Review pack for human review. Green gates mean “ready for a human to look,” not “approved.”
 
-Optional warm-start (`pathway`) and allowlisted `research` help choose a draft; **only `cyberready check` decides pass/fail**. Session notes in pathway-seed are not gate inputs.
+## Three ways in
+
+Write (optional pathway interview that suggests checklists → dual drafts → cite-check refuses uncited Claims), Bring existing docs onto pack paths, or CI alone — same local `check`. Human confirms use a TTY or `--i-am-human`. Research briefs never gate pass/fail.
 
 ## What not
 
@@ -19,22 +21,16 @@ Optional warm-start (`pathway`) and allowlisted `research` help choose a draft; 
 ## Start
 
 - Install: https://github.com/afelin/cyberready#install
-- Builders: https://afelin.github.io/cyberready/for-builders/
-- How it works: https://afelin.github.io/cyberready/how-it-works/
+- Three ways in / builders: https://afelin.github.io/cyberready/for-builders/
+- Pathway (Write depth): https://github.com/afelin/cyberready/blob/main/docs/getting-started/pathway.md
 - Authorities: https://afelin.github.io/cyberready/for-authorities/
 - White paper: https://afelin.github.io/cyberready/whitepaper/
 - Voice: https://github.com/afelin/cyberready/blob/main/docs/voice-and-terms.md
 - Assistant contract: https://github.com/afelin/cyberready/blob/main/docs/assistant-loop.md
-- Pathway (warm-start): https://github.com/afelin/cyberready/blob/main/docs/getting-started/pathway.md
 - ContextPack: `cyberready export --context-pack`
 - Thin MCP example: https://github.com/afelin/cyberready/tree/main/examples/mcp
 - Pin: `@v0.4.3`
 
 ## Optional
-
-- `cyberready pathway status` — one next ask (human default)
-- `cyberready research` / `--cite-check` — allowlisted brief; never gates check
-- Dual-draft HITL: always Option A + Option B + Recommended A|B; human picks
-- After pick: `pathway note --set last_draft_pick=A|B|edited` then `research --cite-check <draft.md>` before human `confirm-prose --i-am-human`
 
 Optional separate product (tutor/enforce client): https://afelin.github.io/coreward/ — CyberReady is self-sustaining without it.
