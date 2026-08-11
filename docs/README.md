@@ -4,7 +4,7 @@
 
 | Reader | Start here |
 |--------|------------|
-| Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [README](../README.md) · [glossary](glossary-and-audience.md) |
+| Builder / adopter | [60-second paths](getting-started/60-second-paths.md) · [Pathway](getting-started/pathway.md) · [site builders](../site/for-builders/) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
@@ -30,8 +30,8 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
-| [Getting started](getting-started/60-second-paths.md) | First move — 60-second paths |
-| [Pathway (warm-start)](getting-started/pathway.md) | Dual doors, one next ask, dual-draft HITL, research sidecar |
+| [Getting started](getting-started/60-second-paths.md) | First move — three ways in (Write / Bring / CI) |
+| [Pathway (warm-start)](getting-started/pathway.md) | Three ways in, one next ask, dual-draft HITL, research sidecar |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Share recipe: ContextPack + buyer-questions + prepare-release |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |

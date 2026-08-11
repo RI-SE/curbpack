@@ -13,7 +13,7 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 | Reader | Start |
 |--------|--------|
-| Builder | Green checks in under ten minutes — [60-second paths](docs/getting-started/60-second-paths.md) · [site builders](site/for-builders/) |
+| Builder | Three ways in — [60-second paths](docs/getting-started/60-second-paths.md) · [pathway](docs/getting-started/pathway.md) · [site builders](site/for-builders/) |
 | Buyer / reviewer | Buyer one-pager + trust table — [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
 | CISO / authority / auditor | What artifacts mean — [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
 | Abbreviations / audience map | [Glossary and audience](docs/glossary-and-audience.md) |
@@ -63,6 +63,8 @@ Pin **`@v0.4.3`** (tag + release checksums). Empty `version` builds from this mo
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen. Quiet habit after `check`: see [daily loop](docs/getting-started/daily-loop.md).
 
+**Three ways in:** Write (optional [pathway](docs/getting-started/pathway.md) + dual drafts + cite-check), Bring existing docs onto pack paths, or CI alone — all end in the same local `check`. Confirms are human-only (TTY or `--i-am-human`). Research briefs never gate pass/fail. First moves: [60-second paths](docs/getting-started/60-second-paths.md).
+
 **Compose, do not conquer:** CyberReady prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program; watchlist = look-here, not a CVE product. Boundary: [strategy boundary](docs/strategy-boundary.md).
 
 | Command | Purpose |
@@ -89,6 +91,6 @@ Exit codes: **0** pass · **1** gates/error · **2** usage/env.
 
 Assistants (Cursor, Copilot, Claude, …): [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 
-Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Docs index](docs/README.md).
+Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [For authorities](docs/for-authorities.md) · [Glossary](docs/glossary-and-audience.md) · [Pathway](docs/getting-started/pathway.md) · [Daily loop](docs/getting-started/daily-loop.md) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Design partners](docs/design-partners.md) · [Write your own pack](docs/write-your-own-pack.md) · [Docs index](docs/README.md).
 
 > **Optional, separate product:** Coreward is a private tutor/enforce client that may consume CyberReady explain-packets over an optional Unix socket. CyberReady is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/

@@ -8,38 +8,38 @@ One next ask. Optional two drafts with a recommendation. Then check. Humans conf
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-## Dual doors → one check
+## Three ways in → one local check
 
-| Door | Meaning |
-|------|---------|
-| **Write→Check** | Optional warm-start: answer a few enums, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check, then check. |
-| **Bring-docs→Check** | Put existing policies on pack paths (or map a partner pack), then check. No portal PDF ingest. |
-| **CI** | Run `check` alone anytime. |
+| Way | Meaning |
+|-----|---------|
+| **Write→Check** | Optional pathway interview that suggests checklists: answer a few questions, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check (refuses uncited Claims), then check. |
+| **Bring-docs→Check** | Put existing policies on pack paths (or point a custom pack JSON at your paths), then check. No portal PDF ingest. |
+| **CI** | Run `check` alone anytime (Action or local). |
 
-Either door ends in a review pack for a human to judge and optionally `attest`.
+Any way in ends in a review pack for a human to judge and optionally `attest`. Confirms need a TTY, `--i-am-human`, or `CYBERREADY_ALLOW_CONFIRM=1`.
 
 ```mermaid
 flowchart TD
   start[Start]
-  door{Which door?}
-  interview[Enum interview]
-  seed[pathway_seed session]
-  packs[HITL confirm packs]
-  research[research brief]
+  ways{Three ways in?}
+  interview[Short interview]
+  session[Remember your answers]
+  packs[You confirm packs]
+  research[Optional research brief]
   ab[Two drafts plus recommendation]
-  pick[HITL pick or edit]
-  cite[cite-check]
-  check[cyberready check]
-  share[share and attest HITL]
+  pick[You pick or edit]
+  cite[Cite-check]
+  check[Local check]
+  share[You share and attest]
 
-  start --> door
-  door -->|"Write then check"| interview
-  door -->|"Bring docs"| check
-  door -->|"CI"| check
-  interview --> seed --> packs --> research --> ab --> pick --> cite --> check
+  start --> ways
+  ways -->|"Write then check"| interview
+  ways -->|"Bring docs"| check
+  ways -->|"CI"| check
+  interview --> session --> packs --> research --> ab --> pick --> cite --> check
   check -->|red| ab
   check -->|green| share
-  pick -->|"record last_pick"| seed
+  pick -->|"record your pick"| session
 ```
 
 ## What you run (human)
@@ -48,14 +48,14 @@ flowchart TD
 cyberready pathway status          # one plain-English next ask (default)
 cyberready pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
 # --house-first is reserved (accepted, currently a no-op)
-# human: pathway confirm-packs --i-am-human
+# human (TTY or --i-am-human): pathway confirm-packs --i-am-human
 cyberready research                # optional allowlisted brief — never gates check
 # agent/human: two drafts + Recommended A|B → you pick → cite-check
 cyberready research --cite-check <draft.md>
-# human: pathway confirm-prose --i-am-human
+# human (TTY or --i-am-human): pathway confirm-prose --i-am-human
 cyberready check
 cyberready share
-# human: pathway confirm-share --i-am-human → attest → open proof/index.html
+# human (TTY or --i-am-human): pathway confirm-share --i-am-human → attest → open proof/index.html
 ```
 
 Optional session memory (not a gate input): `cyberready pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.
@@ -142,14 +142,14 @@ cyberready pathway suggest \
 ### HITL checklist
 
 - [ ] `pathway suggest` → review `proposed_packs`
-- [ ] Human: `pathway confirm-packs` (exports RKG)
+- [ ] Human: `pathway confirm-packs --i-am-human` (or TTY; exports RKG)
 - [ ] `cyberready research` (optional `--fetch`) — never gates check
 - [ ] Dual draft + Recommended A|B → human pick → `pathway note --set last_draft_pick=…`
 - [ ] `init --packs …` + `check --heal` + edit with cite markers
-- [ ] `cyberready research --cite-check <draft.md>` green
-- [ ] Human: `pathway confirm-prose`
+- [ ] `cyberready research --cite-check <draft.md>` green (refuses uncited Claims)
+- [ ] Human: `pathway confirm-prose --i-am-human` (or TTY)
 - [ ] `check` green (or shareable red with ContextPack)
-- [ ] `share` → human: `pathway confirm-share`
+- [ ] `share` → human: `pathway confirm-share --i-am-human` (or TTY)
 - [ ] Human: `attest` (agents **stop** here)
 - [ ] Human: open `proof/index.html` + paste pointer `state_hash`
 
@@ -196,20 +196,20 @@ Fixed string on every seed write:
 ```bash
 cyberready pathway status
 cyberready pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
-# human:
-cyberready pathway confirm-packs
+# human (TTY or --i-am-human):
+cyberready pathway confirm-packs --i-am-human
 cyberready init --packs house-policy
 cyberready research
 cyberready check --heal
 # dual draft + recommend → human pick →:
 cyberready pathway note --set last_draft_pick=A
 cyberready research --cite-check SECURITY.md
-# human:
-cyberready pathway confirm-prose
+# human (TTY or --i-am-human):
+cyberready pathway confirm-prose --i-am-human
 cyberready check
 cyberready share
-# human:
-cyberready pathway confirm-share
+# human (TTY or --i-am-human):
+cyberready pathway confirm-share --i-am-human
 # STOP — human only: attest → proof/index.html verify
 ```
 

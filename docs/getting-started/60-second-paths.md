@@ -4,9 +4,19 @@ CyberReady checks your repository against local rule packs and writes a review p
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Cold-start default pack: **`house-policy`**. CRA / medtech are opt-in later via `--packs` (Advanced). Enum warm-start: [pathway](pathway.md) (`cyberready pathway status`). Two ways in: **write then check**, or **bring existing docs onto pack paths then check** (no portal PDF ingest) — same local `check`.
+Cold-start default pack: **`house-policy`**. CRA / medtech are opt-in later via `--packs` (Advanced). Pick **exactly one** first move for your audience.
 
-Pick **exactly one** first move for your audience.
+## Three ways in
+
+Same local `check` for all three — Write adds optional draft choice first; Bring and CI go straight to check.
+
+| Way | What you do |
+|-----|-------------|
+| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (TTY or `--i-am-human`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
+| **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then `check`. No portal PDF ingest. |
+| **CI** | Action-only (or local `check` alone). Pin **`@v0.4.3`**. |
+
+Builders site: [Three ways in](../../site/for-builders/). Write depth: [pathway](pathway.md).
 
 ## Human — safe try
 
@@ -70,5 +80,3 @@ Habit after first green: [daily loop](daily-loop.md). Optional share: [buyer evi
 | `cyberready init --packs a,b` | Override default house-policy |
 | `cyberready init --workflow` | Opt-in drop-in Action `@v0.4.3` workflow if missing |
 | `cyberready demo --open` | Opt-in browser for the sandbox one-pager |
-
-> Prepares evidence for human review — not a conformity assessment.

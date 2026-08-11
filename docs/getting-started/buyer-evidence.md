@@ -2,6 +2,8 @@
 
 Ask the supplier for a **buyer one-pager** (supplier evidence summary) and, if needed, the **review pack**—structural gate evidence without GRC SaaS.
 
+Suppliers may Write, Bring, or CI into the same local check; optional research briefs inform drafts only and never gate pass/fail.
+
 What the buyer receives:
 
 - A one-screen HTML snapshot (local gate score on this tree — not certification)
