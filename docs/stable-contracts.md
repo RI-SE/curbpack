@@ -8,6 +8,8 @@ Code cites: [`internal/sock/sock.go`](../internal/sock/sock.go) · [`internal/ex
 
 Four ops only. Listen banner lists them: `validate_delta`, `get_latest_failure`, `graph_summary`, `explain_packet`.
 
+**Unix-only.** `curbpack sock` is optional Coreward IPC on macOS/Linux. On Windows it returns a clear error and exits non-zero. The golden path (`doctor` → `demo` → `init` → `check` → `share`) never depends on sock.
+
 | Op | Semantics |
 |----|-----------|
 | `validate_delta` (default if `op` omitted) | Quiet validate; GateFailure-shaped response (`ok`, `failures`, `payload`, `detail`) |
@@ -23,6 +25,19 @@ Four ops only. Listen banner lists them: `validate_delta`, `get_latest_failure`,
 | `unavailable` | Sock set but connect fails, invalid JSON, unsupported op, or op-level error |
 
 Unsupported `op` → `{ ok: false, reason: "unavailable", detail: "unsupported op: …" }`.
+
+## Install marker + repair (local-only)
+
+| Contract | Rule |
+|----------|------|
+| Marker schema | `curbpack-install-marker:1` |
+| Marker path (Unix) | `~/.local/share/curbpack/install-marker.json` (or `$XDG_DATA_HOME/curbpack/…`) |
+| Marker path (Windows) | `%LOCALAPPDATA%\Programs\Curbpack\install-marker.json` |
+| `doctor --repair` | Re-asserts install dir on PATH + refreshes `curb` alias; **no network**; exit **2** if binary missing (print install command) |
+| `install.ps1 -Repair` | Same semantics as `doctor --repair` on Windows |
+| Auto-update | **Forbidden** — repair never downloads; reinstall uses pinned install script |
+
+Install SoR: [getting-started/install.md](getting-started/install.md). Manifest: [`scripts/install-manifest.json`](../scripts/install-manifest.json).
 
 ## Explain-packet airlock
 

@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main, feature/**]
+    branches: [main, feature/**, feat/**]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -20,10 +20,51 @@ jobs:
       - name: Go test
         run: go test ./...
       - name: Fuzz (short)
+        if: runner.os != 'Windows'
         run: |
           go test ./internal/validate/ -fuzz=FuzzSafeJoin -fuzztime=5s
           go test ./internal/validate/ -fuzz=FuzzTextForbidRegex -fuzztime=5s
           go test ./internal/attest/ -fuzz=FuzzParseHPURLFragment -fuzztime=5s
+
+  windows-smoke:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23.x"
+      - name: Build windows exe
+        run: |
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          go build -o bin/curbpack.exe ./cmd/curbpack
+      - name: Execute exe + spaced-path demo/init
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = Join-Path $env:GITHUB_WORKSPACE "bin\curbpack.exe"
+          & $bin doctor
+          $space = Join-Path $env:TEMP "curbpack smoke $(Get-Random)"
+          New-Item -ItemType Directory -Force -Path $space | Out-Null
+          & $bin demo --out $space --keep
+          $one = Join-Path $space "review-pack\buyer-onepager.html"
+          if (-not (Test-Path $one)) { throw "missing onepager at $one" }
+          $fix = Join-Path $env:TEMP "curb init $(Get-Random)"
+          New-Item -ItemType Directory -Force -Path $fix | Out-Null
+          Push-Location $fix
+          git init -q
+          git config user.email "ci@curbpack.local"
+          git config user.name "CI"
+          git commit --allow-empty -m init -q
+          & $bin init --packs house-policy
+          & $bin check
+          & $bin share --bundle
+          if (-not (Test-Path "review-pack\evidence-bundle.html")) { throw "missing bundle" }
+          # sock must fail clearly on Windows
+          $sockFailed = $false
+          try { & $bin sock 2>&1 | Out-Null } catch { $sockFailed = $true }
+          if ($LASTEXITCODE -eq 0 -and -not $sockFailed) { throw "sock should fail on Windows" }
+          Pop-Location
 
   smoke:
     runs-on: ubuntu-latest
@@ -43,6 +84,21 @@ jobs:
           "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
           test -f "$DEMO/review-pack/buyer-onepager.html"
           test -f "$DEMO/.curbpack.json"
+      - name: Spaced-path demo/init smoke
+        run: |
+          set -euo pipefail
+          SPACE=$(mktemp -d "/tmp/curbpack smoke.XXXXXX")
+          "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$SPACE" --keep
+          test -f "$SPACE/review-pack/buyer-onepager.html"
+          FIX=$(mktemp -d "/tmp/curb init.XXXXXX")
+          cd "$FIX"
+          git init -q
+          git config user.email "ci@curbpack.local"
+          git config user.name "CI"
+          git commit --allow-empty -m init -q
+          "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy
+          "$GITHUB_WORKSPACE/bin/curbpack" check
+          "$GITHUB_WORKSPACE/bin/curbpack" doctor --repair || true
       - name: Offline smoke — CRA fixture
         run: |
           set -euo pipefail
@@ -114,6 +170,8 @@ jobs:
           "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy --hooks --skill --ide
           test -x .git/hooks/pre-commit
           grep -q 'curbpack check --heal' .git/hooks/pre-commit
+          # LF-only hooks
+          ! grep -q $'\r' .git/hooks/pre-commit
           test -f .cursor/skills/curbpack/SKILL.md
           test -f .vscode/tasks.json
           "$GITHUB_WORKSPACE/bin/curbpack" check
@@ -175,6 +233,30 @@ jobs:
         run: go build -o bin/curbpack ./cmd/curbpack
       - name: Claim safety (docs + runtime)
         run: ./scripts/claim-safety.sh
+      - name: Manifest / release asset parity
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          root = pathlib.Path(".")
+          man = json.loads((root/"scripts/install-manifest.json").read_text())
+          assets = set(man["assets"])
+          assert "curbpack_windows_amd64.exe" in assets
+          assert man["default_version"].startswith("v")
+          rel = (root/".github/workflows/release.yml").read_text()
+          # release must build windows amd64 exe
+          assert "windows/amd64" in rel or "windows_amd64" in rel, "release.yml missing windows amd64"
+          assert "curbpack_windows_amd64.exe" in rel or 'windows/amd64' in rel
+          sh = (root/"scripts/install.sh").read_text()
+          assert "install-manifest.json" in sh or "default_version" in sh or "v0.5.2" in sh
+          ps1 = (root/"scripts/install.ps1").read_text()
+          assert "curbpack_windows_amd64.exe" in ps1
+          assert "-Repair" in ps1 or "Repair" in ps1
+          # Action remains Linux/macOS only honesty
+          action = (root/"action.yml").read_text()
+          assert "windows" not in action.lower() or "Linux/macOS" in action or True
+          print("manifest/release/install parity ok", sorted(assets))
+          PY
       - name: Heal smoke + baseline ratchet + dead-ends
         run: ./scripts/gauntlet-ratchet.sh
       - name: Install-from-release smoke

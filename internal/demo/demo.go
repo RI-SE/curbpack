@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/platform"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
@@ -181,7 +181,7 @@ func Run(opts Options) error {
 	}
 	fmt.Printf("%s\n", tty.C(tty.Dim, "next on your repo: curbpack init && curbpack check"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, "habit: check → instrument Δ + covenant · docs/getting-started/daily-loop.md"))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/curbpack@v0.5.0  (heal: true)"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/curbpack@v0.5.2  (heal: true) — Action = Linux/macOS runners"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	return nil
 }
@@ -241,14 +241,5 @@ func gitInit(dir string) error {
 }
 
 func openOnePager(path string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", path)
-	case "linux":
-		cmd = exec.Command("xdg-open", path)
-	default:
-		return
-	}
-	_ = cmd.Start()
+	_ = platform.OpenFile(path)
 }

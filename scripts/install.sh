@@ -1,14 +1,22 @@
 #!/bin/sh
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
 # Usage: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
-# Env: CURBPACK_VERSION (default: v0.5.0), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
+# Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.2), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
 # Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).
+# Atomic: download → checksum → temp → replace. Writes install-marker.json.
 set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" 2>/dev/null && pwd || true)
+MANIFEST_DEFAULT="v0.5.2"
+if [ -n "${SCRIPT_DIR:-}" ] && [ -f "${SCRIPT_DIR}/install-manifest.json" ]; then
+  MANIFEST_DEFAULT=$(sed -n 's/.*"default_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${SCRIPT_DIR}/install-manifest.json" | head -n 1)
+  [ -n "$MANIFEST_DEFAULT" ] || MANIFEST_DEFAULT="v0.5.2"
+fi
 
 # Dual-read: CURBPACK_* preferred; CYBERREADY_* accepted during cutover.
 REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-afelin/curbpack}}"
-VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-v0.5.0}}"
+VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-$MANIFEST_DEFAULT}}"
 INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}}"
 
 claim='Prepares evidence for human review — not a conformity assessment.'
@@ -20,13 +28,13 @@ os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
 case "$os" in
   darwin|linux) ;;
-  msys*|mingw*|cygwin*|windows*)
-    echo "unsupported OS: Windows is not supported (need darwin or linux)" >&2
-    echo "See README — Windows = documented unsupported." >&2
+  msys*|mingw*|cygwin*)
+    echo "Use install.ps1 on Windows (PowerShell):" >&2
+    echo "  irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex" >&2
     exit 1
     ;;
   *)
-    echo "unsupported OS: $os (need darwin or linux; Windows unsupported)" >&2
+    echo "unsupported OS: $os (need darwin or linux; Windows → install.ps1)" >&2
     exit 1
     ;;
 esac
@@ -85,7 +93,6 @@ chmod +x "${tmpdir}/curbpack"
 echo "Verifying checksums.txt"
 curl -fsSL -o "${tmpdir}/checksums.txt" "$checksums_url"
 expected=$(
-  # sha256sum format: "<hash>  <filename>" or "<hash> *<filename>"
   grep -E "[ /]${asset}\$" "${tmpdir}/checksums.txt" | head -n 1 | awk '{print $1}'
 )
 if [ -z "${expected:-}" ]; then
@@ -111,10 +118,32 @@ fi
 echo "Checksum OK (${actual})"
 
 mkdir -p "$INSTALL_DIR"
-mv "${tmpdir}/curbpack" "${INSTALL_DIR}/curbpack"
+# Atomic replace: write .new then mv
+dest="${INSTALL_DIR}/curbpack"
+tmp_dest="${dest}.new"
+cp "${tmpdir}/curbpack" "$tmp_dest"
+chmod +x "$tmp_dest"
+mv -f "$tmp_dest" "$dest"
 ln -sfn curbpack "${INSTALL_DIR}/curb"
-echo "Installed: ${INSTALL_DIR}/curbpack"
+echo "Installed: ${dest}"
 echo "Alias:     ${INSTALL_DIR}/curb → curbpack"
+
+# Install marker (Unix)
+marker_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/curbpack"
+mkdir -p "$marker_dir"
+marker="${marker_dir}/install-marker.json"
+ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u)
+cat > "$marker" <<EOF
+{
+  "schema": "curbpack-install-marker:1",
+  "version": "${tag:-$VERSION}",
+  "install_dir": "${INSTALL_DIR}",
+  "binary": "${dest}",
+  "installed_at": "${ts}",
+  "goos": "${os}"
+}
+EOF
+echo "Marker:    ${marker}"
 
 case ":$PATH:" in
   *":${INSTALL_DIR}:"*) ;;
@@ -122,6 +151,7 @@ case ":$PATH:" in
     echo
     echo "Add to PATH:"
     echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+    echo "After OS update / PATH loss: curbpack doctor --repair"
     ;;
 esac
 

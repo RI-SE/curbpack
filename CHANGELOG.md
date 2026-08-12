@@ -4,6 +4,17 @@
 
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
 
+## v0.5.2
+
+Cross-OS TAM — distribution + UX + repair (Trust track deferred).
+
+- **Windows exe** — release asset `curbpack_windows_amd64.exe`; CI `windows-latest` + `windows-smoke`
+- **install.ps1** — PowerShell installer alongside `install.sh`; fail-closed checksums
+- **doctor --repair** — local PATH/alias repair only (no network / no auto-update)
+- **platform.OpenFile** — cross-OS open helper for demo/proof surfaces
+- **Docs** — dual fence (PowerShell | macOS/Linux) + same ladder; install hub + troubleshooting links; pin `@v0.5.2`
+- **Action** — default download pin `v0.5.2`; runners remain **Linux/macOS only**
+
 ## v0.5.1
 
 Safe level-up adoption train — Gate 0 blocker fixes before UX commands.

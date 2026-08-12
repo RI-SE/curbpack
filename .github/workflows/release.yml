@@ -42,10 +42,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          for pair in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+          for pair in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64; do
             GOOS=${pair%/*}
             GOARCH=${pair#*/}
             out="dist/curbpack_${GOOS}_${GOARCH}"
+            if [ "$GOOS" = "windows" ]; then
+              out="${out}.exe"
+            fi
             echo "building $out"
             CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build \
               -trimpath \
@@ -53,6 +56,16 @@ jobs:
               -o "$out" ./cmd/curbpack
           done
           (cd dist && sha256sum curbpack_* > checksums.txt)
+          # Parity with scripts/install-manifest.json
+          python3 - <<'PY'
+          import json, pathlib
+          man = json.loads(pathlib.Path("scripts/install-manifest.json").read_text())
+          dist = {p.name for p in pathlib.Path("dist").glob("curbpack_*")}
+          missing = [a for a in man["assets"] if a not in dist]
+          if missing:
+              raise SystemExit(f"release assets missing vs manifest: {missing}")
+          print("release↔manifest ok", sorted(dist))
+          PY
           ls -la dist
 
       - name: Upload artifacts
@@ -82,14 +95,23 @@ jobs:
 
           Built by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          \`install.sh\` verifies \`checksums.txt\` (sha256) fail-closed. Windows binaries are not published (unsupported).
+          Install scripts verify \`checksums.txt\` (sha256) fail-closed. Asset \`curbpack_windows_amd64.exe\` is published for local Windows CLI. GitHub Action runners remain Linux/macOS only.
 
           ### Install (no Go)
 
+          **macOS / Linux**
           \`\`\`bash
           curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
           curbpack doctor && curbpack demo
           \`\`\`
+
+          **Windows (PowerShell)**
+          \`\`\`powershell
+          irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+          curbpack doctor; curbpack demo
+          \`\`\`
+
+          Full ladders: [docs/getting-started/install.md](https://github.com/afelin/curbpack/blob/main/docs/getting-started/install.md)
 
           ### Claim safety
 

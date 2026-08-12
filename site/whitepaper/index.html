@@ -51,7 +51,7 @@
       <p class="muted">Local evidence preparation for human review — runtime model, capability matrix, curb outlines / pathway, trust catalog, non-claims.</p>
       <p>Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</p>
       <blockquote>Not conformity assessment. Not CE marking. Not a notified-body opinion.</blockquote>
-      <p>Public site: <a href="https://ri-se.github.io/curbpack/">ri-se.github.io/curbpack</a> (optional mirror: <a href="https://afelin.github.io/curbpack/">afelin.github.io/curbpack</a>). Pin <code>@v0.5.0</code>.</p>
+      <p>Public site: <a href="https://ri-se.github.io/curbpack/">ri-se.github.io/curbpack</a> (optional mirror: <a href="https://afelin.github.io/curbpack/">afelin.github.io/curbpack</a>). Pin <code>@v0.5.2</code>.</p>
       <p><a href="https://github.com/afelin/curbpack/blob/main/papers/curbpack-whitepaper.md">Source markdown on GitHub</a> · Voice: <a href="https://github.com/afelin/curbpack/blob/main/docs/voice-and-terms.md">docs/voice-and-terms.md</a></p>
 
       <h2>1. Problem</h2>
@@ -71,7 +71,7 @@
       <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
                                     ↓
                          Review pack / evidence + optional attest</pre>
-      <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. An optional Unix-domain socket bridge continues if unused; the socket defaults to a private path mode 0600.</p>
+      <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. An optional Unix-domain socket bridge is <strong>Unix-only</strong> and continues if unused; the socket defaults to a private path mode 0600. Golden path never requires sock.</p>
 
       <h3>End-to-end flow</h3>
       <pre class="mermaid">
@@ -112,7 +112,7 @@ flowchart LR
           </tr>
           <tr>
             <td><strong>CI</strong></td>
-            <td>Run <code>check</code> alone (Action <code>@v0.5.0</code> or local). <strong>Skips curb outlines.</strong></td>
+            <td>Run <code>check</code> alone (Action <code>@v0.5.2</code> on Linux/macOS runners, or local). <strong>Skips curb outlines.</strong></td>
           </tr>
         </tbody>
       </table>
@@ -152,7 +152,8 @@ flowchart LR
           <tr><td><strong>export / share</strong></td><td>SARIF, ContextPack, buyer-questions; <code>share</code> handoff recipe</td></tr>
           <tr><td><strong>prepare-release / attest</strong></td><td>Review pack + buyer one-pager; human Git Notes (never auto-attest)</td></tr>
           <tr><td><strong>proof verify</strong></td><td>Local <code>proof/index.html</code> vs evidence pointer—still human judgment</td></tr>
-          <tr><td><strong>packs / Action</strong></td><td>list / import / local pack→rule map (<code>export-graph</code>); pin <code>afelin/curbpack@v0.5.0</code>; alias <code>curb</code></td></tr>
+          <tr><td><strong>Platforms</strong></td><td>Release binaries: <code>darwin_*</code>, <code>linux_*</code>, <code>windows_amd64</code> (local CLI). GitHub Action = <strong>Linux/macOS only</strong></td></tr>
+          <tr><td><strong>packs / Action</strong></td><td>list / import / local pack→rule map (<code>export-graph</code>); pin <code>afelin/curbpack@v0.5.2</code>; alias <code>curb</code></td></tr>
         </tbody>
       </table>
       <p>Exit codes: <strong>0</strong> pass · <strong>1</strong> gates/error · <strong>2</strong> usage/env. Optional thin MCP wraps the CLI; no confirm/attest tools.</p>
@@ -193,14 +194,14 @@ flowchart LR
           <tr><td><code>not-verified</code> / unsigned</td><td>Capsule present; not cryptographically verified</td></tr>
         </tbody>
       </table>
-      <p>Synthetic <code>agent-bind:</code> tokens are never accepted as verified signatures. Install paths verify release <code>checksums.txt</code> with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred.</p>
+      <p>Synthetic <code>agent-bind:</code> tokens are never accepted as verified signatures. Install paths (<code>install.sh</code>, <code>install.ps1</code>, GitHub Action) verify release <code>checksums.txt</code> with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred. <code>curbpack doctor --repair</code> re-asserts PATH + alias <strong>locally</strong> — it does <strong>not</strong> download or auto-update.</p>
 
       <h2>10. Non-claims and RISE neutrality</h2>
       <p>Curbpack does not certify conformity or grant CE marking; does not replace notified bodies, auditors, or legal counsel; does not guarantee absence of vulnerabilities; does not claim that green gates equal market access.</p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Public Pages under RI-SE are a credibility home—not an endorsement of adopter products. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.</p>
 
       <h2>11. Limitations</h2>
-      <p>Pack coverage is only as good as pack authors; thin packs create false confidence. Regex and text checks are heuristics with size/time guards — not full program analysis. SBOM/VEX generation is best-effort from common Node lockfiles. Windows is unsupported for release binaries and the sock bridge. Client-side hash-pointer verify does not imply remote notary services. Pathway suggest is closed-world; it does not invent regulation text or pack ids.</p>
+      <p>Pack coverage is only as good as pack authors; thin packs create false confidence. Regex and text checks are heuristics with size/time guards — not full program analysis. SBOM/VEX generation is best-effort from common Node lockfiles. Local CLI ships for darwin / linux / windows_amd64; the optional sock bridge remains <strong>Unix-only</strong>. GitHub Action runners are <strong>Linux/macOS only</strong>. <code>doctor --repair</code> is local PATH/alias repair — not silent auto-update. Client-side hash-pointer verify does not imply remote notary services. Pathway suggest is closed-world; it does not invent regulation text or pack ids.</p>
 
       <h2>12. Glossary</h2>
       <table>
@@ -239,7 +240,7 @@ flowchart LR
         <li>Pathway depth: <a href="https://github.com/afelin/curbpack/blob/main/docs/getting-started/pathway.md">docs/getting-started/pathway.md</a></li>
         <li>Install and commands: <a href="https://github.com/afelin/curbpack">repository README</a></li>
       </ul>
-      <p class="muted">Technical paper only — no ops or GTM runbooks. Aligned with <code>@v0.5.0</code>.</p>
+      <p class="muted">Technical paper only — no ops or GTM runbooks. Aligned with <code>@v0.5.2</code>.</p>
     </article>
 
     <footer class="site-footer">

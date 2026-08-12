@@ -296,6 +296,18 @@ else
   bad "17 drift must emit attest_commit_behind when HEAD moves past bind"
 fi
 
+# --- 18) Windows asset name + Action Linux/macOS-only lock ---
+if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
+   grep -Eq 'windows/amd64|windows_amd64' .github/workflows/release.yml && \
+   grep -q 'curbpack_windows_amd64.exe' scripts/install.ps1 && \
+   grep -qi 'Linux/macOS' docs/getting-started/install.md && \
+   ! grep -qiE 'runs-on:.*windows' action.yml && \
+   grep -q 'Unix-only' docs/stable-contracts.md; then
+  ok "18 windows asset + Action Linux/macOS-only + sock Unix-only doc lock"
+else
+  bad "18 windows asset / Action honesty / sock Unix-only regression"
+fi
+
 echo ""
 echo "redteam-pilot: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -gt 0 ]]; then

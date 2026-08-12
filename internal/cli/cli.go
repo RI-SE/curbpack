@@ -64,11 +64,31 @@ func ExitCode(err error) int {
 	if err == nil {
 		return ExitOK
 	}
+	var miss *doctor.ErrMissingBinary
+	if errors.As(err, &miss) {
+		return ExitUsage
+	}
 	var ee *exitError
 	if errors.As(err, &ee) {
 		return ee.code
 	}
 	return ExitGates
+}
+
+func cmdDoctor(args []string) error {
+	repair := false
+	for _, a := range args {
+		switch a {
+		case "--repair":
+			repair = true
+		case "-h", "--help":
+			fmt.Fprintf(os.Stderr, "Usage: curbpack doctor [--repair]\n  --repair  Re-assert install dir on PATH + refresh curb alias (local only; never downloads)\n")
+			return nil
+		default:
+			return usageErr(fmt.Sprintf("doctor: unknown flag %q (use --repair)", a))
+		}
+	}
+	return doctor.Run(doctor.Options{Version: Version, Repair: repair})
 }
 
 // Run dispatches CLI args (without the program name). Returns a typed exitError for usage/gates.
@@ -104,7 +124,7 @@ func Run(args []string) error {
 	case "sock":
 		return cmdSock(rest)
 	case "doctor":
-		return doctor.Run(doctor.Options{Version: Version})
+		return cmdDoctor(rest)
 	case "demo":
 		return cmdDemo(rest)
 	case "export":
@@ -148,12 +168,12 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: curbpack [<command>] [args]\n")
 	fmt.Fprintf(os.Stderr, "  (no command)     doctor if uninitialized, else check\n\n")
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
-	fmt.Fprintf(os.Stderr, "  doctor           Environment confidence\n")
+	fmt.Fprintf(os.Stderr, "  doctor [--repair] Environment confidence; --repair = local PATH/alias only\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
 	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
-	fmt.Fprintf(os.Stderr, "  share [--bundle] check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
 	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule (then proof verify)\n\n")
@@ -164,16 +184,16 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
 	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
-	fmt.Fprintf(os.Stderr, "  share [--bundle]              Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal]   Recipe + optional Explorer/Finder reveal\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]                Evidence drift checklist (informational; exit 0)\n")
 	fmt.Fprintf(os.Stderr, "  pathway status|suggest|confirm-packs|confirm-prose|confirm-share|note\n")
 	fmt.Fprintf(os.Stderr, "                                Warm-start seed + HITL ticks + session notes (sole writer of pathway-seed.json)\n")
 	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
 	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
-	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
+	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC (macOS/Linux only)\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
-	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")
+	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
 }
 
 func cmdDemo(args []string) error {
@@ -390,21 +410,24 @@ func installPreCommitHook(root string) error {
 		return err
 	}
 	path := filepath.Join(hookDir, "pre-commit")
-	script := `#!/bin/sh
-# Curbpack — fail commit on high/critical gate findings
-# --heal: create missing stubs only (never overwrite filled docs; never attest)
-# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).
-if command -v curbpack >/dev/null 2>&1; then
-  exec curbpack check --heal
-elif [ -x ./bin/curbpack ]; then
-  exec ./bin/curbpack check --heal
-elif [ -x ./curbpack ]; then
-  exec ./curbpack check --heal
-else
-  echo "curbpack not on PATH — refusing commit (hooks enabled)" >&2
-  exit 1
-fi
-`
+	// LF-only: never write CRLF (Windows Git may otherwise break sh hooks).
+	script := "#!/bin/sh\n" +
+		"# Curbpack — fail commit on high/critical gate findings\n" +
+		"# --heal: create missing stubs only (never overwrite filled docs; never attest)\n" +
+		"# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).\n" +
+		"if command -v curbpack >/dev/null 2>&1; then\n" +
+		"  exec curbpack check --heal\n" +
+		"elif [ -x ./bin/curbpack ]; then\n" +
+		"  exec ./bin/curbpack check --heal\n" +
+		"elif [ -x ./curbpack ]; then\n" +
+		"  exec ./curbpack check --heal\n" +
+		"else\n" +
+		"  echo \"curbpack not on PATH — refusing commit (hooks enabled)\" >&2\n" +
+		"  exit 1\n" +
+		"fi\n"
+	if strings.Contains(script, "\r") {
+		return fmt.Errorf("internal: hook script must be LF-only")
+	}
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		return err
 	}

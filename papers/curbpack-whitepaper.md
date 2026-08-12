@@ -6,7 +6,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/) (optional mirror: [afelin.github.io/curbpack](https://afelin.github.io/curbpack/)). Pin Action / examples at **`@v0.5.0`**.
+Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/) (optional mirror: [afelin.github.io/curbpack](https://afelin.github.io/curbpack/)). Pin Action / examples at **`@v0.5.2`**.
 
 ---
 
@@ -43,7 +43,7 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
 - **Engine:** industry-agnostic check kinds (`file_present`, `text_forbid`, dependency bans, etc.).
 - **Packs:** data only — CRA-shaped annex drafts, house policy, sector templates.
 - **No remote policy service** required for daily `check`.
-- Optional Unix-domain socket for IDE/integrator IPC — continues if unused; socket defaults to a private path with mode `0600`.
+- Optional Unix-domain socket for IDE/integrator IPC — **Unix-only**; continues if unused; socket defaults to a private path with mode `0600`. Golden path never requires sock.
 
 ### End-to-end flow
 
@@ -79,7 +79,7 @@ Every path ends in the same local `check`. Optional drafts never replace check.
 |-----|---------|
 | **Write→Check** | Build **curb outlines** via the pathway warm-start (answer a few enums; CLI suggests closed-world packs), human `confirm-packs`, optional research brief, **dual drafts** with **Recommended: A\|B**, cite-check (refuses uncited Claims), human `confirm-prose`, then check. |
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
-| **CI** | Run `check` alone (Action `@v0.5.0` or local). **Skips curb outlines.** |
+| **CI** | Run `check` alone (Action `@v0.5.2` on Linux/macOS runners, or local). **Skips curb outlines.** |
 
 **Curb outlines** (your pathway sketch) are the first Write-path step: a soft local sketch of *what you are curbing* (product posture, house-first, sector)—not pack gates, not regulation, and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
 
@@ -118,7 +118,8 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | **prepare-release / attest** | Review pack + buyer one-pager; human Git Notes capsule (never auto-attest) |
 | **proof verify** | After attest, open local `proof/index.html` and compare the evidence pointer hash—still human judgment |
 | **packs** | `list` / `import` / local pack→rule map (`export-graph`) / `doctor` |
-| **Action / alias** | `afelin/curbpack@v0.5.0`; short alias `curb` = `curbpack` |
+| **Platforms** | Release binaries: `darwin_*`, `linux_*`, `windows_amd64` (local CLI). GitHub Action = **Linux/macOS only** |
+| **Action / alias** | `afelin/curbpack@v0.5.2`; short alias `curb` = `curbpack` |
 | **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
 
 Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/env.
@@ -160,7 +161,7 @@ State hash seed: `commit|parent|sbom_digest|vex_digest` (no wall-clock in the ha
 
 Synthetic `agent-bind:` tokens are never accepted as verified signatures.
 
-Install paths (`install.sh`, GitHub Action) verify release `checksums.txt` with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred.
+Install paths (`install.sh`, `install.ps1`, GitHub Action) verify release `checksums.txt` with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred. `curbpack doctor --repair` re-asserts PATH + alias **locally** — it does **not** download or auto-update.
 
 ## 10. Non-claims and RISE neutrality
 
@@ -180,7 +181,8 @@ Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product
 - Pack coverage is only as good as pack authors; thin packs create false confidence.
 - Regex and text checks are heuristics with size/time guards — not full program analysis.
 - SBOM/VEX generation is best-effort from common Node lockfiles.
-- Windows is unsupported for release binaries and the sock bridge.
+- Local CLI ships for darwin / linux / windows_amd64; the optional sock bridge remains **Unix-only**. GitHub Action runners are **Linux/macOS only**.
+- `doctor --repair` is local PATH/alias repair — not silent auto-update; missing binary requires a full reinstall.
 - Client-side hash-pointer verify does not imply remote notary services.
 - Pathway suggest is closed-world (frozen catalog + imported partner packs); it does not invent regulation text or pack ids.
 
@@ -224,4 +226,4 @@ Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audien
 
 ---
 
-*Document version aligned with Curbpack open-source line `@v0.5.0`. No go-to-market playbooks or CI runbooks are included here by design.*
+*Document version aligned with Curbpack open-source line `@v0.5.2`. No go-to-market playbooks or CI runbooks are included here by design.*

@@ -1,5 +1,5 @@
 name: 'Curbpack Check'
-description: 'Run Curbpack evidence gates on a product repo. Prepares human-review evidence — not a conformity assessment.'
+description: 'Run Curbpack evidence gates on a product repo (Linux/macOS Action runners only). Prepares human-review evidence — not a conformity assessment.'
 author: 'afelin'
 branding:
   icon: 'shield'
@@ -7,7 +7,7 @@ branding:
 
 inputs:
   version:
-    description: 'Release tag to download (e.g. v0.5.1). Empty = build from this checkout if go.mod is curbpack, else download v0.5.1 (never floating latest).'
+    description: 'Release tag to download (e.g. v0.5.2). Empty = build from this checkout if go.mod is curbpack, else download v0.5.2 (never floating latest). Action = Linux/macOS only.'
     required: false
     default: ''
   packs:
@@ -75,12 +75,12 @@ runs:
           go build -o "$DEST" ./cmd/curbpack
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
-          # Empty version → pin v0.5.1 (never silent floating latest).
+          # Empty version → pin v0.5.2 (never silent floating latest).
           if [ -z "$VER" ] || [ "$VER" = "latest" ]; then
             if [ "$VER" = "latest" ]; then
-              echo "inputs.version=latest is deprecated; downloading v0.5.1 instead" >&2
+              echo "inputs.version=latest is deprecated; downloading v0.5.2 instead" >&2
             fi
-            VER="v0.5.1"
+            VER="v0.5.2"
           fi
           URL="https://github.com/afelin/curbpack/releases/download/${VER}/${ASSET}"
           CHECKSUMS_URL="https://github.com/afelin/curbpack/releases/download/${VER}/checksums.txt"

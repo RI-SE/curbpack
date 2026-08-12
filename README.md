@@ -11,12 +11,25 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 ## Quickstart
 
-Install, init, and check—green gates in your repo in under ten minutes.
+Install, init, and check—green gates in your repo in under ten minutes. Pin **`@v0.5.2`**. Full ladders: [install](docs/getting-started/install.md) · stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+```
+
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
-curbpack doctor
+```
 
+Then the same ladder on every OS:
+
+```bash
+curbpack doctor
+curbpack demo              # sandbox; optional --open
 cd /path/to/your/product   # git repo
 curbpack init              # house-policy default; --profile cra|medtech
 curbpack check             # daily loop — exit code is authoritative
@@ -26,7 +39,7 @@ curbpack attest
 # verify: proof/index.html vs hpurl-pointer.json
 ```
 
-On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff. Optional drift checklist: `curbpack drift` (exit 0 always).
+On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff. Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update).
 
 ## Three ways in
 
@@ -80,15 +93,17 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 
 ## GitHub Action
 
+Action runners are **Linux/macOS only** (local Windows CLI is supported separately).
+
 ```yaml
-- uses: afelin/curbpack@v0.5.1
+- uses: afelin/curbpack@v0.5.2
   with:
     heal: "true"
     comment_on: red
     upload_sarif: "true"
 ```
 
-Pin **`@v0.5.1`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
+Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
 
 ## Advanced
 
