@@ -16,18 +16,18 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 
 | Page | Audience | Story |
 |------|----------|--------|
-| `index.html` | Anyone | Primary sentence, curb outlines + local pack→rule map, **three ways in** chips (Write / Bring / CI), CTA **Pick how you start** |
-| `how-it-works/` | Anyone | Same three ways → curb outlines on Write → pack→rule map after confirm → drafts → local check → review pack → human review |
-| `for-builders/` | Builders | Install / init / check; Write HITL + pack→rule map; Bring; CI pin `@v0.5.0`; **Daily loop** (`curb` alias, heal/ask, share, attest/proof) |
+| `index.html` | Anyone | Primary sentence, curb outlines + local pack→rule map, three ways in, quickstart CTA |
+| `how-it-works/` | Anyone | End-to-end sequence: three ways → artifacts → interpret results → human review |
+| `for-builders/` | Builders | Install / init / check; three ways in; artifacts; interpret results; daily loop |
 | `for-reviewers/` | Buyers / reviewers | Buyer one-pager + trust table; research brief demoted (supplier writer aid) |
 | `for-authorities/` | CISO / auditors | Structural evidence for human review; not conformity assessment |
 | `samples/onepager.html` | Reviewers / teaching | Buyer one-pager sample; Sources informational ≠ gate input |
 | `samples/research-brief.html` | Builders (optional) | Allowlisted research brief sample — never a gate input |
-| `whitepaper/` | Deep readers | Intent / curb outlines + pathway / feature surface / trust / non-claims |
+| `whitepaper/` | Deep readers | Capability matrix, evidence flow, curb outlines / pathway, trust / non-claims |
 | `security/` | Builders / CISO | Trust surface pointer |
 | `llms.txt` | Agents | Machine-readable index |
 
-**Nav/Footer (every public page):** Builders | Reviewers | Authorities | How it works | **Source** (`https://github.com/RI-SE/curbpack`). Footer: **Source (RI-SE)** primary + quieter **Mirror** (`https://github.com/afelin/curbpack`) + RISE funder line + optional Coreward one-liner. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
+**Nav/Footer (every public page):** Builders | Reviewers | Authorities | How it works | **Source** (`https://github.com/RI-SE/curbpack`). Footer: **Source (RI-SE)** primary + quieter **Mirror** (`https://github.com/afelin/curbpack`) + RISE funder line. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
 
 ## Link rule
 

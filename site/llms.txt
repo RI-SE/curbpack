@@ -10,19 +10,25 @@ Local-first CLI. Rule packs on disk. Review pack for human review. Green gates m
 
 ## Three ways in
 
-Write starts with **curb outlines** (your pathway sketch). After pack confirm, a **local pack→rule map** steers drafting—not a legal oracle—then dual drafts → cite-check refuses uncited Claims. Bring existing docs onto pack paths, or CI alone — same local `check`. Human confirms use a TTY or `--i-am-human`. Research briefs never gate pass/fail.
+Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a **local pack→rule map** steers drafting—not a legal oracle—then dual drafts → cite-check refuses uncited Claims. Bring existing docs onto pack paths, or CI alone — same local `check`. Human confirms use a TTY or `--i-am-human`. Research briefs never gate pass/fail.
+
+## What you get
+
+- Gate report (every check): JSON + markdown — structural evidence
+- Review pack + buyer one-pager (after green + share): hand to buyer
+- Attest capsule (human attest): unsigned ≠ verified
+- Proof page (after attest): local proof/index.html — still human judgment
 
 ## What not
 
 - Not conformity assessment / CE / notified-body approval
 - Not a cloud GRC / regulation chat KB
-- Not dependent on Coreward (optional external tutor only)
 
 ## Start
 
 - Repo (primary): https://github.com/RI-SE/curbpack — mirror: https://github.com/afelin/curbpack
 - Site (credibility home): https://ri-se.github.io/curbpack/ — optional mirror: https://afelin.github.io/curbpack/
-- Install: https://github.com/RI-SE/curbpack#install
+- Install: https://github.com/RI-SE/curbpack#quickstart
 - Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
 - Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
@@ -36,7 +42,6 @@ Write starts with **curb outlines** (your pathway sketch). After pack confirm, a
 - Thin MCP example: https://github.com/RI-SE/curbpack/tree/main/examples/mcp
 - Pin: `@v0.5.0`
 
-## Optional
+## Optional depth
 
 - Pathway / research / dual-draft / cite-check: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md (research never gates check; cite-check before confirm-prose)
-- Optional separate product (tutor/enforce client): https://afelin.github.io/coreward/ — Curbpack is self-sustaining without it.

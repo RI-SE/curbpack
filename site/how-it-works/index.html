@@ -102,15 +102,25 @@
       <h3>5. Human review (when ready)</h3>
       <p>A person judges the evidence. When you are ready to bind a hash, run <code>curbpack attest</code> into Git Notes (ssh-agent signed when possible). <strong>Unsigned ≠ verified.</strong> After attest, you can open the local <code>proof/index.html</code> page and compare the bound hash from the evidence pointer—still human judgment, not conformity assessment.</p>
 
+      <h3>6. How to interpret results</h3>
+      <table>
+        <thead><tr><th>Signal</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Exit <strong>0</strong></td><td>Gates passed on this tree—for human review, not certification</td></tr>
+          <tr><td>Exit <strong>1</strong></td><td>Findings remain or operational error</td></tr>
+          <tr><td>Exit <strong>2</strong></td><td>Usage / environment</td></tr>
+          <tr><td><strong>Unsigned</strong> attest</td><td>Capsule present; not cryptographically verified</td></tr>
+          <tr><td><strong>ssh-agent-signed</strong></td><td>Real SSH signature produced</td></tr>
+        </tbody>
+      </table>
       <p>Curbpack decides pass/fail (deterministic). Humans decide what to claim. Tutors propose only and must re-check; they never greenlight or attest.</p>
 
-      <p class="muted">Committed sample (front + back): <a href="/curbpack/samples/onepager.html">samples/onepager.html</a>. Optional writer aid: <a href="/curbpack/samples/research-brief.html">research brief sample</a>. Authorities path: <a href="/curbpack/for-authorities/">for authorities</a>. Pack authoring: <a href="https://github.com/afelin/curbpack/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
+      <p class="muted">Committed sample (front + back): <a href="/curbpack/samples/onepager.html">samples/onepager.html</a>. Optional writer aid: <a href="/curbpack/samples/research-brief.html">research brief sample</a>. Authorities path: <a href="/curbpack/for-authorities/">for authorities</a>. Go deeper: <a href="/curbpack/whitepaper/">white paper</a>. Pack authoring: <a href="https://github.com/afelin/curbpack/blob/main/docs/write-your-own-pack.md">write your own pack</a>.</p>
     </section>
 
     <footer class="site-footer">
       <p><a href="/curbpack/">Home</a> · <a href="/curbpack/llms.txt">llms.txt</a> · <a href="/curbpack/samples/onepager.html">Sample</a> · <a href="/curbpack/whitepaper/">White paper</a> · <a href="/curbpack/security/">Security</a> · <a href="https://github.com/RI-SE/curbpack" rel="noopener">Source (RI-SE)</a> · <a href="https://github.com/afelin/curbpack" rel="noopener">Mirror</a></p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.</p>
-      <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>
 </body>

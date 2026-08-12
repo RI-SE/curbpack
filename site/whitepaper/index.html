@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/curbpack/assets/site.css" />
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+  </script>
   <style>
     .paper { max-width: 44rem; padding: 2.5rem 0 4rem; }
     .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; font-weight: 600; }
@@ -26,6 +30,7 @@
       background: var(--paper-alt); color: var(--muted);
     }
     .paper ol, .paper ul { padding-left: 1.25rem; }
+    .mermaid { margin: 1.5rem 0; overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -43,7 +48,7 @@
 
     <article class="paper prose">
       <h1>Curbpack White Paper</h1>
-      <p class="muted">Local evidence preparation for human review — architecture, curb outlines / pathway, feature surface, trust catalog, non-claims.</p>
+      <p class="muted">Local evidence preparation for human review — runtime model, capability matrix, curb outlines / pathway, trust catalog, non-claims.</p>
       <p>Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.</p>
       <blockquote>Not conformity assessment. Not CE marking. Not a notified-body opinion.</blockquote>
       <p>Public site: <a href="https://ri-se.github.io/curbpack/">ri-se.github.io/curbpack</a> (optional mirror: <a href="https://afelin.github.io/curbpack/">afelin.github.io/curbpack</a>). Pin <code>@v0.5.0</code>.</p>
@@ -62,11 +67,35 @@
         <li>RISE funds and hosts credibility surfaces; it does <strong>not</strong> certify products that use Curbpack gate results.</li>
       </ul>
 
-      <h2>3. Architecture</h2>
+      <h2>3. Runtime model and evidence flow</h2>
       <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
                                     ↓
                          Review pack / evidence + optional attest</pre>
       <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. An optional Unix-domain socket bridge continues if unused; the socket defaults to a private path mode 0600.</p>
+
+      <h3>End-to-end flow</h3>
+      <pre class="mermaid">
+flowchart LR
+  install[Install] --> init[Init]
+  init --> choosePath[ChoosePath]
+  choosePath --> writePath[WritePath]
+  choosePath --> bringPath[BringPath]
+  choosePath --> ciPath[CIPath]
+  writePath --> outlines[CurbOutlines]
+  outlines --> confirmPacks[ConfirmPacks]
+  confirmPacks --> localMap[LocalPackRuleMap]
+  localMap --> drafts[DualDraftsCiteCheck]
+  drafts --> check[LocalCheck]
+  bringPath --> check
+  ciPath --> check
+  check --> reviewPack[ReviewPack]
+  reviewPack --> humanReview[HumanReview]
+  humanReview --> attest[OptionalAttest]
+  attest --> proofVerify[ProofVerify]
+      </pre>
+      <p><strong>Write path:</strong> curb outlines → human confirm-packs → local pack→rule map → optional dual drafts + cite-check → check.<br/>
+      <strong>Bring and CI:</strong> skip outlines; go straight to check.<br/>
+      <strong>After green:</strong> review pack → human review → optional attest → local proof verify.</p>
 
       <h2>4. Three ways in and curb outlines</h2>
       <p>Every path ends in the same local <code>check</code>. Optional drafts never replace check.</p>
@@ -88,10 +117,30 @@
         </tbody>
       </table>
       <p><strong>Curb outlines</strong> (your pathway sketch) are a soft sketch of <em>what you are curbing</em>—not pack gates, not regulation, and not the law. The CLI alone writes the pathway seed. Seed and research packets are not check inputs. Humans stamp confirms (TTY, <code>--i-am-human</code>, or <code>CURBPACK_ALLOW_CONFIRM=1</code>). Agents never forge ticks or invent pack ids.</p>
+
+      <h3>Local pack→rule map</h3>
       <p>After human <code>confirm-packs</code>, Curbpack builds a <strong>local pack→rule map</strong> (closed-world suggest → confirm → local map → drafts). Use it to navigate house drafting; it is not regulation text and does not replace check. Optional refresh: <code>curbpack packs export-graph</code>.</p>
       <p class="muted">Mnemonic: Curb outlines → packs → check → hand off.</p>
 
-      <h2>5. Feature surface (shipped)</h2>
+      <h2>5. Capability matrix</h2>
+      <table>
+        <thead><tr><th>Input</th><th>Operation</th><th>Output</th><th>Human decision</th></tr></thead>
+        <tbody>
+          <tr><td>Git repo + pack JSON</td><td><code>init</code></td><td>Scaffold, hooks, skill, <code>.curbpack.json</code></td><td>Choose packs; confirm pathway if Write</td></tr>
+          <tr><td>Pathway enums</td><td><code>pathway suggest</code></td><td>Closed-world pack suggestions in seed</td><td><code>confirm-packs</code> (TTY / <code>--i-am-human</code>)</td></tr>
+          <tr><td>Confirmed packs</td><td><code>packs export-graph</code></td><td>Local pack→rule map JSON</td><td>Use map to steer drafts—not as law</td></tr>
+          <tr><td>Repo tree</td><td><code>check</code> / <code>validate</code></td><td>GateFailure IR; exit 0/1/2</td><td>Remediate on red; never invent green</td></tr>
+          <tr><td>GateFailure JSON</td><td><code>ask --propose</code></td><td>Propose-only remediation hints</td><td>Apply in editor; re-check</td></tr>
+          <tr><td>Allowlisted URLs</td><td><code>research [--fetch]</code></td><td>Citation packet + human brief</td><td>Inform drafts; never gates check</td></tr>
+          <tr><td>Draft markdown</td><td><code>research --cite-check</code></td><td>Pass/fail on uncited Claims</td><td>Fix cites before <code>confirm-prose</code></td></tr>
+          <tr><td>Dual drafts</td><td>Assistant + human</td><td>Option A / B + Recommended A|B</td><td>Pick A, B, or edit; record via <code>pathway note</code></td></tr>
+          <tr><td>Green tree</td><td><code>share</code> / <code>prepare-release</code></td><td>Review pack + buyer one-pager</td><td><code>confirm-share</code>; hand to buyer</td></tr>
+          <tr><td>Ready state</td><td><code>attest</code></td><td>Git Notes capsule + SBOM/VEX drafts</td><td>Human sign-off; unsigned ≠ verified</td></tr>
+          <tr><td>Attest capsule</td><td><code>proof/index.html</code></td><td>Local hash compare</td><td>Human judgment—not conformity assessment</td></tr>
+        </tbody>
+      </table>
+
+      <h2>6. Feature surface (shipped)</h2>
       <table>
         <thead><tr><th>Area</th><th>What it does</th></tr></thead>
         <tbody>
@@ -108,7 +157,7 @@
       </table>
       <p>Exit codes: <strong>0</strong> pass · <strong>1</strong> gates/error · <strong>2</strong> usage/env. Optional thin MCP wraps the CLI; no confirm/attest tools.</p>
 
-      <h2>6. Worked example</h2>
+      <h2>7. Worked example</h2>
       <ol>
         <li><strong>Curb outlines (Write)</strong> — <code>pathway status</code> → <code>suggest</code> → human <code>confirm-packs</code> → optional research → dual drafts + Recommended A|B → cite-check → human <code>confirm-prose</code>.</li>
         <li><strong>Red findings</strong> — e.g. missing <code>SECURITY.md</code>, forbidden claim-adjacent wording. <code>curbpack check</code> exits non-zero.</li>
@@ -119,7 +168,7 @@
       </ol>
       <p>Bring and CI skip step 1. Teaching sample: <a href="/curbpack/samples/onepager.html">samples/onepager.html</a>.</p>
 
-      <h2>7. Evidence catalog and trust levels</h2>
+      <h2>8. Evidence catalog and trust levels</h2>
       <table>
         <thead><tr><th>Artifact</th><th>Trust level (honest)</th></tr></thead>
         <tbody>
@@ -135,7 +184,7 @@
       </table>
       <p><strong>Unsigned ≠ verified.</strong> Green readiness % is a <strong>local gate score on this tree</strong>, not a certification score. Daily <code>check</code> does not generate or open the one-pager.</p>
 
-      <h2>8. Attestation and install integrity</h2>
+      <h2>9. Attestation and install integrity</h2>
       <p>State hash seed: <code>commit|parent|sbom_digest|vex_digest</code> (no wall-clock in the hash).</p>
       <table>
         <thead><tr><th>State</th><th>Meaning</th></tr></thead>
@@ -146,14 +195,14 @@
       </table>
       <p>Synthetic <code>agent-bind:</code> tokens are never accepted as verified signatures. Install paths verify release <code>checksums.txt</code> with sha256 and fail closed on mismatch. Network pack updates require a sha256 pin; offline import is preferred.</p>
 
-      <h2>9. Non-claims and RISE neutrality</h2>
+      <h2>10. Non-claims and RISE neutrality</h2>
       <p>Curbpack does not certify conformity or grant CE marking; does not replace notified bodies, auditors, or legal counsel; does not guarantee absence of vulnerabilities; does not claim that green gates equal market access.</p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Public Pages under RI-SE are a credibility home—not an endorsement of adopter products. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.</p>
 
-      <h2>10. Limitations</h2>
+      <h2>11. Limitations</h2>
       <p>Pack coverage is only as good as pack authors; thin packs create false confidence. Regex and text checks are heuristics with size/time guards — not full program analysis. SBOM/VEX generation is best-effort from common Node lockfiles. Windows is unsupported for release binaries and the sock bridge. Client-side hash-pointer verify does not imply remote notary services. Pathway suggest is closed-world; it does not invent regulation text or pack ids.</p>
 
-      <h2>11. Glossary</h2>
+      <h2>12. Glossary</h2>
       <table>
         <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
         <tbody>
@@ -180,7 +229,7 @@
         </tbody>
       </table>
 
-      <h2>12. Related surfaces</h2>
+      <h2>13. Related surfaces</h2>
       <ul>
         <li>Product narrative: <a href="https://ri-se.github.io/curbpack/">ri-se.github.io/curbpack</a> (optional mirror: <a href="https://afelin.github.io/curbpack/">afelin.github.io/curbpack</a>)</li>
         <li>How it works: <a href="/curbpack/how-it-works/">how it works</a> · <a href="/curbpack/for-builders/">builders</a></li>
@@ -196,7 +245,6 @@
     <footer class="site-footer">
       <p><a href="/curbpack/">Home</a> · <a href="/curbpack/llms.txt">llms.txt</a> · <a href="/curbpack/samples/onepager.html">Sample</a> · <a href="/curbpack/whitepaper/">White paper</a> · <a href="/curbpack/security/">Security</a> · <a href="https://github.com/RI-SE/curbpack" rel="noopener">Source (RI-SE)</a> · <a href="https://github.com/afelin/curbpack" rel="noopener">Mirror</a></p>
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results.</p>
-      <p>Optional: <a href="https://afelin.github.io/coreward/">Coreward</a> (separate product).</p>
     </footer>
   </div>
 </body>
