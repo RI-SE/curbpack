@@ -4,7 +4,7 @@
 
 One contract for Cursor, Copilot, Claude, Codex, Windsurf, Cline, Aider, Continue, and CI-only paths. Assistants **run `curbpack`**, then read ContextPack / IR — they never invent gate results or certification claims. There is **no** chat knowledge base over regulation text (by design).
 
-Pin stays **`@v0.5.1`**. No pack unlock. Optional tutor product: [Coreward pointer](coreward-pointer.md) — not part of activation.
+Pin stays **`@v0.5.2`**. No pack unlock. Optional tutor product: [Coreward pointer](coreward-pointer.md) — not part of activation.
 
 ## Canonical loop
 
@@ -34,7 +34,7 @@ Warm-start: `curbpack pathway status` — optional interview that suggests check
 | RKG | `.github/curbpack/graph/policy-graph.json` | Pack→rule navigation (exported on `confirm-packs`) |
 | buyer-questions / lay-of-land | export outputs | Human share |
 | HPURL pointer | `.github/curbpack/evidence/hpurl-pointer.json` | Post-attest client-side verify via `proof/index.html` |
-| hooks + Action | `init` / `@v0.5.1` | Force re-check loop |
+| hooks + Action | `init` / `@v0.5.2` | Force re-check loop |
 | drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](getting-started/evidence-drift.md)) |
 | evidence bundle | `share --bundle` | `review-pack/evidence-bundle.html` offline handoff |
 
@@ -65,7 +65,7 @@ Catalog is frozen to those three ids until freeze review. See [Intent vs Scope](
 | **Generic agents** (Codex, Windsurf, Cline, Aider, Continue, …) | Root [`AGENTS.md`](../AGENTS.md) | De-facto agent readme |
 | **Claude Desktop / Cursor MCP / VS Code MCP** | Thin MCP [examples/mcp/](../examples/mcp/) | Tools call CLI; CLI remains SoR |
 | **ChatGPT / web Claude / Gemini** (no repo tools) | Paste `context-pack.md` or explain-packet only | Human must re-run `check` locally — no false “fixed” |
-| **CI-only** | Action `@v0.5.0` + SARIF (+ ContextPack artifact when available) | Primary PR path |
+| **CI-only** | Action `@v0.5.2` + SARIF (+ ContextPack artifact when available) | Primary PR path |
 
 **Init hygiene:** `curbpack init` does **not** auto-write `AGENTS.md` / `CLAUDE.md` / `copilot-instructions.md` into every product repo (avoids clutter). Cursor gets the skill; other tools read those files when present — adopters may copy them once from this repo.
 

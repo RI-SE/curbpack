@@ -4,7 +4,7 @@ Static explainer for **https://ri-se.github.io/curbpack/** (credibility home). O
 
 Deploy via `.github/workflows/pages.yml` (Actions → Pages) on **both** remotes after sync. Enable **GitHub Pages → Source: GitHub Actions** on [RI-SE/curbpack](https://github.com/RI-SE/curbpack/settings/pages) if the site 404s — or ask Cursor: **Enable the curbpack site on RI-SE**. See [sync both remotes](../docs/getting-started/sync-both-remotes.md).
 
-Pilot pin: `@v0.5.0` (current instrument-panel honesty cut). Adversarial grade: `scripts/redteam-pilot.sh`. Trust-surface freeze through v0.4.x: see `docs/security-model.md`.
+Pilot pin: `@v0.5.2` (current instrument-panel honesty cut). Adversarial grade: `scripts/redteam-pilot.sh`. Trust-surface freeze through v0.4.x: see `docs/security-model.md`.
 
 ## Contents
 

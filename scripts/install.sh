@@ -118,12 +118,16 @@ fi
 echo "Checksum OK (${actual})"
 
 mkdir -p "$INSTALL_DIR"
-# Atomic replace: write .new then mv
+# Atomic replace: write .new then mv; remove leftover .new on failure
 dest="${INSTALL_DIR}/curbpack"
 tmp_dest="${dest}.new"
 cp "${tmpdir}/curbpack" "$tmp_dest"
 chmod +x "$tmp_dest"
-mv -f "$tmp_dest" "$dest"
+if ! mv -f "$tmp_dest" "$dest"; then
+  rm -f "$tmp_dest"
+  echo "failed to replace ${dest}" >&2
+  exit 1
+fi
 ln -sfn curbpack "${INSTALL_DIR}/curb"
 echo "Installed: ${dest}"
 echo "Alias:     ${INSTALL_DIR}/curb → curbpack"

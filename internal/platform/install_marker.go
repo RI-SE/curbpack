@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,19 +12,68 @@ import (
 
 const MarkerSchema = "curbpack-install-marker:1"
 
+// utf8BOM is stripped on read so PowerShell UTF-8 with BOM markers still parse.
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
 // InstallMarker records a local install (written by install.sh / install.ps1).
 type InstallMarker struct {
-	Schema     string `json:"schema"`
-	Version    string `json:"version"`
-	InstallDir string `json:"install_dir"`
-	Binary     string `json:"binary"`
+	Schema      string `json:"schema"`
+	Version     string `json:"version"`
+	InstallDir  string `json:"install_dir"`
+	Binary      string `json:"binary"`
 	InstalledAt string `json:"installed_at"`
-	GOOS       string `json:"goos"`
-	GOARCH     string `json:"goarch,omitempty"`
+	GOOS        string `json:"goos"`
+	GOARCH      string `json:"goarch,omitempty"`
 }
 
-// MarkerPath returns the OS-specific install-marker.json path.
+// MarkerPath returns the preferred OS-specific install-marker.json path
+// (install dir when CURBPACK_INSTALL_DIR / default applies; else XDG / Programs layout).
 func MarkerPath() (string, error) {
+	cands, err := markerCandidates()
+	if err != nil {
+		return "", err
+	}
+	if len(cands) == 0 {
+		return "", fmt.Errorf("no marker path candidates")
+	}
+	// Prefer an existing marker; else the first candidate (write target).
+	for _, p := range cands {
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
+	}
+	return cands[0], nil
+}
+
+// markerCandidates lists paths to try, in preference order:
+// CURBPACK_INSTALL_DIR, default install dir, then conventional data-dir marker.
+func markerCandidates() ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	add := func(p string) {
+		p = filepath.Clean(p)
+		if p == "" || p == "." || seen[p] {
+			return
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+
+	if d := os.Getenv("CURBPACK_INSTALL_DIR"); d != "" {
+		add(filepath.Join(d, "install-marker.json"))
+	}
+	if def, err := DefaultInstallDir(); err == nil {
+		add(filepath.Join(def, "install-marker.json"))
+	}
+	if conv, err := conventionalMarkerPath(); err == nil {
+		add(conv)
+	}
+	return out, nil
+}
+
+// conventionalMarkerPath is the historical XDG / Programs location (Unix data dir;
+// Windows default install dir — same as DefaultInstallDir for the default case).
+func conventionalMarkerPath() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
 		base := os.Getenv("LOCALAPPDATA")
@@ -50,6 +100,9 @@ func MarkerPath() (string, error) {
 
 // DefaultInstallDir returns the conventional install directory for this OS.
 func DefaultInstallDir() (string, error) {
+	if d := os.Getenv("CURBPACK_INSTALL_DIR"); d != "" {
+		return d, nil
+	}
 	switch runtime.GOOS {
 	case "windows":
 		base := os.Getenv("LOCALAPPDATA")
@@ -86,28 +139,45 @@ func AliasName() string {
 	return "curb"
 }
 
-// ReadMarker loads install-marker.json if present.
+// ReadMarker loads install-marker.json if present (BOM-tolerant; custom InstallDir aware).
 func ReadMarker() (*InstallMarker, error) {
-	p, err := MarkerPath()
+	cands, err := markerCandidates()
 	if err != nil {
 		return nil, err
 	}
-	b, err := os.ReadFile(p)
-	if err != nil {
-		return nil, err
+	var lastErr error
+	for _, p := range cands {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		b = bytes.TrimPrefix(b, utf8BOM)
+		var m InstallMarker
+		if err := json.Unmarshal(b, &m); err != nil {
+			lastErr = err
+			continue
+		}
+		return &m, nil
 	}
-	var m InstallMarker
-	if err := json.Unmarshal(b, &m); err != nil {
-		return nil, err
+	if lastErr != nil {
+		return nil, lastErr
 	}
-	return &m, nil
+	return nil, os.ErrNotExist
 }
 
 // WriteMarker writes install-marker.json (used by doctor --repair refresh + tests).
+// Prefer CURBPACK_INSTALL_DIR / default install dir so custom InstallDir round-trips.
 func WriteMarker(version, installDir, binary string) error {
-	p, err := MarkerPath()
-	if err != nil {
-		return err
+	var p string
+	var err error
+	if installDir != "" {
+		p = filepath.Join(installDir, "install-marker.json")
+	} else {
+		p, err = MarkerPath()
+		if err != nil {
+			return err
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err

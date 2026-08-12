@@ -3,17 +3,21 @@
 ## Unreleased
 
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
+- **Cross-OS TAM hardening** — gauntlet Action honesty assert (no `or True`); `doctor --repair` fail-closed after LookPath; marker BOM-safe + custom InstallDir; CI repair smoke without `|| true`; completions for `drift` / `--repair` / `--bundle` / `--reveal`; atomic `.new` cleanup; `share --reveal` empty-message; docs pin sweep `@v0.5.2`
+- **Note:** annotated **`v0.5.2` release tag is cut after this PR merges** (not before) — pin advertising waits for green CI + release assets
 
 ## v0.5.2
 
 Cross-OS TAM — distribution + UX + repair (Trust track deferred).
 
 - **Windows exe** — release asset `curbpack_windows_amd64.exe`; CI `windows-latest` + `windows-smoke`
-- **install.ps1** — PowerShell installer alongside `install.sh`; fail-closed checksums
-- **doctor --repair** — local PATH/alias repair only (no network / no auto-update)
+- **install.ps1** — PowerShell installer alongside `install.sh`; fail-closed checksums; `-Repair` = local PATH/alias (same as `doctor --repair`)
+- **doctor --repair** — local PATH/alias repair only (no network / no auto-update); fail-closed if LookPath still missing
+- **share --reveal** + **`Attach:`** — optional Explorer/Finder reveal; absolute attach paths on every OS
 - **platform.OpenFile** — cross-OS open helper for demo/proof surfaces
 - **Docs** — dual fence (PowerShell | macOS/Linux) + same ladder; install hub + troubleshooting links; pin `@v0.5.2`
-- **Action** — default download pin `v0.5.2`; runners remain **Linux/macOS only**
+- **Action** — default download pin `v0.5.2`; runners remain **Linux/macOS only** (not Windows runners)
+- **Release tag** — cut **after merge** once CI is green and assets publish (do not advertise the pin before the tag exists)
 
 ## v0.5.1
 

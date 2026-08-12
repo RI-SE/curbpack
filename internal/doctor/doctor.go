@@ -273,10 +273,11 @@ func runRepair(opts Options) error {
 		}
 	}
 
-	if err := ensureDirOnPATH(installDir); err != nil {
-		tty.PrintStatus("PATH", false, err.Error())
+	pathDetail, pathErr := ensureDirOnPATH(installDir)
+	if pathErr != nil {
+		tty.PrintStatus("PATH", false, pathErr.Error())
 	} else {
-		tty.PrintStatus("PATH", true, installDir+" on PATH (session + persisted where supported)")
+		tty.PrintStatus("PATH", true, pathDetail)
 	}
 
 	ver := opts.Version
@@ -289,8 +290,17 @@ func runRepair(opts Options) error {
 	if err := platform.WriteMarker(ver, installDir, binDest); err != nil {
 		tty.PrintStatus("install marker", false, err.Error())
 	} else {
-		mp, _ := platform.MarkerPath()
+		mp := filepath.Join(installDir, "install-marker.json")
 		tty.PrintStatus("install marker", true, mp)
+	}
+
+	// Fail-closed: only claim success after LookPath can resolve curbpack.
+	if _, err := exec.LookPath(platform.BinaryName()); err != nil {
+		fmt.Println()
+		fmt.Printf("%s\n", tty.C(tty.Red, "repair incomplete — curbpack still not on PATH after local repair"))
+		fmt.Printf("%s\n", tty.C(tty.Dim, "Open a new shell, or reinstall: "+hint))
+		fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
+		return &ErrMissingBinary{Hint: hint}
 	}
 
 	fmt.Println()
@@ -300,7 +310,9 @@ func runRepair(opts Options) error {
 	return nil
 }
 
-func ensureDirOnPATH(dir string) error {
+// ensureDirOnPATH prepends dir for this process and persists where supported.
+// Returns a human status detail distinguishing session vs persisted PATH.
+func ensureDirOnPATH(dir string) (detail string, err error) {
 	// Always prepend for this process.
 	pathEnv := os.Getenv("PATH")
 	parts := splitPATH(pathEnv)
@@ -317,13 +329,17 @@ func ensureDirOnPATH(dir string) error {
 
 	switch runtime.GOOS {
 	case "windows":
-		return persistWindowsUserPATH(dir)
+		if err := persistWindowsUserPATH(dir); err != nil {
+			return "", err
+		}
+		return dir + " on PATH (this session + User PATH persisted)", nil
 	default:
 		// Soft hint for Unix profiles — do not rewrite shell rc automatically.
 		if !found {
 			fmt.Printf("%s\n", tty.C(tty.Dim, "Add permanently (if needed): export PATH=\""+dir+":$PATH\""))
+			return dir + " on PATH (this session only — not persisted to shell rc)", nil
 		}
-		return nil
+		return dir + " already on PATH (this session; Unix does not auto-edit shell rc)", nil
 	}
 }
 

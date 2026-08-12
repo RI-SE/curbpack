@@ -89,8 +89,12 @@ func cmdShare(args []string) error {
 		}
 	}
 
-	if wantReveal && revealTarget != "" {
-		_ = platform.RevealInFileManager(revealTarget)
+	if wantReveal {
+		if revealTarget != "" {
+			_ = platform.RevealInFileManager(revealTarget)
+		} else {
+			fmt.Printf("%s\n", tty.C(tty.Dim, "share --reveal: nothing to reveal (need prepare-release output or --bundle)"))
+		}
 	}
 
 	fmt.Printf("%s\n", tty.C(tty.Dim, "Recipe done. Human attest when ready — never auto-attest. Not a conformity assessment."))

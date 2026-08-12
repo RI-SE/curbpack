@@ -11,7 +11,7 @@ Not conformity assessment — a green `check` is local structural evidence for h
 | Check | Fix |
 |-------|-----|
 | `curbpack` not found after install | Open a **new** shell; confirm install dir on PATH |
-| Still missing | `curbpack doctor --repair` (local PATH/alias only) |
+| Still missing | `curbpack doctor --repair` (local PATH/alias only; Windows also `install.ps1 -Repair`) |
 | Binary gone | Full reinstall — [install ladders](install.md) |
 | Windows session PATH stale | New PowerShell / Terminal window after User PATH update |
 

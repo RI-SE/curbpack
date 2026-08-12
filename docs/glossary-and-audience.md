@@ -22,7 +22,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **CLI** | Command-Line Interface — Curbpack’s primary surface (`curbpack` / short alias `curb`). |
 | **IPC** | Inter-Process Communication — optional Unix-domain socket (`curbpack sock`) for integrators. |
 | **OSS** | Open-Source Software — this public Apache-2.0 product line. |
-| **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.5.0`. |
+| **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.5.2`. |
 | **SCA** | Software Composition Analysis — pair Curbpack with tools such as Trivy/OSV for depth; Curbpack is not an SCA platform. |
 | **CVE** | Common Vulnerabilities and Exposures — watchlist∩SBOM is look-here only, not CVE management. |
 | **Gate** / **check** | A deterministic rule-pack evaluation. Exit `0` = gates passed on this tree for human review — **not** certification. |

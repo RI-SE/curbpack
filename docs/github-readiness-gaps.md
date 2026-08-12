@@ -33,7 +33,7 @@ Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are re
 | Legal-metrology / CE / never claim RISE-certified product | Reject | [promotion firewall](promotion-firewall.md) |
 | Enforce-before-execute | Reject | Private Coreward only |
 | Doctor soft-exit (non-blocking tips) | Done (accepted) | `curbpack doctor` — soft diagnostics; not a hard gate redesign |
-| First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.5.0` |
+| First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.5.2` |
 | Install checksum fail-closed | Done | [`scripts/install.sh`](../scripts/install.sh) · [security model](security-model.md) |
 | Action binary cache via consumer `hashFiles` + checksum-skip | Reject | Trust regression — keep download/`checksums.txt` fail-closed · [security model](security-model.md#install-integrity) |
 

@@ -58,6 +58,12 @@ jobs:
           git commit --allow-empty -m init -q
           & $bin init --packs house-policy
           & $bin check
+          $repairOut = & $bin doctor --repair 2>&1 | Out-String
+          Write-Host $repairOut
+          if ($LASTEXITCODE -ne 0) { throw "doctor --repair failed with exit $LASTEXITCODE" }
+          if ($repairOut -notmatch 'repair:|Repair done|binary missing') {
+            throw "doctor --repair did not exercise repair path (no expected status line)"
+          }
           & $bin share --bundle
           if (-not (Test-Path "review-pack\evidence-bundle.html")) { throw "missing bundle" }
           # sock must fail clearly on Windows
@@ -98,7 +104,10 @@ jobs:
           git commit --allow-empty -m init -q
           "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy
           "$GITHUB_WORKSPACE/bin/curbpack" check
-          "$GITHUB_WORKSPACE/bin/curbpack" doctor --repair || true
+          # doctor --repair must fail the job on error (no || true)
+          REPAIR_OUT=$("$GITHUB_WORKSPACE/bin/curbpack" doctor --repair 2>&1)
+          echo "$REPAIR_OUT"
+          echo "$REPAIR_OUT" | grep -Eqi 'repair:|Repair done|binary missing'
       - name: Offline smoke — CRA fixture
         run: |
           set -euo pipefail
@@ -252,9 +261,10 @@ jobs:
           ps1 = (root/"scripts/install.ps1").read_text()
           assert "curbpack_windows_amd64.exe" in ps1
           assert "-Repair" in ps1 or "Repair" in ps1
-          # Action remains Linux/macOS only honesty
+          # Action remains Linux/macOS only honesty (real assert — no or True)
           action = (root/"action.yml").read_text()
-          assert "windows" not in action.lower() or "Linux/macOS" in action or True
+          assert "Linux/macOS" in action, "action.yml must state Linux/macOS runners"
+          assert "not Windows runners" in action, "action.yml must state not Windows runners"
           print("manifest/release/install parity ok", sorted(assets))
           PY
       - name: Heal smoke + baseline ratchet + dead-ends

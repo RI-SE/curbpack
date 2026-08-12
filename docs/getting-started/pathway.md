@@ -80,7 +80,7 @@ Shared phase vocabulary: seed → GateFailure statechart → ContextPack → `pa
 
 Deterministic closed-world pack suggest → guarded HITL confirms → RKG house draft → check/share → human attest → client-side proof verify.
 
-CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.5.0`**.
+CLI exit codes remain source of truth. Chat and MCP never stamp confirms or attest. Catalog stays frozen to `house-policy`, `cra-baseline`, `medtech-iec62304` (plus imported partner packs). Pin Action examples at **`@v0.5.2`**.
 
 ### Phase vocabulary (canonical)
 

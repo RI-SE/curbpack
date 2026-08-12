@@ -12,7 +12,7 @@ Curbpack is a **standalone** public OSS product. Strangers must be able to adopt
 
 - Deterministic local **judge** + instrument panel + fail-open optional sock server.
 - Evidence habit for product repos — not CVE management, not a security program.
-- Pin stays `@v0.5.1` unless a contract-breaking change forces a later patch.
+- Pin stays `@v0.5.2` unless a contract-breaking change forces a later patch.
 - Pack catalog frozen to three ids until freeze review + partner habit proof unlock.
 - Authorities / CISO brief: [for-authorities](for-authorities.md). Glossary: [glossary-and-audience](glossary-and-audience.md).
 

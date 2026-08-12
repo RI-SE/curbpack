@@ -25,7 +25,7 @@ irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 |
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
-Then: `curbpack doctor` → `demo` → `init` → `check` → `share [--bundle]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update). Hub: `docs/getting-started/install.md`.
+Then: `curbpack doctor` → `demo` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/getting-started/install.md`.
 
 ## When to use
 
@@ -41,7 +41,7 @@ Then: `curbpack doctor` → `demo` → `init` → `check` → `share [--bundle]`
 ```bash
 curbpack                 # doctor if uninitialized, else check
 curbpack doctor
-curbpack doctor --repair     # local PATH/alias only — no download
+curbpack doctor --repair     # local PATH/alias only — no download (Windows: install.ps1 -Repair)
 curbpack demo
 curbpack init            # house-policy default; --profile house|cra|medtech (--packs wins)
 curbpack init --packs cra-baseline,house-policy
@@ -55,7 +55,7 @@ curbpack export --watchlist-join
 curbpack export --lay-of-land
 curbpack export --buyer-questions
 curbpack export --context-pack   # one washed assistant artifact (prefer this)
-curbpack share [--bundle]        # check → context-pack → buyer-questions → prepare-release
+curbpack share [--bundle] [--reveal]  # Attach: abs paths; --reveal opens Explorer/Finder
 curbpack drift [--json]          # evidence checklist — exit 0 always (not a compliance meter)
 curbpack pathway status          # one next ask (human default; --technical for phase)
 curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes

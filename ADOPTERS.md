@@ -1,6 +1,6 @@
 # Adopters
 
-Opt-in list. Add your org or project if you run Curbpack Action `@v0.5.0` or `curbpack init` + hooks and want a public nod.
+Opt-in list. Add your org or project if you run Curbpack Action `@v0.5.2` or `curbpack init` + hooks and want a public nod.
 
 Gate green means **ready for human review** — not certification.
 

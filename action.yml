@@ -1,5 +1,5 @@
 name: 'Curbpack Check'
-description: 'Run Curbpack evidence gates on a product repo (Linux/macOS Action runners only). Prepares human-review evidence — not a conformity assessment.'
+description: 'Run Curbpack evidence gates on a product repo (Linux/macOS Action runners only — not Windows runners). Prepares human-review evidence — not a conformity assessment.'
 author: 'afelin'
 branding:
   icon: 'shield'

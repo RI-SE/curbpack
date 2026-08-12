@@ -33,13 +33,13 @@ curbpack demo              # sandbox; optional --open
 cd /path/to/your/product   # git repo
 curbpack init              # house-policy default; --profile cra|medtech
 curbpack check             # daily loop — exit code is authoritative
-curbpack share             # optional --bundle for offline evidence-bundle.html
+curbpack share             # optional --bundle; --reveal opens review-pack in Explorer/Finder
 # human only when ready:
 curbpack attest
 # verify: proof/index.html vs hpurl-pointer.json
 ```
 
-On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff. Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update).
+On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff (`Attach:` lines print absolute paths for Outlook/Teams). Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also: `install.ps1 -Repair`).
 
 ## Three ways in
 
@@ -63,6 +63,7 @@ Depth: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway gu
 | **Review pack** | `prepare-release` or `share` | Layered reports for human review |
 | **Buyer one-pager** | After green + `share` | Supplier evidence summary HTML you hand to a buyer |
 | **Evidence bundle** | `share --bundle` | Offline `review-pack/evidence-bundle.html` with embedded hpurl pointer |
+| **Reveal / Attach** | `share --reveal` | Opens review-pack (or bundle) in Explorer/Finder; stdout `Attach: <abs path>` on every OS |
 | **Drift checklist** | `curbpack drift` | Multi-signal human checklist (exit 0; not a compliance meter) |
 | **Attest capsule** | Human `attest` when ready | Git Notes hash bind—**unsigned ≠ verified** |
 | **Proof page** | After attest | Local `proof/index.html` vs evidence pointer—still human judgment |

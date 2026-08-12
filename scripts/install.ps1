@@ -67,7 +67,9 @@ function Write-Marker {
   } | ConvertTo-Json
   $path = Get-MarkerPath
   $null = New-Item -ItemType Directory -Force -Path (Split-Path $path)
-  Set-Content -Path $path -Value $marker -Encoding utf8
+  # UTF-8 without BOM (Windows PowerShell 5.1 Set-Content -Encoding utf8 writes BOM)
+  $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllText($path, ($marker + [Environment]::NewLine), $utf8NoBom)
   Write-Host "Marker:    $path"
 }
 
@@ -182,6 +184,7 @@ try {
   try {
     Move-Item -Force -Path $newPath -Destination $dest
   } catch {
+    Remove-Item -Force -Path $newPath -ErrorAction SilentlyContinue
     Write-Error "access denied replacing $dest — close running curbpack.exe and retry (or Defender quarantine → full reinstall). $_"
     exit 1
   }
