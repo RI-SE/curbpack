@@ -3,9 +3,17 @@ package attest
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+func skipSSHAgentOnWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("ssh-agent signing path is Unix-oriented (SSH_AUTH_SOCK / shell fakes)")
+	}
+}
 
 func TestAgentBindNeverVerified(t *testing.T) {
 	t.Setenv("SSH_AUTH_SOCK", "")
@@ -27,6 +35,7 @@ func TestAgentBindNeverVerified(t *testing.T) {
 }
 
 func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
+	skipSSHAgentOnWindows(t)
 	bin := t.TempDir()
 	installFakeSSH(t, bin, false, "")
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
@@ -84,6 +93,7 @@ func TestTrySSHAgentSign_DashFIsKeyNotPayload(t *testing.T) {
 }
 
 func TestTrySSHAgentSign_RejectsAgentBindOutput(t *testing.T) {
+	skipSSHAgentOnWindows(t)
 	bin := t.TempDir()
 	installFakeSSH(t, bin, true, `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests fake@cyberready`)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
@@ -118,6 +128,7 @@ func TestIdentityFromSSHAddLine_UnnamedKey(t *testing.T) {
 }
 
 func TestTrySSHAgentSign_MultiWordCommentIdentity(t *testing.T) {
+	skipSSHAgentOnWindows(t)
 	bin := t.TempDir()
 	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests yubi key laptop"
 	installFakeSSH(t, bin, false, line)
@@ -134,6 +145,7 @@ func TestTrySSHAgentSign_MultiWordCommentIdentity(t *testing.T) {
 }
 
 func TestTrySSHAgentSign_UnnamedKeyIdentity(t *testing.T) {
+	skipSSHAgentOnWindows(t)
 	bin := t.TempDir()
 	line := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeKeyMaterialForCurbpackTests"
 	installFakeSSH(t, bin, false, line)

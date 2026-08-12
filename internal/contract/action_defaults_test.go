@@ -3,6 +3,7 @@ package contract_test
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -11,12 +12,15 @@ func TestActionHealDefaultFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// CRLF-tolerant: Windows checkouts may retain \r\n; allow optional CR in the regex.
+	text := strings.ReplaceAll(string(b), "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
 	// Fail-closed: heal must default false (opt-in stubs only).
-	re := regexp.MustCompile(`(?m)^  heal:\n(?:.*\n){0,4}    default: 'false'`)
-	if !re.Match(b) {
+	re := regexp.MustCompile(`(?m)^  heal:\r?\n(?:.*\r?\n){0,4}    default: 'false'`)
+	if !re.MatchString(text) {
 		t.Fatal("action.yml heal default must be 'false'")
 	}
-	if regexp.MustCompile(`(?m)^  heal:\n(?:.*\n){0,4}    default: 'true'`).Match(b) {
+	if regexp.MustCompile(`(?m)^  heal:\r?\n(?:.*\r?\n){0,4}    default: 'true'`).MatchString(text) {
 		t.Fatal("action.yml heal must not default to 'true'")
 	}
 }

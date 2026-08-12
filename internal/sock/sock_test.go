@@ -14,6 +14,9 @@ import (
 )
 
 func TestValidateDeltaIPC(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix sock IPC is Unix-only")
+	}
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -70,6 +73,15 @@ func TestDefaultPathNotSharedTmp(t *testing.T) {
 	t.Setenv("CURBPACK_SOCK", "")
 	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
 	p, err := sock.DefaultPath()
+	if runtime.GOOS == "windows" {
+		if err == nil {
+			t.Fatal("expected Unix-only error on Windows")
+		}
+		if !strings.Contains(err.Error(), "Unix-only") {
+			t.Fatalf("want Unix-only error, got %v", err)
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,6 +94,9 @@ func TestDefaultPathNotSharedTmp(t *testing.T) {
 }
 
 func TestExplainPacketIPC(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix sock IPC is Unix-only")
+	}
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)

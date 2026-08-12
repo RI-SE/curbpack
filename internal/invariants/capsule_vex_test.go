@@ -3,6 +3,7 @@ package invariants_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/afelin/curbpack/internal/attest"
@@ -53,7 +54,12 @@ func TestPathTraversalFailClosed(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected traversal refuse")
 	}
-	_, _, err = validate.SafeJoin(dir, "/etc/passwd")
+	// On Windows, "/etc/passwd" is not filepath.IsAbs — use a real abs probe.
+	absProbe := "/etc/passwd"
+	if runtime.GOOS == "windows" {
+		absProbe = `C:\Windows\System32\drivers\etc\hosts`
+	}
+	_, _, err = validate.SafeJoin(dir, absProbe)
 	if err == nil {
 		t.Fatal("expected abs refuse")
 	}

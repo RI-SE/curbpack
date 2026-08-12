@@ -1,6 +1,8 @@
 package exportx
 
 import (
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -28,11 +30,19 @@ func TestScrubHomePrefixes_RootHomeWouldNotWipe(t *testing.T) {
 }
 
 func TestRepoRelativePrefer(t *testing.T) {
-	rel, ok := repoRelative("/home/runner/work/r/r/SECURITY.md", "/home/runner/work/r/r")
-	if !ok || rel != "SECURITY.md" {
+	root := "/home/runner/work/r/r"
+	inside := "/home/runner/work/r/r/SECURITY.md"
+	outside := "/etc/passwd"
+	if runtime.GOOS == "windows" {
+		root = `C:\Users\runner\work\r\r`
+		inside = `C:\Users\runner\work\r\r\SECURITY.md`
+		outside = `C:\Windows\System32\drivers\etc\hosts`
+	}
+	rel, ok := repoRelative(inside, root)
+	if !ok || filepath.ToSlash(rel) != "SECURITY.md" {
 		t.Fatalf("got rel=%q ok=%v", rel, ok)
 	}
-	if _, ok := repoRelative("/etc/passwd", "/home/runner/work/r/r"); ok {
+	if _, ok := repoRelative(outside, root); ok {
 		t.Fatal("outside repo must not relativize")
 	}
 }
