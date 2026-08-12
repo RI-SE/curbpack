@@ -103,7 +103,10 @@ func Run(opts Options) (Result, error) {
 	score := tty.ScoreFromFailures(len(failures))
 	parent, err := gitutil.HeadSHA(root)
 	if err != nil {
-		return Result{}, fmt.Errorf("cannot resolve HEAD for OCC parent: %w", err)
+		if !opts.Quiet {
+			tty.WarnOCCParent("HEAD unresolved; OCC parent omitted (best-effort): " + err.Error())
+		}
+		parent = ""
 	}
 	parentPath := []string{"Root", "ActiveVerification", "PackEval"}
 	if seed, serr := pathway.Load(root); serr == nil && seed != nil {

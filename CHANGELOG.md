@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
+
 ## v0.5.1
 
 Safe level-up adoption train — Gate 0 blocker fixes before UX commands.

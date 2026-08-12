@@ -83,3 +83,8 @@ func ScoreFromFailures(n int) int {
 func WarnCacheWrite(msg string) {
 	fmt.Fprintf(os.Stderr, "%s\n", C(Dim, "[cache] "+msg))
 }
+
+// WarnOCCParent prints a dim stderr note when OCC parent SHA is omitted (best-effort).
+func WarnOCCParent(msg string) {
+	fmt.Fprintf(os.Stderr, "%s\n", C(Dim, "[occ] "+msg))
+}
