@@ -38,7 +38,7 @@ Footer / authorities / NOTICE-aligned. Never endorsement:
 | research brief | allowlisted Sources (informational; never gates check) | regulation chat KB / open-web RAG as SoR |
 | cite-check | refuses uncited Claims before confirm-prose | inventing regulation text |
 | dual-draft + Recommended A\|B | human pick; record last_draft_pick | auto-apply / auto-attest |
-| confirm (TTY or `--i-am-human`) | human-owned ticks | agent auto-confirm |
+| confirm (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) | human-owned ticks | agent auto-confirm |
 
 **Mnemonic:** *Curb outlines → packs → check → hand off.*
 

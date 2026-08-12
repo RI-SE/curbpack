@@ -16,7 +16,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 ### Pilot deploy + freeze
 
-- Grade: `./scripts/redteam-pilot.sh` must be green (**15/15** cases).
+- Grade: `./scripts/redteam-pilot.sh` must be green (**18/18** cases).
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
 - Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, packs SHA256 pin, demo `--out` jail.
 - Pin: Action/consumers use `@v0.5.2` (prefer tag + commit SHA).

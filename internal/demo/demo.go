@@ -181,7 +181,7 @@ func Run(opts Options) error {
 	}
 	fmt.Printf("%s\n", tty.C(tty.Dim, "next on your repo: curbpack init && curbpack check"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, "habit: check → instrument Δ + covenant · docs/getting-started/daily-loop.md"))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/curbpack@v0.5.2  (heal: true) — Action = Linux/macOS runners"))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "CI-only: uses: afelin/curbpack@v0.5.2  (heal opt-in; default false) — Action = Linux/macOS runners"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
 	return nil
 }

@@ -229,6 +229,14 @@ func cmdInit(args []string) error {
 	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
 
+	if added, gerr := ensureCurbpackGitignore(root); gerr != nil {
+		return gerr
+	} else if len(added) > 0 {
+		tty.PrintStatus(".gitignore", true, "cache/evidence ignored ("+strings.Join(added, ", ")+")")
+	} else {
+		tty.PrintStatus(".gitignore", true, "cache/evidence already ignored")
+	}
+
 	// Opinionated cold start: house-policy + hooks/skill/ide unless --bare.
 	// Workflow is opt-in (--workflow) to avoid surprising CI commits.
 	packList := []string{"house-policy"}
@@ -489,6 +497,7 @@ func cmdCheck(args []string) error {
 	var res validate.Result
 	var lastHints []formhints.Hint
 	checkDiff := diffOnly
+	stubsWritten := 0
 	for round := 0; round <= healMaxRounds; round++ {
 		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: checkDiff, Quiet: jsonOut})
 		if err != nil {
@@ -513,6 +522,7 @@ func cmdCheck(args []string) error {
 				applied++
 			}
 		}
+		stubsWritten += applied
 		if !jsonOut {
 			fmt.Printf("%s\n", tty.C(tty.Yellow, fmt.Sprintf("heal round %d/%d: applied %d missing stub(s); re-checking…", round+1, healMaxRounds, applied)))
 		}
@@ -538,6 +548,9 @@ func cmdCheck(args []string) error {
 		} else {
 			fmt.Printf("readiness=%d%% gates=green\n", res.Score)
 		}
+		if heal && stubsWritten > 0 {
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
+		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
 		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Score, nowInst) {
@@ -549,6 +562,9 @@ func cmdCheck(args []string) error {
 	} else {
 		if tty.IsTerminal {
 			tty.RenderThermometer(res.Score)
+		}
+		if heal && stubsWritten > 0 {
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
 		}
 		// Failures: top 3 + ask pointer (no log archaeology).
 		fmt.Println(topFailuresSummary(res, 3))

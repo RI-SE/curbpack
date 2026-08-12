@@ -2,7 +2,7 @@
 
 **Warm-start and research help you choose a draft; only check decides pass/fail—not certification.**
 
-> **Humans above the fold.** Agents may `status` / `suggest` / `note` / `check` / `share` only. Confirms and attest are human-run: use a TTY, pass `--i-am-human`, or set `CURBPACK_ALLOW_CONFIRM=1`. Agents stop — never forge ticks.
+> **Humans above the fold.** Agents may `status` / `suggest` / `note` / `check` / `share` only. Confirms and attest are human-run: pass `--i-am-human` or set `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough). Agents stop — never forge ticks.
 
 One next ask. Optional two drafts with a recommendation. Then check. Humans confirm and attest—agents never stamp those.
 
@@ -18,7 +18,7 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 > First build **curb outlines** (optional warm-start). Then choose packs, write or bring docs, run **curb check**. Assistants may draft; only check decides pass/fail. Bring/CI skip outlines.
 
-Any way in ends in a review pack for a human to judge and optionally `attest`. Confirms need a TTY, `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`.
+Any way in ends in a review pack for a human to judge and optionally `attest`. Confirms need `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough).
 
 ```mermaid
 flowchart TD
@@ -50,14 +50,14 @@ flowchart TD
 curbpack pathway status          # one plain-English next ask (default)
 curbpack pathway suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=…
 # --house-first is reserved (accepted, currently a no-op)
-# human (TTY or --i-am-human): pathway confirm-packs --i-am-human
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1): pathway confirm-packs --i-am-human
 curbpack research                # optional allowlisted brief — never gates check
 # agent/human: two drafts + Recommended A|B → you pick → cite-check
 curbpack research --cite-check <draft.md>
-# human (TTY or --i-am-human): pathway confirm-prose --i-am-human
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1): pathway confirm-prose --i-am-human
 curbpack check
 curbpack share
-# human (TTY or --i-am-human): pathway confirm-share --i-am-human → attest → open proof/index.html
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1): pathway confirm-share --i-am-human → attest → open proof/index.html
 ```
 
 Optional session memory (not a gate input): `curbpack pathway note --set …` / `--forget …` — short notes, corrections, and `last_draft_pick` live in `pathway-seed.json`.
@@ -144,14 +144,14 @@ curbpack pathway suggest \
 ### HITL checklist
 
 - [ ] `pathway suggest` → review `proposed_packs`
-- [ ] Human: `pathway confirm-packs --i-am-human` (or TTY; exports RKG)
+- [ ] Human: `pathway confirm-packs --i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`; exports RKG)
 - [ ] `curbpack research` (optional `--fetch`) — never gates check
 - [ ] Dual draft + Recommended A|B → human pick → `pathway note --set last_draft_pick=…`
 - [ ] `init --packs …` + `check --heal` + edit with cite markers
 - [ ] `curbpack research --cite-check <draft.md>` green (refuses uncited Claims)
-- [ ] Human: `pathway confirm-prose --i-am-human` (or TTY)
+- [ ] Human: `pathway confirm-prose --i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`)
 - [ ] `check` green (or shareable red with ContextPack)
-- [ ] `share` → human: `pathway confirm-share --i-am-human` (or TTY)
+- [ ] `share` → human: `pathway confirm-share --i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`)
 - [ ] Human: `attest` (agents **stop** here)
 - [ ] Human: open `proof/index.html` + paste pointer `state_hash`
 
@@ -198,7 +198,7 @@ Fixed string on every seed write:
 ```bash
 curbpack pathway status
 curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
-# human (TTY or --i-am-human):
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1):
 curbpack pathway confirm-packs --i-am-human
 curbpack init --packs house-policy
 curbpack research
@@ -206,11 +206,11 @@ curbpack check --heal
 # dual draft + recommend → human pick →:
 curbpack pathway note --set last_draft_pick=A
 curbpack research --cite-check SECURITY.md
-# human (TTY or --i-am-human):
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1):
 curbpack pathway confirm-prose --i-am-human
 curbpack check
 curbpack share
-# human (TTY or --i-am-human):
+# human (--i-am-human or CURBPACK_ALLOW_CONFIRM=1):
 curbpack pathway confirm-share --i-am-human
 # STOP — human only: attest → proof/index.html verify
 ```

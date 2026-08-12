@@ -13,7 +13,7 @@ import (
 )
 
 // Action-equivalent smoke: uninitialized repo (no .curbpack.json) + heal stubs.
-// Mirrors Action heal:true — ResolvePackIDs falls back to house-policy.
+// Mirrors Action with heal:true opt-in (Action default is false) — ResolvePackIDs falls back to house-policy.
 func TestUninitializedHealGreensOrDeterministicRed(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)

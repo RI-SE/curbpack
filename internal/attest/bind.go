@@ -35,7 +35,7 @@ func HeadCommit(repoRoot string) (string, error) {
 
 // LatestBind resolves the last human attest bind:
 //  1. hpurl-pointer.json → verify note on commit
-//  2. git log -1 --notes=curbpack (then cyberready fallback)
+//  2. LatestNoteCommit (notes list / HEAD walk; curbpack then cyberready)
 func LatestBind(repoRoot string) (BindInfo, error) {
 	info := BindInfo{}
 	ptrPath := filepath.Join(repoRoot, ".github", "curbpack", "evidence", "hpurl-pointer.json")

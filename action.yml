@@ -19,11 +19,11 @@ inputs:
     required: false
     default: 'false'
   heal:
-    description: 'If true, run check --heal (missing stubs only; never attest)'
+    description: 'If true, run check --heal (missing stubs only; never attest). Default false — opt in explicitly; scaffold ≠ readiness.'
     required: false
-    default: 'true'
+    default: 'false'
   prepare_release:
-    description: 'If true, also run prepare-release and upload buyer-onepager'
+    description: 'If true, run prepare-release. On green uploads buyer-onepager; on red uploads curbpack-REMEDIATION-REVIEW only (not release sign-off).'
     required: false
     default: 'true'
   comment_pr:
@@ -60,6 +60,14 @@ runs:
       run: |
         set -euo pipefail
         OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        # Action runners = Linux/macOS only. Local Windows CLI is separate (install.ps1).
+        case "$OS" in
+          mingw*|msys*|cygwin*|windows*)
+            echo "::error::Curbpack Action supports Linux/macOS runners only. On Windows use the local CLI (install.ps1), not this Action."
+            echo "Curbpack Action supports Linux/macOS runners only. On Windows use the local CLI (install.ps1), not this Action." >&2
+            exit 1
+            ;;
+        esac
         ARCH=$(uname -m)
         case "$ARCH" in
           x86_64|amd64) ARCH=amd64 ;;
@@ -160,6 +168,10 @@ runs:
         else
           echo "passed=false" >> "$GITHUB_OUTPUT"
         fi
+        if [ "${{ inputs.heal }}" = "true" ] && grep -qE 'applied [1-9][0-9]* missing stub|scaffold green ≠ readiness|heal wrote missing stubs' /tmp/curbpack-check.txt; then
+          echo "::warning::scaffold green ≠ readiness / not certification — heal wrote missing stubs only"
+          echo "HEAL STUBS WRITTEN — scaffold green ≠ readiness / not a certification" >&2
+        fi
         mkdir -p .github/curbpack/cache
         cp /tmp/curbpack-check.txt .github/curbpack/cache/ci-check-log.txt || true
         exit 0
@@ -214,7 +226,7 @@ runs:
         category: curbpack
 
     - name: Prepare release artifacts
-      if: inputs.prepare_release == 'true'
+      if: inputs.prepare_release == 'true' && steps.run.outputs.passed == 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       run: |
@@ -224,7 +236,23 @@ runs:
         if [ -n "${{ inputs.packs }}" ]; then
           EXTRA+=(--packs "${{ inputs.packs }}")
         fi
+        "$BIN" prepare-release "${EXTRA[@]}"
+
+    - name: Prepare remediation review pack (red only)
+      if: inputs.prepare_release == 'true' && steps.run.outputs.passed != 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        set -euo pipefail
+        BIN="${{ steps.bin.outputs.path }}"
+        EXTRA=()
+        if [ -n "${{ inputs.packs }}" ]; then
+          EXTRA+=(--packs "${{ inputs.packs }}")
+        fi
+        echo "::warning::REMEDIATION REVIEW only — gates red; prepare-release output is not release sign-off"
+        echo "REMEDIATION REVIEW only — gates red; not a release pack / not certification" >&2
         "$BIN" prepare-release "${EXTRA[@]}" || true
+        echo "summary=REMEDIATION REVIEW only — gates failing; not release sign-off" >> "$GITHUB_STEP_SUMMARY" || true
 
     - name: Read score
       id: score
@@ -242,10 +270,22 @@ runs:
         echo "score=${SCORE}" >> "$GITHUB_OUTPUT"
 
     - name: Upload buyer-onepager
-      if: inputs.prepare_release == 'true'
+      if: inputs.prepare_release == 'true' && steps.run.outputs.passed == 'true'
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: curbpack-buyer-onepager
+        path: |
+          ${{ inputs.working_directory }}/review-pack/buyer-onepager.html
+          ${{ inputs.working_directory }}/.github/curbpack/cache/latest_action_report.md
+          ${{ inputs.working_directory }}/.github/curbpack/cache/latest_failure.json
+          ${{ inputs.working_directory }}/.github/curbpack/cache/curbpack.sarif
+        if-no-files-found: warn
+
+    - name: Upload REMEDIATION REVIEW pack
+      if: inputs.prepare_release == 'true' && steps.run.outputs.passed != 'true'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: curbpack-REMEDIATION-REVIEW
         path: |
           ${{ inputs.working_directory }}/review-pack/buyer-onepager.html
           ${{ inputs.working_directory }}/.github/curbpack/cache/latest_action_report.md
@@ -369,7 +409,7 @@ runs:
             '<!-- curbpack-sticky -->',
             '## Curbpack check',
             '',
-            `**Readiness:** ${score}% \`${thermo}\` — ${passed ? 'gates green' : 'gates need attention'}`,
+            passed ? `**Readiness:** ${score}% \`${thermo}\` — gates green` : `**REMEDIATION REVIEW** — readiness ${score}% \`${thermo}\` — gates red (not release sign-off)`,
             '',
             fails.length ? '### Top findings\n' + fails.join('\n') : '### Top findings\n_No gate failures in cache._',
             '',

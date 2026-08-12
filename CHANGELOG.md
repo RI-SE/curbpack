@@ -2,9 +2,10 @@
 
 ## Unreleased
 
+- **Premortem production fixes (PR #57)** — `init` gitignores cache/evidence; Action `heal` default **false** + scaffold≠readiness warning; pathway confirm requires `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` (TTY alone refused); `LatestNoteCommit` walks notes (not HEAD-without-note); Action refuses Windows runners + red `REMEDIATION REVIEW` artifacts; claim-safety scans `*.ps1`; redteam **18/18**; maintainer playbook [`docs/getting-started/release-v0.5.2.md`](docs/getting-started/release-v0.5.2.md)
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
 - **Cross-OS TAM hardening** — gauntlet Action honesty assert (no `or True`); `doctor --repair` fail-closed after LookPath; marker BOM-safe + custom InstallDir; CI repair smoke without `|| true`; completions for `drift` / `--repair` / `--bundle` / `--reveal`; atomic `.new` cleanup; `share --reveal` empty-message; docs pin sweep `@v0.5.2`
-- **Note:** annotated **`v0.5.2` release tag is cut after this PR merges** (not before) — pin advertising waits for green CI + release assets
+- **Note:** annotated **`v0.5.2` release tag is cut after this PR merges** (not before) — pin advertising waits for green CI + release assets; follow the release playbook
 
 ## v0.5.2
 

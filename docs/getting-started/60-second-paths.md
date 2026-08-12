@@ -12,7 +12,7 @@ Same local `check` for all three — Write adds optional draft choice first; Bri
 
 | Way | What you do |
 |-----|-------------|
-| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (TTY or `--i-am-human`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
+| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then `check`. No portal PDF ingest. |
 | **CI** | Action-only (or local `check` alone). Pin **`@v0.5.2`**. Action = Linux/macOS runners. |
 
@@ -71,7 +71,7 @@ Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On 
 
 1. Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack-check.yml) → `.github/workflows/curbpack.yml`.
 2. Push / open a PR. Pin stays **`@v0.5.2`**. Action = Linux/macOS only. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
-3. Expect: uninitialized repos resolve **`house-policy`**; with `heal: true`, missing stubs are written; green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
+3. Expect: uninitialized repos resolve **`house-policy`**; Action `heal` defaults to **false**; set `heal: true` to write missing stubs (scaffold ≠ readiness). Green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
 
 Optional local equivalent: `curbpack init --workflow` writes the same drop-in workflow **only if missing** (never overwrites; not enabled by default `init`).
 

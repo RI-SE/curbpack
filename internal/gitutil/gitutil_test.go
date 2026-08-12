@@ -72,6 +72,40 @@ func TestHeadSHA_AuditMatrix(t *testing.T) {
 	})
 }
 
+func TestLatestNoteCommit_skipsHeadWithoutNote(t *testing.T) {
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "commit", "--allow-empty", "-m", "c1", "-q")
+	c1, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gitutil.NotesAdd(dir, c1, `{"state_hash":"note-on-c1"}`); err != nil {
+		t.Fatal(err)
+	}
+	run("git", "commit", "--allow-empty", "-m", "c2", "-q")
+	c2, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := gitutil.LatestNoteCommit(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != c1 {
+		t.Fatalf("LatestNoteCommit = %q want c1 %q (not HEAD %q)", got, c1, c2)
+	}
+}
+
 func TestParentNoteHash_JSON(t *testing.T) {
 	dir := t.TempDir()
 	initGitRepo(t, dir)

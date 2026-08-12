@@ -103,7 +103,7 @@ while IFS= read -r f; do
 done < <(
   find README.md SECURITY.md NOTICE LICENSE AGENTS.md CLAUDE.md docs papers site .cursor/skills internal/skilldata action.yml examples \
     .github/ISSUE_TEMPLATE .github/workflows .github/copilot-instructions.md scripts \
-    \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name '*.html' -o -name '*.txt' -o -name 'LICENSE' -o -name 'NOTICE' -o -name 'copilot-instructions.md' \) \) \
+    \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name '*.ps1' -o -name '*.html' -o -name '*.txt' -o -name 'LICENSE' -o -name 'NOTICE' -o -name 'copilot-instructions.md' \) \) \
     2>/dev/null | grep -v 'scripts/claim-safety\.sh$' | grep -v '/gtm-oss/' | grep -v 'workflows/pages\.yml$' | sort -u
 )
 

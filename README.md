@@ -99,7 +99,7 @@ Action runners are **Linux/macOS only** (local Windows CLI is supported separate
 ```yaml
 - uses: afelin/curbpack@v0.5.2
   with:
-    heal: "true"
+    heal: "true" # opt-in; Action default is false (scaffold ≠ readiness)
     comment_on: red
     upload_sarif: "true"
 ```
@@ -112,7 +112,7 @@ Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals
 
 **Compose, do not conquer:** Curbpack prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program. Boundary: [strategy boundary](docs/strategy-boundary.md).
 
-Confirms are human-only (TTY or `--i-am-human`). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
+Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 
 | Command | Purpose |
 |---------|---------|
@@ -126,7 +126,7 @@ Confirms are human-only (TTY or `--i-am-human`). Research briefs never gate pass
 | `share` | Thin recipe: check → context-pack → buyer-questions → prepare-release |
 | `pathway status` | One next ask (human default; `--technical` for phase path) |
 | `pathway suggest\|note` | Warm-start seed + session notes — not a gate input |
-| `pathway confirm-*` | Human only — TTY or `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` |
+| `pathway confirm-*` | Human only — `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` |
 | `research [--fetch]\|--cite-check` | Allowlisted citation packet + human brief — never gates check |
 | `completion bash\|zsh\|fish` | Print shell completions |
 | `sock` | Optional Unix IPC for integrators (continues if unused) |

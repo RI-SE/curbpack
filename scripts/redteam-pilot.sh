@@ -302,6 +302,8 @@ if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
    grep -q 'curbpack_windows_amd64.exe' scripts/install.ps1 && \
    grep -qi 'Linux/macOS' docs/getting-started/install.md && \
    ! grep -qiE 'runs-on:.*windows' action.yml && \
+   grep -q 'mingw\*|msys\*|cygwin\*|windows\*' action.yml && \
+   grep -A5 "^  heal:" action.yml | grep -q "default: 'false'" && \
    grep -q 'Unix-only' docs/stable-contracts.md; then
   ok "18 windows asset + Action Linux/macOS-only + sock Unix-only doc lock"
 else

@@ -1,6 +1,7 @@
 # Drop-in GitHub Action workflow for Curbpack.
 # Copy to .github/workflows/curbpack.yml — pin stays @v0.5.2.
 # Action runners = Linux/macOS only (local Windows CLI is separate).
+# heal defaults to false; this example opts in for missing-stub cold start.
 name: curbpack-check
 
 on:
@@ -22,7 +23,7 @@ jobs:
         uses: afelin/curbpack@v0.5.2
         with:
           version: v0.5.2
-          heal: "true"
+          heal: "true" # opt-in (Action default is false); scaffold ≠ readiness
           prepare_release: "true"
           comment_on: red
           upload_sarif: "true"

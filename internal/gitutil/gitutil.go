@@ -168,12 +168,41 @@ func ParentNoteHash(repoRoot, commit string) string {
 	return rest[:q2]
 }
 
-// LatestNoteCommit returns the most recent commit with a curbpack (or legacy cyberready) note.
+// LatestNoteCommit returns the most recent commit (from HEAD ancestry) that has a
+// curbpack or legacy cyberready note. Do not use `git log -1 --notes=… --format=%H`:
+// that returns HEAD even when HEAD has no note.
 func LatestNoteCommit(repoRoot string) (string, error) {
+	noted := map[string]struct{}{}
 	for _, ref := range []string{"curbpack", "cyberready"} {
-		out, err := runGit(repoRoot, "log", "-1", "--notes="+ref, "--format=%H")
-		if err == nil && out != "" {
-			return out, nil
+		out, err := runGit(repoRoot, "notes", "--ref="+ref, "list")
+		if err != nil || out == "" {
+			continue
+		}
+		for _, line := range strings.Split(out, "\n") {
+			fields := strings.Fields(line)
+			// notes list: <note-object> <commit>
+			if len(fields) >= 2 {
+				noted[fields[len(fields)-1]] = struct{}{}
+			}
+		}
+	}
+	if len(noted) == 0 {
+		return "", fmt.Errorf("no attest notes found")
+	}
+	revList, err := runGit(repoRoot, "rev-list", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	for _, commit := range strings.Split(revList, "\n") {
+		commit = strings.TrimSpace(commit)
+		if commit == "" {
+			continue
+		}
+		if _, ok := noted[commit]; ok {
+			// Dual-read show confirms the note body is readable.
+			if _, err := NotesShow(repoRoot, commit); err == nil {
+				return commit, nil
+			}
 		}
 	}
 	return "", fmt.Errorf("no attest notes found")
