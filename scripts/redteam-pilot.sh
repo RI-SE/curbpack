@@ -245,6 +245,57 @@ else
   bad "15 demo --out jail regression"
 fi
 
+# --- 16) share --bundle offline schema marker ---
+TMPB="$(mktemp -d)"
+set +e
+(
+  set -e
+  cd "$TMPB"
+  git init -q
+  git config user.email "redteam@curbpack.local"
+  git config user.name "Redteam"
+  git commit --allow-empty -m init -q
+  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" share --bundle >/dev/null 2>&1 || true
+  test -f review-pack/evidence-bundle.html
+  grep -q 'curbpack-bundle-schema:1' review-pack/evidence-bundle.html
+)
+bundle_code=$?
+set -e
+rm -rf "$TMPB"
+if [[ "$bundle_code" -eq 0 ]]; then
+  ok "16 share --bundle offline evidence-bundle schema"
+else
+  bad "16 share --bundle must write evidence-bundle.html with schema marker"
+fi
+
+# --- 17) drift: attest then commit → attest_commit_behind ---
+TMPD="$(mktemp -d)"
+set +e
+(
+  set -e
+  cd "$TMPD"
+  export PATH="$(dirname "$BIN"):$PATH"
+  git init -q
+  git config user.email "redteam@curbpack.local"
+  git config user.name "Redteam"
+  git commit --allow-empty -m init -q
+  "$BIN" init --packs house-policy >/dev/null
+  git add -A && git -c commit.gpgsign=false commit --no-verify -m stubs -q || true
+  "$BIN" attest --allow-dirty >/dev/null 2>&1 || "$BIN" attest >/dev/null 2>&1 || true
+  git commit --allow-empty --no-verify -m after-attest -q
+  out="$("$BIN" drift --json 2>/dev/null)"
+  echo "$out" | grep -q 'attest_commit_behind'
+)
+drift_code=$?
+set -e
+rm -rf "$TMPD"
+if [[ "$drift_code" -eq 0 ]]; then
+  ok "17 drift attest_commit_behind after new commit"
+else
+  bad "17 drift must emit attest_commit_behind when HEAD moves past bind"
+fi
+
 echo ""
 echo "redteam-pilot: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -gt 0 ]]; then

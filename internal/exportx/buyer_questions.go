@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/afelin/curbpack/internal/attest"
-	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/validate"
 )
@@ -171,21 +170,13 @@ func mdCell(s string) string {
 	return s
 }
 
-// attestationStatus returns none | ssh-agent (best-effort notes read; default none).
+// attestationStatus returns none | ssh-agent via LatestBind (not HEAD-only).
 func attestationStatus(root string) string {
-	commit, err := gitutil.HeadSHA(root)
-	if err != nil || commit == "" || commit == "unknown" {
+	bind, _ := attest.LatestBind(root)
+	if !bind.Found {
 		return "none"
 	}
-	body, err := gitutil.NotesShow(root, commit)
-	if err != nil || strings.TrimSpace(body) == "" {
-		return "none"
-	}
-	var cap attest.Capsule
-	if json.Unmarshal([]byte(body), &cap) != nil {
-		return "none"
-	}
-	if cap.UserTouch == "ssh-agent-signed" && cap.SSHSignature != "" && !strings.HasPrefix(cap.SSHSignature, "agent-bind:") {
+	if bind.UserTouch == "ssh-agent-signed" && bind.StateHash != "" {
 		return "ssh-agent"
 	}
 	return "none"

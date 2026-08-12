@@ -1,15 +1,17 @@
 # Daily loop (habit)
 
-Value recurs without babysitting. Pin stays **`@v0.5.0`** until the next honesty cut. Gate green is evidence for human review — not certification.
+Value recurs without babysitting. Pin stays **`@v0.5.1`**. Gate green is evidence for human review — not certification.
 
 Three ways in (Write / Bring / CI) all land on the same local `check`; optional research briefs never gate pass/fail. See [60-second paths](60-second-paths.md).
 
 **Instrument panel pitch:** after every change (human or agent), one `curbpack check` yields an honest map for *this* repo — structural evidence, not a certificate. Keep hooks: they are the agent force-multiplier.
 
 ```text
-every PR  → Action @v0.5.0 (comment_on: red, upload_sarif) + hooks
+every PR  → Action @v0.5.1 (comment_on: red, upload_sarif) + hooks
 local day → curbpack check   # Δ readiness / deps / secret-hits + covenant
-release   → prepare-release → attest
+handoff   → curbpack share [--bundle]
+drift     → curbpack drift   # informational checklist (exit 0)
+release   → prepare-release → attest → proof verify
 optional  → export --lay-of-land · export --buyer-questions
 ```
 
@@ -32,7 +34,17 @@ When a prior evidence cache exists, quiet dim lines show `Δ readiness`, and (wh
 ```bash
 curbpack prepare-release
 curbpack attest   # human only; never auto
+# proof/index.html vs .github/curbpack/evidence/hpurl-pointer.json
 ```
+
+## Evidence drift (optional)
+
+```bash
+curbpack drift        # human checklist — exit 0 always
+curbpack drift --json
+```
+
+See [evidence-drift](evidence-drift.md).
 
 ## Self-dogfood
 

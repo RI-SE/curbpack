@@ -13,6 +13,7 @@ import (
 	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/demo"
+	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/doctor"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/formhints"
@@ -110,6 +111,8 @@ func Run(args []string) error {
 		return cmdExport(rest)
 	case "share":
 		return cmdShare(rest)
+	case "drift":
+		return cmdDrift(rest)
 	case "pathway":
 		return cmdPathway(rest)
 	case "research":
@@ -147,12 +150,13 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
 	fmt.Fprintf(os.Stderr, "  doctor           Environment confidence\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
-	fmt.Fprintf(os.Stderr, "  init [--bare] [--packs a,b] [--workflow]\n")
+	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
-	fmt.Fprintf(os.Stderr, "                   --workflow: write .github/workflows/curbpack.yml if missing\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle] check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
-	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule\n\n")
+	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule (then proof verify)\n\n")
 	fmt.Fprintf(os.Stderr, "Advanced:\n")
 	fmt.Fprintf(os.Stderr, "  validate [--json] [--delta]   Dual-rep gates (--delta not release-safe)\n")
 	fmt.Fprintf(os.Stderr, "  check --diff                  Delta mode — not release-gate safe\n")
@@ -160,7 +164,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
 	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
-	fmt.Fprintf(os.Stderr, "  share                         Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle]              Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  drift [--json]                Evidence drift checklist (informational; exit 0)\n")
 	fmt.Fprintf(os.Stderr, "  pathway status|suggest|confirm-packs|confirm-prose|confirm-share|note\n")
 	fmt.Fprintf(os.Stderr, "                                Warm-start seed + HITL ticks + session notes (sole writer of pathway-seed.json)\n")
 	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
@@ -212,6 +217,7 @@ func cmdInit(args []string) error {
 	ide := true
 	writeWorkflow := false
 	explicitPacks := false
+	explicitProfile := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
@@ -227,13 +233,25 @@ func cmdInit(args []string) error {
 		case strings.HasPrefix(a, "--packs="):
 			packList = config.ParsePacksFlag(strings.TrimPrefix(a, "--packs="))
 			explicitPacks = true
+		case a == "--profile" && i+1 < len(args):
+			if !explicitPacks {
+				packList = profilePacks(args[i+1])
+				explicitProfile = true
+			}
+			i++
+		case strings.HasPrefix(a, "--profile="):
+			if !explicitPacks {
+				packList = profilePacks(strings.TrimPrefix(a, "--profile="))
+				explicitProfile = true
+			}
 		case a == "--medtech":
 			if !explicitPacks {
-				packList = []string{"medtech-iec62304"}
+				packList = profilePacks("medtech")
+				explicitProfile = true
 			} else {
 				packList = appendUnique(packList, "medtech-iec62304")
 			}
-			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --packs medtech-iec62304 (extends cra-baseline)"))
+			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --profile medtech or --packs medtech-iec62304"))
 		case a == "--hooks":
 			hooks = true
 		case a == "--skill":
@@ -253,6 +271,7 @@ func cmdInit(args []string) error {
 	if len(packList) == 0 {
 		packList = []string{"house-policy"}
 	}
+	_ = explicitProfile // reserved for future init messaging
 
 	for _, id := range packList {
 		if _, err := packs.LoadPack(id); err != nil {
@@ -350,6 +369,19 @@ func appendUnique(in []string, id string) []string {
 		}
 	}
 	return append(in, id)
+}
+
+func profilePacks(name string) []string {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "house":
+		return []string{"house-policy"}
+	case "cra":
+		return []string{"cra-baseline"}
+	case "medtech":
+		return []string{"medtech-iec62304"}
+	default:
+		return []string{"house-policy"}
+	}
 }
 
 func installPreCommitHook(root string) error {
@@ -486,6 +518,9 @@ func cmdCheck(args []string) error {
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
 		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Score, nowInst) {
+			fmt.Printf("%s\n", tty.C(tty.Dim, line))
+		}
+		if line := drift.BindDriftLine(root); line != "" {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}
 	} else {

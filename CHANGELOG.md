@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## v0.5.1
+
+Safe level-up adoption train — Gate 0 blocker fixes before UX commands.
+
+- **HeadSHA** — fail-closed: empty repo returns error, never `000…0` with nil err; OCC parent in validate propagates
+- **LatestBind** — shared attest resolution (hpurl-pointer → verify note → git notes fallback); refactors release, export, view
+- **Drift** — `curbpack drift` multi-signal human checklist (exit 0 always; no boolean aligned/no_drift)
+- **Share bundle** — `share --bundle` → offline `evidence-bundle.html` with schema marker + hpurl embed
+- **Init profiles** — `--profile house|cra|medtech` (`--packs` wins); `--medtech` aligned with profile medtech
+- **Fingerprint** — cache-only `share_stale` without validate.Run; JSON ParentNoteHash; cache write warnings
+- **Templates** — buyer one-pager + proof HTML extracted to `internal/release/templates/` with golden fp tests
+- Pin Action / docs → `@v0.5.1`
+
 ## v0.5.0
 
 **Curbpack rebrand** (formerly CyberReady / CyberReady+). Same local pack gates and human-review loop; new product mark, module, and CLI.

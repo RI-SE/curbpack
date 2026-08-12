@@ -101,7 +101,10 @@ func Run(opts Options) (Result, error) {
 	}
 
 	score := tty.ScoreFromFailures(len(failures))
-	parent, _ := gitutil.HeadSHA(root)
+	parent, err := gitutil.HeadSHA(root)
+	if err != nil {
+		return Result{}, fmt.Errorf("cannot resolve HEAD for OCC parent: %w", err)
+	}
 	parentPath := []string{"Root", "ActiveVerification", "PackEval"}
 	if seed, serr := pathway.Load(root); serr == nil && seed != nil {
 		if phase, perr := pathway.DerivePhase(root, seed); perr == nil {
@@ -131,11 +134,20 @@ func Run(opts Options) (Result, error) {
 
 	action := ActionReportMarkdown(payload, skipped)
 	cacheDir := filepath.Join(root, ".github", "curbpack", "cache")
-	_ = os.MkdirAll(cacheDir, 0o755)
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		tty.WarnCacheWrite("mkdir cache: " + err.Error())
+	}
 	b, _ := json.MarshalIndent(payload, "", "  ")
-	_ = os.WriteFile(filepath.Join(cacheDir, "latest_failure.json"), b, 0o644)
-	_ = os.WriteFile(filepath.Join(cacheDir, "latest_result.json"), b, 0o644)
-	_ = os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644)
+	writeCache := func(name string) {
+		if err := os.WriteFile(filepath.Join(cacheDir, name), b, 0o644); err != nil {
+			tty.WarnCacheWrite("write " + name + ": " + err.Error())
+		}
+	}
+	writeCache("latest_failure.json")
+	writeCache("latest_result.json")
+	if err := os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644); err != nil {
+		tty.WarnCacheWrite("write latest_action_report.md: " + err.Error())
+	}
 
 	return Result{
 		Payload:      payload,

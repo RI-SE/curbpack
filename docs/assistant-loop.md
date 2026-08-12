@@ -4,18 +4,19 @@
 
 One contract for Cursor, Copilot, Claude, Codex, Windsurf, Cline, Aider, Continue, and CI-only paths. Assistants **run `curbpack`**, then read ContextPack / IR — they never invent gate results or certification claims. There is **no** chat knowledge base over regulation text (by design).
 
-Pin stays **`@v0.5.0`**. No pack unlock. Coreward is an optional external tutor pointer only — not part of activation.
+Pin stays **`@v0.5.1`**. No pack unlock. Optional tutor product: [Coreward pointer](coreward-pointer.md) — not part of activation.
 
 ## Canonical loop
 
 ```
+install → doctor → init → check → share [--bundle] → (human) attest → proof verify
+
 doc/dep edits → curbpack check (exit code authoritative)
   ├─ red  → check --heal → ask … --propose → re-check
   └─ green → optional export --context-pack / --buyer-questions
-             → prepare-release → human attest (never auto-attest)
+             → share / prepare-release → human attest (never auto-attest)
+optional → curbpack drift (multi-signal checklist; exit 0 always)
 ```
-
-Thin share recipe (same steps): `curbpack share` — see [buyer evidence](getting-started/buyer-evidence.md).
 
 Warm-start: `curbpack pathway status` — optional interview that suggests checklists (see [pathway](getting-started/pathway.md)). Agents may `status` / `suggest` / `note` / `check` / `share` only. Human confirms and attest: TTY or `--i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`) — never invent pack ids. Dual-draft when writing prose: Option A + Option B + **Recommended: A|B** → human pick → `research --cite-check` (refuses uncited Claims) → human `confirm-prose`. Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail). Three ways in (Write / Bring / CI) all end in the same local `check`.
 
@@ -33,7 +34,9 @@ Warm-start: `curbpack pathway status` — optional interview that suggests check
 | RKG | `.github/curbpack/graph/policy-graph.json` | Pack→rule navigation (exported on `confirm-packs`) |
 | buyer-questions / lay-of-land | export outputs | Human share |
 | HPURL pointer | `.github/curbpack/evidence/hpurl-pointer.json` | Post-attest client-side verify via `proof/index.html` |
-| hooks + Action | `init` / `@v0.5.0` | Force re-check loop |
+| hooks + Action | `init` / `@v0.5.1` | Force re-check loop |
+| drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](getting-started/evidence-drift.md)) |
+| evidence bundle | `share --bundle` | `review-pack/evidence-bundle.html` offline handoff |
 
 ```bash
 curbpack export --context-pack

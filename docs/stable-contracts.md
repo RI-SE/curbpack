@@ -64,7 +64,23 @@ Sock `Response` also exposes top-level `ok`, `reason`, `detail`, `failures`, `pa
 ## Compatibility rule
 
 - **Breaking** (rename/remove sock op, drop IR field, weaken airlock) → major pin bump + CHANGELOG.
-- **Additive** fields / optional ops documentation updates → OK within `@v0.4.x` after freeze review if needed.
+- **Additive** fields / optional ops documentation updates → OK within `@v0.5.x` after freeze review if needed.
 - New sock `case` without updating **this file** fails `redteam-pilot` (stable-contracts guard).
+
+## Drift report (`curbpack drift`)
+
+Informational only — **exit code always 0**. No boolean `aligned` / `no_drift` / `pass` / `green`.
+
+| Field | Notes |
+|-------|--------|
+| `schema` | `curbpack-drift-report:1` |
+| `signals[]` | `{ id, detail }` per signal (see [evidence-drift](getting-started/evidence-drift.md)) |
+| `suggested_actions[]` | Optional human hint strings |
+
+Cache-only fingerprint compare for `share_stale` — never runs `validate.Run` in the default path.
+
+## Share bundle
+
+`curbpack share --bundle` writes `review-pack/evidence-bundle.html` with `<!-- curbpack-bundle-schema:1 -->`, optional REMEDIATION banner on red gates, and embedded hpurl pointer JSON for offline verify.
 
 See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md)

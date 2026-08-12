@@ -33,11 +33,13 @@ curbpack demo                          # sandbox green + one-pager path (no brow
 
 ```bash
 cd my-product
-curbpack init                          # house-policy + hooks + skill + ide
+curbpack init                          # house-policy default; --profile cra|medtech
 curbpack check                         # or bare: curbpack / curb
+curbpack share                         # optional --bundle
+# human when ready: curbpack attest → proof/index.html
 ```
 
-On red: `curbpack check --heal` then `curbpack ask … --propose`, then re-check. After first green: `curbpack share` for the handoff recipe (review pack + buyer one-pager).
+On red: `curbpack check --heal` then `curbpack ask … --propose`, then re-check. After first green: `curbpack share` for the handoff recipe (review pack + buyer one-pager). Optional: `curbpack drift` (informational checklist, exit 0).
 
 ## Agent
 

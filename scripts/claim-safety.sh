@@ -167,6 +167,20 @@ if [[ -f "$FIX/review-pack/buyer-onepager.html" ]]; then
   scan_text "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
   scan_brand "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
 fi
+(
+  cd "$FIX"
+  "$BIN" share --bundle >"$TMP/share-bundle.out" 2>&1 || true
+)
+scan_text "share-bundle" "$TMP/share-bundle.out" || FAIL=1
+scan_brand "share-bundle" "$TMP/share-bundle.out" || FAIL=1
+if [[ -f "$FIX/review-pack/evidence-bundle.html" ]]; then
+  if ! grep -q 'curbpack-bundle-schema:1' "$FIX/review-pack/evidence-bundle.html"; then
+    echo "CLAIM-SAFETY FAIL [bundle]: missing curbpack-bundle-schema marker" >&2
+    FAIL=1
+  fi
+  scan_text "evidence-bundle" "$FIX/review-pack/evidence-bundle.html" || FAIL=1
+  scan_brand "evidence-bundle" "$FIX/review-pack/evidence-bundle.html" || FAIL=1
+fi
 if [[ -f "$FIX/.github/curbpack/cache/latest_action_report.md" ]]; then
   scan_text "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
   scan_brand "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1

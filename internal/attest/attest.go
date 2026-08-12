@@ -314,7 +314,7 @@ func identityFromSSHAddLine(line string) string {
 	}
 }
 
-// View prints the capsule for HEAD.
+// View prints the capsule for the latest human bind (LatestBind), not necessarily HEAD.
 func View(repoRoot string) error {
 	if repoRoot == "" {
 		var err error
@@ -323,10 +323,22 @@ func View(repoRoot string) error {
 			return err
 		}
 	}
-	commit, _ := gitutil.HeadSHA(repoRoot)
-	body, err := gitutil.NotesShow(repoRoot, commit)
+	bind, err := LatestBind(repoRoot)
 	if err != nil {
-		fmt.Printf("%s\n", tty.C(tty.Yellow, "No verified compliance records for commit: "+commit))
+		return err
+	}
+	if !bind.Found {
+		head, herr := gitutil.HeadSHA(repoRoot)
+		if herr != nil {
+			fmt.Printf("%s\n", tty.C(tty.Yellow, "Cannot resolve HEAD: "+herr.Error()))
+			return nil
+		}
+		fmt.Printf("%s\n", tty.C(tty.Yellow, "No verified compliance records for commit: "+head))
+		return nil
+	}
+	body, err := gitutil.NotesShow(repoRoot, bind.CommitSHA)
+	if err != nil {
+		fmt.Printf("%s\n", tty.C(tty.Yellow, "No verified compliance records for commit: "+bind.CommitSHA))
 		return nil
 	}
 	var cap Capsule

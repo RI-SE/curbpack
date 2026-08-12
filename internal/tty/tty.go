@@ -78,3 +78,8 @@ func ScoreFromFailures(n int) int {
 	}
 	return score
 }
+
+// WarnCacheWrite prints a dim stderr warning when cache writes fail (gate pass/fail unchanged).
+func WarnCacheWrite(msg string) {
+	fmt.Fprintf(os.Stderr, "%s\n", C(Dim, "[cache] "+msg))
+}
