@@ -2,6 +2,7 @@ package release_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,12 +11,34 @@ import (
 	"github.com/afelin/curbpack/internal/release"
 )
 
+func initGitRepo(t *testing.T, dir string) {
+	t.Helper()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "init", "-q")
+	run("git", "config", "user.email", "release@curbpack.local")
+	run("git", "config", "user.name", "Release")
+}
+
 func TestPrepareReleaseWritesPack(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	initGitRepo(t, dir)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# x\n")
+	run := exec.Command("git", "add", "README.md")
+	run.Dir = dir
+	run.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run.Run()
+	run2 := exec.Command("git", "commit", "-m", "readme", "-q")
+	run2.Dir = dir
+	run2.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run2.Run()
 
 	out := filepath.Join(dir, "review-pack")
 	err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"cra-baseline"}, OutDir: out})
@@ -63,10 +86,16 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 
 func TestPrepareSkipsUnchangedOnePager(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	initGitRepo(t, dir)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# x\n")
+	run := exec.Command("git", "add", "README.md")
+	run.Dir = dir
+	run.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run.Run()
+	run2 := exec.Command("git", "commit", "-m", "readme", "-q")
+	run2.Dir = dir
+	run2.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run2.Run()
 	out := filepath.Join(dir, "review-pack")
 	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, OutDir: out, AllowFailingGates: true}); err != nil {
 		t.Fatal(err)

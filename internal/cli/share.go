@@ -21,6 +21,7 @@ func cmdShare(args []string) error {
 	}
 	var packIDs []string
 	skipPrepare := false
+	wantBundle := false
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--packs":
@@ -30,6 +31,8 @@ func cmdShare(args []string) error {
 			}
 		case "--skip-prepare-release":
 			skipPrepare = true
+		case "--bundle":
+			wantBundle = true
 		}
 	}
 
@@ -61,6 +64,15 @@ func cmdShare(args []string) error {
 			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "prepare-release: "+err.Error()))
 		} else {
 			tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
+		}
+	}
+
+	if wantBundle {
+		bundlePath, err := release.WriteEvidenceBundle(root, res)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "evidence-bundle: "+err.Error()))
+		} else {
+			tty.PrintStatus("evidence-bundle", true, bundlePath)
 		}
 	}
 

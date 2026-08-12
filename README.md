@@ -18,13 +18,15 @@ curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/instal
 curbpack doctor
 
 cd /path/to/your/product   # git repo
-curbpack init              # house-policy + hooks + skill + ide (--bare for minimal)
+curbpack init              # house-policy default; --profile cra|medtech
 curbpack check             # daily loop — exit code is authoritative
+curbpack share             # optional --bundle for offline evidence-bundle.html
+# human only when ready:
+curbpack attest
+# verify: proof/index.html vs hpurl-pointer.json
 ```
 
-`install.sh` installs `curbpack` and the short alias `curb`, and verifies release `checksums.txt` (sha256, fail-closed). macOS/Linux only. From source: `go build -o bin/curbpack ./cmd/curbpack`
-
-On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff.
+On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff. Optional drift checklist: `curbpack drift` (exit 0 always).
 
 ## Three ways in
 
@@ -47,6 +49,8 @@ Depth: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway gu
 | **Gate report** | Every `check` | JSON + markdown findings—structural evidence, not a legal finding |
 | **Review pack** | `prepare-release` or `share` | Layered reports for human review |
 | **Buyer one-pager** | After green + `share` | Supplier evidence summary HTML you hand to a buyer |
+| **Evidence bundle** | `share --bundle` | Offline `review-pack/evidence-bundle.html` with embedded hpurl pointer |
+| **Drift checklist** | `curbpack drift` | Multi-signal human checklist (exit 0; not a compliance meter) |
 | **Attest capsule** | Human `attest` when ready | Git Notes hash bind—**unsigned ≠ verified** |
 | **Proof page** | After attest | Local `proof/index.html` vs evidence pointer—still human judgment |
 
@@ -77,14 +81,14 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 ## GitHub Action
 
 ```yaml
-- uses: afelin/curbpack@v0.5.0
+- uses: afelin/curbpack@v0.5.1
   with:
     heal: "true"
     comment_on: red
     upload_sarif: "true"
 ```
 
-Pin **`@v0.5.0`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
+Pin **`@v0.5.1`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
 
 ## Advanced
 

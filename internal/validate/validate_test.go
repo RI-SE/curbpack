@@ -354,6 +354,27 @@ func TestUnknownCheckPackLoad(t *testing.T) {
 	}
 }
 
+func TestOCCParentSoftFailNonGitRoot(t *testing.T) {
+	dir := t.TempDir()
+	writeGoodHouse(t, dir)
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent := res.Payload.ConcurrencyControl.ExpectedParentCommitSHA
+	if parent != "" {
+		t.Fatalf("expected empty OCC parent on non-git root, got %q", parent)
+	}
+	if strings.HasPrefix(parent, "000") {
+		t.Fatal("must not inject zero SHA placeholder")
+	}
+}
+
 func TestSessionNotesDoNotAffectCheckPassFail(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)

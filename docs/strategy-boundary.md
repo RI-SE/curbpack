@@ -12,7 +12,7 @@ Curbpack is a **standalone** public OSS product. Strangers must be able to adopt
 
 - Deterministic local **judge** + instrument panel + fail-open optional sock server.
 - Evidence habit for product repos — not CVE management, not a security program.
-- Pin stays `@v0.5.0` unless a contract-breaking change forces a later patch.
+- Pin stays `@v0.5.1` unless a contract-breaking change forces a later patch.
 - Pack catalog frozen to three ids until freeze review + partner habit proof unlock.
 - Authorities / CISO brief: [for-authorities](for-authorities.md). Glossary: [glossary-and-audience](glossary-and-audience.md).
 
@@ -28,8 +28,4 @@ Pair Curbpack with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for 
 
 Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](github-readiness-gaps.md).
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md) · [Coreward pointer](coreward-pointer.md)
-
----
-
-> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume Curbpack explain-packets over an optional Unix socket. Curbpack is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
+See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md) · [Coreward pointer](coreward-pointer.md) (integrators only)

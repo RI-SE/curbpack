@@ -33,11 +33,13 @@
       <p>Build <strong>curb outlines</strong> via pathway → assistant proposes A and B → you pick → cite-check → you confirm (TTY or <code>--i-am-human</code>) → check.</p>
       <p>After pack confirm, Curbpack builds a <strong>local pack→rule map</strong> that steers drafting—not a legal oracle. Depth: <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md">docs/getting-started/pathway.md</a>.</p>
       <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curbpack doctor
 cd /path/to/your/product
 curbpack init
-curbpack pathway status
-# optional: curbpack research  → dual drafts → cite-check
-curbpack check</code></pre>
+curbpack check
+curbpack share              # optional --bundle
+# human when ready: curbpack attest → proof/index.html
+curbpack drift              # optional checklist (exit 0)</code></pre>
       <p class="muted">Default pack is <strong>house-policy</strong>. Optional warm-start suggests checklists; drafts never replace check. Pin <code>@v0.5.0</code>.</p>
 
       <h3>Bring docs then check</h3>

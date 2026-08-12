@@ -42,6 +42,4 @@ Curbpack prepares structural evidence for product repos. Pair it with SCA (e.g. 
 
 See also: [For authorities](for-authorities.md) · [Strategy boundary](strategy-boundary.md) · [Stable contracts](stable-contracts.md) · [Promotion firewall](promotion-firewall.md) · [Write your own pack](write-your-own-pack.md) · [Security model](security-model.md)
 
----
-
-> **Optional, separate product:** Coreward is a private tutor/enforce client that may consume Curbpack explain-packets over an optional Unix socket. Curbpack is fully self-sustaining without it — adopters do not need Coreward. Brief architecture note (public Pages, not the private repo): https://afelin.github.io/coreward/
+Optional tutor product (integrators only): [Coreward pointer](coreward-pointer.md).

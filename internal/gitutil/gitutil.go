@@ -2,6 +2,7 @@ package gitutil
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,11 +48,12 @@ func runGit(dir string, args ...string) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-// HeadSHA returns the current HEAD commit hash, or zeros if no commits yet.
+// HeadSHA returns the current HEAD commit hash.
+// On rev-parse failure (e.g. empty repo), returns ("", err) — never zero SHA with nil error.
 func HeadSHA(repoRoot string) (string, error) {
 	out, err := runGit(repoRoot, "rev-parse", "HEAD")
 	if err != nil {
-		return "0000000000000000000000000000000000000000", nil
+		return "", err
 	}
 	return out, nil
 }
@@ -127,6 +129,11 @@ func ChangedFiles(repoRoot string) (map[string]struct{}, error) {
 	return out, nil
 }
 
+// parentNoteCapsule is the minimal JSON shape read from git notes for Merkle chaining.
+type parentNoteCapsule struct {
+	StateHash string `json:"state_hash"`
+}
+
 // ParentNoteHash reads the previous commit's note state_hash for Merkle chaining.
 // It intentionally ignores any existing note on the current commit so re-attest is reproducible.
 func ParentNoteHash(repoRoot, commit string) string {
@@ -138,6 +145,11 @@ func ParentNoteHash(repoRoot, commit string) string {
 	if err != nil || body == "" {
 		return ""
 	}
+	var cap parentNoteCapsule
+	if json.Unmarshal([]byte(body), &cap) == nil && cap.StateHash != "" {
+		return cap.StateHash
+	}
+	// Legacy string hack for pre-JSON notes.
 	const key = `"state_hash"`
 	idx := strings.Index(body, key)
 	if idx < 0 {
@@ -154,4 +166,15 @@ func ParentNoteHash(repoRoot, commit string) string {
 		return ""
 	}
 	return rest[:q2]
+}
+
+// LatestNoteCommit returns the most recent commit with a curbpack (or legacy cyberready) note.
+func LatestNoteCommit(repoRoot string) (string, error) {
+	for _, ref := range []string{"curbpack", "cyberready"} {
+		out, err := runGit(repoRoot, "log", "-1", "--notes="+ref, "--format=%H")
+		if err == nil && out != "" {
+			return out, nil
+		}
+	}
+	return "", fmt.Errorf("no attest notes found")
 }

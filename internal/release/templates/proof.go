@@ -1,0 +1,107 @@
+package templates
+
+// ProofPageHTML returns static HPURL viewer with client-side hash verification.
+func ProofPageHTML() string {
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Curbpack — Proof</title>
+  <style>
+    :root { color-scheme: light dark; font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center;
+      background: linear-gradient(160deg,#0f1117,#1a2233); color:#e8eaed; }
+    main { width:min(640px,92vw); padding:2rem; border:1px solid #2a3142; border-radius:12px; background:#161a24; }
+    h1 { margin:0 0 0.25rem; font-size:1.35rem; }
+    .subtitle { color:#9aa3b2; margin-bottom:1.5rem; }
+    .status { padding:0.75rem 1rem; border-radius:8px; margin-bottom:1.25rem; font-weight:600; }
+    .status.ok { background:#12351f; color:#6ee7a0; border:1px solid #1f6f43; }
+    .status.warn { background:#3a2a12; color:#fbbf24; border:1px solid #92400e; }
+    .status.err { background:#3b1212; color:#fca5a5; border:1px solid #991b1b; }
+    dl { display:grid; grid-template-columns:8.5rem 1fr; gap:0.5rem 1rem; margin:0; }
+    dt { color:#9aa3b2; }
+    dd { margin:0; word-break:break-all; font-family:ui-monospace,Menlo,monospace; font-size:0.85rem; }
+    footer { margin-top:1.5rem; color:#9aa3b2; font-size:0.85rem; }
+    code { font-size:0.8rem; }
+    input { width:100%; box-sizing:border-box; margin:0.35rem 0 0.75rem; padding:0.5rem 0.65rem;
+      border-radius:6px; border:1px solid #2a3142; background:#0f1117; color:#e8eaed; font-family:ui-monospace,Menlo,monospace; }
+    button { padding:0.45rem 0.85rem; border-radius:6px; border:1px solid #3a4660; background:#243049; color:#e8eaed; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Evidence proof</h1>
+    <p class="subtitle">HPURL fragment stays in the browser hash. Verify <code>h=</code> against the local evidence pointer digest (client-side only).</p>
+    <div id="status" class="status warn">Waiting for fragment parameters…</div>
+    <dl id="fields"></dl>
+    <label for="expected">Expected state_hash (from <code>.github/curbpack/evidence/hpurl-pointer.json</code>)</label>
+    <input id="expected" placeholder="Paste state_hash to verify…" autocomplete="off" />
+    <button type="button" id="verifyBtn">Verify hash</button>
+    <footer>
+      Contract: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
+      Aliases: <code>run</code>, <code>capsule</code>, <code>vows</code>. Local pointer: <code>.github/curbpack/evidence/</code>. Not a certification.
+    </footer>
+  </main>
+  <script>
+    function parseHashParams() {
+      const hash = location.hash || "";
+      let q = "";
+      if (hash.startsWith("#?")) q = hash.slice(2);
+      else if (hash.startsWith("#")) q = hash.slice(1);
+      if (!q) return null;
+      if (q.startsWith("?")) q = q.slice(1);
+      const params = new URLSearchParams(q);
+      const h = params.get("h") || params.get("capsule") || params.get("bundle");
+      const p = params.get("p") || params.get("run") || params.get("ref") || params.get("pointer");
+      const s = params.get("s") || params.get("vows") || params.get("$");
+      if (!h && !p && !s) return null;
+      return { h, p, s, space: params.get("space") || undefined, repo: params.get("repo") || undefined };
+    }
+    function setStatus(kind, message) {
+      const el = document.getElementById("status");
+      el.className = "status " + kind;
+      el.textContent = message;
+    }
+    function renderFields(data) {
+      const dl = document.getElementById("fields");
+      dl.innerHTML = "";
+      for (const [label, value] of [["Hash (h)", data.h], ["Pointer (p)", data.p], ["Signature (s)", data.s], ["Space", data.space], ["Repo", data.repo]]) {
+        if (!value) continue;
+        const dt = document.createElement("dt"); dt.textContent = label;
+        const dd = document.createElement("dd"); dd.textContent = value;
+        dl.appendChild(dt); dl.appendChild(dd);
+      }
+    }
+    function normalizeHex(v) { return (v || "").trim().toLowerCase(); }
+    function verify() {
+      const data = parseHashParams();
+      const expected = normalizeHex(document.getElementById("expected").value);
+      if (!data || !data.h) { setStatus("warn", "No h= hash in fragment"); return; }
+      if (!expected) { setStatus("warn", "Paste expected state_hash from hpurl-pointer.json"); return; }
+      if (normalizeHex(data.h) === expected) {
+        setStatus("ok", "Hash match — fragment h= equals local evidence pointer (client-side verify)");
+      } else {
+        setStatus("err", "Hash mismatch — fragment does not match pasted state_hash");
+      }
+    }
+    const data = parseHashParams();
+    if (!data) {
+      setStatus("warn", "No receipt in link — append #?h=…&p=…&s=…");
+    } else {
+      renderFields(data);
+      setStatus("ok", "Params loaded — paste state_hash and Verify");
+      if (data.h) document.getElementById("expected").placeholder = "Expected: " + data.h.slice(0, 16) + "…";
+    }
+    document.getElementById("verifyBtn").addEventListener("click", verify);
+    fetch("../.github/curbpack/evidence/hpurl-pointer.json").then(r => r.ok ? r.json() : null).then(j => {
+      if (j && j.state_hash) {
+        document.getElementById("expected").value = j.state_hash;
+        verify();
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>
+`
+}
