@@ -13,8 +13,8 @@ import (
 	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/demo"
-	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/doctor"
+	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/formhints"
 	"github.com/afelin/curbpack/internal/gitutil"
@@ -176,7 +176,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
-	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule (then proof verify)\n\n")
+	fmt.Fprintf(os.Stderr, "  attest [--allow-dirty] [--reviewed-by=Name]  Human Git Notes capsule (then proof verify)\n\n")
 	fmt.Fprintf(os.Stderr, "Advanced:\n")
 	fmt.Fprintf(os.Stderr, "  validate [--json] [--delta]   Dual-rep gates (--delta not release-safe)\n")
 	fmt.Fprintf(os.Stderr, "  check --diff                  Delta mode — not release-gate safe\n")
@@ -852,9 +852,20 @@ func cmdAsk(args []string) error {
 func cmdAttest(args []string) error {
 	tty.PrintHeader("curbpack attest")
 	allowDirty := false
-	for _, a := range args {
-		if a == "--allow-dirty" {
+	reviewedBy := ""
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--allow-dirty":
 			allowDirty = true
+		case a == "--reviewed-by":
+			if i+1 >= len(args) {
+				return usageErr("attest --reviewed-by requires a name")
+			}
+			reviewedBy = strings.TrimSpace(args[i+1])
+			i++
+		case strings.HasPrefix(a, "--reviewed-by="):
+			reviewedBy = strings.TrimSpace(strings.TrimPrefix(a, "--reviewed-by="))
 		}
 	}
 	root, err := gitutil.RepoRoot("")
@@ -879,7 +890,7 @@ func cmdAttest(args []string) error {
 	}
 
 	// Self-written evidence dirties the tree — require explicit --allow-dirty (no silent force).
-	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty})
+	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty, ReviewedBy: reviewedBy})
 	return err
 }
 

@@ -17,6 +17,7 @@ type BindInfo struct {
 	UserTouch  string
 	SBOMDigest string
 	VEXDigest  string
+	ReviewedBy string // evidence map only; not in state_hash
 	Source     string // "hpurl-pointer" | "git-notes"
 	Found      bool
 }
@@ -88,6 +89,7 @@ func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	if cap.Evidence != nil {
 		info.SBOMDigest = cap.Evidence["sbom_digest"]
 		info.VEXDigest = cap.Evidence["vex_digest"]
+		info.ReviewedBy = cap.Evidence["reviewed_by"]
 	}
 	if sbomOverride != "" {
 		info.SBOMDigest = sbomOverride

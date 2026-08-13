@@ -9,21 +9,26 @@ import (
 	"github.com/afelin/curbpack/internal/attest"
 )
 
+// onePagerCoverMax is the front-of-page file checklist cap (cognitive load).
+const onePagerCoverMax = 12
+
 // OnePagerDTO is the stable input for buyer one-pager HTML generation.
 type OnePagerDTO struct {
-	RepoName      string
-	Score         int
-	Passed        bool
-	PackID        string
-	Timestamp     string
-	Failures      []OnePagerFailure
-	Bind          attest.BindInfo
-	AttestLine    string
-	AttestClass   string
-	UnsignedLoud  bool
+	RepoName       string
+	Score          int
+	Passed         bool
+	PackID         string
+	PackLabels     string // plain-words pack names for the cover; not in fingerprint
+	Timestamp      string
+	Failures       []OnePagerFailure
+	CoverRows      []OnePagerCoverRow // path + human question; not in fingerprint
+	Bind           attest.BindInfo
+	AttestLine     string
+	AttestClass    string
+	UnsignedLoud   bool
 	ProvenanceHTML string
-	SourcesHTML   string
-	FooterPrefix  string
+	SourcesHTML    string
+	FooterPrefix   string
 }
 
 // OnePagerFailure is one gate row for the one-pager table.
@@ -31,6 +36,12 @@ type OnePagerFailure struct {
 	GateID      string
 	Severity    string
 	Description string
+}
+
+// OnePagerCoverRow is one front-of-page file-to-open row (path + human question).
+type OnePagerCoverRow struct {
+	Path     string
+	Question string
 }
 
 // OnePagerFingerprint computes the stable fingerprint marker for a DTO.
@@ -72,6 +83,22 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 	if len(d.Failures) == 0 {
 		rows.WriteString(`<tr><td colspan="3">No open gate findings.</td></tr>`)
 	}
+	var cover strings.Builder
+	n := len(d.CoverRows)
+	if n > onePagerCoverMax {
+		n = onePagerCoverMax
+	}
+	for _, r := range d.CoverRows[:n] {
+		fmt.Fprintf(&cover, "<tr><td>%s</td><td>%s</td></tr>\n",
+			html.EscapeString(r.Path), html.EscapeString(r.Question))
+	}
+	if n == 0 {
+		cover.WriteString(`<tr><td colspan="2">No file checklist rows.</td></tr>`)
+	}
+	labels := strings.TrimSpace(d.PackLabels)
+	if labels == "" {
+		labels = d.PackID
+	}
 	lede := "Structural evidence for human review — not conformity assessment. Hand this one-pager (and the review pack) to a buyer or auditor. Evidence is prepared locally — this page is not a certificate of conformity."
 	if d.UnsignedLoud {
 		lede = "UNSIGNED — not cryptographically verified. " + lede
@@ -91,6 +118,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
     h1 { font-family: Fraunces, Georgia, serif; font-size:2rem; line-height:1.2; margin:0.4rem 0 0.5rem; font-weight:600; }
     h2 { font-family: Fraunces, Georgia, serif; font-size:1.2rem; margin:2rem 0 0.75rem; font-weight:600; border-top:1px solid var(--ink); padding-top:1.25rem; }
     .lede { color:var(--muted); font-size:1.05rem; margin-bottom:1.5rem; }
+    .packs { font-size:1rem; margin:0 0 0.85rem; }
     .status { display:inline-block; padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
     .status.ok { background:#f0fdf4; color:var(--ok); border:1px solid var(--ok); }
     .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
@@ -115,11 +143,16 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
     <div class="brand">Curbpack · Front</div>
     <h1>%s</h1>
     <p class="lede">%s</p>
+    <p class="packs"><strong>Packs:</strong> %s</p>
     <div class="status %s">%s</div>
     <div class="status %s" style="margin-left:0.5rem">%s</div>
-    <div class="meter">Local gate score on this tree: <strong>%d%%</strong> — not certification
-      <div class="bar"><span></span></div>
-    </div>
+    <h2>Files to open</h2>
+    <table>
+      <thead><tr><th>Path</th><th>Question</th></tr></thead>
+      <tbody>
+%s
+      </tbody>
+    </table>
     <table>
       <thead><tr><th>Gate</th><th>Severity</th><th>Finding</th></tr></thead>
       <tbody>
@@ -129,6 +162,9 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 
     <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
     <div class="back">
+      <div class="meter">Local gate score on this tree: <strong>%d%%</strong> — not certification
+        <div class="bar"><span></span></div>
+      </div>
       <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>curbpack attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
       %s
       %s
@@ -136,15 +172,17 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 
     <footer>
       %s
-      Structural evidence for human review — not conformity assessment. Generated %s · Open <code>proof/index.html</code> to verify the HPURL fragment against <code>.github/curbpack/evidence/hpurl-pointer.json</code>.
+      Structural evidence for human review — not conformity assessment. Generated %s · Open <code>proof/index.html</code> to compare the stamp to the local evidence pointer.
     </footer>
   </main>
 </body>
 </html>
 `, fp, d.Score, html.EscapeString(d.RepoName), html.EscapeString(lede),
+		html.EscapeString(labels),
 		statusClass, html.EscapeString(status),
 		d.AttestClass, html.EscapeString(d.AttestLine),
-		d.Score, rows.String(),
+		cover.String(), rows.String(),
+		d.Score,
 		d.ProvenanceHTML, d.SourcesHTML,
 		d.FooterPrefix, html.EscapeString(d.Timestamp))
 }

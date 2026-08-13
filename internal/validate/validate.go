@@ -346,6 +346,7 @@ func wordCount(s string) int {
 
 func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	var out []ir.Failure
+	token, _ := resolveRepoToken(root)
 	for _, rel := range rule.Paths {
 		path, clean, err := safeJoin(root, rel)
 		if err != nil {
@@ -358,9 +359,42 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 		}
 		if placeholderRE.Match(data) {
 			out = append(out, failFromRule(rule, clean, "placeholder pattern matched"))
+			continue
+		}
+		if scaffoldOverlap(string(data), clean, token) {
+			out = append(out, failFromRule(rule, clean, "scaffold body overlap"))
 		}
 	}
 	return out
+}
+
+// scaffoldOverlap reports whether text is still DefaultScaffoldBody(rel),
+// allowing collapsed whitespace and a single optional repo-token insertion.
+func scaffoldOverlap(text, rel, token string) bool {
+	scaffold := packs.DefaultScaffoldBody(rel)
+	normScaffold := collapseWS(scaffold)
+	if collapseWS(text) == normScaffold {
+		return true
+	}
+	if token != "" && collapseWS(stripFirst(text, token)) == normScaffold {
+		return true
+	}
+	return false
+}
+
+func collapseWS(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
+func stripFirst(s, token string) string {
+	if token == "" {
+		return s
+	}
+	i := strings.Index(s, token)
+	if i < 0 {
+		return s
+	}
+	return s[:i] + s[i+len(token):]
 }
 
 func checkTextForbid(root string, rule packs.Rule) []ir.Failure {

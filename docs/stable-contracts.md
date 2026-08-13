@@ -88,11 +88,11 @@ Informational only — **exit code always 0**. No boolean `aligned` / `no_drift`
 
 | Field | Notes |
 |-------|--------|
-| `schema` | `curbpack-drift-report:1` |
+| `schema` | `curbpack-drift-report:1` (additive signal IDs only — no bump) |
 | `signals[]` | `{ id, detail }` per signal (see [evidence-drift](getting-started/evidence-drift.md)) |
 | `suggested_actions[]` | Optional human hint strings |
 
-Cache-only fingerprint compare for `share_stale` — never runs `validate.Run` in the default path.
+New signal IDs (`docs_unchanged_since_attest`, `docs_changed_since_attest`, optional `contact_expires_past` / `contact_missing`) are additive rows. No boolean `aligned` / `no_drift` / `pass` / `green`. Cache-only fingerprint compare for `share_stale` — never runs `validate.Run` in the default path.
 
 ## Share bundle
 

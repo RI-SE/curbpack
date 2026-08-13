@@ -375,6 +375,155 @@ func TestOCCParentSoftFailNonGitRoot(t *testing.T) {
 	}
 }
 
+func TestAntiPlaceholderUntouchedStubFails(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), packs.DefaultScaffoldBody("SECURITY.md"))
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), realSecurityTxt)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("untouched SECURITY.md stub must fail anti_placeholder")
+	}
+	if !hasScaffoldOverlap(res, "HOUSE-ANTI-PLACEHOLDER", "SECURITY.md") {
+		t.Fatalf("expected HOUSE-ANTI-PLACEHOLDER scaffold overlap on SECURITY.md, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestAntiPlaceholderStubPlusProductNameStillFails(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"acme-widget","version":"1.0.0"}`+"\n")
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), packs.DefaultScaffoldBody("SECURITY.md")+"\n\nacme-widget\n")
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), realSecurityTxt)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("stub plus product name only must still fail anti_placeholder")
+	}
+	if !hasScaffoldOverlap(res, "HOUSE-ANTI-PLACEHOLDER", "SECURITY.md") {
+		t.Fatalf("expected HOUSE-ANTI-PLACEHOLDER scaffold overlap on SECURITY.md, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestAntiPlaceholderRealSecurityMDPasses(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("short real SECURITY.md with required header must pass, failures=%v", res.Payload.Failures)
+	}
+}
+
+func TestHonestyEvalFolder(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	evalRoot := filepath.Clean(filepath.Join(wd, "../..", "testdata/honesty-eval"))
+
+	fakeSec, err := os.ReadFile(filepath.Join(evalRoot, "fake", "SECURITY.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if collapseEval(string(fakeSec)) != collapseEval(packs.DefaultScaffoldBody("SECURITY.md")) {
+		t.Fatal("testdata/honesty-eval/fake/SECURITY.md must stay in sync with DefaultScaffoldBody")
+	}
+
+	cases := []struct {
+		name    string
+		subdir  string
+		wantRed bool
+	}{
+		{name: "fake", subdir: "fake", wantRed: true},
+		{name: "token-only", subdir: "token-only", wantRed: true},
+		{name: "real", subdir: "real", wantRed: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			initGit(t, dir)
+			src := filepath.Join(evalRoot, tc.subdir, "SECURITY.md")
+			body, err := os.ReadFile(src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mustWrite(t, filepath.Join(dir, "SECURITY.md"), string(body))
+			mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), realSecurityTxt)
+			mustWrite(t, filepath.Join(dir, "README.md"), "# Honesty eval fixture\n")
+			if tc.subdir == "token-only" {
+				mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"acme-widget","version":"1.0.0"}`+"\n")
+			}
+
+			res, err := validate.Run(validate.Options{
+				RepoRoot: dir,
+				PackIDs:  []string{"house-policy"},
+				Quiet:    true,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantRed {
+				if res.Passed {
+					t.Fatalf("%s write-up must stay red", tc.name)
+				}
+				if !hasScaffoldOverlap(res, "HOUSE-ANTI-PLACEHOLDER", "SECURITY.md") {
+					t.Fatalf("%s: expected scaffold overlap, got %#v", tc.name, res.Payload.Failures)
+				}
+				return
+			}
+			if !res.Passed {
+				t.Fatalf("real write-up must pass, failures=%v", res.Payload.Failures)
+			}
+		})
+	}
+}
+
+func hasScaffoldOverlap(res validate.Result, gateID, file string) bool {
+	for _, f := range res.Payload.Failures {
+		if f.GateID == gateID &&
+			strings.Contains(f.SanitizedDescription, "scaffold body overlap") &&
+			(f.ASTCoordinates.TargetFile == file || strings.HasSuffix(f.ASTCoordinates.TargetFile, file)) {
+			return true
+		}
+	}
+	return false
+}
+
+func collapseEval(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
+const realSecurityTxt = `Contact: mailto:security@example.com
+Expires: 2028-01-15T00:00:00.000Z
+Preferred-Languages: en
+`
+
 func TestSessionNotesDoNotAffectCheckPassFail(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
@@ -436,7 +585,7 @@ Email security@example.com with vulnerability details for coordinated disclosure
 We acknowledge within two business days and coordinate responsible disclosure timelines carefully.
 `)
 	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), `Contact: mailto:security@example.com
-Expires: 2027-12-31T23:59:59.000Z
+Expires: 2028-01-15T00:00:00.000Z
 Preferred-Languages: en
 `)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# Contoso Gateway\n\nProduct overview for operators.\n")

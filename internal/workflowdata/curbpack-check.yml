@@ -2,6 +2,7 @@
 # Copy to .github/workflows/curbpack.yml — pin stays @v0.5.2.
 # Action runners = Linux/macOS only (local Windows CLI is separate).
 # heal defaults to false; this example opts in for missing-stub cold start.
+# Never set CURBPACK_ALLOW_CONFIRM on the Action — confirms and attest are human-only.
 name: curbpack-check
 
 on:

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -127,6 +128,35 @@ func ChangedFiles(repoRoot string) (map[string]struct{}, error) {
 		}
 	}
 	return out, nil
+}
+
+// DiffNameOnly returns slash-normalized paths that differ between fromRev and toRev.
+// When pathspecs is non-empty, they are passed after `--` (git diff --name-only A B -- paths).
+// Empty pathspecs returns nil (does not dump the whole tree). Results are sorted.
+func DiffNameOnly(repoRoot, fromRev, toRev string, pathspecs []string) ([]string, error) {
+	if strings.TrimSpace(fromRev) == "" || strings.TrimSpace(toRev) == "" {
+		return nil, fmt.Errorf("git diff --name-only: empty revision")
+	}
+	if len(pathspecs) == 0 {
+		return nil, nil
+	}
+	args := make([]string, 0, 5+len(pathspecs))
+	args = append(args, "diff", "--name-only", fromRev, toRev, "--")
+	args = append(args, pathspecs...)
+	out, err := runGit(repoRoot, args...)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		names = append(names, filepath.ToSlash(line))
+	}
+	sort.Strings(names)
+	return names, nil
 }
 
 // parentNoteCapsule is the minimal JSON shape read from git notes for Merkle chaining.

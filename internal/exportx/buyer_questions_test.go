@@ -66,3 +66,16 @@ func TestWriteBuyerQuestions_HousePolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestPackPlainNames(t *testing.T) {
+	got := exportx.PackPlainNames("house-policy,cra-baseline")
+	if !strings.Contains(got, "House Policy") {
+		t.Fatalf("want house policy plain name, got %q", got)
+	}
+	if !strings.Contains(got, "CRA Annex VII") {
+		t.Fatalf("want CRA plain name, got %q", got)
+	}
+	if strings.Contains(strings.ToLower(got), "hpurl") {
+		t.Fatal("pack labels must not use HPURL jargon")
+	}
+}

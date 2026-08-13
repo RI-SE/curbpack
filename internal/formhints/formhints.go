@@ -277,12 +277,12 @@ func guessFile(gateID string) string {
 		return "SECURITY.md"
 	case strings.Contains(gateID, "SECURITY-TXT") || strings.Contains(gateID, "SECURITY_TXT"):
 		return ".well-known/security.txt"
-	case strings.Contains(gateID, "SAFETY"):
-		return "docs/iec62304/software_safety_class.md"
+	case strings.Contains(gateID, "SAFETY") || strings.Contains(gateID, "SW-CLASS") || strings.Contains(gateID, "SW_CLASS"):
+		return "docs/medtech/software_safety_class.md"
 	case strings.Contains(gateID, "SOUP"):
-		return "docs/iec62304/soup_list.md"
+		return "docs/medtech/soup_list.md"
 	case strings.Contains(gateID, "PROBLEM"):
-		return "docs/iec62304/problem_resolution.md"
+		return "docs/medtech/problem_resolution.md"
 	default:
 		return ""
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/platform"
 	"github.com/afelin/curbpack/internal/tty"
 )
@@ -153,6 +154,9 @@ func Run(opts Options) error {
 		fmt.Printf("%s\n", tty.C(tty.Dim, "stuck? docs/getting-started/troubleshooting.md · repair: curbpack doctor --repair"))
 	}
 	fmt.Printf("%s\n", tty.C(tty.Dim, Claim))
+	if paths.EnvIs1("ALLOW_CONFIRM") {
+		fmt.Printf("%s\n", tty.C(tty.Yellow, "CURBPACK_ALLOW_CONFIRM=1 is set — agents can stamp confirms. Never set this env on the Action."))
+	}
 	return nil
 }
 

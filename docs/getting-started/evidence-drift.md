@@ -50,6 +50,24 @@ If nothing found → signal `attest_none` (not an error).
 | `working_tree_dirty` | Uncommitted changes present |
 | `working_tree_unknown` | Git status failed — fail-safe |
 
+### Pack docs vs attest bind
+
+Paths come from composed pack rules (`Path` / `Paths` on `annex_file` / `file_present` / `anti_placeholder`) — the same set as `pathway confirm-prose`. Compared with `git diff --name-only <bind> HEAD -- <paths>`. Detail lists at most ~12 paths. Not emitted when there is no bind.
+
+| Signal ID | When | Human hint |
+|-----------|------|------------|
+| `docs_unchanged_since_attest` | Pack paths did not move since bind | Informational only — not “no drift” |
+| `docs_changed_since_attest` | One or more pack paths moved | Re-check, re-share, human re-attest |
+
+### security.txt (optional; not a gate)
+
+Emitted only when `.well-known/security.txt` exists. Never a check pass/fail.
+
+| Signal ID | When |
+|-----------|------|
+| `contact_expires_past` | `Expires:` parses and is in the past |
+| `contact_missing` | No non-empty `Contact:` line |
+
 ## Output
 
 - Default: human table of signal rows + optional `suggested_actions[]`

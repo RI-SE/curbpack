@@ -1,6 +1,8 @@
 package doctor
 
 import (
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -38,6 +40,31 @@ func TestRepairFailClosedWhenLookPathMissing(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "reinstall") {
 		t.Fatal(err)
+	}
+}
+
+func TestAllowConfirmSoftTip(t *testing.T) {
+	t.Setenv("CURBPACK_ALLOW_CONFIRM", "1")
+	t.Setenv("CYBERREADY_ALLOW_CONFIRM", "")
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	runErr := Run(Options{Version: "0.5.2", Repair: false})
+	_ = w.Close()
+	os.Stdout = old
+	if runErr != nil {
+		t.Fatalf("doctor: %v", runErr)
+	}
+	out, _ := io.ReadAll(r)
+	text := string(out)
+	if !strings.Contains(text, "CURBPACK_ALLOW_CONFIRM=1 is set") {
+		t.Fatalf("want ALLOW_CONFIRM soft tip, got:\n%s", text)
+	}
+	if !strings.Contains(text, "Never set this env on the Action") {
+		t.Fatal("tip must warn never set ALLOW_CONFIRM on the Action")
 	}
 }
 

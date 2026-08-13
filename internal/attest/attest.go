@@ -39,6 +39,8 @@ type Options struct {
 	// Optional digests to bind (CycloneDX / VEX). Empty strings omitted.
 	SBOMDigest string
 	VEXDigest  string
+	// ReviewedBy is recorded in the capsule evidence map only — not state_hash.
+	ReviewedBy string
 }
 
 // ComputeStateHash returns sha256 hex of the length-prefixed field stream.
@@ -120,6 +122,9 @@ func Run(opts Options) (Capsule, error) {
 		evidence["vex_path"] = ".github/curbpack/evidence/vex-pending.json"
 	}
 	evidence["local_pointer"] = ".github/curbpack/evidence/"
+	if name := strings.TrimSpace(opts.ReviewedBy); name != "" {
+		evidence["reviewed_by"] = name
+	}
 
 	cap := Capsule{
 		SchemaVersion:   "v3.33-OCC",

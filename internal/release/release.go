@@ -14,8 +14,8 @@ import (
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
-	"github.com/afelin/curbpack/internal/research"
 	"github.com/afelin/curbpack/internal/release/templates"
+	"github.com/afelin/curbpack/internal/research"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
@@ -278,13 +278,27 @@ func buyerOnePager(root string, res validate.Result) string {
 			Description: f.SanitizedDescription,
 		})
 	}
+	var cover []templates.OnePagerCoverRow
+	if qs, err := exportx.CollectBuyerQuestions(root, nil, res); err == nil {
+		for i, q := range qs {
+			if i >= 12 {
+				break
+			}
+			cover = append(cover, templates.OnePagerCoverRow{
+				Path:     q.ArtifactPath,
+				Question: q.HumanQuestion,
+			})
+		}
+	}
 	dto := templates.OnePagerDTO{
 		RepoName:       name,
 		Score:          res.Score,
 		Passed:         res.Passed,
 		PackID:         res.Payload.PackID,
+		PackLabels:     exportx.PackPlainNames(res.Payload.PackID),
 		Timestamp:      res.Payload.Timestamp,
 		Failures:       failures,
+		CoverRows:      cover,
 		Bind:           bind,
 		AttestLine:     line,
 		AttestClass:    class,
@@ -338,8 +352,11 @@ func provenanceDL(packID string, bind attest.BindInfo, line string, unsignedLoud
 	if bind.VEXDigest != "" {
 		fmt.Fprintf(&b, "<dt>vex_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.VEXDigest)))
 	}
+	if name := strings.TrimSpace(bind.ReviewedBy); name != "" {
+		fmt.Fprintf(&b, "<dt>Reviewed by</dt><dd>%s — recorded review, not assessment.</dd>\n", html.EscapeString(name))
+	}
 	fmt.Fprintf(&b, "<dt>Human sign-off</dt><dd>%s</dd>\n", html.EscapeString(signOff))
-	b.WriteString(`<dt>Verify</dt><dd>proof/index.html + hpurl-pointer.json (client-side hash compare)</dd>`)
+	b.WriteString(`<dt>Verify</dt><dd>proof/index.html + local evidence pointer (client-side hash compare)</dd>`)
 	b.WriteString(`</dl>`)
 	return b.String()
 }

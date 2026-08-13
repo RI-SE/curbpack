@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/gitutil"
@@ -63,6 +64,8 @@ func cmdShare(args []string) error {
 	printAttach(bq)
 
 	var revealTarget string
+	prepared := false
+	onepager := filepath.Join(root, "review-pack", "buyer-onepager.html")
 	if !skipPrepare {
 		if err := release.Prepare(release.Options{
 			RepoRoot:          root,
@@ -71,11 +74,18 @@ func cmdShare(args []string) error {
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "prepare-release: "+err.Error()))
 		} else {
-			onepager := filepath.Join(root, "review-pack", "buyer-onepager.html")
-			tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
-			printAttach(onepager)
-			revealTarget = onepager
+			prepared = true
 		}
+	}
+
+	for _, line := range shareLadderLines(root, res.Score, res.Passed) {
+		fmt.Printf("%s\n", tty.C(tty.Yellow, line))
+	}
+
+	if prepared {
+		tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
+		printAttach(onepager)
+		revealTarget = onepager
 	}
 
 	if wantBundle {
@@ -102,6 +112,29 @@ func cmdShare(args []string) error {
 		return gatesErr()
 	}
 	return nil
+}
+
+// shareLadderLines returns share_stale / attest_commit_behind as the first post-prepare
+// status lines when those conditions hold. Bundle still writes (no extra flag).
+func shareLadderLines(root string, score int, passed bool) []string {
+	bind, _ := attest.LatestBind(root)
+	var lines []string
+	sig, detail := release.ShareStaleReport(root, bind, score, passed)
+	if sig == "share_stale" {
+		lines = append(lines, "share_stale: "+detail)
+	}
+	head, err := gitutil.HeadSHA(root)
+	if err == nil && bind.Found && bind.CommitSHA != head {
+		lines = append(lines, fmt.Sprintf("attest_commit_behind: bind %s ≠ HEAD %s", shortSHA(bind.CommitSHA), shortSHA(head)))
+	}
+	return lines
+}
+
+func shortSHA(s string) string {
+	if len(s) > 12 {
+		return s[:12] + "…"
+	}
+	return s
 }
 
 // printAttach prints an identical abs-path Attach line on all OS.
