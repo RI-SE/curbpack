@@ -5,8 +5,8 @@
     {
       "id": "heal-missing-house-stubs",
       "kind": "heal_missing_stubs",
-      "expect": "pass",
-      "note": "Missing SECURITY.md + security.txt → check --heal applies stubs and re-checks green. Never attest."
+      "expect": "fail",
+      "note": "Missing SECURITY.md + security.txt → check --heal writes stubs; re-check stays red (scaffold overlap). Never attest."
     },
     {
       "id": "dead-end-non-git",
