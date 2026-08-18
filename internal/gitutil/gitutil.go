@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -129,6 +130,35 @@ func ChangedFiles(repoRoot string) (map[string]struct{}, error) {
 	return out, nil
 }
 
+// DiffNameOnly returns slash-normalized paths that differ between fromRev and toRev.
+// When pathspecs is non-empty, they are passed after `--` (git diff --name-only A B -- paths).
+// Empty pathspecs returns nil (does not dump the whole tree). Results are sorted.
+func DiffNameOnly(repoRoot, fromRev, toRev string, pathspecs []string) ([]string, error) {
+	if strings.TrimSpace(fromRev) == "" || strings.TrimSpace(toRev) == "" {
+		return nil, fmt.Errorf("git diff --name-only: empty revision")
+	}
+	if len(pathspecs) == 0 {
+		return nil, nil
+	}
+	args := make([]string, 0, 5+len(pathspecs))
+	args = append(args, "diff", "--name-only", fromRev, toRev, "--")
+	args = append(args, pathspecs...)
+	out, err := runGit(repoRoot, args...)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		names = append(names, filepath.ToSlash(line))
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 // parentNoteCapsule is the minimal JSON shape read from git notes for Merkle chaining.
 type parentNoteCapsule struct {
 	StateHash string `json:"state_hash"`
@@ -168,12 +198,41 @@ func ParentNoteHash(repoRoot, commit string) string {
 	return rest[:q2]
 }
 
-// LatestNoteCommit returns the most recent commit with a curbpack (or legacy cyberready) note.
+// LatestNoteCommit returns the most recent commit (from HEAD ancestry) that has a
+// curbpack or legacy cyberready note. Do not use `git log -1 --notes=… --format=%H`:
+// that returns HEAD even when HEAD has no note.
 func LatestNoteCommit(repoRoot string) (string, error) {
+	noted := map[string]struct{}{}
 	for _, ref := range []string{"curbpack", "cyberready"} {
-		out, err := runGit(repoRoot, "log", "-1", "--notes="+ref, "--format=%H")
-		if err == nil && out != "" {
-			return out, nil
+		out, err := runGit(repoRoot, "notes", "--ref="+ref, "list")
+		if err != nil || out == "" {
+			continue
+		}
+		for _, line := range strings.Split(out, "\n") {
+			fields := strings.Fields(line)
+			// notes list: <note-object> <commit>
+			if len(fields) >= 2 {
+				noted[fields[len(fields)-1]] = struct{}{}
+			}
+		}
+	}
+	if len(noted) == 0 {
+		return "", fmt.Errorf("no attest notes found")
+	}
+	revList, err := runGit(repoRoot, "rev-list", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	for _, commit := range strings.Split(revList, "\n") {
+		commit = strings.TrimSpace(commit)
+		if commit == "" {
+			continue
+		}
+		if _, ok := noted[commit]; ok {
+			// Dual-read show confirms the note body is readable.
+			if _, err := NotesShow(repoRoot, commit); err == nil {
+				return commit, nil
+			}
 		}
 	}
 	return "", fmt.Errorf("no attest notes found")

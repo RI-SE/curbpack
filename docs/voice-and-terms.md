@@ -38,7 +38,7 @@ Footer / authorities / NOTICE-aligned. Never endorsement:
 | research brief | allowlisted Sources (informational; never gates check) | regulation chat KB / open-web RAG as SoR |
 | cite-check | refuses uncited Claims before confirm-prose | inventing regulation text |
 | dual-draft + Recommended A\|B | human pick; record last_draft_pick | auto-apply / auto-attest |
-| confirm (TTY or `--i-am-human`) | human-owned ticks | agent auto-confirm |
+| confirm (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) | human-owned ticks | agent auto-confirm |
 
 **Mnemonic:** *Curb outlines → packs → check → hand off.*
 
@@ -57,7 +57,7 @@ On authorities pages, use EU-familiar nouns: *structural evidence*, *human revie
 
 ## Builder register
 
-Short verbs: install, init, check, prepare-release, attest, share, pathway status (curb outlines), research. Daily mid-tier: on red `check --heal` then `ask --propose`; on green `share` for handoff. Prefer **Pick how you start** / **Three ways in** over “Pick a door.” No soft-exit / Zig / TTFV on the first screen. Pin `@v0.5.0` under Install / Builders—not in the hero.
+Short verbs: install, init, check, prepare-release, attest, share, pathway status (curb outlines), research. Daily mid-tier: on red `check --heal` then `ask --propose`; on green `share` for handoff. Prefer **Pick how you start** / **Three ways in** over “Pick a door.” No soft-exit / Zig / TTFV on the first screen. Pin `@v0.5.2` under Install / Builders—not in the hero.
 
 ## Writing rules
 

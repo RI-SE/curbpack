@@ -1,13 +1,13 @@
 package templates
 
-// ProofPageHTML returns static HPURL viewer with client-side hash verification.
+// ProofPageHTML returns a local stamp viewer with client-side hash verification.
 func ProofPageHTML() string {
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Curbpack — Proof</title>
+  <title>Does this folder match the human stamp?</title>
   <style>
     :root { color-scheme: light dark; font-family: "IBM Plex Sans", system-ui, sans-serif; line-height: 1.5; }
     body { margin:0; min-height:100vh; display:grid; place-items:center;
@@ -31,16 +31,16 @@ func ProofPageHTML() string {
 </head>
 <body>
   <main>
-    <h1>Evidence proof</h1>
-    <p class="subtitle">HPURL fragment stays in the browser hash. Verify <code>h=</code> against the local evidence pointer digest (client-side only).</p>
-    <div id="status" class="status warn">Waiting for fragment parameters…</div>
+    <h1>Does this folder match the human stamp?</h1>
+    <p class="subtitle">Yes or no: compare the hash on this page to the local evidence pointer. Opened from the repo copy, the expected stamp fills in automatically. Not a certification.</p>
+    <div id="status" class="status warn">Waiting for stamp parameters…</div>
     <dl id="fields"></dl>
-    <label for="expected">Expected state_hash (from <code>.github/curbpack/evidence/hpurl-pointer.json</code>)</label>
-    <input id="expected" placeholder="Paste state_hash to verify…" autocomplete="off" />
-    <button type="button" id="verifyBtn">Verify hash</button>
+    <label for="expected">Expected stamp (from the local evidence pointer)</label>
+    <input id="expected" placeholder="Paste expected stamp to verify…" autocomplete="off" />
+    <button type="button" id="verifyBtn">Compare stamp</button>
     <footer>
-      Contract: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
-      Aliases: <code>run</code>, <code>capsule</code>, <code>vows</code>. Local pointer: <code>.github/curbpack/evidence/</code>. Not a certification.
+      Fragment: <code>#?h=&lt;hash&gt;&amp;p=&lt;pointer&gt;&amp;s=&lt;signature&gt;</code><br/>
+      Local pointer: <code>.github/curbpack/evidence/</code>. Not a certification.
     </footer>
   </main>
   <script>
@@ -77,20 +77,20 @@ func ProofPageHTML() string {
     function verify() {
       const data = parseHashParams();
       const expected = normalizeHex(document.getElementById("expected").value);
-      if (!data || !data.h) { setStatus("warn", "No h= hash in fragment"); return; }
-      if (!expected) { setStatus("warn", "Paste expected state_hash from hpurl-pointer.json"); return; }
+      if (!data || !data.h) { setStatus("warn", "No hash in this page"); return; }
+      if (!expected) { setStatus("warn", "Paste the expected stamp from the local evidence pointer"); return; }
       if (normalizeHex(data.h) === expected) {
-        setStatus("ok", "Hash match — fragment h= equals local evidence pointer (client-side verify)");
+        setStatus("ok", "Yes — this folder matches the human stamp (client-side compare, not certification)");
       } else {
-        setStatus("err", "Hash mismatch — fragment does not match pasted state_hash");
+        setStatus("err", "No — this folder does not match the human stamp");
       }
     }
     const data = parseHashParams();
     if (!data) {
-      setStatus("warn", "No receipt in link — append #?h=…&p=…&s=…");
+      setStatus("warn", "No stamp in this page — open from the repo copy, or append the fragment from the evidence pointer");
     } else {
       renderFields(data);
-      setStatus("ok", "Params loaded — paste state_hash and Verify");
+      setStatus("ok", "Stamp loaded — compare to the local evidence pointer");
       if (data.h) document.getElementById("expected").placeholder = "Expected: " + data.h.slice(0, 16) + "…";
     }
     document.getElementById("verifyBtn").addEventListener("click", verify);

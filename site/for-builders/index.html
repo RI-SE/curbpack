@@ -27,20 +27,26 @@
       <h2>For builders</h2>
       <p class="sub">Install, init, and check—green gates in your repo in under ten minutes.</p>
       <p>Not conformity assessment. Not CE marking. Not a notified-body opinion.</p>
+      <p>Install hub: <a href="https://github.com/afelin/curbpack/blob/main/docs/getting-started/install.md">docs/getting-started/install.md</a> · stuck? <a href="https://github.com/afelin/curbpack/blob/main/docs/getting-started/troubleshooting.md">troubleshooting</a>. Pin <code>@v0.5.2</code>.</p>
       <p>Pick <strong>one</strong> of three ways in:</p>
 
       <h3>Write then check</h3>
       <p>Build <strong>curb outlines</strong> via pathway → assistant proposes A and B → you pick → cite-check → you confirm (TTY or <code>--i-am-human</code>) → check.</p>
       <p>After pack confirm, Curbpack builds a <strong>local pack→rule map</strong> that steers drafting—not a legal oracle. Depth: <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md">docs/getting-started/pathway.md</a>.</p>
-      <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
-curbpack doctor
+      <p><strong>Windows (PowerShell)</strong></p>
+      <pre class="mono"><code>irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex</code></pre>
+      <p><strong>macOS / Linux</strong></p>
+      <pre class="mono"><code>curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh</code></pre>
+      <p>Then the same ladder:</p>
+      <pre class="mono"><code>curbpack doctor
+curbpack demo
 cd /path/to/your/product
 curbpack init
 curbpack check
 curbpack share              # optional --bundle
 # human when ready: curbpack attest → proof/index.html
 curbpack drift              # optional checklist (exit 0)</code></pre>
-      <p class="muted">Default pack is <strong>house-policy</strong>. Optional warm-start suggests checklists; drafts never replace check. Pin <code>@v0.5.0</code>.</p>
+      <p class="muted">Default pack is <strong>house-policy</strong>. Optional warm-start suggests checklists; drafts never replace check. Pin <code>@v0.5.2</code>. After PATH loss: <code>curbpack doctor --repair</code> (local only).</p>
 
       <h3>Bring docs then check</h3>
       <pre class="mono"><code>cd /path/to/your/product
@@ -52,10 +58,10 @@ curbpack check</code></pre>
       <p class="muted">No portal PDF ingest — files in the repo only. Names above match the house-policy pack.</p>
 
       <h3>CI (check alone)</h3>
-      <pre class="mono"><code>- uses: afelin/curbpack@v0.5.0
+      <pre class="mono"><code>- uses: afelin/curbpack@v0.5.2
   with:
     heal: "true"</code></pre>
-      <p class="muted">Drop-in example: repo <code>examples/workflows/curbpack-check.yml</code>.</p>
+      <p class="muted">Drop-in example: repo <code>examples/workflows/curbpack-check.yml</code>. Action runners = <strong>Linux/macOS only</strong>; local Windows CLI is supported separately.</p>
 
       <h3>What you get</h3>
       <table>
@@ -78,7 +84,7 @@ curbpack check</code></pre>
       </ul>
 
       <h3>Daily loop</h3>
-      <p class="muted"><code>curb</code> is a short alias for <code>curbpack</code> (same binary). Pin stays <code>@v0.5.0</code>.</p>
+      <p class="muted"><code>curb</code> is a short alias for <code>curbpack</code> (same binary). Pin stays <code>@v0.5.2</code>.</p>
       <pre class="mono"><code>curb check                 # or curbpack check
 # red: curb check --heal && curb ask .github/curbpack/cache/latest_failure.json --propose
 # green handoff: curb share

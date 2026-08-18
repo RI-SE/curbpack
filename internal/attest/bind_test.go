@@ -110,6 +110,37 @@ func TestLatestBind_post_commit_head_empty(t *testing.T) {
 	}
 }
 
+func TestLatestBind_git_notes_fallback_after_new_commit(t *testing.T) {
+	dir := t.TempDir()
+	initRepo(t, dir)
+	c1, _ := gitutil.HeadSHA(dir)
+	cap := attest.Capsule{CommitSHA: c1, StateHash: "notes-c1", Signer: "local-unsigned", UserTouch: "not-verified"}
+	body, _ := json.Marshal(cap)
+	if err := gitutil.NotesAdd(dir, c1, string(body)); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("git", "commit", "--allow-empty", "-m", "c2-no-note", "-q")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	// No hpurl-pointer — must find c1 via notes walk, not HEAD.
+	bind, err := attest.LatestBind(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bind.Found || bind.Source != "git-notes" {
+		t.Fatalf("want git-notes fallback, got %+v", bind)
+	}
+	if bind.CommitSHA != c1 {
+		t.Fatalf("bind commit = %q want c1 %q", bind.CommitSHA, c1)
+	}
+	if bind.StateHash != "notes-c1" {
+		t.Fatalf("state_hash = %q", bind.StateHash)
+	}
+}
+
 func TestLatestBind_git_notes_fallback(t *testing.T) {
 	dir := t.TempDir()
 	initRepo(t, dir)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -152,6 +153,9 @@ func TestAirlock_GHARunnerPath(t *testing.T) {
 }
 
 func TestAirlock_RootHomePath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix absolute /root path fixture")
+	}
 	pkt := exportx.AssembleExplainPacket(ir.GateFailurePayload{
 		PackID: "house-policy",
 		Failures: []ir.Failure{{
@@ -202,6 +206,9 @@ func TestAirlock_WSLPath(t *testing.T) {
 }
 
 func TestAirlock_HomeIsRootDoesNotWipeSlashes(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix absolute corp path fixture")
+	}
 	pkt := exportx.AssembleExplainPacket(ir.GateFailurePayload{
 		PackID: "house-policy",
 		Failures: []ir.Failure{{

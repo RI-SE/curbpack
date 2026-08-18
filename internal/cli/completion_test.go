@@ -22,6 +22,18 @@ func TestRun_CompletionBash(t *testing.T) {
 	if !strings.Contains(stdout, "share") {
 		t.Fatal("expected share command")
 	}
+	if !strings.Contains(stdout, "drift") {
+		t.Fatal("expected drift command")
+	}
+	if !strings.Contains(stdout, "--repair") {
+		t.Fatal("expected doctor --repair")
+	}
+	if !strings.Contains(stdout, "--bundle") {
+		t.Fatal("expected share --bundle")
+	}
+	if !strings.Contains(stdout, "--reveal") {
+		t.Fatal("expected share --reveal")
+	}
 }
 
 func TestRun_CompletionUnknownShell(t *testing.T) {

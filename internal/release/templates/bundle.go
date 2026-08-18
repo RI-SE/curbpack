@@ -30,7 +30,7 @@ func EvidenceBundleHTML(d BundleDTO) string {
 	}
 	hpurlBlock := ""
 	if d.HPURLFragment != "" {
-		hpurlBlock = fmt.Sprintf(`<section><h2>HPURL fragment (offline)</h2><code>%s</code></section>`, html.EscapeString(d.HPURLFragment))
+		hpurlBlock = fmt.Sprintf(`<section><h2>Evidence stamp (offline)</h2><code>%s</code></section>`, html.EscapeString(d.HPURLFragment))
 	}
 	if d.HPURLEmbedJSON != "" {
 		hpurlBlock += fmt.Sprintf(`<script type="application/json" id="curbpack-hpurl-pointer">%s</script>`, d.HPURLEmbedJSON)
@@ -63,12 +63,13 @@ func EvidenceBundleHTML(d BundleDTO) string {
     %s
     <h1>Evidence bundle — %s</h1>
     <p class="meta">%s · score %d%% · Generated %s · Structural evidence for human review — not conformity assessment.</p>
+    <p class="meta">Keep this folder with the release tag for 10 years or the support period, whichever is longer. Curbpack does not archive it. This is a reminder, not a legal fulfillment claim.</p>
     <section class="embed">
       <h2>Buyer one-pager</h2>
       %s
     </section>
     %s
-    <footer>Open proof/index.html locally to verify HPURL hash against embedded pointer. Unsigned ≠ verified.</footer>
+    <footer>Open proof/index.html locally to compare the stamp to the embedded pointer. Unsigned ≠ verified.</footer>
   </main>
 </body>
 </html>

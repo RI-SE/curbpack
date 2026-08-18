@@ -72,6 +72,40 @@ func TestHeadSHA_AuditMatrix(t *testing.T) {
 	})
 }
 
+func TestLatestNoteCommit_skipsHeadWithoutNote(t *testing.T) {
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "commit", "--allow-empty", "-m", "c1", "-q")
+	c1, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gitutil.NotesAdd(dir, c1, `{"state_hash":"note-on-c1"}`); err != nil {
+		t.Fatal(err)
+	}
+	run("git", "commit", "--allow-empty", "-m", "c2", "-q")
+	c2, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := gitutil.LatestNoteCommit(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != c1 {
+		t.Fatalf("LatestNoteCommit = %q want c1 %q (not HEAD %q)", got, c1, c2)
+	}
+}
+
 func TestParentNoteHash_JSON(t *testing.T) {
 	dir := t.TempDir()
 	initGitRepo(t, dir)
@@ -93,5 +127,68 @@ func TestParentNoteHash_JSON(t *testing.T) {
 	if got != "abc123deadbeef" {
 		t.Fatalf("ParentNoteHash = %q want abc123deadbeef", got)
 	}
-	_ = filepath.Join(dir) // keep import
+}
+
+func TestDiffNameOnly_pathspecs(t *testing.T) {
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	mustWrite := func(rel, body string) {
+		t.Helper()
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mustWrite("SECURITY.md", "v1")
+	mustWrite("other.txt", "keep")
+	run("git", "add", "SECURITY.md", "other.txt")
+	run("git", "commit", "-m", "c1", "-q")
+	from, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustWrite("SECURITY.md", "v2")
+	mustWrite("other.txt", "changed too")
+	run("git", "add", "SECURITY.md", "other.txt")
+	run("git", "commit", "-m", "c2", "-q")
+	to, err := gitutil.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := gitutil.DiffNameOnly(dir, from, to, []string{"SECURITY.md"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "SECURITY.md" {
+		t.Fatalf("pathspec SECURITY.md: got %v", got)
+	}
+
+	empty, err := gitutil.DiffNameOnly(dir, from, to, []string{"missing.md"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(empty) != 0 {
+		t.Fatalf("want empty for unchanged pathspec, got %v", empty)
+	}
+
+	none, err := gitutil.DiffNameOnly(dir, from, to, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if none != nil {
+		t.Fatalf("empty pathspecs should skip whole-tree diff, got %v", none)
+	}
 }

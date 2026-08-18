@@ -3,10 +3,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/platform"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
@@ -22,6 +25,7 @@ func cmdShare(args []string) error {
 	var packIDs []string
 	skipPrepare := false
 	wantBundle := false
+	wantReveal := false
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--packs":
@@ -33,6 +37,8 @@ func cmdShare(args []string) error {
 			skipPrepare = true
 		case "--bundle":
 			wantBundle = true
+		case "--reveal":
+			wantReveal = true
 		}
 	}
 
@@ -48,13 +54,18 @@ func cmdShare(args []string) error {
 		return err
 	}
 	tty.PrintStatus("context-pack", true, cp)
+	printAttach(cp)
 
 	bq, n, err := exportx.WriteBuyerQuestions(root, packIDs, "")
 	if err != nil {
 		return err
 	}
 	tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", bq, n))
+	printAttach(bq)
 
+	var revealTarget string
+	prepared := false
+	onepager := filepath.Join(root, "review-pack", "buyer-onepager.html")
 	if !skipPrepare {
 		if err := release.Prepare(release.Options{
 			RepoRoot:          root,
@@ -63,8 +74,18 @@ func cmdShare(args []string) error {
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "prepare-release: "+err.Error()))
 		} else {
-			tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
+			prepared = true
 		}
+	}
+
+	for _, line := range shareLadderLines(root, res.Score, res.Passed) {
+		fmt.Printf("%s\n", tty.C(tty.Yellow, line))
+	}
+
+	if prepared {
+		tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
+		printAttach(onepager)
+		revealTarget = onepager
 	}
 
 	if wantBundle {
@@ -73,6 +94,16 @@ func cmdShare(args []string) error {
 			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "evidence-bundle: "+err.Error()))
 		} else {
 			tty.PrintStatus("evidence-bundle", true, bundlePath)
+			printAttach(bundlePath)
+			revealTarget = bundlePath
+		}
+	}
+
+	if wantReveal {
+		if revealTarget != "" {
+			_ = platform.RevealInFileManager(revealTarget)
+		} else {
+			fmt.Printf("%s\n", tty.C(tty.Dim, "share --reveal: nothing to reveal (need prepare-release output or --bundle)"))
 		}
 	}
 
@@ -81,4 +112,36 @@ func cmdShare(args []string) error {
 		return gatesErr()
 	}
 	return nil
+}
+
+// shareLadderLines returns share_stale / attest_commit_behind as the first post-prepare
+// status lines when those conditions hold. Bundle still writes (no extra flag).
+func shareLadderLines(root string, score int, passed bool) []string {
+	bind, _ := attest.LatestBind(root)
+	var lines []string
+	sig, detail := release.ShareStaleReport(root, bind, score, passed)
+	if sig == "share_stale" {
+		lines = append(lines, "share_stale: "+detail)
+	}
+	head, err := gitutil.HeadSHA(root)
+	if err == nil && bind.Found && bind.CommitSHA != head {
+		lines = append(lines, fmt.Sprintf("attest_commit_behind: bind %s ≠ HEAD %s", shortSHA(bind.CommitSHA), shortSHA(head)))
+	}
+	return lines
+}
+
+func shortSHA(s string) string {
+	if len(s) > 12 {
+		return s[:12] + "…"
+	}
+	return s
+}
+
+// printAttach prints an identical abs-path Attach line on all OS.
+func printAttach(path string) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		abs = path
+	}
+	fmt.Printf("Attach: %s\n", abs)
 }

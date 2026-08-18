@@ -11,22 +11,35 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 ## Quickstart
 
-Install, init, and check—green gates in your repo in under ten minutes.
+Install, init, and check—green gates in your repo in under ten minutes. Pin **`@v0.5.2`**. Full ladders: [install](docs/getting-started/install.md) · stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+```
+
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
-curbpack doctor
+```
 
+Then the same ladder on every OS:
+
+```bash
+curbpack doctor
+curbpack demo              # sandbox; optional --open
 cd /path/to/your/product   # git repo
 curbpack init              # house-policy default; --profile cra|medtech
 curbpack check             # daily loop — exit code is authoritative
-curbpack share             # optional --bundle for offline evidence-bundle.html
+curbpack share             # optional --bundle; --reveal opens review-pack in Explorer/Finder
 # human only when ready:
 curbpack attest
 # verify: proof/index.html vs hpurl-pointer.json
 ```
 
-On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff. Optional drift checklist: `curbpack drift` (exit 0 always).
+On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff (`Attach:` lines print absolute paths for Outlook/Teams). Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also: `install.ps1 -Repair`).
 
 ## Three ways in
 
@@ -50,6 +63,7 @@ Depth: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway gu
 | **Review pack** | `prepare-release` or `share` | Layered reports for human review |
 | **Buyer one-pager** | After green + `share` | Supplier evidence summary HTML you hand to a buyer |
 | **Evidence bundle** | `share --bundle` | Offline `review-pack/evidence-bundle.html` with embedded hpurl pointer |
+| **Reveal / Attach** | `share --reveal` | Opens review-pack (or bundle) in Explorer/Finder; stdout `Attach: <abs path>` on every OS |
 | **Drift checklist** | `curbpack drift` | Multi-signal human checklist (exit 0; not a compliance meter) |
 | **Attest capsule** | Human `attest` when ready | Git Notes hash bind—**unsigned ≠ verified** |
 | **Proof page** | After attest | Local `proof/index.html` vs evidence pointer—still human judgment |
@@ -80,15 +94,17 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 
 ## GitHub Action
 
+Action runners are **Linux/macOS only** (local Windows CLI is supported separately).
+
 ```yaml
-- uses: afelin/curbpack@v0.5.1
+- uses: afelin/curbpack@v0.5.2
   with:
-    heal: "true"
+    heal: "true" # opt-in; Action default is false (scaffold ≠ readiness)
     comment_on: red
     upload_sarif: "true"
 ```
 
-Pin **`@v0.5.1`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
+Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
 
 ## Advanced
 
@@ -96,7 +112,7 @@ Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals
 
 **Compose, do not conquer:** Curbpack prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program. Boundary: [strategy boundary](docs/strategy-boundary.md).
 
-Confirms are human-only (TTY or `--i-am-human`). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
+Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 
 | Command | Purpose |
 |---------|---------|
@@ -110,7 +126,7 @@ Confirms are human-only (TTY or `--i-am-human`). Research briefs never gate pass
 | `share` | Thin recipe: check → context-pack → buyer-questions → prepare-release |
 | `pathway status` | One next ask (human default; `--technical` for phase path) |
 | `pathway suggest\|note` | Warm-start seed + session notes — not a gate input |
-| `pathway confirm-*` | Human only — TTY or `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` |
+| `pathway confirm-*` | Human only — `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` |
 | `research [--fetch]\|--cite-check` | Allowlisted citation packet + human brief — never gates check |
 | `completion bash\|zsh\|fish` | Print shell completions |
 | `sock` | Optional Unix IPC for integrators (continues if unused) |

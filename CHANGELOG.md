@@ -2,7 +2,24 @@
 
 ## Unreleased
 
+- **Handoff honesty** — one-pager cover sheet (files-to-read front, gate score on the back); `anti_placeholder` fails DefaultScaffoldBody overlap (`--heal` remaining red is intended); drift `docs_changed_since_attest` / `docs_unchanged_since_attest` plus optional security.txt contact signals; medtech formhints guess path `docs/medtech/…`. Proof yes/no stamp copy; share prints `share_stale` first; doctor warns on `CURBPACK_ALLOW_CONFIRM=1`; optional attest `--reviewed-by` in evidence only. Structural evidence for human review — not certification. Pin stays `@v0.5.2`. Trust-surface freeze continues (no Action resolve / SafeJoin / OCC / airlock / sock / pack catalog).
+- **Premortem production fixes (PR #57)** — `init` gitignores cache/evidence; Action `heal` default **false** + scaffold≠readiness warning; pathway confirm requires `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` (TTY alone refused); `LatestNoteCommit` walks notes (not HEAD-without-note); Action refuses Windows runners + red `REMEDIATION REVIEW` artifacts; claim-safety scans `*.ps1`; redteam **18/18**; maintainer playbook [`docs/getting-started/release-v0.5.2.md`](docs/getting-started/release-v0.5.2.md)
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
+- **Cross-OS TAM hardening** — gauntlet Action honesty assert (no `or True`); `doctor --repair` fail-closed after LookPath; marker BOM-safe + custom InstallDir; CI repair smoke without `|| true`; completions for `drift` / `--repair` / `--bundle` / `--reveal`; atomic `.new` cleanup; `share --reveal` empty-message; docs pin sweep `@v0.5.2`
+- **Note:** annotated **`v0.5.2` release tag is cut after this PR merges** (not before) — pin advertising waits for green CI + release assets; follow the release playbook
+
+## v0.5.2
+
+Cross-OS TAM — distribution + UX + repair (Trust track deferred).
+
+- **Windows exe** — release asset `curbpack_windows_amd64.exe`; CI `windows-latest` + `windows-smoke`
+- **install.ps1** — PowerShell installer alongside `install.sh`; fail-closed checksums; `-Repair` = local PATH/alias (same as `doctor --repair`)
+- **doctor --repair** — local PATH/alias repair only (no network / no auto-update); fail-closed if LookPath still missing
+- **share --reveal** + **`Attach:`** — optional Explorer/Finder reveal; absolute attach paths on every OS
+- **platform.OpenFile** — cross-OS open helper for demo/proof surfaces
+- **Docs** — dual fence (PowerShell | macOS/Linux) + same ladder; install hub + troubleshooting links; pin `@v0.5.2`
+- **Action** — default download pin `v0.5.2`; runners remain **Linux/macOS only** (not Windows runners)
+- **Release tag** — cut **after merge** once CI is green and assets publish (do not advertise the pin before the tag exists)
 
 ## v0.5.1
 

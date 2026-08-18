@@ -12,18 +12,31 @@ Same local `check` for all three — Write adds optional draft choice first; Bri
 
 | Way | What you do |
 |-----|-------------|
-| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (TTY or `--i-am-human`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
+| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then `check`. No portal PDF ingest. |
-| **CI** | Action-only (or local `check` alone). Pin **`@v0.5.0`**. |
+| **CI** | Action-only (or local `check` alone). Pin **`@v0.5.2`**. Action = Linux/macOS runners. |
 
-Builders site: [Three ways in](../../site/for-builders/). Write depth: [pathway](pathway.md).
+Builders site: [Three ways in](../../site/for-builders/). Install hub: [install](install.md) · [troubleshooting](troubleshooting.md). Write depth: [pathway](pathway.md).
 
 ## Human — safe try
 
-Under ten minutes (pin **`@v0.5.0`**): `install.sh` → `doctor` → `demo`. Gate green ≠ certification.
+Under ten minutes (pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+```
+
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+```
+
+Then:
+
+```bash
 curbpack doctor
 curbpack demo                          # sandbox green + one-pager path (no browser)
 # curbpack demo --open                 # opt-in: open the one-pager in the OS browser
@@ -57,8 +70,8 @@ Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On 
 **Action-only path** (no local install required):
 
 1. Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack-check.yml) → `.github/workflows/curbpack.yml`.
-2. Push / open a PR. Pin stays **`@v0.5.0`**. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
-3. Expect: uninitialized repos resolve **`house-policy`**; with `heal: true`, missing stubs are written; green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
+2. Push / open a PR. Pin stays **`@v0.5.2`**. Action = Linux/macOS only. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
+3. Expect: uninitialized repos resolve **`house-policy`**; Action `heal` defaults to **false**; set `heal: true` to write missing stubs (scaffold ≠ readiness). Green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
 
 Optional local equivalent: `curbpack init --workflow` writes the same drop-in workflow **only if missing** (never overwrites; not enabled by default `init`).
 
@@ -82,5 +95,5 @@ Habit after first green: [daily loop](daily-loop.md). Optional share: [buyer evi
 |-------------|------|
 | `curbpack init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `curbpack init --packs a,b` | Override default house-policy |
-| `curbpack init --workflow` | Opt-in drop-in Action `@v0.5.0` workflow if missing |
+| `curbpack init --workflow` | Opt-in drop-in Action `@v0.5.2` workflow if missing |
 | `curbpack demo --open` | Opt-in browser for the sandbox one-pager |

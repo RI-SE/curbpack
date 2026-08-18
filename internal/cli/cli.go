@@ -13,8 +13,8 @@ import (
 	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/demo"
-	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/doctor"
+	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/formhints"
 	"github.com/afelin/curbpack/internal/gitutil"
@@ -64,11 +64,31 @@ func ExitCode(err error) int {
 	if err == nil {
 		return ExitOK
 	}
+	var miss *doctor.ErrMissingBinary
+	if errors.As(err, &miss) {
+		return ExitUsage
+	}
 	var ee *exitError
 	if errors.As(err, &ee) {
 		return ee.code
 	}
 	return ExitGates
+}
+
+func cmdDoctor(args []string) error {
+	repair := false
+	for _, a := range args {
+		switch a {
+		case "--repair":
+			repair = true
+		case "-h", "--help":
+			fmt.Fprintf(os.Stderr, "Usage: curbpack doctor [--repair]\n  --repair  Re-assert install dir on PATH + refresh curb alias (local only; never downloads)\n")
+			return nil
+		default:
+			return usageErr(fmt.Sprintf("doctor: unknown flag %q (use --repair)", a))
+		}
+	}
+	return doctor.Run(doctor.Options{Version: Version, Repair: repair})
 }
 
 // Run dispatches CLI args (without the program name). Returns a typed exitError for usage/gates.
@@ -104,7 +124,7 @@ func Run(args []string) error {
 	case "sock":
 		return cmdSock(rest)
 	case "doctor":
-		return doctor.Run(doctor.Options{Version: Version})
+		return cmdDoctor(rest)
 	case "demo":
 		return cmdDemo(rest)
 	case "export":
@@ -148,15 +168,15 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: curbpack [<command>] [args]\n")
 	fmt.Fprintf(os.Stderr, "  (no command)     doctor if uninitialized, else check\n\n")
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
-	fmt.Fprintf(os.Stderr, "  doctor           Environment confidence\n")
+	fmt.Fprintf(os.Stderr, "  doctor [--repair] Environment confidence; --repair = local PATH/alias only\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
 	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
-	fmt.Fprintf(os.Stderr, "  share [--bundle] check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
-	fmt.Fprintf(os.Stderr, "  attest           Human Git Notes capsule (then proof verify)\n\n")
+	fmt.Fprintf(os.Stderr, "  attest [--allow-dirty] [--reviewed-by=Name]  Human Git Notes capsule (then proof verify)\n\n")
 	fmt.Fprintf(os.Stderr, "Advanced:\n")
 	fmt.Fprintf(os.Stderr, "  validate [--json] [--delta]   Dual-rep gates (--delta not release-safe)\n")
 	fmt.Fprintf(os.Stderr, "  check --diff                  Delta mode — not release-gate safe\n")
@@ -164,16 +184,16 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  packs list|update|import|export-graph|doctor\n")
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
 	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
-	fmt.Fprintf(os.Stderr, "  share [--bundle]              Recipe: check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal]   Recipe + optional Explorer/Finder reveal\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]                Evidence drift checklist (informational; exit 0)\n")
 	fmt.Fprintf(os.Stderr, "  pathway status|suggest|confirm-packs|confirm-prose|confirm-share|note\n")
 	fmt.Fprintf(os.Stderr, "                                Warm-start seed + HITL ticks + session notes (sole writer of pathway-seed.json)\n")
 	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
 	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
-	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC\n")
+	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC (macOS/Linux only)\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
-	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env\n")
+	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
 }
 
 func cmdDemo(args []string) error {
@@ -208,6 +228,14 @@ func cmdInit(args []string) error {
 	_ = os.MkdirAll(filepath.Join(crPath, "policies"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
 	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
+
+	if added, gerr := ensureCurbpackGitignore(root); gerr != nil {
+		return gerr
+	} else if len(added) > 0 {
+		tty.PrintStatus(".gitignore", true, "cache/evidence ignored ("+strings.Join(added, ", ")+")")
+	} else {
+		tty.PrintStatus(".gitignore", true, "cache/evidence already ignored")
+	}
 
 	// Opinionated cold start: house-policy + hooks/skill/ide unless --bare.
 	// Workflow is opt-in (--workflow) to avoid surprising CI commits.
@@ -390,21 +418,24 @@ func installPreCommitHook(root string) error {
 		return err
 	}
 	path := filepath.Join(hookDir, "pre-commit")
-	script := `#!/bin/sh
-# Curbpack — fail commit on high/critical gate findings
-# --heal: create missing stubs only (never overwrite filled docs; never attest)
-# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).
-if command -v curbpack >/dev/null 2>&1; then
-  exec curbpack check --heal
-elif [ -x ./bin/curbpack ]; then
-  exec ./bin/curbpack check --heal
-elif [ -x ./curbpack ]; then
-  exec ./curbpack check --heal
-else
-  echo "curbpack not on PATH — refusing commit (hooks enabled)" >&2
-  exit 1
-fi
-`
+	// LF-only: never write CRLF (Windows Git may otherwise break sh hooks).
+	script := "#!/bin/sh\n" +
+		"# Curbpack — fail commit on high/critical gate findings\n" +
+		"# --heal: create missing stubs only (never overwrite filled docs; never attest)\n" +
+		"# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).\n" +
+		"if command -v curbpack >/dev/null 2>&1; then\n" +
+		"  exec curbpack check --heal\n" +
+		"elif [ -x ./bin/curbpack ]; then\n" +
+		"  exec ./bin/curbpack check --heal\n" +
+		"elif [ -x ./curbpack ]; then\n" +
+		"  exec ./curbpack check --heal\n" +
+		"else\n" +
+		"  echo \"curbpack not on PATH — refusing commit (hooks enabled)\" >&2\n" +
+		"  exit 1\n" +
+		"fi\n"
+	if strings.Contains(script, "\r") {
+		return fmt.Errorf("internal: hook script must be LF-only")
+	}
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		return err
 	}
@@ -466,6 +497,7 @@ func cmdCheck(args []string) error {
 	var res validate.Result
 	var lastHints []formhints.Hint
 	checkDiff := diffOnly
+	stubsWritten := 0
 	for round := 0; round <= healMaxRounds; round++ {
 		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: checkDiff, Quiet: jsonOut})
 		if err != nil {
@@ -490,6 +522,7 @@ func cmdCheck(args []string) error {
 				applied++
 			}
 		}
+		stubsWritten += applied
 		if !jsonOut {
 			fmt.Printf("%s\n", tty.C(tty.Yellow, fmt.Sprintf("heal round %d/%d: applied %d missing stub(s); re-checking…", round+1, healMaxRounds, applied)))
 		}
@@ -515,6 +548,9 @@ func cmdCheck(args []string) error {
 		} else {
 			fmt.Printf("readiness=%d%% gates=green\n", res.Score)
 		}
+		if heal && stubsWritten > 0 {
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
+		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
 		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Score, nowInst) {
@@ -526,6 +562,9 @@ func cmdCheck(args []string) error {
 	} else {
 		if tty.IsTerminal {
 			tty.RenderThermometer(res.Score)
+		}
+		if heal && stubsWritten > 0 {
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
 		}
 		// Failures: top 3 + ask pointer (no log archaeology).
 		fmt.Println(topFailuresSummary(res, 3))
@@ -813,9 +852,20 @@ func cmdAsk(args []string) error {
 func cmdAttest(args []string) error {
 	tty.PrintHeader("curbpack attest")
 	allowDirty := false
-	for _, a := range args {
-		if a == "--allow-dirty" {
+	reviewedBy := ""
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--allow-dirty":
 			allowDirty = true
+		case a == "--reviewed-by":
+			if i+1 >= len(args) {
+				return usageErr("attest --reviewed-by requires a name")
+			}
+			reviewedBy = strings.TrimSpace(args[i+1])
+			i++
+		case strings.HasPrefix(a, "--reviewed-by="):
+			reviewedBy = strings.TrimSpace(strings.TrimPrefix(a, "--reviewed-by="))
 		}
 	}
 	root, err := gitutil.RepoRoot("")
@@ -840,7 +890,7 @@ func cmdAttest(args []string) error {
 	}
 
 	// Self-written evidence dirties the tree — require explicit --allow-dirty (no silent force).
-	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty})
+	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty, ReviewedBy: reviewedBy})
 	return err
 }
 

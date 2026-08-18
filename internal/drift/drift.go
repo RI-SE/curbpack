@@ -5,15 +5,24 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/tty"
 )
 
-const schemaVersion = "curbpack-drift-report:1"
+const (
+	docsPathCap              = 12
+	actionRecheckShareAttest = "Re-run curbpack check, curbpack share, then human re-attest when ready"
+	securityTxtRel           = ".well-known/security.txt"
+	schemaVersion            = "curbpack-drift-report:1"
+)
 
 // Signal is one informational drift row (never a boolean pass/fail).
 type Signal struct {
@@ -23,9 +32,9 @@ type Signal struct {
 
 // Report is the multi-signal human checklist output.
 type Report struct {
-	Schema            string   `json:"schema"`
-	Signals           []Signal `json:"signals"`
-	SuggestedActions  []string `json:"suggested_actions,omitempty"`
+	Schema           string   `json:"schema"`
+	Signals          []Signal `json:"signals"`
+	SuggestedActions []string `json:"suggested_actions,omitempty"`
 }
 
 // Options for drift report generation.
@@ -67,9 +76,19 @@ func Run(opts Options) error {
 			ID:     "attest_commit_behind",
 			Detail: fmt.Sprintf("Code moved since bind — bind %s ≠ HEAD %s", truncate(bind.CommitSHA), truncate(head)),
 		})
-		actions = append(actions, "Re-run curbpack check, curbpack share, then human re-attest when ready")
+		actions = append(actions, actionRecheckShareAttest)
 	} else {
 		signals = append(signals, Signal{ID: "attest_commit_current", Detail: "Attest bind matches HEAD (informational only)"})
+	}
+
+	// pack Path/Paths vs attest bind (same set as confirm-prose)
+	if bind.Found && headErr == nil {
+		if sig, changed := docsSinceAttestSignal(root, bind.CommitSHA, head); sig.ID != "" {
+			signals = append(signals, sig)
+			if changed {
+				actions = append(actions, actionRecheckShareAttest)
+			}
+		}
 	}
 
 	// last_check from cache
@@ -125,6 +144,9 @@ func Run(opts Options) error {
 		actions = append(actions, "Commit or stash changes before attest")
 	}
 
+	// security.txt Contact/Expires — optional, not a gate
+	signals = append(signals, securityTxtSignals(root)...)
+
 	report := Report{
 		Schema:           schemaVersion,
 		Signals:          signals,
@@ -139,7 +161,7 @@ func Run(opts Options) error {
 
 	fmt.Fprintf(w, "Curbpack drift — human checklist (exit 0 always; not a compliance meter)\n\n")
 	for _, s := range signals {
-		fmt.Fprintf(w, "  • %-24s %s\n", s.ID+":", s.Detail)
+		fmt.Fprintf(w, "  • %-30s %s\n", s.ID+":", s.Detail)
 	}
 	if len(report.SuggestedActions) > 0 {
 		fmt.Fprintf(w, "\nSuggested actions:\n")
@@ -159,6 +181,92 @@ func workingTreeSignal(root string) (Signal, bool) {
 		return Signal{ID: "working_tree_dirty", Detail: "Uncommitted changes present"}, true
 	}
 	return Signal{ID: "working_tree_clean", Detail: "No uncommitted changes (informational)"}, true
+}
+
+func docsSinceAttestSignal(root, bindSHA, head string) (Signal, bool) {
+	packIDs, err := config.ResolvePackIDs(root, nil)
+	if err != nil || len(packIDs) == 0 {
+		return Signal{}, false
+	}
+	paths, err := pathway.ProsePaths(packIDs)
+	if err != nil || len(paths) == 0 {
+		return Signal{}, false
+	}
+	changed, err := gitutil.DiffNameOnly(root, bindSHA, head, paths)
+	if err != nil {
+		return Signal{}, false
+	}
+	if len(changed) == 0 {
+		return Signal{ID: "docs_unchanged_since_attest", Detail: "Pack Path/Paths files unchanged since bind (informational only)"}, false
+	}
+	detail := "Pack files moved since bind: " + formatPathList(changed, docsPathCap)
+	return Signal{ID: "docs_changed_since_attest", Detail: detail}, true
+}
+
+func formatPathList(paths []string, cap int) string {
+	if cap < 1 {
+		cap = docsPathCap
+	}
+	if len(paths) <= cap {
+		return strings.Join(paths, ", ")
+	}
+	return strings.Join(paths[:cap], ", ") + fmt.Sprintf(" (+%d more)", len(paths)-cap)
+}
+
+func securityTxtSignals(root string) []Signal {
+	p := filepath.Join(root, filepath.FromSlash(securityTxtRel))
+	body, err := os.ReadFile(p)
+	if err != nil {
+		return nil
+	}
+	return parseSecurityTxtSignals(string(body), time.Now())
+}
+
+func parseSecurityTxtSignals(body string, now time.Time) []Signal {
+	var contact, expires string
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, val, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		val = strings.TrimSpace(val)
+		switch key {
+		case "contact":
+			if contact == "" && val != "" {
+				contact = val
+			}
+		case "expires":
+			if expires == "" && val != "" {
+				expires = val
+			}
+		}
+	}
+	var out []Signal
+	if contact == "" {
+		out = append(out, Signal{ID: "contact_missing", Detail: securityTxtRel + " has no Contact: line (informational, not a gate)"})
+	}
+	if t, ok := parseSecurityTxtExpires(expires); ok && now.After(t) {
+		out = append(out, Signal{ID: "contact_expires_past", Detail: fmt.Sprintf("%s Expires: %s is past (informational, not a gate)", securityTxtRel, expires)})
+	}
+	return out
+}
+
+func parseSecurityTxtExpires(s string) (time.Time, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{time.RFC3339, time.RFC3339Nano, "2006-01-02"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // BindDriftLine returns at most one dim line for check output when bind is behind HEAD.

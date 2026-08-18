@@ -9,7 +9,7 @@ import (
 var completionCommands = []string{
 	"help", "version", "doctor", "demo", "init", "check", "validate",
 	"prepare-release", "packs", "ask", "attest", "view", "sock",
-	"export", "share", "pathway", "research", "completion",
+	"export", "share", "pathway", "research", "drift", "completion",
 }
 
 var completionExportFlags = []string{
@@ -18,6 +18,10 @@ var completionExportFlags = []string{
 }
 
 var completionShells = []string{"bash", "zsh", "fish"}
+
+var completionDoctorFlags = []string{"--repair"}
+
+var completionShareFlags = []string{"--packs", "--skip-prepare-release", "--bundle", "--reveal"}
 
 func cmdCompletion(args []string) error {
 	if len(args) == 0 {
@@ -60,6 +64,9 @@ _curbpack() {
     packs)
       COMPREPLY=( $(compgen -W "list update import export-graph doctor" -- "$cur") )
       ;;
+    doctor)
+      COMPREPLY=( $(compgen -W "` + strings.Join(completionDoctorFlags, " ") + `" -- "$cur") )
+      ;;
     check)
       COMPREPLY=( $(compgen -W "--heal --diff --json --form-hints --apply-stub --packs" -- "$cur") )
       ;;
@@ -73,7 +80,7 @@ _curbpack() {
       COMPREPLY=( $(compgen -W "--propose" -- "$cur") )
       ;;
     share)
-      COMPREPLY=( $(compgen -W "--packs --skip-prepare-release" -- "$cur") )
+      COMPREPLY=( $(compgen -W "` + strings.Join(completionShareFlags, " ") + `" -- "$cur") )
       ;;
     pathway)
       COMPREPLY=( $(compgen -W "status suggest confirm-packs confirm-prose confirm-share note" -- "$cur") )
@@ -110,6 +117,16 @@ func zshCompletionScript() string {
 	b.WriteString(" ;;\n")
 	b.WriteString("    completion) _values 'shell' 'bash' 'zsh' 'fish' ;;\n")
 	b.WriteString("    packs) _values 'packs' 'list' 'update' 'import' 'export-graph' 'doctor' ;;\n")
+	b.WriteString("    doctor) _values 'doctor'")
+	for _, f := range completionDoctorFlags {
+		fmt.Fprintf(&b, " %q", f)
+	}
+	b.WriteString(" ;;\n")
+	b.WriteString("    share) _values 'share'")
+	for _, f := range completionShareFlags {
+		fmt.Fprintf(&b, " %q", f)
+	}
+	b.WriteString(" ;;\n")
 	b.WriteString("    pathway) _values 'pathway' 'status' 'suggest' 'confirm-packs' 'confirm-prose' 'confirm-share' 'note' ;;\n")
 	b.WriteString("    research) _values 'research' '--fetch' '--cite-check' '--list-sources' '--open-sources' '--packs' '--gate-id' ;;\n")
 	b.WriteString("  esac\n")
@@ -130,6 +147,12 @@ func fishCompletionScript() string {
 	}
 	for _, s := range completionShells {
 		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from completion' -a %q\n", s)
+	}
+	for _, f := range completionDoctorFlags {
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from doctor' -a %q\n", f)
+	}
+	for _, f := range completionShareFlags {
+		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from share' -a %q\n", f)
 	}
 	for _, p := range []string{"status", "suggest", "confirm-packs", "confirm-prose", "confirm-share", "note"} {
 		fmt.Fprintf(&b, "complete -c curbpack -n '__fish_seen_subcommand_from pathway' -a %q\n", p)

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/release"
 )
 
@@ -65,6 +66,12 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 	if !strings.Contains(string(html), "Structural evidence for human review") {
 		t.Fatal("buyer html must stamp structural evidence honesty")
 	}
+	if !strings.Contains(string(html), "Files to open") {
+		t.Fatal("buyer html must lead with files to open")
+	}
+	if !strings.Contains(string(html), "<th>Path</th>") {
+		t.Fatal("buyer html must show path + question cover table")
+	}
 	if !strings.Contains(string(html), "Back — provenance") {
 		t.Fatal("buyer html must include provenance back")
 	}
@@ -81,6 +88,41 @@ func TestPrepareReleaseWritesPack(t *testing.T) {
 		RepoRoot: dir, PackIDs: []string{"cra-baseline"}, OutDir: out, AllowFailingGates: true,
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPrepareProvenanceReviewedBy(t *testing.T) {
+	dir := t.TempDir()
+	initGitRepo(t, dir)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# x\n")
+	run := exec.Command("git", "add", "README.md")
+	run.Dir = dir
+	run.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run.Run()
+	run2 := exec.Command("git", "commit", "-m", "readme", "-q")
+	run2.Dir = dir
+	run2.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	_ = run2.Run()
+
+	if _, err := attest.Run(attest.Options{RepoRoot: dir, AllowDirty: true, ReviewedBy: "Ada Reviewer"}); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(dir, "review-pack")
+	if err := release.Prepare(release.Options{
+		RepoRoot: dir, PackIDs: []string{"house-policy"}, OutDir: out, AllowFailingGates: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	html, err := os.ReadFile(filepath.Join(out, "buyer-onepager.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(html)
+	if !strings.Contains(text, "Ada Reviewer") {
+		t.Fatal("one-pager provenance must show reviewed-by name")
+	}
+	if !strings.Contains(text, "recorded review, not assessment") {
+		t.Fatal("reviewed-by must say recorded review, not assessment")
 	}
 }
 

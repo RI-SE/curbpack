@@ -1,12 +1,12 @@
 # Design partners
 
-Product brief for five external repos that keep Action `@v0.5.0` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard. Public [`ADOPTERS.md`](../ADOPTERS.md) rows only on partner opt-in — never invent entries.
+Product brief for five external repos that keep Action `@v0.5.2` or `init`+hooks green. Outreach is human-operated; this file is the ask + scoreboard. Public [`ADOPTERS.md`](../ADOPTERS.md) rows only on partner opt-in — never invent entries.
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
 | Field | Content |
 |-------|---------|
-| Ask | Add Action `@v0.5.0` **or** `curbpack init` + hooks; keep for 14 days |
+| Ask | Add Action `@v0.5.2` **or** `curbpack init` + hooks; keep for 14 days |
 | Success | First green &lt;10 min; second green ≤7 days; “judge clicked without pitch?” Y/N |
 | Forbidden asks | Certification claims; uploading IP to a cloud policy brain |
 | Weekly ritual | 15-min note: path taken (A/B/C), stall step, keep/kill |
@@ -23,7 +23,7 @@ Object owner fills rows during outreach. Empty slots are fine — **no fake logo
 | _(slot 4 — SME)_ | | | | | | |
 | _(slot 5 — optional later Coreward-as-consumer)_ | | | | | | Curbpack contracts only this round; live Coreward dogfood is a later plan |
 
-Paths: **A** = safe try (`doctor`/`demo`) · **B** = product repo (`init`+hooks) · **C** = CI Action `@v0.5.0`.
+Paths: **A** = safe try (`doctor`/`demo`) · **B** = product repo (`init`+hooks) · **C** = CI Action `@v0.5.2`.
 
 ## Target mix
 

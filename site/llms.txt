@@ -28,7 +28,8 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 
 - Repo (primary): https://github.com/RI-SE/curbpack — mirror: https://github.com/afelin/curbpack
 - Site (credibility home): https://ri-se.github.io/curbpack/ — optional mirror: https://afelin.github.io/curbpack/
-- Install: https://github.com/RI-SE/curbpack#quickstart
+- Install (dual fence — PowerShell | macOS/Linux): https://github.com/afelin/curbpack/blob/main/docs/getting-started/install.md
+- Troubleshooting: https://github.com/afelin/curbpack/blob/main/docs/getting-started/troubleshooting.md
 - Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
 - Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
@@ -40,7 +41,7 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 - Green handoff: `curb share` (check → context-pack → buyer-questions → prepare-release)
 - ContextPack: `curbpack export --context-pack`
 - Thin MCP example: https://github.com/RI-SE/curbpack/tree/main/examples/mcp
-- Pin: `@v0.5.0`
+- Pin: `@v0.5.2` (Action = Linux/macOS runners; local CLI includes Windows)
 
 ## Optional depth
 

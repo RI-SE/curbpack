@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/afelin/curbpack/internal/workflowdata"
@@ -39,6 +40,9 @@ func TestInstallOnlyIfMissing(t *testing.T) {
 	}
 	if string(body) != string(workflowdata.Bytes()) {
 		t.Fatal("written body != embed")
+	}
+	if !strings.Contains(string(body), "Never set CURBPACK_ALLOW_CONFIRM on the Action") {
+		t.Fatal("workflow example must warn never set ALLOW_CONFIRM on the Action")
 	}
 
 	// Second call must not overwrite.

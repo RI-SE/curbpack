@@ -16,37 +16,34 @@ const buyerQuestionsAssuranceClass = "structural_draft"
 
 // BuyerQuestion is one human-review checklist row for buyers/auditors.
 type BuyerQuestion struct {
-	GateID           string `json:"gate_id"`
-	Severity         string `json:"severity"`
-	HumanQuestion    string `json:"human_question"`
-	ArtifactPath     string `json:"artifact_path"`
-	AssuranceClass   string `json:"assurance_class"`
-	RemediationHint  string `json:"remediation_hint"`
+	GateID          string `json:"gate_id"`
+	Severity        string `json:"severity"`
+	HumanQuestion   string `json:"human_question"`
+	ArtifactPath    string `json:"artifact_path"`
+	AssuranceClass  string `json:"assurance_class"`
+	RemediationHint string `json:"remediation_hint"`
 }
 
 // BuyerQuestionsReport is Markdown+JSON checklist export (claim-safe).
 type BuyerQuestionsReport struct {
-	SchemaVersion    string          `json:"schema_version"`
-	Note             string          `json:"note"`
-	PackID           string          `json:"pack_id"`
-	AssuranceClass   string          `json:"assurance_class"`
-	AttestationStatus string         `json:"attestation_status"`
-	Questions        []BuyerQuestion `json:"questions"`
+	SchemaVersion     string          `json:"schema_version"`
+	Note              string          `json:"note"`
+	PackID            string          `json:"pack_id"`
+	AssuranceClass    string          `json:"assurance_class"`
+	AttestationStatus string          `json:"attestation_status"`
+	Questions         []BuyerQuestion `json:"questions"`
 }
 
-// WriteBuyerQuestions emits buyer-questions.md + .json under cache (or outPath stem).
-func WriteBuyerQuestions(root string, packIDs []string, outPath string) (string, int, error) {
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
-	if err != nil {
-		return "", 0, err
-	}
+// CollectBuyerQuestions builds the same checklist rows WriteBuyerQuestions writes,
+// without touching the filesystem. Used by prepare-release one-pager cover sheet.
+func CollectBuyerQuestions(root string, packIDs []string, res validate.Result) ([]BuyerQuestion, error) {
 	ids := packIDs
 	if len(ids) == 0 {
 		ids = nonzeroPacks(strings.Split(res.Payload.PackID, ","))
 	}
 	composed, _, err := packs.Compose(ids)
 	if err != nil {
-		return "", 0, err
+		return nil, err
 	}
 	failRem := map[string]string{}
 	failPath := map[string]string{}
@@ -81,6 +78,49 @@ func WriteBuyerQuestions(root string, packIDs []string, outPath string) (string,
 			AssuranceClass:  assurance,
 			RemediationHint: hint,
 		})
+	}
+	return questions, nil
+}
+
+// PackPlainNames returns human pack names for a CSV of pack ids (fallback: the id).
+func PackPlainNames(packIDCSV string) string {
+	var names []string
+	for _, id := range strings.Split(packIDCSV, ",") {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		p, err := packs.LoadPack(id)
+		if err != nil || strings.TrimSpace(p.Name) == "" {
+			names = append(names, id)
+			continue
+		}
+		names = append(names, strings.TrimSpace(p.Name))
+	}
+	return strings.Join(names, "; ")
+}
+
+// WriteBuyerQuestions emits buyer-questions.md + .json under cache (or outPath stem).
+func WriteBuyerQuestions(root string, packIDs []string, outPath string) (string, int, error) {
+	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
+	if err != nil {
+		return "", 0, err
+	}
+	questions, err := CollectBuyerQuestions(root, packIDs, res)
+	if err != nil {
+		return "", 0, err
+	}
+	ids := packIDs
+	if len(ids) == 0 {
+		ids = nonzeroPacks(strings.Split(res.Payload.PackID, ","))
+	}
+	composed, _, err := packs.Compose(ids)
+	if err != nil {
+		return "", 0, err
+	}
+	assurance := strings.TrimSpace(composed.AssuranceClass)
+	if assurance == "" {
+		assurance = buyerQuestionsAssuranceClass
 	}
 	report := BuyerQuestionsReport{
 		SchemaVersion:     "1",

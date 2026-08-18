@@ -36,7 +36,7 @@ If you previously attested under the old notes ref, **re-attest** after upgrade 
 ```yaml
 - uses: afelin/curbpack@v0.5.0
   with:
-    heal: true
+    heal: true  # opt-in; Action default is false
 ```
 
 Install (no Go):

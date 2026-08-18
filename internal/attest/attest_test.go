@@ -77,3 +77,39 @@ func TestAttestRefusesDirtyWithoutAllowDirty(t *testing.T) {
 		t.Fatalf("--allow-dirty must proceed: %v", err)
 	}
 }
+
+func TestReviewedByEvidenceNotInStateHash(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "init", "-q")
+	run("git", "config", "user.email", "attest@curbpack.local")
+	run("git", "config", "user.name", "Attest")
+	run("git", "commit", "--allow-empty", "-m", "init", "-q")
+
+	cap, err := attest.Run(attest.Options{RepoRoot: dir, AllowDirty: true, ReviewedBy: "Ada Reviewer"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cap.Evidence["reviewed_by"] != "Ada Reviewer" {
+		t.Fatalf("evidence reviewed_by=%q", cap.Evidence["reviewed_by"])
+	}
+	want := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, cap.Evidence["sbom_digest"], cap.Evidence["vex_digest"])
+	if cap.StateHash != want {
+		t.Fatalf("reviewed-by must not enter state_hash: got %s want %s", cap.StateHash, want)
+	}
+	bind, err := attest.LatestBind(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bind.ReviewedBy != "Ada Reviewer" {
+		t.Fatalf("bind ReviewedBy=%q", bind.ReviewedBy)
+	}
+}

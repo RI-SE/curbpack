@@ -17,6 +17,7 @@ type BindInfo struct {
 	UserTouch  string
 	SBOMDigest string
 	VEXDigest  string
+	ReviewedBy string // evidence map only; not in state_hash
 	Source     string // "hpurl-pointer" | "git-notes"
 	Found      bool
 }
@@ -35,7 +36,7 @@ func HeadCommit(repoRoot string) (string, error) {
 
 // LatestBind resolves the last human attest bind:
 //  1. hpurl-pointer.json → verify note on commit
-//  2. git log -1 --notes=curbpack (then cyberready fallback)
+//  2. LatestNoteCommit (notes list / HEAD walk; curbpack then cyberready)
 func LatestBind(repoRoot string) (BindInfo, error) {
 	info := BindInfo{}
 	ptrPath := filepath.Join(repoRoot, ".github", "curbpack", "evidence", "hpurl-pointer.json")
@@ -88,6 +89,7 @@ func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	if cap.Evidence != nil {
 		info.SBOMDigest = cap.Evidence["sbom_digest"]
 		info.VEXDigest = cap.Evidence["vex_digest"]
+		info.ReviewedBy = cap.Evidence["reviewed_by"]
 	}
 	if sbomOverride != "" {
 		info.SBOMDigest = sbomOverride

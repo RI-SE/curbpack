@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/afelin/curbpack/internal/config"
@@ -13,7 +14,7 @@ import (
 )
 
 // Action-equivalent smoke: uninitialized repo (no .curbpack.json) + heal stubs.
-// Mirrors Action heal:true — ResolvePackIDs falls back to house-policy.
+// Mirrors Action with heal:true opt-in (Action default is false) — ResolvePackIDs falls back to house-policy.
 func TestUninitializedHealGreensOrDeterministicRed(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
@@ -100,7 +101,11 @@ func TestCLICheckHealUninitialized(t *testing.T) {
 
 func buildCyberready(t *testing.T) string {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "curbpack")
+	name := "curbpack"
+	if runtime.GOOS == "windows" {
+		name = "curbpack.exe"
+	}
+	bin := filepath.Join(t.TempDir(), name)
 	cmd := exec.Command("go", "build", "-o", bin, "./cmd/curbpack")
 	cmd.Dir = repoRoot(t)
 	if out, err := cmd.CombinedOutput(); err != nil {

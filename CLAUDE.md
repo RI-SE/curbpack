@@ -18,6 +18,6 @@ curbpack check
 # human only: pathway confirm-* / attest / proof verify — never auto-attest; never invent pack ids
 ```
 
-Exit code is authoritative. Never claim certification. Pin **`@v0.5.0`**. Cite-or-refuse: do not invent regulation text; link allowlisted sources only.
+Exit code is authoritative. Never claim certification. Pin **`@v0.5.2`**. Cite-or-refuse: do not invent regulation text; link allowlisted sources only.
 
 Thin MCP (optional): [examples/mcp/](examples/mcp/) — propose-only; no confirm/attest tools.

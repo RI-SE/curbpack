@@ -53,15 +53,28 @@
     </nav>
 
     <main class="onepager">
-      <div class="brand-line">Curbpack</div>
+      <div class="brand-line">Curbpack · Front</div>
       <h1>sample-app</h1>
       <p class="lede">Teaching sample: open findings, then after-fix. Supplier evidence summary for procurement review — not a certificate of conformity.</p>
+      <p><strong>Packs:</strong> House Policy Example</p>
       <div class="status unsigned">UNSIGNED — not cryptographically verified</div>
 
+      <h2>Files to open</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Question</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>SECURITY.md</code></td>
+            <td>For human review: Is a vulnerability disclosure path present?</td>
+          </tr>
+          <tr>
+            <td><code>.well-known/security.txt</code></td>
+            <td>For human review: Is a security.txt contact path present?</td>
+          </tr>
+        </tbody>
+      </table>
+
       <p class="label">Before fix — findings remain</p>
-      <div class="meter">Local gate score on this tree: <strong>62%</strong>
-        <div class="bar"><span class="red"></span></div>
-      </div>
       <table>
         <thead><tr><th>Gate</th><th>Severity</th><th>Finding / remediation</th></tr></thead>
         <tbody>
@@ -86,9 +99,6 @@
       <h2>After fix — gates passed on this tree</h2>
       <p class="label">Same sample, after remediations</p>
       <div class="status ok">Gates passed — pending human review &amp; attest</div>
-      <div class="meter">Local gate score on this tree: <strong>100%</strong>
-        <div class="bar"><span class="green"></span></div>
-      </div>
       <table>
         <thead><tr><th>Gate</th><th>Severity</th><th>Finding</th></tr></thead>
         <tbody>
@@ -98,6 +108,12 @@
 
       <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
       <div class="back">
+        <div class="meter">Local gate score on this tree: <strong>62%</strong> — not certification
+          <div class="bar"><span class="red"></span></div>
+        </div>
+        <div class="meter">After fix, local gate score on this tree: <strong>100%</strong> — not certification
+          <div class="bar"><span class="green"></span></div>
+        </div>
         <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>curbpack attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
         <dl class="prov">
           <dt>Rule packs</dt><dd>house-policy</dd>
@@ -107,7 +123,7 @@
           <dt>User touch</dt><dd>not-verified</dd>
           <dt>state_hash</dt><dd>(none — run curbpack attest after human review)</dd>
           <dt>Human sign-off</dt><dd>Pending human review. A reviewer runs curbpack attest; ssh-agent-signed = human-bound on this commit.</dd>
-          <dt>Verify</dt><dd>proof/index.html + hpurl-pointer.json (client-side hash compare)</dd>
+          <dt>Verify</dt><dd>proof/index.html + local evidence pointer (client-side hash compare)</dd>
         </dl>
         <p class="label" style="margin-top:1rem">Sources (informational — not a gate input)</p>
         <ul style="margin:0;padding-left:1.1rem;font-size:0.9rem">

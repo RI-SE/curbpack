@@ -6,15 +6,20 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
-	"github.com/afelin/curbpack/internal/validate"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/validate"
 )
+
+// ErrWindowsUnsupported is returned when sock is requested on Windows.
+// Sock is optional Unix-only Coreward IPC; the golden path never requires it.
+var ErrWindowsUnsupported = fmt.Errorf("curbpack sock is Unix-only (optional Coreward bridge); golden path does not require it — see docs/stable-contracts.md and docs/getting-started/install.md")
 
 // Request is the Coreward bridge IPC envelope.
 type Request struct {
@@ -48,6 +53,9 @@ type GraphSummary struct {
 // $TMPDIR/curbpack-$UID/curbpack.sock → .curbpack/curbpack.sock under cwd.
 // Never defaults to a world-writable shared path like /tmp/curbpack.sock.
 func DefaultPath() (string, error) {
+	if runtime.GOOS == "windows" {
+		return "", ErrWindowsUnsupported
+	}
 	if p := strings.TrimSpace(paths.Env("SOCK")); p != "" {
 		return p, nil
 	}
@@ -99,6 +107,9 @@ func ensurePrivateDir(dir string) error {
 
 // Serve listens on a Unix domain socket and handles validate_delta / get_latest_failure / graph_summary / explain_packet.
 func Serve(sockPath, repoRoot string) error {
+	if runtime.GOOS == "windows" {
+		return ErrWindowsUnsupported
+	}
 	var err error
 	if sockPath == "" {
 		sockPath, err = DefaultPath()

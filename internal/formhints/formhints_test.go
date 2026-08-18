@@ -147,6 +147,102 @@ func TestApplyStubsRefusesSymlink(t *testing.T) {
 	}
 }
 
+func TestResolveFilePrefersPackPath(t *testing.T) {
+	hints := ForFailures([]ir.Failure{
+		{
+			GateID:         "MD-SW-CLASS",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "docs/medtech/software_safety_class.md"},
+		},
+		{
+			GateID:         "MD-SOUP",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "docs/medtech/soup_list.md"},
+		},
+		{
+			GateID:         "MD-PROBLEM-RESOLUTION",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "docs/medtech/problem_resolution.md"},
+		},
+	})
+	want := []string{
+		"docs/medtech/software_safety_class.md",
+		"docs/medtech/soup_list.md",
+		"docs/medtech/problem_resolution.md",
+	}
+	if len(hints) != len(want) {
+		t.Fatalf("want %d hints, got %d", len(want), len(hints))
+	}
+	for i, h := range hints {
+		if h.File != want[i] {
+			t.Fatalf("hint %d file=%q want %q", i, h.File, want[i])
+		}
+		if strings.Contains(h.File, "iec62304") {
+			t.Fatalf("stale iec62304 path: %q", h.File)
+		}
+	}
+}
+
+func TestResolveFileMedtechBasenameOnlyIR(t *testing.T) {
+	hints := ForFailures([]ir.Failure{
+		{
+			GateID:         "MD-SW-CLASS",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "software_safety_class.md"},
+		},
+		{
+			GateID:         "MD-SOUP",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "soup_list.md"},
+		},
+		{
+			GateID:         "MD-PROBLEM-RESOLUTION",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "problem_resolution.md"},
+		},
+	})
+	want := []string{
+		"docs/medtech/software_safety_class.md",
+		"docs/medtech/soup_list.md",
+		"docs/medtech/problem_resolution.md",
+	}
+	if len(hints) != len(want) {
+		t.Fatalf("want %d hints, got %d", len(want), len(hints))
+	}
+	for i, h := range hints {
+		if h.File != want[i] {
+			t.Fatalf("basename-only IR hint %d file=%q want %q", i, h.File, want[i])
+		}
+		if strings.Contains(h.File, "iec62304") {
+			t.Fatalf("stale iec62304 path: %q", h.File)
+		}
+	}
+	if !strings.Contains(hints[0].Snippet, "# Software Safety Class") {
+		t.Fatalf("safety snippet missing header: %q", hints[0].Snippet)
+	}
+	if !strings.Contains(hints[1].Snippet, "# SOUP List") {
+		t.Fatalf("soup snippet missing header: %q", hints[1].Snippet)
+	}
+	if !strings.Contains(hints[2].Snippet, "# Problem Resolution") {
+		t.Fatalf("problem snippet missing header: %q", hints[2].Snippet)
+	}
+}
+
+func TestResolveFileMedtechEmptyTargetGuessesPackPath(t *testing.T) {
+	hints := ForFailures([]ir.Failure{
+		{GateID: "MD-SW-CLASS"},
+		{GateID: "MD-SOUP"},
+		{GateID: "MD-PROBLEM-RESOLUTION"},
+	})
+	want := []string{
+		"docs/medtech/software_safety_class.md",
+		"docs/medtech/soup_list.md",
+		"docs/medtech/problem_resolution.md",
+	}
+	if len(hints) != len(want) {
+		t.Fatalf("want %d hints, got %d", len(want), len(hints))
+	}
+	for i, h := range hints {
+		if h.File != want[i] {
+			t.Fatalf("empty-target hint %d file=%q want %q", i, h.File, want[i])
+		}
+	}
+}
+
 func TestCachePreferredSnippet(t *testing.T) {
 	dir := t.TempDir()
 	c := remediation.Cache{Entries: map[string]remediation.Entry{

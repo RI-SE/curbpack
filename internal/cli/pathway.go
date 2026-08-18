@@ -61,21 +61,19 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "  suggest --product=… --eu-docs=… --medtech=… --sector=… --house-first=… [--ce-context=…]\n")
 	fmt.Fprintf(os.Stderr, "                                  Closed-world proposed_packs (enums only)\n")
 	fmt.Fprintf(os.Stderr, "                                  --house-first is reserved (accepted, currently a no-op)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-packs [--i-am-human]    Human: stamp packs_confirmed (TTY or --i-am-human)\n")
+	fmt.Fprintf(os.Stderr, "  confirm-packs [--i-am-human]    Human: stamp packs_confirmed (--i-am-human or CURBPACK_ALLOW_CONFIRM=1)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-prose [--i-am-human]    Human: stamp prose_owned (cite-check if packet present)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-share [--i-am-human]    Human: stamp share_reviewed\n")
 	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
 	fmt.Fprintf(os.Stderr, "Sole writer of .github/curbpack/cache/pathway-seed.json.\n")
 	fmt.Fprintf(os.Stderr, "Does not affect check pass/fail. Agents stop at confirms/attest.\n")
-	fmt.Fprintf(os.Stderr, "Confirms require a TTY, --i-am-human, or CURBPACK_ALLOW_CONFIRM=1.\n")
+	fmt.Fprintf(os.Stderr, "Confirms require --i-am-human or CURBPACK_ALLOW_CONFIRM=1 (TTY alone is not enough).\n")
 	fmt.Fprintf(os.Stderr, "%s\n", pathway.ClaimFence)
 }
 
 // requireHumanConfirm blocks agent/non-interactive confirm forgery.
+// Fail-closed: stdout TTY alone is not enough (agent-integrated TTYs exist).
 func requireHumanConfirm(args []string) error {
-	if tty.IsTerminal {
-		return nil
-	}
 	if paths.Env("ALLOW_CONFIRM") == "1" {
 		return nil
 	}
@@ -84,7 +82,7 @@ func requireHumanConfirm(args []string) error {
 			return nil
 		}
 	}
-	return usageErr("pathway confirm-*: requires a TTY or --i-am-human (or CURBPACK_ALLOW_CONFIRM=1); agents must stop for a human")
+	return usageErr("pathway confirm-*: requires --i-am-human or CURBPACK_ALLOW_CONFIRM=1; agents must stop for a human")
 }
 
 func cmdPathwayNote(root string, args []string) error {

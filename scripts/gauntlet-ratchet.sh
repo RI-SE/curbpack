@@ -59,9 +59,19 @@ for case in cases:
                 if os.path.exists(p):
                     os.remove(p)
             code, out = run([bin_path, "check", "--heal"], cwd=tmp)
-            ok = (code == 0) if expect == "pass" else (code != 0)
+            want_pass = expect == "pass"
+            ok = (code == 0) if want_pass else (code != 0)
+            for rel in ("SECURITY.md", ".well-known/security.txt"):
+                if not os.path.isfile(os.path.join(tmp, rel)):
+                    ok = False
+                    out += f"\nmissing heal stub {rel}"
+            if not want_pass:
+                blob = out.lower()
+                if "house-anti-placeholder" not in blob and "scaffold body overlap" not in blob:
+                    ok = False
+                    out += "\nexpected HOUSE-ANTI-PLACEHOLDER / scaffold body overlap on red re-check"
             cache = os.path.join(tmp, ".github/curbpack/cache/remediations.json")
-            if expect == "pass" and not os.path.isfile(cache):
+            if want_pass and not os.path.isfile(cache):
                 ok = False
                 out += "\nmissing remediations.json"
             if not ok:
