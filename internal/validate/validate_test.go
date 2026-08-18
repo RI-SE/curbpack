@@ -259,8 +259,8 @@ func TestDiffSkipUntouchedRules(t *testing.T) {
 		t.Fatal("pathless rules always run")
 	}
 	anti := packs.Rule{ID: "z", Check: "anti_placeholder", Paths: []string{"docs/annex-vii/risk_assessment.md"}}
-	if packs.RuleTouchesDiff(anti, changed) {
-		t.Fatal("anti_placeholder on untouched annex may skip under --diff")
+	if !packs.RuleTouchesDiff(anti, changed) {
+		t.Fatal("anti_placeholder on untouched annex must always evaluate under --diff")
 	}
 }
 
@@ -524,6 +524,81 @@ Expires: 2028-01-15T00:00:00.000Z
 Preferred-Languages: en
 `
 
+func TestArt14PathMissingFails(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodCRA(t, dir)
+	if err := os.RemoveAll(filepath.Join(dir, "docs/incident")); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"cra-baseline"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("missing Art 14 rehearsal file must fail cra-baseline")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "CRA-ART14-PATH" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected CRA-ART14-PATH, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestArt14PathUntouchedStubFailsOverlap(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodCRA(t, dir)
+	mustWrite(t, filepath.Join(dir, "docs/incident/art14-path.md"), packs.DefaultScaffoldBody("docs/incident/art14-path.md"))
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"cra-baseline"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("untouched Art 14 stub must fail anti_placeholder")
+	}
+	if !hasScaffoldOverlap(res, "CRA-ANTI-PLACEHOLDER", "docs/incident/art14-path.md") {
+		t.Fatalf("expected CRA-ANTI-PLACEHOLDER scaffold overlap on art14-path.md, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestArt14PathNotInHousePolicy(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("house-policy must not require Art 14 path, failures=%v", res.Payload.Failures)
+	}
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "CRA-ART14-PATH" {
+			t.Fatal("house-policy must not emit CRA-ART14-PATH")
+		}
+	}
+}
+
 func TestSessionNotesDoNotAffectCheckPassFail(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
@@ -630,7 +705,27 @@ Disable default accounts on contoso-gateway, enforce MFA, and restrict managemen
 
 Factory-reset the appliance, shred exported key material, and confirm cloud tenant deletion.
 `)
+	mustWrite(t, filepath.Join(dir, "docs/incident/art14-path.md"), art14GoodBody)
 }
+
+const art14GoodBody = `# Art 14 reporting path
+
+## Reporting clock (CRA Art 14)
+
+For contoso-gateway, actively exploited or severe incidents are reported by the on-call owner using the in-repo rehearsal dated 2026-04-12. This is a file record for CRA Article 14 reporting (clock from 11 September 2026, including products already on the market). It is not a live Single Reporting Platform check and does not assert that EU Login works.
+
+## Handling clock (not this file)
+
+Vulnerability handling and public security contact for contoso-gateway are documented separately. They sit on a later clock than Article 14 reporting and are not this rehearsal.
+
+## Named owner
+
+Product security on-call for contoso-gateway owns the reporting path. Escalation is the engineering manager of record in SECURITY.md.
+
+## Rehearsal dated artifact
+
+Last tabletop: 2026-04-12. Record: this file plus the incident mail template under docs/incident/ (in-repo). Not a live submission.
+`
 
 func initGit(t *testing.T, dir string) {
 	t.Helper()

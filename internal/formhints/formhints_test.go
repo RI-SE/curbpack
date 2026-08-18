@@ -13,12 +13,12 @@ import (
 func TestForFailuresDeterministic(t *testing.T) {
 	hints := ForFailures([]ir.Failure{
 		{
-			GateID: "HOUSE-SECURITY-MD",
+			GateID:         "HOUSE-SECURITY-MD",
 			ASTCoordinates: ir.ASTCoordinates{TargetFile: "SECURITY.md"},
 			Remediation:    ir.Remediation{ActionRequired: "Add SECURITY.md"},
 		},
 		{
-			GateID: "CRA-ANNEX-VII-RISK",
+			GateID:         "CRA-ANNEX-VII-RISK",
 			ASTCoordinates: ir.ASTCoordinates{TargetFile: "docs/annex-vii/risk_assessment.md"},
 		},
 		{
@@ -239,6 +239,34 @@ func TestResolveFileMedtechEmptyTargetGuessesPackPath(t *testing.T) {
 	for i, h := range hints {
 		if h.File != want[i] {
 			t.Fatalf("empty-target hint %d file=%q want %q", i, h.File, want[i])
+		}
+	}
+}
+
+func TestResolveFileArt14GuessesPackPath(t *testing.T) {
+	hints := ForFailures([]ir.Failure{
+		{GateID: "CRA-ART14-PATH"},
+		{
+			GateID:         "CRA-ART14-PATH",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "art14-path.md"},
+		},
+		{
+			GateID:         "CRA-ART14-PATH",
+			ASTCoordinates: ir.ASTCoordinates{TargetFile: "docs/incident/art14-path.md"},
+		},
+	})
+	if len(hints) != 3 {
+		t.Fatalf("want 3 hints, got %d", len(hints))
+	}
+	for i, h := range hints {
+		if h.File != "docs/incident/art14-path.md" {
+			t.Fatalf("hint %d file=%q", i, h.File)
+		}
+		if !strings.Contains(h.Snippet, "# Art 14 reporting path") {
+			t.Fatalf("art14 snippet missing header: %q", h.Snippet)
+		}
+		if !strings.Contains(h.Snippet, "not a live Single Reporting Platform") {
+			t.Fatalf("stub must distinguish file rehearsal from live SRP: %q", h.Snippet)
 		}
 	}
 }

@@ -73,6 +73,7 @@ type ContextPack struct {
 	Instrument           ContextInstrument        `json:"instrument"`
 	RemediationHints     []ContextRemediationHint `json:"remediation_hints"`
 	Pathway              *ContextPathway          `json:"pathway,omitempty"`
+	AgentIdentity        ir.AgentIdentity         `json:"agent_identity,omitempty"`
 	Paths                map[string]string        `json:"paths"`
 	CertificationClaimed bool                     `json:"certification_claimed"`
 }
@@ -151,6 +152,7 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		},
 		RemediationHints:     hints,
 		Pathway:              buildContextPathway(root),
+		AgentIdentity:        payload.AgentIdentity,
 		Paths:                contextPackPathsMap(root),
 		CertificationClaimed: false,
 	}
@@ -218,17 +220,17 @@ func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {
 func contextPackPathsMap(root string) map[string]string {
 	base := filepath.ToSlash(filepath.Join(".github", "curbpack", "cache"))
 	m := map[string]string{
-		"latest_failure":   base + "/latest_failure.json",
-		"instrument":       base + "/instrument.json",
-		"remediations":     base + "/remediations.json",
-		"context_pack":     base + "/context-pack.json",
-		"context_pack_md":  base + "/context-pack.md",
-		"buyer_questions":  base + "/buyer-questions.md",
-		"explain_packet":   base + "/explain-packet.json",
-		"policy_graph":     filepath.ToSlash(filepath.Join(".github", "curbpack", "graph", "policy-graph.json")),
-		"pathway_seed":     base + "/pathway-seed.json",
-		"research_packet":  base + "/research-packet.json",
-		"research_brief":   base + "/research-brief.md",
+		"latest_failure":  base + "/latest_failure.json",
+		"instrument":      base + "/instrument.json",
+		"remediations":    base + "/remediations.json",
+		"context_pack":    base + "/context-pack.json",
+		"context_pack_md": base + "/context-pack.md",
+		"buyer_questions": base + "/buyer-questions.md",
+		"explain_packet":  base + "/explain-packet.json",
+		"policy_graph":    filepath.ToSlash(filepath.Join(".github", "curbpack", "graph", "policy-graph.json")),
+		"pathway_seed":    base + "/pathway-seed.json",
+		"research_packet": base + "/research-packet.json",
+		"research_brief":  base + "/research-brief.md",
 	}
 	if snap, err := pathway.Project(root); err == nil {
 		m["pathway_status_hint"] = snap.Next.Cmd
@@ -276,7 +278,18 @@ func formatContextPackMarkdown(p ContextPack) string {
 	fmt.Fprintf(&b, "- **Packs:** %s\n", strings.Join(p.PackIDs, ", "))
 	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
 	fmt.Fprintf(&b, "- **OK:** %v\n", p.OK)
-	fmt.Fprintf(&b, "- **Certification claimed:** no\n\n")
+	fmt.Fprintf(&b, "- **Certification claimed:** no\n")
+	if p.AgentIdentity.Source != "" || p.AgentIdentity.AgentID != "" {
+		fmt.Fprintf(&b, "- **Agent identity:** `%s`", mdCell(p.AgentIdentity.Source))
+		if p.AgentIdentity.Reason != "" {
+			fmt.Fprintf(&b, " (%s)", mdCell(p.AgentIdentity.Reason))
+		}
+		if p.AgentIdentity.AgentID != "" {
+			fmt.Fprintf(&b, " agent_id=`%s`", mdCell(p.AgentIdentity.AgentID))
+		}
+		b.WriteString(" — lineage label, not attestation\n")
+	}
+	b.WriteString("\n")
 	if p.Pathway != nil {
 		b.WriteString("## Pathway\n\n")
 		fmt.Fprintf(&b, "- **Phase:** `%s`\n", p.Pathway.ParentPath)

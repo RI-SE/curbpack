@@ -38,6 +38,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
 | [Sync both remotes](getting-started/sync-both-remotes.md) | One Cursor phrase to keep afelin ↔ RI-SE `main` matching |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Share recipe: ContextPack + buyer-questions + prepare-release |
+| [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md) | Counsel note: Art 14 reporting clock vs later handling/SPOC; Art 50 grace not blanket |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Launch readiness](launch-readiness.md) | Internal launch checklist |
 | [Coreward pointer](coreward-pointer.md) | Standardized optional-product aside + URL |

@@ -273,6 +273,8 @@ func guessFile(gateID string) string {
 		return "docs/annex-vii/support_period.md"
 	case strings.Contains(gateID, "MANUAL"):
 		return "docs/annex-vii/user_manual_security.md"
+	case strings.Contains(gateID, "ART14") || strings.Contains(gateID, "ART-14"):
+		return "docs/incident/art14-path.md"
 	case strings.Contains(gateID, "SECURITY-MD") || strings.Contains(gateID, "SECURITY_MD"):
 		return "SECURITY.md"
 	case strings.Contains(gateID, "SECURITY-TXT") || strings.Contains(gateID, "SECURITY_TXT"):

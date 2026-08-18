@@ -80,10 +80,7 @@ func humanWhy(snap Snapshot) string {
 		}
 		return "Heal stubs, then write real product wording."
 	case PhaseAwaitProseConfirm:
-		if researchPacketNote(snap) {
-			return "Cite-check drafts first; then confirm you own the wording."
-		}
-		return "Confirm you own the wording — then re-check."
+		return "Cite-check drafts (repo artifact or allowlisted cite); every prose path must be independent. Then you own the wording."
 	case PhaseAwaitCheck:
 		if snap.GateID != "" {
 			return "Fix the top finding, then re-check. Chat never greenlights."
@@ -103,10 +100,6 @@ func humanWhy(snap Snapshot) string {
 	default:
 		return sanitizeHumanNote(snap.Next.Note)
 	}
-}
-
-func researchPacketNote(snap Snapshot) bool {
-	return strings.Contains(snap.Next.Note, "cite-check")
 }
 
 func gitDirtyNote(note string) bool {

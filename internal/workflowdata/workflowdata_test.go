@@ -41,8 +41,11 @@ func TestInstallOnlyIfMissing(t *testing.T) {
 	if string(body) != string(workflowdata.Bytes()) {
 		t.Fatal("written body != embed")
 	}
-	if !strings.Contains(string(body), "Never set CURBPACK_ALLOW_CONFIRM on the Action") {
-		t.Fatal("workflow example must warn never set ALLOW_CONFIRM on the Action")
+	if !strings.Contains(string(body), "Never set CURBPACK_ALLOW_CONFIRM=1 on the Action") {
+		t.Fatal("workflow example must warn never set ALLOW_CONFIRM=1 on the Action")
+	}
+	if !strings.Contains(string(body), "Compose Trivy/Gitleaks") {
+		t.Fatal("workflow example must tell adopters to compose Trivy/Gitleaks beside check")
 	}
 
 	// Second call must not overwrite.

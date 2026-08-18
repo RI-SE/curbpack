@@ -148,6 +148,18 @@ func EnvIs1(key string) bool {
 	return Env(key) == "1"
 }
 
+// IsCacheRel reports whether rel is under the agent cache (write-new or legacy).
+// Cache-only files are not independent grounding artifacts for confirm-prose.
+func IsCacheRel(rel string) bool {
+	rel = filepath.ToSlash(strings.TrimSpace(rel))
+	rel = strings.TrimPrefix(rel, "./")
+	if rel == "" {
+		return false
+	}
+	return rel == CacheRel || strings.HasPrefix(rel, CacheRel+"/") ||
+		rel == LegacyCacheRel || strings.HasPrefix(rel, LegacyCacheRel+"/")
+}
+
 func resolveDir(root, neuRel, legacyRel string) string {
 	neu := filepath.Join(root, filepath.FromSlash(neuRel))
 	if dirExists(neu) {

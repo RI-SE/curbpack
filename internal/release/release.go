@@ -223,6 +223,7 @@ func ensureWitnessTemplates(root string) error {
 			"docs/annex-vii/risk_assessment.md",
 			"docs/annex-vii/support_period.md",
 			"docs/annex-vii/user_manual_security.md",
+			"docs/incident/art14-path.md",
 		}
 	}
 	for _, rel := range paths {

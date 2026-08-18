@@ -113,3 +113,42 @@ func TestReviewedByEvidenceNotInStateHash(t *testing.T) {
 		t.Fatalf("bind ReviewedBy=%q", bind.ReviewedBy)
 	}
 }
+
+func TestAgentIdentityEnvNotInStateHash(t *testing.T) {
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "init", "-q")
+	run("git", "config", "user.email", "attest@curbpack.local")
+	run("git", "config", "user.name", "Attest")
+	run("git", "commit", "--allow-empty", "-m", "init", "-q")
+
+	t.Setenv("CURBPACK_AGENT_ID", "agent-a")
+	t.Setenv("CURBPACK_MODEL_HASH", "hash-a")
+	t.Setenv("CURBPACK_MANDATE_ID", "mandate-a")
+	capA, err := attest.Run(attest.Options{RepoRoot: dir, AllowDirty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CURBPACK_AGENT_ID", "agent-b")
+	t.Setenv("CURBPACK_MODEL_HASH", "hash-b")
+	t.Setenv("CURBPACK_MANDATE_ID", "mandate-b")
+	capB, err := attest.Run(attest.Options{RepoRoot: dir, AllowDirty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if capA.StateHash != capB.StateHash {
+		t.Fatalf("AgentIdentity env must not enter state_hash: %s vs %s", capA.StateHash, capB.StateHash)
+	}
+	want := attest.ComputeStateHash(capA.CommitSHA, capA.ParentStateHash, capA.Evidence["sbom_digest"], capA.Evidence["vex_digest"])
+	if capA.StateHash != want {
+		t.Fatalf("state_hash drifted from frozen field order: got %s want %s", capA.StateHash, want)
+	}
+}

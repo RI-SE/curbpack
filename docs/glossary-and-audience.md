@@ -32,7 +32,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **Buyer one-pager** | Supplier evidence summary HTML — local gate score on this tree, not a certificate. |
 | **Warm-start** / **pathway** | Optional interview that builds curb outlines and suggests checklists (`curb pathway`); seeds packs + human ticks — not a gate input. |
 | **Research brief** | Allowlisted human brief from `curbpack research` — informational; never check pass/fail. |
-| **Cite-check** | `curbpack research --cite-check <draft.md>` — refuses uncited Claims before `confirm-prose`. |
+| **Cite-check** | `curbpack research --cite-check <draft.md>` — refuses ungrounded Claims (repo artifact or allowlisted cite). `confirm-prose` runs the same check and refuses heal-stub-only. |
 | **Three ways in** | Write→Check (starts with curb outlines), Bring-docs→Check, or CI — same local `check`. |
 | **Write→Check** | Way in: curb outlines + draft house docs (optional pathway), then check. |
 | **Bring-docs→Check** | Way in: place existing policies on pack paths, then check (skips curb outlines; no portal PDF ingest). |

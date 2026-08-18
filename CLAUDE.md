@@ -13,7 +13,7 @@ curbpack check
 # optional research sidecar (never gates check): curbpack research [--fetch] [--gate-id=…]
 # dual-draft: Option A + Option B + Recommended A|B (≤3 reasons) → human pick →
 #   curbpack pathway note --set last_draft_pick=A|B|edited
-# before confirm-prose: curbpack research --cite-check <draft.md>
+# before confirm-prose: curbpack research --cite-check <draft.md> (confirm-prose also ground-checks; every prose path must be independent)
 # green (optional share): curbpack export --context-pack
 # human only: pathway confirm-* / attest / proof verify — never auto-attest; never invent pack ids
 ```

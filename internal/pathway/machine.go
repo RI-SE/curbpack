@@ -33,10 +33,10 @@ const (
 type Event string
 
 const (
-	EventSuggest       Event = "suggest"
-	EventConfirmPacks  Event = "confirm-packs"
-	EventConfirmProse  Event = "confirm-prose"
-	EventConfirmShare  Event = "confirm-share"
+	EventSuggest      Event = "suggest"
+	EventConfirmPacks Event = "confirm-packs"
+	EventConfirmProse Event = "confirm-prose"
+	EventConfirmShare Event = "confirm-share"
 )
 
 // ErrUsage marks illegal transition / closed-world usage refuses (CLI → exit 2).
@@ -66,10 +66,10 @@ func FormatParentPath(path []string) string {
 
 // Snapshot is machine projection: phase + one next action (+ optional gate_id).
 type Snapshot struct {
-	Phase   Phase
-	Next    NextAction
-	GateID  string // top failure gate_id when red; never invented
-	Path    []string
+	Phase  Phase
+	Next   NextAction
+	GateID string // top failure gate_id when red; never invented
+	Path   []string
 }
 
 // DerivePhase projects seed + filesystem into one phase (pure; no writes).
@@ -196,14 +196,10 @@ func Project(repoRoot string) (Snapshot, error) {
 			}
 		}
 	case PhaseAwaitProseConfirm:
-		note := "I own this wording — then re-check"
-		if research.PacketPresent(repoRoot) {
-			note = "run curbpack research --cite-check on drafts first; then human confirm — cite-check refuse blocks confirm-prose"
-		}
 		snap.Next = NextAction{
 			Verb: "confirm prose (human)",
 			Cmd:  "curbpack pathway confirm-prose",
-			Note: note,
+			Note: "cite-check + every prose path independent; stub-only / ungrounded claims refuse",
 		}
 	case PhaseAwaitCheck:
 		gateID := TopGateID(repoRoot)

@@ -94,6 +94,42 @@ func TestApplyStubRefusesTraversal(t *testing.T) {
 	}
 }
 
+func TestArt14HealStubFailsOverlap(t *testing.T) {
+	dir := t.TempDir()
+	mustGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"contoso-gateway","version":"1.0.0","dependencies":{}}`+"\n")
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Contoso Gateway\n")
+	hints := formhints.ForFailures([]ir.Failure{{GateID: "CRA-ART14-PATH"}})
+	if len(hints) != 1 || hints[0].File != "docs/incident/art14-path.md" {
+		t.Fatalf("want art14 hint, got %+v", hints)
+	}
+	out, err := formhints.ApplyStubs(dir, hints)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out[0].Applied {
+		t.Fatal("expected Art 14 stub applied")
+	}
+	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"cra-baseline"}, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("heal stub must stay red until real prose")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "CRA-ANTI-PLACEHOLDER" &&
+			strings.Contains(f.SanitizedDescription, "scaffold body overlap") &&
+			strings.Contains(f.ASTCoordinates.TargetFile, "art14-path.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected CRA-ANTI-PLACEHOLDER scaffold overlap after heal, got %#v", res.Payload.Failures)
+	}
+}
+
 func TestClaimStringsPresent(t *testing.T) {
 	// Static claim text used on human TTY paths; --json payloads omit banners by design.
 	claim := "Prepares evidence for human review — not a conformity assessment."
