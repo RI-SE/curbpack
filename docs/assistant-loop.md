@@ -18,7 +18,7 @@ doc/dep edits → curbpack check (exit code authoritative)
 optional → curbpack drift (multi-signal checklist; exit 0 always)
 ```
 
-Warm-start: `curbpack pathway status` — optional interview that suggests checklists (see [pathway](getting-started/pathway.md)). Agents may `status` / `suggest` / `note` / `check` / `share` only. Human confirms and attest: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough) — never invent pack ids. Dual-draft when writing prose: Option A + Option B + **Recommended: A|B** → human pick → `research --cite-check` (refuses uncited Claims) → human `confirm-prose`. Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail). Three ways in (Write / Bring / CI) all end in the same local `check`.
+Warm-start: `curbpack pathway status` — optional interview that suggests checklists (see [pathway](getting-started/pathway.md)). Agents may `status` / `suggest` / `note` / `check` / `share` only. Human confirms and attest: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough) — never invent pack ids. Dual-draft when writing prose: Option A + Option B + **Recommended: A|B** → human pick → `research --cite-check` (refuses ungrounded Claims) → human `confirm-prose` (also refuses stub-only). Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail). Three ways in (Write / Bring / CI) all end in the same local `check`.
 
 ## Memory map (on-disk IR — not embeddings)
 

@@ -73,6 +73,8 @@ CI enforces wording via `scripts/claim-safety.sh`. This page is **not** certific
 
 Default cold start is **`house-policy`**. CRA-style (`cra-baseline`) and medtech (`medtech-iec62304`) are **opt-in** via `--packs` — catalog frozen until freeze review. Assistants and auditors should ask which pack ids were composed (see ContextPack `pack_ids` / GateFailure `pack_id`). Details: [assistant-loop pack chooser](assistant-loop.md#pack-chooser-cold-start).
 
+CRA Art 14 reporting (11 September 2026) is not the same clock as vulnerability-handling / public SPOC. Opt-in `cra-baseline` may require an in-repo dated rehearsal file — not a live SRP or EU Login check. AI Act Art 50 marking grace is **not** blanket (only systems already on the market before 2 August 2026). Counsel note: [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md).
+
 ## Suggested reviewer path
 
 1. Read this page + [Intent vs Scope](intent-vs-scope.md).

@@ -36,7 +36,7 @@ Footer / authorities / NOTICE-aligned. Never endorsement:
 | house-policy (default) | CRA-shaped pack only when opted in | Never claim “CRA compliant” or “EU CRA Baseline” as a product claim |
 | **Three ways in** (Write / Bring / CI) | Write starts with curb outlines; Bring/CI skip outlines; same local check | “Pick a door”; implying only two paths |
 | research brief | allowlisted Sources (informational; never gates check) | regulation chat KB / open-web RAG as SoR |
-| cite-check | refuses uncited Claims before confirm-prose | inventing regulation text |
+| cite-check | refuses ungrounded Claims (repo artifact or allowlisted cite) before confirm-prose; stub-only confirm refuses | inventing regulation text |
 | dual-draft + Recommended A\|B | human pick; record last_draft_pick | auto-apply / auto-attest |
 | confirm (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) | human-owned ticks | agent auto-confirm |
 

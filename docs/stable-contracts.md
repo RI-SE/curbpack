@@ -59,7 +59,7 @@ Consumers may rely on (`schema_version` = `"1"`):
 | `timestamp` | ISO-ish run time |
 | `concurrency_control` | OCC parent / state token |
 | `statechart_context` | Parent path + pack-eval regions (see below) |
-| `agent_identity` | Optional agent/mandate ids |
+| `agent_identity` | Optional agent/mandate ids. Additive: `source` (`self-declared` \| `bridge`) and fail-open `reason` (`not_installed` \| `unavailable`). Not in `state_hash`. |
 | `failures[]` | `gate_id`, `severity`, `type`, `sanitized_description`, `ast_coordinates`, `remediation` |
 | `pack_id` | Composed pack id(s) |
 | `readiness_score` | Optional numeric readiness |

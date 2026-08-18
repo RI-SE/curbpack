@@ -12,7 +12,7 @@ Same local `check` for all three — Write adds optional draft choice first; Bri
 
 | Way | What you do |
 |-----|-------------|
-| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses uncited Claims) → `check`. |
+| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses ungrounded Claims; stub-only confirm refuses) → `check`. |
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then `check`. No portal PDF ingest. |
 | **CI** | Action-only (or local `check` alone). Pin **`@v0.5.2`**. Action = Linux/macOS runners. |
 

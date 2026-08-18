@@ -50,14 +50,30 @@ func TestScaffoldPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
-	for _, p := range paths {
-		if p == "docs/annex-vii/risk_assessment.md" {
-			found = true
+	want := []string{
+		"docs/annex-vii/risk_assessment.md",
+		"docs/incident/art14-path.md",
+	}
+	for _, w := range want {
+		found := false
+		for _, p := range paths {
+			if p == w {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("missing scaffold path %s in %v", w, paths)
 		}
 	}
-	if !found {
-		t.Fatalf("missing annex path in %v", paths)
+	house, err := packs.ScaffoldPaths([]string{"house-policy"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range house {
+		if p == "docs/incident/art14-path.md" {
+			t.Fatal("Art 14 path must not be a house-policy default scaffold")
+		}
 	}
 }
 
@@ -68,8 +84,8 @@ func TestRuleTouchesDiffAlwaysRunsFilePresent(t *testing.T) {
 		t.Fatal("file_present must always evaluate under --diff")
 	}
 	r2 := packs.Rule{ID: "HOUSE-ANTI-PLACEHOLDER", Check: "anti_placeholder", Paths: []string{"SECURITY.md"}}
-	if packs.RuleTouchesDiff(r2, changed) {
-		t.Fatal("anti_placeholder on untouched SECURITY.md may skip under --diff")
+	if !packs.RuleTouchesDiff(r2, changed) {
+		t.Fatal("anti_placeholder on untouched SECURITY.md must always evaluate under --diff")
 	}
 }
 
@@ -140,6 +156,21 @@ func TestBuildPolicyGraphSchema(t *testing.T) {
 	}
 	if len(g.Nodes) == 0 || len(g.Edges) == 0 {
 		t.Fatal("expected nodes and edges")
+	}
+}
+
+func TestScaffoldOverlap_HealStubAndToken(t *testing.T) {
+	rel := "SECURITY.md"
+	stub := packs.DefaultScaffoldBody(rel)
+	if !packs.ScaffoldOverlap(stub, rel, "") {
+		t.Fatal("exact DefaultScaffoldBody must overlap")
+	}
+	if packs.ScaffoldOverlap("# Security\n\nHouse policy prose.\n", rel, "") {
+		t.Fatal("human prose must not overlap")
+	}
+	withToken := stub + "\nacme-widget\n"
+	if !packs.ScaffoldOverlap(withToken, rel, "acme-widget") {
+		t.Fatal("stub plus token insertion must still overlap")
 	}
 }
 

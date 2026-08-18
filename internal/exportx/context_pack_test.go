@@ -11,6 +11,8 @@ import (
 )
 
 func TestWriteContextPack_FromValidateWash(t *testing.T) {
+	t.Setenv("CURBPACK_SOCK", "")
+	t.Setenv("CYBERREADY_SOCK", "")
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeMinimalHouseFail(t, dir)
@@ -51,6 +53,12 @@ func TestWriteContextPack_FromValidateWash(t *testing.T) {
 	if pack.Pathway == nil || pack.Pathway.NextVerb == "" {
 		t.Fatal("expected pathway projection")
 	}
+	if pack.AgentIdentity.Source != "self-declared" {
+		t.Fatalf("agent_identity.source=%q", pack.AgentIdentity.Source)
+	}
+	if pack.AgentIdentity.Reason != "not_installed" {
+		t.Fatalf("agent_identity.reason=%q want not_installed", pack.AgentIdentity.Reason)
+	}
 	if !strings.Contains(pack.Pathway.ParentPath, "Root / Pathway /") {
 		t.Fatalf("pathway parent path=%q", pack.Pathway.ParentPath)
 	}
@@ -64,6 +72,9 @@ func TestWriteContextPack_FromValidateWash(t *testing.T) {
 	}
 	if !strings.Contains(string(mdBytes), "## Pathway") {
 		t.Fatal("md missing Pathway section")
+	}
+	if !strings.Contains(string(mdBytes), "lineage label, not attestation") {
+		t.Fatal("md missing agent identity lineage label")
 	}
 	if strings.Contains(string(data), "/Users/") || strings.Contains(string(data), "/home/") {
 		t.Fatal("absolute home path leaked")
@@ -146,5 +157,43 @@ func TestWriteContextPack_GreenEmptyFailures(t *testing.T) {
 	}
 	if len(pack.Failures) != 0 {
 		t.Fatalf("want empty failures, got %d", len(pack.Failures))
+	}
+}
+
+func TestWriteContextPack_SurfacesAgentIdentity(t *testing.T) {
+	t.Setenv("CURBPACK_SOCK", "")
+	t.Setenv("CYBERREADY_SOCK", "")
+	t.Setenv("CURBPACK_AGENT_ID", "pack-agent")
+	t.Setenv("CURBPACK_MODEL_HASH", "pack-hash")
+	t.Setenv("CURBPACK_MANDATE_ID", "pack-mandate")
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	path, err := exportx.WriteContextPack(dir, []string{"house-policy"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pack exportx.ContextPack
+	if err := json.Unmarshal(data, &pack); err != nil {
+		t.Fatal(err)
+	}
+	if pack.AgentIdentity.AgentID != "pack-agent" || pack.AgentIdentity.ModelHash != "pack-hash" || pack.AgentIdentity.ActiveMandateID != "pack-mandate" {
+		t.Fatalf("context pack identity: %#v", pack.AgentIdentity)
+	}
+	if pack.AgentIdentity.Source != "self-declared" {
+		t.Fatalf("source=%q", pack.AgentIdentity.Source)
+	}
+	md := strings.TrimSuffix(path, ".json") + ".md"
+	mdBytes, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(mdBytes), "pack-agent") || !strings.Contains(string(mdBytes), "self-declared") {
+		t.Fatalf("md missing identity: %s", mdBytes)
 	}
 }

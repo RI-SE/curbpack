@@ -46,6 +46,7 @@ type Options struct {
 // ComputeStateHash returns sha256 hex of the length-prefixed field stream.
 // Sole authority for capsule state_hash. Field order is frozen: commit,
 // parentHash, sbomDigest, vexDigest. No wall-clock / UnixNano.
+// AgentIdentity (env or Coreward sock label) is not a field — do not append it.
 // Length-prefixing avoids pipe-delimiter ambiguity across field boundaries.
 func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest string) string {
 	h := sha256.New()

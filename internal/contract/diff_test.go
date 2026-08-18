@@ -12,6 +12,7 @@ import (
 	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/sock"
@@ -158,6 +159,8 @@ func TestAgentIdentityFromEnv(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeGoodHouse(t, dir)
+	t.Setenv("CURBPACK_SOCK", "")
+	t.Setenv("CYBERREADY_SOCK", "")
 	t.Setenv("CURBPACK_AGENT_ID", "agent-x")
 	t.Setenv("CURBPACK_MODEL_HASH", "hash-y")
 	t.Setenv("CURBPACK_MANDATE_ID", "mandate-z")
@@ -165,8 +168,58 @@ func TestAgentIdentityFromEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Payload.AgentIdentity.AgentID != "agent-x" || res.Payload.AgentIdentity.ModelHash != "hash-y" || res.Payload.AgentIdentity.ActiveMandateID != "mandate-z" {
-		t.Fatalf("agent identity env not applied: %#v", res.Payload.AgentIdentity)
+	id := res.Payload.AgentIdentity
+	if id.AgentID != "agent-x" || id.ModelHash != "hash-y" || id.ActiveMandateID != "mandate-z" {
+		t.Fatalf("agent identity env not applied: %#v", id)
+	}
+	if id.Source != ir.SourceSelfDeclared {
+		t.Fatalf("source=%q want self-declared", id.Source)
+	}
+	if id.Reason != ir.ReasonNotInstalled {
+		t.Fatalf("reason=%q want not_installed (fail-open)", id.Reason)
+	}
+}
+
+func TestAgentIdentitySockFailOpenDoesNotFailCheck(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeGoodHouse(t, dir)
+	t.Setenv("CURBPACK_SOCK", filepath.Join(dir, "absent.sock"))
+	t.Setenv("CYBERREADY_SOCK", "")
+	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("missing sock must fail-open, not fail check: %#v", res.Payload.Failures)
+	}
+	if res.Payload.AgentIdentity.Source != ir.SourceSelfDeclared {
+		t.Fatalf("source=%q", res.Payload.AgentIdentity.Source)
+	}
+	if res.Payload.AgentIdentity.Reason != ir.ReasonUnavailable {
+		t.Fatalf("reason=%q want unavailable", res.Payload.AgentIdentity.Reason)
+	}
+}
+
+func TestAgentIdentityBridgeWhenSockPresent(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeGoodHouse(t, dir)
+	sockPath := filepath.Join(dir, "curbpack.sock")
+	mustWrite(t, sockPath, "")
+	t.Setenv("CURBPACK_SOCK", sockPath)
+	t.Setenv("CYBERREADY_SOCK", "")
+	t.Setenv("CURBPACK_AGENT_ID", "bridge-agent")
+	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("bridge label must not fail check: %#v", res.Payload.Failures)
+	}
+	id := res.Payload.AgentIdentity
+	if id.Source != ir.SourceBridge || id.AgentID != "bridge-agent" || id.Reason != "" {
+		t.Fatalf("want bridge from env+sock presence: %#v", id)
 	}
 }
 
@@ -210,6 +263,44 @@ func TestDiffOnlyStillFailsMissingSecurityMD(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected HOUSE-SECURITY-MD under --diff, got %#v", diffRes.Payload.Failures)
+	}
+}
+
+// --diff must not false-green when a committed heal stub is untouched and only README changed.
+func TestDiffOnlyStillFailsScaffoldOverlap(t *testing.T) {
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\n")
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), "Contact: mailto:a@b.c\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en\n")
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), packs.DefaultScaffoldBody("SECURITY.md"))
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	run("git", "add", "-A")
+	run("git", "commit", "-m", "heal stub", "-q")
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Project\ntouched\n")
+
+	diffRes, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, DiffOnly: true, Quiet: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diffRes.Passed {
+		t.Fatal("--diff must not pass when committed SECURITY.md is still a heal stub")
+	}
+	found := false
+	for _, f := range diffRes.Payload.Failures {
+		if f.GateID == "HOUSE-ANTI-PLACEHOLDER" && strings.Contains(f.SanitizedDescription, "scaffold body overlap") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected HOUSE-ANTI-PLACEHOLDER scaffold body overlap under --diff, got %#v", diffRes.Payload.Failures)
 	}
 }
 

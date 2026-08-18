@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/afelin/curbpack/internal/gitutil"
-	"github.com/afelin/curbpack/internal/pathway"
-	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/research"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 func pathwayErr(err error) error {
@@ -19,8 +20,8 @@ func pathwayErr(err error) error {
 	if errors.Is(err, pathway.ErrUsage) {
 		return usageErr(err.Error())
 	}
-	if errors.Is(err, pathway.ErrCiteRefuse) {
-		// Cite refuse is exit 1 (gates), not usage 2.
+	if errors.Is(err, pathway.ErrCiteRefuse) || errors.Is(err, pathway.ErrInformedConsent) {
+		// Honesty refuse is exit 1 (gates), not usage 2.
 		return &exitError{code: ExitGates, msg: err.Error()}
 	}
 	return err
@@ -62,7 +63,7 @@ func pathwayUsage() {
 	fmt.Fprintf(os.Stderr, "                                  Closed-world proposed_packs (enums only)\n")
 	fmt.Fprintf(os.Stderr, "                                  --house-first is reserved (accepted, currently a no-op)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-packs [--i-am-human]    Human: stamp packs_confirmed (--i-am-human or CURBPACK_ALLOW_CONFIRM=1)\n")
-	fmt.Fprintf(os.Stderr, "  confirm-prose [--i-am-human]    Human: stamp prose_owned (cite-check if packet present)\n")
+	fmt.Fprintf(os.Stderr, "  confirm-prose [--i-am-human]    Human: stamp prose_owned (ground-check + every prose path independent)\n")
 	fmt.Fprintf(os.Stderr, "  confirm-share [--i-am-human]    Human: stamp share_reviewed\n")
 	fmt.Fprintf(os.Stderr, "  note --set|--forget …          Session notes / corrections / last_draft_pick (not a gate input)\n\n")
 	fmt.Fprintf(os.Stderr, "Sole writer of .github/curbpack/cache/pathway-seed.json.\n")
@@ -225,16 +226,36 @@ func cmdPathwayConfirmProse(root string, args []string) error {
 	if err := requireHumanConfirm(args); err != nil {
 		return err
 	}
-	_, err := pathway.ConfirmProse(root)
+	seed, err := pathway.ConfirmProse(root)
 	if err != nil {
+		printNotGroundingStubs(root)
 		return pathwayErr(err)
 	}
 	tty.PrintHeader("curbpack pathway confirm-prose")
+	if paths, perr := pathway.ProsePaths(seed.ProposedPacks); perr == nil {
+		for _, a := range research.IndependentGrounding(root, paths) {
+			fmt.Printf("grounding: %s (%s)\n", a.Rel, a.Kind)
+		}
+	}
 	fmt.Printf("%s\n", tty.C(tty.Dim, "prose_owned stamped — re-check before share"))
 	fmt.Printf("%s\n", tty.C(tty.Dim, pathway.ClaimFence))
 	snap, _ := pathway.Project(root)
 	fmt.Print(pathway.FormatSnapshot(snap))
 	return nil
+}
+
+func printNotGroundingStubs(root string) {
+	s, err := pathway.Load(root)
+	if err != nil || s == nil || len(s.ProposedPacks) == 0 {
+		return
+	}
+	paths, err := pathway.ProsePaths(s.ProposedPacks)
+	if err != nil {
+		return
+	}
+	for _, rel := range research.NotIndependent(root, paths) {
+		fmt.Printf("not-grounding: %s (stub)\n", rel)
+	}
 }
 
 func cmdPathwayConfirmShare(root string, args []string) error {

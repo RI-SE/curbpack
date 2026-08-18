@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afelin/curbpack/internal/packs"
 )
 
 func TestConfirmPacks_RefuseNoSuggest(t *testing.T) {
@@ -37,6 +39,109 @@ func TestConfirmPacks_RefuseUnknownID(t *testing.T) {
 	}
 	if loaded.HumanTicks.PacksConfirmed {
 		t.Fatal("tick must not stamp on refuse")
+	}
+}
+
+func writeHouseConfirmSeed(t *testing.T, dir string) {
+	t.Helper()
+	s := Seed{
+		SchemaVersion: SchemaVersion,
+		ProposedPacks: []string{"house-policy"},
+		HumanTicks:    HumanTicks{PacksConfirmed: true},
+		Claim:         ClaimFence,
+	}
+	if err := Write(dir, s); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeHouseConfirmDocs(t *testing.T, dir, security, txt string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, ".curbpack.json"), []byte(`{"packs":["house-policy"]}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte(security), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".well-known"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".well-known", "security.txt"), []byte(txt), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConfirmProse_RefuseHealStubOnly(t *testing.T) {
+	dir := t.TempDir()
+	writeHouseConfirmSeed(t, dir)
+	writeHouseConfirmDocs(t, dir, packs.DefaultScaffoldBody("SECURITY.md"), packs.DefaultScaffoldBody(".well-known/security.txt"))
+	_, err := ConfirmProse(dir)
+	if err == nil || !errors.Is(err, ErrInformedConsent) {
+		t.Fatalf("want informed-consent refuse for heal-stub-only, got %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil || loaded == nil {
+		t.Fatal(err)
+	}
+	if loaded.HumanTicks.ProseOwned {
+		t.Fatal("must not stamp prose_owned on informed-consent refuse")
+	}
+}
+
+func TestConfirmProse_RefuseWhenSecurityStillScaffold(t *testing.T) {
+	dir := t.TempDir()
+	writeHouseConfirmSeed(t, dir)
+	writeHouseConfirmDocs(t, dir, packs.DefaultScaffoldBody("SECURITY.md"), "Contact: security@example.com\nPreferred-Languages: en\n")
+	_, err := ConfirmProse(dir)
+	if err == nil || !errors.Is(err, ErrInformedConsent) {
+		t.Fatalf("want informed-consent refuse when SECURITY.md is still DefaultScaffoldBody, got %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil || loaded == nil {
+		t.Fatal(err)
+	}
+	if loaded.HumanTicks.ProseOwned {
+		t.Fatal("must not stamp prose_owned when a displayed path is still a heal stub")
+	}
+}
+
+func TestConfirmProse_OKWhenAllIndependent(t *testing.T) {
+	dir := t.TempDir()
+	writeHouseConfirmSeed(t, dir)
+	writeHouseConfirmDocs(t, dir, `# Security
+
+House policy reporting and response for this product.
+
+Contact security@example.com with reproduction steps. We acknowledge within two business days.
+`, "Contact: security@example.com\nPreferred-Languages: en\n")
+	out, err := ConfirmProse(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.HumanTicks.ProseOwned {
+		t.Fatal("expected prose_owned when every displayed path is independent")
+	}
+}
+
+func TestConfirmProse_RefuseUngroundedClaims(t *testing.T) {
+	dir := t.TempDir()
+	writeHouseConfirmSeed(t, dir)
+	writeHouseConfirmDocs(t, dir, `# Security
+
+## Claims
+
+This product implements CRA Annex VII.
+`, "Contact: security@example.com\nPreferred-Languages: en\n")
+	_, err := ConfirmProse(dir)
+	if err == nil || !errors.Is(err, ErrCiteRefuse) {
+		t.Fatalf("want cite-check refuse for ungrounded Claims, got %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil || loaded == nil {
+		t.Fatal(err)
+	}
+	if loaded.HumanTicks.ProseOwned {
+		t.Fatal("must not stamp on cite-check refuse")
 	}
 }
 

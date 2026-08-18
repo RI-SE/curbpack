@@ -15,10 +15,15 @@ type StatechartContext struct {
 }
 
 // AgentIdentity identifies the agent/mandate that triggered validation (optional).
+// Source is self-declared (env) or bridge (Coreward sock present). Reason is the
+// fail-open sock probe (not_installed / unavailable) and is never a gate.
+// Not part of attest state_hash / ComputeStateHash field order.
 type AgentIdentity struct {
 	AgentID         string `json:"agent_id"`
 	ModelHash       string `json:"model_hash"`
 	ActiveMandateID string `json:"active_mandate_id"`
+	Source          string `json:"source,omitempty"`
+	Reason          string `json:"reason,omitempty"`
 }
 
 // ASTCoordinates pin a failure to a file/symbol when available.

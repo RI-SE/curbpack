@@ -12,7 +12,7 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 | Way | Meaning |
 |-----|---------|
-| **Write→Check** | Optional pathway interview that suggests checklists: answer a few questions, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check (refuses uncited Claims), then check. |
+| **Write→Check** | Optional pathway interview that suggests checklists: answer a few questions, confirm packs, optional research brief, draft house docs (always **two options + Recommended: A\|B**), cite-check (refuses ungrounded Claims; stub-only confirm refuses), then check. |
 | **Bring-docs→Check** | Put existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
 | **CI** | Run `check` alone anytime (Action or local). **Skips curb outlines.** |
 
@@ -102,7 +102,7 @@ Human-only events: `confirm-packs`, `confirm-prose`, `confirm-share`, `attest`. 
 | **L2.5** | Research sidecar | `curbpack research` (+ optional `--fetch`) | Read brief; not a gate |
 | **L3** | Activate | `init --packs` / `check --heal` | — |
 | **L4** | House draft | RKG + research packet; **dual draft + recommend**; cite-or-refuse | Pick A/B/edit |
-| **L5** | Tick prose | `cite-check` green → `pathway confirm-prose` | “I own this wording” |
+| **L5** | Tick prose | ground-check green + every prose path independent → `pathway confirm-prose` | “I own this wording” |
 | **L6** | Check | `check` (+ hooks); GateFailure path = pathway phase | Fix on red |
 | **L7** | Share | `share` (ContextPack includes pathway next) | — |
 | **L8** | Tick share | `pathway confirm-share` | Review buyer-Qs / one-pager |
@@ -135,7 +135,7 @@ curbpack pathway suggest \
 2. **Findings:** only from check JSON / ContextPack / SARIF `ruleId` — never invent gate results.
 3. **Law:** no regulation-text KB; L4 navigates **RKG** + **research packet** allowlisted URLs — cite-or-refuse.
 4. **Prose:** always two drafts + recommendation; human picks; heal = stubs only.
-5. **Ticks / attest:** human CLI only; not MCP. Cite-check refuse blocks `confirm-prose` when packet present.
+5. **Ticks / attest:** human CLI only; not MCP. Cite-check refuse blocks `confirm-prose` (always — packet optional). Stub-only / agent-cache-only confirm refuses (informed-consent).
 6. **Claims:** claim-safety + fixed fence on seed + exports.
 7. **Enums:** suggest flags are closed sets; reject free strings.
 8. **Session notes:** `pathway note` only; never forge seed; notes are **not** check inputs.
@@ -148,7 +148,7 @@ curbpack pathway suggest \
 - [ ] `curbpack research` (optional `--fetch`) — never gates check
 - [ ] Dual draft + Recommended A|B → human pick → `pathway note --set last_draft_pick=…`
 - [ ] `init --packs …` + `check --heal` + edit with cite markers
-- [ ] `curbpack research --cite-check <draft.md>` green (refuses uncited Claims)
+- [ ] `curbpack research --cite-check <draft.md>` green (refuses ungrounded Claims; confirm-prose also refuse-ungrounded / stub-only)
 - [ ] Human: `pathway confirm-prose --i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`)
 - [ ] `check` green (or shareable red with ContextPack)
 - [ ] `share` → human: `pathway confirm-share --i-am-human` (or `CURBPACK_ALLOW_CONFIRM=1`)

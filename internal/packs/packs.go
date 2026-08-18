@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/afelin/curbpack/internal/paths"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-	"github.com/afelin/curbpack/internal/paths"
 )
 
 //go:embed data/cra-baseline/pack.json data/medtech-iec62304/pack.json data/house-policy/pack.json data/_watchlist.json
@@ -457,6 +457,25 @@ Document default-secure settings and hardening steps.
 
 Explain secure decommissioning and data wiping.
 `
+	case strings.Contains(rel, "art14"):
+		return `# Art 14 reporting path
+
+## Reporting clock (CRA Art 14)
+
+Record how actively exploited or severe incidents would be reported under CRA Article 14. Reporting applies from 11 September 2026, including products already on the market. This file is a dated rehearsal artifact in this repository. It is not a live Single Reporting Platform check and does not assert that EU Login works.
+
+## Handling clock (not this file)
+
+Vulnerability handling and public security contact (SPOC) sit on a later clock than Article 14 reporting. Do not treat this path as Annex I Part II handling evidence.
+
+## Named owner
+
+Name the role that owns the reporting path for this product.
+
+## Rehearsal dated artifact
+
+Date of last tabletop or file rehearsal (YYYY-MM-DD) and a pointer to the in-repo record. Not a live submission.
+`
 	case strings.Contains(rel, "software_safety_class"):
 		return `# Software Safety Class
 
@@ -511,11 +530,12 @@ Preferred-Languages: en
 
 // RuleTouchesDiff reports whether a rule's declared paths intersect changed files.
 // Rules without path/paths always run (true).
-// file_present / annex_file always run under --diff: missing or short required files
-// never appear in porcelain, so skipping them produces false greens.
+// file_present / annex_file / anti_placeholder always run under --diff: missing
+// or short required files never appear in porcelain, and committed heal stubs on
+// untouched paths would false-green if overlap were skipped.
 func RuleTouchesDiff(rule Rule, changed map[string]struct{}) bool {
 	switch rule.Check {
-	case "file_present", "annex_file":
+	case "file_present", "annex_file", "anti_placeholder":
 		return true
 	}
 	if len(changed) == 0 {

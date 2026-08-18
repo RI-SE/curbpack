@@ -3,8 +3,13 @@ package research
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/paths"
 )
 
 func TestBuild_DeterministicSources_CRA(t *testing.T) {
@@ -206,5 +211,115 @@ func TestPathMatchesReq_NoBasenameTrap(t *testing.T) {
 	}
 	if pathMatchesReq("other/risk_assessment.md", "docs/annex-vii/risk_assessment.md") {
 		t.Fatal("different parent path must not match via basename")
+	}
+}
+
+func TestCiteCheck_AllowlistedURLGroundsClaims(t *testing.T) {
+	t.Parallel()
+	pkt := Packet{}
+	good := []byte(`## Claims
+
+Annex structure follows the CRA text. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847
+`)
+	res := CiteCheck(pkt, "docs/annex-vii/risk_assessment.md", good)
+	if !res.OK {
+		t.Fatalf("allowlisted URL should ground Claims, errors=%v", res.Errors)
+	}
+	bad := []byte(`## Claims
+
+Annex structure follows the CRA text. https://evil.example/law
+`)
+	res = CiteCheck(pkt, "docs/annex-vii/risk_assessment.md", bad)
+	if res.OK {
+		t.Fatal("non-allowlisted URL must not ground")
+	}
+}
+
+func TestCiteCheck_ClaimIDGrounds(t *testing.T) {
+	t.Parallel()
+	pkt := Packet{Requirements: []Requirement{{GateID: "CRA-ANNEX-VII-RISK"}}}
+	draft := []byte(`## Claims
+
+Draft maps to CRA-ANNEX-VII-RISK.
+`)
+	res := CiteCheck(pkt, "docs/annex-vii/risk_assessment.md", draft)
+	if !res.OK {
+		t.Fatalf("claim id should ground, errors=%v", res.Errors)
+	}
+}
+
+func TestCiteCheck_HealStubPathDoesNotGround(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte(packs.DefaultScaffoldBody("SECURITY.md")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkt := Packet{}
+	draft := []byte(`## Claims
+
+This product implements CRA Annex VII — see SECURITY.md.
+`)
+	res := citeCheck(pkt, "docs/annex-vii/risk_assessment.md", draft, NewCatalog(dir, pkt))
+	if res.OK {
+		t.Fatal("heal-stub path must not ground a Claims line")
+	}
+}
+
+func TestCiteCheck_RepoPathGrounds(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	body := "# Security\n\nHouse reporting contact and response process for this repo.\n"
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkt := Packet{}
+	draft := []byte(`## Claims
+
+House reporting lives in SECURITY.md.
+`)
+	res := citeCheck(pkt, "SECURITY.md", draft, NewCatalog(dir, pkt))
+	if !res.OK {
+		t.Fatalf("independent repo path should ground, errors=%v", res.Errors)
+	}
+}
+
+func TestIndependentGrounding_SkipsCacheAndStubs(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cache := filepath.Join(dir, filepath.FromSlash(paths.CacheRel))
+	if err := os.MkdirAll(cache, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cache, "notes.md"), []byte("agent cache prose\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte(packs.DefaultScaffoldBody("SECURITY.md")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	arts := IndependentGrounding(dir, []string{"SECURITY.md", paths.CacheRel + "/notes.md"})
+	if len(arts) != 0 {
+		t.Fatalf("stub + cache must not count, got %#v", arts)
+	}
+}
+
+func TestIndependentGrounding_AcceptsHumanProse(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "SECURITY.md"), []byte("# Security\n\nHouse policy prose.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	arts := IndependentGrounding(dir, []string{"SECURITY.md"})
+	if len(arts) != 1 || arts[0].Rel != "SECURITY.md" {
+		t.Fatalf("want SECURITY.md, got %#v", arts)
+	}
+}
+
+func TestCiteCheck_UngroundedPositiveAssertion(t *testing.T) {
+	t.Parallel()
+	pkt := Packet{}
+	draft := []byte("# Security\n\nThis product implements CRA Annex VII.\n")
+	res := CiteCheck(pkt, "SECURITY.md", draft)
+	if res.OK {
+		t.Fatal("positive CRA assertion without grounding must refuse")
 	}
 }
