@@ -3,6 +3,7 @@ package packs_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -156,6 +157,27 @@ func TestBuildPolicyGraphSchema(t *testing.T) {
 	}
 	if len(g.Nodes) == 0 || len(g.Edges) == 0 {
 		t.Fatal("expected nodes and edges")
+	}
+}
+
+func TestExportTreeMatchesEmbeddedPackJSON(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	root := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
+	for _, id := range []string{"cra-baseline", "house-policy", "medtech-iec62304"} {
+		exportB, err := os.ReadFile(filepath.Join(root, "packs", id, "pack.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		embedB, err := os.ReadFile(filepath.Join(root, "internal", "packs", "data", id, "pack.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(exportB) != string(embedB) {
+			t.Fatalf("pack.json twins drifted for %s (packs/%s/pack.json vs internal/packs/data/%s/pack.json)", id, id, id)
+		}
 	}
 }
 

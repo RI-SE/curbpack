@@ -228,7 +228,9 @@ func cmdPathwayConfirmProse(root string, args []string) error {
 	}
 	seed, err := pathway.ConfirmProse(root)
 	if err != nil {
-		printNotGroundingStubs(root)
+		if errors.Is(err, pathway.ErrInformedConsent) {
+			printNotGroundingStubs(root)
+		}
 		return pathwayErr(err)
 	}
 	tty.PrintHeader("curbpack pathway confirm-prose")
