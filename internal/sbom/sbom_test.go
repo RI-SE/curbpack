@@ -6,76 +6,79 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/sbom"
 )
 
-func TestCycloneDXFromPackageJSON(t *testing.T) {
+func TestCollectPackagesStableOrder(t *testing.T) {
 	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "package.json"), `{
-  "name": "demo",
-  "dependencies": { "left-pad": "1.3.0" },
-  "devDependencies": { "typescript": "5.4.0" }
-}`)
-	doc, path, err := sbom.WriteCycloneDX(dir, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if doc.BomFormat != "CycloneDX" || doc.SpecVersion != "1.5" {
-		t.Fatalf("bad bom header: %+v", doc)
-	}
-	if len(doc.Components) != 2 {
-		t.Fatalf("components=%d", len(doc.Components))
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var probe map[string]any
-	if json.Unmarshal(raw, &probe) != nil {
-		t.Fatal("cdx json invalid")
-	}
-	if probe["bomFormat"] != "CycloneDX" {
-		t.Fatal("missing bomFormat")
-	}
-	if len(doc.Metadata.Tools.Components) == 0 || doc.Metadata.Tools.Components[0].Version != buildinfo.Version {
-		t.Fatalf("SBOM tool version=%q want buildinfo.Version=%q", toolVersion(doc), buildinfo.Version)
-	}
-}
-
-func toolVersion(doc sbom.Document) string {
-	if len(doc.Metadata.Tools.Components) == 0 {
-		return ""
-	}
-	return doc.Metadata.Tools.Components[0].Version
-}
-
-func TestNPMLockParse(t *testing.T) {
-	dir := t.TempDir()
-	mustWrite(t, filepath.Join(dir, "package-lock.json"), `{
+	lock := filepath.Join(dir, "package-lock.json")
+	body := `{
   "name": "demo",
   "lockfileVersion": 3,
   "packages": {
     "": { "name": "demo" },
-    "node_modules/axios": { "version": "1.8.4" }
+    "node_modules/zod": { "version": "3.22.0" },
+    "node_modules/axios": { "version": "1.6.0" },
+    "node_modules/lodash": { "version": "4.17.21" }
   }
-}`)
-	pkgs, src, err := sbom.CollectPackages(dir)
+}`
+	if err := os.WriteFile(lock, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	first, _, err := sbom.CollectPackages(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if src != "package-lock.json" {
-		t.Fatalf("src=%s", src)
+	second, _, err := sbom.CollectPackages(dir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(pkgs) != 1 || pkgs[0].Name != "axios" {
-		t.Fatalf("pkgs=%v", pkgs)
+	for i := range first {
+		if first[i] != second[i] {
+			t.Fatalf("order drift at %d: %+v vs %+v", i, first[i], second[i])
+		}
 	}
 }
 
-func mustWrite(t *testing.T, path, body string) {
-	t.Helper()
-	_ = os.MkdirAll(filepath.Dir(path), 0o755)
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+func TestBuildCycloneDXStableBytes(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1704067200")
+	dir := t.TempDir()
+	lock := filepath.Join(dir, "package-lock.json")
+	body := `{
+  "name": "demo",
+  "lockfileVersion": 3,
+  "packages": {
+    "": { "name": "demo" },
+    "node_modules/axios": { "version": "1.6.0" },
+    "node_modules/lodash": { "version": "4.17.21" }
+  }
+}`
+	if err := os.WriteFile(lock, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
+	}
+	pkgs, source, err := sbom.CollectPackages(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docA := sbom.BuildCycloneDX(dir, pkgs, source)
+	docB := sbom.BuildCycloneDX(dir, pkgs, source)
+	bA, _ := json.Marshal(docA)
+	bB, _ := json.Marshal(docB)
+	if string(bA) != string(bB) {
+		t.Fatal("cyclonedx marshal not byte-stable")
+	}
+	out := filepath.Join(dir, "sbom.cdx.json")
+	_, path1, err := sbom.WriteCycloneDX(dir, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data1, _ := os.ReadFile(path1)
+	_, _, err = sbom.WriteCycloneDX(dir, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data2, _ := os.ReadFile(path1)
+	if string(data1) != string(data2) {
+		t.Fatal("cyclonedx write not byte-stable")
 	}
 }

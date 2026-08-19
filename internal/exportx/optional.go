@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
+	"sort"
 
+	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/validate"
 )
@@ -28,7 +29,7 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 		"name":              filepath.Base(root) + "-sbom",
 		"documentNamespace": "https://curbpack.local/spdx/" + filepath.Base(root),
 		"creationInfo": map[string]any{
-			"created":  "2024-01-01T00:00:00Z",
+			"created":  clock.RFC3339(),
 			"creators": []string{"Tool: curbpack"},
 			"comment":  "Optional SPDX mirror of component list — not a certification. Source=" + source,
 		},
@@ -48,8 +49,15 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 }
 
 func spdxPackages(pkgs []sbom.Package) []map[string]any {
-	out := make([]map[string]any, 0, len(pkgs))
-	for i, p := range pkgs {
+	sorted := append([]sbom.Package(nil), pkgs...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].Name != sorted[j].Name {
+			return sorted[i].Name < sorted[j].Name
+		}
+		return sorted[i].Version < sorted[j].Version
+	})
+	out := make([]map[string]any, 0, len(sorted))
+	for i, p := range sorted {
 		out = append(out, map[string]any{
 			"SPDXID":           fmt.Sprintf("SPDXRef-Package-%d", i+1),
 			"name":             p.Name,
@@ -82,7 +90,7 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 			{"uri": "sbom.cdx.json", "digest": map[string]string{"sha256": sbomDig}},
 		},
 		"metadata": map[string]any{
-			"buildFinishedOn": time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+			"buildFinishedOn": clock.RFC3339(),
 			"completeness":    map[string]any{"parameters": false, "environment": false, "materials": false},
 			"comment":         "Optional SLSA-shaped sidecar wrapping local digests — does not replace Git Notes attest honesty. Not a certification.",
 		},

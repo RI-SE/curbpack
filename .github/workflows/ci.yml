@@ -25,6 +25,8 @@ jobs:
         with:
           go-version: "1.23.x"
       - name: Go test
+        env:
+          SOURCE_DATE_EPOCH: "1704067200"
         run: go test ./...
       - name: Fuzz (short)
         if: runner.os != 'Windows'

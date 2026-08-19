@@ -154,7 +154,7 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 	doc.SpecVersion = "1.5"
 	doc.SerialNumber = serial
 	doc.Version = 1
-	doc.Metadata.Timestamp = "2024-01-01T00:00:00Z"
+	doc.Metadata.Timestamp = clock.RFC3339()
 	doc.Metadata.Tools.Components = []Component{{
 		Type:    "application",
 		Name:    "curbpack",
@@ -233,6 +233,22 @@ func CollectPackages(root string) ([]Package, string, error) {
 	if len(out) == 0 && len(sources) == 0 {
 		return nil, "", fmt.Errorf("no package-lock.json, pnpm-lock.yaml, package.json, or go.mod")
 	}
+	sort.Slice(out, func(i, j int) bool {
+		ei, ej := out[i].Ecosystem, out[j].Ecosystem
+		if ei == "" {
+			ei = "npm"
+		}
+		if ej == "" {
+			ej = "npm"
+		}
+		if ei != ej {
+			return ei < ej
+		}
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].Version < out[j].Version
+	})
 	return out, strings.Join(sources, "+"), nil
 }
 
