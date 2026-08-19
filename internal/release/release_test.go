@@ -20,10 +20,17 @@ func TestPrepareAggregatesPartialWriteFailures(t *testing.T) {
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(out, 0o555); err != nil {
-		t.Fatal(err)
+	// Block several review-pack writes cross-platform (chmod on dirs is Unix-only).
+	for _, name := range []string{
+		"01-gate-failures.json",
+		"02-action-report.md",
+		"03-executive-summary.md",
+		"06-gate-failures.sarif",
+	} {
+		if err := os.MkdirAll(filepath.Join(out, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	t.Cleanup(func() { _ = os.Chmod(out, 0o755) })
 
 	err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, OutDir: out})
 	if err == nil {
