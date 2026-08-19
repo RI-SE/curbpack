@@ -72,7 +72,7 @@
       <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
                                     ↓
                          Review pack / evidence + optional attest</pre>
-      <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. An optional Unix-domain socket bridge is <strong>Unix-only</strong> and continues if unused; the socket defaults to a private path mode 0600. Golden path never requires sock.</p>
+      <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
 
       <h3>End-to-end flow</h3>
       <pre class="mermaid">
@@ -202,7 +202,7 @@ flowchart LR
       <p>Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Public Pages under RI-SE are a credibility home—not an endorsement of adopter products. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.</p>
 
       <h2>11. Limitations</h2>
-      <p>Pack coverage is only as good as pack authors; thin packs create false confidence. Regex and text checks are heuristics with size/time guards — not full program analysis. SBOM/VEX generation is best-effort from common Node lockfiles. Local CLI ships for darwin / linux / windows_amd64; the optional sock bridge remains <strong>Unix-only</strong>. GitHub Action runners are <strong>Linux/macOS only</strong>. <code>doctor --repair</code> is local PATH/alias repair — not silent auto-update. Client-side hash-pointer verify does not imply remote notary services. Pathway suggest is closed-world; it does not invent regulation text or pack ids.</p>
+      <p>Pack coverage is only as good as pack authors; thin packs create false confidence. Regex and text checks are heuristics with size/time guards — not full program analysis. SBOM/VEX generation is best-effort from common Node lockfiles. Local CLI ships for darwin / linux / windows_amd64. GitHub Action runners are <strong>Linux/macOS only</strong>. Integrator sock sidecar is Unix-only under <code>examples/mcp/</code>. <code>doctor --repair</code> is local PATH/alias repair — not silent auto-update. Client-side hash-pointer verify does not imply remote notary services. Pathway suggest is closed-world; it does not invent regulation text or pack ids.</p>
 
       <h2>12. Glossary</h2>
       <table>

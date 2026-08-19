@@ -31,7 +31,17 @@ Design intent: `docs/software-design-document.md`.
 
 ## Loop (opens read-only)
 
-An agent's first action never mutates the repository: **`scan`** → optional **`fix --<gap>`** → **`init`** → **`check`** → on green **`ask-my-suppliers`**. Pathway/research sidecars remain optional — see `docs/assistant-loop.md`.
+An agent's first action never mutates the repository: **`scan`** → optional **`fix --<gap>`** → **`init`** → **`check`** → on green **`ask-my-suppliers`**.
+
+### Write→Check depth (optional)
+
+Pathway and research are **Write→Check depth** sidecars — never gate inputs. Use when warm-starting house docs or grounding external claims:
+
+- **`pathway status|suggest|note`** — human next ask; stop for human `confirm-*` / `attest`
+- **`research [--fetch] [--gate-id=…]`** — allowlisted citation packet; **`research --cite-check`** before `confirm-prose`
+- Dual-draft HITL: Option A + Option B + **Recommended: A|B** → human pick → cite-check → `pathway note --set last_draft_pick=…`
+
+See `docs/assistant-loop.md` and `docs/getting-started/pathway.md`.
 
 ## Human-only acts
 

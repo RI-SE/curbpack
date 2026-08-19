@@ -69,6 +69,16 @@ Informational only — **exit code always 0**. No boolean `aligned` / `no_drift`
 
 New signal IDs (`docs_unchanged_since_attest`, `docs_changed_since_attest`, optional `contact_expires_past` / `contact_missing`) are additive rows. No boolean `aligned` / `no_drift` / `pass` / `green`. Cache-only fingerprint compare for `share_stale` — never runs `validate.Run` in the default path.
 
+## Optional sock IPC (example only)
+
+The main `curbpack` binary does **not** ship a `sock` verb (SDD §14). Integrators who need Unix IPC build the example server:
+
+- Server: `examples/mcp/cmd/curbpack-sock` → `examples/mcp/internal/sock/`
+- MCP client fallback: `examples/mcp/internal/sockclient/` when `CURBPACK_SOCK` is set
+- Golden path for agents and MCP: shell out to `curbpack` CLI
+
+Frozen ops (unchanged): `validate_delta`, `get_latest_failure`, `graph_summary`, `explain_packet`. See [coreward-bridge.md](coreward-bridge.md).
+
 ## Share bundle
 
 `curbpack share --bundle` writes `review-pack/evidence-bundle.html` with `<!-- curbpack-bundle-schema:1 -->`, optional REMEDIATION banner on red gates, and embedded hpurl pointer JSON for offline verify.

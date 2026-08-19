@@ -15,7 +15,7 @@
   ],
   "notes": {
     "action": "GitHub Action runners are Linux/macOS only in v0.5.2 — local Windows CLI is supported.",
-    "sock": "Optional Coreward Unix domain socket — not available on Windows; golden path never requires sock.",
+    "mcp": "Thin MCP example shells out to CLI; optional Unix sock reference in examples/mcp/sock (not in main binary).",
     "deferred": "winget, windows/arm64, and pwsh completion are out of scope for this train."
   }
 }

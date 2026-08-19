@@ -43,7 +43,7 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
 - **Engine:** industry-agnostic check kinds (`file_present`, `text_forbid`, dependency bans, etc.).
 - **Packs:** data only — CRA-shaped annex drafts, house policy, sector templates.
 - **No remote policy service** required for daily `check`.
-- Optional Unix-domain socket for IDE/integrator IPC — **Unix-only**; continues if unused; socket defaults to a private path with mode `0600`. Golden path never requires sock.
+- **Thin MCP example** shells out to CLI; optional Unix sock sidecar (`curbpack-sock` in `examples/mcp/`) for integrators — not in the main binary.
 
 ### End-to-end flow
 
@@ -181,7 +181,7 @@ Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product
 - Pack coverage is only as good as pack authors; thin packs create false confidence.
 - Regex and text checks are heuristics with size/time guards — not full program analysis.
 - SBOM/VEX generation is best-effort from common Node lockfiles.
-- Local CLI ships for darwin / linux / windows_amd64; the optional sock bridge remains **Unix-only**. GitHub Action runners are **Linux/macOS only**.
+- Local CLI ships for darwin / linux / windows_amd64. GitHub Action runners are **Linux/macOS only**. Integrator sock sidecar is Unix-only under `examples/mcp/cmd/curbpack-sock`.
 - `doctor --repair` is local PATH/alias repair — not silent auto-update; missing binary requires a full reinstall.
 - Client-side hash-pointer verify does not imply remote notary services.
 - Pathway suggest is closed-world (frozen catalog + imported partner packs); it does not invent regulation text or pack ids.

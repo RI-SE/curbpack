@@ -20,7 +20,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **OPA** | Open Policy Agent — Rego policy engine. Explicit **non-goal** for Curbpack OSS. |
 | **VEX** | Vulnerability Exploitability eXchange — draft OpenVEX may bind pending findings at attest time; not a CVE product. |
 | **CLI** | Command-Line Interface — Curbpack’s primary surface (`curbpack` / short alias `curb`). |
-| **IPC** | Inter-Process Communication — optional Unix-domain socket (`curbpack sock`) for integrators. |
+| **IPC** | Inter-Process Communication — optional Unix sock sidecar (`curbpack-sock` in `examples/mcp/`) for integrators; not in main binary. |
 | **OSS** | Open-Source Software — this public Apache-2.0 product line. |
 | **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.5.2`. |
 | **SCA** | Software Composition Analysis — pair Curbpack with tools such as Trivy/OSV for depth; Curbpack is not an SCA platform. |

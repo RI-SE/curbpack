@@ -9,7 +9,7 @@
 
 | Item | Was present? | Wave A action |
 |------|----------------|---------------|
-| `internal/sock/` | Yes | **Removed** — package, CLI verb, stable-contracts section, contract test |
+| `internal/sock/` | Yes | **Removed** from main binary — moved to `examples/mcp/internal/sock/` + `cmd/curbpack-sock` sidecar |
 | `matchWithTimeout` in `validate.go` | Yes (3 sites) | **Removed** — uses `re.Match` directly |
 | `auditASTReachability` duplicate call | Yes (main loop + `CheckImportReach`) | **Fixed** — main-loop call removed; rule path stamps pack rule id |
 | `testdata/fuzz/` (18 root seeds) | Yes | **Removed** — kept `internal/validate/testdata/fuzz/FuzzSafeJoin/` |
@@ -18,7 +18,7 @@
 | `scripts/time-to-green-windows.ps1` | Yes, unreferenced | **Deleted** |
 | `scripts/dogfood-explain-recheck.sh` | Yes, prose-only ref | **Deleted** |
 
-**Residual sock prose:** site pages, `coreward-bridge.md`, whitepaper, and `CURBPACK_SOCK` bridge labeling in `internal/ir/identity.go` still mention optional socket IPC historically. MCP now shells out to CLI only. Full doc sweep deferred to a follow-up PR.
+**Residual sock prose:** site pages and whitepaper may still mention historical `curbpack sock`; canonical path is CLI + `examples/mcp/cmd/curbpack-sock`. `coreward-bridge.md` and `stable-contracts.md` updated in Wave A follow-up.
 
 ---
 

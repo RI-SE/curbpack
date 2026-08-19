@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Security — Curbpack</title>
-  <meta name="description" content="Install checksums, unsigned vs signed, offline packs, optional socket, regex limits." />
+  <meta name="description" content="Install checksums, unsigned vs signed, offline packs, MCP CLI example, regex limits." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -32,7 +32,7 @@
         <li><strong>Install checksums:</strong> release downloads verify <code>checksums.txt</code> (sha256, fail-closed) in both <code>install.sh</code> and the GitHub Action.</li>
         <li><strong>Unsigned vs signed:</strong> unsigned capsules are labeled unsigned. Fake agent-bind tokens are never treated as verified signatures. Unsigned ≠ verified.</li>
         <li><strong>Offline packs:</strong> daily check needs no network. Network pack update requires a sha256 pin; otherwise stay offline / import locally.</li>
-        <li><strong>Optional socket:</strong> integrator IPC uses a private path (mode <code>0600</code>), not a shared world-writable <code>/tmp</code> default. Continues if unused.</li>
+        <li><strong>MCP / integrator IPC:</strong> MCP shells out to CLI by default. Optional Unix sock sidecar (<code>curbpack-sock</code> in <code>examples/mcp/</code>; private path mode <code>0600</code> when used).</li>
         <li><strong>Regex limits:</strong> pack patterns are length-capped and time-bounded to reduce regular expression denial-of-service (ReDoS) risk.</li>
       </ul>
       <p>Full write-up: <a href="https://github.com/afelin/curbpack/blob/main/docs/security-model.md">docs/security-model.md</a>. Co-promotion / RISE-neutral language: <a href="https://github.com/afelin/curbpack/blob/main/docs/promotion-firewall.md">docs/promotion-firewall.md</a>. Report vulnerabilities via <a href="https://github.com/afelin/curbpack/blob/main/SECURITY.md">SECURITY.md</a>.</p>
