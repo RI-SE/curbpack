@@ -2,12 +2,19 @@
 
 This runbook keeps `afelin/curbpack` and `RI-SE/curbpack` clean and aligned while preserving a low-cognitive-load workflow.
 
+## Mirror policy
+
+- **Source of truth:** `afelin/curbpack` — PR-only merge, protected checks.
+- **Mirror:** `RI-SE/curbpack` (public) — receives normal pushes from `./scripts/curb-sync.sh` only.
+- **Force-push:** A one-time historical force-push on the mirror was resolved; **never force-push again** on either remote.
+- **After every merge to `afelin/main`:** run `./scripts/curb-sync.sh` and confirm SHA parity (PM ritual — say “sync curbpack remotes” to trigger the agent).
+
 ## Daily operator loop
 
 1. Work only on a feature branch.
 2. Open PR and wait for required checks to pass.
 3. Merge PR (never direct-push `main`).
-4. Run `./scripts/curb-sync.sh`.
+4. Run `./scripts/curb-sync.sh` (required after every merge).
 5. Confirm both remotes are identical on `main`.
 
 ```bash
@@ -64,6 +71,16 @@ Before declaring repo healthy:
 - `./scripts/curb-sync.sh` exits cleanly.
 - `origin/main` equals `corp-origin/main`.
 - Scheduled `mirror-drift` workflow passes (or open drift issue is resolved).
+
+### mirror-drift workflow
+
+The scheduled `mirror-drift` job compares `afelin/main` vs `RI-SE/main`:
+
+1. **Primary:** unauthenticated GitHub REST API (RI-SE repo is public):
+   `curl -fsSL https://api.github.com/repos/RI-SE/curbpack/commits/main`
+2. **Fallback:** `MIRROR_READ_TOKEN` secret via `gh api` if curl fails (future-proof if mirror goes private).
+3. **SHA regex validation** (`^[0-9a-f]{40}$`) prevents false drift from 404/error JSON.
+4. **Outcomes:** SHAs match → pass; SHAs differ → open/update drift issue; mirror unreachable → exit 1 with manual sync message (not a false drift issue).
 
 ## Incident playbook (if sync pauses)
 
