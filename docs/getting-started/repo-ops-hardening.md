@@ -17,22 +17,24 @@ git rev-parse corp-origin/main
 
 The two SHAs must match.
 
-## Protected main policy
+## Protected main policy (source + mirror)
 
-For both repos (`afelin/curbpack`, `RI-SE/curbpack`):
+Use asymmetric protection to avoid endless SHA drift:
 
-- Require pull request before merging to `main`.
-- Require status checks to pass before merge.
-- Require branch to be up to date before merge.
-- Dismiss stale approvals on new commits.
-- Restrict direct pushes to `main`.
-- Allow merge queue only if your team actively uses it.
+- **Source of truth (`afelin/curbpack`)**
+  - Protect `main` with required checks.
+  - Require PR-based merge into `main`.
+  - Restrict direct pushes to `main`.
+- **Mirror (`RI-SE/curbpack`)**
+  - Keep `main` in mirror mode for deterministic sync (`./scripts/curb-sync.sh`).
+  - Do not require PR-only merge on mirror `main`, or sync will create merge-commit loops.
+  - Never force-push; mirror only receives normal sync pushes from source `main`.
 
 ## Merge strategy policy
 
 To reduce history ambiguity:
 
-- Prefer merge commits (default in this repo).
+- Prefer merge commits on the source repo (default here).
 - Keep branch auto-delete enabled after merge.
 - Do not force-push to `main`.
 
