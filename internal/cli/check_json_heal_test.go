@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,9 @@ func initGit(t *testing.T, dir string) {
 func buildCLI(t *testing.T) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), "curbpack")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
 	wd, _ := os.Getwd()
 	root := filepath.Clean(filepath.Join(wd, "../.."))
 	out, err := exec.Command("go", "build", "-o", bin, filepath.Join(root, "cmd/curbpack")).CombinedOutput()

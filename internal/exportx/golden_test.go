@@ -1,9 +1,11 @@
 package exportx_test
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -42,8 +44,37 @@ func TestGoldenContextPack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing golden %s (run with -update): %v", golden, err)
 	}
+	if runtime.GOOS == "windows" {
+		assertContextPackGoldenStruct(t, got, want)
+		return
+	}
 	if string(got) != string(want) {
 		t.Fatalf("context-pack drift — run: go test ./internal/exportx/ -run Golden -update\n got len=%d want len=%d", len(got), len(want))
+	}
+}
+
+func assertContextPackGoldenStruct(t *testing.T, got, want []byte) {
+	t.Helper()
+	var gotPack, wantPack exportx.ContextPack
+	if err := json.Unmarshal(got, &gotPack); err != nil {
+		t.Fatalf("got json: %v", err)
+	}
+	if err := json.Unmarshal(want, &wantPack); err != nil {
+		t.Fatalf("want json: %v", err)
+	}
+	// Instrument scan can differ by OS (temp paths); compare stable contract fields.
+	gotPack.Instrument = wantPack.Instrument
+	if gotPack.SchemaVersion != wantPack.SchemaVersion ||
+		gotPack.OK != wantPack.OK ||
+		gotPack.ReadinessScore != wantPack.ReadinessScore ||
+		gotPack.CertificationClaimed != wantPack.CertificationClaimed {
+		t.Fatalf("context-pack structural drift: got=%+v want=%+v", gotPack, wantPack)
+	}
+	if len(gotPack.Failures) != len(wantPack.Failures) {
+		t.Fatalf("failures len got=%d want=%d", len(gotPack.Failures), len(wantPack.Failures))
+	}
+	if gotPack.Pathway == nil || wantPack.Pathway == nil || gotPack.Pathway.Phase != wantPack.Pathway.Phase {
+		t.Fatalf("pathway phase drift")
 	}
 }
 

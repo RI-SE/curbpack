@@ -110,6 +110,14 @@ func AllowedRel(rel string) bool {
 	if strings.TrimSpace(rel) == "" {
 		return false
 	}
+	if strings.ContainsRune(rel, 0) {
+		return false
+	}
+	for _, r := range rel {
+		if r < 32 {
+			return false
+		}
+	}
 	if filepath.IsAbs(rel) || strings.HasPrefix(filepath.ToSlash(rel), "/") {
 		return false
 	}

@@ -18,7 +18,7 @@ func TestUnderGitCaseInsensitive(t *testing.T) {
 }
 
 func TestAllowedRelMatchesValidate(t *testing.T) {
-	cases := []string{"docs/a.md", "../x", ".git/x", "/abs", ""}
+	cases := []string{"docs/a.md", "../x", ".git/x", "/abs", "", "ok\x00bad"}
 	for _, c := range cases {
 		err := pathjail.ValidateRel(c)
 		allowed := pathjail.AllowedRel(c)
