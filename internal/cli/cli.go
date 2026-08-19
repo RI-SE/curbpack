@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/afelin/curbpack/internal/formhints"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/packscmd"
 	"github.com/afelin/curbpack/internal/release"
@@ -446,35 +448,74 @@ func installPreCommitHook(root string) error {
 	return nil
 }
 
-func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool) {
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--pack":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, args[i+1])
-				i++
-			}
-		case "--packs":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, config.ParsePacksFlag(args[i+1])...)
-				i++
-			}
-		case "--json":
-			jsonOut = true
-		case "--diff", "--delta":
-			diffOnly = true
-		case "--form-hints":
-			formHints = true
-		case "--apply-stub":
-			applyStub = true
-			formHints = true // apply implies show hints
-		case "--heal":
-			heal = true
-			applyStub = true
-			formHints = true
-		}
+func parseCheckFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
+	fs := flag.NewFlagSet("check", flag.ContinueOnError)
+	fs.SetOutput(ioDiscard{})
+	var packsFlag string
+	fs.BoolVar(&jsonOut, "json", false, "")
+	fs.BoolVar(&diffOnly, "diff", false, "")
+	fs.BoolVar(&diffOnly, "delta", false, "")
+	fs.BoolVar(&formHints, "form-hints", false, "")
+	fs.BoolVar(&applyStub, "apply-stub", false, "")
+	fs.BoolVar(&heal, "heal", false, "")
+	fs.StringVar(&packsFlag, "packs", "", "")
+	var packSingle string
+	fs.StringVar(&packSingle, "pack", "", "")
+	if err := fs.Parse(args); err != nil {
+		return nil, false, false, false, false, false, usageErr("check: " + err.Error())
 	}
-	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal
+	if fs.NArg() > 0 {
+		return nil, false, false, false, false, false, usageErr(fmt.Sprintf("check: unknown argument %q", fs.Arg(0)))
+	}
+	if packsFlag != "" {
+		packIDs = config.ParsePacksFlag(packsFlag)
+	}
+	if packSingle != "" {
+		packIDs = append(packIDs, packSingle)
+	}
+	if heal {
+		applyStub = true
+		formHints = true
+	}
+	if applyStub {
+		formHints = true
+	}
+	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal, nil
+}
+
+func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
+	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
+	fs.SetOutput(ioDiscard{})
+	var packsFlag string
+	fs.BoolVar(&jsonOut, "json", false, "")
+	fs.BoolVar(&diffOnly, "diff", false, "")
+	fs.BoolVar(&diffOnly, "delta", false, "")
+	fs.BoolVar(&formHints, "form-hints", false, "")
+	fs.BoolVar(&applyStub, "apply-stub", false, "")
+	fs.BoolVar(&heal, "heal", false, "")
+	fs.StringVar(&packsFlag, "packs", "", "")
+	var packSingle string
+	fs.StringVar(&packSingle, "pack", "", "")
+	if err := fs.Parse(args); err != nil {
+		return nil, false, false, false, false, false, usageErr("validate: " + err.Error())
+	}
+	if fs.NArg() > 0 {
+		return nil, false, false, false, false, false, usageErr(fmt.Sprintf("validate: unknown argument %q", fs.Arg(0)))
+	}
+	if packsFlag != "" {
+		packIDs = config.ParsePacksFlag(packsFlag)
+	}
+	if packSingle != "" {
+		packIDs = append(packIDs, packSingle)
+	}
+	if heal {
+		applyStub = true
+		formHints = true
+	}
+	if applyStub {
+		formHints = true
+	}
+	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal, nil
 }
 
 const healMaxRounds = 3
@@ -484,7 +525,10 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal := parseValidateFlags(args)
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, err := parseCheckFlags(args)
+	if err != nil {
+		return err
+	}
 
 	// Snapshot prior evidence deposit before validate overwrites cache.
 	prior := loadPriorCache(root)
@@ -574,7 +618,7 @@ func cmdCheck(args []string) error {
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
 	}
 
-	if wantHints && (len(res.Payload.Failures) > 0 || len(lastHints) > 0) {
+	if wantHints && !jsonOut && (len(res.Payload.Failures) > 0 || len(lastHints) > 0) {
 		hints := lastHints
 		if len(hints) == 0 && len(res.Payload.Failures) > 0 {
 			cache, _ := remediation.Load(root)
@@ -619,7 +663,10 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, _, _, _ := parseValidateFlags(args)
+	packIDs, jsonOut, diffOnly, _, _, _, err := parseValidateFlags(args)
+	if err != nil {
+		return err
+	}
 	if !jsonOut {
 		tty.PrintHeader("EXECUTING COMPLIANCE GATES")
 	}
@@ -888,9 +935,17 @@ func cmdAttest(args []string) error {
 	if _, werr := vex.Write(root, doc, ""); werr != nil {
 		return fmt.Errorf("VEX write failed while binding digests: %w", werr)
 	}
+	resultDigest := ir.ComputeResultDigest(res.Payload)
+	packID := res.Payload.PackID
 
 	// Self-written evidence dirties the tree — require explicit --allow-dirty (no silent force).
-	_, err = attest.Run(attest.Options{RepoRoot: root, AllowDirty: allowDirty, ReviewedBy: reviewedBy})
+	_, err = attest.Run(attest.Options{
+		RepoRoot:     root,
+		AllowDirty:   allowDirty,
+		ReviewedBy:   reviewedBy,
+		ResultDigest: resultDigest,
+		PackIDs:      packID,
+	})
 	return err
 }
 

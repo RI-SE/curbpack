@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/gitutil"
 )
 
 func TestWriteContextPack_FromValidateWash(t *testing.T) {
@@ -85,6 +86,7 @@ func TestWriteContextPack_PrefersCache(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeGoodHouse(t, dir)
+	head, _ := gitutil.HeadSHA(dir)
 
 	// Seed cache without calling validate again via WriteContextPack first path.
 	cache := filepath.Join(dir, ".github", "curbpack", "cache")
@@ -95,6 +97,7 @@ func TestWriteContextPack_PrefersCache(t *testing.T) {
   "schema_version": "1",
   "pack_id": "house-policy",
   "readiness_score": 88,
+  "concurrency_control": {"expected_parent_commit_sha": "` + head + `"},
   "failures": [{
     "gate_id": "HOUSE-SECURITY-MD",
     "severity": "high",

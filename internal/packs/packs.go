@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/pathjail"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -299,21 +300,7 @@ func validateDateWindow(from, to string) error {
 // ValidateRelPath refuses absolute paths, traversal, and .git/** (pack path jail).
 // Used by ValidatePack and scaffold writers before joining under a repo root.
 func ValidateRelPath(rel string) error {
-	rel = strings.TrimSpace(rel)
-	if rel == "" {
-		return fmt.Errorf("empty path")
-	}
-	if filepath.IsAbs(rel) || strings.HasPrefix(filepath.ToSlash(rel), "/") {
-		return fmt.Errorf("absolute path refused")
-	}
-	clean := filepath.ToSlash(filepath.Clean(rel))
-	if clean == ".." || strings.HasPrefix(clean, "../") {
-		return fmt.Errorf("path traversal refused")
-	}
-	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
-		return fmt.Errorf("path under .git refused")
-	}
-	return nil
+	return pathjail.ValidateRel(rel)
 }
 
 // MaxRegexPatternLen is the hard cap on pack text_forbid patterns (ReDoS hygiene).

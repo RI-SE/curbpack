@@ -11,12 +11,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/tty"
 )
+
+// SchemaVersion is the Git Notes capsule schema (bump when state_hash field order changes).
+const SchemaVersion = "v3.34-result-bind"
 
 // Capsule is the Git Notes compliance capsule (Merkle + OCC).
 type Capsule struct {
@@ -42,19 +45,24 @@ type Options struct {
 	VEXDigest  string
 	// ReviewedBy is recorded in the capsule evidence map only — not state_hash.
 	ReviewedBy string
+	// ResultDigest and PackIDs bind the evaluated gate outcome (ir.ComputeResultDigest).
+	ResultDigest string
+	PackIDs      string
 }
 
 // ComputeStateHash returns sha256 hex of the length-prefixed field stream.
 // Sole authority for capsule state_hash. Field order is frozen: commit,
-// parentHash, sbomDigest, vexDigest. No wall-clock / UnixNano.
+// parentHash, sbomDigest, vexDigest, resultDigest, packIDs. No wall-clock / UnixNano.
 // AgentIdentity (env or Coreward sock label) is not a field — do not append it.
 // Length-prefixing avoids pipe-delimiter ambiguity across field boundaries.
-func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest string) string {
+func ComputeStateHash(commit, parentHash, sbomDigest, vexDigest, resultDigest, packIDs string) string {
 	h := sha256.New()
 	writeLenPrefixed(h, commit)
 	writeLenPrefixed(h, parentHash)
 	writeLenPrefixed(h, sbomDigest)
 	writeLenPrefixed(h, vexDigest)
+	writeLenPrefixed(h, resultDigest)
+	writeLenPrefixed(h, packIDs)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -96,7 +104,9 @@ func Run(opts Options) (Capsule, error) {
 	}
 
 	parentHash := gitutil.ParentNoteHash(root, commit)
-	stateHash := ComputeStateHash(commit, parentHash, sbomDigest, vexDigest)
+	resultDigest := strings.TrimSpace(opts.ResultDigest)
+	packIDs := strings.TrimSpace(opts.PackIDs)
+	stateHash := ComputeStateHash(commit, parentHash, sbomDigest, vexDigest, resultDigest, packIDs)
 
 	signer := "local-unsigned"
 	userTouch := "not-verified"
@@ -129,10 +139,16 @@ func Run(opts Options) (Capsule, error) {
 	if name := strings.TrimSpace(opts.ReviewedBy); name != "" {
 		evidence["reviewed_by"] = name
 	}
+	if resultDigest != "" {
+		evidence["result_digest"] = resultDigest
+	}
+	if packIDs != "" {
+		evidence["pack_ids"] = packIDs
+	}
 
 	cap := Capsule{
-		SchemaVersion:   "v3.33-OCC",
-		Timestamp:       time.Now().UTC().Format(time.RFC3339), // display-only; not in state_hash
+		SchemaVersion:   SchemaVersion,
+		Timestamp:       clock.RFC3339(), // display-only; not in state_hash
 		CommitSHA:       commit,
 		StateHash:       stateHash,
 		ParentStateHash: parentHash,

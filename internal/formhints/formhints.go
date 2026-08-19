@@ -9,6 +9,7 @@ import (
 
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/remediation"
 )
 
@@ -237,32 +238,22 @@ func safeRelPath(p string) (string, error) {
 	if p == "" {
 		return "", fmt.Errorf("empty remediation path")
 	}
-	if filepath.IsAbs(p) || strings.HasPrefix(p, "/") {
-		return "", fmt.Errorf("refusing absolute remediation path: %s", p)
-	}
-	clean := filepath.ToSlash(filepath.Clean(p))
-	if clean == ".." || strings.HasPrefix(clean, "../") {
-		return "", fmt.Errorf("refusing path traversal in remediation: %s", p)
-	}
-	if clean == ".git" || strings.HasPrefix(clean, ".git/") {
-		return "", fmt.Errorf("refusing remediation under .git: %s", p)
-	}
-	// Mirror validate.SafeJoin: refuse escape after Abs when joined under a fake root.
-	root := string(os.PathSeparator) + "repo"
-	full := filepath.Join(root, filepath.FromSlash(clean))
-	rootAbs, err := filepath.Abs(root)
-	if err != nil {
+	if err := pathjail.ValidateRel(p); err != nil {
+		if strings.Contains(err.Error(), ".git") {
+			return "", fmt.Errorf("refusing remediation under .git: %s", p)
+		}
+		if strings.Contains(err.Error(), "traversal") {
+			return "", fmt.Errorf("refusing path traversal in remediation: %s", p)
+		}
+		if strings.Contains(err.Error(), "absolute") {
+			return "", fmt.Errorf("refusing absolute remediation path: %s", p)
+		}
+		if strings.Contains(err.Error(), "escape") {
+			return "", fmt.Errorf("refusing path escape in remediation: %s", p)
+		}
 		return "", err
 	}
-	fullAbs, err := filepath.Abs(full)
-	if err != nil {
-		return "", err
-	}
-	sep := string(os.PathSeparator)
-	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
-		return "", fmt.Errorf("refusing path escape in remediation: %s", p)
-	}
-	return clean, nil
+	return filepath.ToSlash(filepath.Clean(p)), nil
 }
 
 func guessFile(gateID string) string {

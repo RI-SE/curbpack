@@ -63,6 +63,7 @@ Before declaring repo healthy:
 - Required checks are green on merged PRs.
 - `./scripts/curb-sync.sh` exits cleanly.
 - `origin/main` equals `corp-origin/main`.
+- Scheduled `mirror-drift` workflow passes (or open drift issue is resolved).
 
 ## Incident playbook (if sync pauses)
 

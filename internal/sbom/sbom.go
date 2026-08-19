@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/afelin/curbpack/internal/buildinfo"
+	"github.com/afelin/curbpack/internal/clock"
 )
 
 // Summary is a lightweight SBOM digest kept for backward compatibility.
@@ -61,7 +61,7 @@ type Package struct {
 // FromLockfiles scans npm/pnpm lockfiles if present (summary view).
 func FromLockfiles(root string) (Summary, error) {
 	pkgs, source, err := CollectPackages(root)
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := clock.RFC3339()
 	if err != nil {
 		return Summary{}, err
 	}

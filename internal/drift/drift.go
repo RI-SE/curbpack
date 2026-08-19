@@ -125,7 +125,7 @@ func Run(opts Options) error {
 	// state_hash informational
 	if bind.Found && headErr == nil {
 		parentHash := gitutil.ParentNoteHash(root, head)
-		expected := attest.ComputeStateHash(head, parentHash, bind.SBOMDigest, bind.VEXDigest)
+		expected := attest.ComputeStateHash(head, parentHash, bind.SBOMDigest, bind.VEXDigest, bind.ResultDigest, bind.PackIDs)
 		if bind.StateHash != expected {
 			signals = append(signals, Signal{
 				ID:     "state_hash_mismatch",
