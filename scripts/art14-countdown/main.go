@@ -23,11 +23,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "read %s: %v\n", path, err)
 			os.Exit(1)
 		}
-		out := countdownRE.ReplaceAllString(string(b), "$1"+text+"$3")
-		if out == string(b) {
+		s := string(b)
+		if !countdownRE.MatchString(s) {
 			fmt.Fprintf(os.Stderr, "no art14-countdown element in %s\n", path)
 			os.Exit(1)
 		}
+		out := countdownRE.ReplaceAllString(s, "${1}"+text+"${3}")
 		if err := os.WriteFile(path, []byte(out), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "write %s: %v\n", path, err)
 			os.Exit(1)
