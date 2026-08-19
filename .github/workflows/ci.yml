@@ -283,6 +283,21 @@ jobs:
           "$GITHUB_WORKSPACE/bin/curbpack" attest --allow-dirty >/dev/null
           H2=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')
           test "$H1" = "$H2"
+      - name: Scan read-only smoke (uninitialized repo)
+        run: |
+          set -euo pipefail
+          SCAN=$(mktemp -d)
+          cd "$SCAN"
+          git init -q
+          git config user.email "ci@curbpack.local"
+          git config user.name "CI"
+          git commit --allow-empty -m init -q
+          OUT=$("$GITHUB_WORKSPACE/bin/curbpack" scan 2>&1)
+          printf '%s\n' "$OUT"
+          printf '%s\n' "$OUT" | grep -q 'Art 14 reporting clock'
+          printf '%s\n' "$OUT" | grep -q 'Packs: cra-baseline'
+          printf '%s\n' "$OUT" | grep -q 'Read-only'
+          test -z "$(git status --porcelain)"
 
   pin-guard:
     runs-on: ubuntu-latest
@@ -385,12 +400,30 @@ jobs:
           if sh "$GITHUB_WORKSPACE/scripts/install.sh"; then
             export PATH="$INST:$PATH"
             curbpack doctor
+            SCAN=$(mktemp -d)
+            cd "$SCAN"
+            git init -q
+            git config user.email "ci@curbpack.local"
+            git config user.name "CI"
+            git commit --allow-empty -m init -q
+            curbpack scan | grep -q 'Art 14 reporting clock'
+            test -z "$(git status --porcelain)"
+            cd -
             DEMO=$(mktemp -d)
             curbpack demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"
           else
             echo "release install unavailable — falling back to workspace binary"
             "$GITHUB_WORKSPACE/bin/curbpack" doctor
+            SCAN=$(mktemp -d)
+            cd "$SCAN"
+            git init -q
+            git config user.email "ci@curbpack.local"
+            git config user.name "CI"
+            git commit --allow-empty -m init -q
+            "$GITHUB_WORKSPACE/bin/curbpack" scan | grep -q 'Art 14 reporting clock'
+            test -z "$(git status --porcelain)"
+            cd -
             DEMO=$(mktemp -d)
             "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"
