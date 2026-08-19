@@ -23,10 +23,13 @@ jobs:
         run: |
           set -euo pipefail
           SRC=$(gh api repos/afelin/curbpack/commits/main --jq .sha)
-          MIRROR=$(gh api repos/RI-SE/curbpack/commits/main --jq .sha 2>/dev/null || true)
-          if [ -z "$MIRROR" ]; then
-            echo "RI-SE/curbpack main unreachable — mirror org settings or SSO may block token"
-            echo "Human: verify corp-origin remote and ./scripts/curb-sync.sh"
+          MIRROR=""
+          if out=$(gh api repos/RI-SE/curbpack/commits/main --jq .sha 2>/dev/null); then
+            MIRROR="$out"
+          fi
+          if ! [[ "$MIRROR" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "RI-SE/curbpack main unreachable — mirror org settings or SSO may block GITHUB_TOKEN"
+            echo "Human: verify corp-origin remote and ./scripts/curb-sync.sh (manual SHA parity)"
             exit 1
           fi
           echo "afelin/main=$SRC"
