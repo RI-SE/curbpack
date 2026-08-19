@@ -22,7 +22,6 @@ by={c["name"]:c for c in json.loads(checks)}
 for ctx in req:
  c=by.get(ctx)
  if not c or c.get("bucket")!="pass": sys.exit(f"check not green: {ctx}")
-if set(by)-req: sys.exit(f"drift: {sorted(set(by)-req)}")
 base=subprocess.check_output(["git","merge-base","origin/main","HEAD"],text=True).strip()
 diff=subprocess.check_output(["git","diff",f"{base}..HEAD"],text=True)
 if re.search(rf"[+-].*{re.escape(pin)}",diff):

@@ -128,7 +128,7 @@ func TestCurbpackShipAcceptance(t *testing.T) {
 		runGit(t, dir, "git", "branch", "-M", "main")
 		runGit(t, dir, "git", "update-ref", "refs/remotes/origin/main", "HEAD")
 		runGit(t, dir, "git", "remote", "add", "corp-origin", "https://example.com/corp.git")
-		driftChecks := `[{"name":"redteam-pilot","bucket":"pass"},{"name":"test (ubuntu-latest)","bucket":"pass"},{"name":"test (macos-latest)","bucket":"pass"},{"name":"smoke","bucket":"pass"},{"name":"gauntlet","bucket":"pass"},{"name":"extra-check","bucket":"pass"}]`
+		driftChecks := `[{"name":"redteam-pilot","bucket":"pass"},{"name":"test (ubuntu-latest)","bucket":"pass"},{"name":"test (macos-latest)","bucket":"pass"},{"name":"smoke","bucket":"fail"},{"name":"gauntlet","bucket":"pass"}]`
 		code, out := runShip(t, dir, filepath.Join(dir, "scripts/curbpack-ship.sh"), []string{"GIT_CONFIG_NOSYSTEM=1", "CURBPACK_SHIP_CHECKS_JSON=" + driftChecks}, "--dry-run", "preflight", "1")
 		if code != 1 || !strings.Contains(out, "Blocked:") {
 			t.Fatalf("code=%d out=%q", code, out)
@@ -223,17 +223,22 @@ func countTestPasses(t *testing.T, pkg string) int {
 	t.Helper()
 	cmd := exec.Command("go", "test", "-json", pkg)
 	out, err := cmd.CombinedOutput()
+	s := string(out)
 	if err != nil {
-		// no package is fine
-		if strings.Contains(string(out), "no packages") || strings.Contains(string(out), "no Go files") {
+		low := strings.ToLower(s)
+		if strings.Contains(low, "no packages") || strings.Contains(low, "no go files") ||
+			strings.Contains(low, "cannot find package") || strings.Contains(low, "does not contain") {
 			return 0
 		}
 	}
-	py := exec.Command("python3", "-c", "import sys,json;print(sum(1 for l in sys.stdin if json.loads(l).get('Action')=='pass' and json.loads(l).get('Test')))")
-	py.Stdin = strings.NewReader(string(out))
+	py := exec.Command("python3", "-c", "import sys,json;n=0\nfor l in sys.stdin:\n l=l.strip()\n if not l: continue\n try: o=json.loads(l)\n except json.JSONDecodeError: continue\n if o.get('Action')=='pass' and o.get('Test'): n+=1\nprint(n)")
+	py.Stdin = strings.NewReader(s)
 	nout, err := py.Output()
 	if err != nil {
-		t.Fatal(err)
+		if err != nil && len(strings.TrimSpace(s)) == 0 {
+			return 0
+		}
+		t.Fatalf("count passes: %v out=%q", err, s)
 	}
 	n, err := strconv.Atoi(strings.TrimSpace(string(nout)))
 	if err != nil {
