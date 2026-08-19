@@ -14,6 +14,9 @@ func Join(root, rel string) (full, slash string, err error) {
 	if rel == "" {
 		return "", "", fmt.Errorf("empty path")
 	}
+	if invalidPathChars(rel) {
+		return "", "", fmt.Errorf("invalid path characters")
+	}
 	if filepath.IsAbs(rel) || strings.HasPrefix(filepath.ToSlash(rel), "/") {
 		return "", "", fmt.Errorf("absolute path refused")
 	}
@@ -107,16 +110,12 @@ func evalExisting(path string) (string, error) {
 
 // AllowedRel is an independent oracle for fuzz/property tests (must agree with Join).
 func AllowedRel(rel string) bool {
-	if strings.TrimSpace(rel) == "" {
+	rel = strings.TrimSpace(rel)
+	if rel == "" {
 		return false
 	}
-	if strings.ContainsRune(rel, 0) {
+	if invalidPathChars(rel) {
 		return false
-	}
-	for _, r := range rel {
-		if r < 32 {
-			return false
-		}
 	}
 	if filepath.IsAbs(rel) || strings.HasPrefix(filepath.ToSlash(rel), "/") {
 		return false
@@ -129,4 +128,16 @@ func AllowedRel(rel string) bool {
 		return false
 	}
 	return true
+}
+
+func invalidPathChars(rel string) bool {
+	if strings.ContainsRune(rel, 0) {
+		return true
+	}
+	for _, r := range rel {
+		if r < 32 {
+			return true
+		}
+	}
+	return false
 }

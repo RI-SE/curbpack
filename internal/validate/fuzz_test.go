@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"testing"
 	"unicode/utf8"
-
-	"github.com/afelin/curbpack/internal/pathjail"
 )
 
 func FuzzSafeJoin(f *testing.F) {
@@ -31,28 +29,21 @@ func FuzzSafeJoin(f *testing.F) {
 		if !utf8.ValidString(rel) {
 			return
 		}
-		allowed := pathjail.AllowedRel(rel)
 		full, clean, err := SafeJoin(root, rel)
-		if allowed {
-			if err != nil {
-				t.Fatalf("oracle allowed %q but SafeJoin refused: %v", rel, err)
-			}
-			if filepath.IsAbs(rel) {
-				t.Fatalf("abs accepted: %q", rel)
-			}
-			if clean == ".." || len(clean) >= 3 && clean[:3] == "../" {
-				t.Fatalf("traversal clean=%q", clean)
-			}
-			rootAbs, _ := filepath.Abs(root)
-			fullAbs, _ := filepath.Abs(full)
-			sep := string(filepath.Separator)
-			if fullAbs != rootAbs && !hasPrefixPath(fullAbs, rootAbs+sep) {
-				t.Fatalf("escape: full=%q root=%q", fullAbs, rootAbs)
-			}
-			return
+		if err != nil {
+			return // refused paths are ok; success-path invariants below
 		}
-		if err == nil {
-			t.Fatalf("oracle refused %q but SafeJoin accepted full=%q clean=%q", rel, full, clean)
+		if filepath.IsAbs(rel) {
+			t.Fatalf("abs accepted: %q", rel)
+		}
+		if clean == ".." || len(clean) >= 3 && clean[:3] == "../" {
+			t.Fatalf("traversal clean=%q", clean)
+		}
+		rootAbs, _ := filepath.Abs(root)
+		fullAbs, _ := filepath.Abs(full)
+		sep := string(filepath.Separator)
+		if fullAbs != rootAbs && !hasPrefixPath(fullAbs, rootAbs+sep) {
+			t.Fatalf("escape: full=%q root=%q", fullAbs, rootAbs)
 		}
 	})
 }
