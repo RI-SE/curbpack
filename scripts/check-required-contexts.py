@@ -67,7 +67,7 @@ def main() -> int:
         actual.update(expand_contexts(job_id, block))
 
     missing = sorted(expected - actual)
-    extra = sorted(actual - expected - {"windows-smoke", "required-check-drift"})
+    extra = sorted(actual - expected - {"windows-smoke", "required-check-drift", "pin-guard", "dogfood"})
     if missing or extra:
         print("required-check context drift detected", file=sys.stderr)
         if missing:

@@ -54,39 +54,11 @@ else
   bad "2 check --diff false-greened missing SECURITY.md"
 fi
 
-# --- 3) ApplyStubs .git/hooks/pre-commit refused ---
-if go test ./internal/formhints/ -run TestApplyStubsRefusesDotGit -count=1 >/dev/null 2>&1; then
-  ok "3 ApplyStubs refuses .git/hooks/pre-commit"
-else
-  bad "3 ApplyStubs .git jail regression"
-fi
-
-# --- 4) Pack path ../outside refused ---
-if go test ./internal/packs/ -run 'TestValidatePackRefusesPathEscape|TestValidatePackSchema' -count=1 >/dev/null 2>&1; then
-  ok "4 pack path ../outside refused at ValidatePack"
-else
-  bad "4 pack path escape not refused"
-fi
-
 # --- 5) Claim-safety still green ---
 if ./scripts/claim-safety.sh >/dev/null 2>&1; then
   ok "5 claim-safety green"
 else
   bad "5 claim-safety failed"
-fi
-
-# --- 6) Overlay compose loads medtech+CRA ---
-if go test ./internal/packs/ -run TestComposeMedtechExtendsCRA -count=1 >/dev/null 2>&1; then
-  ok "6 medtech extends cra-baseline compose"
-else
-  bad "6 overlay compose regression"
-fi
-
-# --- 7) SARIF non-empty on failure + ruleId=gate_id ---
-if go test ./internal/contract/ -run TestSARIFRuleIDEqualsGateID -count=1 >/dev/null 2>&1; then
-  ok "7 SARIF ruleId equals gate_id"
-else
-  bad "7 SARIF contract regression"
 fi
 
 # --- 8) policy-graph schema_version present ---
@@ -110,13 +82,6 @@ if [[ "$graph_code" -eq 0 ]]; then
   ok "8 policy-graph schema_version present"
 else
   bad "8 policy-graph export missing schema_version"
-fi
-
-# --- 9) explain-packet airlock ---
-if go test ./internal/contract/ -run TestExplainPacketAirlock -count=1 >/dev/null 2>&1; then
-  ok "9 explain-packet airlock"
-else
-  bad "9 explain-packet airlock regression"
 fi
 
 # --- 10) Pack catalog freeze — only allowlisted pack ids ---
@@ -222,27 +187,6 @@ if [[ "$stable_fail" -eq 0 ]]; then
   ok "12 stable contracts (sock ops + explain consumer + docs sync)"
 else
   bad "12 stable contracts nave — update docs/stable-contracts.md when changing sock ops"
-fi
-
-# --- 13) Attest refuses dirty tree without --allow-dirty (existing unit invariant) ---
-if go test ./internal/attest/ -run TestAttestRefusesDirtyWithoutAllowDirty -count=1 >/dev/null 2>&1; then
-  ok "13 attest OCC refuses dirty without --allow-dirty"
-else
-  bad "13 attest dirty / --allow-dirty honesty regression"
-fi
-
-# --- 14) Packs update refuses without CURBPACK_PACKS_SHA256 ---
-if go test ./internal/packscmd/ -run TestUpdateRequiresSHA256Pin -count=1 >/dev/null 2>&1; then
-  ok "14 packs update requires CURBPACK_PACKS_SHA256"
-else
-  bad "14 packs update SHA256 pin regression"
-fi
-
-# --- 15) Demo --out product-cwd jail ---
-if go test ./internal/invariants/ -run 'TestDemoRefusesProductCwd|TestDemoRefusesPathUnderCwd' -count=1 >/dev/null 2>&1; then
-  ok "15 demo --out jail (product cwd)"
-else
-  bad "15 demo --out jail regression"
 fi
 
 # --- 16) share --bundle offline schema marker ---

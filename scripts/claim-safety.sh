@@ -8,6 +8,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+CHANGED_ONLY=0; for arg in "$@"; do [[ "$arg" == --changed-only ]] && CHANGED_ONLY=1; done
+
 BIN="${CURBPACK_BIN:-${CYBERREADY_BIN:-$ROOT/bin/curbpack}}"
 if [[ ! -x "$BIN" ]]; then
   go build -o "$BIN" ./cmd/curbpack
@@ -106,6 +108,11 @@ done < <(
     \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name '*.ps1' -o -name '*.html' -o -name '*.txt' -o -name 'LICENSE' -o -name 'NOTICE' -o -name 'copilot-instructions.md' \) \) \
     2>/dev/null | grep -v 'scripts/claim-safety\.sh$' | grep -v '/gtm-oss/' | grep -v 'workflows/pages\.yml$' | sort -u
 )
+
+if [[ "$CHANGED_ONLY" -eq 1 ]]; then
+  mapfile -t CHANGED < <(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1)
+  NEXT=(); for f in "${DOC_FILES[@]}"; do for c in "${CHANGED[@]}"; do [[ "$f" == "$c" ]] && NEXT+=("$f") && break; done; done; DOC_FILES=("${NEXT[@]}")
+fi
 
 for f in "${DOC_FILES[@]}"; do
   if ! scan_text "$f" "$f"; then
