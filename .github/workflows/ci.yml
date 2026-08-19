@@ -284,6 +284,38 @@ jobs:
           H2=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')
           test "$H1" = "$H2"
 
+  pin-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Pin guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PIN="v0.5.2"
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD="${{ github.sha }}"
+          if [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          fi
+          if ! git diff "$BASE" "$HEAD" -- . | grep -qE "[+-].*${PIN}"; then
+            echo "pin unchanged — OK"
+            exit 0
+          fi
+          if git log "$BASE..$HEAD" --format=%B | grep -q 'Approve-Pin-Bump:'; then
+            echo "pin bump approved via trailer — OK"
+            exit 0
+          fi
+          if gh issue list --label tabletop-evidence --state closed --limit 1 --json number --jq '.[0].number' 2>/dev/null | grep -qE '^[0-9]+$'; then
+            echo "closed tabletop-evidence issue present — OK"
+            exit 0
+          fi
+          echo "pin literal changed without tabletop-evidence or Approve-Pin-Bump trailer" >&2
+          exit 1
+
   redteam-pilot:
     # Stable check name for branch protection: merges to main require this green.
     name: redteam-pilot
