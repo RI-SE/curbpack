@@ -10,11 +10,9 @@ func cmdDrift(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	jsonOut := false
-	for _, a := range args {
-		if a == "--json" {
-			jsonOut = true
-		}
+	f, err := parseDriftFlags(args)
+	if err != nil {
+		return err
 	}
-	return drift.Run(drift.Options{RepoRoot: root, JSONOut: jsonOut})
+	return drift.Run(drift.Options{RepoRoot: root, JSONOut: f.jsonOut})
 }

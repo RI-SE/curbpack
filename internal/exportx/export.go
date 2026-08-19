@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/validate"
@@ -96,76 +95,6 @@ func WriteSARIF(root string, packIDs []string, outPath string) (string, int, err
 		n = len(doc.Runs[0].Results)
 	}
 	return outPath, n, nil
-}
-
-// FromGateFailures maps GateFailure IR to SARIF (ruleId == gate_id).
-// Text and path fields reuse the same exportx sanitize helpers as explain-packet.
-// repoRoot enables repo-relative path rewrite when non-empty.
-func FromGateFailures(payload ir.GateFailurePayload, repoRoot string) SARIFDocument {
-	rulesByID := map[string]SARIFRule{}
-	results := make([]SARIFResult, 0, len(payload.Failures))
-	for _, f := range payload.Failures {
-		sev := strings.ToLower(f.Severity)
-		level := "warning"
-		if sev == "high" || sev == "critical" {
-			level = "error"
-		}
-		desc := sanitizeText(f.SanitizedDescription, repoRoot)
-		if _, ok := rulesByID[f.GateID]; !ok {
-			r := SARIFRule{ID: f.GateID}
-			r.ShortDescription.Text = desc
-			rulesByID[f.GateID] = r
-		}
-		res := SARIFResult{
-			RuleID:  f.GateID,
-			Level:   level,
-			Message: SARIFMessage{Text: desc},
-			Properties: map[string]any{
-				"assurance_class":       "structural_draft",
-				"certification_claimed": false,
-				"instrument_panel":      true,
-				"note":                  "Structural evidence for human review — not a conformity assessment.",
-			},
-		}
-		file := strings.TrimSpace(f.ASTCoordinates.TargetFile)
-		if file != "" {
-			var loc SARIFLocation
-			loc.PhysicalLocation.ArtifactLocation.URI = relativizePath(file, repoRoot)
-			loc.PhysicalLocation.Region.StartLine = 1
-			res.Locations = []SARIFLocation{loc}
-		}
-		results = append(results, res)
-	}
-	ruleIDs := make([]string, 0, len(rulesByID))
-	for id := range rulesByID {
-		ruleIDs = append(ruleIDs, id)
-	}
-	sort.Strings(ruleIDs)
-	rules := make([]SARIFRule, 0, len(ruleIDs))
-	for _, id := range ruleIDs {
-		rules = append(rules, rulesByID[id])
-	}
-	return SARIFDocument{
-		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-		Version: "2.1.0",
-		Runs: []SARIFRun{{
-			Tool: SARIFTool{Driver: SARIFDriver{
-				Name:           "curbpack",
-				InformationURI: "https://github.com/afelin/curbpack",
-				Rules:          rules,
-			}},
-			Results: results,
-			Invocations: []SARIFInvocation{{
-				ExecutionSuccessful: true,
-				Properties: map[string]any{
-					"assurance_class":       "structural_draft",
-					"certification_claimed": false,
-					"instrument_panel":      true,
-					"note":                  "Structural evidence for human review — not a conformity assessment.",
-				},
-			}},
-		}},
-	}
 }
 
 // WatchlistJoinFinding is an informational SBOM ∩ watchlist hit.

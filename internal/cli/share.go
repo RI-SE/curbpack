@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/afelin/curbpack/internal/attest"
-	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/platform"
@@ -22,25 +21,14 @@ func cmdShare(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	var packIDs []string
-	skipPrepare := false
-	wantBundle := false
-	wantReveal := false
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--packs":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, config.ParsePacksFlag(args[i+1])...)
-				i++
-			}
-		case "--skip-prepare-release":
-			skipPrepare = true
-		case "--bundle":
-			wantBundle = true
-		case "--reveal":
-			wantReveal = true
-		}
+	f, err := parseShareFlags(args)
+	if err != nil {
+		return err
 	}
+	packIDs := f.packIDs
+	skipPrepare := f.skipPrepare
+	wantBundle := f.wantBundle
+	wantReveal := f.wantReveal
 
 	tty.PrintHeader("curbpack share")
 	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: false})
