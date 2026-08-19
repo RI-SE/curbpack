@@ -49,7 +49,7 @@ func LatestBind(repoRoot string) (BindInfo, error) {
 		if json.Unmarshal(b, &ptr) == nil && strings.TrimSpace(ptr.CommitSHA) != "" {
 			if body, err := gitutil.NotesShow(repoRoot, ptr.CommitSHA); err == nil && strings.TrimSpace(body) != "" {
 				if cap, ok := parseCapsule(body); ok {
-					info = bindFromCapsule(cap, ptr.SBOMDigest, ptr.VEXDigest)
+					info = bindFromCapsule(repoRoot, cap, ptr.SBOMDigest, ptr.VEXDigest)
 					info.Source = "hpurl-pointer"
 					info.Found = true
 					return info, nil
@@ -69,7 +69,7 @@ func LatestBind(repoRoot string) (BindInfo, error) {
 	if !ok {
 		return info, nil
 	}
-	info = bindFromCapsule(cap, "", "")
+	info = bindFromCapsule(repoRoot, cap, "", "")
 	info.Source = "git-notes"
 	info.Found = true
 	return info, nil
@@ -83,7 +83,7 @@ func parseCapsule(body string) (Capsule, bool) {
 	return cap, cap.CommitSHA != "" || cap.StateHash != ""
 }
 
-func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
+func bindFromCapsule(repoRoot string, cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	info := BindInfo{
 		CommitSHA:    cap.CommitSHA,
 		StateHash:    cap.StateHash,
@@ -110,7 +110,7 @@ func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	if info.UserTouch == "" {
 		info.UserTouch = "not-verified"
 	}
-	info.CryptoVerified = VerifySSHSignature(info.StateHash, info.SSHSignature)
+	info.CryptoVerified = VerifySSHSignature(repoRoot, info.StateHash, info.SSHSignature)
 	return info
 }
 

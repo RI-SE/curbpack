@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -78,19 +77,11 @@ func ExitCode(err error) int {
 }
 
 func cmdDoctor(args []string) error {
-	repair := false
-	for _, a := range args {
-		switch a {
-		case "--repair":
-			repair = true
-		case "-h", "--help":
-			fmt.Fprintf(os.Stderr, "Usage: curbpack doctor [--repair]\n  --repair  Re-assert install dir on PATH + refresh curb alias (local only; never downloads)\n")
-			return nil
-		default:
-			return usageErr(fmt.Sprintf("doctor: unknown flag %q (use --repair)", a))
-		}
+	f, err := parseDoctorFlags(args)
+	if err != nil {
+		return err
 	}
-	return doctor.Run(doctor.Options{Version: Version, Repair: repair})
+	return doctor.Run(doctor.Options{Version: Version, Repair: f.repair})
 }
 
 // Run dispatches CLI args (without the program name). Returns a typed exitError for usage/gates.
@@ -107,41 +98,10 @@ func Run(args []string) error {
 	case "version", "-v", "--version":
 		fmt.Println("curbpack", Version)
 		return nil
-	case "init":
-		return cmdInit(rest)
-	case "check":
-		return cmdCheck(rest)
-	case "validate":
-		return cmdValidate(rest)
-	case "prepare-release":
-		return cmdPrepareRelease(rest)
-	case "packs":
-		return cmdPacks(rest)
-	case "ask":
-		return cmdAsk(rest)
-	case "attest":
-		return cmdAttest(rest)
-	case "view":
-		return attest.View("")
-	case "sock":
-		return cmdSock(rest)
-	case "doctor":
-		return cmdDoctor(rest)
-	case "demo":
-		return cmdDemo(rest)
-	case "export":
-		return cmdExport(rest)
-	case "share":
-		return cmdShare(rest)
-	case "drift":
-		return cmdDrift(rest)
-	case "pathway":
-		return cmdPathway(rest)
-	case "research":
-		return cmdResearch(rest)
-	case "completion":
-		return cmdCompletion(rest)
 	default:
+		if h, ok := lookupCommand(cmd); ok {
+			return h(rest)
+		}
 		fmt.Printf("%s\n\n", tty.C(tty.Red, "Unknown command '"+cmd+"'"))
 		usage()
 		return usageErr("")
@@ -199,23 +159,11 @@ func usage() {
 }
 
 func cmdDemo(args []string) error {
-	keep := false
-	openBrowser := false
-	out := ""
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--keep":
-			keep = true
-		case "--open":
-			openBrowser = true
-		case "--out":
-			if i+1 < len(args) {
-				out = args[i+1]
-				i++
-			}
-		}
+	f, err := parseDemoFlags(args)
+	if err != nil {
+		return err
 	}
-	return demo.Run(demo.Options{KeepDir: keep, OutDir: out, Version: Version, OpenBrowser: openBrowser})
+	return demo.Run(demo.Options{KeepDir: f.keep, OutDir: f.out, Version: Version, OpenBrowser: f.openBrowser})
 }
 
 func cmdInit(args []string) error {
@@ -239,69 +187,19 @@ func cmdInit(args []string) error {
 		tty.PrintStatus(".gitignore", true, "cache/evidence already ignored")
 	}
 
-	// Opinionated cold start: house-policy + hooks/skill/ide unless --bare.
-	// Workflow is opt-in (--workflow) to avoid surprising CI commits.
-	packList := []string{"house-policy"}
-	hooks := true
-	skill := true
-	ide := true
-	writeWorkflow := false
-	explicitPacks := false
-	explicitProfile := false
-	for i := 0; i < len(args); i++ {
-		a := args[i]
-		switch {
-		case a == "--bare":
-			hooks = false
-			skill = false
-			ide = false
-			writeWorkflow = false
-		case a == "--packs" && i+1 < len(args):
-			packList = config.ParsePacksFlag(args[i+1])
-			explicitPacks = true
-			i++
-		case strings.HasPrefix(a, "--packs="):
-			packList = config.ParsePacksFlag(strings.TrimPrefix(a, "--packs="))
-			explicitPacks = true
-		case a == "--profile" && i+1 < len(args):
-			if !explicitPacks {
-				packList = profilePacks(args[i+1])
-				explicitProfile = true
-			}
-			i++
-		case strings.HasPrefix(a, "--profile="):
-			if !explicitPacks {
-				packList = profilePacks(strings.TrimPrefix(a, "--profile="))
-				explicitProfile = true
-			}
-		case a == "--medtech":
-			if !explicitPacks {
-				packList = profilePacks("medtech")
-				explicitProfile = true
-			} else {
-				packList = appendUnique(packList, "medtech-iec62304")
-			}
-			fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --profile medtech or --packs medtech-iec62304"))
-		case a == "--hooks":
-			hooks = true
-		case a == "--skill":
-			skill = true
-		case a == "--ide":
-			ide = true
-		case a == "--workflow":
-			writeWorkflow = true
-		case a == "--no-hooks":
-			hooks = false
-		case a == "--no-skill":
-			skill = false
-		case a == "--no-ide":
-			ide = false
-		}
+	iflags, err := parseInitFlags(args)
+	if err != nil {
+		return err
 	}
-	if len(packList) == 0 {
-		packList = []string{"house-policy"}
+	packList := iflags.packList
+	hooks := iflags.hooks
+	skill := iflags.skill
+	ide := iflags.ide
+	writeWorkflow := iflags.writeWorkflow
+	if iflags.showMedtechWarn {
+		fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --profile medtech or --packs medtech-iec62304"))
 	}
-	_ = explicitProfile // reserved for future init messaging
+	_ = iflags.explicitProfile // reserved for future init messaging
 
 	for _, id := range packList {
 		if _, err := packs.LoadPack(id); err != nil {
@@ -449,73 +347,19 @@ func installPreCommitHook(root string) error {
 }
 
 func parseCheckFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
-	fs := flag.NewFlagSet("check", flag.ContinueOnError)
-	fs.SetOutput(ioDiscard{})
-	var packsFlag string
-	fs.BoolVar(&jsonOut, "json", false, "")
-	fs.BoolVar(&diffOnly, "diff", false, "")
-	fs.BoolVar(&diffOnly, "delta", false, "")
-	fs.BoolVar(&formHints, "form-hints", false, "")
-	fs.BoolVar(&applyStub, "apply-stub", false, "")
-	fs.BoolVar(&heal, "heal", false, "")
-	fs.StringVar(&packsFlag, "packs", "", "")
-	var packSingle string
-	fs.StringVar(&packSingle, "pack", "", "")
-	if err := fs.Parse(args); err != nil {
-		return nil, false, false, false, false, false, usageErr("check: " + err.Error())
+	f, err := parseCheckValidateFlags("check", args)
+	if err != nil {
+		return nil, false, false, false, false, false, err
 	}
-	if fs.NArg() > 0 {
-		return nil, false, false, false, false, false, usageErr(fmt.Sprintf("check: unknown argument %q", fs.Arg(0)))
-	}
-	if packsFlag != "" {
-		packIDs = config.ParsePacksFlag(packsFlag)
-	}
-	if packSingle != "" {
-		packIDs = append(packIDs, packSingle)
-	}
-	if heal {
-		applyStub = true
-		formHints = true
-	}
-	if applyStub {
-		formHints = true
-	}
-	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal, nil
+	return f.packIDs, f.jsonOut, f.diffOnly, f.formHints, f.applyStub, f.heal, nil
 }
 
 func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
-	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
-	fs.SetOutput(ioDiscard{})
-	var packsFlag string
-	fs.BoolVar(&jsonOut, "json", false, "")
-	fs.BoolVar(&diffOnly, "diff", false, "")
-	fs.BoolVar(&diffOnly, "delta", false, "")
-	fs.BoolVar(&formHints, "form-hints", false, "")
-	fs.BoolVar(&applyStub, "apply-stub", false, "")
-	fs.BoolVar(&heal, "heal", false, "")
-	fs.StringVar(&packsFlag, "packs", "", "")
-	var packSingle string
-	fs.StringVar(&packSingle, "pack", "", "")
-	if err := fs.Parse(args); err != nil {
-		return nil, false, false, false, false, false, usageErr("validate: " + err.Error())
+	f, err := parseCheckValidateFlags("validate", args)
+	if err != nil {
+		return nil, false, false, false, false, false, err
 	}
-	if fs.NArg() > 0 {
-		return nil, false, false, false, false, false, usageErr(fmt.Sprintf("validate: unknown argument %q", fs.Arg(0)))
-	}
-	if packsFlag != "" {
-		packIDs = config.ParsePacksFlag(packsFlag)
-	}
-	if packSingle != "" {
-		packIDs = append(packIDs, packSingle)
-	}
-	if heal {
-		applyStub = true
-		formHints = true
-	}
-	if applyStub {
-		formHints = true
-	}
-	return packIDs, jsonOut, diffOnly, formHints, applyStub, heal, nil
+	return f.packIDs, f.jsonOut, f.diffOnly, f.formHints, f.applyStub, f.heal, nil
 }
 
 const healMaxRounds = 3
@@ -701,35 +545,15 @@ func cmdPrepareRelease(args []string) error {
 	if err != nil {
 		return usageErr(err.Error())
 	}
-	var packIDs []string
-	out := ""
-	allowFailing := false
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--pack":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, args[i+1])
-				i++
-			}
-		case "--packs":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, config.ParsePacksFlag(args[i+1])...)
-				i++
-			}
-		case "--out":
-			if i+1 < len(args) {
-				out = args[i+1]
-				i++
-			}
-		case "--allow-failing-gates":
-			allowFailing = true
-		}
+	f, err := parsePrepareReleaseFlags(args)
+	if err != nil {
+		return err
 	}
 	return release.Prepare(release.Options{
 		RepoRoot:          root,
-		PackIDs:           packIDs,
-		OutDir:            out,
-		AllowFailingGates: allowFailing,
+		PackIDs:           f.packIDs,
+		OutDir:            f.out,
+		AllowFailingGates: f.allowFailing,
 	})
 }
 
@@ -762,73 +586,34 @@ func cmdExport(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	var packIDs []string
-	out := ""
-	wantSARIF := false
-	wantExplain := false
-	wantJoin := false
-	wantBuyerQ := false
-	wantLayOfLand := false
-	wantContextPack := false
-	wantSPDX := false
-	wantSLSA := false
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--sarif":
-			wantSARIF = true
-		case "--explain-packet":
-			wantExplain = true
-		case "--watchlist-join":
-			wantJoin = true
-		case "--buyer-questions":
-			wantBuyerQ = true
-		case "--lay-of-land":
-			wantLayOfLand = true
-		case "--context-pack":
-			wantContextPack = true
-		case "--spdx":
-			wantSPDX = true
-		case "--slsa":
-			wantSLSA = true
-		case "--out":
-			if i+1 < len(args) {
-				out = args[i+1]
-				i++
-			}
-		case "--packs":
-			if i+1 < len(args) {
-				packIDs = append(packIDs, config.ParsePacksFlag(args[i+1])...)
-				i++
-			}
-		}
-	}
-	if !wantSARIF && !wantExplain && !wantJoin && !wantBuyerQ && !wantLayOfLand && !wantContextPack && !wantSPDX && !wantSLSA {
-		return usageErr("export requires --sarif, --explain-packet, --watchlist-join, --buyer-questions, --lay-of-land, --context-pack, and/or --spdx/--slsa")
+	f, err := parseExportFlags(args)
+	if err != nil {
+		return err
 	}
 	usedOut := false
 	takeOut := func() string {
-		if usedOut || out == "" {
+		if usedOut || f.out == "" {
 			return ""
 		}
 		usedOut = true
-		return out
+		return f.out
 	}
-	if wantSARIF {
-		path, n, err := exportx.WriteSARIF(root, packIDs, takeOut())
+	if f.wantSARIF {
+		path, n, err := exportx.WriteSARIF(root, f.packIDs, takeOut())
 		if err != nil {
 			return err
 		}
 		tty.PrintStatus("SARIF", true, fmt.Sprintf("%s results=%d", path, n))
 	}
-	if wantJoin {
+	if f.wantJoin {
 		path, err := exportx.WriteWatchlistJoin(root, takeOut())
 		if err != nil {
 			return err
 		}
 		tty.PrintStatus("watchlist∩SBOM", true, path)
 	}
-	if wantExplain {
-		path, err := exportx.WriteExplainPacket(root, packIDs, takeOut())
+	if f.wantExplain {
+		path, err := exportx.WriteExplainPacket(root, f.packIDs, takeOut())
 		if err != nil {
 			return err
 		}
@@ -839,22 +624,22 @@ func cmdExport(args []string) error {
 		tty.PrintStatus("explain-packet", true, path)
 		fmt.Printf("%s\n", tty.C(tty.Dim, "CURBPACK_EXPLAIN_ALLOW_CLOUD=0 by default — set =1 only for explicit cloud tutor export"))
 	}
-	if wantBuyerQ {
-		path, n, err := exportx.WriteBuyerQuestions(root, packIDs, takeOut())
+	if f.wantBuyerQ {
+		path, n, err := exportx.WriteBuyerQuestions(root, f.packIDs, takeOut())
 		if err != nil {
 			return err
 		}
 		tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", path, n))
 	}
-	if wantLayOfLand {
+	if f.wantLayOfLand {
 		path, err := exportx.WriteLayOfLand(root, takeOut())
 		if err != nil {
 			return err
 		}
 		tty.PrintStatus("lay-of-land", true, path)
 	}
-	if wantContextPack {
-		path, err := exportx.WriteContextPack(root, packIDs, takeOut())
+	if f.wantContextPack {
+		path, err := exportx.WriteContextPack(root, f.packIDs, takeOut())
 		if err != nil {
 			return err
 		}
@@ -864,14 +649,14 @@ func cmdExport(args []string) error {
 		}
 		tty.PrintStatus("context-pack", true, path)
 	}
-	if wantSPDX {
+	if f.wantSPDX {
 		path, err := exportx.WriteSPDXOptional(root, "")
 		if err != nil {
 			return err
 		}
 		tty.PrintStatus("SPDX (optional)", true, path)
 	}
-	if wantSLSA {
+	if f.wantSLSA {
 		path, err := exportx.WriteSLSAOptional(root, "")
 		if err != nil {
 			return err
@@ -882,44 +667,28 @@ func cmdExport(args []string) error {
 }
 
 func cmdAsk(args []string) error {
-	propose := false
-	path := ""
-	for _, a := range args {
-		if a == "--propose" {
-			propose = true
-			continue
-		}
-		if !strings.HasPrefix(a, "-") {
-			path = a
-		}
+	f, err := parseAskFlags(args)
+	if err != nil {
+		return err
 	}
-	return ask.Run(path, propose)
+	return ask.Run(f.path, f.propose)
+}
+
+func cmdView(_ []string) error {
+	return attest.View("")
 }
 
 func cmdAttest(args []string) error {
 	tty.PrintHeader("curbpack attest")
-	allowDirty := false
-	reviewedBy := ""
-	for i := 0; i < len(args); i++ {
-		a := args[i]
-		switch {
-		case a == "--allow-dirty":
-			allowDirty = true
-		case a == "--reviewed-by":
-			if i+1 >= len(args) {
-				return usageErr("attest --reviewed-by requires a name")
-			}
-			reviewedBy = strings.TrimSpace(args[i+1])
-			i++
-		case strings.HasPrefix(a, "--reviewed-by="):
-			reviewedBy = strings.TrimSpace(strings.TrimPrefix(a, "--reviewed-by="))
-		}
+	f, err := parseAttestFlags(args)
+	if err != nil {
+		return err
 	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr(err.Error())
 	}
-	if !allowDirty && gitutil.IsDirty(root) {
+	if !f.allowDirty && gitutil.IsDirty(root) {
 		return usageErr("OCC conflict: working directory has uncommitted files (pass --allow-dirty to bind digests of uncommitted evidence)")
 	}
 
@@ -941,8 +710,8 @@ func cmdAttest(args []string) error {
 	// Self-written evidence dirties the tree — require explicit --allow-dirty (no silent force).
 	_, err = attest.Run(attest.Options{
 		RepoRoot:     root,
-		AllowDirty:   allowDirty,
-		ReviewedBy:   reviewedBy,
+		AllowDirty:   f.allowDirty,
+		ReviewedBy:   f.reviewedBy,
 		ResultDigest: resultDigest,
 		PackIDs:      packID,
 	})
@@ -950,22 +719,11 @@ func cmdAttest(args []string) error {
 }
 
 func cmdSock(args []string) error {
-	path := ""
-	root := ""
-	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--path":
-			if i+1 < len(args) {
-				path = args[i+1]
-				i++
-			}
-		case "--repo":
-			if i+1 < len(args) {
-				root = args[i+1]
-				i++
-			}
-		}
+	f, err := parseSockFlags(args)
+	if err != nil {
+		return err
 	}
+	root := f.root
 	if root == "" {
 		var err error
 		root, err = gitutil.RepoRoot("")
@@ -973,5 +731,5 @@ func cmdSock(args []string) error {
 			root, _ = os.Getwd()
 		}
 	}
-	return sock.Serve(path, root)
+	return sock.Serve(f.path, root)
 }

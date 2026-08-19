@@ -1,0 +1,9 @@
+{
+  "contexts": [
+    "redteam-pilot",
+    "test (ubuntu-latest)",
+    "test (macos-latest)",
+    "smoke",
+    "gauntlet"
+  ]
+}

@@ -167,7 +167,7 @@ func pathChanged(changed map[string]struct{}, rel string) bool {
 }
 
 func evalRule(root string, rule packs.Rule) []ir.Failure {
-	fn, ok := checkRegistry[rule.Check]
+	fn, ok := checkRegistry[CheckKind(rule.Check)]
 	if !ok {
 		return []ir.Failure{{
 			GateID:               rule.ID,
@@ -181,20 +181,6 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 		}}
 	}
 	return fn(root, rule)
-}
-
-// checkFn evaluates one pack rule check kind.
-type checkFn func(root string, rule packs.Rule) []ir.Failure
-
-// checkRegistry maps pack check kinds to evaluators (extend here for new kinds).
-var checkRegistry = map[string]checkFn{
-	"annex_file":       checkFilePresent,
-	"file_present":     checkFilePresent,
-	"anti_placeholder": checkAntiPlaceholder,
-	"npm_dep_ban":      checkNPMDepBan,
-	"manifest_dep_ban": checkNPMDepBan,
-	"text_forbid":      checkTextForbid,
-	"import_reach":     func(root string, rule packs.Rule) []ir.Failure { return auditASTReachability(root) },
 }
 
 // SafeJoin resolves rel under root with symlink-aware containment and .git jail (fail closed).
