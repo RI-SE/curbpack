@@ -125,6 +125,8 @@ Two hardening checks:
 
 For this repository, "Sync both curbpack remotes" means running `./scripts/curb-sync.sh` (merge-only; never force-push).
 
+Ops runbook: [`docs/getting-started/repo-ops-hardening.md`](docs/getting-started/repo-ops-hardening.md).
+
 ## Advanced
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
