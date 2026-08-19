@@ -36,16 +36,14 @@ jobs:
             exit 0
           fi
           TITLE="Mirror drift: RI-SE/main ≠ afelin/main"
-          BODY=$(cat <<EOF
-Source and mirror \`main\` SHAs diverged.
-
-- afelin/curbpack @ \`$SRC\`
-- RI-SE/curbpack @ \`$MIRROR\`
-
-Run \`./scripts/curb-sync.sh\` from a clean worktree after merging to source \`main\`.
-Never force-push.
-EOF
-)
+          BODY=$(printf '%s\n' \
+            "Source and mirror \`main\` SHAs diverged." \
+            "" \
+            "- afelin/curbpack @ \`$SRC\`" \
+            "- RI-SE/curbpack @ \`$MIRROR\`" \
+            "" \
+            "Run \`./scripts/curb-sync.sh\` from a clean worktree after merging to source \`main\`." \
+            "Never force-push.")
           EXISTING=$(gh issue list --repo afelin/curbpack --search "Mirror drift: RI-SE/main" --state open --json number --jq '.[0].number' || true)
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
             gh issue comment "$EXISTING" --repo afelin/curbpack --body "Still drifted: afelin=$SRC RI-SE=$MIRROR"
