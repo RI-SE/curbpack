@@ -89,12 +89,6 @@ jobs:
           }
           & $bin share --bundle
           if (-not (Test-Path "review-pack\evidence-bundle.html")) { throw "missing bundle" }
-          # sock must fail clearly on Windows
-          $sockFailed = $false
-          try { & $bin sock 2>&1 | Out-Null } catch { $sockFailed = $true }
-          if ($LASTEXITCODE -eq 0 -and -not $sockFailed) { throw "sock should fail on Windows" }
-          # Native non-zero from sock must not become the step exit code.
-          $global:LASTEXITCODE = 0
           Pop-Location
           exit 0
 

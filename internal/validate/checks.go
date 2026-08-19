@@ -28,7 +28,7 @@ var checkRegistry = map[CheckKind]checkFn{
 	CheckNPMDepBan:       checkNPMDepBan,
 	CheckManifestDepBan:  checkNPMDepBan,
 	CheckTextForbid:      checkTextForbid,
-	CheckImportReach:     func(root string, rule packs.Rule) []ir.Failure { return auditASTReachability(root) },
+	CheckImportReach:     func(root string, rule packs.Rule) []ir.Failure { return auditASTReachability(root, rule) },
 	CheckFresh:           checkFresh,
 	CheckOwned:           checkOwned,
 }

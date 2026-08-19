@@ -26,7 +26,6 @@ import (
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/skilldata"
-	"github.com/afelin/curbpack/internal/sock"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
 	"github.com/afelin/curbpack/internal/vex"
@@ -157,7 +156,6 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
 	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
-	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC (macOS/Linux only)\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
 }
@@ -771,18 +769,3 @@ func cmdAttest(args []string) error {
 	return err
 }
 
-func cmdSock(args []string) error {
-	f, err := parseSockFlags(args)
-	if err != nil {
-		return err
-	}
-	root := f.root
-	if root == "" {
-		var err error
-		root, err = gitutil.RepoRoot("")
-		if err != nil {
-			root, _ = os.Getwd()
-		}
-	}
-	return sock.Serve(f.path, root)
-}

@@ -163,7 +163,6 @@ Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone
 | `pathway confirm-*` | Human only — `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` |
 | `research [--fetch]\|--cite-check` | Allowlisted citation packet + human brief — never gates check |
 | `completion bash\|zsh\|fish` | Print shell completions |
-| `sock` | Optional Unix IPC for integrators (continues if unused) |
 | `init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/curbpack.yml` if missing |

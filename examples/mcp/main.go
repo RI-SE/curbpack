@@ -1,5 +1,4 @@
 // Command curbpack-mcp is a thin MCP stdio server that shells out to PATH `curbpack`.
-// Optional CURBPACK_SOCK enables sock-backed tools; no new sock ops.
 // Claim-safe: tools never certify conformity.
 package main
 
@@ -10,12 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
 	"github.com/afelin/curbpack/internal/paths"
 )
 
@@ -132,11 +131,11 @@ func toolDefs() []map[string]any {
 			"type":       "object",
 			"properties": map[string]any{"path": map[string]any{"type": "string", "description": "Optional GateFailure JSON path"}},
 		}),
-		tool("curbpack_explain_packet", "Export explain-packet (CLI) or sock explain_packet when CURBPACK_SOCK is set. "+claim, map[string]any{
+		tool("curbpack_explain_packet", "Run curbpack export --explain-packet. "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"packs": map[string]any{"type": "string"}},
 		}),
-		tool("curbpack_validate_delta", "Sock validate_delta when CURBPACK_SOCK is set; else curbpack validate --json. "+claim, map[string]any{
+		tool("curbpack_validate_delta", "Run curbpack validate --json (full quiet validate). "+claim, map[string]any{
 			"type":       "object",
 			"properties": map[string]any{"packs": map[string]any{"type": "string"}},
 		}),
@@ -186,22 +185,12 @@ func callTool(name string, args map[string]any) (string, bool) {
 		}
 		return runCLI(bin, []string{"ask", path, "--propose"})
 	case "curbpack_explain_packet":
-		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
-			if body, serr := sockOp(sock, "explain_packet", nil); serr == nil {
-				return body, false
-			}
-		}
 		argv := []string{"export", "--explain-packet"}
 		if packs != "" {
 			argv = append(argv, "--packs", packs)
 		}
 		return runCLI(bin, argv)
 	case "curbpack_validate_delta":
-		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
-			if body, serr := sockOp(sock, "validate_delta", nil); serr == nil {
-				return body, false
-			}
-		}
 		argv := []string{"validate", "--json"}
 		if packs != "" {
 			argv = append(argv, "--packs", packs)
@@ -236,28 +225,6 @@ func runCLI(bin string, argv []string) (string, bool) {
 		return out + "\n" + err.Error() + disclaimer, true
 	}
 	return out + disclaimer, false
-}
-
-func sockOp(sockPath, op string, payload any) (string, error) {
-	conn, err := net.DialTimeout("unix", sockPath, 2*time.Second)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(60 * time.Second))
-	req := map[string]any{"op": op}
-	if payload != nil {
-		req["payload"] = payload
-	}
-	b, _ := json.Marshal(req)
-	if _, err := conn.Write(append(b, '\n')); err != nil {
-		return "", err
-	}
-	resp, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil && err != io.EOF {
-		return "", err
-	}
-	return string(bytes.TrimSpace(resp)), nil
 }
 
 func strArg(args map[string]any, k string) string {

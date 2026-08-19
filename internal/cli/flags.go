@@ -301,22 +301,6 @@ func parseAttestFlags(args []string) (attestFlags, error) {
 	return f, nil
 }
 
-type sockFlags struct{ path, root string }
-
-func parseSockFlags(args []string) (sockFlags, error) {
-	fs := newCommandFlagSet("sock")
-	var f sockFlags
-	fs.StringVar(&f.path, "path", "", "")
-	fs.StringVar(&f.root, "repo", "", "")
-	if err := fs.Parse(args); err != nil {
-		return f, flagUsageErr("sock", err.Error())
-	}
-	if fs.NArg() > 0 {
-		return f, usageErr(fmt.Sprintf("sock: unknown argument %q", fs.Arg(0)))
-	}
-	return f, nil
-}
-
 type shareFlags struct {
 	packIDs                   []string
 	skipPrepare, wantBundle, wantReveal bool

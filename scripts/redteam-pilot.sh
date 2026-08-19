@@ -132,9 +132,9 @@ fi
 rm -rf "$THEATER" "$IMPORT_DEST"
 
 # --- 12) Stable contracts nave — internal/contract/ + go test ./... (CI) ---
-[[ -f docs/stable-contracts.md && -f internal/contract/stable_ops_test.go && \
+[[ -f docs/stable-contracts.md && \
     -f internal/contract/explain_coreward_consumer_test.go ]] && \
-  ok "12 stable contracts (sock ops + explain consumer + docs sync)" || \
+  ok "12 stable contracts (explain consumer + docs sync)" || \
   bad "12 stable contracts nave — missing contract tests or docs/stable-contracts.md"
 
 # --- 16) share --bundle offline schema marker ---
@@ -189,10 +189,9 @@ if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
    grep -qi 'Linux/macOS' docs/getting-started/install.md && \
    ! grep -qiE 'runs-on:.*windows' action.yml && \
    grep -q 'mingw\*|msys\*|cygwin\*|windows\*' action.yml && \
-   grep -A5 "^  heal:" action.yml | grep -q "default: 'false'" && \
-   grep -q 'Unix-only' docs/stable-contracts.md; then
-  ok "18 windows asset + Action Linux/macOS-only + sock Unix-only doc lock"
-else bad "18 windows asset / Action honesty / sock Unix-only regression"; fi
+   grep -A5 "^  heal:" action.yml | grep -q "default: 'false'"; then
+  ok "18 windows asset + Action Linux/macOS-only doc lock"
+else bad "18 windows asset / Action honesty regression"; fi
 
 # --- 19) Forged note user_touch=ssh-agent-signed must not show verified ---
 TMP19="$(mktemp -d)"

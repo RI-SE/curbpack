@@ -20,7 +20,6 @@ var commandRegistry = []commandEntry{
 	{name: "ask-my-suppliers", handler: cmdAskMySuppliers},
 	{name: "attest", handler: cmdAttest},
 	{name: "view", handler: cmdView},
-	{name: "sock", handler: cmdSock},
 	{name: "doctor", handler: cmdDoctor},
 	{name: "demo", handler: cmdDemo},
 	{name: "export", handler: cmdExport},

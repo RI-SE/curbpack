@@ -7,7 +7,7 @@
 | Builder / adopter | [Install](getting-started/install.md) · [60-second paths](getting-started/60-second-paths.md) · [Troubleshooting](getting-started/troubleshooting.md) · [Pathway](getting-started/pathway.md) · [Sync both remotes](getting-started/sync-both-remotes.md) · [site builders](../site/for-builders/) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
-| Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
+| Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [Software design document](software-design-document.md) · [SDD gap analysis](sdd-gap-analysis.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
 | Integrator / tutor author | [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Coreward pointer](coreward-pointer.md) |
 
 Full audience table: [glossary and audience](glossary-and-audience.md). Public sentence voice: [voice and terms](voice-and-terms.md).
@@ -25,7 +25,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Intent vs Scope](intent-vs-scope.md) | What Curbpack is / is not |
 | [Strategy boundary](strategy-boundary.md) | Curbpack standalone; claim boundaries |
 | [GitHub-readiness gaps](github-readiness-gaps.md) | Stakeholder demand → Done/Polish/Ops/Reject + Evidence paths |
-| [Stable contracts](stable-contracts.md) | Sock ops, GateFailure IR, explain airlock (nave freeze) |
+| [Stable contracts](stable-contracts.md) | Explain airlock, GateFailure IR (nave freeze) |
 | [Security model](security-model.md) | Trust boundaries, required CI, freeze |
 | [Promotion firewall](promotion-firewall.md) | RISE-neutral publish language + MoU checklist |
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |

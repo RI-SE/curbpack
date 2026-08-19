@@ -25,7 +25,21 @@ irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 |
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
-Then: `curbpack doctor` → `demo` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/getting-started/install.md`.
+Then: `curbpack doctor` → `demo` → `scan` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/getting-started/install.md`.
+
+Design intent: `docs/software-design-document.md`.
+
+## Loop (opens read-only)
+
+An agent's first action never mutates the repository: **`scan`** → optional **`fix --<gap>`** → **`init`** → **`check`** → on green **`ask-my-suppliers`**. Pathway/research sidecars remain optional — see `docs/assistant-loop.md`.
+
+## Human-only acts
+
+```
+trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
+```
+
+Gate: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough). **`packs trust import`** is not built yet — contract-only until Wave B.
 
 ## When to use
 
@@ -43,6 +57,8 @@ curbpack                 # doctor if uninitialized, else check
 curbpack doctor
 curbpack doctor --repair     # local PATH/alias only — no download (Windows: install.ps1 -Repair)
 curbpack demo
+curbpack scan                # read-only first — no init, no hooks, no score
+curbpack fix --art14         # one templated file (human confirm)
 curbpack init            # house-policy default; --profile house|cra|medtech (--packs wins)
 curbpack init --packs cra-baseline,house-policy
 curbpack check
@@ -69,6 +85,7 @@ curbpack packs list
 curbpack packs export-graph
 curbpack packs doctor
 curbpack ask .github/curbpack/cache/latest_failure.json --propose
+curbpack ask-my-suppliers      # on green — buyer checklist + pack draft
 curbpack attest                  # human only — never auto-attest
 ```
 
@@ -94,7 +111,7 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 8. **On red:** run `curbpack check --heal` then `curbpack ask … --propose` (explain-packet optional for tutors); never invent certification; `--heal` never auto-attests; **never attest**.
 9. **On green:** optional `export --context-pack` (preferred), and/or `--lay-of-land` / `--buyer-questions` for human share — not a security program. Thin recipe: `curbpack share`.
 10. Remediations cache: `.github/curbpack/cache/remediations.json`. Instrument map: `.github/curbpack/cache/instrument.json`. ContextPack: `.github/curbpack/cache/context-pack.json`.
-11. Release path: `prepare-release` then human `attest` — never auto-attest. Optional MCP: `examples/mcp` (CLI remains SoR; no new sock ops).
+11. Release path: `prepare-release` then human `attest` — never auto-attest. Optional MCP: `examples/mcp` (CLI remains SoR).
 
 12. **No auto-demo loops.** Demo does **not** open a browser unless `--open`.
 13. RKG: `packs export-graph` → `.github/curbpack/graph/policy-graph.json`. Prefer `export --sarif` / `check --json` over inventing findings.
@@ -106,4 +123,5 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 19. **Three ways in:** Write→Check (optional pathway), Bring-docs→Check (files on pack paths; no portal PDF ingest), or CI alone — same local `check`. On red, optional `curbpack research --gate-id=<failed_id>`.
 20. **Dual-draft HITL (always):** When drafting house prose or remediating with external claims: (1) read seed notes/corrections/last_draft_pick + research packet + ContextPack failures; (2) propose **Option A** and **Option B** with cite ids; (3) state **Recommended: A|B** with ≤3 reasons; (4) stop for human pick/edit; (5) run `research --cite-check`; (6) record via `curbpack pathway note --set last_draft_pick=A|B|edited`. Never auto-apply or auto-attest.
 21. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
-22. **Ship it:** on “ship it” / “merge PR” / “sync remotes” → `./scripts/curbpack-ship.sh preflight <pr#>` → wait for auto-merge → `./scripts/curbpack-ship.sh post-merge` → report. Never bump pin without human “approve pin bump”. Never force-push. Never open a second `tabletop-evidence` issue (upsert only).
+22. **Ship it:** on “ship it” / “merge PR” / “sync remotes” → `./scripts/curbpack-ship.sh preflight <pr#>` → wait for auto-merge → `./scripts/curbpack-ship.sh post-merge` → report. Never bump pin without human “approve pin bump” (human-only **pin-bump**). Never force-push. Never open a second `tabletop-evidence` issue (upsert only).
+23. **Human-only acts (verbatim):** `trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump` — never perform these; stop for a human.

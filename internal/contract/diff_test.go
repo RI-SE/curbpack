@@ -15,11 +15,10 @@ import (
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/sbom"
-	"github.com/afelin/curbpack/internal/sock"
 	"github.com/afelin/curbpack/internal/validate"
 )
 
-func TestGateIDSetsEqualCheckValidateSock(t *testing.T) {
+func TestGateIDSetsEqualCheckValidate(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeMinimalHouseFail(t, dir)
@@ -32,23 +31,11 @@ func TestGateIDSetsEqualCheckValidateSock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sockRes := sock.ValidateDelta(dir)
 
 	a := sortedGateIDs(checkRes.Payload.Failures)
 	b := sortedGateIDs(validateRes.Payload.Failures)
-	c := sortedGateIDs(sockRes.Failures)
 	if strings.Join(a, ",") != strings.Join(b, ",") {
 		t.Fatalf("check≠validate gate_ids: %v vs %v", a, b)
-	}
-	if strings.Join(a, ",") != strings.Join(c, ",") {
-		t.Fatalf("check≠sock gate_ids: %v vs %v", a, c)
-	}
-	if sockRes.Payload == nil {
-		t.Fatal("sock payload nil")
-	}
-	d := sortedGateIDs(sockRes.Payload.Failures)
-	if strings.Join(a, ",") != strings.Join(d, ",") {
-		t.Fatal("sock payload gate_ids diverge")
 	}
 }
 
