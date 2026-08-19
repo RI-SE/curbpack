@@ -15,6 +15,7 @@ Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pat
 7. **Research (optional sidecar):** `curbpack research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every factual assertion needs a repo artifact (path, config, test name, commit, metric, claim id) or an allowlisted cite (`[^src-N]` / `<!-- cite:src-N -->` / allowlisted URL). Heal stubs are not grounding. `confirm-prose` is AND: every displayed prose path must be independent (mixed stub+real still refuses). Run `curbpack research --cite-check <draft.md>` before asking a human for `confirm-prose` (confirm-prose also refuse-ungrounded). On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
 9. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
+10. **Claim discipline:** an artifact must never assert something the tool caused — see [docs/claim-discipline.md](docs/claim-discipline.md).
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
 

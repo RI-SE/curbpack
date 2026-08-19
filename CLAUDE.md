@@ -20,4 +20,6 @@ curbpack check
 
 Exit code is authoritative. Never claim certification. Pin **`@v0.5.2`**. Cite-or-refuse: do not invent regulation text; link allowlisted sources only.
 
+Claim discipline: [docs/claim-discipline.md](docs/claim-discipline.md) — never assert what the tool caused.
+
 Thin MCP (optional): [examples/mcp/](examples/mcp/) — propose-only; no confirm/attest tools.
