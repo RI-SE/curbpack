@@ -22,6 +22,18 @@ func RFC3339() string {
 	return NowUTC().Format(time.RFC3339)
 }
 
+// Art14ReportingStart is the CRA Art 14 reporting clock start (UTC date).
+// EC reporting date — see https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847
+var Art14ReportingStart = time.Date(2026, 9, 11, 0, 0, 0, 0, time.UTC)
+
+// DaysUntilUTC returns whole calendar days from NowUTC (date-truncated) until deadline.
+// Negative when the deadline has passed.
+func DaysUntilUTC(deadline time.Time) int {
+	now := NowUTC().Truncate(24 * time.Hour)
+	d := deadline.UTC().Truncate(24 * time.Hour)
+	return int(d.Sub(now).Hours() / 24)
+}
+
 func stringsTrim(s string) string {
 	i := 0
 	j := len(s)

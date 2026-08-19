@@ -26,6 +26,8 @@ type OnePagerDTO struct {
 	AttestLine     string
 	AttestClass    string
 	UnsignedLoud   bool
+	AssuranceClass string
+	MechanicalSummary string // e.g. "5 of 7 gates mechanically evidenced"
 	ProvenanceHTML string
 	SourcesHTML    string
 	FooterPrefix   string
@@ -99,6 +101,14 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 	if labels == "" {
 		labels = d.PackID
 	}
+	assuranceLine := ""
+	if ac := strings.TrimSpace(d.AssuranceClass); ac != "" {
+		assuranceLine = fmt.Sprintf(`<p class="assurance"><strong>Assurance class:</strong> %s`, html.EscapeString(ac))
+		if ms := strings.TrimSpace(d.MechanicalSummary); ms != "" {
+			assuranceLine += fmt.Sprintf(` · <strong>%s</strong>`, html.EscapeString(ms))
+		}
+		assuranceLine += "</p>\n    "
+	}
 	lede := "Structural evidence for human review — not conformity assessment. Hand this one-pager (and the review pack) to a buyer or auditor. Evidence is prepared locally — this page is not a certificate of conformity."
 	if d.UnsignedLoud {
 		lede = "UNSIGNED — not cryptographically verified. " + lede
@@ -119,6 +129,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
     h2 { font-family: Fraunces, Georgia, serif; font-size:1.2rem; margin:2rem 0 0.75rem; font-weight:600; border-top:1px solid var(--ink); padding-top:1.25rem; }
     .lede { color:var(--muted); font-size:1.05rem; margin-bottom:1.5rem; }
     .packs { font-size:1rem; margin:0 0 0.85rem; }
+    .assurance { font-size:0.95rem; margin:0 0 0.85rem; color:var(--muted); }
     .status { display:inline-block; padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
     .status.ok { background:#f0fdf4; color:var(--ok); border:1px solid var(--ok); }
     .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
@@ -144,7 +155,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
     <h1>%s</h1>
     <p class="lede">%s</p>
     <p class="packs"><strong>Packs:</strong> %s</p>
-    <div class="status %s">%s</div>
+    %s<div class="status %s">%s</div>
     <div class="status %s" style="margin-left:0.5rem">%s</div>
     <h2>Files to open</h2>
     <table>
@@ -179,6 +190,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 </html>
 `, fp, d.Score, html.EscapeString(d.RepoName), html.EscapeString(lede),
 		html.EscapeString(labels),
+		assuranceLine,
 		statusClass, html.EscapeString(status),
 		d.AttestClass, html.EscapeString(d.AttestLine),
 		cover.String(), rows.String(),

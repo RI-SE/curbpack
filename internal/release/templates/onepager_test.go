@@ -50,6 +50,7 @@ func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 	htmlDoc := templates.BuyerOnePagerHTML(templates.OnePagerDTO{
 		RepoName: "sample", Score: 62, Passed: false, PackID: "house-policy",
 		PackLabels: "House Policy Example",
+		AssuranceClass: "structural_draft", MechanicalSummary: "5 of 7 gates mechanically evidenced",
 		AttestLine: "UNSIGNED — not cryptographically verified", UnsignedLoud: true,
 		AttestClass: "unsigned",
 		CoverRows: []templates.OnePagerCoverRow{
@@ -74,6 +75,9 @@ func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 	}
 	if !strings.Contains(front, "House Policy Example") {
 		t.Fatal("front must show pack names in plain words")
+	}
+	if !strings.Contains(front, "Assurance class:") || !strings.Contains(front, "mechanically evidenced") {
+		t.Fatal("front must show assurance class and mechanically evidenced summary")
 	}
 	if strings.Contains(front, "Local gate score") {
 		t.Fatal("score meter must not lead the front")

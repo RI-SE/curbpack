@@ -72,6 +72,7 @@ func Compose(ids []string) (Pack, []string, error) {
 	nameParts := make([]string, 0, len(order))
 	versions := make([]string, 0, len(order))
 
+	assuranceClass := ""
 	for _, id := range order {
 		p, err := LoadPack(id)
 		if err != nil {
@@ -83,6 +84,9 @@ func Compose(ids []string) (Pack, []string, error) {
 				return Pack{}, nil, fmt.Errorf("pack %q overlay merge-patch: %w", id, err)
 			}
 			p = merged
+		}
+		if ac := strings.TrimSpace(p.AssuranceClass); ac != "" {
+			assuranceClass = ac
 		}
 		nameParts = append(nameParts, p.Name)
 		versions = append(versions, p.ID+"@"+p.Version)
@@ -114,11 +118,12 @@ func Compose(ids []string) (Pack, []string, error) {
 
 	composedID := strings.Join(uniquePreserve(ids), "+")
 	out := Pack{
-		ID:           composedID,
-		Name:         strings.Join(nameParts, " + "),
-		Version:      strings.Join(versions, ","),
-		Description:  "Composed pack view (extends/overlays merged; later rule id wins).",
-		Jurisdiction: jurisdiction,
+		ID:             composedID,
+		Name:           strings.Join(nameParts, " + "),
+		Version:        strings.Join(versions, ","),
+		Description:    "Composed pack view (extends/overlays merged; later rule id wins).",
+		AssuranceClass: assuranceClass,
+		Jurisdiction:   jurisdiction,
 		Validity:     validity,
 		Supersedes:   supersedes,
 		SupersededBy: supersededBy,

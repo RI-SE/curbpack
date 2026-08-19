@@ -23,6 +23,9 @@ func TestCommandRegistryDispatch(t *testing.T) {
 			t.Errorf("lookupCommand(%q) = false", name)
 		}
 	}
+	if _, ok := lookupCommand("reality-check"); !ok {
+		t.Fatal("reality-check alias must resolve to scan")
+	}
 	if _, ok := lookupCommand("not-a-command"); ok {
 		t.Fatal("unknown command should not resolve")
 	}

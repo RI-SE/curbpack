@@ -281,12 +281,31 @@ func buyerOnePager(root string, res validate.Result) string {
 	bind, _ := attest.LatestBind(root)
 	line, class, unsignedLoud := attest.AttestDisplay(bind)
 	var failures []templates.OnePagerFailure
+	failedGates := map[string]struct{}{}
 	for _, f := range res.Payload.Failures {
 		failures = append(failures, templates.OnePagerFailure{
 			GateID:      f.GateID,
 			Severity:    f.Severity,
 			Description: f.SanitizedDescription,
 		})
+		failedGates[f.GateID] = struct{}{}
+	}
+	assuranceClass := buyerQuestionsAssuranceClass
+	mechanicalSummary := ""
+	if ids := nonzeroPackCSV(res.Payload.PackID); len(ids) > 0 {
+		if composed, _, err := packs.Compose(ids); err == nil {
+			if ac := strings.TrimSpace(composed.AssuranceClass); ac != "" {
+				assuranceClass = ac
+			}
+			total := len(composed.Rules)
+			evidenced := total - len(failedGates)
+			if evidenced < 0 {
+				evidenced = 0
+			}
+			if total > 0 {
+				mechanicalSummary = fmt.Sprintf("%d of %d gates mechanically evidenced", evidenced, total)
+			}
+		}
 	}
 	var cover []templates.OnePagerCoverRow
 	if qs, err := exportx.CollectBuyerQuestions(root, nil, res); err == nil {
@@ -301,23 +320,38 @@ func buyerOnePager(root string, res validate.Result) string {
 		}
 	}
 	dto := templates.OnePagerDTO{
-		RepoName:       name,
-		Score:          res.Score,
-		Passed:         res.Passed,
-		PackID:         res.Payload.PackID,
-		PackLabels:     exportx.PackPlainNames(res.Payload.PackID),
-		Timestamp:      res.Payload.Timestamp,
-		Failures:       failures,
-		CoverRows:      cover,
-		Bind:           bind,
-		AttestLine:     line,
-		AttestClass:    class,
-		UnsignedLoud:   unsignedLoud,
-		ProvenanceHTML: provenanceDL(res.Payload.PackID, bind, line, unsignedLoud),
-		SourcesHTML:    sourcesStrip(root, res.Payload.PackID),
-		FooterPrefix:   footerHTML(line, unsignedLoud),
+		RepoName:          name,
+		Score:             res.Score,
+		Passed:            res.Passed,
+		PackID:            res.Payload.PackID,
+		PackLabels:        exportx.PackPlainNames(res.Payload.PackID),
+		Timestamp:         res.Payload.Timestamp,
+		Failures:          failures,
+		CoverRows:         cover,
+		Bind:              bind,
+		AttestLine:        line,
+		AttestClass:       class,
+		UnsignedLoud:      unsignedLoud,
+		AssuranceClass:    assuranceClass,
+		MechanicalSummary: mechanicalSummary,
+		ProvenanceHTML:    provenanceDL(res.Payload.PackID, bind, line, unsignedLoud),
+		SourcesHTML:       sourcesStrip(root, res.Payload.PackID),
+		FooterPrefix:      footerHTML(line, unsignedLoud),
 	}
 	return templates.BuyerOnePagerHTML(dto)
+}
+
+const buyerQuestionsAssuranceClass = "structural_draft"
+
+func nonzeroPackCSV(csv string) []string {
+	var out []string
+	for _, id := range strings.Split(csv, ",") {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func footerHTML(line string, unsignedLoud bool) string {

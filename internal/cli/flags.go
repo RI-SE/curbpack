@@ -29,6 +29,7 @@ type checkValidateFlags struct {
 	formHints bool
 	applyStub bool
 	heal      bool
+	showScore bool
 }
 
 func parseCheckValidateFlags(cmd string, args []string) (checkValidateFlags, error) {
@@ -41,6 +42,7 @@ func parseCheckValidateFlags(cmd string, args []string) (checkValidateFlags, err
 	fs.BoolVar(&f.formHints, "form-hints", false, "")
 	fs.BoolVar(&f.applyStub, "apply-stub", false, "")
 	fs.BoolVar(&f.heal, "heal", false, "")
+	fs.BoolVar(&f.showScore, "score", false, "")
 	fs.StringVar(&packsFlag, "packs", "", "")
 	fs.StringVar(&packSingle, "pack", "", "")
 	if err := fs.Parse(args); err != nil {
@@ -311,6 +313,25 @@ func parseShareFlags(args []string) (shareFlags, error) {
 	}
 	if fs.NArg() > 0 {
 		return f, usageErr(fmt.Sprintf("share: unknown argument %q", fs.Arg(0)))
+	}
+	return f, nil
+}
+
+type fixFlags struct {
+	art14 bool
+	yes   bool
+}
+
+func parseFixFlags(args []string) (fixFlags, error) {
+	fs := newCommandFlagSet("fix")
+	var f fixFlags
+	fs.BoolVar(&f.art14, "art14", false, "")
+	fs.BoolVar(&f.yes, "yes", false, "")
+	if err := fs.Parse(args); err != nil {
+		return f, flagUsageErr("fix", err.Error())
+	}
+	if fs.NArg() > 0 {
+		return f, usageErr(fmt.Sprintf("fix: unknown argument %q", fs.Arg(0)))
 	}
 	return f, nil
 }
