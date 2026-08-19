@@ -20,16 +20,26 @@ jobs:
       - name: Compare afelin/main vs RI-SE/main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIRROR_READ_TOKEN: ${{ secrets.MIRROR_READ_TOKEN }}
         run: |
           set -euo pipefail
           SRC=$(gh api repos/afelin/curbpack/commits/main --jq .sha)
           MIRROR=""
-          if out=$(gh api repos/RI-SE/curbpack/commits/main --jq .sha 2>/dev/null); then
-            MIRROR="$out"
+          if out=$(curl -fsSL "https://api.github.com/repos/RI-SE/curbpack/commits/main" | jq -r .sha 2>/dev/null); then
+            if [[ "$out" =~ ^[0-9a-f]{40}$ ]]; then
+              MIRROR="$out"
+            fi
+          fi
+          if ! [[ "$MIRROR" =~ ^[0-9a-f]{40}$ ]] && [ -n "${MIRROR_READ_TOKEN:-}" ]; then
+            if out=$(GH_TOKEN="$MIRROR_READ_TOKEN" gh api repos/RI-SE/curbpack/commits/main --jq .sha 2>/dev/null); then
+              if [[ "$out" =~ ^[0-9a-f]{40}$ ]]; then
+                MIRROR="$out"
+              fi
+            fi
           fi
           if ! [[ "$MIRROR" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "RI-SE/curbpack main unreachable — mirror org settings or SSO may block GITHUB_TOKEN"
-            echo "Human: verify corp-origin remote and ./scripts/curb-sync.sh (manual SHA parity)"
+            echo "RI-SE/curbpack main unreachable — public API and token fallback failed"
+            echo "Human: verify corp-origin remote and ./scripts/curb-sync.sh (manual SHA parity OK)"
             exit 1
           fi
           echo "afelin/main=$SRC"
