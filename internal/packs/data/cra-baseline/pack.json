@@ -70,7 +70,7 @@
       ],
       "bind_repo_token": true,
       "description": "CRA Art 14 reporting path file missing, too short, or lacking required section headers. Structural file gate only — documents the path; does not mean tabletop rehearsed. Not a live SRP or EU Login check; not vulnerability-handling/SPOC evidence.",
-      "remediation": "Populate docs/incident/art14-path.md with this product's Art 14 reporting path (named owner + Drafted date). Fill Last tabletop: after tabletop for badge rehearsed. Distinguish reporting (11 Sept 2026) from vulnerability-handling/public SPOC (later clock). Do not claim EU Login works. Mention this product (package.json name, go.mod module, or repo directory name).",
+      "remediation": "Populate docs/incident/art14-path.md with this product's Art 14 reporting path (named owner + Drafted date). After you run a tabletop, record the date in `Last tabletop:`. Distinguish reporting (11 Sept 2026) from vulnerability-handling/public SPOC (later clock). Do not claim EU Login works. Mention this product (package.json name, go.mod module, or repo directory name).",
       "expected": "Art 14 reporting path file present with required headers and a repo-bound product mention. Documented draft only — not a live SRP check; badge shows rehearsed only after human fills Last tabletop:.",
       "citations": [
         {
