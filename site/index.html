@@ -120,7 +120,7 @@
             <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1] mb-4">
               Article 14 reporting starts 11 September 2026
             </h1>
-             days until 11 September 2026</p>
+             14 reporting starts in 23 days (11 September 2026)</p>
             <p class="text-lg sm:text-xl text-ink-muted mb-8 max-w-2xl leading-relaxed font-sans">
               One command, writes nothing — not certification. Curbpack scans your repo read-only on your machine; we never see your code.
             </p>
@@ -334,9 +334,9 @@
       return Math.floor((ART14_START - nowUTC) / 86400000);
     }
     function formatCountdown(days) {
-      if (days > 0) return days + ' day' + (days === 1 ? '' : 's') + ' until 11 September 2026';
-      if (days === 0) return 'starts today (11 September 2026)';
-      return 'started ' + (-days) + ' day' + (-days === 1 ? '' : 's') + ' ago (11 September 2026)';
+      if (days > 0) return 'Article 14 reporting starts in ' + days + ' day' + (days === 1 ? '' : 's') + ' (11 September 2026)';
+      if (days === 0) return 'Article 14 reporting starts today (11 September 2026)';
+      return 'Article 14 reporting has applied since 11 September 2026';
     }
     var el = document.getElementById('art14-countdown');
     if (el) el.textContent = formatCountdown(daysUntil());

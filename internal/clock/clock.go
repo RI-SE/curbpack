@@ -42,17 +42,12 @@ func FormatArt14Countdown(days int) string {
 		if days == 1 {
 			s = ""
 		}
-		return strconv.Itoa(days) + " day" + s + " until 11 September 2026"
+		return "Article 14 reporting starts in " + strconv.Itoa(days) + " day" + s + " (11 September 2026)"
 	}
 	if days == 0 {
-		return "starts today (11 September 2026)"
+		return "Article 14 reporting starts today (11 September 2026)"
 	}
-	past := -days
-	s := "s"
-	if past == 1 {
-		s = ""
-	}
-	return "started " + strconv.Itoa(past) + " day" + s + " ago (11 September 2026)"
+	return "Article 14 reporting has applied since 11 September 2026"
 }
 
 func stringsTrim(s string) string {

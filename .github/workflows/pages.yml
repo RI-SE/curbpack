@@ -5,6 +5,8 @@ on:
     paths:
       - "site/**"
       - ".github/workflows/pages.yml"
+  schedule:
+    - cron: '0 6 * * *'  # daily UTC — refresh baked Art14 countdown
   workflow_dispatch:
 
 permissions:

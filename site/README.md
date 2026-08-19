@@ -29,6 +29,8 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 
 **Nav/Footer (every public page):** Builders | Reviewers | Authorities | Art 14 (where present) | How it works | **Source** (`https://github.com/afelin/curbpack`, title: canonical module/releases/Action) | **RISE mirror** (`https://github.com/RI-SE/curbpack`). Footer: **Source: afelin/curbpack · RISE mirror: RI-SE/curbpack** + Pages link + RISE funder line. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
 
+**Metadata rule:** Never put a day count in `<title>`, `og:title`, `og:description`, or `<meta description>` — use the date only. Social cards and search snippets are cached and never run JS; a countdown baked into metadata freezes and goes wrong silently.
+
 ## Link rule
 
 Internal HTML navigation and asset `href`s use **site-root-relative** `/curbpack/…` paths (not `../` or bare `samples/…`). That matches GitHub project Pages and works with or without trailing slashes on the page URL.
