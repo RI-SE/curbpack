@@ -209,6 +209,8 @@ func TestRun_ScanBadge(t *testing.T) {
 	})
 
 	t.Run("after human fills Last tabletop", func(t *testing.T) {
+		// CI sets SOURCE_DATE_EPOCH globally (2024-01-01); pin after tabletop date for staleness.
+		t.Setenv("SOURCE_DATE_EPOCH", "1785542400") // 2026-08-01 UTC
 		path := filepath.Join(dir, "docs", "incident", "art14-path.md")
 		body, err := os.ReadFile(path)
 		if err != nil {
