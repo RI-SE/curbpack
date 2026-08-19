@@ -106,6 +106,25 @@ Action runners are **Linux/macOS only** (local Windows CLI is supported separate
 
 Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
 
+## Dual-remote vibe-safe flow
+
+Use this exact flow for low-cognitive-load day-to-day work:
+
+1. Open repo in Cursor.
+2. Build feature in a feature branch.
+3. Say: **"Open a PR."**
+4. Wait for CI checks to pass.
+5. Merge PR in GitHub (or let Cursor merge if token allows).
+6. Say: **"Sync both curbpack remotes."**
+7. If sync pauses, do exactly what the pause message says (auth, conflict resolution, or branch protection issue).
+
+Two hardening checks:
+
+- Before step 6, confirm `main` is clean and up to date.
+- After step 6, verify both remotes are at the same commit SHA.
+
+For this repository, "Sync both curbpack remotes" means running `./scripts/curb-sync.sh` (merge-only; never force-push).
+
 ## Advanced
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
