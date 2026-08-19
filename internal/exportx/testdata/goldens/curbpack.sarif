@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "curbpack",
+          "informationUri": "https://github.com/afelin/curbpack",
+          "rules": []
+        }
+      },
+      "results": [],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "assurance_class": "structural_draft",
+            "certification_claimed": false,
+            "instrument_panel": true,
+            "note": "Structural evidence for human review — not a conformity assessment."
+          }
+        }
+      ]
+    }
+  ]
+}

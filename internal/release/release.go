@@ -3,6 +3,7 @@ package release
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"os"
@@ -51,11 +52,16 @@ func Prepare(opts Options) error {
 		return err
 	}
 
+	var prepErrs []error
+	record := func(err error) {
+		if err != nil {
+			prepErrs = append(prepErrs, err)
+		}
+	}
+
 	// Layer 1: machine JSON
 	layer1, _ := json.MarshalIndent(res.Payload, "", "  ")
-	if err := os.WriteFile(filepath.Join(out, "01-gate-failures.json"), append(layer1, '\n'), 0o644); err != nil {
-		return err
-	}
+	record(os.WriteFile(filepath.Join(out, "01-gate-failures.json"), append(layer1, '\n'), 0o644))
 
 	// Layer 2: semantic markdown for agents
 	md := validate.SemanticMarkdown(res.Payload)
@@ -63,58 +69,61 @@ func Prepare(opts Options) error {
 		md = "# COMPLIANCE STATUS: ALL GATES PASSED\n\nDeterministic pack evaluation found no violations.\n\n" +
 			"**Note:** This is evidence preparation for human review — not a certification.\n"
 	}
-	if err := os.WriteFile(filepath.Join(out, "02-action-report.md"), []byte(md), 0o644); err != nil {
-		return err
-	}
+	record(os.WriteFile(filepath.Join(out, "02-action-report.md"), []byte(md), 0o644))
 
 	// Layer 3: executive summary markdown
 	execMD := executiveSummary(res)
-	if err := os.WriteFile(filepath.Join(out, "03-executive-summary.md"), []byte(execMD), 0o644); err != nil {
-		return err
-	}
+	record(os.WriteFile(filepath.Join(out, "03-executive-summary.md"), []byte(execMD), 0o644))
 
 	// SBOM summary + CycloneDX 1.5 (best-effort from lockfile)
 	evidenceDir := filepath.Join(root, ".github", "curbpack", "evidence")
-	_ = os.MkdirAll(evidenceDir, 0o755)
+	record(os.MkdirAll(evidenceDir, 0o755))
 	sbomSummary, sbomErr := sbom.FromLockfiles(root)
 	sbomPath := filepath.Join(out, "04-sbom-summary.json")
 	if sbomErr != nil {
-		_ = os.WriteFile(sbomPath, []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"), 0o644)
+		record(os.WriteFile(sbomPath, []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"), 0o644))
 	} else {
 		cdxPath := filepath.Join(evidenceDir, "sbom.cdx.json")
 		if _, written, err := sbom.WriteCycloneDX(root, cdxPath); err == nil {
 			sbomSummary.CycloneDXPath = written
 			sbomSummary.Format = "CycloneDX-1.5"
-			_ = copyFile(written, filepath.Join(out, "04-sbom.cdx.json"))
+			record(copyFile(written, filepath.Join(out, "04-sbom.cdx.json")))
+		} else {
+			record(fmt.Errorf("cyclonedx: %w", err))
 		}
 		b, _ := json.MarshalIndent(sbomSummary, "", "  ")
-		_ = os.WriteFile(sbomPath, append(b, '\n'), 0o644)
+		record(os.WriteFile(sbomPath, append(b, '\n'), 0o644))
 	}
 
 	// Pending OpenVEX from dependency-shaped findings only (gates stay in IR).
 	vexDoc := vex.FromGateFailures(filepath.Base(root), res.Payload)
-	vexPath, _ := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
-	_ = copyFile(vexPath, filepath.Join(out, "05-vex-draft.json"))
+	vexPath, vexWriteErr := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
+	if vexWriteErr != nil {
+		record(fmt.Errorf("vex: %w", vexWriteErr))
+	} else {
+		record(copyFile(vexPath, filepath.Join(out, "05-vex-draft.json")))
+	}
 
 	// SARIF layer (same mapper as CLI export --sarif)
 	sarifDoc := exportx.FromGateFailures(res.Payload, root)
 	sarifBytes, _ := json.MarshalIndent(sarifDoc, "", "  ")
-	_ = os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644)
-	_ = os.MkdirAll(filepath.Join(root, ".github", "curbpack", "cache"), 0o755)
-	_ = os.WriteFile(filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif"), append(sarifBytes, '\n'), 0o644)
+	record(os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644))
+	record(os.MkdirAll(filepath.Join(root, ".github", "curbpack", "cache"), 0o755))
+	record(os.WriteFile(filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif"), append(sarifBytes, '\n'), 0o644))
 
 	// Informational watchlist ∩ SBOM join
-	if joinPath, err := exportx.WriteWatchlistJoin(root, ""); err == nil {
-		_ = copyFile(joinPath, filepath.Join(out, "07-watchlist-sbom-join.json"))
+	if joinPath, err := exportx.WriteWatchlistJoin(root, ""); err != nil {
+		record(fmt.Errorf("watchlist join: %w", err))
+	} else {
+		record(copyFile(joinPath, filepath.Join(out, "07-watchlist-sbom-join.json")))
 	}
 	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
 	htmlDoc := buyerOnePager(root, res)
 	onepagerPath := filepath.Join(out, "buyer-onepager.html")
 	wrote, err := writeOnePagerIfChanged(onepagerPath, htmlDoc)
 	if err != nil {
-		return err
-	}
-	if wrote {
+		record(fmt.Errorf("buyer one-pager: %w", err))
+	} else if wrote {
 		tty.PrintStatus("Buyer one-pager", true, onepagerPath)
 	} else {
 		tty.PrintStatus("Buyer one-pager", true, onepagerPath+" (unchanged)")
@@ -122,9 +131,9 @@ func Prepare(opts Options) error {
 
 	// Copy / refresh proof page into review-pack and repo proof/
 	proof := templates.ProofPageHTML()
-	_ = os.MkdirAll(filepath.Join(root, "proof"), 0o755)
-	_ = os.WriteFile(filepath.Join(root, "proof", "index.html"), []byte(proof), 0o644)
-	_ = os.WriteFile(filepath.Join(out, "proof-index.html"), []byte(proof), 0o644)
+	record(os.MkdirAll(filepath.Join(root, "proof"), 0o755))
+	record(os.WriteFile(filepath.Join(root, "proof", "index.html"), []byte(proof), 0o644))
+	record(os.WriteFile(filepath.Join(out, "proof-index.html"), []byte(proof), 0o644))
 
 	tty.PrintStatus("Review pack", true, out)
 	if !res.Passed {
@@ -134,9 +143,9 @@ func Prepare(opts Options) error {
 		tty.RenderThermometer(res.Score)
 	}
 	if !res.Passed && !opts.AllowFailingGates {
-		return fmt.Errorf("gates failing — pass --allow-failing-gates to accept a remediation review pack")
+		prepErrs = append(prepErrs, fmt.Errorf("gates failing — pass --allow-failing-gates to accept a remediation review pack"))
 	}
-	return nil
+	return errors.Join(prepErrs...)
 }
 
 func jsonString(s string) string {

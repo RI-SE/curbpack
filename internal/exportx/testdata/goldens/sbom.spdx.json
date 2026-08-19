@@ -1,0 +1,22 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "comment": "Optional SPDX mirror of component list — not a certification. Source=package-lock.json",
+    "created": "2024-01-01T00:00:00Z",
+    "creators": [
+      "Tool: curbpack"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://curbpack.local/spdx/golden-fixture",
+  "name": "golden-fixture-sbom",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-1",
+      "downloadLocation": "NOASSERTION",
+      "name": "lodash",
+      "versionInfo": "4.17.21"
+    }
+  ],
+  "spdxVersion": "SPDX-2.3"
+}

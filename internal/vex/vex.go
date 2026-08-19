@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/ir"
 )
 
@@ -86,7 +87,7 @@ func FromAdvisories(product string, advisories []Advisory) Document {
 		Context:    "https://openvex.dev/ns/v0.2.0",
 		ID:         "https://curbpack.local/vex/" + seed,
 		Author:     "curbpack",
-		Timestamp:  "2024-01-01T00:00:00Z",
+		Timestamp:  clock.RFC3339(),
 		Version:    1,
 		Statements: stmts,
 		Status:     "draft_pending_attest",
