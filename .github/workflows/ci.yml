@@ -400,15 +400,7 @@ jobs:
           if sh "$GITHUB_WORKSPACE/scripts/install.sh"; then
             export PATH="$INST:$PATH"
             curbpack doctor
-            SCAN=$(mktemp -d)
-            cd "$SCAN"
-            git init -q
-            git config user.email "ci@curbpack.local"
-            git config user.name "CI"
-            git commit --allow-empty -m init -q
-            curbpack scan | grep -q 'Art 14 reporting clock'
-            test -z "$(git status --porcelain)"
-            cd -
+            # scan is workspace-only until next release ships curbpack scan (v0.5.2 has no scan)
             DEMO=$(mktemp -d)
             curbpack demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"
