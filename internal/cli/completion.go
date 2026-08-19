@@ -7,7 +7,8 @@ import (
 
 // top-level commands and common flags for static shell completions (freeze-safe).
 var completionCommands = []string{
-	"help", "version", "doctor", "demo", "init", "check", "validate",
+	"help", "version", "doctor", "demo", "scan", "fix",
+	"init", "check", "validate", "ask-my-suppliers",
 	"prepare-release", "packs", "ask", "attest", "view", "sock",
 	"export", "share", "pathway", "research", "drift", "completion",
 }
@@ -68,7 +69,10 @@ _curbpack() {
       COMPREPLY=( $(compgen -W "` + strings.Join(completionDoctorFlags, " ") + `" -- "$cur") )
       ;;
     check)
-      COMPREPLY=( $(compgen -W "--heal --diff --json --form-hints --apply-stub --packs" -- "$cur") )
+      COMPREPLY=( $(compgen -W "--heal --score --diff --json --form-hints --apply-stub --packs" -- "$cur") )
+      ;;
+    fix)
+      COMPREPLY=( $(compgen -W "--art14 --yes" -- "$cur") )
       ;;
     demo)
       COMPREPLY=( $(compgen -W "--open --keep --out" -- "$cur") )

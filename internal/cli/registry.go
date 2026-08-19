@@ -10,11 +10,14 @@ type commandEntry struct {
 
 var commandRegistry = []commandEntry{
 	{name: "init", handler: cmdInit},
+	{name: "scan", aliases: []string{"reality-check"}, handler: cmdScan},
 	{name: "check", handler: cmdCheck},
+	{name: "fix", handler: cmdFix},
 	{name: "validate", handler: cmdValidate},
 	{name: "prepare-release", handler: cmdPrepareRelease},
 	{name: "packs", handler: cmdPacks},
 	{name: "ask", handler: cmdAsk},
+	{name: "ask-my-suppliers", handler: cmdAskMySuppliers},
 	{name: "attest", handler: cmdAttest},
 	{name: "view", handler: cmdView},
 	{name: "sock", handler: cmdSock},

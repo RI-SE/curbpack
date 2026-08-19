@@ -32,6 +32,10 @@ type Options struct {
 	PackIDs  []string
 	Quiet    bool
 	DiffOnly bool // skip rules whose paths are untouched by git diff
+	ReadOnly bool // skip cache writes (scan / read-only paths)
+	// FreshStubPaths: paths written by init/--heal in the same CLI invocation —
+	// skip anti_placeholder scaffold overlap (next run still scores them).
+	FreshStubPaths map[string]struct{}
 }
 
 // Result is the outcome of a validate run.
@@ -45,6 +49,10 @@ type Result struct {
 
 // Run evaluates embedded pack rules against the repo tree.
 func Run(opts Options) (Result, error) {
+	prevFresh := freshStubPathsEval
+	freshStubPathsEval = opts.FreshStubPaths
+	defer func() { freshStubPathsEval = prevFresh }()
+
 	root := opts.RepoRoot
 	if root == "" {
 		var err error
@@ -133,20 +141,22 @@ func Run(opts Options) (Result, error) {
 	}
 
 	action := ActionReportMarkdown(payload, skipped)
-	cacheDir := filepath.Join(root, ".github", "curbpack", "cache")
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		tty.WarnCacheWrite("mkdir cache: " + err.Error())
-	}
-	b, _ := json.MarshalIndent(payload, "", "  ")
-	writeCache := func(name string) {
-		if err := os.WriteFile(filepath.Join(cacheDir, name), b, 0o644); err != nil {
-			tty.WarnCacheWrite("write " + name + ": " + err.Error())
+	if !opts.ReadOnly {
+		cacheDir := filepath.Join(root, ".github", "curbpack", "cache")
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+			tty.WarnCacheWrite("mkdir cache: " + err.Error())
 		}
-	}
-	writeCache("latest_failure.json")
-	writeCache("latest_result.json")
-	if err := os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644); err != nil {
-		tty.WarnCacheWrite("write latest_action_report.md: " + err.Error())
+		b, _ := json.MarshalIndent(payload, "", "  ")
+		writeCache := func(name string) {
+			if err := os.WriteFile(filepath.Join(cacheDir, name), b, 0o644); err != nil {
+				tty.WarnCacheWrite("write " + name + ": " + err.Error())
+			}
+		}
+		writeCache("latest_failure.json")
+		writeCache("latest_result.json")
+		if err := os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644); err != nil {
+			tty.WarnCacheWrite("write latest_action_report.md: " + err.Error())
+		}
 	}
 
 	return Result{
@@ -260,6 +270,11 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 			out = append(out, failFromRule(rule, rel, err.Error()))
 			continue
 		}
+		if freshStubPathsEval != nil {
+			if _, skip := freshStubPathsEval[filepath.ToSlash(clean)]; skip {
+				continue
+			}
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			continue // missing handled by file_present / annex_file rules
@@ -274,6 +289,8 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	}
 	return out
 }
+
+var freshStubPathsEval map[string]struct{}
 
 func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 	if err := packs.ValidateRegexPattern(rule.Pattern); err != nil {

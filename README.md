@@ -11,7 +11,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 ## Quickstart
 
-Install, init, and check—green gates in your repo in under ten minutes. Pin **`@v0.5.2`**. Full ladders: [install](docs/getting-started/install.md) · stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+Install, **scan your repo read-only**, draft Art 14, **share** — then init when you want hooks. Pin **`@v0.5.2`**. Full ladders: [install](docs/getting-started/install.md) · stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
 
 **Windows (PowerShell)**
 
@@ -31,15 +31,17 @@ Then the same ladder on every OS:
 curbpack doctor
 curbpack demo              # sandbox; optional --open
 cd /path/to/your/product   # git repo
-curbpack init              # house-policy default; --profile cra|medtech
-curbpack check             # daily loop — exit code is authoritative
+curbpack scan              # read-only diagnosis — no init, no hooks, no score
+curbpack fix --art14       # one Art 14 rehearsal file (diff preview; human confirm)
 curbpack share             # optional --bundle; --reveal opens review-pack in Explorer/Finder
+curbpack init              # when ready: house-policy default; --profile cra|medtech
+curbpack check --score     # daily loop — exit code is authoritative
 # human only when ready:
 curbpack attest
 # verify: proof/index.html vs hpurl-pointer.json
 ```
 
-On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. On green: `curbpack share` for handoff (`Attach:` lines print absolute paths for Outlook/Teams). Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also: `install.ps1 -Repair`).
+`curbpack ask-my-suppliers` emits the same buyer checklist as `export --buyer-questions`. On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also: `install.ps1 -Repair`).
 
 ## Three ways in
 

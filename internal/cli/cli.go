@@ -132,9 +132,12 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
 	fmt.Fprintf(os.Stderr, "  doctor [--repair] Environment confidence; --repair = local PATH/alias only\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
+	fmt.Fprintf(os.Stderr, "  scan             Read-only repo diagnosis (alias: reality-check)\n")
+	fmt.Fprintf(os.Stderr, "  fix --art14      Write Art 14 rehearsal file (one file; diff preview)\n")
 	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
-	fmt.Fprintf(os.Stderr, "  check [--heal]   Daily loop\n")
+	fmt.Fprintf(os.Stderr, "  check [--heal] [--score]  Daily loop (--score shows readiness %%)\n")
+	fmt.Fprintf(os.Stderr, "  ask-my-suppliers Buyer checklist (same as export --buyer-questions)\n")
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
@@ -346,12 +349,12 @@ func installPreCommitHook(root string) error {
 	return nil
 }
 
-func parseCheckFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
+func parseCheckFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal, showScore bool, err error) {
 	f, err := parseCheckValidateFlags("check", args)
 	if err != nil {
-		return nil, false, false, false, false, false, err
+		return nil, false, false, false, false, false, false, err
 	}
-	return f.packIDs, f.jsonOut, f.diffOnly, f.formHints, f.applyStub, f.heal, nil
+	return f.packIDs, f.jsonOut, f.diffOnly, f.formHints, f.applyStub, f.heal, f.showScore, nil
 }
 
 func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, formHints, applyStub, heal bool, err error) {
@@ -369,7 +372,7 @@ func cmdCheck(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, err := parseCheckFlags(args)
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore, err := parseCheckFlags(args)
 	if err != nil {
 		return err
 	}
@@ -386,8 +389,15 @@ func cmdCheck(args []string) error {
 	var lastHints []formhints.Hint
 	checkDiff := diffOnly
 	stubsWritten := 0
+	freshStubs := map[string]struct{}{}
 	for round := 0; round <= healMaxRounds; round++ {
-		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: checkDiff, Quiet: jsonOut})
+		res, err = validate.Run(validate.Options{
+			RepoRoot:       root,
+			PackIDs:        packIDs,
+			DiffOnly:       checkDiff,
+			Quiet:          jsonOut,
+			FreshStubPaths: freshStubs,
+		})
 		if err != nil {
 			return err
 		}
@@ -408,6 +418,7 @@ func cmdCheck(args []string) error {
 		for _, h := range hints {
 			if h.Applied {
 				applied++
+				freshStubs[filepath.ToSlash(h.File)] = struct{}{}
 			}
 		}
 		stubsWritten += applied
@@ -430,11 +441,13 @@ func cmdCheck(args []string) error {
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(res.Payload)
 	} else if res.Passed {
-		// Green: thermometer + claim + optional accumulation / instrument whispers.
-		if tty.IsTerminal {
-			tty.RenderThermometer(res.Score)
-		} else {
-			fmt.Printf("readiness=%d%% gates=green\n", res.Score)
+		// Green: optional thermometer + claim + optional accumulation / instrument whispers.
+		if showScore {
+			if tty.IsTerminal {
+				tty.RenderThermometer(res.Score)
+			} else {
+				fmt.Printf("readiness=%d%% gates=green\n", res.Score)
+			}
 		}
 		if heal && stubsWritten > 0 {
 			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
@@ -448,8 +461,12 @@ func cmdCheck(args []string) error {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}
 	} else {
-		if tty.IsTerminal {
-			tty.RenderThermometer(res.Score)
+		if showScore {
+			if tty.IsTerminal {
+				tty.RenderThermometer(res.Score)
+			} else {
+				fmt.Printf("readiness=%d%% gates=open\n", res.Score)
+			}
 		}
 		if heal && stubsWritten > 0 {
 			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
@@ -579,6 +596,24 @@ func cmdPacks(args []string) error {
 	default:
 		return usageErr(fmt.Sprintf("unknown packs subcommand %q (list|update|import|export-graph|doctor)", args[0]))
 	}
+}
+
+func cmdAskMySuppliers(args []string) error {
+	root, err := gitutil.RepoRoot("")
+	if err != nil {
+		return usageErr("must run inside a git repository")
+	}
+	packIDs := []string(nil)
+	if len(args) > 0 {
+		return usageErr("ask-my-suppliers: unknown argument " + args[0])
+	}
+	path, n, err := exportx.WriteBuyerQuestions(root, packIDs, "")
+	if err != nil {
+		return err
+	}
+	tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", path, n))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Hand checklist to suppliers — not conformity assessment."))
+	return nil
 }
 
 func cmdExport(args []string) error {
