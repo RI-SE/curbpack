@@ -29,7 +29,9 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 
 **Nav/Footer (every public page):** Builders | Reviewers | Authorities | Art 14 (where present) | How it works | **Source** (`https://github.com/afelin/curbpack`, title: canonical module/releases/Action) | **RISE mirror** (`https://github.com/RI-SE/curbpack`). Footer: **Source: afelin/curbpack · RISE mirror: RI-SE/curbpack** + Pages link + RISE funder line. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
 
-**Metadata rule:** Never put a day count in `<title>`, `og:title`, `og:description`, or `<meta description>` — use the date only. Social cards and search snippets are cached and never run JS; a countdown baked into metadata freezes and goes wrong silently.
+**Metadata rule:** Never put a day count in `<title>`, `og:title`, `og:description`, `<meta description>`, or `og:image` artwork — use the date only (e.g. **11 September 2026**). Social cards and search snippets are cached and never run JS; a countdown baked into metadata or image text freezes and goes wrong silently.
+
+**Post-merge card check:** After deploy, open the live URL logged out on a phone; paste into Slack and LinkedIn to confirm the card renders. Meta tags can be correct in page source while previews stay wrong (CDN/cache lag or missing/broken image URL).
 
 ## Link rule
 
