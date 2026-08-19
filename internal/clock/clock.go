@@ -34,6 +34,27 @@ func DaysUntilUTC(deadline time.Time) int {
 	return int(d.Sub(now).Hours() / 24)
 }
 
+// FormatArt14Countdown formats days until Art14ReportingStart for site HTML.
+// Matches site/index.html client-side formatCountdown (progressive enhancement).
+func FormatArt14Countdown(days int) string {
+	if days > 0 {
+		s := "s"
+		if days == 1 {
+			s = ""
+		}
+		return strconv.Itoa(days) + " day" + s + " until 11 September 2026"
+	}
+	if days == 0 {
+		return "starts today (11 September 2026)"
+	}
+	past := -days
+	s := "s"
+	if past == 1 {
+		s = ""
+	}
+	return "started " + strconv.Itoa(past) + " day" + s + " ago (11 September 2026)"
+}
+
 func stringsTrim(s string) string {
 	i := 0
 	j := len(s)

@@ -27,7 +27,7 @@ Home uses a neo-brutalist Tailwind CDN layout (grid, hard borders, ink/paper). S
 | `security/` | Builders / CISO | Trust surface pointer |
 | `llms.txt` | Agents | Machine-readable index |
 
-**Nav/Footer (every public page):** Builders | Reviewers | Authorities | How it works | **Source** (`https://github.com/RI-SE/curbpack`). Footer: **Source (RI-SE)** primary + quieter **Mirror** (`https://github.com/afelin/curbpack`) + RISE funder line. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
+**Nav/Footer (every public page):** Builders | Reviewers | Authorities | Art 14 (where present) | How it works | **Source** (`https://github.com/afelin/curbpack`, title: canonical module/releases/Action) | **RISE mirror** (`https://github.com/RI-SE/curbpack`). Footer: **Source: afelin/curbpack · RISE mirror: RI-SE/curbpack** + Pages link + RISE funder line. Duplicate the same chrome snippet across static HTML pages (no SSG/partials).
 
 ## Link rule
 

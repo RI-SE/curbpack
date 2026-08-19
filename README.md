@@ -1,5 +1,8 @@
 # Curbpack
 
+> **Canonical source:** [afelin/curbpack](https://github.com/afelin/curbpack) — module path, releases, GitHub Action.  
+> **RISE mirror:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — read-only mirror of `main`, maintained by RISE. Development supported by RISE; RISE does not certify products that use Curbpack gate results.
+
 [![ci](https://github.com/afelin/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
