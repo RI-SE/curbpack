@@ -19,6 +19,8 @@ func FuzzSafeJoin(f *testing.F) {
 		"",
 		".",
 		"a\\b",
+		".Git/config",
+		"docs/.git/hooks/x",
 	} {
 		f.Add(s)
 	}
@@ -29,7 +31,7 @@ func FuzzSafeJoin(f *testing.F) {
 		}
 		full, clean, err := SafeJoin(root, rel)
 		if err != nil {
-			return
+			return // refused paths are ok; success-path invariants below
 		}
 		if filepath.IsAbs(rel) {
 			t.Fatalf("abs accepted: %q", rel)

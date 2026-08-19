@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/instrument"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/pathway"
@@ -186,9 +188,11 @@ func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailur
 	if b, rerr := os.ReadFile(cachePath); rerr == nil {
 		var p ir.GateFailurePayload
 		if json.Unmarshal(b, &p) == nil && (p.SchemaVersion != "" || len(p.Failures) > 0 || p.PackID != "") {
-			ok = len(p.Failures) == 0
-			score = p.ReadinessScore
-			return p, score, ok, true, nil
+			if cacheValidForRequest(root, p, packIDs) {
+				ok = len(p.Failures) == 0
+				score = p.ReadinessScore
+				return p, score, ok, true, nil
+			}
 		}
 	}
 	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
@@ -198,6 +202,50 @@ func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailur
 	p := res.Payload
 	p.ReadinessScore = res.Score
 	return p, res.Score, res.Passed, false, nil
+}
+
+// cacheValidForRequest rejects stale cache when pack set or HEAD commit drifted.
+func cacheValidForRequest(root string, p ir.GateFailurePayload, requested []string) bool {
+	head, err := gitutil.HeadSHA(root)
+	if err != nil || head == "" {
+		return false
+	}
+	if parent := strings.TrimSpace(p.ConcurrencyControl.ExpectedParentCommitSHA); parent != head {
+		return false
+	}
+	want := normalizePackList(requested)
+	if len(want) == 0 {
+		cfgIDs, err := config.ResolvePackIDs(root, nil)
+		if err != nil {
+			return false
+		}
+		want = normalizePackList(cfgIDs)
+	}
+	if len(want) == 0 {
+		return true
+	}
+	got := normalizePackList(strings.Split(p.PackID, ","))
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range want {
+		if want[i] != got[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizePackList(ids []string) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			out = append(out, id)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 func contextPackPaths(root, outPath string) (mdPath, jsonPath string) {

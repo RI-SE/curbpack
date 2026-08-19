@@ -13,9 +13,11 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/tty"
@@ -115,7 +117,7 @@ func Run(opts Options) (Result, error) {
 	}
 	payload := ir.GateFailurePayload{
 		SchemaVersion: ir.SchemaVersion,
-		Timestamp:     time.Now().UTC().Format(time.RFC3339),
+		Timestamp:     clock.RFC3339(),
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
 			StateVersionToken:       "v3.33-OCC",
@@ -165,18 +167,8 @@ func pathChanged(changed map[string]struct{}, rel string) bool {
 }
 
 func evalRule(root string, rule packs.Rule) []ir.Failure {
-	switch rule.Check {
-	case "annex_file", "file_present":
-		return checkFilePresent(root, rule)
-	case "anti_placeholder":
-		return checkAntiPlaceholder(root, rule)
-	case "npm_dep_ban", "manifest_dep_ban":
-		return checkNPMDepBan(root, rule)
-	case "text_forbid":
-		return checkTextForbid(root, rule)
-	case "import_reach":
-		return auditASTReachability(root)
-	default:
+	fn, ok := checkRegistry[rule.Check]
+	if !ok {
 		return []ir.Failure{{
 			GateID:               rule.ID,
 			Severity:             "medium",
@@ -188,45 +180,30 @@ func evalRule(root string, rule packs.Rule) []ir.Failure {
 			},
 		}}
 	}
+	return fn(root, rule)
 }
 
-// SafeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
+// checkFn evaluates one pack rule check kind.
+type checkFn func(root string, rule packs.Rule) []ir.Failure
+
+// checkRegistry maps pack check kinds to evaluators (extend here for new kinds).
+var checkRegistry = map[string]checkFn{
+	"annex_file":       checkFilePresent,
+	"file_present":     checkFilePresent,
+	"anti_placeholder": checkAntiPlaceholder,
+	"npm_dep_ban":      checkNPMDepBan,
+	"manifest_dep_ban": checkNPMDepBan,
+	"text_forbid":      checkTextForbid,
+	"import_reach":     func(root string, rule packs.Rule) []ir.Failure { return auditASTReachability(root) },
+}
+
+// SafeJoin resolves rel under root with symlink-aware containment and .git jail (fail closed).
 func SafeJoin(root, rel string) (string, string, error) {
-	return safeJoin(root, rel)
-}
-
-// safeJoin resolves a relative path under root; refuses abs + traversal (fail closed).
-func safeJoin(root, rel string) (string, string, error) {
-	rel = strings.TrimSpace(rel)
-	if rel == "" {
-		return "", "", fmt.Errorf("empty path")
-	}
-	if filepath.IsAbs(rel) {
-		return "", "", fmt.Errorf("absolute path refused")
-	}
-	clean := filepath.Clean(rel)
-	slash := filepath.ToSlash(clean)
-	if slash == ".." || strings.HasPrefix(slash, "../") {
-		return "", "", fmt.Errorf("path traversal refused")
-	}
-	full := filepath.Join(root, clean)
-	rootAbs, err := filepath.Abs(root)
-	if err != nil {
-		return "", "", err
-	}
-	fullAbs, err := filepath.Abs(full)
-	if err != nil {
-		return "", "", err
-	}
-	sep := string(os.PathSeparator)
-	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
-		return "", "", fmt.Errorf("path escapes repository root")
-	}
-	return full, slash, nil
+	return pathjail.Join(root, rel)
 }
 
 func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
-	path, rel, err := safeJoin(root, rule.Path)
+	path, rel, err := SafeJoin(root, rule.Path)
 	if err != nil {
 		return []ir.Failure{failFromRule(rule, rule.Path, err.Error())}
 	}
@@ -261,7 +238,7 @@ func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
 		}
 	}
 	for _, tp := range rule.RequireTreePaths {
-		full, clean, err := safeJoin(root, tp)
+		full, clean, err := SafeJoin(root, tp)
 		if err != nil {
 			return []ir.Failure{failFromRule(rule, rel, "require_tree_paths: "+err.Error())}
 		}
@@ -292,7 +269,7 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	var out []ir.Failure
 	token, _ := packs.RepoToken(root)
 	for _, rel := range rule.Paths {
-		path, clean, err := safeJoin(root, rel)
+		path, clean, err := SafeJoin(root, rel)
 		if err != nil {
 			out = append(out, failFromRule(rule, rel, err.Error()))
 			continue
@@ -322,7 +299,7 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 	}
 	var out []ir.Failure
 	for _, rel := range rule.Paths {
-		path, clean, err := safeJoin(root, rel)
+		path, clean, err := SafeJoin(root, rel)
 		if err != nil {
 			out = append(out, failFromRule(rule, rel, err.Error()))
 			continue

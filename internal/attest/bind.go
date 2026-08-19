@@ -11,15 +11,19 @@ import (
 
 // BindInfo is the last human attest bind (not necessarily HEAD).
 type BindInfo struct {
-	CommitSHA  string // last human bind
-	StateHash  string
-	Signer     string
-	UserTouch  string
-	SBOMDigest string
-	VEXDigest  string
-	ReviewedBy string // evidence map only; not in state_hash
-	Source     string // "hpurl-pointer" | "git-notes"
-	Found      bool
+	CommitSHA      string // last human bind
+	StateHash      string
+	Signer         string
+	UserTouch      string
+	SSHSignature   string
+	CryptoVerified bool // ssh-keygen -Y verify succeeded at bind resolution
+	SBOMDigest     string
+	VEXDigest      string
+	ResultDigest   string
+	PackIDs        string
+	ReviewedBy     string // evidence map only; not in state_hash
+	Source         string // "hpurl-pointer" | "git-notes"
+	Found          bool
 }
 
 type hpurlPointer struct {
@@ -81,15 +85,18 @@ func parseCapsule(body string) (Capsule, bool) {
 
 func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	info := BindInfo{
-		CommitSHA: cap.CommitSHA,
-		StateHash: cap.StateHash,
-		Signer:    cap.Signer,
-		UserTouch: cap.UserTouch,
+		CommitSHA:    cap.CommitSHA,
+		StateHash:    cap.StateHash,
+		Signer:       cap.Signer,
+		UserTouch:    cap.UserTouch,
+		SSHSignature: cap.SSHSignature,
 	}
 	if cap.Evidence != nil {
 		info.SBOMDigest = cap.Evidence["sbom_digest"]
 		info.VEXDigest = cap.Evidence["vex_digest"]
 		info.ReviewedBy = cap.Evidence["reviewed_by"]
+		info.ResultDigest = cap.Evidence["result_digest"]
+		info.PackIDs = cap.Evidence["pack_ids"]
 	}
 	if sbomOverride != "" {
 		info.SBOMDigest = sbomOverride
@@ -103,10 +110,12 @@ func bindFromCapsule(cap Capsule, sbomOverride, vexOverride string) BindInfo {
 	if info.UserTouch == "" {
 		info.UserTouch = "not-verified"
 	}
+	info.CryptoVerified = VerifySSHSignature(info.StateHash, info.SSHSignature)
 	return info
 }
 
 // AttestDisplay maps BindInfo to buyer-facing attest line/class.
+// Verified status requires cryptographic verification — never user_touch alone.
 func AttestDisplay(bind BindInfo) (line, class string, unsignedLoud bool) {
 	line = "UNSIGNED — not cryptographically verified"
 	class = "unsigned"
@@ -114,7 +123,7 @@ func AttestDisplay(bind BindInfo) (line, class string, unsignedLoud bool) {
 	if !bind.Found {
 		return line, class, unsignedLoud
 	}
-	if bind.UserTouch == "ssh-agent-signed" && bind.StateHash != "" {
+	if bind.CryptoVerified {
 		line = "ssh-agent-signed"
 		class = "ok"
 		unsignedLoud = false

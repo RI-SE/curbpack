@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -231,6 +232,7 @@ func GraphSummaryOp(repoRoot string) Response {
 	for t := range types {
 		typeList = append(typeList, t)
 	}
+	sort.Strings(typeList)
 	sum := GraphSummary{
 		SchemaVersion: g.SchemaVersion,
 		Path:          filepath.ToSlash(filepath.Join(".github", "curbpack", "graph", "policy-graph.json")),

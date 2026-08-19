@@ -13,13 +13,13 @@ import (
 )
 
 func TestCapsuleHashReproducibleNoWallClock(t *testing.T) {
-	a := attest.ComputeStateHash("c1", "p1", "sbom", "vex")
-	b := attest.ComputeStateHash("c1", "p1", "sbom", "vex")
+	a := attest.ComputeStateHash("c1", "p1", "sbom", "vex", "rd", "house-policy")
+	b := attest.ComputeStateHash("c1", "p1", "sbom", "vex", "rd", "house-policy")
 	if a != b {
 		t.Fatal("state_hash must ignore wall clock")
 	}
 	// Boundary fields must not collide under length-prefixed hashing.
-	if attest.ComputeStateHash("a", "b", "c|d", "e") == attest.ComputeStateHash("a|b", "c", "d", "e") {
+	if attest.ComputeStateHash("a", "b", "c|d", "e", "", "") == attest.ComputeStateHash("a|b", "c", "d", "e", "", "") {
 		t.Fatal("length-prefixed state_hash must reject delimiter ambiguity")
 	}
 }

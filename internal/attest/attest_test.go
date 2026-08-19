@@ -13,14 +13,18 @@ import (
 )
 
 func TestReproducibleStateHash(t *testing.T) {
-	a := attest.ComputeStateHash("abc", "parent", "sbom1", "vex1")
-	b := attest.ComputeStateHash("abc", "parent", "sbom1", "vex1")
+	a := attest.ComputeStateHash("abc", "parent", "sbom1", "vex1", "result1", "house-policy")
+	b := attest.ComputeStateHash("abc", "parent", "sbom1", "vex1", "result1", "house-policy")
 	if a != b {
 		t.Fatal("state hash must be reproducible")
 	}
-	c := attest.ComputeStateHash("abc", "parent", "sbom2", "vex1")
+	c := attest.ComputeStateHash("abc", "parent", "sbom2", "vex1", "result1", "house-policy")
 	if a == c {
 		t.Fatal("sbom digest must affect hash")
+	}
+	d := attest.ComputeStateHash("abc", "parent", "sbom1", "vex1", "result2", "house-policy")
+	if a == d {
+		t.Fatal("result digest must affect hash")
 	}
 }
 
@@ -45,8 +49,8 @@ func TestStateHashFieldBoundaryCollision(t *testing.T) {
 		},
 	}
 	for i, p := range pairs {
-		left := attest.ComputeStateHash(p[0][0], p[0][1], p[0][2], p[0][3])
-		right := attest.ComputeStateHash(p[1][0], p[1][1], p[1][2], p[1][3])
+		left := attest.ComputeStateHash(p[0][0], p[0][1], p[0][2], p[0][3], "", "")
+		right := attest.ComputeStateHash(p[1][0], p[1][1], p[1][2], p[1][3], "", "")
 		if left == right {
 			t.Fatalf("pair %d: boundary inputs must not collide: %q vs %q → %s", i, p[0], p[1], left)
 		}
@@ -88,7 +92,7 @@ func TestAttestDualReadsLegacyEvidence(t *testing.T) {
 	}
 	wantSbom := fmt.Sprintf("%x", sha256.Sum256(sbomBody))
 	wantVex := fmt.Sprintf("%x", sha256.Sum256(vexBody))
-	wantHash := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, wantSbom, wantVex)
+	wantHash := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, wantSbom, wantVex, cap.Evidence["result_digest"], cap.Evidence["pack_ids"])
 	if cap.StateHash != wantHash {
 		t.Fatalf("state_hash unbound to legacy evidence:\n got %s\nwant %s\n sbom=%s vex=%s",
 			cap.StateHash, wantHash, cap.Evidence["sbom_digest"], cap.Evidence["vex_digest"])
@@ -158,7 +162,7 @@ func TestReviewedByEvidenceNotInStateHash(t *testing.T) {
 	if cap.Evidence["reviewed_by"] != "Ada Reviewer" {
 		t.Fatalf("evidence reviewed_by=%q", cap.Evidence["reviewed_by"])
 	}
-	want := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, cap.Evidence["sbom_digest"], cap.Evidence["vex_digest"])
+	want := attest.ComputeStateHash(cap.CommitSHA, cap.ParentStateHash, cap.Evidence["sbom_digest"], cap.Evidence["vex_digest"], cap.Evidence["result_digest"], cap.Evidence["pack_ids"])
 	if cap.StateHash != want {
 		t.Fatalf("reviewed-by must not enter state_hash: got %s want %s", cap.StateHash, want)
 	}
@@ -204,7 +208,7 @@ func TestAgentIdentityEnvNotInStateHash(t *testing.T) {
 	if capA.StateHash != capB.StateHash {
 		t.Fatalf("AgentIdentity env must not enter state_hash: %s vs %s", capA.StateHash, capB.StateHash)
 	}
-	want := attest.ComputeStateHash(capA.CommitSHA, capA.ParentStateHash, capA.Evidence["sbom_digest"], capA.Evidence["vex_digest"])
+	want := attest.ComputeStateHash(capA.CommitSHA, capA.ParentStateHash, capA.Evidence["sbom_digest"], capA.Evidence["vex_digest"], capA.Evidence["result_digest"], capA.Evidence["pack_ids"])
 	if capA.StateHash != want {
 		t.Fatalf("state_hash drifted from frozen field order: got %s want %s", capA.StateHash, want)
 	}
