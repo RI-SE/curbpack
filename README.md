@@ -6,10 +6,11 @@
 [![ci](https://github.com/afelin/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-> Article 14 reporting starts **11 September 2026**. One command, writes nothing:
+> Article 14 reporting starts **11 September 2026**. Install once, then scan — writes nothing:
 >
 > ```bash
-> npx curbpack@0.5.2 scan   # or curbpack scan after install
+> curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+> curbpack scan
 > ```
 >
 > Not conformity assessment. We never see your repo.
@@ -20,12 +21,13 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 [Site](https://ri-se.github.io/curbpack/) (Pages at ri-se.github.io) · canonical repo [afelin/curbpack](https://github.com/afelin/curbpack) · mirror [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
-## Quickstart (one command)
+## Quickstart (install + scan)
 
-Inside any git repo — read-only, no install, no files written. Pin **`@v0.5.2`**.
+Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
 
 ```bash
-npx curbpack@0.5.2 scan
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curbpack scan
 ```
 
 Scan defaults to **`cra-baseline`** and prints the Art 14 reporting clock. When you want hooks and a daily score, use the full ladder below. Stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
@@ -37,13 +39,13 @@ Install when you want a local binary (Windows PowerShell · macOS/Linux curl): [
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Then the same ladder on every OS:

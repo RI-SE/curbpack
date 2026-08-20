@@ -394,7 +394,31 @@ jobs:
           if sh "$GITHUB_WORKSPACE/scripts/install.sh"; then
             export PATH="$INST:$PATH"
             curbpack doctor
-            # scan is workspace-only until next release ships curbpack scan (v0.5.2 has no scan)
+            INSTALLED_VER=$(curbpack version 2>/dev/null | awk '{print $2}' | sed 's/^/v/')
+            scan_ge_v053() {
+              python3 - "$1" <<'PY'
+          import sys
+          def parse(v):
+              v = v.lstrip('v')
+              return tuple(int(x) for x in v.split('.'))
+          cur = parse(sys.argv[1])
+          need = parse('0.5.3')
+          sys.exit(0 if cur >= need else 1)
+          PY
+            }
+            if scan_ge_v053 "${INSTALLED_VER:-v0.0.0}"; then
+              SCAN=$(mktemp -d)
+              cd "$SCAN"
+              git init -q
+              git config user.email "ci@curbpack.local"
+              git config user.name "CI"
+              git commit --allow-empty -m init -q
+              curbpack scan | grep -q 'Art 14 reporting clock'
+              test -z "$(git status --porcelain)"
+              cd -
+            else
+              echo "release ${INSTALLED_VER:-unknown} < v0.5.3 — scan smoke skipped (expected until tag)"
+            fi
             DEMO=$(mktemp -d)
             curbpack demo --out "$DEMO" --keep
             test -f "$DEMO/review-pack/buyer-onepager.html"

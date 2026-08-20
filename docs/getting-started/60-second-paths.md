@@ -4,15 +4,25 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Scan-first (cold repo, no init):** `npx curbpack@0.5.2 scan` — read-only; defaults to **`cra-baseline`** + Art 14 clock.  
+**Scan-first (cold repo, no init):** install from release **`v0.5.3`**, then `curbpack scan` — read-only; defaults to **`cra-baseline`** + Art 14 clock.  
 **Init / check cold default:** **`house-policy`** (via `curbpack init` or uninitialized `check`). CRA / medtech are opt-in via `--packs`. Pick **exactly one** first move for your audience.
 
 ## Scan-first (fastest)
 
-No install, no init — inside any git repo:
+Install once, then scan inside any git repo — **no init**, **no files written**:
+
+**macOS / Linux**
 
 ```bash
-npx curbpack@0.5.2 scan
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curbpack scan
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+curbpack scan
 ```
 
 Read-only diagnosis. Packs line shows `cra-baseline` on a cold tree. Use `curbpack fix --art14` → `init` → `check --score` when you are ready to write files.
@@ -31,18 +41,18 @@ Builders site: [Three ways in](../../site/for-builders/). Install hub: [install]
 
 ## Human — safe try
 
-Under ten minutes (pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
+Under ten minutes (install pin **`v0.5.3`**; Action pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Then:
@@ -104,8 +114,9 @@ Habit after first green: [daily loop](daily-loop.md). Optional share: [buyer evi
 
 | Flag / path | When |
 |-------------|------|
-| `npx curbpack@0.5.2 scan` | Read-only first contact; scan defaults to **cra-baseline** |
+| `curl …/v0.5.3/scripts/install.sh \| sh` then `curbpack scan` | Read-only first contact; scan defaults to **cra-baseline** |
 | `curbpack init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `curbpack init --packs a,b` | Override init default **house-policy** |
 | `curbpack init --workflow` | Opt-in drop-in Action `@v0.5.2` workflow if missing |
 | `curbpack demo --open` | Opt-in browser for the sandbox one-pager |
+| `npx curbpack` (deferred) | npm wrapper not on stranger path until PR5 ships |

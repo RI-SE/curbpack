@@ -29,20 +29,20 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 | Boundary | What you can trust | What you must not assume |
 |----------|--------------------|--------------------------|
 | Local `check` / `validate` | Deterministic gates on the files present | That a green score is a certificate |
-| `install.sh` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
-| `npm` wrapper (`npx curbpack`) | Same release asset + `checksums.txt` verify; lazy fetch to cache dir | That npm install alone attests to binary integrity without sha256 check |
+| `install.sh` / `install.ps1` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
+| `npm` wrapper (`npx curbpack`) | **Deferred** — same checksum path when PR5 ships; not the stranger install path today | That npm is required for first contact |
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
 | HPURL / proof page | Client-side compare of fragment `h=` to local pointer | Remote server verification or certification |
-| Optional sock IPC | Optional; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
+| Optional sock IPC | Optional MCP sidecar at `examples/mcp/`; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
 | Pack network update | Only when `CURBPACK_PACKS_URL` **and** `CURBPACK_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
 
 ## Install integrity
 
-Release installs (shell script, **npm wrapper**, and composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Prefer building from a known checkout when dogfooding this repo.
+Release installs (**`install.sh` / `install.ps1`** primary; composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Stranger path pins **`v0.5.3`** for `scan`. Prefer building from a known checkout when dogfooding this repo.
 
-**npm wrapper:** `npx curbpack` / `npm install -g curbpack` use a thin Node entrypoint. Default pin is **`v0.5.2`** from bundled `install-manifest.json` (not floating `latest` unless `CURBPACK_VERSION=latest`). No network `postinstall` — download runs on first exec. Cached path: `~/.curbpack/bin` (Unix) or `%LOCALAPPDATA%\curbpack` (Windows).
+**npm wrapper (deferred):** `npx curbpack` is not on the stranger path until PR5 publishes. When shipped, it will use the same checksum verify path as shell installers — not floating `latest` unless `CURBPACK_VERSION=latest`. No network `postinstall`.
 
-The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
+The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256. Action pin stays **`@v0.5.2`** until human tabletop approves bump.
 
 **Rejected: Action cache-as-written.** A proposed consumer `hashFiles('**/*.go')` cache key plus skipping checksum verify on cache hit is a trust regression. Keep fail-closed download + `checksums.txt` verify (or dogfood `go build`). Any future cache must key on version + expected sha256 and **re-verify** before exec — not land in this track.
 
@@ -56,7 +56,7 @@ Unsigned ≠ verified. A green readiness score and an unsigned capsule are compa
 
 ## Socket (optional integrator IPC)
 
-Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
+Optional Unix IPC for MCP integrators lives in [`examples/mcp/`](../../examples/mcp/) — not in the main binary. Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
 
 1. `CURBPACK_SOCK` if set
 2. `$XDG_RUNTIME_DIR/curbpack/curbpack.sock`

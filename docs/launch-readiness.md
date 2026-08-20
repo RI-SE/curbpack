@@ -3,14 +3,15 @@
 Public Apache-2.0 launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
-## Status (2026-08-12)
+## Status (2026-08-20)
 
 | Item | State |
 |------|--------|
 | CI on `main` | Includes `test` matrix (`ubuntu-latest`, `macos-latest`, `windows-latest`) + **`windows-smoke`** (`windows-latest`) + `smoke` / `gauntlet` / `redteam-pilot` |
 | Required checks on `main` | **Configured via API** — exact names below; `strict` (branches up to date) **on**; `enforce_admins` **on** |
 | SPDX | **Apache-2.0** |
-| Release pin | **`@v0.5.2`** — cut only after merge: [release-v0.5.2 playbook](getting-started/release-v0.5.2.md) |
+| Release pin | **`@v0.5.2`** Action / CI examples — cut only after merge: [release-v0.5.2 playbook](getting-started/release-v0.5.2.md) |
+| **v0.5.3 scan milestone** | **Pending human tag** — `scan` ships in branch CLI; stranger path = `install.sh`/`install.ps1` @ **v0.5.3** then `curbpack scan`; copy aligned in PR #73 stack; 3-OS smoke matrix after tag |
 | Trust freeze (v0.5.2) | **Distribution + UX + repair** (Windows exe, `install.ps1`, `doctor --repair`, dual-fence docs). **Trust track deferred** — no Action resolve / SafeJoin / attest OCC / explain-airlock rewrite |
 | Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
 | Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to Curbpack](https://github.com/afelin/curbpack/discussions/4) |
@@ -114,8 +115,8 @@ Welcome thread: https://github.com/afelin/curbpack/discussions/4
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
-> Try (read-only): `npx curbpack@0.5.2 scan`  
-> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
+> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh && curbpack scan`  
+> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh && curbpack doctor && curbpack demo`
 >
 > Tester reports: use the **Tester report** issue template.
 
