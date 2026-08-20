@@ -1,17 +1,17 @@
 #!/bin/sh
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
 # Usage: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
-# Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.2), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
+# Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.3), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
 # Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).
 # Atomic: download → checksum → temp → replace. Writes install-marker.json.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" 2>/dev/null && pwd || true)
-MANIFEST_DEFAULT="v0.5.2"
+MANIFEST_DEFAULT="v0.5.3"
 if [ -n "${SCRIPT_DIR:-}" ] && [ -f "${SCRIPT_DIR}/install-manifest.json" ]; then
   MANIFEST_DEFAULT=$(sed -n 's/.*"default_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${SCRIPT_DIR}/install-manifest.json" | head -n 1)
-  [ -n "$MANIFEST_DEFAULT" ] || MANIFEST_DEFAULT="v0.5.2"
+  [ -n "$MANIFEST_DEFAULT" ] || MANIFEST_DEFAULT="v0.5.3"
 fi
 
 # Dual-read: CURBPACK_* preferred; CYBERREADY_* accepted during cutover.
