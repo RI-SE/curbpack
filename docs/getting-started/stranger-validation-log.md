@@ -5,9 +5,15 @@
 **Install (send verbatim):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
+```
+
+Pinned tag install (if you must use `v0.5.3` script URL — tag script lacks manifest sibling):
+
+```bash
+CURBPACK_VERSION=v0.5.3 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Windows (PowerShell):

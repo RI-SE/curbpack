@@ -11,7 +11,7 @@
   Repair mode (-Repair) is local-only: re-asserts PATH + alias; never downloads.
 
 .PARAMETER Version
-  Release tag (default from install-manifest.json / v0.5.2). Use 'latest' for newest.
+  Release tag (default from install-manifest.json / v0.5.3). Use 'latest' for newest.
 
 .PARAMETER InstallDir
   Default: $env:LOCALAPPDATA\Programs\Curbpack
@@ -42,7 +42,7 @@ function Get-DefaultVersion {
       if ($j.default_version) { return [string]$j.default_version }
     } catch {}
   }
-  return "v0.5.2"
+  return "v0.5.3"
 }
 
 function Get-InstallDir {
