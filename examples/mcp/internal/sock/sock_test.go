@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afelin/curbpack/internal/sock"
+	"github.com/afelin/curbpack/examples/mcp/internal/sock"
 )
 
 func TestValidateDeltaIPC(t *testing.T) {
@@ -170,7 +170,6 @@ func TestRefuseWorldWritableParent(t *testing.T) {
 	if err := os.MkdirAll(bad, 0o777); err != nil {
 		t.Fatal(err)
 	}
-	// Some filesystems ignore sticky/umask — force world-writable.
 	_ = os.Chmod(bad, 0o777)
 	sockPath := filepath.Join(bad, "curbpack.sock")
 	err := sock.Serve(sockPath, dir)

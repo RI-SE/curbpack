@@ -1,18 +1,28 @@
 # Curbpack thin MCP (example)
 
-Stdio MCP server that **shells out** to PATH `curbpack` (or `CURBPACK_BIN`). Optional `CURBPACK_SOCK` for `explain_packet` / `validate_delta` only — **no new sock ops**.
+Stdio MCP server that **shells out** to PATH `curbpack` (or `CURBPACK_BIN`). **CLI-only by default** — optional sock when `CURBPACK_SOCK` is set and a sidecar is running.
 
 Structural evidence for human review — **not** a conformity assessment or certification. CLI exit codes remain source of truth.
+
+**Sock (optional, Unix):** removed from the main binary per SDD §14. Reference server: [`cmd/curbpack-sock`](cmd/curbpack-sock/main.go) + [`internal/sock`](internal/sock/sock.go). Client dial: [`internal/sockclient`](internal/sockclient/client.go). MCP may use sock for `explain_packet` / `validate_delta` when `CURBPACK_SOCK` is set; otherwise CLI.
 
 ## Build
 
 ```bash
 go build -o curbpack-mcp ./examples/mcp
-# or from repo root while developing:
+go build -o curbpack-sock ./examples/mcp/cmd/curbpack-sock   # optional sidecar (Unix)
 go run ./examples/mcp
 ```
 
 Requires `curbpack` on `PATH` (fail-open message if missing — never blocks promote).
+
+### Optional sock sidecar (Unix integrators)
+
+```bash
+go build -o curbpack-sock ./examples/mcp/cmd/curbpack-sock
+./curbpack-sock --repo /path/to/product
+export CURBPACK_SOCK="$XDG_RUNTIME_DIR/curbpack/curbpack.sock"   # or --path
+```
 
 ## Tools
 
@@ -21,8 +31,8 @@ Requires `curbpack` on `PATH` (fail-open message if missing — never blocks pro
 | `curbpack_check` | `curbpack check` (`heal` / `packs` args) |
 | `curbpack_context_pack` | `export --context-pack` |
 | `curbpack_ask_propose` | `ask … --propose` |
-| `curbpack_explain_packet` | `export --explain-packet` or sock `explain_packet` |
-| `curbpack_validate_delta` | sock `validate_delta` or `validate --json` |
+| `curbpack_explain_packet` | sock `explain_packet` if `CURBPACK_SOCK` set, else `export --explain-packet` |
+| `curbpack_validate_delta` | sock `validate_delta` if set, else `validate --json` |
 
 ## Claude Desktop
 

@@ -2,7 +2,40 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
+Design intent: [docs/software-design-document.md](docs/software-design-document.md). Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
+
+## Loop (opens read-only)
+
+An agent's first action never mutates the repository.
+
+```bash
+curbpack scan              # read-only diagnosis — no init, no hooks, no score
+# optional: curbpack fix --<gap>   # one templated file; diff shown; human confirm
+curbpack init              # when ready — house-policy default
+curbpack check             # exit code authoritative
+# red: curbpack check --heal && curbpack ask .github/curbpack/cache/latest_failure.json --propose
+# green: curbpack ask-my-suppliers  # durable buyer checklist + pack draft
+# optional pathway sidecar (never gates check):
+curbpack pathway status    # human next ask by default (--technical for phase path)
+# optional research sidecar (never gates check): curbpack research [--fetch] [--gate-id=…]
+```
+
+Pathway/research/dual-draft flows remain valid for warm-start users — see [assistant-loop.md](docs/assistant-loop.md). When both apply, **scan before init/check**.
+
+## Human-only acts
+
+Enumerated. Gate: explicit human confirmation flag or environment variable. A TTY alone is not sufficient.
+
+```
+trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
+```
+
+- **trust-import** — `curbpack packs trust import` (not built yet; contract-only until Wave B).
+- **review-sign** — pack reviewer attestation signatures.
+- **Last tabletop:** — badge reads this field only; agents must not fill it.
+- **confirm-*** — `pathway confirm-packs|confirm-prose|confirm-share` with `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`.
+- **attest** — human capsule after review; never auto-attest.
+- **pin-bump** — Action/examples pin stays **`@v0.5.2`** until human approves bump.
 
 ## Rules (short)
 
@@ -15,6 +48,7 @@ Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pat
 7. **Research (optional sidecar):** `curbpack research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every factual assertion needs a repo artifact (path, config, test name, commit, metric, claim id) or an allowlisted cite (`[^src-N]` / `<!-- cite:src-N -->` / allowlisted URL). Heal stubs are not grounding. `confirm-prose` is AND: every displayed prose path must be independent (mixed stub+real still refuses). Run `curbpack research --cite-check <draft.md>` before asking a human for `confirm-prose` (confirm-prose also refuse-ungrounded). On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
 9. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
+10. **Claim discipline:** an artifact must never assert something the tool caused — see [docs/claim-discipline.md](docs/claim-discipline.md).
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
 

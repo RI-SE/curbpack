@@ -2,29 +2,7 @@
 
 Schema consumers (Action, tutors, agents) may rely on these shapes. Breaking changes require a **major pin bump** + CHANGELOG entry. Additive fields are OK.
 
-Code cites: [`internal/sock/sock.go`](../internal/sock/sock.go) · [`internal/exportx/explain.go`](../internal/exportx/explain.go) · [`internal/ir/`](../internal/ir/).
-
-## Sock ops
-
-Four ops only. Listen banner lists them: `validate_delta`, `get_latest_failure`, `graph_summary`, `explain_packet`.
-
-**Unix-only.** `curbpack sock` is optional Coreward IPC on macOS/Linux. On Windows it returns a clear error and exits non-zero. The golden path (`doctor` → `demo` → `init` → `check` → `share`) never depends on sock.
-
-| Op | Semantics |
-|----|-----------|
-| `validate_delta` (default if `op` omitted) | Quiet validate; GateFailure-shaped response (`ok`, `failures`, `payload`, `detail`) |
-| `get_latest_failure` | Read `.github/curbpack/cache/latest_failure.json` without re-running gates |
-| `graph_summary` | Paths-only RKG stats from `policy-graph.json` (builds if missing) |
-| `explain_packet` | Sanitized teach packet; body wrapped in `<untrusted_metadata>…</untrusted_metadata>` |
-
-### Fail-open reasons (client / missing server)
-
-| Reason | When |
-|--------|------|
-| `not_installed` | Client has no `CURBPACK_SOCK` / Curbpack absent — never block promote |
-| `unavailable` | Sock set but connect fails, invalid JSON, unsupported op, or op-level error |
-
-Unsupported `op` → `{ ok: false, reason: "unavailable", detail: "unsupported op: …" }`.
+Code cites: [`internal/exportx/explain.go`](../internal/exportx/explain.go) · [`internal/ir/`](../internal/ir/).
 
 ## Install marker + repair (local-only)
 
@@ -46,7 +24,7 @@ Invariants consumers and CI enforce:
 - No absolute home paths (`/Users/…`, `/home/…`, `C:\Users\…`)
 - No PEM blobs
 - `untrusted_metadata` field contains literal `<untrusted_metadata>…</untrusted_metadata>`
-- Packet **never** greenlights — tutors must re-run `validate_delta` / `curbpack check` before any “fixed” claim
+- Packet **never** greenlights — tutors must re-run `curbpack check` before any “fixed” claim
 - Cloud export only when `CURBPACK_EXPLAIN_ALLOW_CLOUD=1` (default `0`)
 
 ## GateFailure / dual-rep IR
@@ -70,17 +48,14 @@ Consumers may rely on (`schema_version` = `"1"`):
 - `failed_orthogonal_regions` — pack-eval / rule regions only (unchanged). Pathway ticks are parent path, not fake pack regions.
 - Pathway seed is **not** a check pass/fail input; exit code still comes from gate failures only.
 
-Sock `Response` also exposes top-level `ok`, `reason`, `detail`, `failures`, `payload`, optional `graph`, optional `explain_packet`.
-
 ## Instrument cache path
 
 `.github/curbpack/cache/instrument.json` — additive, best-effort Δ map beside IR cache. Missing/corrupt → treat as absent; never a gate.
 
 ## Compatibility rule
 
-- **Breaking** (rename/remove sock op, drop IR field, weaken airlock) → major pin bump + CHANGELOG.
+- **Breaking** (drop IR field, weaken airlock) → major pin bump + CHANGELOG.
 - **Additive** fields / optional ops documentation updates → OK within `@v0.5.x` after freeze review if needed.
-- New sock `case` without updating **this file** fails `redteam-pilot` (stable-contracts guard).
 
 ## Drift report (`curbpack drift`)
 
@@ -93,6 +68,16 @@ Informational only — **exit code always 0**. No boolean `aligned` / `no_drift`
 | `suggested_actions[]` | Optional human hint strings |
 
 New signal IDs (`docs_unchanged_since_attest`, `docs_changed_since_attest`, optional `contact_expires_past` / `contact_missing`) are additive rows. No boolean `aligned` / `no_drift` / `pass` / `green`. Cache-only fingerprint compare for `share_stale` — never runs `validate.Run` in the default path.
+
+## Optional sock IPC (example only)
+
+The main `curbpack` binary does **not** ship a `sock` verb (SDD §14). Integrators who need Unix IPC build the example server:
+
+- Server: `examples/mcp/cmd/curbpack-sock` → `examples/mcp/internal/sock/`
+- MCP client fallback: `examples/mcp/internal/sockclient/` when `CURBPACK_SOCK` is set
+- Golden path for agents and MCP: shell out to `curbpack` CLI
+
+Frozen ops (unchanged): `validate_delta`, `get_latest_failure`, `graph_summary`, `explain_packet`. See [coreward-bridge.md](coreward-bridge.md).
 
 ## Share bundle
 

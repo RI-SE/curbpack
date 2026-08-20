@@ -3,17 +3,17 @@
 One Curbpack product for **Windows, macOS, and Linux**. Same golden path after install:
 
 ```text
-install → doctor → demo [--open] → init → check → share [--bundle] → (human) attest
+install → doctor → demo [--open] → scan → init → check → share [--bundle] → (human) attest
 # after OS update / PATH loss:
 doctor → doctor --repair → full reinstall only if binary missing
 ```
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Pin:** `@v0.5.2` / install default from [`scripts/install-manifest.json`](../../scripts/install-manifest.json).  
-**Action:** GitHub Action runners are **Linux/macOS only** in v0.5.2 — local Windows CLI is supported.  
-**Sock:** optional Coreward Unix IPC — **Unix-only**; golden path never requires it.  
-**Deferred:** winget, windows/arm64, pwsh completion.
+**Install pin:** **`v0.5.3`** in examples below (stranger path). Manifest default until tag: [`scripts/install-manifest.json`](../../scripts/install-manifest.json).  
+**Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump. Local Windows CLI is supported.  
+**MCP sidecar:** optional Unix IPC example at [`examples/mcp/`](../../examples/mcp/) — golden path never requires it.  
+**Deferred:** npm publish, winget, windows/arm64, pwsh completion.
 
 Stuck? [Troubleshooting](troubleshooting.md).
 
@@ -21,12 +21,34 @@ Stuck? [Troubleshooting](troubleshooting.md).
 
 ## Three ladders × both OS families
 
+### Ladder 0 — Read-only scan (install + scan)
+
+Inside any git repository — **no init**, **no files written**. Requires **`v0.5.3`** or newer (earlier releases do not ship `scan`).
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+cd /path/to/your/git/repo
+curbpack scan
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+cd C:\path\to\your\git\repo
+curbpack scan
+```
+
+Shows open gate signals against the CRA-shaped default pack (`cra-baseline`), Art 14 reporting clock, and product hint. Not conformity assessment. See also: [Art 14 reporting vs handling](art14-reporting-vs-handling.md) (campaign page ships separately).
+
 ### Ladder 1 — Download + run installer (recommended)
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh
+curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh
 sh /tmp/curbpack-install.sh
 curbpack doctor
 ```
@@ -34,7 +56,7 @@ curbpack doctor
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
 powershell -ExecutionPolicy Bypass -File $env:TEMP\curbpack-install.ps1
 curbpack doctor
 ```
@@ -44,13 +66,13 @@ curbpack doctor
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 ```
 
 If ExecutionPolicy blocks scripts, use Ladder 1 with `-ExecutionPolicy Bypass`, or:
@@ -61,7 +83,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ### Ladder 3 — Manual binary + checksums
 
-1. Open the release for pin **`v0.5.2`**: https://github.com/afelin/curbpack/releases/tag/v0.5.2  
+1. Open the release for pin **`v0.5.3`**: https://github.com/afelin/curbpack/releases/tag/v0.5.3  
 2. Download the asset for your OS from the manifest (`curbpack_darwin_*`, `curbpack_linux_*`, or `curbpack_windows_amd64.exe`) **and** `checksums.txt`.  
 3. Verify sha256 (fail closed if mismatch).  
 4. Place the binary on PATH (`~/.local/bin` or `%LOCALAPPDATA%\Programs\Curbpack`).  
@@ -128,5 +150,5 @@ Re-asserts install dir on PATH + refreshes `curb` alias. **No network.** Exit **
 
 ## Next
 
-`curbpack doctor` → `curbpack demo` → product repo `init` → `check` → `share`.  
+`curbpack doctor` → `curbpack demo` → product repo `scan` → `init` → `check` → `share`.  
 Audience paths: [60-second paths](60-second-paths.md).

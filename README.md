@@ -1,28 +1,51 @@
 # Curbpack
 
+> **Canonical source:** [afelin/curbpack](https://github.com/afelin/curbpack) — module path, releases, GitHub Action.  
+> **RISE mirror:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — read-only mirror of `main`, maintained by RISE. Development supported by RISE; RISE does not certify products that use Curbpack gate results.
+
 [![ci](https://github.com/afelin/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+> Article 14 reporting starts **11 September 2026**. Install once, then scan — writes nothing:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+> curbpack scan
+> ```
+>
+> Not conformity assessment. We never see your repo.
 
 Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://ri-se.github.io/curbpack/) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Docs index](docs/README.md)
+[Site](https://ri-se.github.io/curbpack/) (Pages at ri-se.github.io) · canonical repo [afelin/curbpack](https://github.com/afelin/curbpack) · mirror [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
-## Quickstart
+## Quickstart (install + scan)
 
-Install, **scan your repo read-only**, draft Art 14, **share** — then init when you want hooks. Pin **`@v0.5.2`**. Full ladders: [install](docs/getting-started/install.md) · stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curbpack scan
+```
+
+Scan defaults to **`cra-baseline`** and prints the Art 14 reporting clock. When you want hooks and a daily score, use the full ladder below. Stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+
+## Full ladder (below)
+
+Install when you want a local binary (Windows PowerShell · macOS/Linux curl): [install](docs/getting-started/install.md). After install, `curb` is a short alias for `curbpack`.
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Then the same ladder on every OS:
@@ -45,17 +68,7 @@ curbpack attest
 
 ## Three ways in
 
-Every path ends in the same local `check`. Pick one:
-
-| Way | You do | Outcome |
-|-----|--------|---------|
-| **Write→Check** | Build **curb outlines (your pathway sketch)** → confirm packs → optional dual drafts + cite-check → check | House prose drafted with human picks before gates run |
-| **Bring-docs→Check** | Place existing policies on pack paths, then check | **Skips curb outlines.** Files in the repo only—no portal PDF ingest |
-| **CI** | Run `check` in GitHub Actions or locally | **Skips curb outlines.** Same gates, automated |
-
-Write path: after you confirm packs, Curbpack builds a **local pack→rule map** that steers drafting—not a legal oracle. Mnemonic: *Curb outlines → packs → check → hand off.*
-
-Depth: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway guide](docs/getting-started/pathway.md)
+Every path ends in the same local `check`. Write adds optional pathway drafts first; Bring and CI skip outlines. Full table and ladders: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway guide](docs/getting-started/pathway.md).
 
 ## What you get
 
@@ -152,7 +165,6 @@ Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone
 | `pathway confirm-*` | Human only — `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` |
 | `research [--fetch]\|--cite-check` | Allowlisted citation packet + human brief — never gates check |
 | `completion bash\|zsh\|fish` | Print shell completions |
-| `sock` | Optional Unix IPC for integrators (continues if unused) |
 | `init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/curbpack.yml` if missing |

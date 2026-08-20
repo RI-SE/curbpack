@@ -104,11 +104,6 @@ func Run(opts Options) (Result, error) {
 		}
 	}
 
-	// Built-in AST reachability (MVP lift) — only if file exists
-	if !opts.DiffOnly || pathChanged(changed, "src/payment.go") {
-		failures = append(failures, auditASTReachability(root)...)
-	}
-
 	score := tty.ScoreFromFailures(len(failures))
 	parent, err := gitutil.HeadSHA(root)
 	if err != nil {
@@ -245,6 +240,51 @@ func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
 	return nil
 }
 
+func checkFresh(root string, rule packs.Rule) []ir.Failure {
+	if fs := checkFilePresent(root, rule); len(fs) > 0 {
+		return fs
+	}
+	rel := filepath.ToSlash(rule.Path)
+	if rule.MaxAgeDays > 0 {
+		meta, err := gitutil.FileLastCommit(root, rel)
+		if err != nil {
+			return []ir.Failure{failFromRule(rule, rel, "fresh: "+err.Error())}
+		}
+		age := time.Since(meta.Time)
+		if age > time.Duration(rule.MaxAgeDays)*24*time.Hour {
+			return []ir.Failure{failFromRule(rule, rel, fmt.Sprintf("fresh: last commit %s older than %d days", meta.Time.Format(time.RFC3339), rule.MaxAgeDays))}
+		}
+	}
+	if ref := strings.TrimSpace(rule.SinceRef); ref != "" {
+		ok, err := gitutil.FileTouchedSinceRef(root, ref, rel)
+		if err != nil {
+			return []ir.Failure{failFromRule(rule, rel, "fresh since_ref: "+err.Error())}
+		}
+		if !ok {
+			return []ir.Failure{failFromRule(rule, rel, "fresh: no commit since "+ref)}
+		}
+	}
+	return nil
+}
+
+func checkOwned(root string, rule packs.Rule) []ir.Failure {
+	if fs := checkFilePresent(root, rule); len(fs) > 0 {
+		return fs
+	}
+	rel := filepath.ToSlash(rule.Path)
+	meta, err := gitutil.FileLastCommit(root, rel)
+	if err != nil {
+		return []ir.Failure{failFromRule(rule, rel, "owned: "+err.Error())}
+	}
+	if want := strings.TrimSpace(rule.RequireGitAuthorEmail); want != "" && !strings.EqualFold(meta.Email, want) {
+		return []ir.Failure{failFromRule(rule, rel, fmt.Sprintf("owned: last commit author email %q want %q", meta.Email, want))}
+	}
+	if want := strings.TrimSpace(rule.RequireGitAuthorName); want != "" && meta.Name != want {
+		return []ir.Failure{failFromRule(rule, rel, fmt.Sprintf("owned: last commit author name %q want %q", meta.Name, want))}
+	}
+	return nil
+}
+
 func wordCount(s string) int {
 	n := 0
 	in := false
@@ -314,31 +354,11 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 		if len(data) > packs.MaxRegexMatchBytes {
 			data = data[:packs.MaxRegexMatchBytes]
 		}
-		matched, timedOut := matchWithTimeout(re, data, 50*time.Millisecond)
-		if timedOut {
-			out = append(out, failFromRule(rule, clean, "pattern match timed out (ReDoS guard)"))
-			continue
-		}
-		if matched {
+		if re.Match(data) {
 			out = append(out, failFromRule(rule, clean, "forbidden pattern matched"))
 		}
 	}
 	return out
-}
-
-// matchWithTimeout runs re.Match with a soft timeout via goroutine.
-// On timeout returns timedOut=true (treat as failure, not silent pass).
-func matchWithTimeout(re *regexp.Regexp, data []byte, timeout time.Duration) (matched, timedOut bool) {
-	done := make(chan bool, 1)
-	go func() {
-		done <- re.Match(data)
-	}()
-	select {
-	case m := <-done:
-		return m, false
-	case <-time.After(timeout):
-		return false, true
-	}
 }
 
 func checkNPMDepBan(root string, rule packs.Rule) []ir.Failure {
@@ -399,7 +419,7 @@ func failFromRule(rule packs.Rule, file, detail string) ir.Failure {
 	}
 }
 
-func auditASTReachability(gitRoot string) []ir.Failure {
+func auditASTReachability(gitRoot string, rule packs.Rule) []ir.Failure {
 	targetFile := filepath.Join(gitRoot, "src", "payment.go")
 	if _, err := os.Stat(targetFile); os.IsNotExist(err) {
 		return nil
@@ -434,22 +454,11 @@ func auditASTReachability(gitRoot string) []ir.Failure {
 	if !found {
 		return nil
 	}
-	return []ir.Failure{{
-		GateID:               "CR-AST-01",
-		Severity:             "high",
-		Type:                 "POLICY_VIOLATION",
-		SanitizedDescription: "Unsafe direct execution of vulnerable module detected via AST Inspector.",
-		ASTCoordinates: ir.ASTCoordinates{
-			TargetFile:    "src/payment.go",
-			NodePath:      "CallExpr.SelectorExpr[axios.Post]",
-			TargetSymbol:  "axios.Post",
-			FallbackLines: fmt.Sprintf("Line %d", nodePos.Line),
-		},
-		Remediation: ir.Remediation{
-			ActionRequired: "Route calls through validated wrapper function in 'safe_http.go'.",
-			ExpectedState:  "No direct unmitigated function calls found in AST.",
-		},
-	}}
+	f := failFromRule(rule, "src/payment.go", "direct axios.Post call detected via AST inspector")
+	f.ASTCoordinates.NodePath = "CallExpr.SelectorExpr[axios.Post]"
+	f.ASTCoordinates.TargetSymbol = "axios.Post"
+	f.ASTCoordinates.FallbackLines = fmt.Sprintf("Line %d", nodePos.Line)
+	return []ir.Failure{f}
 }
 
 func unique(in []string) []string {

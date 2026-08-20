@@ -9,7 +9,7 @@ import (
 var completionCommands = []string{
 	"help", "version", "doctor", "demo", "scan", "fix",
 	"init", "check", "validate", "ask-my-suppliers",
-	"prepare-release", "packs", "ask", "attest", "view", "sock",
+	"prepare-release", "packs", "ask", "attest", "view",
 	"export", "share", "pathway", "research", "drift", "completion",
 }
 

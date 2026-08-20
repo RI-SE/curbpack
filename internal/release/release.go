@@ -13,7 +13,6 @@ import (
 	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
-	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release/templates"
 	"github.com/afelin/curbpack/internal/research"
@@ -151,24 +150,6 @@ func Prepare(opts Options) error {
 func jsonString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
-}
-
-// writeIfChanged writes data only when missing or content hash differs. Returns true if written.
-func writeIfChanged(path string, data []byte) (bool, error) {
-	want := sha256.Sum256(data)
-	if prev, err := os.ReadFile(path); err == nil {
-		got := sha256.Sum256(prev)
-		if want == got {
-			return false, nil
-		}
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, err
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 // writeOnePagerIfChanged skips rewrite when the stable gate fingerprint matches
@@ -499,35 +480,6 @@ func truncateSHA(s string) string {
 	return s
 }
 
-type attestInfo struct {
-	Line         string
-	Class        string
-	UnsignedLoud bool
-	Commit       string
-	StateHash    string
-	Signer       string
-	UserTouch    string
-	SBOMDigest   string
-	VEXDigest    string
-}
-
-// loadAttestInfo reads LatestBind for buyer-facing provenance.
-func loadAttestInfo(root string) attestInfo {
-	bind, _ := attest.LatestBind(root)
-	line, class, unsignedLoud := attest.AttestDisplay(bind)
-	return attestInfo{
-		Line:         line,
-		Class:        class,
-		UnsignedLoud: unsignedLoud,
-		Commit:       bind.CommitSHA,
-		StateHash:    bind.StateHash,
-		Signer:       bind.Signer,
-		UserTouch:    bind.UserTouch,
-		SBOMDigest:   bind.SBOMDigest,
-		VEXDigest:    bind.VEXDigest,
-	}
-}
-
 // ProofPageHTML delegates to templates package.
 func ProofPageHTML() string {
 	return templates.ProofPageHTML()
@@ -571,6 +523,3 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 	}
 	return out, nil
 }
-
-// Unused import guard for ir in case of refactors
-var _ = ir.Failure{}

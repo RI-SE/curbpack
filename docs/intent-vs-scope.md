@@ -28,7 +28,7 @@ repo → Curbpack (gates, packs, attest)
    human judgment (attest when ready)
 ```
 
-Curbpack decides pass/fail. Optional chat tutors (any local or operator-chosen assistant) may draft prose from a sanitized explain-packet — they never greenlight gates and never write attest capsules. After any proposed fix you must re-check (`curbpack check`). Recorded loop: [`scripts/dogfood-explain-recheck.sh`](../scripts/dogfood-explain-recheck.sh).
+Curbpack decides pass/fail. Optional chat tutors (any local or operator-chosen assistant) may draft prose from a sanitized explain-packet — they never greenlight gates and never write attest capsules. After any proposed fix you must re-check (`curbpack check`). Optional sock sidecar: [`examples/mcp/README.md`](../examples/mcp/README.md).
 
 ## Agentic coding: evidence habit / not AI security product
 

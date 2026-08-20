@@ -234,6 +234,31 @@ func parseExportFlags(args []string) (exportFlags, error) {
 	return f, nil
 }
 
+type askMySuppliersFlags struct {
+	packIDs    []string
+	out        string
+	stdoutOnly bool
+}
+
+func parseAskMySuppliersFlags(args []string) (askMySuppliersFlags, error) {
+	fs := newCommandFlagSet("ask-my-suppliers")
+	var f askMySuppliersFlags
+	var packsFlag string
+	fs.BoolVar(&f.stdoutOnly, "stdout-only", false, "")
+	fs.StringVar(&f.out, "out", "", "")
+	fs.StringVar(&packsFlag, "packs", "", "")
+	if err := fs.Parse(args); err != nil {
+		return f, flagUsageErr("ask-my-suppliers", err.Error())
+	}
+	if fs.NArg() > 0 {
+		return f, usageErr(fmt.Sprintf("ask-my-suppliers: unknown argument %q", fs.Arg(0)))
+	}
+	if packsFlag != "" {
+		f.packIDs = config.ParsePacksFlag(packsFlag)
+	}
+	return f, nil
+}
+
 type askFlags struct{ path string; propose bool }
 
 func parseAskFlags(args []string) (askFlags, error) {
@@ -276,22 +301,6 @@ func parseAttestFlags(args []string) (attestFlags, error) {
 	return f, nil
 }
 
-type sockFlags struct{ path, root string }
-
-func parseSockFlags(args []string) (sockFlags, error) {
-	fs := newCommandFlagSet("sock")
-	var f sockFlags
-	fs.StringVar(&f.path, "path", "", "")
-	fs.StringVar(&f.root, "repo", "", "")
-	if err := fs.Parse(args); err != nil {
-		return f, flagUsageErr("sock", err.Error())
-	}
-	if fs.NArg() > 0 {
-		return f, usageErr(fmt.Sprintf("sock: unknown argument %q", fs.Arg(0)))
-	}
-	return f, nil
-}
-
 type shareFlags struct {
 	packIDs                   []string
 	skipPrepare, wantBundle, wantReveal bool
@@ -313,6 +322,38 @@ func parseShareFlags(args []string) (shareFlags, error) {
 	}
 	if fs.NArg() > 0 {
 		return f, usageErr(fmt.Sprintf("share: unknown argument %q", fs.Arg(0)))
+	}
+	return f, nil
+}
+
+type scanFlags struct {
+	packIDs        []string
+	badge          bool
+	formatMarkdown bool
+}
+
+func parseScanFlags(args []string) (scanFlags, error) {
+	fs := newCommandFlagSet("scan")
+	var f scanFlags
+	var packsFlag, format string
+	fs.StringVar(&packsFlag, "packs", "", "")
+	fs.BoolVar(&f.badge, "badge", false, "")
+	fs.StringVar(&format, "format", "", "")
+	if err := fs.Parse(args); err != nil {
+		return f, flagUsageErr("scan", err.Error())
+	}
+	if fs.NArg() > 0 {
+		return f, usageErr(fmt.Sprintf("scan: unknown argument %q", fs.Arg(0)))
+	}
+	if packsFlag != "" {
+		f.packIDs = config.ParsePacksFlag(packsFlag)
+	}
+	switch format {
+	case "":
+	case "markdown":
+		f.formatMarkdown = true
+	default:
+		return f, usageErr(fmt.Sprintf("scan: unknown --format %q (use markdown)", format))
 	}
 	return f, nil
 }

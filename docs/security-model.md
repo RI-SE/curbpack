@@ -16,9 +16,9 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 ### Pilot deploy + freeze
 
-- Grade: `./scripts/redteam-pilot.sh` must be green (**18/18** cases).
+- Grade: `./scripts/redteam-pilot.sh` must be green (**13/13** cases).
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
-- Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, packs SHA256 pin, demo `--out` jail.
+- Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, forged attest note, tampered cache, symlink escape, packs SHA256 pin, demo `--out` jail.
 - Pin: Action/consumers use `@v0.5.2` (prefer tag + commit SHA).
 - **30-day trust-surface freeze continues from `v0.4.0` through `v0.5.0`** (`v0.5.0` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
 - Stakeholder gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
@@ -29,17 +29,20 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 | Boundary | What you can trust | What you must not assume |
 |----------|--------------------|--------------------------|
 | Local `check` / `validate` | Deterministic gates on the files present | That a green score is a certificate |
-| `install.sh` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
+| `install.sh` / `install.ps1` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
+| `npm` wrapper (`npx curbpack`) | **Deferred** — same checksum path when PR5 ships; not the stranger install path today | That npm is required for first contact |
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
 | HPURL / proof page | Client-side compare of fragment `h=` to local pointer | Remote server verification or certification |
-| Optional sock IPC | Optional; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
+| Optional sock IPC | Optional MCP sidecar at `examples/mcp/`; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
 | Pack network update | Only when `CURBPACK_PACKS_URL` **and** `CURBPACK_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
 
 ## Install integrity
 
-Release installs (shell script and composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Prefer building from a known checkout when dogfooding this repo.
+Release installs (**`install.sh` / `install.ps1`** primary; composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Stranger path pins **`v0.5.3`** for `scan`. Prefer building from a known checkout when dogfooding this repo.
 
-The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256.
+**npm wrapper (deferred):** `npx curbpack` is not on the stranger path until PR5 publishes. When shipped, it will use the same checksum verify path as shell installers — not floating `latest` unless `CURBPACK_VERSION=latest`. No network `postinstall`.
+
+The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256. Action pin stays **`@v0.5.2`** until human tabletop approves bump.
 
 **Rejected: Action cache-as-written.** A proposed consumer `hashFiles('**/*.go')` cache key plus skipping checksum verify on cache hit is a trust regression. Keep fail-closed download + `checksums.txt` verify (or dogfood `go build`). Any future cache must key on version + expected sha256 and **re-verify** before exec — not land in this track.
 
@@ -53,7 +56,7 @@ Unsigned ≠ verified. A green readiness score and an unsigned capsule are compa
 
 ## Socket (optional integrator IPC)
 
-Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
+Optional Unix IPC for MCP integrators lives in [`examples/mcp/`](../../examples/mcp/) — not in the main binary. Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
 
 1. `CURBPACK_SOCK` if set
 2. `$XDG_RUNTIME_DIR/curbpack/curbpack.sock`

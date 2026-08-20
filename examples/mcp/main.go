@@ -1,5 +1,5 @@
 // Command curbpack-mcp is a thin MCP stdio server that shells out to PATH `curbpack`.
-// Optional CURBPACK_SOCK enables sock-backed tools; no new sock ops.
+// Optional CURBPACK_SOCK enables sock-backed tools via examples/mcp/internal/sockclient.
 // Claim-safe: tools never certify conformity.
 package main
 
@@ -10,12 +10,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/afelin/curbpack/examples/mcp/internal/sockclient"
 	"github.com/afelin/curbpack/internal/paths"
 )
 
@@ -187,7 +188,7 @@ func callTool(name string, args map[string]any) (string, bool) {
 		return runCLI(bin, []string{"ask", path, "--propose"})
 	case "curbpack_explain_packet":
 		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
-			if body, serr := sockOp(sock, "explain_packet", nil); serr == nil {
+			if body, serr := sockclient.Op(sock, "explain_packet", nil); serr == nil {
 				return body, false
 			}
 		}
@@ -198,7 +199,7 @@ func callTool(name string, args map[string]any) (string, bool) {
 		return runCLI(bin, argv)
 	case "curbpack_validate_delta":
 		if sock := strings.TrimSpace(paths.Env("SOCK")); sock != "" {
-			if body, serr := sockOp(sock, "validate_delta", nil); serr == nil {
+			if body, serr := sockclient.Op(sock, "validate_delta", nil); serr == nil {
 				return body, false
 			}
 		}
@@ -236,28 +237,6 @@ func runCLI(bin string, argv []string) (string, bool) {
 		return out + "\n" + err.Error() + disclaimer, true
 	}
 	return out + disclaimer, false
-}
-
-func sockOp(sockPath, op string, payload any) (string, error) {
-	conn, err := net.DialTimeout("unix", sockPath, 2*time.Second)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(60 * time.Second))
-	req := map[string]any{"op": op}
-	if payload != nil {
-		req["payload"] = payload
-	}
-	b, _ := json.Marshal(req)
-	if _, err := conn.Write(append(b, '\n')); err != nil {
-		return "", err
-	}
-	resp, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil && err != io.EOF {
-		return "", err
-	}
-	return string(bytes.TrimSpace(resp)), nil
 }
 
 func strArg(args map[string]any, k string) string {

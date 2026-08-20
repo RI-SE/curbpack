@@ -1,3 +1,5 @@
+// Package sock is optional Unix-only Coreward IPC for the MCP example.
+// The main curbpack binary does not ship sock; golden path is CLI shell-out.
 package sock
 
 import (
@@ -19,8 +21,7 @@ import (
 )
 
 // ErrWindowsUnsupported is returned when sock is requested on Windows.
-// Sock is optional Unix-only Coreward IPC; the golden path never requires it.
-var ErrWindowsUnsupported = fmt.Errorf("curbpack sock is Unix-only (optional Coreward bridge); golden path does not require it — see docs/stable-contracts.md and docs/getting-started/install.md")
+var ErrWindowsUnsupported = fmt.Errorf("curbpack-sock is Unix-only (optional Coreward bridge in examples/mcp); golden path is CLI — see docs/coreward-bridge.md")
 
 // Request is the Coreward bridge IPC envelope.
 type Request struct {
@@ -50,9 +51,6 @@ type GraphSummary struct {
 }
 
 // DefaultPath returns a private socket path.
-// Order: CURBPACK_SOCK / CYBERREADY_SOCK → XDG_RUNTIME_DIR/curbpack/curbpack.sock →
-// $TMPDIR/curbpack-$UID/curbpack.sock → .curbpack/curbpack.sock under cwd.
-// Never defaults to a world-writable shared path like /tmp/curbpack.sock.
 func DefaultPath() (string, error) {
 	if runtime.GOOS == "windows" {
 		return "", ErrWindowsUnsupported
@@ -71,7 +69,6 @@ func DefaultPath() (string, error) {
 	tmpBase := os.TempDir()
 	dir := filepath.Join(tmpBase, fmt.Sprintf("curbpack-%d", uid))
 	if err := ensurePrivateDir(dir); err != nil {
-		// Fall back to repo-local .curbpack/
 		cwd, err2 := os.Getwd()
 		if err2 != nil {
 			return "", fmt.Errorf("sock path: %w (and cwd: %v)", err, err2)
@@ -97,7 +94,6 @@ func ensurePrivateDir(dir string) error {
 	if mode&0o002 != 0 {
 		return fmt.Errorf("refuse world-writable sock dir %s (mode %04o)", dir, mode)
 	}
-	// Tighten if group/other writable
 	if mode&0o077 != 0 {
 		if err := os.Chmod(dir, 0o700); err != nil {
 			return fmt.Errorf("cannot tighten sock dir %s: %w", dir, err)
@@ -135,7 +131,7 @@ func Serve(sockPath, repoRoot string) error {
 		_ = ln.Close()
 		_ = os.Remove(sockPath)
 	}()
-	fmt.Fprintf(os.Stderr, "curbpack sock listening on %s mode=0600 (ops=validate_delta,get_latest_failure,graph_summary,explain_packet)\n", sockPath)
+	fmt.Fprintf(os.Stderr, "curbpack-sock listening on %s mode=0600 (ops=validate_delta,get_latest_failure,graph_summary,explain_packet)\n", sockPath)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {

@@ -26,7 +26,6 @@ import (
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/sbom"
 	"github.com/afelin/curbpack/internal/skilldata"
-	"github.com/afelin/curbpack/internal/sock"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
 	"github.com/afelin/curbpack/internal/vex"
@@ -132,12 +131,13 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Ladder:\n")
 	fmt.Fprintf(os.Stderr, "  doctor [--repair] Environment confidence; --repair = local PATH/alias only\n")
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
-	fmt.Fprintf(os.Stderr, "  scan             Read-only repo diagnosis (alias: reality-check)\n")
+	fmt.Fprintf(os.Stderr, "  scan [--packs a,b] Read-only repo diagnosis (alias: reality-check)\n")
 	fmt.Fprintf(os.Stderr, "  fix --art14      Write Art 14 rehearsal file (one file; diff preview)\n")
 	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal] [--score]  Daily loop (--score shows readiness %%)\n")
-	fmt.Fprintf(os.Stderr, "  ask-my-suppliers Buyer checklist (same as export --buyer-questions)\n")
+	fmt.Fprintf(os.Stderr, "  ask-my-suppliers [--stdout-only] [--out path]\n")
+	fmt.Fprintf(os.Stderr, "                   Supplier checklist → stdout + review-pack/ (writes files)\n")
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
@@ -156,7 +156,6 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  research [--fetch] [--cite-check <md>] [--list-sources]\n")
 	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
-	fmt.Fprintf(os.Stderr, "  sock                          Optional Coreward Unix IPC (macOS/Linux only)\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
 }
@@ -599,20 +598,37 @@ func cmdPacks(args []string) error {
 }
 
 func cmdAskMySuppliers(args []string) error {
+	f, err := parseAskMySuppliersFlags(args)
+	if err != nil {
+		return err
+	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs := []string(nil)
-	if len(args) > 0 {
-		return usageErr("ask-my-suppliers: unknown argument " + args[0])
-	}
-	path, n, err := exportx.WriteBuyerQuestions(root, packIDs, "")
+
+	report, err := exportx.BuildBuyerQuestionsReportReadOnly(root, f.packIDs)
 	if err != nil {
 		return err
 	}
-	tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", path, n))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "Hand checklist to suppliers — not conformity assessment."))
+
+	tty.PrintHeader("curbpack ask-my-suppliers")
+	fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "Writes review-pack/supplier-checklist.md — unlike scan, this command creates files. Not conformity assessment."))
+	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Copy the checklist and email below to suppliers — not CE / not notified-body."))
+
+	fmt.Print(exportx.FormatBuyerQuestionsMarkdown(report))
+	fmt.Println("---")
+	fmt.Print(exportx.FormatSupplierEmailTemplate(report))
+
+	if f.stdoutOnly {
+		return nil
+	}
+
+	path, n, err := exportx.WriteSupplierChecklistReport(root, report, f.out)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\n%s\n", tty.C(tty.Dim, fmt.Sprintf("Wrote %s (%d questions)", path, n)))
 	return nil
 }
 
@@ -753,18 +769,3 @@ func cmdAttest(args []string) error {
 	return err
 }
 
-func cmdSock(args []string) error {
-	f, err := parseSockFlags(args)
-	if err != nil {
-		return err
-	}
-	root := f.root
-	if root == "" {
-		var err error
-		root, err = gitutil.RepoRoot("")
-		if err != nil {
-			root, _ = os.Getwd()
-		}
-	}
-	return sock.Serve(f.path, root)
-}
