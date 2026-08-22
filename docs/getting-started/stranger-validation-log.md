@@ -22,7 +22,7 @@ cd C:\path\to\your\git\repo
 curbpack scan
 ```
 
-Stop at **scan** for stranger validation. Do **not** run `./scripts/pilot-receipt.sh` on this path (workshop-only; needs a curbpack checkout).
+Stop at **scan** for stranger validation. Do **not** run receipt, share, attest, pathway, or `./scripts/pilot-receipt.sh` on this path (workshop / deepen tracks only).
 
 Contributor / unreleased installer only (labelled development):
 

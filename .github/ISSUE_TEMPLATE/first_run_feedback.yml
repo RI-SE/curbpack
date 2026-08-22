@@ -1,0 +1,93 @@
+name: First-run feedback
+description: Optional feedback after install → cd → curbpack scan (first-run tryout only).
+title: "[first-run] "
+labels: ["first-run"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the first-run path (install → `cd` → `curbpack scan`).
+
+        **GitHub issues are public.** Do not include repository contents, internal paths, customer information, personal data, credentials, secrets, or detailed security findings.
+
+        Feedback is optional. You may paste a sanitised note in Teams instead, or finish without sharing.
+
+        Gate results prepare evidence for human review — **not** certification.
+
+  - type: dropdown
+    id: cohort
+    attributes:
+      label: Cohort
+      options:
+        - rise-3
+        - friendly-10
+        - stranger-20
+        - stranger-100
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_worked
+    attributes:
+      label: Did installation work?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scan_completed
+    attributes:
+      label: Did curbpack scan complete?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: next_clear
+    attributes:
+      label: Was Next: clear?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: textarea
+    id: almost_stopped
+    attributes:
+      label: What almost made you stop?
+      description: Short friction note only. No secrets, paths, findings, or personal data.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: follow_up_issue
+    attributes:
+      label: Follow-up
+      options:
+        - label: RISE may follow up through this GitHub issue.
+          required: false
+
+  - type: checkboxes
+    id: future_tests
+    attributes:
+      label: Future tests
+      options:
+        - label: I am interested in future Curbpack tests.
+          required: false

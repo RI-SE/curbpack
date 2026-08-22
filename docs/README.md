@@ -32,7 +32,8 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
 | [Install](getting-started/install.md) | Cross-OS install (PowerShell \| macOS/Linux); install pin `v0.5.3`, Action `@v0.5.2`; release gate [`scripts/release-gate.json`](../scripts/release-gate.json) |
-| [RISE tryout](getting-started/rise-tryout.md) | Thin RISE product-repo tryout wrapper → install + troubleshooting |
+| [RISE tryout](getting-started/rise-tryout.md) | Thin RISE first-run entry (install → cd → scan); feedback on canonical repo |
+| [First-run cohort scorecard](getting-started/first-run-cohort-scorecard.md) | 3→10→20→100 aggregates only (no PII); internal rows stay at RISE |
 | [RISE pilot offer](getting-started/rise-pilot-offer.md) | One-sentence Neutral Evidence Profile Pilot frame |
 | [Pilot scorecard](getting-started/pilot-scorecard.md) | Manual transaction / adoption scorecard |
 | [Minimum receipt fixture](getting-started/minimum-receipt-fixture.md) | Receipt v0 thin index + structural validate |

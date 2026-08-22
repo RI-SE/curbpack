@@ -1,15 +1,19 @@
-# RISE tryout — product repo
+# RISE tryout — first scan
 
-Audience wrapper for RISE colleagues testing Curbpack on a repo they are building. **Commands and install pins live only in** [install.md](install.md) and [troubleshooting.md](troubleshooting.md) — do not copy alternate pins from this page.
+**One RI-SE entry link for the 3 → 10 → 20 → 100 first-run rollout.** Purpose: test installation and one local `scan` only.
+
+Commands and the verified install pin live only in [install.md](install.md). Recovery: [troubleshooting.md](troubleshooting.md). Do not copy alternate pins from this page.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-## Path A — smoke (recommended)
+## Steps
 
-1. Follow [install.md](install.md) **Ladder 0** (pinned release install).
-2. `cd` into your **product git repository** (confirm the path).
+1. Follow [install.md](install.md) **Ladder 0** (canonical pinned release).
+2. Choose a **git repository you are permitted to inspect**, then `cd` into its root (confirm the path).
 3. Run `curbpack scan`.
-4. Confirm write-free:
+4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout.
+
+Optional write-free check:
 
 ```bash
 before="$(git status --porcelain)"
@@ -18,29 +22,26 @@ after="$(git status --porcelain)"
 test "$before" = "$after"
 ```
 
-**Pass for this tryout:** scan exits 0, Art 14 clock / findings / `Next:` visible, working tree unchanged. Soft-exit diagnosis is not a gate pass — see [install.md](install.md) / README exit notes.
+The native scan is local and read-only. Exit 0 means diagnosis completed, not that all gates passed.
 
-Stuck? [troubleshooting.md](troubleshooting.md). Optional sandbox without a product repo: `curbpack demo` (same install SoR).
+Stuck? [troubleshooting.md](troubleshooting.md). No product repo handy? `curbpack demo` (same install SoR).
 
-## Path B — optional deepen
+## Optional feedback
 
-Only if you are willing to write local curbpack files into the product repo. Follow the product-repo ladder in [60-second-paths.md](60-second-paths.md) / [install.md](install.md) (`init` → `check`).
+Feedback is **not required** to complete the tryout.
 
-A red check result is a successful evaluation for this tryout. It identifies work for human review; it is not a successful gate result.
+Use the **canonical** issue form (RI-SE mirror Issues are not the feedback destination):
 
-Skip pathway confirms, attest, and `./scripts/pilot-receipt.sh` unless you are in a guided workshop (receipt needs a curbpack checkout).
+→ [Open first-run feedback on afelin/curbpack](https://github.com/afelin/curbpack/issues/new?template=first_run_feedback.yml)
 
-## Feedback (short)
+Do not include repository contents, internal paths, customer information, personal data, credentials, secrets, or detailed security findings in feedback.
 
-| Field | Your note |
-|-------|-----------|
-| OS / arch | |
-| Install method | |
-| `curbpack version` | |
-| Path A scan exit + write-free? | |
-| Blocker (paste last lines) | |
+Alternatives: paste a sanitised note in Teams, or finish without sharing.
+
+Optional community: [Curbpack Discussions](https://github.com/afelin/curbpack/discussions) for release notes and future tester calls (no auto-enrol).
 
 ## Related
 
-- Recruit / pilot frame: [rise-pilot-offer.md](rise-pilot-offer.md)
-- Stranger log (external): [stranger-validation-log.md](stranger-validation-log.md)
+- Cohort scorecard (empty template + aggregates): [first-run-cohort-scorecard.md](first-run-cohort-scorecard.md)
+- Stranger log: [stranger-validation-log.md](stranger-validation-log.md)
+- Pilot frame (separate track): [rise-pilot-offer.md](rise-pilot-offer.md)

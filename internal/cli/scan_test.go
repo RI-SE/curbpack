@@ -318,7 +318,7 @@ func TestRun_ScanNotGitRepo(t *testing.T) {
 		t.Fatalf("exit code: got %d want %d (%v)", cli.ExitCode(err), cli.ExitUsage, err)
 	}
 	msg := err.Error()
-	for _, want := range []string{"git repository", "cd /path/to/your/git/repo", "curbpack demo", "troubleshooting"} {
+	for _, want := range []string{"git repository", "cd /path/to/your/git/repo", "git init", "curbpack demo", "troubleshooting"} {
 		if !strings.Contains(msg, want) {
 			t.Fatalf("non-git scan error missing %q: %q", want, msg)
 		}

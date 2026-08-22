@@ -17,4 +17,4 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion. RISE is 
 
 Recruit in parallel with stranger validation ([stranger-validation-log](stranger-validation-log.md)); do not wait for six scan runs.
 
-**RISE colleagues trying the CLI on a product repo:** use the thin wrapper [rise-tryout.md](rise-tryout.md) (points at [install](install.md) + [troubleshooting](troubleshooting.md) only).
+**RISE colleagues trying the CLI on a product repo:** use the thin wrapper [rise-tryout.md](rise-tryout.md) (points at [install](install.md) + [troubleshooting](troubleshooting.md) only). First-run cohorts: [first-run-cohort-scorecard.md](first-run-cohort-scorecard.md).
