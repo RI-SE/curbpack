@@ -1,7 +1,7 @@
 #!/bin/sh
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
-# Preferred: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
-# Contributor/dev (unreleased installer): …/main/scripts/install.sh | sh
+# Preferred: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+# (installs smoke-verified binary from release gate / manifest default)
 # Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.3), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
 # Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).

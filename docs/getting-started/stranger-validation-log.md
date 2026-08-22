@@ -9,7 +9,7 @@
 **Install (send verbatim):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -17,7 +17,7 @@ curbpack scan
 Windows (PowerShell):
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
 ```

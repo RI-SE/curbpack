@@ -115,8 +115,8 @@ Welcome thread: https://github.com/afelin/curbpack/discussions/4
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
-> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh && curbpack scan`  
-> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh && curbpack doctor && curbpack demo`
+> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack scan`  
+> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
 >
 > Tester reports: use the **Tester report** issue template.
 

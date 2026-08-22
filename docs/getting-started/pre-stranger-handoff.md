@@ -32,9 +32,9 @@ Clean env — no workspace binary on PATH.
 
 | OS | Install | Command | Pass |
 |----|---------|---------|------|
-| macOS | `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-20):** v0.5.3 binary via install; exit 0; Art 14 + `Next:`; porcelain empty. Until manifest bump on main, bare curl installs v0.5.2 — bump merged post-tag. |
+| macOS | `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-20):** v0.5.3 binary via install; exit 0; Art 14 + `Next:`; porcelain empty. Until manifest bump on main, bare curl installs v0.5.2 — bump merged post-tag. |
 | Linux | same | same | same |
-| Windows | `irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 \| iex` | `curbpack scan` | same |
+| Windows | `irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
 
 Optional regression: `curbpack doctor && curbpack demo` on each OS.
 
@@ -54,7 +54,7 @@ Record results: Discussion comment or internal log.
 Send verbatim:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```

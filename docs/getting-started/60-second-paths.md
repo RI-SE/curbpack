@@ -14,7 +14,7 @@ Install once, then scan inside any git repo — **no init**, **no files written*
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -22,7 +22,7 @@ curbpack scan
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
 ```
@@ -48,13 +48,13 @@ Under ten minutes (install pin **`v0.5.3`**; Action pin **`@v0.5.2`**): install 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
 Then:
@@ -116,7 +116,7 @@ Habit after first green: [daily loop](daily-loop.md). Optional share: [buyer evi
 
 | Flag / path | When |
 |-------------|------|
-| `curl …/v0.5.3/scripts/install.sh \| sh` then `curbpack scan` | Read-only first contact; scan defaults to **cra-baseline** |
+| `curl …/main/scripts/install.sh \| sh` then `curbpack scan` | Read-only first contact; scan defaults to **cra-baseline** |
 | `curbpack init --bare` | Minimal scaffold (no hooks/skill/ide) |
 | `curbpack init --packs a,b` | Override init default **house-policy** |
 | `curbpack init --workflow` | Opt-in drop-in Action `@v0.5.2` workflow if missing |

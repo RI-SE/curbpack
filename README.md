@@ -9,7 +9,7 @@
 > Article 14 reporting starts **11 September 2026**. Install once, then scan — writes nothing:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+> curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 > cd /path/to/your/git/repo
 > curbpack scan
 > ```
@@ -27,7 +27,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -41,13 +41,13 @@ Install when you want a local binary (Windows PowerShell · macOS/Linux curl): [
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
 Then the same ladder on every OS:
