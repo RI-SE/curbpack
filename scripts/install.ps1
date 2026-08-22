@@ -100,7 +100,7 @@ function Invoke-Repair {
   Write-Host ""
   if (-not (Test-Path $exe)) {
     Write-Host "Binary missing — reinstall:" -ForegroundColor Red
-    Write-Host '  irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex'
+    Write-Host '  irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex'
     exit 2
   }
   Copy-Item -Force -Path $exe -Destination $alias

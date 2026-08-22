@@ -1,0 +1,61 @@
+{
+  "schema": "curbpack-pilot-response:0",
+  "request_id": "rise-nep-pilot-2026-001",
+  "supplier_id": "supplier-b",
+  "repository": {
+    "label": "fixture-supplier-b",
+    "commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "profile": {
+    "pack_id": "cra-baseline",
+    "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "check": {
+    "exit_code": 0,
+    "readiness_score": 92,
+    "passed": true,
+    "note": "Structural gates on this tree — not certification"
+  },
+  "artefacts": [
+    {
+      "path": ".github/curbpack/cache/context-pack.json",
+      "role": "context-pack",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    {
+      "path": ".github/curbpack/cache/buyer-questions.md",
+      "role": "buyer-questions",
+      "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+    }
+  ],
+  "assertions": [
+    {
+      "label": "security_txt_present",
+      "status": "observed",
+      "evidence": ".well-known/security.txt"
+    },
+    {
+      "label": "equivalent_security_policy",
+      "status": "equivalent_proposed",
+      "evidence": "docs/SECURITY_POLICY.md offered in lieu of SECURITY.md (human disposition required)"
+    }
+  ],
+  "exceptions": [
+    {
+      "criterion_id": "hp-security-md",
+      "kind": "equivalent_evidence",
+      "note": "Path name differs; content role claimed equivalent — recipient decides"
+    }
+  ],
+  "limitations": [
+    "Equivalent path is context-specific until decision log records reuse",
+    "Hashes in this fixture are placeholders for schema review"
+  ],
+  "evaluator": {
+    "id": "curbpack-native",
+    "version": "0.5.3",
+    "method": "deterministic"
+  },
+  "claim": "Prepares evidence for human review — not a conformity assessment.",
+  "certification_claimed": false
+}

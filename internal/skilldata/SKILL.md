@@ -7,7 +7,7 @@ description: Run Curbpack local compliance gates and explain GateFailure JSON. U
 
 Local-first evidence CLI. Prepares review packs for **human review**. Does not certify conformity.
 
-**Pin:** `@v0.5.2`. Action runners = Linux/macOS only; local CLI includes Windows.
+**Install pin:** `v0.5.3`. **Action pin:** `@v0.5.2` (Linux/macOS runners). Local CLI includes Windows.
 
 **Instrument panel:** after edits, one `curbpack check` yields an honest map for *this* repo — structural evidence, not a certificate. Green is expensive to fake.
 
@@ -16,13 +16,13 @@ Local-first evidence CLI. Prepares review packs for **human review**. Does not c
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Then: `curbpack doctor` → `demo` → `scan` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/getting-started/install.md`.

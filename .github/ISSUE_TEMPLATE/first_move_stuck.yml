@@ -17,7 +17,7 @@ body:
       options:
         - A — Safe try (install → doctor → demo)
         - B — Product repo (init → check)
-        - C — CI-only (Action @v0.4.1)
+        - C — CI-only (Action @v0.5.2)
     validations:
       required: true
 
@@ -34,8 +34,8 @@ body:
     id: pin
     attributes:
       label: Pin / binary
-      description: Tag, commit SHA, or `curbpack version`
-      placeholder: v0.4.1
+      description: Tag, commit SHA, or `curbpack version` (install `v0.5.3`; Action `@v0.5.2`)
+      placeholder: v0.5.3
     validations:
       required: true
 

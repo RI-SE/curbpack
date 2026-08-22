@@ -1,0 +1,55 @@
+{
+  "schema": "curbpack-pilot-response:0",
+  "request_id": "rise-nep-pilot-2026-001",
+  "supplier_id": "supplier-a",
+  "repository": {
+    "label": "fixture-supplier-a",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "profile": {
+    "pack_id": "house-policy",
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "check": {
+    "exit_code": 0,
+    "readiness_score": 100,
+    "passed": true,
+    "note": "Structural gates on this tree — not certification"
+  },
+  "artefacts": [
+    {
+      "path": ".github/curbpack/cache/context-pack.json",
+      "role": "context-pack",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    {
+      "path": "review-pack/buyer-onepager.html",
+      "role": "buyer-onepager",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "assertions": [
+    {
+      "label": "security_md_present",
+      "status": "observed",
+      "evidence": "SECURITY.md"
+    },
+    {
+      "label": "local_check_passed",
+      "status": "observed",
+      "evidence": "curbpack check exit 0"
+    }
+  ],
+  "exceptions": [],
+  "limitations": [
+    "Unsigned attest — not cryptographically verified",
+    "Hashes in this fixture are placeholders for schema review"
+  ],
+  "evaluator": {
+    "id": "curbpack-native",
+    "version": "0.5.3",
+    "method": "deterministic"
+  },
+  "claim": "Prepares evidence for human review — not a conformity assessment.",
+  "certification_claimed": false
+}

@@ -39,7 +39,7 @@ jobs:
             "demo_score": ${SCORE},
             "claim": "Prepares evidence for human review — not a conformity assessment.",
             "certification_claimed": false,
-            "install": "curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh",
+            "install": "curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh",
             "try": "curbpack doctor && curbpack demo"
           }
           EOF

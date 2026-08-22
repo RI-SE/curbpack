@@ -2,18 +2,16 @@
 
 **Gate:** 3 external repos × 2 successful `curbpack scan` runs each (exit 0, read-only, `Next:` visible, `git status --porcelain` empty).
 
+**Parallel recruit:** while logging strangers, offer the one-sentence [RISE Neutral Evidence Profile Pilot](rise-pilot-offer.md) to a named relying party — do not wait for all six scans.
+
+**Install pin:** smoke-verified **`v0.5.3`** ([`scripts/install-manifest.json`](../../scripts/install-manifest.json)). Action pin stays **`@v0.5.2`**. Prefer pinned release script URLs; `main` only for contributor/dev notes.
+
 **Install (send verbatim):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
-```
-
-Pinned tag install (if you must use `v0.5.3` script URL — tag script lacks manifest sibling):
-
-```bash
-CURBPACK_VERSION=v0.5.3 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
 ```
 
 Windows (PowerShell):
@@ -22,6 +20,12 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
+```
+
+Contributor / unreleased installer only (labelled development):
+
+```bash
+# DEV: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
 ---

@@ -1,0 +1,33 @@
+{
+  "schema": "curbpack-pilot-request:0",
+  "request_id": "rise-nep-pilot-2026-001",
+  "purpose": "Buyer review of supplier repository structural evidence for a stated product handoff — not conformity assessment.",
+  "profile": {
+    "pack_id": "house-policy",
+    "criteria": [
+      {
+        "id": "hp-security-md",
+        "description": "SECURITY.md (or pack-equivalent path) present and non-empty"
+      },
+      {
+        "id": "hp-security-txt",
+        "description": ".well-known/security.txt (or pack-equivalent) present"
+      },
+      {
+        "id": "hp-check-green",
+        "description": "Local curbpack check exit 0 on stated commit against house-policy"
+      }
+    ]
+  },
+  "optional_profile_note": "cra-baseline may be used for Art 14 clock visibility on scan-first trees; same claim boundary.",
+  "required_outputs": [
+    "receipt.json (Receipt v0 thin index)",
+    "context-pack.json from curbpack export/share",
+    "decision-log entry for any equivalent evidence"
+  ],
+  "limitations": [
+    "Local structural gates only — not a notified-body opinion",
+    "Does not assert CRA / CE / certification outcomes"
+  ],
+  "claim": "Prepares evidence for human review — not a conformity assessment."
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "curbpack-pilot-disposition:0",
+  "request_id": "rise-nep-pilot-2026-001",
+  "workshop": "rise-nep-pilot-review-1",
+  "responses_reviewed": ["supplier-a", "supplier-b"],
+  "decisions": [
+    {
+      "supplier_id": "supplier-a",
+      "purpose": "handoff_review",
+      "outcome": "accept_for_stated_purpose",
+      "note": "Structural evidence sufficient for human handoff review — not a conformity decision"
+    },
+    {
+      "supplier_id": "supplier-b",
+      "purpose": "handoff_review",
+      "outcome": "accept_with_equivalent",
+      "equivalent_criterion_id": "hp-security-md",
+      "note": "Accepted docs/SECURITY_POLICY.md as equivalent for this purpose only"
+    }
+  ],
+  "continuation": {
+    "willingness_to_pay": null,
+    "next": "record_on_pilot_scorecard",
+    "note": "Human fills willingness-to-pay / stop on pilot-scorecard.md"
+  },
+  "limitations": [
+    "Disposition is human-authored",
+    "Does not grant certification, CE marking, or notified-body approval"
+  ],
+  "claim": "Prepares evidence for human review — not a conformity assessment.",
+  "certification_claimed": false
+}

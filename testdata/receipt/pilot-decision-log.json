@@ -1,0 +1,25 @@
+{
+  "schema": "curbpack-pilot-decision-log:0",
+  "request_id": "rise-nep-pilot-2026-001",
+  "entries": [
+    {
+      "criterion": "hp-security-md",
+      "requested_evidence": "SECURITY.md present and non-empty",
+      "supplied_evidence": "docs/SECURITY_POLICY.md (supplier-b)",
+      "equivalent_proposed": "Same role: vulnerability contact + disclosure expectations",
+      "recipient_decision": "accept_with_equivalent",
+      "limitation": "Accepted for this handoff purpose only",
+      "reusable_or_context_specific": "context-specific"
+    },
+    {
+      "criterion": "hp-check-green",
+      "requested_evidence": "curbpack check exit 0 against stated pack",
+      "supplied_evidence": "exit 0 house-policy (A) / cra-baseline (B)",
+      "equivalent_proposed": null,
+      "recipient_decision": "accept_for_stated_purpose",
+      "limitation": "Local structural score — not certification",
+      "reusable_or_context_specific": "reusable"
+    }
+  ],
+  "claim": "Prepares evidence for human review — not a conformity assessment."
+}
