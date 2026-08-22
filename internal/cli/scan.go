@@ -27,6 +27,7 @@ func cmdScan(args []string) error {
 		return usageErr("must run inside a git repository\n" +
 			"  cd /path/to/your/git/repo\n" +
 			"  curbpack scan\n" +
+			"Or git init only if creating a repository is intentional.\n" +
 			"Or try the sandbox: curbpack demo\n" +
 			"See: docs/getting-started/troubleshooting.md · install Ladder 0")
 	}
