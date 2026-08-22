@@ -4,6 +4,8 @@ Capture equivalence and disposition learning **beside** Receipt v0. No registry 
 
 Not conformity assessment. Decisions are human; the receipt is a structural index.
 
+Flow reminder: `curbpack-pilot-request:0` (workshop input) → `curbpack-pilot-response:0` (supplier sketches) → human disposition / this log → `curbpack-receipt:0` (generated artefact index). Sketches and receipt are related by `request_id`, not competing protocols.
+
 ## Entries
 
 | Field | Entry 1 | Entry 2 |

@@ -1,5 +1,6 @@
 {
   "schema": "curbpack-pilot-decision-log:0",
+  "_shape_note": "Human equivalence / disposition learning beside the flow: curbpack-pilot-request:0 → curbpack-pilot-response:0 sketches → curbpack-receipt:0 (generated index). Not competing protocols.",
   "request_id": "rise-nep-pilot-2026-001",
   "entries": [
     {

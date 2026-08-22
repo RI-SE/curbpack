@@ -2,6 +2,10 @@
 """Receipt v0 — assemble / structurally validate a thin index over local artefacts.
 
 Not a conformity assessment. Digests only when files are locally available.
+
+profile.digest identifies resolved pack/profile bytes (packs/<id>/pack.json or
+internal/packs/data/<id>/pack.json). NEVER a ContextPack / run-export hash —
+those belong only under artefacts[].
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ from typing import Any
 
 SCHEMA = "curbpack-receipt:0"
 CLAIM = "Prepares evidence for human review — not a conformity assessment."
+DIGEST_UNAVAILABLE = "unavailable"
 REQUIRED = (
     "schema",
     "claim",
@@ -44,6 +49,60 @@ def load_json(path: Path) -> Any:
         return json.load(f)
 
 
+def pack_json_candidates(root: Path, pack_id: str) -> list[Path]:
+    """Deterministic locations for resolved pack bytes (never ContextPack)."""
+    pid = pack_id.strip()
+    out: list[Path] = []
+    override = (
+        os.environ.get("CURBPACK_PACKS_DIR") or os.environ.get("CYBERREADY_PACKS_DIR") or ""
+    ).strip()
+    if override:
+        out.append(Path(override) / pid / "pack.json")
+    out.append(root / "packs" / pid / "pack.json")
+    out.append(root / "internal" / "packs" / "data" / pid / "pack.json")
+    return out
+
+
+def resolve_pack_digest(root: Path, pack_id: str) -> tuple[str | None, Path | None]:
+    """Hash first available pack.json. Returns (sha256:hex, path) or (None, None)."""
+    for p in pack_json_candidates(root, pack_id):
+        if p.is_file():
+            return f"sha256:{sha256_file(p)}", p
+    return None, None
+
+
+def profile_block(
+    pack_id: str,
+    pack_digest: str | None,
+    *,
+    resolve_from: Path | None,
+) -> dict[str, Any]:
+    """Build profile with pack digest or explicit unavailable status.
+
+    If pack_digest is None and resolve_from is set, resolve from pack bytes.
+    Empty string with resolve_from=None forces unavailable (no invent from exports).
+    Never invent a digest from run-export artefacts.
+    """
+    digest = (pack_digest or "").strip() or None
+    source: Path | None = None
+    if digest is None and resolve_from is not None:
+        digest, source = resolve_pack_digest(resolve_from, pack_id)
+
+    profile: dict[str, Any] = {"pack_id": pack_id}
+    if digest:
+        profile["digest"] = digest
+        if source is not None:
+            try:
+                rel = source.resolve().relative_to(resolve_from.resolve())  # type: ignore[union-attr]
+                profile["digest_source"] = str(rel).replace("\\", "/")
+            except (ValueError, AttributeError):
+                profile["digest_source"] = str(source)
+    else:
+        profile["digest"] = None
+        profile["digest_status"] = DIGEST_UNAVAILABLE
+    return profile
+
+
 def assemble(
     *,
     root: Path,
@@ -52,11 +111,12 @@ def assemble(
     artefact_paths: list[str],
     evaluator_version: str,
     pack_id: str,
-    pack_digest: str,
+    pack_digest: str | None,
     commit: str,
     check_passed: bool,
     readiness_score: int | None,
     exceptions: list[dict[str, Any]] | None = None,
+    resolve_pack: bool = True,
 ) -> dict[str, Any]:
     req = load_json(request_path)
     request_id = req.get("request_id")
@@ -89,7 +149,11 @@ def assemble(
         "claim": CLAIM,
         "certification_claimed": False,
         "request_id": request_id,
-        "profile": {"pack_id": pack_id, "digest": pack_digest},
+        "profile": profile_block(
+            pack_id,
+            pack_digest,
+            resolve_from=root if resolve_pack else None,
+        ),
         "repository": {"commit": commit},
         "artefacts": artefacts,
         "assertions": assertions,
@@ -98,6 +162,7 @@ def assemble(
             "Structural index over local artefacts only",
             "Cannot verify remote repositories or unavailable profiles",
             "Not conformity assessment / CE / certification",
+            "profile.digest is pack/profile bytes only — ContextPack hashes live under artefacts[]",
         ],
         "evaluator": {
             "id": "curbpack-native",
@@ -151,6 +216,38 @@ def validate(
     profile = receipt.get("profile")
     if not isinstance(profile, dict) or not profile.get("pack_id"):
         errors.append("profile.pack_id required")
+    elif isinstance(profile, dict):
+        status = profile.get("digest_status")
+        digest = profile.get("digest")
+        if status == DIGEST_UNAVAILABLE:
+            if digest not in (None, ""):
+                errors.append(
+                    "profile.digest must be null when digest_status is unavailable "
+                    "(do not substitute ContextPack / run-export hashes)"
+                )
+            # Pack digest not required when unavailable.
+        else:
+            if not digest or not isinstance(digest, str):
+                errors.append(
+                    "profile.digest required unless digest_status is "
+                    f"{DIGEST_UNAVAILABLE!r}"
+                )
+            elif recompute_digests and root is not None:
+                want = str(digest).removeprefix("sha256:")
+                got_digest, src = resolve_pack_digest(root, str(profile["pack_id"]))
+                if got_digest is None:
+                    errors.append(
+                        "profile.digest present but pack.json not locally available "
+                        "to recompute (set digest null + digest_status unavailable "
+                        "instead of using a run-export hash)"
+                    )
+                else:
+                    got = got_digest.removeprefix("sha256:")
+                    if got != want:
+                        where = str(src) if src else "pack.json"
+                        errors.append(
+                            f"profile.digest mismatch vs {where}: got {got} want {want}"
+                        )
 
     repo = receipt.get("repository")
     if not isinstance(repo, dict) or not repo.get("commit"):
@@ -189,7 +286,6 @@ def validate(
 
     claim = str(receipt.get("claim") or "")
     if "conformity assessment" not in claim.lower() and "not a conformity" not in claim.lower():
-        # Prefer explicit claim-safe sentence; soft-check for boundary language.
         if "not" not in claim.lower():
             errors.append("claim must include claim-safe boundary language")
 
@@ -214,7 +310,16 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--artefact", action="append", default=[], dest="artefacts")
     a.add_argument("--evaluator-version", required=True)
     a.add_argument("--pack-id", default="house-policy")
-    a.add_argument("--pack-digest", default="")
+    a.add_argument(
+        "--pack-digest",
+        default=None,
+        help="sha256:… of pack.json bytes; omit to resolve from packs/ or internal/packs/data/",
+    )
+    a.add_argument(
+        "--pack-digest-unavailable",
+        action="store_true",
+        help="Force profile.digest=null and digest_status=unavailable (never invent from ContextPack)",
+    )
     a.add_argument("--commit", required=True)
     a.add_argument("--check-passed", choices=("true", "false"), required=True)
     a.add_argument("--readiness-score", type=int, default=None)
@@ -224,6 +329,13 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--root", type=Path, default=None)
     v.add_argument("--request", type=Path, default=None)
     v.add_argument("--recompute-digests", action="store_true")
+
+    r = sub.add_parser(
+        "resolve-pack-digest",
+        help="Print pack digest JSON for a pack_id (pack bytes only; never ContextPack)",
+    )
+    r.add_argument("--root", type=Path, required=True)
+    r.add_argument("--pack-id", required=True)
 
     args = ap.parse_args(argv)
     if args.cmd == "assemble":
@@ -236,10 +348,11 @@ def main(argv: list[str] | None = None) -> int:
             artefact_paths=args.artefacts,
             evaluator_version=args.evaluator_version,
             pack_id=args.pack_id,
-            pack_digest=args.pack_digest,
+            pack_digest=None if args.pack_digest_unavailable else args.pack_digest,
             commit=args.commit,
             check_passed=(args.check_passed == "true"),
             readiness_score=args.readiness_score,
+            resolve_pack=not args.pack_digest_unavailable,
         )
         print(f"receipt-assemble OK: {args.out}")
         return 0
@@ -250,6 +363,21 @@ def main(argv: list[str] | None = None) -> int:
             request_path=args.request.resolve() if args.request else None,
             recompute_digests=bool(args.recompute_digests),
         )
+        return 0
+    if args.cmd == "resolve-pack-digest":
+        digest, src = resolve_pack_digest(args.root.resolve(), args.pack_id)
+        if digest is None:
+            print(json.dumps({"digest": None, "digest_status": DIGEST_UNAVAILABLE}))
+        else:
+            payload: dict[str, Any] = {"digest": digest, "digest_status": None}
+            if src is not None:
+                try:
+                    payload["path"] = str(
+                        src.resolve().relative_to(args.root.resolve())
+                    ).replace("\\", "/")
+                except ValueError:
+                    payload["path"] = str(src)
+            print(json.dumps(payload))
         return 0
     return 2
 

@@ -1,5 +1,6 @@
 {
   "schema": "curbpack-pilot-response:0",
+  "_shape_note": "Workshop supplier response sketch. profile.digest here is a placeholder for pack.json bytes — not a ContextPack hash. Generated receipts use curbpack-receipt:0 via pilot-receipt.sh.",
   "request_id": "rise-nep-pilot-2026-001",
   "supplier_id": "supplier-a",
   "repository": {
@@ -8,7 +9,8 @@
   },
   "profile": {
     "pack_id": "house-policy",
-    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "digest_note": "Placeholder for pack/profile bytes; ContextPack digests belong under artefacts[] only"
   },
   "check": {
     "exit_code": 0,

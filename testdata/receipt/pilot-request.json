@@ -1,5 +1,6 @@
 {
   "schema": "curbpack-pilot-request:0",
+  "_shape_note": "Workshop buyer input. Not curbpack-receipt:0 (that is the generated artefact index from pilot-receipt.sh).",
   "request_id": "rise-nep-pilot-2026-001",
   "purpose": "Buyer review of supplier repository structural evidence for a stated product handoff — not conformity assessment.",
   "profile": {
