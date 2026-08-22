@@ -299,6 +299,32 @@ func TestRun_AskMySuppliersStdoutOnly(t *testing.T) {
 	}
 }
 
+func TestRun_ScanNotGitRepo(t *testing.T) {
+	dir := t.TempDir()
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(old) }()
+
+	err = cli.Run([]string{"scan"})
+	if err == nil {
+		t.Fatal("expected usage error outside git repo")
+	}
+	if cli.ExitCode(err) != cli.ExitUsage {
+		t.Fatalf("exit code: got %d want %d (%v)", cli.ExitCode(err), cli.ExitUsage, err)
+	}
+	msg := err.Error()
+	for _, want := range []string{"git repository", "cd /path/to/your/git/repo", "curbpack demo", "troubleshooting"} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("non-git scan error missing %q: %q", want, msg)
+		}
+	}
+}
+
 func initScanGit(t *testing.T, dir string) {
 	t.Helper()
 	run := func(args ...string) {

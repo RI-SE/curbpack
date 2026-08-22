@@ -4,7 +4,7 @@
 
 **Parallel recruit:** while logging strangers, offer the one-sentence [RISE Neutral Evidence Profile Pilot](rise-pilot-offer.md) to a named relying party — do not wait for all six scans.
 
-**Install pin:** smoke-verified **`v0.5.3`** ([`scripts/install-manifest.json`](../../scripts/install-manifest.json)). Action pin stays **`@v0.5.2`**. Prefer pinned release script URLs; `main` only for contributor/dev notes.
+**Install pin:** smoke-verified **`v0.5.3`** ([`scripts/install-manifest.json`](../../scripts/install-manifest.json) + [`scripts/release-gate.json`](../../scripts/release-gate.json)). Action pin stays **`@v0.5.2`**. Prefer pinned release script URLs; `main` only for contributor/dev notes.
 
 **Install (send verbatim):**
 
@@ -21,6 +21,8 @@ irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1
 cd C:\path\to\your\git\repo
 curbpack scan
 ```
+
+Stop at **scan** for stranger validation. Do **not** run `./scripts/pilot-receipt.sh` on this path (workshop-only; needs a curbpack checkout).
 
 Contributor / unreleased installer only (labelled development):
 

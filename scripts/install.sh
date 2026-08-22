@@ -154,15 +154,25 @@ case ":$PATH:" in
   *":${INSTALL_DIR}:"*) ;;
   *)
     echo
-    echo "Add to PATH:"
+    echo "Add to PATH — open a new terminal after adding this line to your shell profile, or run now:"
     echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+    case "$(basename "${SHELL:-}")" in
+      zsh) echo "  (zsh: put the export in ~/.zprofile)" ;;
+      bash) echo "  (bash: put the export in ~/.bashrc)" ;;
+    esac
     echo "After OS update / PATH loss: curbpack doctor --repair"
     ;;
 esac
 
 echo
-echo "Next (safe sandbox, never touches your product):"
-echo "  curb doctor"
-echo "  curb demo"
+echo "Next:"
+echo
+echo "  cd /path/to/your/git/repo"
+echo "  curbpack scan"
+echo
+echo "Not ready to use a product repository?"
+echo "  curbpack demo"
+echo
+echo "Optional: curbpack doctor"
 echo
 echo "${claim}"

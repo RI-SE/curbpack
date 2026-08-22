@@ -10,6 +10,7 @@
 >
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+> cd /path/to/your/git/repo
 > curbpack scan
 > ```
 >
@@ -27,10 +28,11 @@ Inside any git repo — read-only diagnosis after a one-line install. Pin instal
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+cd /path/to/your/git/repo
 curbpack scan
 ```
 
-Scan defaults to **`cra-baseline`** and prints the Art 14 reporting clock. When you want hooks and a daily score, use the full ladder below. Stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
+Scan defaults to **`cra-baseline`** and prints the Art 14 reporting clock. `scan` uses exit 0 when diagnosis completes, even when findings remain — use `curbpack check` for repository gate pass/fail. When you want hooks and a daily score, use the full ladder below. Stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
 
 ## Full ladder (below)
 
@@ -89,13 +91,15 @@ Optional exports: SARIF, ContextPack, buyer-questions, lay-of-land. Teaching sam
 
 | Signal | Meaning |
 |--------|---------|
-| Exit **0** | Gates passed on this tree—for human review, not certification |
-| Exit **1** | Findings remain or operational error |
+| Exit **0** on **`check`** | Gates passed on this tree—for human review, not certification |
+| Exit **0** on **`scan`** | Diagnosis completed (findings may remain); not a gate pass |
+| Exit **0** on **`doctor`** | Environment report finished; advisory issues do not mean gate failure |
+| Exit **1** | Gate findings remain or operational error (typically `check`) |
 | Exit **2** | Usage / environment (unknown command, not a git repo when required) |
 | **Unsigned** attest | Capsule present; **not cryptographically verified** |
 | **ssh-agent-signed** | Real SSH signature produced |
 
-Gate pass is **not** certification, CE marking, or notified-body approval. Humans decide what to claim.
+Gate pass is **not** certification, CE marking, or notified-body approval. Humans decide what to claim. Only **`check`** provides repository gate pass/fail.
 
 ## Where to go deeper
 
