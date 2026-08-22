@@ -4,7 +4,7 @@
 
 | Reader | Start here |
 |--------|------------|
-| Builder / adopter | [Install](getting-started/install.md) · [60-second paths](getting-started/60-second-paths.md) · [Troubleshooting](getting-started/troubleshooting.md) · [Pathway](getting-started/pathway.md) · [Sync both remotes](getting-started/sync-both-remotes.md) · [site builders](../site/for-builders/) |
+| Builder / adopter | [Install](getting-started/install.md) · [60-second paths](getting-started/60-second-paths.md) · [Troubleshooting](getting-started/troubleshooting.md) · [RISE tryout](getting-started/rise-tryout.md) · [Pathway](getting-started/pathway.md) · [Sync both remotes](getting-started/sync-both-remotes.md) · [site builders](../site/for-builders/) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [Software design document](software-design-document.md) · [SDD gap analysis](sdd-gap-analysis.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
@@ -31,7 +31,8 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
-| [Install](getting-started/install.md) | Cross-OS install (PowerShell \| macOS/Linux); install pin `v0.5.3`, Action `@v0.5.2` |
+| [Install](getting-started/install.md) | Cross-OS install (PowerShell \| macOS/Linux); install pin `v0.5.3`, Action `@v0.5.2`; release gate [`scripts/release-gate.json`](../scripts/release-gate.json) |
+| [RISE tryout](getting-started/rise-tryout.md) | Thin RISE product-repo tryout wrapper → install + troubleshooting |
 | [RISE pilot offer](getting-started/rise-pilot-offer.md) | One-sentence Neutral Evidence Profile Pilot frame |
 | [Pilot scorecard](getting-started/pilot-scorecard.md) | Manual transaction / adoption scorecard |
 | [Minimum receipt fixture](getting-started/minimum-receipt-fixture.md) | Receipt v0 thin index + structural validate |

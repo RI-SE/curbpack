@@ -125,4 +125,4 @@ curbpack demo --out "$env:TEMP\curbpack smoke" --keep
 
 1. `curbpack doctor`  
 2. [install.md](install.md) Ladder 1  
-3. Open a GitHub issue with OS, `curbpack version`, and doctor output (no secrets)
+3. Open a [first-move stuck](../../.github/ISSUE_TEMPLATE/first_move_stuck.yml) issue with OS, `curbpack version`, and doctor output (no secrets)

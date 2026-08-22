@@ -15,6 +15,7 @@ Install once, then scan inside any git repo — **no init**, **no files written*
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+cd /path/to/your/git/repo
 curbpack scan
 ```
 
@@ -22,6 +23,7 @@ curbpack scan
 
 ```powershell
 irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+cd C:\path\to\your\git\repo
 curbpack scan
 ```
 

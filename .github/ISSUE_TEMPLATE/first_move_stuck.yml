@@ -53,6 +53,7 @@ body:
       label: Platform
       options:
         - macOS
+        - Windows
         - Linux
         - GitHub Actions runner
         - Other

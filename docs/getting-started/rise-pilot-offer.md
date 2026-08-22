@@ -16,3 +16,5 @@
 Not conformity assessment. Not CE marking. Not a notified-body opinion. RISE is funder / liaison context — not product certifier ([promotion firewall](../promotion-firewall.md)).
 
 Recruit in parallel with stranger validation ([stranger-validation-log](stranger-validation-log.md)); do not wait for six scan runs.
+
+**RISE colleagues trying the CLI on a product repo:** use the thin wrapper [rise-tryout.md](rise-tryout.md) (points at [install](install.md) + [troubleshooting](troubleshooting.md) only).

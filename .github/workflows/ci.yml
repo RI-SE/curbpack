@@ -359,23 +359,34 @@ jobs:
           import json, pathlib, re, sys
           root = pathlib.Path(".")
           man = json.loads((root/"scripts/install-manifest.json").read_text())
+          gate = json.loads((root/"scripts/release-gate.json").read_text())
           assets = set(man["assets"])
           assert "curbpack_windows_amd64.exe" in assets
           assert man["default_version"].startswith("v")
+          assert gate.get("schema") == "curbpack-release-gate:1", gate
+          assert gate["version"] == man["default_version"], (
+              f"manifest default_version {man['default_version']!r} must equal "
+              f"release-gate version {gate['version']!r} before public pins advance"
+          )
+          for k in ("assets_verified", "checksums_verified", "install_smoke_verified", "scan_write_free_verified"):
+              assert gate.get(k) is True, f"release-gate {k} must be true"
           rel = (root/".github/workflows/release.yml").read_text()
           # release must build windows amd64 exe
           assert "windows/amd64" in rel or "windows_amd64" in rel, "release.yml missing windows amd64"
           assert "curbpack_windows_amd64.exe" in rel or 'windows/amd64' in rel
           sh = (root/"scripts/install.sh").read_text()
           assert "install-manifest.json" in sh or "default_version" in sh or "v0.5.2" in sh
+          assert "cd /path/to/your/git/repo" in sh and "curbpack scan" in sh
+          assert "curbpack demo" in sh
           ps1 = (root/"scripts/install.ps1").read_text()
           assert "curbpack_windows_amd64.exe" in ps1
           assert "-Repair" in ps1 or "Repair" in ps1
+          assert "cd /path/to/your/git/repo" in ps1 and "curbpack scan" in ps1
           # Action remains Linux/macOS only honesty (real assert — no or True)
           action = (root/"action.yml").read_text()
           assert "Linux/macOS" in action, "action.yml must state Linux/macOS runners"
           assert "not Windows runners" in action, "action.yml must state not Windows runners"
-          print("manifest/release/install parity ok", sorted(assets))
+          print("manifest/release-gate/install parity ok", man["default_version"], sorted(assets))
           PY
       - name: Heal smoke + baseline ratchet + dead-ends
         run: ./scripts/gauntlet-ratchet.sh

@@ -24,7 +24,11 @@ func cmdScan(args []string) error {
 	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
-		return usageErr("must run inside a git repository")
+		return usageErr("must run inside a git repository\n" +
+			"  cd /path/to/your/git/repo\n" +
+			"  curbpack scan\n" +
+			"Or try the sandbox: curbpack demo\n" +
+			"See: docs/getting-started/troubleshooting.md · install Ladder 0")
 	}
 
 	packIDs, err := config.ResolvePackIDsForScan(root, flags.packIDs)

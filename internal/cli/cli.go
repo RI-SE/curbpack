@@ -157,7 +157,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "                                Allowlisted citation packet + human brief (never gates check)\n")
 	fmt.Fprintf(os.Stderr, "  completion bash|zsh|fish      Print shell completions to stdout\n")
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
-	fmt.Fprintf(os.Stderr, "Exit codes: 0=pass  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
+	fmt.Fprintf(os.Stderr, "Exit codes: 0=success/soft-ok  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
+	fmt.Fprintf(os.Stderr, "  scan uses exit 0 when diagnosis completes, even when findings remain.\n")
+	fmt.Fprintf(os.Stderr, "  doctor may report advisory issues without signalling gate failure.\n")
+	fmt.Fprintf(os.Stderr, "  Only check provides repository gate pass/fail.\n")
 }
 
 func cmdDemo(args []string) error {
