@@ -116,10 +116,12 @@ BQ_MD="${REPO_ROOT}/.github/curbpack/cache/buyer-questions.md"
 ONEPAGER="${REPO_ROOT}/review-pack/buyer-onepager.html"
 [[ -f "$ONEPAGER" ]] && ARTEFACTS+=("review-pack/buyer-onepager.html")
 
-PACK_DIGEST=""
-if [[ -f "$CP_JSON" ]]; then
-  PACK_DIGEST="sha256:$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$CP_JSON")"
-fi
+# profile.digest = pack/profile bytes only (packs/<id>/pack.json or
+# internal/packs/data/<id>/pack.json). NEVER hash ContextPack / run-export here —
+# those digests belong only under artefacts[]. Assemble resolves pack bytes;
+# if none are available it sets digest=null + digest_status=unavailable.
+PACK_DIGEST_JSON="$(python3 "$RECEIPT_PY" resolve-pack-digest --root "$REPO_ROOT" --pack-id "$PACK_ID")"
+echo "  pack digest: $PACK_DIGEST_JSON"
 
 SCORE=""
 if command -v jq >/dev/null 2>&1; then
@@ -134,7 +136,6 @@ ASM_ARGS=(
   --out "$RECEIPT_OUT"
   --evaluator-version "$EVAL_VER"
   --pack-id "$PACK_ID"
-  --pack-digest "$PACK_DIGEST"
   --commit "$COMMIT"
   --check-passed "$([[ "$PASSED" == true ]] && echo true || echo false)"
 )
