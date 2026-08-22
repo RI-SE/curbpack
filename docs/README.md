@@ -31,7 +31,11 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |
 | [Packs update](packs-update.md) | Pack refresh / air-gap |
 | [Assistant loop](assistant-loop.md) | Canonical multi-IDE contract + ContextPack + pack chooser |
-| [Install](getting-started/install.md) | Cross-OS install (PowerShell \| macOS/Linux); pin `@v0.5.2` |
+| [Install](getting-started/install.md) | Cross-OS install (PowerShell \| macOS/Linux); install pin `v0.5.3`, Action `@v0.5.2` |
+| [RISE pilot offer](getting-started/rise-pilot-offer.md) | One-sentence Neutral Evidence Profile Pilot frame |
+| [Pilot scorecard](getting-started/pilot-scorecard.md) | Manual transaction / adoption scorecard |
+| [Minimum receipt fixture](getting-started/minimum-receipt-fixture.md) | Receipt v0 thin index + structural validate |
+| [Pilot decision log](getting-started/pilot-decision-log.md) | Equivalence / disposition learning log |
 | [Getting started](getting-started/60-second-paths.md) | First move — three ways in (Write / Bring / CI) |
 | [Troubleshooting](getting-started/troubleshooting.md) | PATH, SmartScreen, repair, doctor tips |
 | [Pathway (warm-start)](getting-started/pathway.md) | Three ways in, one next ask, dual-draft HITL, research sidecar |

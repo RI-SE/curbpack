@@ -4,6 +4,15 @@ Shared stuck? page for Windows, macOS, and Linux. Install SoR: [install.md](inst
 
 Not conformity assessment — a green `check` is local structural evidence for human review.
 
+## Decision tree (start here)
+
+1. **`curbpack: command not found`** → new shell → confirm install dir on PATH → `doctor --repair` → full reinstall ([install](install.md) Ladder 1–3).
+2. **Install / checksum fail** → re-fetch from pinned **`v0.5.3`** release URL (not `main`) → verify `checksums.txt` → refuse on mismatch.
+3. **`doctor` / `demo` / `check` fail for missing `git`** → install Git, reopen shell.
+4. **macOS Gatekeeper / Windows SmartScreen** → verify sha256 first → Allow / Unblock → then quarantine/`Unblock-File` only after checksum OK.
+5. **Hooks / CRLF / WSL+NTFS weirdness** → re-`init --hooks` (LF-only) or prefer native Windows exe on NTFS vs Linux binary on Linux FS.
+6. **Still stuck** → [first-move stuck](../../.github/ISSUE_TEMPLATE/first_move_stuck.yml) with pin + exit code; no certification language.
+
 ---
 
 ## PATH / command not found

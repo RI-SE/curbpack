@@ -27,8 +27,8 @@ body:
     id: version
     attributes:
       label: Version / pin
-      description: e.g. `curbpack version` output or Action `@v0.4.1`
-      placeholder: v0.4.1
+      description: e.g. `curbpack version` output, install `v0.5.3`, or Action `@v0.5.2`
+      placeholder: v0.5.3
     validations:
       required: true
 

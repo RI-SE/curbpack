@@ -1,6 +1,7 @@
 #!/bin/sh
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
-# Usage: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+# Preferred: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+# Contributor/dev (unreleased installer): …/main/scripts/install.sh | sh
 # Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.3), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
 # Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
 # Fail-closed: verifies asset against release checksums.txt (sha256).
@@ -30,7 +31,7 @@ case "$os" in
   darwin|linux) ;;
   msys*|mingw*|cygwin*)
     echo "Use install.ps1 on Windows (PowerShell):" >&2
-    echo "  irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex" >&2
+    echo "  irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex" >&2
     exit 1
     ;;
   *)

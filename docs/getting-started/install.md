@@ -10,10 +10,12 @@ doctor → doctor --repair → full reinstall only if binary missing
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Install pin:** **`v0.5.3`** in examples below (stranger path). Manifest default until tag: [`scripts/install-manifest.json`](../../scripts/install-manifest.json).  
-**Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump. Local Windows CLI is supported.  
+**Install pin:** **`v0.5.3`** in examples below (stranger path). Smoke-verified default: [`scripts/install-manifest.json`](../../scripts/install-manifest.json).  
+**Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump (separate from CLI install pin). Local Windows CLI is supported.  
 **MCP sidecar:** optional Unix IPC example at [`examples/mcp/`](../../examples/mcp/) — golden path never requires it.  
 **Deferred:** npm publish, winget, windows/arm64, pwsh completion.
+
+Prefer **pinned release script URLs** matching the manifest. Use `main` only for contributor / labelled development installs of an unreleased installer.
 
 Stuck? [Troubleshooting](troubleshooting.md).
 

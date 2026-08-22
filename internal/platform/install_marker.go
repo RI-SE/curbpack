@@ -199,13 +199,17 @@ func WriteMarker(version, installDir, binary string) error {
 	return os.WriteFile(p, b, 0o644)
 }
 
+// DefaultInstallPin is the smoke-verified CLI install tag (scripts/install-manifest.json).
+// Action/examples pin remains @v0.5.2 until human tabletop approves bump.
+const DefaultInstallPin = "v0.5.3"
+
 // InstallCommandHint returns the pinned reinstall one-liner for this OS.
 func InstallCommandHint() string {
 	switch runtime.GOOS {
 	case "windows":
-		return `irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex`
+		return `irm https://raw.githubusercontent.com/afelin/curbpack/` + DefaultInstallPin + `/scripts/install.ps1 | iex`
 	default:
-		return `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh`
+		return `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/` + DefaultInstallPin + `/scripts/install.sh | sh`
 	}
 }
 

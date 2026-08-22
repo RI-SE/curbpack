@@ -13,7 +13,7 @@ body:
       options:
         - A — Safe try (install → doctor → demo)
         - B — Product repo (init → check)
-        - C — CI-only (Action @v0.4.1)
+        - C — CI-only (Action @v0.5.2)
     validations:
       required: true
 
@@ -21,8 +21,8 @@ body:
     id: pin
     attributes:
       label: Pin
-      description: e.g. `@v0.4.1`
-      placeholder: v0.4.1
+      description: CLI install tag (e.g. v0.5.3) or Action `@v0.5.2`
+      placeholder: v0.5.3
     validations:
       required: true
 
