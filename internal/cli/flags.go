@@ -46,6 +46,9 @@ func parseCheckValidateFlags(cmd string, args []string) (checkValidateFlags, err
 	fs.StringVar(&packsFlag, "packs", "", "")
 	fs.StringVar(&packSingle, "pack", "", "")
 	if err := fs.Parse(args); err != nil {
+		if isHelpFlagErr(err) {
+			return f, helpShownErr(cmd)
+		}
 		return f, flagUsageErr(cmd, err.Error())
 	}
 	if fs.NArg() > 0 {
@@ -168,6 +171,8 @@ func parseInitFlags(args []string) (initFlags, error) {
 			f.skill = false
 		case a == "--no-ide":
 			f.ide = false
+		case a == "-h", a == "--help":
+			return f, helpShownErr("init")
 		default:
 			return f, usageErr(fmt.Sprintf("init: unknown flag %q", a))
 		}
@@ -303,6 +308,8 @@ func parseAttestFlags(args []string) (attestFlags, error) {
 			i++
 		case strings.HasPrefix(a, "--reviewed-by="):
 			f.reviewedBy = strings.TrimSpace(strings.TrimPrefix(a, "--reviewed-by="))
+		case a == "-h", a == "--help":
+			return f, helpShownErr("attest")
 		default:
 			return f, usageErr(fmt.Sprintf("attest: unknown flag %q", a))
 		}
@@ -324,6 +331,9 @@ func parseShareFlags(args []string) (shareFlags, error) {
 	fs.BoolVar(&f.wantBundle, "bundle", false, "")
 	fs.BoolVar(&f.wantReveal, "reveal", false, "")
 	if err := fs.Parse(args); err != nil {
+		if isHelpFlagErr(err) {
+			return f, helpShownErr("share")
+		}
 		return f, flagUsageErr("share", err.Error())
 	}
 	if packsFlag != "" {
@@ -349,6 +359,9 @@ func parseScanFlags(args []string) (scanFlags, error) {
 	fs.BoolVar(&f.badge, "badge", false, "")
 	fs.StringVar(&format, "format", "", "")
 	if err := fs.Parse(args); err != nil {
+		if isHelpFlagErr(err) {
+			return f, helpShownErr("scan")
+		}
 		return f, flagUsageErr("scan", err.Error())
 	}
 	if fs.NArg() > 0 {
@@ -393,6 +406,9 @@ func parseDriftFlags(args []string) (driftFlags, error) {
 	var f driftFlags
 	fs.BoolVar(&f.jsonOut, "json", false, "")
 	if err := fs.Parse(args); err != nil {
+		if isHelpFlagErr(err) {
+			return f, helpShownErr("drift")
+		}
 		return f, flagUsageErr("drift", err.Error())
 	}
 	if fs.NArg() > 0 {

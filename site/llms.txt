@@ -26,7 +26,7 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 
 ## Start
 
-- **Read-only first contact:** `npx curbpack@0.5.2 scan` — no init, no files written; scan defaults to cra-baseline + Art 14 clock
+- **Read-only first contact:** install from docs/getting-started/install.md then `curbpack scan` — no init, no files written; scan defaults to cra-baseline + Art 14 clock
 - Canonical repo: https://github.com/afelin/curbpack — RISE mirror: https://github.com/RI-SE/curbpack
 - Site (credibility home): https://ri-se.github.io/curbpack/ — optional mirror: https://afelin.github.io/curbpack/
 - Install (dual fence — PowerShell | macOS/Linux): https://github.com/afelin/curbpack/blob/main/docs/getting-started/install.md

@@ -238,6 +238,62 @@ if [[ -d "$FIX/.cursor/skills/cyberready" ]]; then
   FAIL=1
 fi
 
+echo "== claim-safety: doc truth (verbs, blob links, npx) =="
+if ! python3 - "$ROOT" <<'PY'
+import os, re, sys
+root = sys.argv[1]
+reg_path = os.path.join(root, "internal/cli/registry.go")
+reg_text = open(reg_path, errors="replace").read()
+verbs = set(re.findall(r'\{name:\s*"([a-z][a-z0-9-]*)"', reg_text))
+aliases = set(re.findall(r'aliases:\s*\[\]string\{"([^"]+)"\}', reg_text))
+allowed = verbs | aliases | {"version", "help", "curb"}
+skip_verb_files = {
+    "docs/software-design-document.md",
+    "docs/sdd-gap-analysis.md",
+}
+doc_globs = ["README.md", "docs", "site", "papers", "AGENTS.md", "CLAUDE.md"]
+paths = []
+for g in doc_globs:
+    p = os.path.join(root, g)
+    if os.path.isfile(p):
+        paths.append(p)
+    elif os.path.isdir(p):
+        for dp, dns, fns in os.walk(p):
+            if "gtm-oss" in dp.replace("\\", "/"):
+                continue
+            for fn in fns:
+                if fn.endswith((".md", ".html", ".txt")):
+                    paths.append(os.path.join(dp, fn))
+fail = 0
+verb_re = re.compile(r"`curbpack ([a-z][a-z0-9-]*)")
+blob_re = re.compile(r"github\.com/(?:afelin|RI-SE)/curbpack/blob/main/([^)\s\"'#]+)")
+for path in sorted(set(paths)):
+    rel = os.path.relpath(path, root).replace("\\", "/")
+    try:
+        text = open(path, errors="replace").read()
+    except OSError:
+        continue
+    if re.search(r"npx curbpack", text, re.I) and "deferred" not in text.lower():
+        print(f"DOC-TRUTH FAIL [{rel}]: npx curbpack without deferred", file=sys.stderr)
+        fail = 1
+    if rel not in skip_verb_files:
+        for i, line in enumerate(text.splitlines(), 1):
+            for m in verb_re.finditer(line):
+                v = m.group(1)
+                if v not in allowed:
+                    print(f"DOC-TRUTH FAIL [{rel}:{i}]: unknown verb `curbpack {v}`", file=sys.stderr)
+                    fail = 1
+    for m in blob_re.finditer(text):
+        target = os.path.join(root, m.group(1))
+        if not os.path.isfile(target):
+            print(f"DOC-TRUTH FAIL [{rel}]: missing blob/main target {m.group(1)}", file=sys.stderr)
+            fail = 1
+sys.exit(fail)
+PY
+then
+  FAIL=1
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "claim-safety: FAILED — certification theater or brand leftovers detected" >&2
   exit 1

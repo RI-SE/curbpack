@@ -172,6 +172,13 @@ func cmdDemo(args []string) error {
 }
 
 func cmdInit(args []string) error {
+	iflags, err := parseInitFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	tty.PrintHeader("curbpack init")
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
@@ -179,10 +186,6 @@ func cmdInit(args []string) error {
 	}
 	tty.PrintStatus("Git repository", true, root)
 
-	iflags, err := parseInitFlags(args)
-	if err != nil {
-		return err
-	}
 	packList := iflags.packList
 	hooks := iflags.hooks
 	skill := iflags.skill
@@ -386,13 +389,16 @@ func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, for
 const healMaxRounds = 3
 
 func cmdCheck(args []string) error {
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore, err := parseCheckFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr("must run inside a git repository")
-	}
-	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore, err := parseCheckFlags(args)
-	if err != nil {
-		return err
 	}
 
 	// Snapshot prior evidence deposit before validate overwrites cache.
@@ -755,11 +761,14 @@ func cmdView(_ []string) error {
 }
 
 func cmdAttest(args []string) error {
-	tty.PrintHeader("curbpack attest")
 	f, err := parseAttestFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
+	tty.PrintHeader("curbpack attest")
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr(err.Error())
