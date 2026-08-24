@@ -98,4 +98,4 @@ A stranger should answer from the public home alone, in under two minutes:
 3. What do I get?
 4. What must I not claim?
 
-See also: [glossary](glossary-and-audience.md) · [intent vs scope](intent-vs-scope.md) · [for-authorities](for-authorities.md) · [migration from Curbpack](migration-curbpack-to-curbpack.md) · [launch readiness](launch-readiness.md)
+See also: [glossary](glossary-and-audience.md) · [intent vs scope](intent-vs-scope.md) · [for-authorities](for-authorities.md) · [migration from Cyberready](migration-cyberready-to-curbpack.md) · [internal launch readiness](internal/launch-readiness.md)

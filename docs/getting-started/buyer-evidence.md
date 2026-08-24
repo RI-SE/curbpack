@@ -1,59 +1,34 @@
-# Buyer evidence (quiet path)
+# Buyer evidence
 
-Ask the supplier for a **buyer one-pager** (supplier evidence summary) and, if needed, the **review pack**—structural gate evidence without GRC SaaS.
-
-Suppliers may Write, Bring, or CI into the same local check; optional research briefs inform drafts only and never gate pass/fail.
-
-What the buyer receives:
-
-- A one-screen HTML snapshot (local gate score on this tree — not certification)
-- Optional review-pack folder (JSON + markdown layers)
-- Optional ContextPack / buyer-questions checklist for deeper human Q&A
-- Attest status: **UNSIGNED — not cryptographically verified** until ssh-agent attest
+Ask the supplier for a **buyer one-pager** (supplier evidence summary). If you need more depth, ask for the **review pack** (JSON + markdown layers). Then use the [trust table on for-reviewers](../../site/for-reviewers/) — not a certification score.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-## One-breath share recipe
+## What to ask for
 
-```bash
-curbpack check
-curbpack export --context-pack      # washed assistant/auditor snapshot
-curbpack export --buyer-questions   # human Q&A checklist
-curbpack prepare-release            # review-pack / one-pager
-# human: curbpack attest            # never auto-attest
-```
+1. **Buyer one-pager** — one-screen HTML snapshot. **Local gate score on this tree** is structural evidence, not certification.
+2. **Review pack** (optional) — gate JSON, action report, executive summary when the one-pager is not enough.
+3. **Attest status** — look for **UNSIGNED — not cryptographically verified** until an ssh-agent signed attest. Unsigned ≠ verified.
 
-Thin CLI wrapper (same order; exits non-zero if check is red, still writes ContextPack for the red state):
+Suppliers may reach green via Write, Bring, or CI; that path is theirs. Optional research briefs on a one-pager back are informational only — never gate pass/fail.
 
-```bash
-curbpack share
-# optional: curbpack share --skip-prepare-release
-# human review tick: curbpack pathway confirm-share  — see pathway.md
-```
+## How to read what you receive
 
-Artifacts land under `.github/curbpack/cache/` (`context-pack.json` + `.md`, `buyer-questions.md` + `.json`) and `review-pack/`.
+| Signal | Meaning |
+|--------|---------|
+| **Gates passed** | Deterministic rule-pack checks did not fail on the tree shown — humans still judge annex drafts and risk |
+| **Local gate score** | Not a certification score or market-access percentage |
+| **UNSIGNED** | Capsule may be present; not cryptographically verified |
+| **ssh-agent-signed** | Real SSH signature on the attest capsule |
 
-Warm-start before share: [pathway](pathway.md) (`pathway status` → confirms → stop before attest).
+Use the full [artifact trust table](../../site/for-reviewers/) before equating any artifact with legal conformity or CE readiness.
 
-## Individual exports
+## What you must not assume
 
-```bash
-curbpack check
-curbpack export --buyer-questions
-# → .github/curbpack/cache/buyer-questions.md (+ .json)
-```
+- Gate pass is **not** CE marking, notified-body approval, or legal market access.
+- A green local score is **not** a procurement shortcut or “compliance percentage.”
+- Allowlisted Sources on the back of a one-pager are citation trails — not legal authority.
 
-Optional shareable map (deps summary, secret-hit count, informational watchlist∩SBOM — not a CVE product):
+Pair supplier evidence with your own SCA, secret scanning, and risk review. Curbpack prepares structural evidence for human judgment — not a GRC program or CVE product.
 
-```bash
-curbpack export --lay-of-land
-# → .github/curbpack/cache/lay-of-land.md (+ .json)
-```
-
-Hand the Markdown checklist / ContextPack to the human reviewer. When drafts are ready, `curbpack prepare-release` then human `curbpack attest`.
-
-Rows carry `assurance_class: structural_draft`. Buyer-questions header includes `attestation_status: none | ssh-agent`.
-
-Curbpack prepares structural evidence for product repos — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
-
-See also: [Voice and terms](../voice-and-terms.md) · [Assistant loop](../assistant-loop.md) · [For authorities](../for-authorities.md) · [Daily loop](daily-loop.md) · [Intent vs Scope](../intent-vs-scope.md) · [Strategy boundary](../strategy-boundary.md) · [Glossary](../glossary-and-audience.md)
+See also: [Voice and terms](../voice-and-terms.md) · [For authorities](../for-authorities.md) · [Glossary](../glossary-and-audience.md) · [Supplier share handoff](share-handoff.md) (what builders run)

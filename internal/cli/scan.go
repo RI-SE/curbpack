@@ -74,6 +74,9 @@ func cmdScan(args []string) error {
 	fmt.Printf("Packs: %s\n", strings.Join(packIDs, ", "))
 	if scanAssumedColdDefault(root, flags.packIDs) && len(packIDs) > 0 {
 		fmt.Printf("Assuming %s because no %s\n", packIDs[0], paths.ConfigFile)
+		if packIDs[0] == "cra-baseline" {
+			fmt.Printf("%s\n", tty.C(tty.Dim, "Daily init uses house-policy default; curbpack init --profile cra to match scan."))
+		}
 	}
 
 	switch {

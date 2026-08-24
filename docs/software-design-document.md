@@ -1,5 +1,7 @@
 # Curbpack — Software Design Document
 
+> **Target state:** This document describes design intent — not everything here is shipped yet (e.g. `verify` is not in the CLI). For repository baseline vs this doc, see [internal SDD gap analysis](internal/sdd-gap-analysis.md).
+
 **Version:** 1.0 · **Date:** 19 August 2026 · **Status:** target state
 **Applies to:** `github.com/afelin/curbpack` (canonical) and its RISE mirror
 **Audience:** implementers and the agents working this repository
@@ -533,4 +535,4 @@ Resolve before Wave B is planned. Both are cheap. Resolve by consider the best r
 
 ## Gap analysis
 
-See [sdd-gap-analysis.md](sdd-gap-analysis.md) for repository baseline vs this document (§14 removals, Wave B deferrals, check-name mapping, command surface).
+See [sdd-gap-analysis.md](internal/sdd-gap-analysis.md) for repository baseline vs this document (§14 removals, Wave B deferrals, check-name mapping, command surface).

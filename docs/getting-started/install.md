@@ -10,6 +10,8 @@ doctor → doctor --repair → full reinstall only if binary missing
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
+**Pin sentence:** the install script on `main` downloads binary **v0.5.3**; the GitHub Action pin (`@v0.5.2`) moves separately — no retag in doc-only PRs.
+
 **Install pin (binary):** smoke-verified **`v0.5.3`** when [`scripts/install-manifest.json`](../../scripts/install-manifest.json) `default_version` equals [`scripts/release-gate.json`](../../scripts/release-gate.json) `version` with all verification flags true.  
 **Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump (separate from CLI install pin). Local Windows CLI is supported.  
 **MCP sidecar:** optional Unix IPC example at [`examples/mcp/`](../../examples/mcp/) — golden path never requires it.  

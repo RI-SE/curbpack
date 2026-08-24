@@ -22,6 +22,14 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 [Site](https://ri-se.github.io/curbpack/) (Pages at ri-se.github.io) · canonical repo [afelin/curbpack](https://github.com/afelin/curbpack) · mirror [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
+## Who are you?
+
+| You are | Start here |
+|---------|------------|
+| **Supplier / builder** | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
+| **Buyer / reviewer** | [For reviewers](site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](site/samples/onepager.html) |
+| **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site Authorities](site/for-authorities/) |
+
 ## Quickstart (install + scan)
 
 Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
@@ -105,7 +113,7 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 
 | Reader | Start |
 |--------|--------|
-| Builder | [For builders](site/for-builders/) · [pathway](docs/getting-started/pathway.md) · [daily loop](docs/getting-started/daily-loop.md) |
+| Builder | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [pathway](docs/getting-started/pathway.md) · [daily loop](docs/getting-started/daily-loop.md) |
 | Buyer / reviewer | [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
 | CISO / authority | [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
 | Full system | [White paper](papers/curbpack-whitepaper.md) · [how it works](site/how-it-works/) |
@@ -125,7 +133,11 @@ Action runners are **Linux/macOS only** (local Windows CLI is supported separate
 
 Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](examples/workflows/curbpack-check.yml). Pilot deploy: `./scripts/redteam-pilot.sh`.
 
-## Dual-remote vibe-safe flow
+## Advanced
+
+Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
+
+### Dual-remote vibe-safe flow
 
 Use this exact flow for low-cognitive-load day-to-day work:
 
@@ -145,10 +157,6 @@ Two hardening checks:
 For this repository, "Sync both curbpack remotes" means running `./scripts/curb-sync.sh` (merge-only; never force-push).
 
 Ops runbook: [`docs/getting-started/repo-ops-hardening.md`](docs/getting-started/repo-ops-hardening.md).
-
-## Advanced
-
-Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
 
 **Compose, do not conquer:** Curbpack prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program. Boundary: [strategy boundary](docs/strategy-boundary.md).
 

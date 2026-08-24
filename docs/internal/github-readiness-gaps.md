@@ -7,7 +7,7 @@ Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are re
 | Stakeholder demand | Status | Evidence |
 |--------------------|--------|----------|
 | Claim-safe public language (no CE / notified-body theater) | Done | [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) · [promotion firewall](promotion-firewall.md) · [voice and terms](voice-and-terms.md) |
-| Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
+| Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](../voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
 | Institute / agency endorsement refuse (never claim `RISE-approved` / `FRA-approved` / `NCSC-approved` / `agency-endorsed`) | Done | DENY list in `claim-safety.sh` · [promotion firewall](promotion-firewall.md) |
 | Adversarial false-green scoreboard | Done | [`scripts/redteam-pilot.sh`](../scripts/redteam-pilot.sh) cases 1, 2, 5, 8, 10–12, 16–21 · [security model](security-model.md) |
 | Forged attest note not verified | Done | `internal/attest` · redteam case 19 |
@@ -53,4 +53,4 @@ Do **not** retarget sock `validate_delta` to `--diff`. Changing `RuleTouchesDiff
 
 Sub-MB Zig binary · OPA evaluator · `events.ndjson` SoR · full local AST/SQLite graph · legal-metrology / CE / never claim RISE-certified product · enforce-before-execute · Action cache that skips sha256 verify (consumer `hashFiles` key).
 
-See also: [strategy boundary](strategy-boundary.md) · [launch readiness](launch-readiness.md) · [security model](security-model.md)
+See also: [strategy boundary](../strategy-boundary.md) · [launch readiness](launch-readiness.md) · [security model](../security-model.md)

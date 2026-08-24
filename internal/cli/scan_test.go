@@ -40,6 +40,9 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if !strings.Contains(stdout, "cra-baseline because no .curbpack.json") {
 		t.Fatalf("cold scan must name assumed profile: %q", stdout)
 	}
+	if !strings.Contains(stdout, "house-policy default; curbpack init --profile cra to match scan") {
+		t.Fatalf("cold scan must hint init default vs scan profile: %q", stdout)
+	}
 	if strings.Contains(stdout, "ENISA SME maturity mapping") {
 		t.Fatalf("scan must not reference ENISA mapping until doc ships: %q", stdout)
 	}

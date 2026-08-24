@@ -110,4 +110,4 @@ Packs prepare evidence for human review. Passing gates is not certification for 
 | `curbpack check --diff` | Porcelain: evaluates rules that touch the dirty/changed set (`RuleTouchesDiff`; basename match). `file_present` / `annex_file` always run. | **No** — local speed only; do not treat green `--diff` as release evidence |
 | `curbpack validate` / sock `validate_delta` | Full quiet validate of composed packs | **Yes** — authoritative |
 
-Do not change `RuleTouchesDiff` matching mid-freeze. Stakeholder matrix: [github-readiness-gaps.md](github-readiness-gaps.md#diff-vs-validate_delta).
+Do not change `RuleTouchesDiff` matching mid-freeze. Stakeholder matrix: [github-readiness-gaps.md](internal/github-readiness-gaps.md#diff-vs-validate_delta).

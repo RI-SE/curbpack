@@ -24,4 +24,4 @@ go build -o bin/curbpack ./cmd/curbpack
 
 Automated unit tests under `internal/*/ *_test.go` use a fake `.git` directory (no `git init`) so they run in restricted sandboxes — except `internal/demo` which needs real `git` for the sandbox test.
 
-CI (`.github/workflows/ci.yml`) runs `go test ./...`, doctor/demo smokes, **claim-safety**, **heal/baseline gauntlet**, and install-from-release. See [docs/launch-readiness.md](../docs/launch-readiness.md).
+CI (`.github/workflows/ci.yml`) runs `go test ./...`, doctor/demo smokes, **claim-safety**, **heal/baseline gauntlet**, and install-from-release. See [docs/internal/launch-readiness.md](../docs/internal/launch-readiness.md).
