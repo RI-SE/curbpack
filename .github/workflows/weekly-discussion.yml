@@ -68,7 +68,7 @@ jobs:
               '',
               '### Try it',
               '```bash',
-              'curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh',
+              'curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh',
               'curbpack doctor && curbpack demo',
               '```',
               '',

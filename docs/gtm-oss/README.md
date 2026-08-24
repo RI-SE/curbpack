@@ -34,7 +34,7 @@ Sandbox green in ~{N}s. Evidence for humans — not certification.
 ```
 5 lines of YAML → PR comment with readiness thermometer + top fails.
 
-uses: afelin/curbpack@vX
+uses: RI-SE/curbpack@vX
 
 Claim-safe by design. Try the Action or `curbpack demo`.
 ```
