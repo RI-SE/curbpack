@@ -1,3 +1,5 @@
+> **Preliminary — not verified by a named domain reader.** Informational mapping only; not ENISA endorsement; not conformity assessment.
+
 # ENISA SME maturity ↔ Curbpack pack mapping
 
 **Informational mapping only — not conformity assessment.**  
