@@ -11,7 +11,7 @@ This repository was renamed **CyberReady** / **CyberReady+** → **Curbpack** in
 | Product | CyberReady+ | **Curbpack** (no “+”) |
 | Module | `github.com/afelin/cyberready` | `github.com/afelin/curbpack` (Go module; public repo [RI-SE/curbpack](https://github.com/RI-SE/curbpack)) |
 | CLI | `cyberready` | **`curbpack`** + short alias **`curb`** |
-| Action pin | `afelin/cyberready@v0.4.3` | `RI-SE/curbpack@v0.5.0` |
+| Action pin | `afelin/cyberready@v0.4.3` | `RI-SE/curbpack@v0.5.2` (public Action; was afelin) |
 | Config | `.cyberready.json` | write **`.curbpack.json`** |
 | Cache / evidence | `.github/cyberready/` | write **`.github/curbpack/`** |
 | Git notes | `refs/notes/cyberready` | write **`refs/notes/curbpack`** |
@@ -34,7 +34,7 @@ If you previously attested under the old notes ref, **re-attest** after upgrade 
 ## CI / Action
 
 ```yaml
-- uses: RI-SE/curbpack@v0.5.0
+- uses: RI-SE/curbpack@v0.5.2
   with:
     heal: true  # opt-in; Action default is false
 ```

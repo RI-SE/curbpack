@@ -155,7 +155,7 @@ func tool(name, desc string, schema map[string]any) map[string]any {
 func callTool(name string, args map[string]any) (string, bool) {
 	bin, err := lookCurbpack()
 	if err != nil {
-		return "curbpack not found on PATH — install from https://github.com/afelin/curbpack (fail-open; not blocking promote). " + err.Error(), true
+		return "curbpack not found on PATH — install from https://github.com/RI-SE/curbpack (fail-open; not blocking promote). " + err.Error(), true
 	}
 	root, _ := os.Getwd()
 	packs := strArg(args, "packs")
