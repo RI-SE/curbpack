@@ -17,7 +17,7 @@ Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audie
 
 | Artifact | How produced | Trust level (honest) |
 |----------|--------------|----------------------|
-| **Scan output** (`scan`, `npx curbpack scan`) | Read-only pack evaluation; no cache, no init | **Structural diagnosis** — defaults to `cra-baseline` on cold repos; not certification |
+| **Scan output** (`scan`) | Read-only pack evaluation; no cache, no init | **Structural diagnosis** — defaults to `cra-baseline` on cold repos; not certification |
 | Gate JSON / action report (`check`, `validate`) | Local deterministic pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
 | SARIF export | `export --sarif` / Action upload | Same findings in IDE/CI format; still pack gates, not certification |
 | Buyer-questions checklist | `export --buyer-questions` | Human Q&A aid; rows carry `assurance_class: structural_draft` |

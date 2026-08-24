@@ -20,6 +20,9 @@ import (
 
 func cmdScan(args []string) error {
 	flags, err := parseScanFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -71,10 +74,6 @@ func cmdScan(args []string) error {
 	fmt.Printf("Packs: %s\n", strings.Join(packIDs, ", "))
 	if scanAssumedColdDefault(root, flags.packIDs) && len(packIDs) > 0 {
 		fmt.Printf("Assuming %s because no %s\n", packIDs[0], paths.ConfigFile)
-	}
-
-	if scanShowsENISAMapping(packIDs) {
-		fmt.Printf("%s\n", tty.C(tty.Dim, "ENISA SME maturity mapping (informational): docs/mappings/enisa-cra-mapping.md"))
 	}
 
 	switch {
@@ -247,15 +246,6 @@ func scanAssumedColdDefault(root string, cliPacks []string) bool {
 	}
 	cfg, err := config.Load(root)
 	return err == nil && cfg == nil
-}
-
-func scanShowsENISAMapping(packIDs []string) bool {
-	for _, id := range packIDs {
-		if id == "cra-baseline" || id == "medtech-iec62304" {
-			return true
-		}
-	}
-	return false
 }
 
 var lastTabletopDateRE = regexp.MustCompile(`(?im)^Last tabletop:\s*(\d{4}-\d{2}-\d{2})`)

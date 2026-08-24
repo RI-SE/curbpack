@@ -6,13 +6,16 @@ import (
 )
 
 func cmdDrift(args []string) error {
+	f, err := parseDriftFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr("must run inside a git repository")
-	}
-	f, err := parseDriftFlags(args)
-	if err != nil {
-		return err
 	}
 	return drift.Run(drift.Options{RepoRoot: root, JSONOut: f.jsonOut})
 }

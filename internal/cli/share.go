@@ -18,13 +18,16 @@ import (
 // cmdShare is a thin recipe wrapper: check → context-pack → buyer-questions → prepare-release.
 // No new evaluation logic. Exit non-zero if check is red; still writes context-pack for the red state.
 func cmdShare(args []string) error {
+	f, err := parseShareFlags(args)
+	if helpRequested(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	root, err := gitutil.RepoRoot("")
 	if err != nil {
 		return usageErr("must run inside a git repository")
-	}
-	f, err := parseShareFlags(args)
-	if err != nil {
-		return err
 	}
 	packIDs := f.packIDs
 	skipPrepare := f.skipPrepare
