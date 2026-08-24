@@ -101,17 +101,17 @@ jobs:
 
           **macOS / Linux**
           \`\`\`bash
-          curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+          curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
           curbpack doctor && curbpack demo
           \`\`\`
 
           **Windows (PowerShell)**
           \`\`\`powershell
-          irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+          irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
           curbpack doctor; curbpack demo
           \`\`\`
 
-          Full ladders: [docs/getting-started/install.md](https://github.com/afelin/curbpack/blob/main/docs/getting-started/install.md)
+          Full ladders: [docs/getting-started/install.md](https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md)
 
           ### Claim safety
 

@@ -12,8 +12,7 @@
 - [ ] Branch is up to date with `main` before merge
 - [ ] Required CI checks are green
 - [ ] No direct push to `main` (PR merge only)
-- [ ] After merge: run `./scripts/curb-sync.sh`
-- [ ] Confirm `origin/main` and `corp-origin/main` are the same SHA
+- [ ] Confirm Pages deploy if site content changed
 
 ## Risk / rollback
 - [ ] Rollback path is clear (revert PR or restore previous tag/pin docs as needed)

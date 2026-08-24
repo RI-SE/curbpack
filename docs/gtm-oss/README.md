@@ -71,7 +71,7 @@ If you try it, open a “Tester report” issue or drop a thermometer screenshot
 ## README badge
 
 ```markdown
-[![curbpack-check](https://img.shields.io/badge/curbpack-check-2ea44f?logo=github)](https://github.com/afelin/curbpack)
+[![curbpack-check](https://img.shields.io/badge/curbpack-check-2ea44f?logo=github)](https://github.com/RI-SE/curbpack)
 ```
 
 Optional shields.io workflow badge once the Action runs on your repo:
