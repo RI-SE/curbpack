@@ -66,4 +66,4 @@ OPA/LSP/tracers · badge marketplace · `gtm-oss` on site · CE language · seco
 
 **Pack catalog freeze:** only `house-policy`, `cra-baseline`, `medtech-iec62304`. `scripts/redteam-pilot.sh` fails on any new pack id under `packs/` or the embed twin. Unlock requires freeze review + an explicit PR that updates the allowlist — not an env escape hatch in CI.
 
-Also mirrored in [launch readiness](launch-readiness.md), [Intent vs Scope](intent-vs-scope.md), and [Promotion firewall](promotion-firewall.md).
+Also mirrored in [launch readiness](internal/launch-readiness.md), [Intent vs Scope](intent-vs-scope.md), and [Promotion firewall](promotion-firewall.md).

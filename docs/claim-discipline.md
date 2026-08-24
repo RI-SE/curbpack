@@ -21,4 +21,4 @@ Curbpack prepares structural evidence for human review. Every user-visible strin
 3. **Re-check after every copy change** — run [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) (docs + runtime CLI captures).
 4. **Public language** — align with [voice and terms](voice-and-terms.md); deny-list blocks certification theater.
 
-See also: [launch readiness](launch-readiness.md) · [promotion firewall](promotion-firewall.md) · [security model](security-model.md)
+See also: [launch readiness](internal/launch-readiness.md) · [promotion firewall](promotion-firewall.md) · [security model](security-model.md)

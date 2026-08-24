@@ -26,6 +26,6 @@ PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or new pack ids with
 
 Pair Curbpack with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth. Watchlist∩SBOM is look-here only — not a vulnerability product.
 
-Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](github-readiness-gaps.md).
+Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](internal/github-readiness-gaps.md).
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](launch-readiness.md) · [Coreward pointer](coreward-pointer.md) (integrators only)
+See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](internal/launch-readiness.md) · [Coreward pointer](coreward-pointer.md) (integrators only)

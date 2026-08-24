@@ -249,7 +249,7 @@ aliases = set(re.findall(r'aliases:\s*\[\]string\{"([^"]+)"\}', reg_text))
 allowed = verbs | aliases | {"version", "help", "curb"}
 skip_verb_files = {
     "docs/software-design-document.md",
-    "docs/sdd-gap-analysis.md",
+    "docs/internal/sdd-gap-analysis.md",
 }
 doc_globs = ["README.md", "docs", "site", "papers", "AGENTS.md", "CLAUDE.md"]
 paths = []

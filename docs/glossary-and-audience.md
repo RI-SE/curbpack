@@ -20,6 +20,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **OPA** | Open Policy Agent — Rego policy engine. Explicit **non-goal** for Curbpack OSS. |
 | **VEX** | Vulnerability Exploitability eXchange — draft OpenVEX may bind pending findings at attest time; not a CVE product. |
 | **CLI** | Command-Line Interface — Curbpack’s primary surface (`curbpack` / short alias `curb`). |
+| **Supplier & builder** | Product team preparing structural evidence for buyers — same audience as **Builder** in public copy. |
 | **IPC** | Inter-Process Communication — optional Unix sock sidecar (`curbpack-sock` in `examples/mcp/`) for integrators; not in main binary. |
 | **OSS** | Open-Source Software — this public Apache-2.0 product line. |
 | **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.5.2`. |
@@ -53,7 +54,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 
 | Audience | First sentence | Start here | Then | Skip by default |
 |----------|----------------|------------|------|-----------------|
-| **Builder** (product engineer) | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [pathway](getting-started/pathway.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
+| **Supplier & builder** | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [share handoff](getting-started/share-handoff.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
 | **Buyer / reviewer** | Ask the supplier for a buyer one-pager and, if needed, the review pack—then use the trust table. | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) | Sample [one-pager](../site/samples/onepager.html) | Pack authoring, sock bridge |
 | **CISO** | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
 | **Authority / auditor** (NCSC/EU-style, internal audit) | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](promotion-firewall.md) · white paper | Coreward bridge, GTM folders |
