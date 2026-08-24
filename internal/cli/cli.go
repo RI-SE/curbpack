@@ -463,8 +463,14 @@ func cmdCheck(args []string) error {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}
 	} else {
+		notStarted, failing := classifyFindings(res.Payload.Failures)
+		onlyNotStarted := len(failing) == 0 && len(notStarted) > 0
 		if showScore {
-			if tty.IsTerminal {
+			if onlyNotStarted {
+				for _, f := range notStarted {
+					fmt.Printf("○ [%s] %s — %s (%s)\n", f.Severity, f.GateID, shortFinding(f), notStartedParen(f))
+				}
+			} else if tty.IsTerminal {
 				tty.RenderThermometer(res.Score)
 			} else {
 				fmt.Printf("readiness=%d%% gates=open\n", res.Score)

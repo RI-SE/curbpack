@@ -44,6 +44,12 @@ func PrintStatus(step string, passed bool, details string) {
 	}
 }
 
+// PrintNotStarted marks a gate that was not examined (target absent / scaffold / not started).
+// Never use PrintStatus ok for unevaluated empty results — emit a not-started finding instead.
+func PrintNotStarted(step string, details string) {
+	fmt.Printf("[%s]  %-40s %s\n", C(Yellow, "○"), step, C(Dim, "("+details+")"))
+}
+
 // RenderThermometer prints an ASCII readiness bar. Score is 0–100.
 func RenderThermometer(score int) {
 	if score < 0 {

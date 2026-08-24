@@ -298,6 +298,96 @@ func TestPathTraversalFailClosed(t *testing.T) {
 	}
 }
 
+func TestAntiPlaceholderTargetAbsentWhenAllMissing(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"absent-widget","version":"1.0.0"}`+"\n")
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Absent Widget\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"cra-baseline"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("missing annex targets must not vacuous-pass anti_placeholder")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "CRA-ANTI-PLACEHOLDER" && strings.Contains(f.SanitizedDescription, "target absent") {
+			found = true
+			if f.ASTCoordinates.TargetFile != "docs/annex-vii/risk_assessment.md" {
+				t.Fatalf("want first absent path, got %q", f.ASTCoordinates.TargetFile)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("expected CRA-ANTI-PLACEHOLDER target absent, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestNPMDepBanVacuousPassPresentManifest(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	writeGoodHouse(t, dir)
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Passed {
+		t.Fatalf("present package.json with no banned pin must pass, got %#v", res.Payload.Failures)
+	}
+}
+
+func TestNPMDepBanTargetAbsentMissingManifest(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	mustWrite(t, filepath.Join(dir, "SECURITY.md"), `# Security
+
+## Reporting
+
+Email security@example.com with vulnerability details for coordinated disclosure.
+
+## Response
+
+We acknowledge within two business days and coordinate responsible disclosure timelines carefully.
+`)
+	mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), `Contact: mailto:security@example.com
+Expires: 2028-01-15T00:00:00.000Z
+Preferred-Languages: en
+`)
+	mustWrite(t, filepath.Join(dir, "README.md"), "# Demo\n")
+
+	res, err := validate.Run(validate.Options{
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed {
+		t.Fatal("missing package.json must not vacuous-pass manifest_dep_ban")
+	}
+	found := false
+	for _, f := range res.Payload.Failures {
+		if f.GateID == "HOUSE-DEP-AXIOS-PIN" && strings.Contains(f.SanitizedDescription, "target absent") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected HOUSE-DEP-AXIOS-PIN target absent, got %#v", res.Payload.Failures)
+	}
+}
+
 func TestInvalidPackageJSONDepBanFail(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
@@ -476,9 +566,7 @@ func TestHonestyEvalFolder(t *testing.T) {
 			mustWrite(t, filepath.Join(dir, "SECURITY.md"), string(body))
 			mustWrite(t, filepath.Join(dir, ".well-known/security.txt"), realSecurityTxt)
 			mustWrite(t, filepath.Join(dir, "README.md"), "# Honesty eval fixture\n")
-			if tc.subdir == "token-only" {
-				mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"acme-widget","version":"1.0.0"}`+"\n")
-			}
+			mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"acme-widget","version":"1.0.0","dependencies":{}}`+"\n")
 
 			res, err := validate.Run(validate.Options{
 				RepoRoot: dir,
@@ -664,6 +752,8 @@ Expires: 2028-01-15T00:00:00.000Z
 Preferred-Languages: en
 `)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# Contoso Gateway\n\nProduct overview for operators.\n")
+	// Present manifest with no banned pin = vacuous pass (missing package.json is target absent).
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"contoso-gateway","version":"1.0.0","dependencies":{}}`+"\n")
 }
 
 func writeGoodCRA(t *testing.T, dir string) {

@@ -1,6 +1,7 @@
 package formhints
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,6 +41,78 @@ func TestForFailuresDeterministic(t *testing.T) {
 	text := Format(hints)
 	if !strings.Contains(text, "propose-only") {
 		t.Fatalf("format missing propose-only: %s", text)
+	}
+}
+
+func TestDepBanTargetAbsentScaffoldsValidPackageJSON(t *testing.T) {
+	hints := ForFailures([]ir.Failure{{
+		GateID:               "HOUSE-DEP-AXIOS-PIN",
+		SanitizedDescription: "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)",
+		ASTCoordinates:       ir.ASTCoordinates{TargetFile: "package.json"},
+	}})
+	if len(hints) != 1 {
+		t.Fatalf("want 1 hint, got %d", len(hints))
+	}
+	if !json.Valid([]byte(strings.TrimSpace(hints[0].Snippet))) {
+		t.Fatalf("target-absent dep-ban must scaffold valid JSON, got %q", hints[0].Snippet)
+	}
+	if !strings.Contains(hints[0].Snippet, `"dependencies"`) {
+		t.Fatalf("empty manifest stub missing dependencies: %q", hints[0].Snippet)
+	}
+
+	dir := t.TempDir()
+	out, err := ApplyStubs(dir, hints)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out[0].Applied {
+		t.Fatal("target-absent empty package.json stub must be applied")
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !json.Valid(b) {
+		t.Fatalf("wrote invalid package.json: %s", b)
+	}
+}
+
+func TestApplyStubsRefusesNonJSONPackageJSON(t *testing.T) {
+	dir := t.TempDir()
+	out, err := ApplyStubs(dir, []Hint{{
+		GateID:  "HOUSE-DEP-AXIOS-PIN",
+		File:    "package.json",
+		Snippet: "# Dependency remediations are not auto-written.\n",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out[0].Applied {
+		t.Fatal("must not write non-JSON propose-only dep stub into package.json")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "package.json")); !os.IsNotExist(err) {
+		t.Fatalf("package.json must remain absent, err=%v", err)
+	}
+}
+
+func TestDepBanTargetAbsentOverridesCachedCommentStub(t *testing.T) {
+	c := remediation.Cache{Entries: map[string]remediation.Entry{
+		"HOUSE-DEP-AXIOS-PIN": {
+			GateID:  "HOUSE-DEP-AXIOS-PIN",
+			File:    "package.json",
+			Snippet: "# Dependency remediations are not auto-written.\n",
+		},
+	}}
+	hints := ForFailuresCached([]ir.Failure{{
+		GateID:               "HOUSE-DEP-AXIOS-PIN",
+		SanitizedDescription: "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)",
+		ASTCoordinates:       ir.ASTCoordinates{TargetFile: "package.json"},
+	}}, c)
+	if hints[0].FromCache {
+		t.Fatal("target-absent must not keep non-JSON cached dep stub")
+	}
+	if !json.Valid([]byte(strings.TrimSpace(hints[0].Snippet))) {
+		t.Fatalf("want valid JSON stub after cache override, got %q", hints[0].Snippet)
 	}
 }
 

@@ -149,6 +149,7 @@ We support the latest major release with security patches for twelve months.
 
 Coordinated disclosure within 90 days after fix availability.
 `+strings.Repeat("word ", 40)+"\n")
+	mustWriteFile(t, filepath.Join(dir, "package.json"), `{"name":"product","version":"1.0.0","dependencies":{}}`+"\n")
 	mustWriteFile(t, filepath.Join(dir, ".curbpack.json"), `{"packs":["house-policy"],"claim":"Prepares evidence for human review — not a conformity assessment."}`+"\n")
 }
 

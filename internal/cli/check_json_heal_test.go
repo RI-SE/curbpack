@@ -38,6 +38,36 @@ func TestCheckJSONHealValidJSON(t *testing.T) {
 	}
 }
 
+// Init stubs leave only not-started/scaffold/absent findings — no ✘, no readiness=%, still exit 1.
+func TestCheckScoreStubOnlyNoReadiness(t *testing.T) {
+	dir := t.TempDir()
+	initGit(t, dir)
+	bin := buildCLI(t)
+
+	initCmd := exec.Command(bin, "init", "--packs", "house-policy", "--bare")
+	initCmd.Dir = dir
+	if out, err := initCmd.CombinedOutput(); err != nil {
+		t.Fatalf("init: %v %s", err, out)
+	}
+
+	checkCmd := exec.Command(bin, "check", "--score")
+	checkCmd.Dir = dir
+	out, err := checkCmd.CombinedOutput()
+	text := string(out)
+	if err == nil {
+		t.Fatalf("stub-only check must exit non-zero (Passed false), got success:\n%s", text)
+	}
+	if strings.Contains(text, "✘") {
+		t.Fatalf("stub-only overlap must not print ✘: %q", text)
+	}
+	if strings.Contains(text, "readiness=") {
+		t.Fatalf("stub-only findings must omit readiness=%%: %q", text)
+	}
+	if !strings.Contains(text, "○") {
+		t.Fatalf("stub-only findings should print ○ not-started lines: %q", text)
+	}
+}
+
 func initGit(t *testing.T, dir string) {
 	t.Helper()
 	run := func(args ...string) {

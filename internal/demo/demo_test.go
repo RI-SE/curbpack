@@ -14,7 +14,7 @@ func TestCopyEmbedded(t *testing.T) {
 	if err := copyEmbedded(dir); err != nil {
 		t.Fatal(err)
 	}
-	for _, rel := range []string{"SECURITY.md", ".well-known/security.txt", "README.md"} {
+	for _, rel := range []string{"SECURITY.md", ".well-known/security.txt", "README.md", "package.json"} {
 		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
 			t.Fatalf("missing %s: %v", rel, err)
 		}

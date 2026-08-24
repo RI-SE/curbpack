@@ -299,6 +299,33 @@ func TestRun_AskMySuppliersStdoutOnly(t *testing.T) {
 	}
 }
 
+func TestRun_ScanColdNeverCheckAntiPlaceholder(t *testing.T) {
+	dir := t.TempDir()
+	initScanGit(t, dir)
+	mustWriteScan(t, filepath.Join(dir, "package.json"), `{"name":"cold-widget","version":"1.0.0"}`+"\n")
+	mustWriteScan(t, filepath.Join(dir, "README.md"), "# Cold Widget\n")
+
+	stdout, _ := capture(t, func() {
+		old, _ := os.Getwd()
+		_ = os.Chdir(dir)
+		defer func() { _ = os.Chdir(old) }()
+		if err := cli.Run([]string{"scan"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for _, line := range strings.Split(stdout, "\n") {
+		if strings.Contains(line, "✔") && strings.Contains(line, "CRA-ANTI-PLACEHOLDER") {
+			t.Fatalf("cold scan must never ✔ CRA-ANTI-PLACEHOLDER: %q", stdout)
+		}
+	}
+	if !strings.Contains(stdout, "CRA-ANTI-PLACEHOLDER") || !strings.Contains(stdout, "○") {
+		t.Fatalf("cold scan must show ○ CRA-ANTI-PLACEHOLDER (target absent): %q", stdout)
+	}
+	if !strings.Contains(stdout, "target absent") {
+		t.Fatalf("cold scan must classify CRA-ANTI-PLACEHOLDER as target absent: %q", stdout)
+	}
+}
+
 func TestRun_ScanNotGitRepo(t *testing.T) {
 	dir := t.TempDir()
 	old, err := os.Getwd()

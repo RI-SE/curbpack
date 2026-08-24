@@ -1,6 +1,7 @@
 package formhints
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -52,11 +53,17 @@ func ForFailuresCached(failures []ir.Failure, cache remediation.Cache) []Hint {
 			}
 		}
 		if h.Snippet == "" {
-			if snip, ok := snippetForGate(f.GateID, h.File); ok {
+			if snip, ok := snippetForFailure(f, h.File); ok {
 				h.Snippet = snip
 			} else if h.File != "" {
 				h.Snippet = packs.DefaultScaffoldBody(h.File)
 			}
+		}
+		// Target-absent dep-ban: ensure heal can scaffold a valid empty manifest
+		// even if remediations.json still holds the propose-only comment stub.
+		if isPackageJSON(h.File) && isTargetAbsent(f) && !json.Valid([]byte(strings.TrimSpace(h.Snippet))) {
+			h.Snippet = emptyPackageJSONStub()
+			h.FromCache = false
 		}
 		out = append(out, h)
 	}
@@ -113,6 +120,7 @@ func Format(hints []Hint) string {
 // ApplyStubs writes missing/empty target files with snippets. Never overwrites non-empty files.
 // Missing paths use O_CREATE|O_EXCL (atomic create). Empty non-symlink files are healed via
 // Lstat-proven write/trunc. Refuses absolute paths, path traversal, .git/**, and symlink targets.
+// Never writes non-JSON snippets into package.json (dep remediations stay propose-only).
 // Never calls attest.
 func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 	out := make([]Hint, 0, len(hints))
@@ -127,6 +135,12 @@ func ApplyStubs(repoRoot string, hints []Hint) ([]Hint, error) {
 			return out, err
 		}
 		h.File = rel
+		// Dependency pin remediations are propose-only: never materialize the
+		// "# … not auto-written" comment stub as package.json.
+		if isPackageJSON(rel) && !json.Valid([]byte(strings.TrimSpace(h.Snippet))) {
+			out = append(out, h)
+			continue
+		}
 		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
 		applied, err := applyStubAt(path, rel, []byte(h.Snippet))
 		if err != nil {
@@ -282,7 +296,17 @@ func guessFile(gateID string) string {
 }
 
 func snippetForGate(gateID, file string) (string, bool) {
+	return snippetForFailure(ir.Failure{GateID: gateID}, file)
+}
+
+func snippetForFailure(f ir.Failure, file string) (string, bool) {
+	gateID := f.GateID
 	if strings.Contains(gateID, "DEP") || strings.Contains(gateID, "AXIOS") {
+		// Missing manifest: scaffold a present empty package.json so dep-ban can
+		// vacuous-pass. Banned pins / invalid JSON stay propose-only comments.
+		if isTargetAbsent(f) {
+			return emptyPackageJSONStub(), true
+		}
 		return "# Dependency remediations are not auto-written.\n# Upgrade the banned package and refresh the lockfile, then re-run check.\n", true
 	}
 	if strings.Contains(gateID, "SECRET") {
@@ -292,4 +316,17 @@ func snippetForGate(gateID, file string) (string, bool) {
 		return "", false
 	}
 	return packs.DefaultScaffoldBody(file), true
+}
+
+func isTargetAbsent(f ir.Failure) bool {
+	return strings.Contains(strings.ToLower(f.SanitizedDescription), "target absent")
+}
+
+func isPackageJSON(file string) bool {
+	return filepath.Base(filepath.ToSlash(strings.TrimSpace(file))) == "package.json"
+}
+
+// emptyPackageJSONStub is a present, pin-free manifest for heal of target-absent dep-ban.
+func emptyPackageJSONStub() string {
+	return "{\n  \"name\": \"app\",\n  \"version\": \"0.0.0\",\n  \"private\": true,\n  \"dependencies\": {}\n}\n"
 }
