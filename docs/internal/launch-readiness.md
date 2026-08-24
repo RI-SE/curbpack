@@ -38,7 +38,7 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
 
-**Post-sprint parity — recorded 2026-08-24** (afelin/main @ `e62f813`): ENISA preliminary mapping + scan re-point shipped on RI-SE; `go.mod` / Action pin remain `RI-SE/curbpack@v0.5.2` until wave 2 tabletop.
+**Post-sprint parity — recorded 2026-08-24** (afelin/main @ `e62f813`): ENISA preliminary mapping and scan re-point shipped on RI-SE; `go.mod` / Action pin remain at RI-SE curbpack pin version v0.5.2 until wave 2 tabletop.
 
 ### Sprint A — test launch readiness (2026-08-25)
 
