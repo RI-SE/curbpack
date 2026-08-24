@@ -37,6 +37,9 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if !strings.Contains(stdout, "Packs: cra-baseline") {
 		t.Fatalf("uninitialized scan must default to cra-baseline: %q", stdout)
 	}
+	if !strings.Contains(stdout, "cra-baseline because no .curbpack.json") {
+		t.Fatalf("cold scan must name assumed profile: %q", stdout)
+	}
 	if !strings.Contains(stdout, "ENISA SME maturity mapping") {
 		t.Fatalf("cra-baseline scan must show ENISA mapping pointer: %q", stdout)
 	}
@@ -64,6 +67,9 @@ func TestRun_ScanHousePolicyNoENISA(t *testing.T) {
 	})
 	if strings.Contains(stdout, "ENISA SME maturity mapping") {
 		t.Fatalf("house-policy scan must not show ENISA line: %q", stdout)
+	}
+	if strings.Contains(stdout, "because no .curbpack.json") {
+		t.Fatalf("explicit --packs must not assume cold default: %q", stdout)
 	}
 }
 

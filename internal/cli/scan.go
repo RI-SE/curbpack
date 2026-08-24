@@ -13,6 +13,7 @@ import (
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/validate"
 )
@@ -68,6 +69,9 @@ func cmdScan(args []string) error {
 	fmt.Printf("Product hint: %s (%s)\n", product, source)
 	fmt.Printf("Repo: %s\n", root)
 	fmt.Printf("Packs: %s\n", strings.Join(packIDs, ", "))
+	if scanAssumedColdDefault(root, flags.packIDs) && len(packIDs) > 0 {
+		fmt.Printf("Assuming %s because no %s\n", packIDs[0], paths.ConfigFile)
+	}
 
 	if scanShowsENISAMapping(packIDs) {
 		fmt.Printf("%s\n", tty.C(tty.Dim, "ENISA SME maturity mapping (informational): docs/mappings/enisa-cra-mapping.md"))
@@ -235,6 +239,14 @@ func notStartedParen(f ir.Failure) string {
 	default:
 		return "not started"
 	}
+}
+
+func scanAssumedColdDefault(root string, cliPacks []string) bool {
+	if len(cliPacks) > 0 {
+		return false
+	}
+	cfg, err := config.Load(root)
+	return err == nil && cfg == nil
 }
 
 func scanShowsENISAMapping(packIDs []string) bool {

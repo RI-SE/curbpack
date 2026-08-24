@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/exportx"
@@ -42,14 +43,22 @@ func cmdShare(args []string) error {
 		return err
 	}
 	tty.PrintStatus("context-pack", true, cp)
-	printAttach(cp)
+	reviewCP, err := copyShareArtifactToReviewPack(root, cp)
+	if err != nil {
+		return err
+	}
+	printAttach(reviewCP)
 
 	bq, n, err := exportx.WriteBuyerQuestions(root, packIDs, "")
 	if err != nil {
 		return err
 	}
 	tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", bq, n))
-	printAttach(bq)
+	reviewBQ, err := copyShareArtifactToReviewPack(root, bq)
+	if err != nil {
+		return err
+	}
+	printAttach(reviewBQ)
 
 	var revealTarget string
 	prepared := false
@@ -132,4 +141,49 @@ func printAttach(path string) {
 		abs = path
 	}
 	fmt.Printf("Attach: %s\n", abs)
+}
+
+// copyShareArtifactToReviewPack copies a cache share artifact into review-pack/
+// (and its .md/.json companion when present). Cache copies stay (SoR for pathway/MCP).
+func copyShareArtifactToReviewPack(root, src string) (string, error) {
+	dest, err := copyFileIntoReviewPack(root, src)
+	if err != nil {
+		return "", err
+	}
+	if companion := shareArtifactCompanion(src); companion != "" {
+		if _, err := os.Stat(companion); err == nil {
+			if _, cerr := copyFileIntoReviewPack(root, companion); cerr != nil {
+				return "", cerr
+			}
+		}
+	}
+	return dest, nil
+}
+
+func copyFileIntoReviewPack(root, src string) (string, error) {
+	dest := filepath.Join(root, "review-pack", filepath.Base(src))
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(dest, data, 0o644); err != nil {
+		return "", err
+	}
+	return dest, nil
+}
+
+func shareArtifactCompanion(src string) string {
+	ext := strings.ToLower(filepath.Ext(src))
+	stem := strings.TrimSuffix(src, filepath.Ext(src))
+	switch ext {
+	case ".json":
+		return stem + ".md"
+	case ".md", ".markdown":
+		return stem + ".json"
+	default:
+		return ""
+	}
 }
