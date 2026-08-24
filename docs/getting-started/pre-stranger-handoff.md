@@ -20,7 +20,7 @@ Engineering stops here. Agents must not merge, tag, disable Pages, or run strang
 - [x] ~~Run `./scripts/curb-sync.sh`~~ (deprecated — RI-SE is now canonical)
 - [x] Verify RI-SE `main` parity with afelin
 
-**Do not merge:** [PR #75](https://github.com/RI-SE/curbpack/pull/75) (`do-not-merge` staging). **Do not merge:** PR #6 ENISA until domain reader ships.
+**Do not merge:** [PR #75](https://github.com/RI-SE/curbpack/pull/75) (`do-not-merge` staging). **ENISA:** preliminary mapping on `main` (not domain-verified) — see [docs/mappings/enisa-cra-mapping.md](../mappings/enisa-cra-mapping.md).
 
 ### 2. Tag v0.5.3
 
