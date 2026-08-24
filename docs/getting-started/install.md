@@ -32,7 +32,7 @@ Inside any git repository — **no init**, **no files written**. Requires **`v0.
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -40,7 +40,7 @@ curbpack scan
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
 ```
@@ -52,7 +52,7 @@ Shows open gate signals against the CRA-shaped default pack (`cra-baseline`), Ar
 **macOS / Linux**
 
 ```bash
-curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh
+curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh
 sh /tmp/curbpack-install.sh
 curbpack doctor
 ```
@@ -60,7 +60,7 @@ curbpack doctor
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
 powershell -ExecutionPolicy Bypass -File $env:TEMP\curbpack-install.ps1
 curbpack doctor
 ```
@@ -70,13 +70,13 @@ curbpack doctor
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 ```
 
 If ExecutionPolicy blocks scripts, use Ladder 1 with `-ExecutionPolicy Bypass`, or:
@@ -87,7 +87,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ### Ladder 3 — Manual binary + checksums
 
-1. Open the release for pin **`v0.5.3`**: https://github.com/afelin/curbpack/releases/tag/v0.5.3  
+1. Open the release for pin **`v0.5.3`**: https://github.com/RI-SE/curbpack/releases/tag/v0.5.3  
 2. Download the asset for your OS from the manifest (`curbpack_darwin_*`, `curbpack_linux_*`, or `curbpack_windows_amd64.exe`) **and** `checksums.txt`.  
 3. Verify sha256 (fail closed if mismatch).  
 4. Place the binary on PATH (`~/.local/bin` or `%LOCALAPPDATA%\Programs\Curbpack`).  

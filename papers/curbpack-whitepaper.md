@@ -6,7 +6,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/) (optional mirror: [afelin.github.io/curbpack](https://afelin.github.io/curbpack/)). Pin Action / examples at **`@v0.5.2`**.
+Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/). Pin Action / examples at **`@v0.5.2`**.
 
 ---
 
@@ -119,7 +119,7 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | **proof verify** | After attest, open local `proof/index.html` and compare the evidence pointer hash—still human judgment |
 | **packs** | `list` / `import` / local pack→rule map (`export-graph`) / `doctor` |
 | **Platforms** | Release binaries: `darwin_*`, `linux_*`, `windows_amd64` (local CLI). GitHub Action = **Linux/macOS only** |
-| **Action / alias** | `afelin/curbpack@v0.5.2`; short alias `curb` = `curbpack` |
+| **Action / alias** | `RI-SE/curbpack@v0.5.2`; short alias `curb` = `curbpack` |
 | **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
 
 Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/env.

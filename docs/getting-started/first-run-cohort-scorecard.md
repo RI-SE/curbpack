@@ -13,7 +13,7 @@ Manual adoption validation for the first-run path only: install → `cd` → `cu
 
 Do **not** commit names, contact details, repository identifiers, scan findings, or identifiable notes.
 
-Entry link for invitees: [rise-tryout.md](rise-tryout.md). Feedback (optional): canonical [first_run_feedback.yml](https://github.com/afelin/curbpack/issues/new?template=first_run_feedback.yml) on **afelin/curbpack** only.
+Entry link for invitees: [rise-tryout.md](rise-tryout.md). Feedback (optional): canonical [first_run_feedback.yml](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) on **RI-SE/curbpack** only.
 
 ## Aggregate results (public)
 

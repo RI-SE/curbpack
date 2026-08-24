@@ -13,13 +13,13 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 ```
 
 2. Choose a **git repository you are permitted to inspect**, then `cd` into its root (confirm the path).
@@ -43,13 +43,13 @@ Stuck? [troubleshooting.md](troubleshooting.md). No product repo handy? `curbpac
 
 Feedback is **not required** to complete the tryout.
 
-→ [Open first-run feedback](https://github.com/afelin/curbpack/issues/new?template=first_run_feedback.yml)
+→ [Open first-run feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml)
 
 Do not include repository contents, internal paths, customer information, personal data, credentials, secrets, or detailed security findings in feedback.
 
 Alternatives: paste a sanitised note in Teams, or finish without sharing.
 
-Optional community: [Curbpack Discussions](https://github.com/afelin/curbpack/discussions) for release notes and future tester calls (no auto-enrol).
+Optional community: [Curbpack Discussions](https://github.com/RI-SE/curbpack/discussions) for release notes and future tester calls (no auto-enrol).
 
 ## Related
 

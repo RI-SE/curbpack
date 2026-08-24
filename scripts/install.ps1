@@ -20,14 +20,14 @@
   Local PATH/alias repair only (same semantics as: curbpack doctor --repair).
 
 .PARAMETER Repo
-  GitHub repo (default afelin/curbpack)
+  GitHub repo (default RI-SE/curbpack)
 #>
 [CmdletBinding()]
 param(
   [string]$Version = "",
   [string]$InstallDir = "",
   [switch]$Repair,
-  [string]$Repo = "afelin/curbpack"
+  [string]$Repo = "RI-SE/curbpack"
 )
 
 $ErrorActionPreference = "Stop"
@@ -100,7 +100,7 @@ function Invoke-Repair {
   Write-Host ""
   if (-not (Test-Path $exe)) {
     Write-Host "Binary missing — reinstall:" -ForegroundColor Red
-    Write-Host '  irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex'
+    Write-Host '  irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex'
     exit 2
   }
   Copy-Item -Force -Path $exe -Destination $alias

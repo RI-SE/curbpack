@@ -1,6 +1,6 @@
 #!/bin/sh
 # Curbpack one-click install — downloads a GitHub Release binary (no Go required).
-# Preferred: curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+# Preferred: curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 # (installs smoke-verified binary from release gate / manifest default)
 # Env: CURBPACK_VERSION (default: from install-manifest.json / v0.5.3), CURBPACK_INSTALL_DIR (default: ~/.local/bin), GITHUB_TOKEN (optional)
 # Legacy CYBERREADY_* env names are still read if CURBPACK_* is unset.
@@ -16,7 +16,7 @@ if [ -n "${SCRIPT_DIR:-}" ] && [ -f "${SCRIPT_DIR}/install-manifest.json" ]; the
 fi
 
 # Dual-read: CURBPACK_* preferred; CYBERREADY_* accepted during cutover.
-REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-afelin/curbpack}}"
+REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-RI-SE/curbpack}}"
 VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-$MANIFEST_DEFAULT}}"
 INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}}"
 
@@ -31,7 +31,7 @@ case "$os" in
   darwin|linux) ;;
   msys*|mingw*|cygwin*)
     echo "Use install.ps1 on Windows (PowerShell):" >&2
-    echo "  irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex" >&2
+    echo "  irm https://raw.githubusercontent.com/RI-SE/curbpack/v0.5.3/scripts/install.ps1 | iex" >&2
     exit 1
     ;;
   *)
@@ -76,7 +76,7 @@ fi
 
 if [ -z "${url:-}" ]; then
   echo "could not resolve download URL for ${asset} (tag=${tag:-unknown})" >&2
-  echo "Build from source: go install github.com/afelin/curbpack/cmd/curbpack@latest" >&2
+  echo "Build from source: go install github.com/RI-SE/curbpack/cmd/curbpack@latest" >&2
   exit 1
 fi
 

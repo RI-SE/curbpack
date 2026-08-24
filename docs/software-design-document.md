@@ -3,7 +3,7 @@
 > **Target state:** This document describes design intent — not everything here is shipped yet (e.g. `verify` is not in the CLI). For repository baseline vs this doc, see [internal SDD gap analysis](internal/sdd-gap-analysis.md).
 
 **Version:** 1.0 · **Date:** 19 August 2026 · **Status:** target state
-**Applies to:** `github.com/afelin/curbpack` (canonical) and its RISE mirror
+**Applies to:** `github.com/RI-SE/curbpack`
 **Audience:** implementers and the agents working this repository
 
 This document describes the state curbpack is being built toward — the design, the reasoning behind it, and the work required to get there. It is the single source of design intent. Where it conflicts with older notes, plans or specifications, this document wins.
@@ -391,7 +391,7 @@ The countdown is rendered into the HTML at build time with a scheduled daily reb
 
 ### 11.2 Repository identity
 
-`afelin/curbpack` is canonical: the Go module path, releases and the Action resolve there. The RISE repository is a read-only mirror of `main`. Navigation and footers on every page state this in that direction. No page states or implies that the mirror serves releases or binaries.
+`RI-SE/curbpack` is the public source of truth: releases, install scripts, GitHub Action, and docs. The Go module path remains `github.com/afelin/curbpack` until a future semver-major migration.
 
 ### 11.3 Vocabulary
 

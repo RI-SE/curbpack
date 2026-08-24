@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PR preflight + post-merge sync. Never bare merge, force-push, or pin bump.
+# PR preflight + post-merge housekeeping. Never bare merge, force-push, or pin bump.
 set -euo pipefail
 R="$(cd "$(dirname "$0")/.." && pwd)"; cd "$R"
 PIN="v0.5.2"; FLOOR=80; DRY=0; STATE="$R/.github/curbpack/ship-state.json"
@@ -11,7 +11,6 @@ preflight(){
   local pr="${1:?pr number required}"
   local cmd="./scripts/curbpack-ship.sh${DRY:+ --dry-run} preflight $pr" checks
   [[ -n "$(git status --porcelain)" ]] && pause "Save or discard local changes first" "$cmd"
-  git remote get-url corp-origin >/dev/null 2>&1 || pause "Remote corp-origin missing" "$cmd"
   if [[ $DRY -eq 1 ]]; then echo "[dry-run] gh pr checks $pr --json"; checks="${CURBPACK_SHIP_CHECKS_JSON:-}"; [[ -n "$checks" ]] || pause "dry-run needs CURBPACK_SHIP_CHECKS_JSON" "$cmd"
   else checks="$(gh pr checks "$pr" --json name,state,bucket 2>/dev/null)" || pause "Could not read PR checks" "$cmd"; fi
   python3 - "$checks" "$PIN" <<'PY' || die "preflight evidence failed"
@@ -36,23 +35,17 @@ PY
 }
 post-merge(){
   local cmd="./scripts/curbpack-ship.sh${DRY:+ --dry-run} post-merge" sha pr_url num body
-  git remote get-url corp-origin >/dev/null 2>&1 || pause "Remote corp-origin missing" "$cmd"
   sha="$(git rev-parse HEAD)"
   if [[ -f "$STATE" ]] && grep -q "\"$sha\"" "$STATE" 2>/dev/null; then echo "post-merge already done for $sha"; exit 0; fi
   [[ -n "$(git status --porcelain)" ]] && pause "Save or discard local changes first" "$cmd"
-  run ./scripts/curb-sync.sh || pause "curb-sync failed" "$cmd"
-  run git fetch origin corp-origin
-  [[ "$(git rev-parse origin/main)" == "$(git rev-parse corp-origin/main)" ]] || die "origin/main != corp-origin/main"
+  run git fetch origin
   if [[ $DRY -eq 0 ]]; then
-    gh workflow run mirror-drift.yml --ref main; end=$((SECONDS+600)); ok=0
-    while [[ $SECONDS -lt $end ]]; do gh run list --workflow=mirror-drift.yml --limit 1 --json status,conclusion --jq '.[0]|select(.status=="completed" and .conclusion=="success")'|grep -q success && { ok=1; break; }; sleep 15; done
-    [[ $ok -eq 1 ]] || pause "mirror-drift not green within 10m" "$cmd"
     pr_url="$(gh pr list --state merged --limit 1 --json url --jq '.[0].url' 2>/dev/null||echo n/a)"
     body=$'## Tier A (auto)\n- [x] Required CI green ('"$pr_url"$')\n\n## Tier B\n- [ ] Tabletop walkthrough\n\n## Tier C\n- [ ] Evidence archived'
     num="$(gh issue list --label tabletop-evidence --state all --limit 1 --json number --jq '.[0].number' 2>/dev/null||true)"
     [[ -n "$num" && "$num" != null ]] && gh issue edit "$num" --body "$body" || gh issue create --title "Tabletop evidence" --label tabletop-evidence --body "$body"
     mkdir -p "$(dirname "$STATE")"; echo "{\"post_merge_sha\":\"$sha\"}" >"$STATE"
-  else echo "[dry-run] mirror-drift poll + tabletop-evidence upsert skipped"; fi
+  else echo "[dry-run] tabletop-evidence upsert skipped"; fi
   echo "post-merge complete"
 }
 case "${1:-}" in preflight) shift; preflight "$@";; post-merge) post-merge;;

@@ -1,8 +1,10 @@
 # Pre-stranger handoff (human-only)
 
+> **Historical (2026-08).** Dual-remote sync removed; canonical repo is [RI-SE/curbpack](https://github.com/RI-SE/curbpack). PR links below reference the former afelin fork.
+
 Engineering stops here. Agents must not merge, tag, disable Pages, or run stranger outreach.
 
-**Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/afelin/curbpack/pull/73)  
+**Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/RI-SE/curbpack/pull/73)  
 **Stranger path after tag:** `curl …/v0.5.3/scripts/install.sh | sh` then `curbpack scan`  
 **Action pin:** stays **`@v0.5.2`** until human tabletop approves bump ([AGENTS.md](../../AGENTS.md))
 
@@ -13,12 +15,12 @@ Engineering stops here. Agents must not merge, tag, disable Pages, or run strang
 ### 1. Merge train
 
 - [x] Confirm PR #73 CI green on latest push (`gh pr checks 73`)
-- [x] Merge [PR #73](https://github.com/afelin/curbpack/pull/73) → `main` (merge commit preferred if tagging from merge SHA)
+- [x] Merge [PR #73](https://github.com/RI-SE/curbpack/pull/73) → `main` (merge commit preferred if tagging from merge SHA)
 - [x] Confirm `main` CI green (required: `test (ubuntu-latest)`, `test (macos-latest)`, `smoke`, `gauntlet`, `redteam-pilot`)
-- [x] Run `./scripts/curb-sync.sh` — sync afelin → RI-SE mirror
+- [x] ~~Run `./scripts/curb-sync.sh`~~ (deprecated — RI-SE is now canonical)
 - [x] Verify RI-SE `main` parity with afelin
 
-**Do not merge:** [PR #75](https://github.com/afelin/curbpack/pull/75) (`do-not-merge` staging). **Do not merge:** PR #6 ENISA until domain reader ships.
+**Do not merge:** [PR #75](https://github.com/RI-SE/curbpack/pull/75) (`do-not-merge` staging). **Do not merge:** PR #6 ENISA until domain reader ships.
 
 ### 2. Tag v0.5.3
 
@@ -32,9 +34,9 @@ Clean env — no workspace binary on PATH.
 
 | OS | Install | Command | Pass |
 |----|---------|---------|------|
-| macOS | `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-20):** v0.5.3 binary via install; exit 0; Art 14 + `Next:`; porcelain empty. Until manifest bump on main, bare curl installs v0.5.2 — bump merged post-tag. |
+| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-20):** v0.5.3 binary via install; exit 0; Art 14 + `Next:`; porcelain empty. Until manifest bump on main, bare curl installs v0.5.2 — bump merged post-tag. |
 | Linux | same | same | same |
-| Windows | `irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
+| Windows | `irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
 
 Optional regression: `curbpack doctor && curbpack demo` on each OS.
 
@@ -43,8 +45,8 @@ Record results: Discussion comment or internal log.
 ### 4. Ops housekeeping
 
 - [ ] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/
-  - **GitHub UI (CLI cannot disable source):** Repo **afelin/curbpack** → **Settings** → **Pages** → under **Build and deployment**, set **Source** to **None** (or delete the Pages workflow deployment if your org requires workflow-only). Confirm https://afelin.github.io/curbpack/ stops updating or returns 404.
-  - API check (2026-08-20): `gh api repos/afelin/curbpack/pages` → `html_url`: https://afelin.github.io/curbpack/ (still active).
+  - **GitHub UI (CLI cannot disable source):** Repo **RI-SE/curbpack** → **Settings** → **Pages** → under **Build and deployment**, set **Source** to **None** (or delete the Pages workflow deployment if your org requires workflow-only). Confirm https://afelin.github.io/curbpack/ stops updating or returns 404.
+  - API check (2026-08-20): `gh api repos/RI-SE/curbpack/pages` → `html_url`: https://afelin.github.io/curbpack/ (still active).
 - [ ] **Card test:** logged-out phone → Slack + LinkedIn; paste https://ri-se.github.io/curbpack/ ; LinkedIn Post Inspector if stale cache
 - [ ] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
 - [ ] RI-SE About/mirror wording still correct
@@ -54,7 +56,7 @@ Record results: Discussion comment or internal log.
 Send verbatim:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```

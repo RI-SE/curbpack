@@ -79,7 +79,7 @@ runs:
         # Never prefer consumer ./bin/curbpack — that skips checksum verification and
         # lets a PR ship a fake-green binary. Dogfood builds from this module; others
         # download a pinned release and verify sha256 against checksums.txt (fail-closed).
-        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/curbpack' go.mod 2>/dev/null; then
+        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/RI-SE/curbpack' go.mod 2>/dev/null; then
           go build -o "$DEST" ./cmd/curbpack
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
@@ -90,8 +90,8 @@ runs:
             fi
             VER="v0.5.2"
           fi
-          URL="https://github.com/afelin/curbpack/releases/download/${VER}/${ASSET}"
-          CHECKSUMS_URL="https://github.com/afelin/curbpack/releases/download/${VER}/checksums.txt"
+          URL="https://github.com/RI-SE/curbpack/releases/download/${VER}/${ASSET}"
+          CHECKSUMS_URL="https://github.com/RI-SE/curbpack/releases/download/${VER}/checksums.txt"
           if [ -z "${URL:-}" ]; then
             echo "Could not resolve release binary ${ASSET}. Build curbpack or set inputs.version." >&2
             exit 1
@@ -192,7 +192,7 @@ runs:
         else
           echo "export --sarif failed; writing empty SARIF shell" >&2
           cat /tmp/curbpack-sarif.err >&2 || true
-          printf '%s\n' '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"curbpack","informationUri":"https://github.com/afelin/curbpack","rules":[]}},"results":[]}]}' > "$OUT"
+          printf '%s\n' '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"curbpack","informationUri":"https://github.com/RI-SE/curbpack","rules":[]}},"results":[]}]}' > "$OUT"
         fi
         # GitHub Actions annotations from latest_failure.json
         python3 <<'PY'

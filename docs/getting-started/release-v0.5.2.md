@@ -20,16 +20,15 @@ Ordered steps (humans only — agents stop before merge/tag/release):
 5. **Smoke** installers against the tag (no workspace binary fallback):
    ```bash
    # macOS/Linux — isolated PATH
-   curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.2/scripts/install.sh | sh
+   curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/v0.5.2/scripts/install.sh | sh
    # Windows PowerShell — same pin
    # irm …/v0.5.2/scripts/install.ps1 | iex
    curbpack doctor && curbpack demo
    ```
-6. **Sync both** curbpack remotes via `./scripts/curb-sync.sh` only (never force-push). Phrase: “sync both curbpack remotes” — see [sync-both-remotes](sync-both-remotes.md).
-7. **Optional:** if https://ri-se.github.io/curbpack/ 404s, enable RI-SE Pages (GitHub Actions source) per [sync-both-remotes](sync-both-remotes.md#if-the-ri-se-site-404s-again).
+6. **Optional:** if https://ri-se.github.io/curbpack/ 404s, enable RI-SE Pages per [repo ops hardening](repo-ops-hardening.md).
 
 ## Warn
 
 - Pin copy in README/Action examples may already say `@v0.5.2` on the branch — that is **aspirational until step 4 passes**.
-- Do **not** run curb-sync or cut the tag from a feature tip before merge.
+- Do **not** cut the tag from a feature tip before merge.
 - Do **not** treat chat green as a release gate; re-check locally after install smoke.

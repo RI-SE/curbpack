@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Curbpack check
-        uses: afelin/curbpack@v0.5.2
+        uses: RI-SE/curbpack@v0.5.2
         with:
           version: v0.5.2
           heal: "true" # opt-in (Action default is false); scaffold ≠ readiness
