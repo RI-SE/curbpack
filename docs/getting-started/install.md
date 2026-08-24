@@ -19,6 +19,8 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 Installation is provided from the **canonical Curbpack release repository**. Ladder 0 uses the maintained installer on `main`, which downloads the smoke-verified release binary (currently **v0.5.3**).
 
+**Module / Action note:** public clone, install scripts, releases, and GitHub Action live on [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — pin **`RI-SE/curbpack@v0.5.2`**. The Go module path remains `github.com/afelin/curbpack` until a future semver-major migration (wave 2); with the development repo private, strangers should prefer the binary installers above — `go install github.com/afelin/curbpack/...` is not a reliable public path.
+
 Stuck? [Troubleshooting](troubleshooting.md).
 
 ---

@@ -79,7 +79,7 @@ runs:
         # Never prefer consumer ./bin/curbpack — that skips checksum verification and
         # lets a PR ship a fake-green binary. Dogfood builds from this module; others
         # download a pinned release and verify sha256 against checksums.txt (fail-closed).
-        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/RI-SE/curbpack' go.mod 2>/dev/null; then
+        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/curbpack' go.mod 2>/dev/null; then
           go build -o "$DEST" ./cmd/curbpack
           echo "source=built" >> "$GITHUB_OUTPUT"
         else
