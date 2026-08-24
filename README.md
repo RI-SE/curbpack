@@ -1,6 +1,6 @@
 # Curbpack
 
-> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — clone, install, releases, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results. GitHub Action pin: **`RI-SE/curbpack@v0.5.2`** (version bump still needs human tabletop).
+> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — releases, GitHub Action, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results.
 
 [![ci](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
