@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "curbpack",
-          "informationUri": "https://github.com/afelin/curbpack",
+          "informationUri": "https://github.com/RI-SE/curbpack",
           "rules": []
         }
       },

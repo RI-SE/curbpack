@@ -1,6 +1,6 @@
 # Curbpack
 
-> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — clone, install, releases, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results. GitHub Action pin stays **`afelin/curbpack@v0.5.2`** until a human pin/tabletop wave.
+> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — clone, install, releases, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results. GitHub Action pin: **`RI-SE/curbpack@v0.5.2`** (version bump still needs human tabletop).
 
 [![ci](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -123,7 +123,7 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 Action runners are **Linux/macOS only** (local Windows CLI is supported separately).
 
 ```yaml
-- uses: afelin/curbpack@v0.5.2
+- uses: RI-SE/curbpack@v0.5.2
   with:
     heal: "true" # opt-in; Action default is false (scaffold ≠ readiness)
     comment_on: red
