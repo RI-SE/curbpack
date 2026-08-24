@@ -4,7 +4,7 @@
 
 | Reader | Start here |
 |--------|------------|
-| Builder / adopter | [Install](getting-started/install.md) · [Share handoff](getting-started/share-handoff.md) · [60-second paths](getting-started/60-second-paths.md) · [Troubleshooting](getting-started/troubleshooting.md) · [RISE tryout](getting-started/rise-tryout.md) · [Pathway](getting-started/pathway.md) · [Sync both remotes](getting-started/sync-both-remotes.md) · [site builders](../site/for-builders/) |
+| Builder / adopter | [Install](getting-started/install.md) · [Share handoff](getting-started/share-handoff.md) · [60-second paths](getting-started/60-second-paths.md) · [Troubleshooting](getting-started/troubleshooting.md) · [RISE tryout](getting-started/rise-tryout.md) · [Pathway](getting-started/pathway.md) · [Repo ops hardening](getting-started/repo-ops-hardening.md) · [site builders](../site/for-builders/) |
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [Software design document](software-design-document.md) · [SDD gap analysis](internal/sdd-gap-analysis.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
@@ -41,7 +41,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Troubleshooting](getting-started/troubleshooting.md) | PATH, SmartScreen, repair, doctor tips |
 | [Pathway (warm-start)](getting-started/pathway.md) | Three ways in, one next ask, dual-draft HITL, research sidecar |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
-| [Sync both remotes](getting-started/sync-both-remotes.md) | One Cursor phrase to keep afelin ↔ RI-SE `main` matching |
+| [Sync both remotes (deprecated)](getting-started/sync-both-remotes.md) | Historical — RI-SE/curbpack is now single source |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Buyer journey: one-pager → trust table → what not to assume |
 | [Share handoff](getting-started/share-handoff.md) | Supplier share/export/attest recipe |
 | [ENISA CRA mapping (preliminary)](mappings/enisa-cra-mapping.md) | Informational SME maturity ↔ pack map — **not domain-verified**; not ENISA endorsement |

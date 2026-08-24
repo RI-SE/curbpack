@@ -111,12 +111,14 @@ func TestCurbpackShipAcceptance(t *testing.T) {
 		}
 	})
 
-	t.Run("corp-origin missing exit 2", func(t *testing.T) {
+	t.Run("preflight without corp-origin dry-run ok", func(t *testing.T) {
 		dir := initFixtureRepo(t)
 		seedFixtureTree(t, dir, root)
 		commitSeed(t, dir)
-		code, out := runShip(t, dir, filepath.Join(dir, "scripts/curbpack-ship.sh"), []string{"GIT_CONFIG_NOSYSTEM=1"}, "preflight", "1")
-		if code != 2 || !strings.Contains(out, "corp-origin") {
+		runGit(t, dir, "git", "branch", "-M", "main")
+		runGit(t, dir, "git", "update-ref", "refs/remotes/origin/main", "HEAD")
+		code, out := runShip(t, dir, filepath.Join(dir, "scripts/curbpack-ship.sh"), []string{"GIT_CONFIG_NOSYSTEM=1", "CURBPACK_SHIP_CHECKS_JSON=" + checksJSON}, "--dry-run", "preflight", "1")
+		if code != 0 {
 			t.Fatalf("code=%d out=%q", code, out)
 		}
 	})
