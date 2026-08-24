@@ -133,7 +133,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  demo [--open]    Sandbox check (browser only with --open)\n")
 	fmt.Fprintf(os.Stderr, "  scan [--packs a,b] Read-only repo diagnosis (alias: reality-check)\n")
 	fmt.Fprintf(os.Stderr, "  fix --art14      Write Art 14 rehearsal file (one file; diff preview)\n")
-	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow]\n")
+	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow] [--dry-run] [--yes]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
 	fmt.Fprintf(os.Stderr, "  check [--heal] [--score]  Daily loop (--score shows readiness %%)\n")
 	fmt.Fprintf(os.Stderr, "  ask-my-suppliers [--stdout-only] [--out path]\n")
@@ -179,19 +179,6 @@ func cmdInit(args []string) error {
 	}
 	tty.PrintStatus("Git repository", true, root)
 
-	crPath := filepath.Join(root, ".github", "curbpack")
-	_ = os.MkdirAll(filepath.Join(crPath, "policies"), 0o755)
-	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
-	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
-
-	if added, gerr := ensureCurbpackGitignore(root); gerr != nil {
-		return gerr
-	} else if len(added) > 0 {
-		tty.PrintStatus(".gitignore", true, "cache/evidence ignored ("+strings.Join(added, ", ")+")")
-	} else {
-		tty.PrintStatus(".gitignore", true, "cache/evidence already ignored")
-	}
-
 	iflags, err := parseInitFlags(args)
 	if err != nil {
 		return err
@@ -204,12 +191,45 @@ func cmdInit(args []string) error {
 	if iflags.showMedtechWarn {
 		fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] --medtech is deprecated; prefer --profile medtech or --packs medtech-iec62304"))
 	}
-	_ = iflags.explicitProfile // reserved for future init messaging
+
+	fmt.Printf("Profile: %s (%s)\n", strings.Join(packList, ", "), initProfileWhy(iflags))
 
 	for _, id := range packList {
 		if _, err := packs.LoadPack(id); err != nil {
 			return err
 		}
+	}
+
+	scaffold, err := packs.ScaffoldPaths(packList)
+	if err != nil {
+		return err
+	}
+	plan := initWritePlan(iflags, scaffold)
+	printInitWriteList(plan)
+
+	if iflags.dryRun {
+		fmt.Println("Dry-run — nothing written.")
+		return nil
+	}
+	write, err := confirmInitIfNeeded(iflags.yes)
+	if err != nil {
+		return err
+	}
+	if !write {
+		return nil
+	}
+
+	crPath := filepath.Join(root, ".github", "curbpack")
+	_ = os.MkdirAll(filepath.Join(crPath, "policies"), 0o755)
+	_ = os.MkdirAll(filepath.Join(crPath, "cache"), 0o755)
+	_ = os.MkdirAll(filepath.Join(crPath, "evidence"), 0o755)
+
+	if added, gerr := ensureCurbpackGitignore(root); gerr != nil {
+		return gerr
+	} else if len(added) > 0 {
+		tty.PrintStatus(".gitignore", true, "cache/evidence ignored ("+strings.Join(added, ", ")+")")
+	} else {
+		tty.PrintStatus(".gitignore", true, "cache/evidence already ignored")
 	}
 
 	cfg := config.File{
@@ -228,11 +248,7 @@ func cmdInit(args []string) error {
 		tty.PrintStatus(".curbpack.json", true, "exists (not overwritten)")
 	}
 
-	paths, err := packs.ScaffoldPaths(packList)
-	if err != nil {
-		return err
-	}
-	for _, rel := range paths {
+	for _, rel := range scaffold {
 		p, clean, err := validate.SafeJoin(root, rel)
 		if err != nil {
 			return fmt.Errorf("scaffold path refused: %s: %w", rel, err)

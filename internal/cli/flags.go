@@ -108,6 +108,9 @@ type initFlags struct {
 	packList                         []string
 	hooks, skill, ide, writeWorkflow bool
 	showMedtechWarn, explicitProfile bool
+	dryRun, yes                      bool
+	explicitPacks                    bool
+	profileName                      string
 }
 
 func parseInitFlags(args []string) (initFlags, error) {
@@ -120,21 +123,27 @@ func parseInitFlags(args []string) (initFlags, error) {
 		switch {
 		case a == "--bare":
 			f.hooks, f.skill, f.ide, f.writeWorkflow = false, false, false, false
+		case a == "--dry-run":
+			f.dryRun = true
+		case a == "--yes":
+			f.yes = true
 		case a == "--packs" && i+1 < len(args):
 			f.packList = config.ParsePacksFlag(args[i+1])
-			explicitPacks, i = true, i+1
+			explicitPacks, f.explicitPacks, i = true, true, i+1
 		case strings.HasPrefix(a, "--packs="):
 			f.packList = config.ParsePacksFlag(strings.TrimPrefix(a, "--packs="))
-			explicitPacks = true
+			explicitPacks, f.explicitPacks = true, true
 		case a == "--profile" && i+1 < len(args):
+			f.profileName = args[i+1]
 			if !explicitPacks {
 				f.packList = profilePacks(args[i+1])
 				f.explicitProfile = true
 			}
 			i++
 		case strings.HasPrefix(a, "--profile="):
+			f.profileName = strings.TrimPrefix(a, "--profile=")
 			if !explicitPacks {
-				f.packList = profilePacks(strings.TrimPrefix(a, "--profile="))
+				f.packList = profilePacks(f.profileName)
 				f.explicitProfile = true
 			}
 		case a == "--medtech":
