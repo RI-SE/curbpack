@@ -1,6 +1,6 @@
 # Launch readiness
 
-Public Apache-2.0 launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack).
+Public Apache-2.0 launch checklist for [RI-SE/curbpack](https://github.com/RI-SE/curbpack).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
 ## Status (2026-08-20)
@@ -14,8 +14,8 @@ Coreward is **not** required to build, test, launch, or use Curbpack (optional `
 | **v0.5.3 scan milestone** | **Pending human tag** — `scan` ships in branch CLI; stranger path = `install.sh`/`install.ps1` @ **v0.5.3** then `curbpack scan`; copy aligned in PR #73 stack; 3-OS smoke matrix after tag |
 | Trust freeze (v0.5.2) | **Distribution + UX + repair** (Windows exe, `install.ps1`, `doctor --repair`, dual-fence docs). **Trust track deferred** — no Action resolve / SafeJoin / attest OCC / explain-airlock rewrite |
 | Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
-| Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to Curbpack](https://github.com/afelin/curbpack/discussions/4) |
-| Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/afelin/curbpack/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.5.0`, isolated HOME/PATH) |
+| Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to Curbpack](https://github.com/RI-SE/curbpack/discussions/4) |
+| Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/RI-SE/curbpack/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.5.0`, isolated HOME/PATH) |
 | Invite wave | **Ready/open** — items 1–4 done (Welcome Discussion pinned) |
 | Understandability (cold-reader four-question bar) | **Done** (2026-08-10) — public rewrite shipped; `scripts/claim-safety.sh` OK; home/builders free of TTFV/HPURL/RKG/IR/airlock/covenant/Δ; sample one-pager shows before/after findings; voice: [voice and terms](voice-and-terms.md) |
 
@@ -36,6 +36,8 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Recorded:** Done after public language rewrite (2026-08-10).
 
+**Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
+
 ### Branch protection (already set; Settings mirror)
 
 Settings → Branches → `main` rule should require:
@@ -48,7 +50,7 @@ Settings → Branches → `main` rule should require:
 - Require branches to be up to date before merging
 - Do not bypass for admins on routine pushes (`enforce_admins`)
 
-Verify: `gh api repos/afelin/curbpack/branches/main/protection --jq '.required_status_checks'`
+Verify: `gh api repos/RI-SE/curbpack/branches/main/protection --jq '.required_status_checks'`
 
 ## Required GitHub checks (merge gate)
 
@@ -71,7 +73,7 @@ Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet
 - `SECURITY.md` — claim-safe disclosure path
 - README license badge → Apache-2.0
 
-After merge, confirm: `gh api repos/afelin/curbpack --jq .license.spdx_id` → `Apache-2.0`.
+After merge, confirm: `gh api repos/RI-SE/curbpack --jq .license.spdx_id` → `Apache-2.0`.
 If still `NOASSERTION`, wait for GitHub re-detect (pin `@v0.5.2` ships with license hygiene).
 
 ## Heal (deterministic — not ML)
@@ -105,18 +107,18 @@ Before inviting external testers:
 2. Decision-maker understands: evidence for humans — **not** certification
 3. `SECURITY.md` reporting path is usable
 
-**Pass recorded:** 2026-08-10 on pinned Discussions welcome thread ([comment](https://github.com/afelin/curbpack/discussions/4#discussioncomment-17960761)).
+**Pass recorded:** 2026-08-10 on pinned Discussions welcome thread ([comment](https://github.com/RI-SE/curbpack/discussions/4#discussioncomment-17960761)).
 
 ## Discussions welcome (claim-safe)
 
-Welcome thread: https://github.com/afelin/curbpack/discussions/4
+Welcome thread: https://github.com/RI-SE/curbpack/discussions/4
 
 **Pin:** **Pinned** (GraphQL `pinnedDiscussions`, 2026-08-10). Body must keep:
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
-> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack scan`  
-> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
+> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh && curbpack scan`  
+> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
 >
 > Tester reports: use the **Tester report** issue template.
 

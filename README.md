@@ -1,15 +1,14 @@
 # Curbpack
 
-> **Canonical source:** [afelin/curbpack](https://github.com/afelin/curbpack) — module path, releases, GitHub Action.  
-> **RISE mirror:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — read-only mirror of `main`, maintained by RISE. Development supported by RISE; RISE does not certify products that use Curbpack gate results.
+> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — releases, GitHub Action, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results.
 
-[![ci](https://github.com/afelin/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/afelin/curbpack/actions/workflows/ci.yml)
+[![ci](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 > Article 14 reporting starts **11 September 2026**. Install once, then scan — writes nothing:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+> curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 > cd /path/to/your/git/repo
 > curbpack scan
 > ```
@@ -20,7 +19,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://ri-se.github.io/curbpack/) (Pages at ri-se.github.io) · canonical repo [afelin/curbpack](https://github.com/afelin/curbpack) · mirror [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
+[Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
 ## Who are you?
 
@@ -35,7 +34,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -49,13 +48,13 @@ Install when you want a local binary (Windows PowerShell · macOS/Linux curl): [
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 ```
 
 Then the same ladder on every OS:
@@ -124,7 +123,7 @@ Gate pass is **not** certification, CE marking, or notified-body approval. Human
 Action runners are **Linux/macOS only** (local Windows CLI is supported separately).
 
 ```yaml
-- uses: afelin/curbpack@v0.5.2
+- uses: RI-SE/curbpack@v0.5.2
   with:
     heal: "true" # opt-in; Action default is false (scaffold ≠ readiness)
     comment_on: red
@@ -136,27 +135,6 @@ Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](ex
 ## Advanced
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
-
-### Dual-remote vibe-safe flow
-
-Use this exact flow for low-cognitive-load day-to-day work:
-
-1. Open repo in Cursor.
-2. Build feature in a feature branch.
-3. Say: **"Open a PR."**
-4. Wait for CI checks to pass.
-5. Merge PR in GitHub (or let Cursor merge if token allows).
-6. Say: **"Sync both curbpack remotes."**
-7. If sync pauses, do exactly what the pause message says (auth, conflict resolution, or branch protection issue).
-
-Two hardening checks:
-
-- Before step 6, confirm `main` is clean and up to date.
-- After step 6, verify both remotes are at the same commit SHA.
-
-For this repository, "Sync both curbpack remotes" means running `./scripts/curb-sync.sh` (merge-only; never force-push).
-
-Ops runbook: [`docs/getting-started/repo-ops-hardening.md`](docs/getting-started/repo-ops-hardening.md).
 
 **Compose, do not conquer:** Curbpack prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program. Boundary: [strategy boundary](docs/strategy-boundary.md).
 

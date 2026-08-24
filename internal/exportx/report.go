@@ -85,7 +85,7 @@ func RenderSARIF(rep Report, repoRoot string) SARIFDocument {
 		Runs: []SARIFRun{{
 			Tool: SARIFTool{Driver: SARIFDriver{
 				Name:           "curbpack",
-				InformationURI: "https://github.com/afelin/curbpack",
+				InformationURI: "https://github.com/RI-SE/curbpack",
 				Rules:          rules,
 			}},
 			Results: results,

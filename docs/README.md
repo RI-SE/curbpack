@@ -41,7 +41,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Troubleshooting](getting-started/troubleshooting.md) | PATH, SmartScreen, repair, doctor tips |
 | [Pathway (warm-start)](getting-started/pathway.md) | Three ways in, one next ask, dual-draft HITL, research sidecar |
 | [Daily loop](getting-started/daily-loop.md) | Habit: Action / check / attest |
-| [Sync both remotes](getting-started/sync-both-remotes.md) | One Cursor phrase to keep afelin ↔ RI-SE `main` matching |
+| [Repo ops hardening](getting-started/repo-ops-hardening.md) | PR-only `main`, Pages on RI-SE/curbpack |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Buyer journey: one-pager → trust table → what not to assume |
 | [Share handoff](getting-started/share-handoff.md) | Supplier share/export/attest recipe |
 | [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md) | Counsel note: Art 14 reporting clock vs later handling/SPOC; Art 50 grace not blanket |

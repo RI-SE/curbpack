@@ -14,7 +14,7 @@ Install once, then scan inside any git repo — **no init**, **no files written*
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -22,7 +22,7 @@ curbpack scan
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
 ```
@@ -48,13 +48,13 @@ Under ten minutes (install pin **`v0.5.3`**; Action pin **`@v0.5.2`**): install 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 ```
 
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 ```
 
 Then:

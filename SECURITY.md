@@ -3,7 +3,7 @@
 ## Reporting
 
 Email **security@curbpack.dev** (or open a private GitHub Security Advisory on
-[afelin/curbpack](https://github.com/afelin/curbpack)) with vulnerability details.
+[RI-SE/curbpack](https://github.com/RI-SE/curbpack)) with vulnerability details.
 Do **not** open public issues for sensitive reports.
 
 Include: affected version/commit, reproduction steps, impact, and any suggested fix.

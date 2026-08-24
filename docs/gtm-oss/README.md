@@ -34,7 +34,7 @@ Sandbox green in ~{N}s. Evidence for humans — not certification.
 ```
 5 lines of YAML → PR comment with readiness thermometer + top fails.
 
-uses: afelin/curbpack@vX
+uses: RI-SE/curbpack@vX
 
 Claim-safe by design. Try the Action or `curbpack demo`.
 ```
@@ -71,7 +71,7 @@ If you try it, open a “Tester report” issue or drop a thermometer screenshot
 ## README badge
 
 ```markdown
-[![curbpack-check](https://img.shields.io/badge/curbpack-check-2ea44f?logo=github)](https://github.com/afelin/curbpack)
+[![curbpack-check](https://img.shields.io/badge/curbpack-check-2ea44f?logo=github)](https://github.com/RI-SE/curbpack)
 ```
 
 Optional shields.io workflow badge once the Action runs on your repo:
