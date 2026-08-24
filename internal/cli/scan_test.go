@@ -44,7 +44,7 @@ func TestRun_ScanReadOnly(t *testing.T) {
 		t.Fatalf("cold scan must hint init default vs scan profile: %q", stdout)
 	}
 	if strings.Contains(stdout, "ENISA SME maturity mapping") {
-		t.Fatalf("scan must not reference ENISA mapping until doc ships: %q", stdout)
+		t.Fatalf("scan must not reference ENISA mapping when file absent: %q", stdout)
 	}
 	if strings.Contains(stdout, "Readiness Score") {
 		t.Fatal("scan must not show readiness thermometer")
@@ -52,6 +52,29 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	cache := filepath.Join(dir, ".github", "curbpack", "cache", "latest_failure.json")
 	if _, err := os.Stat(cache); err == nil {
 		t.Fatal("scan must not write cache")
+	}
+}
+
+func TestRun_ScanShowsENISAPreliminaryWhenMappingPresent(t *testing.T) {
+	dir := t.TempDir()
+	initScanGit(t, dir)
+	mustWriteScan(t, filepath.Join(dir, "README.md"), "# Demo\n")
+	mappingDir := filepath.Join(dir, "docs", "mappings")
+	if err := os.MkdirAll(mappingDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWriteScan(t, filepath.Join(mappingDir, "enisa-cra-mapping.md"), "> Preliminary\n\n# ENISA mapping\n")
+
+	stdout, _ := capture(t, func() {
+		old, _ := os.Getwd()
+		_ = os.Chdir(dir)
+		defer func() { _ = os.Chdir(old) }()
+		if err := cli.Run([]string{"scan"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(stdout, "ENISA SME maturity mapping (preliminary — not domain-verified)") {
+		t.Fatalf("cra-baseline scan must show preliminary ENISA pointer when mapping exists: %q", stdout)
 	}
 }
 

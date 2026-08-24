@@ -77,6 +77,8 @@ CI enforces wording via `scripts/claim-safety.sh`. This page is **not** certific
 
 CRA Art 14 reporting (11 September 2026) is not the same clock as vulnerability-handling / public SPOC. Opt-in `cra-baseline` may require an in-repo dated rehearsal file — not a live SRP or EU Login check. AI Act Art 50 marking grace is **not** blanket (only systems already on the market before 2 August 2026). Counsel note: [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md).
 
+Optional informational mapping (preliminary — not verified by a named domain reader): [ENISA SME maturity ↔ packs](mappings/enisa-cra-mapping.md). Not ENISA endorsement or conformity assessment.
+
 ## Suggested reviewer path
 
 1. Read this page + [Intent vs Scope](intent-vs-scope.md).

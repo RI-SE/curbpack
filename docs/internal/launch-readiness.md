@@ -38,6 +38,8 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
 
+**Post-sprint parity — recorded 2026-08-24** (afelin/main @ `e62f813`): ENISA preliminary mapping + scan re-point shipped on RI-SE; `go.mod` / Action pin remain `RI-SE/curbpack@v0.5.2` until wave 2 tabletop.
+
 ### Branch protection (already set; Settings mirror)
 
 Settings → Branches → `main` rule should require:
