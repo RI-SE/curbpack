@@ -68,6 +68,7 @@ func TestFreshStubAllowsHealGreenWithWarning(t *testing.T) {
 	initGit(t, dir)
 	mustWrite(t, filepath.Join(dir, ".well-known", "security.txt"), "Contact: mailto:a@b.c\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en\n")
 	mustWrite(t, filepath.Join(dir, "README.md"), "# Demo\n")
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"demo","version":"1.0.0","dependencies":{}}`+"\n")
 
 	hints := formhints.ForFailures([]ir.Failure{{GateID: "HOUSE-SECURITY-MD"}})
 	out, err := formhints.ApplyStubs(dir, hints)

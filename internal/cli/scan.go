@@ -111,7 +111,7 @@ func cmdScan(args []string) error {
 		if openShown >= 5 {
 			break
 		}
-		fmt.Printf("  ○ [%s] %s — %s (not started)\n", f.Severity, f.GateID, shortFinding(f))
+		fmt.Printf("  ○ [%s] %s — %s (%s)\n", f.Severity, f.GateID, shortFinding(f), notStartedParen(f))
 		openShown++
 	}
 	rest := len(failing) + len(notStarted) - openShown
@@ -206,11 +206,7 @@ func readmeTitle(root string) string {
 
 func classifyFindings(failures []ir.Failure) (notStarted, failing []ir.Failure) {
 	for _, f := range failures {
-		desc := strings.ToLower(f.SanitizedDescription)
-		if strings.Contains(desc, "scaffold body overlap") ||
-			strings.Contains(desc, "missing") ||
-			strings.Contains(desc, "too short") ||
-			strings.Contains(desc, "too small") {
+		if validate.IsNotStartedFailure(f) {
 			notStarted = append(notStarted, f)
 			continue
 		}
@@ -227,6 +223,18 @@ func shortFinding(f ir.Failure) string {
 		return f.SanitizedDescription[:69] + "..."
 	}
 	return f.SanitizedDescription
+}
+
+func notStartedParen(f ir.Failure) string {
+	desc := strings.ToLower(f.SanitizedDescription)
+	switch {
+	case strings.Contains(desc, "target absent"):
+		return "target absent"
+	case strings.Contains(desc, "scaffold body overlap"):
+		return "not started — fill this in"
+	default:
+		return "not started"
+	}
 }
 
 func scanShowsENISAMapping(packIDs []string) bool {

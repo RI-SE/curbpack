@@ -97,7 +97,11 @@ func Run(opts Options) (Result, error) {
 			regions = append(regions, rule.ID)
 			failures = append(failures, fs...)
 			if !opts.Quiet {
-				tty.PrintStatus("Gate "+rule.ID, false, rule.Description)
+				if AllNotStarted(fs) {
+					tty.PrintNotStarted("Gate "+rule.ID, notStartedTTYDetail(fs[0]))
+				} else {
+					tty.PrintStatus("Gate "+rule.ID, false, rule.Description)
+				}
 			}
 		} else if !opts.Quiet {
 			tty.PrintStatus("Gate "+rule.ID, true, "ok")
@@ -303,6 +307,8 @@ func wordCount(s string) int {
 
 func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	var out []ir.Failure
+	examined := 0
+	firstAbsent := ""
 	token, _ := packs.RepoToken(root)
 	for _, rel := range rule.Paths {
 		path, clean, err := SafeJoin(root, rel)
@@ -317,8 +323,12 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			continue // missing handled by file_present / annex_file rules
+			if firstAbsent == "" {
+				firstAbsent = clean
+			}
+			continue // per-path skip; zero examined ⇒ not a pass (below)
 		}
+		examined++
 		if placeholderRE.Match(data) {
 			out = append(out, failFromRule(rule, clean, "placeholder pattern matched"))
 			continue
@@ -326,6 +336,9 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 		if packs.ScaffoldOverlap(string(data), clean, token) {
 			out = append(out, failFromRule(rule, clean, "scaffold body overlap"))
 		}
+	}
+	if examined == 0 && firstAbsent != "" && len(out) == 0 {
+		return []ir.Failure{failFromRule(rule, firstAbsent, "target absent")}
 	}
 	return out
 }
@@ -341,6 +354,8 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 		return []ir.Failure{failFromRule(rule, strings.Join(rule.Paths, ","), "invalid pattern: "+err.Error())}
 	}
 	var out []ir.Failure
+	examined := 0
+	firstAbsent := ""
 	for _, rel := range rule.Paths {
 		path, clean, err := SafeJoin(root, rel)
 		if err != nil {
@@ -349,14 +364,21 @@ func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
+			if firstAbsent == "" {
+				firstAbsent = clean
+			}
 			continue
 		}
+		examined++
 		if len(data) > packs.MaxRegexMatchBytes {
 			data = data[:packs.MaxRegexMatchBytes]
 		}
 		if re.Match(data) {
 			out = append(out, failFromRule(rule, clean, "forbidden pattern matched"))
 		}
+	}
+	if examined == 0 && firstAbsent != "" && len(out) == 0 {
+		return []ir.Failure{failFromRule(rule, firstAbsent, "target absent")}
 	}
 	return out
 }
@@ -365,7 +387,8 @@ func checkNPMDepBan(root string, rule packs.Rule) []ir.Failure {
 	packagePath := filepath.Join(root, "package.json")
 	data, err := os.ReadFile(packagePath)
 	if err != nil {
-		return nil
+		// Missing manifest is not a vacuous pass — zero examined ⇒ target absent.
+		return []ir.Failure{failFromRule(rule, "package.json", "target absent")}
 	}
 	var manifest ir.PackageManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
@@ -416,6 +439,42 @@ func failFromRule(rule packs.Rule, file, detail string) ir.Failure {
 			ActionRequired: rule.Remediation,
 			ExpectedState:  rule.Expected,
 		},
+	}
+}
+
+// IsNotStartedFailure reports scaffold / absent / missing-file style findings
+// that must not earn ✔ or readiness % until a human edits real content.
+func IsNotStartedFailure(f ir.Failure) bool {
+	desc := strings.ToLower(f.SanitizedDescription)
+	return strings.Contains(desc, "scaffold body overlap") ||
+		strings.Contains(desc, "target absent") ||
+		strings.Contains(desc, "missing") ||
+		strings.Contains(desc, "too short") ||
+		strings.Contains(desc, "too small")
+}
+
+// AllNotStarted is true when every failure is not-started/scaffold/absent.
+func AllNotStarted(failures []ir.Failure) bool {
+	if len(failures) == 0 {
+		return false
+	}
+	for _, f := range failures {
+		if !IsNotStartedFailure(f) {
+			return false
+		}
+	}
+	return true
+}
+
+func notStartedTTYDetail(f ir.Failure) string {
+	desc := strings.ToLower(f.SanitizedDescription)
+	switch {
+	case strings.Contains(desc, "target absent"):
+		return "target absent"
+	case strings.Contains(desc, "scaffold body overlap"):
+		return "not started — fill this in"
+	default:
+		return "not started"
 	}
 }
 

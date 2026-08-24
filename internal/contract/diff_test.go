@@ -352,4 +352,5 @@ We support the latest major release with security patches for twelve months.
 
 Coordinated disclosure within 90 days after fix availability.
 `+strings.Repeat("word ", 40)+"\n")
+	mustWrite(t, filepath.Join(dir, "package.json"), `{"name":"demo","version":"1.0.0","dependencies":{}}`+"\n")
 }
