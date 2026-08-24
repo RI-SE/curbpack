@@ -36,6 +36,8 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Recorded:** Done after public language rewrite (2026-08-10).
 
+**Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
+
 ### Branch protection (already set; Settings mirror)
 
 Settings → Branches → `main` rule should require:
