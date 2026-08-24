@@ -44,11 +44,9 @@ Record results: Discussion comment or internal log.
 
 ### 4. Ops housekeeping
 
-- [ ] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/
-  - **GitHub UI (CLI cannot disable source):** Repo **RI-SE/curbpack** → **Settings** → **Pages** → under **Build and deployment**, set **Source** to **None** (or delete the Pages workflow deployment if your org requires workflow-only). Confirm https://afelin.github.io/curbpack/ stops updating or returns 404.
-  - API check (2026-08-20): `gh api repos/RI-SE/curbpack/pages` → `html_url`: https://afelin.github.io/curbpack/ (still active).
+- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ (API DELETE 2026-08-25; GET → 404; confirm in browser)
 - [ ] **Card test:** logged-out phone → Slack + LinkedIn; paste https://ri-se.github.io/curbpack/ ; LinkedIn Post Inspector if stale cache
-- [ ] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
+- [x] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
 - [ ] RI-SE About/mirror wording still correct
 
 ### 5. Stranger program kit (after smoke green)

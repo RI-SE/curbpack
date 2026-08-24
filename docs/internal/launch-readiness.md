@@ -38,7 +38,21 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
 
-**Post-sprint train — recorded 2026-08-24** @ `4bf5a9f`: RI-SE canonical stranger URLs; ENISA preliminary mapping re-pointed in scan + site; `go.mod` / Action pin remain `afelin/curbpack@v0.5.2` until wave 2 tabletop.
+**Post-sprint train — recorded 2026-08-24** @ `4bf5a9f`: RI-SE canonical stranger URLs; ENISA preliminary mapping refreshed in scan + site; `go.mod` remains `github.com/afelin/curbpack` until wave 2; public Action owner is RI SE curbpack at pin version v0.5.2.
+
+### Sprint A — test launch readiness (2026-08-25)
+
+| Gate | Result |
+|------|--------|
+| **A1 Pages** | **afelin** site removed (`DELETE /repos/afelin/curbpack/pages`; GET → 404). Canonical: https://ri-se.github.io/curbpack/ . `pages.yml` daily cron `0 6 * * *` unchanged. |
+| **A2 OG / social** | **HUMAN** — logged-out Slack + LinkedIn + Post Inspector for canonical URL. |
+| **A4 TTG** | **PASS** — `TTG_MAX_SECONDS=600 ./scripts/time-to-green.sh` → **4s** wall (2026-08-25). |
+| **A5 mechanical** | Local `claim-safety.sh` OK; `redteam-pilot.sh` **13/13**. RI-SE `ci` on `main` green (latest observed 2026-08-24). Required-check names: verify Settings if API 404. |
+| **A3 Tier-3** | Agent surrogate: RI-SE + v0.5.3 in `install.sh`; doctor/demo/scan exit 0, porcelain clean in temp repo. **HUMAN:** fresh curl install + [Discussion #4](https://github.com/RI-SE/curbpack/discussions/4) comment still pending. |
+
+**Sprint C (deferred):** Wave 2 tabletop after first stranger cohort; freeze renewal review by **2026-09-07**.
+
+**Sprint B invite:** use [rise-tryout.md](../getting-started/rise-tryout.md) verbatim — do not send until A2 + Tier-3 human pass.
 
 ### Branch protection (already set; Settings mirror)
 
