@@ -78,6 +78,9 @@ func cmdScan(args []string) error {
 			fmt.Printf("%s\n", tty.C(tty.Dim, "Daily init uses house-policy default; curbpack init --profile cra to match scan."))
 		}
 	}
+	if scanShowsENISAMapping(root, packIDs) {
+		fmt.Printf("%s\n", tty.C(tty.Dim, "ENISA SME maturity mapping (preliminary — not domain-verified): docs/mappings/enisa-cra-mapping.md"))
+	}
 
 	switch {
 	case days > 0:
@@ -249,6 +252,19 @@ func scanAssumedColdDefault(root string, cliPacks []string) bool {
 	}
 	cfg, err := config.Load(root)
 	return err == nil && cfg == nil
+}
+
+func scanShowsENISAMapping(root string, packIDs []string) bool {
+	mapping := filepath.Join(root, "docs", "mappings", "enisa-cra-mapping.md")
+	if _, err := os.Stat(mapping); err != nil {
+		return false
+	}
+	for _, id := range packIDs {
+		if id == "cra-baseline" || id == "medtech-iec62304" {
+			return true
+		}
+	}
+	return false
 }
 
 var lastTabletopDateRE = regexp.MustCompile(`(?im)^Last tabletop:\s*(\d{4}-\d{2}-\d{2})`)

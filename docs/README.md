@@ -44,6 +44,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Sync both remotes](getting-started/sync-both-remotes.md) | One Cursor phrase to keep afelin ↔ RI-SE `main` matching |
 | [Buyer evidence](getting-started/buyer-evidence.md) | Buyer journey: one-pager → trust table → what not to assume |
 | [Share handoff](getting-started/share-handoff.md) | Supplier share/export/attest recipe |
+| [ENISA CRA mapping (preliminary)](mappings/enisa-cra-mapping.md) | Informational SME maturity ↔ pack map — **not domain-verified**; not ENISA endorsement |
 | [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md) | Counsel note: Art 14 reporting clock vs later handling/SPOC; Art 50 grace not blanket |
 | [Design partners](design-partners.md) | Partner ask + weekly ritual |
 | [Coreward pointer](coreward-pointer.md) | Standardized optional-product aside + URL |
