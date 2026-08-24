@@ -2,7 +2,7 @@
 
 ```bash
 # Magic path (no product mutation) — pinned release
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 curbpack doctor && curbpack demo
 
 # Or build from source (contributor / development)

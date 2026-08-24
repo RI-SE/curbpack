@@ -10,12 +10,12 @@ doctor → doctor --repair → full reinstall only if binary missing
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Install pin:** **`v0.5.3`** in examples below (stranger path). Smoke-verified only when [`scripts/install-manifest.json`](../../scripts/install-manifest.json) `default_version` equals [`scripts/release-gate.json`](../../scripts/release-gate.json) `version` with all verification flags true.  
+**Install pin (binary):** smoke-verified **`v0.5.3`** when [`scripts/install-manifest.json`](../../scripts/install-manifest.json) `default_version` equals [`scripts/release-gate.json`](../../scripts/release-gate.json) `version` with all verification flags true.  
 **Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump (separate from CLI install pin). Local Windows CLI is supported.  
 **MCP sidecar:** optional Unix IPC example at [`examples/mcp/`](../../examples/mcp/) — golden path never requires it.  
 **Deferred:** npm publish, winget, windows/arm64, pwsh completion.
 
-Prefer **pinned release script URLs** matching the release gate. Use `main` only for contributor / labelled development installs of an unreleased installer.
+Installation is provided from the **canonical Curbpack release repository**. Ladder 0 uses the maintained installer on `main`, which downloads the smoke-verified release binary (currently **v0.5.3**).
 
 Stuck? [Troubleshooting](troubleshooting.md).
 
@@ -30,7 +30,7 @@ Inside any git repository — **no init**, **no files written**. Requires **`v0.
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 cd /path/to/your/git/repo
 curbpack scan
 ```
@@ -38,7 +38,7 @@ curbpack scan
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 cd C:\path\to\your\git\repo
 curbpack scan
 ```
@@ -50,7 +50,7 @@ Shows open gate signals against the CRA-shaped default pack (`cra-baseline`), Ar
 **macOS / Linux**
 
 ```bash
-curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh
+curl -fsSL -o /tmp/curbpack-install.sh https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh
 sh /tmp/curbpack-install.sh
 curbpack doctor
 ```
@@ -58,7 +58,7 @@ curbpack doctor
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 -OutFile $env:TEMP\curbpack-install.ps1
 powershell -ExecutionPolicy Bypass -File $env:TEMP\curbpack-install.ps1
 curbpack doctor
 ```
@@ -68,13 +68,13 @@ curbpack doctor
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/afelin/curbpack/v0.5.3/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex
 ```
 
 If ExecutionPolicy blocks scripts, use Ladder 1 with `-ExecutionPolicy Bypass`, or:

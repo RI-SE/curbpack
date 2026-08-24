@@ -94,7 +94,7 @@ Binary missing. Print install command and reinstall — repair never downloads /
 |---------|--------------|-----|
 | `unknown command "scan"` or `scan` missing from help | Binary from **v0.5.2 or older** (scan ships in **v0.5.3+**) | Reinstall with **`v0.5.3`** install scripts (see [install.md](install.md) Ladder 0) |
 | `curbpack scan` works in dev checkout but not after install | Stale PATH or old install dir | New shell; `curbpack doctor --repair`; or full reinstall at **v0.5.3** |
-| Used `main` install URL before tag cut | May pull pre-release manifest default | Pin URL to **`/v0.5.3/scripts/install.sh`** (or set `CURBPACK_VERSION=v0.5.3`) |
+| Used wrong install URL / old binary | `scan` missing or wrong version | Re-run Ladder 0 from [install.md](install.md) (`main` installer → smoke-verified binary) |
 | npm / `npx` path | npm wrapper **deferred** (PR5) — not the stranger path | Use `install.sh` / `install.ps1` instead |
 
 Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 reporting clock + `Next:`, and `git status --porcelain` stays empty.

@@ -203,13 +203,13 @@ func WriteMarker(version, installDir, binary string) error {
 // Action/examples pin remains @v0.5.2 until human tabletop approves bump.
 const DefaultInstallPin = "v0.5.3"
 
-// InstallCommandHint returns the pinned reinstall one-liner for this OS.
+// InstallCommandHint returns the reinstall one-liner for this OS (canonical installer on main → smoke-verified binary).
 func InstallCommandHint() string {
 	switch runtime.GOOS {
 	case "windows":
-		return `irm https://raw.githubusercontent.com/afelin/curbpack/` + DefaultInstallPin + `/scripts/install.ps1 | iex`
+		return `irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex`
 	default:
-		return `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/` + DefaultInstallPin + `/scripts/install.sh | sh`
+		return `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh`
 	}
 }
 
