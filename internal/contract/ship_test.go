@@ -111,6 +111,16 @@ func TestCurbpackShipAcceptance(t *testing.T) {
 		}
 	})
 
+	t.Run("PR checks unavailable exit 2", func(t *testing.T) {
+		dir := initFixtureRepo(t)
+		seedFixtureTree(t, dir, root)
+		commitSeed(t, dir)
+		code, out := runShip(t, dir, filepath.Join(dir, "scripts/curbpack-ship.sh"), []string{"GIT_CONFIG_NOSYSTEM=1"}, "preflight", "1")
+		if code != 2 || !strings.Contains(out, "Could not read PR checks") {
+			t.Fatalf("code=%d out=%q", code, out)
+		}
+	})
+
 	t.Run("preflight without corp-origin dry-run ok", func(t *testing.T) {
 		dir := initFixtureRepo(t)
 		seedFixtureTree(t, dir, root)

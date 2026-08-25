@@ -29,7 +29,8 @@ func LoadCachedGatePayload(repoRoot string) (ir.GateFailurePayload, bool) {
 }
 
 // FingerprintFromGatePayload computes the same stable marker as buyerOnePager without HTML.
-func FingerprintFromGatePayload(payload ir.GateFailurePayload, bind attest.BindInfo, score int, passed bool) string {
+// reviewPackDir is the on-disk review-pack (hashes 04-sbom / 05-vex when present).
+func FingerprintFromGatePayload(payload ir.GateFailurePayload, bind attest.BindInfo, score int, passed bool, reviewPackDir string) string {
 	line, _, unsignedLoud := attest.AttestDisplay(bind)
 	var failures []templates.OnePagerFailure
 	for _, f := range payload.Failures {
@@ -37,16 +38,25 @@ func FingerprintFromGatePayload(payload ir.GateFailurePayload, bind attest.BindI
 			GateID: f.GateID, Severity: f.Severity,
 		})
 	}
+	resultDigest := ir.ComputeResultDigest(payload)
+	sbomDigest := ""
+	vexDigest := ""
+	if reviewPackDir != "" {
+		sbomDigest = fileSHA256Hex(filepath.Join(reviewPackDir, "04-sbom.cdx.json"))
+		vexDigest = fileSHA256Hex(filepath.Join(reviewPackDir, "05-vex-draft.json"))
+	}
 	return templates.OnePagerFingerprint(templates.OnePagerDTO{
 		Score: score, Passed: passed, PackID: payload.PackID,
 		Failures: failures, Bind: bind, AttestLine: line, UnsignedLoud: unsignedLoud,
+		ResultDigest: resultDigest, SBOMDigest: sbomDigest, VEXDigest: vexDigest,
 	})
 }
 
 // ShareStaleReport compares on-disk buyer-onepager.html fp to expected fp from cache+bind.
 // Returns signal id and human detail (empty signal when no comparison possible).
 func ShareStaleReport(repoRoot string, bind attest.BindInfo, score int, passed bool) (signal, detail string) {
-	onepagerPath := filepath.Join(repoRoot, "review-pack", "buyer-onepager.html")
+	packDir := filepath.Join(repoRoot, "review-pack")
+	onepagerPath := filepath.Join(packDir, "buyer-onepager.html")
 	prev, err := os.ReadFile(onepagerPath)
 	if err != nil {
 		return "share_no_review_pack", "review-pack/buyer-onepager.html missing — run curbpack share"
@@ -55,7 +65,7 @@ func ShareStaleReport(repoRoot string, bind attest.BindInfo, score int, passed b
 	if !ok {
 		return "share_cache_missing", "no gate cache JSON — run curbpack check or share"
 	}
-	expected := FingerprintFromGatePayload(payload, bind, score, passed)
+	expected := FingerprintFromGatePayload(payload, bind, score, passed, packDir)
 	onDisk := extractOnePagerFP(string(prev))
 	if onDisk == "" {
 		return "share_stale", "buyer-onepager.html missing fingerprint marker — re-run share"

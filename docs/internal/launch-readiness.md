@@ -71,7 +71,7 @@ Settings → Branches → `main` rule should require:
 - Require branches to be up to date before merging
 - Do not bypass for admins on routine pushes (`enforce_admins`)
 
-Verify: `gh api repos/afelin/curbpack/branches/main/protection --jq '.required_status_checks'`
+Verify: `gh api repos/RI-SE/curbpack/branches/main/protection --jq '.required_status_checks'`
 
 ## Required GitHub checks (merge gate)
 
@@ -94,7 +94,7 @@ Optional (not merge-blocking): `gauntlet-nightly` in `.github/workflows/gauntlet
 - `SECURITY.md` — claim-safe disclosure path
 - README license badge → Apache-2.0
 
-After merge, confirm: `gh api repos/afelin/curbpack --jq .license.spdx_id` → `Apache-2.0`.
+After merge, confirm: `gh api repos/RI-SE/curbpack --jq .license.spdx_id` → `Apache-2.0`.
 If still `NOASSERTION`, wait for GitHub re-detect (pin `@v0.5.2` ships with license hygiene).
 
 ## Heal (deterministic — not ML)

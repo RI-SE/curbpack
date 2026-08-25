@@ -89,6 +89,8 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ### Ladder 3 — Manual binary + checksums
 
+For locked-down or offline assessor laptops: receive the release binary **as a file** (email attachment, USB, or internal file drop) together with `checksums.txt`, verify sha256 fail-closed, then place on PATH — same steps as below. No installer required. See also [buyer evidence](buyer-evidence.md) and [for reviewers](../../site/for-reviewers/).
+
 1. Open the release for pin **`v0.5.4`**: https://github.com/RI-SE/curbpack/releases/tag/v0.5.4  
 2. Download the asset for your OS from the manifest (`curbpack_darwin_*`, `curbpack_linux_*`, or `curbpack_windows_amd64.exe`) **and** `checksums.txt`.  
 3. Verify sha256 (fail closed if mismatch).  

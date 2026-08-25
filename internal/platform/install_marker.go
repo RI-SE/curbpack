@@ -207,9 +207,9 @@ const DefaultInstallPin = "v0.5.4"
 func InstallCommandHint() string {
 	switch runtime.GOOS {
 	case "windows":
-		return `irm https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.ps1 | iex`
+		return `irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex`
 	default:
-		return `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh`
+		return `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh`
 	}
 }
 
