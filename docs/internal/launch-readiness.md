@@ -1,9 +1,11 @@
 # Launch readiness
 
-Public Apache-2.0 launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack).
+Private-fork launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack) (public SoR remains [RI-SE/curbpack](https://github.com/RI-SE/curbpack)).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
 ## Status (2026-08-25)
+
+**Verdict: GO-WITH-GATES** — mechanical stranger install+scan path works; invite blocked until human **A2 ∧ A3**. Sprint C (wave 2 / pin bump / #75) stays deferred.
 
 | Item | State |
 |------|--------|
@@ -13,10 +15,10 @@ Coreward is **not** required to build, test, launch, or use Curbpack (optional `
 | Release pin | **`@v0.5.2`** Action / CI examples — cut only after merge: [release-v0.5.2 playbook](getting-started/release-v0.5.2.md) |
 | **v0.5.3 scan milestone** | **Shipped** — [RI-SE release v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) published **2026-08-25** (tag commit `f74cc96`); install+scan smoke **agent-verified**; stranger path = `install.sh`/`install.ps1` @ **v0.5.3** then `curbpack scan`. Site PR [#7](https://github.com/RI-SE/curbpack/pull/7) merged. **A2 / A3 still HUMAN** (no invite wave). |
 | Trust freeze (v0.5.2) | **Distribution + UX + repair** (Windows exe, `install.ps1`, `doctor --repair`, dual-fence docs). **Trust track deferred** — no Action resolve / SafeJoin / attest OCC / explain-airlock rewrite |
-| Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
-| Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to Curbpack](https://github.com/afelin/curbpack/discussions/4) |
-| Tier-3 human pass | **Recorded 2026-08-10** on [Discussion #4](https://github.com/afelin/curbpack/discussions/4#discussioncomment-17960761) — install.sh → doctor → demo PASS (`@v0.5.0`, isolated HOME/PATH) |
-| Invite wave | **Ready/open** — items 1–4 done (Welcome Discussion pinned) |
+| RI-SE Discussions | **OFF** (`has_discussions: false`) — do **not** use Discussion #4 for feedback. Prefer [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) or [tester_report](https://github.com/RI-SE/curbpack/issues/new?template=tester_report.yml). Optional later: enable Discussions + claim-safe Welcome (do not copy stale private-fork Discussion body). |
+| Historical Discussion #4 | **Stale path** — 2026-08-10 pin/body/Tier-3 notes remain historical only while Discussions stay OFF. |
+| Tier-3 human pass (v0.5.3) | **HUMAN pending** — fresh curl install → doctor → demo → `scan` on a permitted git repo; record via first_run_feedback / tester_report (not Discussion #4). Prior 2026-08-10 pass was on older pin and is not A3 closure. |
+| Invite wave | **BLOCKED** — wait for A2 ∧ A3. Kit ready: [rise-tryout.md](../getting-started/rise-tryout.md) + empty [stranger-validation-log.md](../getting-started/stranger-validation-log.md) (do not invent rows). |
 | Understandability (cold-reader four-question bar) | **Done** (2026-08-10) — public rewrite shipped; `scripts/claim-safety.sh` OK; home/builders free of TTFV/HPURL/RKG/IR/airlock/covenant/Δ; sample one-pager shows before/after findings; voice: [voice and terms](voice-and-terms.md) |
 
 Gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
@@ -44,17 +46,17 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 | Gate | Result |
 |------|--------|
-| **A1 Pages** | **afelin** site removed (`DELETE /repos/afelin/curbpack/pages`; GET → 404). Canonical: https://ri-se.github.io/curbpack/ . `pages.yml` daily cron `0 6 * * *` unchanged. |
-| **A2 OG / social** | **HUMAN** — logged-out Slack + LinkedIn + Post Inspector for canonical URL. |
-| **A4 TTG** | **PASS** — `TTG_MAX_SECONDS=600 ./scripts/time-to-green.sh` → **4s** wall (2026-08-25). |
-| **A5 mechanical** | Local `claim-safety.sh` OK; `redteam-pilot.sh` **13/13**. RI-SE `ci` on `main` green (latest observed 2026-08-24). Required-check names: verify Settings if API 404. |
-| **A3 Tier-3** | Agent surrogate: RI-SE + v0.5.3 in `install.sh`; doctor/demo/scan exit 0, porcelain clean in temp repo. **HUMAN:** fresh curl install + [Discussion #4](https://github.com/RI-SE/curbpack/discussions/4) comment still pending. |
+| **A1 Pages** | **DONE (re-verified)** — afelin Pages GET → **404**; canonical https://ri-se.github.io/curbpack/ → **200**. `pages.yml` daily cron unchanged. |
+| **A2 OG / social** | **HUMAN blocker** — logged-out phone: Slack + LinkedIn + Post Inspector on https://ri-se.github.io/curbpack/ (~5 min). Agents cannot close. |
+| **A4 TTG** | **DONE (re-verified)** — `TTG_MAX_SECONDS=600 ./scripts/time-to-green.sh` → **3s** wall (2026-08-25 re-run). |
+| **A5 mechanical** | **DONE (re-verified)** — local `claim-safety.sh` OK; `redteam-pilot.sh` **13/13**. Tip `0d853c2` required jobs (`test`/`smoke`/`gauntlet`/`redteam-pilot`) green; tip `ci` overall failed **pin-guard** only (docs literal noise on honesty PR — not an Action pin bump). Prior tip `b483434` full `ci` success. |
+| **A3 Tier-3** | **HUMAN blocker** — agent surrogate OK (curl `main` install → **0.5.3**; doctor/demo/scan exit 0; porcelain clean). Human must re-run fresh curl path and file [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) or tester_report. **Do not** use Discussion #4 (Discussions OFF). |
 
-**v0.5.3 release (2026-08-25):** [RI-SE/curbpack v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) shipped at tag `f74cc96`. Install+scan smoke agent-verified. Does **not** close A2 or A3.
+**v0.5.3 release (2026-08-25):** [RI-SE/curbpack v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) shipped at tag `f74cc96`. Checksums + five binaries HTTP **200**; `install-manifest.json` `default_version` **v0.5.3**. Install+scan smoke agent-verified. Does **not** close A2 or A3.
 
-**Sprint C (deferred):** Wave 2 tabletop after first stranger cohort; freeze renewal review by **2026-09-07**.
+**Sprint B (PREP only):** [rise-tryout.md](../getting-started/rise-tryout.md) is the verbatim invite body; [stranger-validation-log.md](../getting-started/stranger-validation-log.md) templates empty (no invented rows); scorecard aggregates stay blank until cohort. **Do not send invites** until A2 ∧ A3.
 
-**Sprint B invite:** use [rise-tryout.md](../getting-started/rise-tryout.md) verbatim — do not send until A2 + Tier-3 human pass.
+**Sprint C (deferred):** Wave 2 tabletop after first stranger cohort; freeze renewal review by **2026-09-07**; do not merge #75; do not bump Action pin.
 
 ### Branch protection (already set; Settings mirror)
 
@@ -121,33 +123,41 @@ Deny-list blocks certification theater; negation / claim-safe framing is allowed
 
 Before inviting external testers:
 
-1. Fresh machine / no Go: `install.sh` → `doctor` → `demo` — first green in under **10 minutes** (often much faster)
+1. Fresh machine / no Go: `curl …/main/scripts/install.sh | sh` → `doctor` → `demo` → `scan` in a permitted git repo — first green in under **10 minutes** (often much faster); expect CLI **0.5.3**
 2. Decision-maker understands: evidence for humans — **not** certification
 3. `SECURITY.md` reporting path is usable
+4. Record the pass via [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) or [tester_report](https://github.com/RI-SE/curbpack/issues/new?template=tester_report.yml)
 
-**Pass recorded:** 2026-08-10 on pinned Discussions welcome thread ([comment](https://github.com/afelin/curbpack/discussions/4#discussioncomment-17960761)).
+**Status:** **HUMAN pending** for the v0.5.3 stranger path. Historical 2026-08-10 Discussion #4 note is not A3 closure (Discussions OFF; older pin).
 
-## Discussions welcome (claim-safe)
+## Feedback channel (Discussions OFF)
 
-Welcome thread: https://github.com/afelin/curbpack/discussions/4
+RI-SE `has_discussions: false`. Do **not** send testers to Discussion #4.
 
-**Pin:** **Pinned** (GraphQL `pinnedDiscussions`, 2026-08-10). Body must keep:
+**Use:** issue templates `first_run_feedback.yml` / `tester_report.yml` on [RI-SE/curbpack](https://github.com/RI-SE/curbpack).
+
+**Optional later:** enable Discussions, then create a claim-safe Welcome (install ladder + fence). Do not copy stale private-fork Discussion body.
+
+Claim-safe fence for any future Welcome / invite prose:
 
 > Prepares evidence for human review — **not** a conformity assessment, CE mark, or certification.
 >
-> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack scan`  
-> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/afelin/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
+> Try (read-only): `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh && curbpack scan`  
+> Try (safe sandbox): `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh && curbpack doctor && curbpack demo`
 >
-> Tester reports: use the **Tester report** issue template.
+> Tester reports: use the **Tester report** / **first-run feedback** issue templates.
 
 ## Invite wave gate
 
-Invite only when:
+**GO-WITH-GATES:** invite only when **all** of:
 
-1. Tier 0–1 CI green on `main` (required checks above) — **done**
+1. Tier 0–1 required checks green on `main` (`test` / `smoke` / `gauntlet` / `redteam-pilot`) — **done** (tip pin-guard noise does not authorize pin bump)
 2. SPDX shows Apache-2.0 — **done**
-3. One Tier-3 human pass recorded — **done (2026-08-10)**
-4. Welcome Discussion pinned — **done**
+3. **A2** OG/social human smoke — **pending**
+4. **A3** Tier-3 human pass recorded via first_run_feedback / tester_report — **pending**
+5. Kit ready — [rise-tryout.md](../getting-started/rise-tryout.md) verbatim + empty stranger log — **done (PREP)**; do not invent stranger rows
+
+Until 3 ∧ 4: **do not send** the invite wave.
 
 ## Object-owner cadence (30-day freeze)
 
