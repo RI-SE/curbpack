@@ -8,7 +8,7 @@ Manual adoption validation for the first-run path only: install → `cd` → `cu
 
 | Where | What |
 |-------|------|
-| **This committed file** | Empty template + **aggregate** counts only |
+| **This committed file** | Aggregate counts + sanitised friction categories only (may show early **n=1** prep rows; not cohort completion) |
 | **RISE access-controlled file** (not in git) | Tester-level rows; identified owner; retention period set by humans |
 
 Do **not** commit names, contact details, repository identifiers, scan findings, or identifiable notes.

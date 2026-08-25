@@ -61,6 +61,7 @@ Alternatives: paste a sanitised note in Teams, or finish without sharing. (GitHu
 
 ## Related
 
-- Cohort scorecard (empty template + aggregates): [first-run-cohort-scorecard.md](first-run-cohort-scorecard.md)
+- A2/A3 human runbook (before invites): [a2-a3-human-runbook.md](a2-a3-human-runbook.md)
+- Cohort scorecard (aggregates + friction; may show n=1 prep): [first-run-cohort-scorecard.md](first-run-cohort-scorecard.md)
 - Stranger log: [stranger-validation-log.md](stranger-validation-log.md)
 - Pilot frame (separate track): [rise-pilot-offer.md](rise-pilot-offer.md)
