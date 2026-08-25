@@ -76,7 +76,12 @@ fi
 
 if [ -z "${url:-}" ]; then
   echo "could not resolve download URL for ${asset} (tag=${tag:-unknown})" >&2
-  echo "Build from source: go install github.com/RI-SE/curbpack/cmd/curbpack@latest" >&2
+  echo "Prefer the binary installer from RI-SE releases:" >&2
+  echo "  https://github.com/RI-SE/curbpack/releases" >&2
+  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" >&2
+  echo "Go module path remains github.com/afelin/curbpack until wave-2 migration;" >&2
+  echo "with that development repo private, strangers should use binary installers only." >&2
+  echo "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)" >&2
   exit 1
 fi
 

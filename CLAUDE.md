@@ -19,6 +19,7 @@ curbpack check
 #   curbpack pathway note --set last_draft_pick=A|B|edited
 # before confirm-prose: curbpack research --cite-check <draft.md>
 # green (optional share): curbpack export --context-pack
+# reviewers (offline): curbpack review <received-pack>  # document triage — not confirm/attest
 ```
 
 ## Human-only acts

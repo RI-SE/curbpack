@@ -26,6 +26,11 @@ func commandUsage(cmd string) {
 	case "share":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack share [--bundle] [--reveal] [--packs a,b] [--skip-prepare-release]\n")
 		fmt.Fprintf(os.Stderr, "  Recipe: check → context-pack → buyer-questions → prepare-release.\n")
+	case "review":
+		fmt.Fprintf(os.Stderr, "Usage: curbpack review <received-pack> [--json]\n")
+		fmt.Fprintf(os.Stderr, "  Offline triage of a curbpack-native review-pack (no git, no network).\n")
+		fmt.Fprintf(os.Stderr, "  States: confirmed | unconfirmed | contradicted — document only, not a product verdict.\n")
+		fmt.Fprintf(os.Stderr, "  Exit 1 if any finding is contradicted; exit 2 on usage errors.\n")
 	case "drift":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack drift [--json]\n")
 		fmt.Fprintf(os.Stderr, "  Multi-signal evidence checklist — informational; exit 0 always.\n")
