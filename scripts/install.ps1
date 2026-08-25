@@ -148,7 +148,13 @@ if ($Version -eq "latest") {
 }
 
 if (-not $url) {
-  Write-Error "could not resolve download URL for $asset (tag=$tag)"
+  Write-Host "could not resolve download URL for $asset (tag=$tag)" -ForegroundColor Red
+  Write-Host "Prefer the binary installer from RI-SE releases:" -ForegroundColor Yellow
+  Write-Host "  https://github.com/RI-SE/curbpack/releases"
+  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md"
+  Write-Host "Go module path remains github.com/afelin/curbpack until wave-2 migration;"
+  Write-Host "with that development repo private, strangers should use binary installers only."
+  Write-Host "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)"
   exit 1
 }
 if (-not $checksumsUrl) {

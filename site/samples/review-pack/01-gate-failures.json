@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "timestamp": "2026-08-25T00:00:00Z",
+  "concurrency_control": {
+    "expected_parent_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "state_version_token": "v3.33-OCC"
+  },
+  "statechart_context": {
+    "active_parent_state_path": ["Root"],
+    "failed_orthogonal_regions": null
+  },
+  "agent_identity": {
+    "agent_id": "",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared",
+    "reason": "fixture"
+  },
+  "failures": [
+    {
+      "gate_id": "HOUSE-SECURITY-MD",
+      "severity": "high",
+      "type": "missing",
+      "sanitized_description": "SECURITY.md missing or incomplete",
+      "ast_coordinates": {
+        "target_file": "SECURITY.md"
+      },
+      "remediation": {
+        "action_required": "Add SECURITY.md with a disclosure path"
+      }
+    }
+  ],
+  "pack_id": "house-policy",
+  "readiness_score": 62
+}
