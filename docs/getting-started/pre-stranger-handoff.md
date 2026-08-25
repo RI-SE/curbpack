@@ -4,8 +4,10 @@
 
 Engineering stops here. Agents must not merge, tag, disable Pages, or run stranger outreach.
 
+**v0.5.3 shipped (2026-08-25):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) at tag `f74cc96`. Install+scan smoke **agent-verified**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human Discussion comment — do not send invites yet.
+
 **Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/RI-SE/curbpack/pull/73)  
-**Stranger path after tag:** `curl …/v0.5.3/scripts/install.sh | sh` then `curbpack scan`  
+**Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.3**) then `curbpack scan`  
 **Action pin:** stays **`@v0.5.2`** until human tabletop approves bump ([AGENTS.md](../../AGENTS.md))
 
 ---
