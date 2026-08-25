@@ -49,6 +49,18 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if strings.Contains(stdout, "Readiness Score") {
 		t.Fatal("scan must not show readiness thermometer")
 	}
+	if !strings.Contains(stdout, "Satisfied:") {
+		t.Fatalf("scan must label Satisfied section: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Open signals:") {
+		t.Fatalf("scan must label Open signals section: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Exit 0: diagnosis finished") {
+		t.Fatalf("scan must state exit 0 is diagnosis finished, not a pass: %q", stdout)
+	}
+	if !strings.Contains(stdout, "readiness % is via curbpack check --score (not this command)") {
+		t.Fatalf("scan banner must not push check as the tryout next step: %q", stdout)
+	}
 	cache := filepath.Join(dir, ".github", "curbpack", "cache", "latest_failure.json")
 	if _, err := os.Stat(cache); err == nil {
 		t.Fatal("scan must not write cache")
@@ -150,6 +162,9 @@ func TestRun_ScanAfterFixArt14(t *testing.T) {
 	}
 
 	before := runScan()
+	if !strings.Contains(before, "Next (optional):") {
+		t.Fatalf("cold scan must mark continuation optional (first-run tryout stops after scan): %q", before)
+	}
 	if !strings.Contains(before, "fix --art14") {
 		t.Fatalf("cold scan must suggest fix --art14 in Next: %q", before)
 	}
@@ -170,8 +185,26 @@ func TestRun_ScanAfterFixArt14(t *testing.T) {
 	if !strings.Contains(after, "✔") || !strings.Contains(after, "CRA-ART14-PATH") {
 		t.Fatalf("post-fix scan must show satisfied CRA-ART14-PATH: %q", after)
 	}
+	if !strings.Contains(after, "Satisfied:") {
+		t.Fatalf("post-fix scan must label Satisfied section: %q", after)
+	}
+	if !strings.Contains(after, "Open signals:") {
+		t.Fatalf("post-fix scan must label Open signals section: %q", after)
+	}
+	satIdx := strings.Index(after, "Satisfied:")
+	openIdx := strings.Index(after, "Open signals:")
+	checkIdx := strings.Index(after, "✔")
+	if satIdx < 0 || openIdx < 0 || checkIdx < 0 || !(satIdx < checkIdx && checkIdx < openIdx) {
+		t.Fatalf("✔ satisfied lines must appear under Satisfied, before Open signals: %q", after)
+	}
 	if strings.Contains(after, "fix --art14") {
 		t.Fatalf("post-fix scan must not suggest fix --art14: %q", after)
+	}
+	if !strings.Contains(after, "Next (optional):") {
+		t.Fatalf("post-fix scan must keep Next (optional): footer: %q", after)
+	}
+	if !strings.Contains(after, "curbpack init") || !strings.Contains(after, "check --score") {
+		t.Fatalf("post-art14 Next (optional) must suggest init · check --score: %q", after)
 	}
 }
 

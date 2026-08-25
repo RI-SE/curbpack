@@ -25,6 +25,18 @@ echo "Curbpack installer"
 echo "  ${claim}"
 echo
 
+if [ "$REPO" != "RI-SE/curbpack" ]; then
+  echo "WARNING: CURBPACK_REPO=${REPO} — canonical stranger installs use RI-SE/curbpack only." >&2
+  echo "Do not use afelin/curbpack (private fork; release assets often 404)." >&2
+  if [ "${CURBPACK_REPO_I_UNDERSTAND:-}" != "1" ]; then
+    echo "Refusing non-canonical repo. Unset CURBPACK_REPO, or set CURBPACK_REPO_I_UNDERSTAND=1 to override." >&2
+    echo "Prefer: https://github.com/RI-SE/curbpack/releases" >&2
+    exit 1
+  fi
+  echo "Proceeding with override (CURBPACK_REPO_I_UNDERSTAND=1)." >&2
+  echo
+fi
+
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
 case "$os" in
@@ -82,22 +94,38 @@ if [ -z "${url:-}" ]; then
   echo "Go module path remains github.com/afelin/curbpack until wave-2 migration;" >&2
   echo "with that development repo private, strangers should use binary installers only." >&2
   echo "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)" >&2
+  echo "Do not point stranger installs at afelin/curbpack (private; assets may 404)." >&2
   exit 1
 fi
 
 if [ -z "${checksums_url:-}" ]; then
   echo "checksums.txt URL missing — refusing install (fail closed)" >&2
+  echo "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" >&2
+  echo "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)." >&2
   exit 1
 fi
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 echo "Downloading ${tag:-latest} → ${asset}"
-curl -fsSL -o "${tmpdir}/curbpack" "$url"
+if ! curl -fsSL -o "${tmpdir}/curbpack" "$url"; then
+  echo "Download failed (often HTTP 404) for:" >&2
+  echo "  ${url}" >&2
+  echo "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" >&2
+  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" >&2
+  echo "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)." >&2
+  exit 1
+fi
 chmod +x "${tmpdir}/curbpack"
 
 echo "Verifying checksums.txt"
-curl -fsSL -o "${tmpdir}/checksums.txt" "$checksums_url"
+if ! curl -fsSL -o "${tmpdir}/checksums.txt" "$checksums_url"; then
+  echo "checksums.txt download failed (often HTTP 404) for:" >&2
+  echo "  ${checksums_url}" >&2
+  echo "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" >&2
+  echo "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)." >&2
+  exit 1
+fi
 expected=$(
   grep -E "[ /]${asset}\$" "${tmpdir}/checksums.txt" | head -n 1 | awk '{print $1}'
 )

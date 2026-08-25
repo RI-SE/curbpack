@@ -1,6 +1,6 @@
 # Stranger validation log (Wave B gate)
 
-**Gate:** 3 external repos × 2 successful `curbpack scan` runs each (exit 0, read-only, `Next:` visible, `git status --porcelain` empty).
+**Gate:** 3 external repos × 2 successful `curbpack scan` runs each (exit 0, read-only, `Next:` or `Next (optional):` visible — both OK until the next binary after v0.5.3 — `git status --porcelain` empty).
 
 **Parallel recruit:** while logging strangers, offer the one-sentence [RISE Neutral Evidence Profile Pilot](rise-pilot-offer.md) to a named relying party — do not wait for all six scans.
 
@@ -42,7 +42,7 @@ Contributor / unreleased installer only (labelled development):
 | Repo type (language, size) | | |
 | `curbpack scan` exit code | | |
 | Art 14 clock shown? | | |
-| `Next:` clear? (Y/N + note) | | |
+| `Next:` / `Next (optional):` clear? (Y/N + note) | | |
 | Blockers | | |
 | stdout (paste or link) | | |
 
@@ -56,7 +56,7 @@ Contributor / unreleased installer only (labelled development):
 | Repo type | | |
 | Exit code | | |
 | Art 14 clock? | | |
-| `Next:` clear? | | |
+| `Next:` / `Next (optional):` clear? | | |
 | Blockers | | |
 | stdout | | |
 
@@ -70,7 +70,7 @@ Contributor / unreleased installer only (labelled development):
 | Repo type | | |
 | Exit code | | |
 | Art 14 clock? | | |
-| `Next:` clear? | | |
+| `Next:` / `Next (optional):` clear? | | |
 | Blockers | | |
 | stdout | | |
 
@@ -79,5 +79,5 @@ Contributor / unreleased installer only (labelled development):
 ## Sign-off (human)
 
 - [ ] 3 strangers × 2 runs complete
-- [ ] Log linked from Discussion or ADOPTERS draft PR
+- [ ] Log linked from first-run feedback issues, Teams note, or ADOPTERS draft PR (Discussions not enabled — do not send testers there)
 - [ ] Wave B `verify` spike scheduled per [software-design-document.md](../software-design-document.md)

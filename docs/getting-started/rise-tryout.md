@@ -8,12 +8,18 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 ## Steps
 
-1. Install (canonical release repository):
+1. Install (canonical release repository — **RI-SE/curbpack only**; other forks may 404):
 
 **macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
+```
+
+If `curbpack: command not found`, open a **new** terminal, or run:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 **Windows (PowerShell)**
@@ -22,9 +28,11 @@ curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install
 irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
 ```
 
+Open a **new** PowerShell window if `curbpack` is not found.
+
 2. Choose a **git repository you are permitted to inspect**, then `cd` into its root (confirm the path).
 3. Run `curbpack scan`.
-4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout.
+4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout. The CLI may print `Next:` or `Next (optional): …` — that is the full golden path later; **ignore it for this tryout**.
 
 Optional write-free check:
 
@@ -47,9 +55,7 @@ Feedback is **not required** to complete the tryout.
 
 Do not include repository contents, internal paths, customer information, personal data, credentials, secrets, or detailed security findings in feedback.
 
-Alternatives: paste a sanitised note in Teams, or finish without sharing.
-
-Optional community: [Curbpack Discussions](https://github.com/RI-SE/curbpack/discussions) for release notes and future tester calls (no auto-enrol).
+Alternatives: paste a sanitised note in Teams, or finish without sharing. (GitHub Discussions are not enabled on RI-SE/curbpack — do not use that path.)
 
 ## Related
 

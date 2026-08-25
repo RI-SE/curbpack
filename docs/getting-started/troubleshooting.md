@@ -97,7 +97,7 @@ Binary missing. Print install command and reinstall — repair never downloads /
 | Used wrong install URL / old binary | `scan` missing or wrong version | Re-run Ladder 0 from [install.md](install.md) (`main` installer → smoke-verified binary) |
 | npm / `npx` path | npm wrapper **deferred** (PR5) — not the stranger path | Use `install.sh` / `install.ps1` instead |
 
-Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 reporting clock + `Next:`, and `git status --porcelain` stays empty.
+Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 reporting clock + `Next:` or `Next (optional):` (both OK until the next binary after v0.5.3), and `git status --porcelain` stays empty.
 
 ---
 
