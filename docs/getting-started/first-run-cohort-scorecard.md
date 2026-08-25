@@ -33,9 +33,9 @@ Update counts only — no individual rows.
 
 | Category | Count | Status (acknowledged / fixed / planned / not pursuing) |
 |----------|-------|--------------------------------------------------------|
-| Scan `Next:` read as required vs tryout “stop after scan” | 1 | fixed in tree / pending merge + next binary (CLI: `Next (optional):` + tryout ignore note; ships after v0.5.3) |
-| Wrong install host (non-RI-SE URL → 404) | 1 | acknowledged (tryout: RI-SE only) |
-| PATH stale until new shell / export | 1 | acknowledged (tryout + install PATH hint) |
+| Scan `Next:` read as required vs tryout “stop after scan” | 1 | fixed on RI-SE main (scripts/docs); CLI pending v0.5.4 |
+| Wrong install host (non-RI-SE URL → 404) | 1 | fixed on RI-SE main (scripts/docs) |
+| PATH stale until new shell / export | 1 | acknowledged (hint-only by design; tryout + install PATH / `doctor --repair`) |
 
 ### Cohort gate checklist
 

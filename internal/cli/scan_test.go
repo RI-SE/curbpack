@@ -58,8 +58,23 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if !strings.Contains(stdout, "Exit 0: diagnosis finished") {
 		t.Fatalf("scan must state exit 0 is diagnosis finished, not a pass: %q", stdout)
 	}
+	if !strings.Contains(stdout, "Exit 0 means diagnosis finished") {
+		t.Fatalf("scan must state Exit 0 invariant early under banner: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Scan complete — repository unchanged.") {
+		t.Fatalf("scan must end with Scan complete claim: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Prepares evidence for human review — not a conformity assessment.") {
+		t.Fatalf("scan must print claim line: %q", stdout)
+	}
 	if !strings.Contains(stdout, "readiness % is via curbpack check --score (not this command)") {
 		t.Fatalf("scan banner must not push check as the tryout next step: %q", stdout)
+	}
+	earlyIdx := strings.Index(stdout, "Exit 0 means diagnosis finished")
+	lateIdx := strings.Index(stdout, "Exit 0: diagnosis finished")
+	completeIdx := strings.Index(stdout, "Scan complete — repository unchanged.")
+	if earlyIdx < 0 || lateIdx < 0 || completeIdx < 0 || !(earlyIdx < lateIdx && lateIdx < completeIdx) {
+		t.Fatalf("want early Exit 0, then late Exit 0, then Scan complete: %q", stdout)
 	}
 	cache := filepath.Join(dir, ".github", "curbpack", "cache", "latest_failure.json")
 	if _, err := os.Stat(cache); err == nil {
@@ -206,6 +221,67 @@ func TestRun_ScanAfterFixArt14(t *testing.T) {
 	if !strings.Contains(after, "curbpack init") || !strings.Contains(after, "check --score") {
 		t.Fatalf("post-art14 Next (optional) must suggest init · check --score: %q", after)
 	}
+	if !strings.Contains(after, "Scan complete — repository unchanged.") {
+		t.Fatalf("post-fix scan must end with Scan complete: %q", after)
+	}
+}
+
+func TestRun_ScanAllGreenNoNext(t *testing.T) {
+	dir := t.TempDir()
+	initScanGit(t, dir)
+	mustWriteScan(t, filepath.Join(dir, "README.md"), "# Product\n")
+	mustWriteScan(t, filepath.Join(dir, ".well-known", "security.txt"), "Contact: mailto:a@b.c\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en\n")
+	mustWriteScan(t, filepath.Join(dir, "SECURITY.md"), `# Security Policy
+
+## Reporting
+
+Report vulnerabilities to security@example.com with reproduction steps.
+
+## Supported Versions
+
+We support the latest major release with security patches for twelve months.
+
+## Disclosure
+
+Coordinated disclosure within 90 days after fix availability.
+`+strings.Repeat("word ", 40)+"\n")
+	mustWriteScan(t, filepath.Join(dir, "package.json"), `{"name":"product","version":"1.0.0","dependencies":{}}`+"\n")
+	mustWriteScan(t, filepath.Join(dir, ".curbpack.json"), `{"packs":["house-policy"]}`+"\n")
+
+	stdout, _ := capture(t, func() {
+		old, _ := os.Getwd()
+		_ = os.Chdir(dir)
+		defer func() { _ = os.Chdir(old) }()
+		if err := cli.Run([]string{"scan"}); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if strings.Contains(stdout, "Next (optional):") || strings.Contains(stdout, "Next:") {
+		t.Fatalf("all-green scan must not print Next: %q", stdout)
+	}
+	if !strings.Contains(stdout, "No open gate findings on this tree") {
+		t.Fatalf("all-green scan must say no open findings: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Exit 0 means diagnosis finished") {
+		t.Fatalf("all-green scan must keep early Exit 0 invariant: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Exit 0: diagnosis finished") {
+		t.Fatalf("all-green scan must keep footer Exit 0: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Scan complete — repository unchanged.") {
+		t.Fatalf("all-green scan must end with Scan complete: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Satisfied:") {
+		t.Fatalf("all-green scan must label Satisfied: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Open signals: 0 failing · 0 not started") {
+		t.Fatalf("all-green scan must show zero open signals: %q", stdout)
+	}
+	satIdx := strings.Index(stdout, "Satisfied:")
+	openIdx := strings.Index(stdout, "Open signals:")
+	if satIdx < 0 || openIdx < 0 || !(satIdx < openIdx) {
+		t.Fatalf("Satisfied must appear before Open signals: %q", stdout)
+	}
 }
 
 func TestRun_ScanBadge(t *testing.T) {
@@ -220,6 +296,9 @@ func TestRun_ScanBadge(t *testing.T) {
 		}
 		if !strings.Contains(stdout, "self-declared · curbpack") {
 			t.Fatalf("missing self-declared suffix: %q", stdout)
+		}
+		if !strings.Contains(stdout, "Prepares evidence for human review — not a conformity assessment.") {
+			t.Fatalf("badge/markdown must still print claim line: %q", stdout)
 		}
 		for _, bad := range []string{"failing", "not started", "CRA compliant", "passing", "green", "Drafted"} {
 			if strings.Contains(strings.ToLower(stdout), strings.ToLower(bad)) {

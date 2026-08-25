@@ -2,6 +2,8 @@
 
 **One RI-SE entry link for the 3 → 10 → 20 → 100 first-run rollout.** Purpose: test installation and one local `scan` only.
 
+**Pins (do not confuse):** install scripts download the CLI binary from RI-SE releases (currently **v0.5.3** until **v0.5.4**); the GitHub Action pin stays **`@v0.5.2`** — unrelated and frozen until human tabletop.
+
 Installation is provided from the canonical Curbpack release repository. Full install SoR: [install.md](install.md). Recovery: [troubleshooting.md](troubleshooting.md). Do not copy alternate pins from this page.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
@@ -32,7 +34,7 @@ Open a **new** PowerShell window if `curbpack` is not found.
 
 2. Choose a **git repository you are permitted to inspect**, then `cd` into its root (confirm the path).
 3. Run `curbpack scan`.
-4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout. The CLI may print `Next:` or `Next (optional): …` — that is the full golden path later; **ignore it for this tryout**.
+4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout. Look for `Exit 0` + `Scan complete — repository unchanged.` (always). If the CLI prints `Next:` or `Next (optional): …`, that is the full golden path later — **ignore it for this tryout**.
 
 Optional write-free check:
 
@@ -43,7 +45,7 @@ after="$(git status --porcelain)"
 test "$before" = "$after"
 ```
 
-The native scan is local and read-only. Exit 0 means diagnosis completed, not that all gates passed.
+The native scan is local and read-only. Exit 0 means diagnosis completed, not that all gates passed. `Scan complete — repository unchanged.` closes the tryout — the repository was not modified.
 
 Stuck? [troubleshooting.md](troubleshooting.md). No product repo handy? `curbpack demo`.
 

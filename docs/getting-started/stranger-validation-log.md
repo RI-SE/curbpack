@@ -1,6 +1,6 @@
 # Stranger validation log (Wave B gate)
 
-**Gate:** 3 external repos × 2 successful `curbpack scan` runs each (exit 0, read-only, `Next:` or `Next (optional):` visible — both OK until the next binary after v0.5.3 — `git status --porcelain` empty).
+**Gate:** 3 external repos × 2 successful `curbpack scan` runs each (exit 0, read-only, Exit 0 invariant + `Scan complete — repository unchanged.` always — `Next:` / `Next (optional):` only when findings remain; both Next wordings OK until v0.5.4 binary — `git status --porcelain` empty).
 
 **Parallel recruit:** while logging strangers, offer the one-sentence [RISE Neutral Evidence Profile Pilot](rise-pilot-offer.md) to a named relying party — do not wait for all six scans.
 
@@ -42,7 +42,8 @@ Contributor / unreleased installer only (labelled development):
 | Repo type (language, size) | | |
 | `curbpack scan` exit code | | |
 | Art 14 clock shown? | | |
-| `Next:` / `Next (optional):` clear? (Y/N + note) | | |
+| Exit 0 + `Scan complete` visible? | | |
+| `Next:` / `Next (optional):` only if findings? (Y/N + note) | | |
 | Blockers | | |
 | stdout (paste or link) | | |
 
@@ -56,7 +57,8 @@ Contributor / unreleased installer only (labelled development):
 | Repo type | | |
 | Exit code | | |
 | Art 14 clock? | | |
-| `Next:` / `Next (optional):` clear? | | |
+| Exit 0 + `Scan complete`? | | |
+| `Next:` / `Next (optional):` only if findings? | | |
 | Blockers | | |
 | stdout | | |
 
@@ -70,7 +72,8 @@ Contributor / unreleased installer only (labelled development):
 | Repo type | | |
 | Exit code | | |
 | Art 14 clock? | | |
-| `Next:` / `Next (optional):` clear? | | |
+| Exit 0 + `Scan complete`? | | |
+| `Next:` / `Next (optional):` only if findings? | | |
 | Blockers | | |
 | stdout | | |
 
