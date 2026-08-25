@@ -20,14 +20,14 @@
   Local PATH/alias repair only (same semantics as: curbpack doctor --repair).
 
 .PARAMETER Repo
-  GitHub repo (default RI-SE/curbpack)
+  GitHub repo (default: CURBPACK_REPO env, else RI-SE/curbpack). Non-canonical repos require CURBPACK_REPO_I_UNDERSTAND=1.
 #>
 [CmdletBinding()]
 param(
   [string]$Version = "",
   [string]$InstallDir = "",
   [switch]$Repair,
-  [string]$Repo = "RI-SE/curbpack"
+  [string]$Repo = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -127,6 +127,23 @@ if (-not $Version) {
   else { $Version = Get-DefaultVersion }
 }
 
+if (-not $Repo) {
+  if ($env:CURBPACK_REPO) { $Repo = $env:CURBPACK_REPO }
+  else { $Repo = "RI-SE/curbpack" }
+}
+
+if ($Repo -ne "RI-SE/curbpack") {
+  Write-Host "WARNING: CURBPACK_REPO=$Repo — canonical stranger installs use RI-SE/curbpack only." -ForegroundColor Yellow
+  Write-Host "Do not use afelin/curbpack (private fork; release assets often 404)." -ForegroundColor Yellow
+  if ($env:CURBPACK_REPO_I_UNDERSTAND -ne "1") {
+    Write-Host "Refusing non-canonical repo. Unset CURBPACK_REPO, or set CURBPACK_REPO_I_UNDERSTAND=1 to override." -ForegroundColor Red
+    Write-Host "Prefer: https://github.com/RI-SE/curbpack/releases"
+    exit 1
+  }
+  Write-Host "Proceeding with override (CURBPACK_REPO_I_UNDERSTAND=1)." -ForegroundColor Yellow
+  Write-Host ""
+}
+
 $dir = Get-InstallDir
 $null = New-Item -ItemType Directory -Force -Path $dir
 $asset = "curbpack_windows_amd64.exe"
@@ -136,8 +153,22 @@ $alias = Join-Path $dir "curb.exe"
 $headers = @{ "Accept" = "application/vnd.github+json"; "User-Agent" = "curbpack-install.ps1" }
 if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $($env:GITHUB_TOKEN)" }
 
+function Write-Install404Guidance {
+  param([string]$Context, [string]$FailedUrl)
+  Write-Host "$Context (often HTTP 404):" -ForegroundColor Red
+  if ($FailedUrl) { Write-Host "  $FailedUrl" }
+  Write-Host "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" -ForegroundColor Yellow
+  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md"
+  Write-Host "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)."
+}
+
 if ($Version -eq "latest") {
-  $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers $headers
+  try {
+    $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers $headers
+  } catch {
+    Write-Install404Guidance -Context "Could not resolve latest release for $Repo" -FailedUrl "https://api.github.com/repos/$Repo/releases/latest"
+    exit 1
+  }
   $tag = $rel.tag_name
   $url = ($rel.assets | Where-Object { $_.name -eq $asset } | Select-Object -First 1).browser_download_url
   $checksumsUrl = ($rel.assets | Where-Object { $_.name -eq "checksums.txt" } | Select-Object -First 1).browser_download_url
@@ -148,11 +179,18 @@ if ($Version -eq "latest") {
 }
 
 if (-not $url) {
-  Write-Error "could not resolve download URL for $asset (tag=$tag)"
+  Write-Host "could not resolve download URL for $asset (tag=$tag)" -ForegroundColor Red
+  Write-Host "Prefer the binary installer from RI-SE releases:" -ForegroundColor Yellow
+  Write-Host "  https://github.com/RI-SE/curbpack/releases"
+  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md"
+  Write-Host "Go module path remains github.com/afelin/curbpack until wave-2 migration;"
+  Write-Host "with that development repo private, strangers should use binary installers only."
+  Write-Host "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)"
+  Write-Host "Do not point stranger installs at afelin/curbpack (private; assets may 404)."
   exit 1
 }
 if (-not $checksumsUrl) {
-  Write-Error "checksums.txt URL missing — refusing install (fail closed)"
+  Write-Install404Guidance -Context "checksums.txt URL missing — refusing install (fail closed)" -FailedUrl ""
   exit 1
 }
 
@@ -162,8 +200,18 @@ try {
   $tmpExe = Join-Path $tmp $asset
   $tmpSum = Join-Path $tmp "checksums.txt"
   Write-Host "Downloading $tag → $asset"
-  Invoke-WebRequest -Uri $url -OutFile $tmpExe -Headers $headers -UseBasicParsing
-  Invoke-WebRequest -Uri $checksumsUrl -OutFile $tmpSum -Headers $headers -UseBasicParsing
+  try {
+    Invoke-WebRequest -Uri $url -OutFile $tmpExe -Headers $headers -UseBasicParsing
+  } catch {
+    Write-Install404Guidance -Context "Download failed" -FailedUrl $url
+    exit 1
+  }
+  try {
+    Invoke-WebRequest -Uri $checksumsUrl -OutFile $tmpSum -Headers $headers -UseBasicParsing
+  } catch {
+    Write-Install404Guidance -Context "checksums.txt download failed" -FailedUrl $checksumsUrl
+    exit 1
+  }
 
   $line = Get-Content $tmpSum | Where-Object { $_ -match [regex]::Escape($asset) + '\s*$' } | Select-Object -First 1
   if (-not $line) {
