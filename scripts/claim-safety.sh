@@ -250,6 +250,7 @@ allowed = verbs | aliases | {"version", "help", "curb"}
 skip_verb_files = {
     "docs/software-design-document.md",
     "docs/internal/sdd-gap-analysis.md",
+    "docs/internal/historical-verify-target.md",  # fences phantom verify; not a ship verb
 }
 doc_globs = ["README.md", "docs", "site", "papers", "AGENTS.md", "CLAUDE.md"]
 paths = []
