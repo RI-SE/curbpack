@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased (on `main`, not yet pinned — `v0.5.2` tag is TAM-only at `b3ed5b1`)
+## Unreleased (on `main`, not yet pinned — Action pin stays `@v0.5.2`)
 
+- **First-run scan honesty** — `curbpack scan` prints Exit 0 invariant early + late; ends with `Scan complete — repository unchanged.`; `Next (optional):` only when findings remain; Satisfied vs Open; badge/`--format markdown` still emit claim line. Installers print REPO/VERSION/ASSET/URL/INSTALL_DIR/PATH membership before download; adjacent `install-manifest.json` only when `$0` is a real script file; footer points at `curbpack doctor --repair`. Non-`RI-SE/curbpack` `CURBPACK_REPO` refuses unless `CURBPACK_REPO_I_UNDERSTAND=1`; 404 guidance prefers RI-SE. RISE tryout: dual-pin (CLI install ≠ Action `@v0.5.2`); stop after scan; no Discussions CTA. Gate docs: Exit 0 + Scan complete always; Next only when findings. Pin stays `@v0.5.2`. Not certification.
 - **Reader review wedge (comms + CLI)** — `curbpack review <dir>` offline document triage (confirmed / unconfirmed / contradicted) on curbpack-native review-packs — not a product verdict. Teaching sample at `site/samples/review-pack/`; site page `site/receiving-submissions/` (“Are you receiving submissions?”). Home / for-reviewers promote artifact trust table + review path. Pin stays `@v0.5.2`. Not certification.
 - **Phase 0-slim honesty** — installer fallback no longer prints a failing `go install …/RI-SE/curbpack` line; claim-safe guidance points to RI-SE binary releases / `docs/getting-started/install.md` and notes the Go module path remains `github.com/afelin/curbpack` until wave-2 (strangers: binary only). SDD banner + §8–§10 clarify **`curbpack verify` is not a shipped CLI verb** (future reader wedge: `curbpack review`). Directional evaluator tip-drift note + `scripts/evaluator-behavior-check.sh`. Pin stays `@v0.5.2`. Not certification.
 - **Reader wedge (`curbpack review`)** — offline triage of a received curbpack-native `review-pack/` (no git, no network): confirmed / unconfirmed / contradicted on structure, digests, and references (allowlisted URLs recorded never fetched). Pasteable triage note; exit 1 on contradicted. Frozen sample: `testdata/sample-review-pack` + `site/samples/review-pack`. Site: reviewers-first home, receiving-submissions page, trust-table links. Phase 6 scaffold + post-kill-test gates for intake/lint/batch. Document triage only — not a product verdict. Pin stays `@v0.5.2`.
@@ -10,6 +11,16 @@
 - **Premortem production fixes (PR #57)** — `init` gitignores cache/evidence; Action `heal` default **false** + scaffold≠readiness warning; pathway confirm requires `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` (TTY alone refused); `LatestNoteCommit` walks notes (not HEAD-without-note); Action refuses Windows runners + red `REMEDIATION REVIEW` artifacts; claim-safety scans `*.ps1`; redteam **18/18**; maintainer playbook [`docs/getting-started/release-v0.5.2.md`](docs/getting-started/release-v0.5.2.md)
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
 - **Cross-OS TAM hardening** — gauntlet Action honesty assert (no `or True`); `doctor --repair` fail-closed after LookPath; marker BOM-safe + custom InstallDir; CI repair smoke without `|| true`; completions for `drift` / `--repair` / `--bundle` / `--reveal`; atomic `.new` cleanup; `share --reveal` empty-message; docs pin sweep `@v0.5.2`
+
+## v0.5.3
+
+Ladder 0 scan milestone — install + read-only `curbpack scan` for strangers. Action pin stayed `@v0.5.2`.
+
+- **`curbpack scan`** — read-only diagnosis (no init, no hooks, no score); Art 14 reporting clock; product hint; exit 0 = diagnosis finished (not pass/cert)
+- **Install** — `main` scripts download smoke-verified **v0.5.3** binary (manifest ≡ release-gate); Windows amd64 asset published
+- **Docs** — stranger Ladder 0, RISE tryout, troubleshooting scan section; Discussions not required for feedback
+- **Claim safety** — prepares evidence for human review — not CE / notified-body / certification
+
 ## v0.5.2
 
 Cross-OS TAM — distribution + UX + repair (Trust track deferred).

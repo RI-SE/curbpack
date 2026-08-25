@@ -61,7 +61,7 @@ body:
   - type: dropdown
     id: next_clear
     attributes:
-      label: Was Next: clear?
+      label: Was Next (optional): clear? (Older binaries may say Next: — same question.)
       options:
         - "Yes"
         - "No"
