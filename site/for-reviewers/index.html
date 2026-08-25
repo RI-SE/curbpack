@@ -39,8 +39,10 @@
 
       <h3>Offline document triage</h3>
       <p>When you receive a curbpack-native review-pack, unzip it on your machine and run:</p>
-      <pre class="mono"><code>curbpack review &lt;received-pack-dir&gt;</code></pre>
+      <pre class="mono"><code>curbpack review &lt;received-pack-dir&gt;
+# terse default · --full for all findings · --json for schema v2</code></pre>
       <p>You get pasteable triage: <strong>confirmed</strong>, <strong>unconfirmed</strong>, or <strong>contradicted</strong> findings about the document (structure, digests, references) — not a product verdict. Teaching folder: <a href="/curbpack/samples/review-pack/">/curbpack/samples/review-pack/</a>. Longer path: <a href="/curbpack/receiving-submissions/">Are you receiving submissions?</a></p>
+      <p class="muted">Locked laptop? Receive the release binary as a file (email/USB) with <code>checksums.txt</code>, verify sha256, then PATH — <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md#ladder-3--manual-binary--checksums">Ladder 3</a>. No installer engineering required.</p>
 
       <h3 id="artifact-trust-table">Artifact trust table</h3>
       <table>

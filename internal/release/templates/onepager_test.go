@@ -24,6 +24,11 @@ func TestOnePagerFingerprintStable(t *testing.T) {
 	if templates.OnePagerFingerprint(dto2) == a {
 		t.Fatal("score change must change fingerprint")
 	}
+	dto3 := dto
+	dto3.ResultDigest = "abcdef0123456789"
+	if templates.OnePagerFingerprint(dto3) == a {
+		t.Fatal("digest change must change fingerprint")
+	}
 }
 
 func TestOnePagerFingerprintIgnoresCoverAndReviewedBy(t *testing.T) {

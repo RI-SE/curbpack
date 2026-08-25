@@ -83,4 +83,19 @@ Frozen ops (unchanged): `validate_delta`, `get_latest_failure`, `graph_summary`,
 
 `curbpack share --bundle` writes `review-pack/evidence-bundle.html` with `<!-- curbpack-bundle-schema:1 -->`, optional REMEDIATION banner on red gates, and embedded hpurl pointer JSON for offline verify.
 
-See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md)
+## Review report (`curbpack review`)
+
+Offline document triage of a received curbpack-native review-pack. **Not** a product verdict or conformity assessment. No current MCP / `exportx` consumer — CLI-local assessor surface; treat JSON as the product contract for future intake.
+
+| Contract | Rule |
+|----------|------|
+| Schema | `curbpack-review-report:2` (`--json`) |
+| Classifier | `classifier_version` string (e.g. `refclass:1`) — golden list; changes that move the reference denominator must be visible |
+| States | `confirmed` \| `unconfirmed` \| `contradicted` only |
+| Additive `cause` | Unconfirmed: `producer` \| `extractor` \| `genuine` \| `external`. Contradicted: `self_disagree` (digest/structure contradictions) |
+| Counters | Split unconfirmed/contradicted-by-cause fields; `dropped_count` (+ `dropped` under `--full`) |
+| Digests | Producer emits payload/file digests; bind disagreements appear as sibling `*_bind` keys — reader contradicts, never silently prefers bind |
+| Airlock | Redact-then-emit home-path/PEM in findings, then fail closed via `PacketLooksAirlocked` |
+| Exit | `1` if any contradicted (or `--batch` child unreadable/contradicted); usage → `2`. `--batch --full` / `--batch --json` → usage |
+
+See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md)
