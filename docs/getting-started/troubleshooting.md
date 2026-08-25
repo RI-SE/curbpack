@@ -7,7 +7,7 @@ Not conformity assessment — a green `check` is local structural evidence for h
 ## Decision tree (start here)
 
 1. **`curbpack: command not found`** → new shell → confirm install dir on PATH → `doctor --repair` → full reinstall ([install](install.md) Ladder 1–3).
-2. **Install / checksum fail** → re-fetch from pinned **`v0.5.3`** release URL (not `main`) → verify `checksums.txt` → refuse on mismatch.
+2. **Install / checksum fail** → re-fetch from pinned **`v0.5.4`** release URL (not `main`) → verify `checksums.txt` → refuse on mismatch.
 3. **`doctor` / `demo` / `check` fail for missing `git`** → install Git, reopen shell.
 4. **macOS Gatekeeper / Windows SmartScreen** → verify sha256 first → Allow / Unblock → then quarantine/`Unblock-File` only after checksum OK.
 5. **Hooks / CRLF / WSL+NTFS weirdness** → re-`init --hooks` (LF-only) or prefer native Windows exe on NTFS vs Linux binary on Linux FS.
@@ -92,12 +92,12 @@ Binary missing. Print install command and reinstall — repair never downloads /
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `unknown command "scan"` or `scan` missing from help | Binary from **v0.5.2 or older** (scan ships in **v0.5.3+**) | Reinstall with **`v0.5.3`** install scripts (see [install.md](install.md) Ladder 0) |
-| `curbpack scan` works in dev checkout but not after install | Stale PATH or old install dir | New shell; `curbpack doctor --repair`; or full reinstall at **v0.5.3** |
+| `unknown command "scan"` or `scan` missing from help | Binary from **v0.5.2 or older** (scan ships in **v0.5.3+**) | Reinstall with **`v0.5.4`** (see [install.md](install.md) Ladder 0) |
+| `curbpack scan` works in dev checkout but not after install | Stale PATH or old install dir | New shell; `curbpack doctor --repair`; or full reinstall at **v0.5.4** |
 | Used wrong install URL / old binary | `scan` missing or wrong version | Re-run Ladder 0 from [install.md](install.md) (`main` installer → smoke-verified binary) |
 | npm / `npx` path | npm wrapper **deferred** (PR5) — not the stranger path | Use `install.sh` / `install.ps1` instead |
 
-Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 reporting clock + early/late Exit 0 invariant + `Scan complete — repository unchanged.`, and `git status --porcelain` stays empty. `Next:` / `Next (optional):` appears only when open findings remain (both wordings OK until the v0.5.4 binary).
+Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 reporting clock + early/late Exit 0 invariant + `Scan complete — repository unchanged.`, and `git status --porcelain` stays empty. `Next (optional):` appears only when open findings remain (v0.5.4+).
 
 ---
 

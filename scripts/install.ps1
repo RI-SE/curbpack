@@ -11,7 +11,7 @@
   Repair mode (-Repair) is local-only: re-asserts PATH + alias; never downloads.
 
 .PARAMETER Version
-  Release tag (default from install-manifest.json / v0.5.3). Use 'latest' for newest.
+  Release tag (default from install-manifest.json / v0.5.4). Use 'latest' for newest.
 
 .PARAMETER InstallDir
   Default: $env:LOCALAPPDATA\Programs\Curbpack
@@ -37,7 +37,7 @@ function Get-DefaultVersion {
   # Piped `irm | iex` has no real script path — keep baked default only.
   $scriptPath = $MyInvocation.MyCommand.Path
   if (-not $scriptPath -or -not (Test-Path -LiteralPath $scriptPath)) {
-    return "v0.5.3"
+    return "v0.5.4"
   }
   $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $scriptPath }
   $manifest = Join-Path $here "install-manifest.json"
@@ -47,7 +47,7 @@ function Get-DefaultVersion {
       if ($j.default_version) { return [string]$j.default_version }
     } catch {}
   }
-  return "v0.5.3"
+  return "v0.5.4"
 }
 
 function Get-InstallDir {

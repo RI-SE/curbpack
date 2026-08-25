@@ -4,7 +4,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Scan-first (cold repo, no init):** install from release **`v0.5.3`**, then `curbpack scan` — read-only; defaults to **`cra-baseline`** + Art 14 clock.  
+**Scan-first (cold repo, no init):** install from release **`v0.5.4`**, then `curbpack scan` — read-only; defaults to **`cra-baseline`** + Art 14 clock.  
 **Init / check cold default:** **`house-policy`** (via `curbpack init` or uninitialized `check`). CRA / medtech are opt-in via `--packs`. Pick **exactly one** first move for your audience.
 
 ## Scan-first (fastest)
@@ -43,7 +43,7 @@ Builders site: [Three ways in](../../site/for-builders/). Install hub: [install]
 
 ## Human — safe try
 
-Under ten minutes (install pin **`v0.5.3`**; Action pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
+Under ten minutes (install pin **`v0.5.4`**; Action pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
 
 **Windows (PowerShell)**
 

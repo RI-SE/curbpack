@@ -31,7 +31,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 ## Quickstart (install + scan)
 
-Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.3`** (Action stays **`@v0.5.2`** until human pin bump).
+Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.4`** (Action stays **`@v0.5.2`** until human pin bump).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
