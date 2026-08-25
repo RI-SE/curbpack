@@ -1,9 +1,9 @@
 {
   "schema": "curbpack-release-gate:1",
-  "version": "v0.5.3",
+  "version": "v0.5.4",
   "assets_verified": true,
   "checksums_verified": true,
   "install_smoke_verified": true,
   "scan_write_free_verified": true,
-  "notes": "CLI install pin for public copy. Public pin updates require install-manifest.json default_version == this version and all *_verified flags true. Action pin remains @v0.5.2 until human pin-bump."
+  "notes": "CLI install pin for public copy. Public pin updates require install-manifest.json default_version == this version and all *_verified flags true. Action pin remains @v0.5.2 until human pin-bump. Tag-smoke CURBPACK_VERSION=v0.5.4 passed 2026-08-25 before advertise."
 }

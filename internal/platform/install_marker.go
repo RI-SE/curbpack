@@ -201,7 +201,7 @@ func WriteMarker(version, installDir, binary string) error {
 
 // DefaultInstallPin is the smoke-verified CLI install tag (scripts/install-manifest.json).
 // Action/examples pin remains @v0.5.2 until human tabletop approves bump.
-const DefaultInstallPin = "v0.5.3"
+const DefaultInstallPin = "v0.5.4"
 
 // InstallCommandHint returns the reinstall one-liner for this OS (canonical installer on main → smoke-verified binary).
 func InstallCommandHint() string {

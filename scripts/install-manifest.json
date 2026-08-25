@@ -1,6 +1,6 @@
 {
   "schema": "curbpack-install-manifest:1",
-  "default_version": "v0.5.3",
+  "default_version": "v0.5.4",
   "claim": "Prepares evidence for human review — not a conformity assessment.",
   "assets": [
     "curbpack_darwin_amd64",
