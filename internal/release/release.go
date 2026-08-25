@@ -13,6 +13,7 @@ import (
 	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release/templates"
 	"github.com/afelin/curbpack/internal/research"
@@ -117,7 +118,8 @@ func Prepare(opts Options) error {
 		record(copyFile(joinPath, filepath.Join(out, "07-watchlist-sbom-join.json")))
 	}
 	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
-	htmlDoc := buyerOnePager(root, res)
+	// Digests are computed from payload + written layers (not silently preferred from bind).
+	htmlDoc := buyerOnePager(root, out, res)
 	onepagerPath := filepath.Join(out, "buyer-onepager.html")
 	wrote, err := writeOnePagerIfChanged(onepagerPath, htmlDoc)
 	if err != nil {
@@ -257,7 +259,7 @@ func executiveSummary(res validate.Result) string {
 	return b.String()
 }
 
-func buyerOnePager(root string, res validate.Result) string {
+func buyerOnePager(root, outDir string, res validate.Result) string {
 	name := filepath.Base(root)
 	bind, _ := attest.LatestBind(root)
 	line, class, unsignedLoud := attest.AttestDisplay(bind)
@@ -300,6 +302,9 @@ func buyerOnePager(root string, res validate.Result) string {
 			})
 		}
 	}
+	resultDigest := ir.ComputeResultDigest(res.Payload)
+	sbomDigest := fileSHA256Hex(filepath.Join(outDir, "04-sbom.cdx.json"))
+	vexDigest := fileSHA256Hex(filepath.Join(outDir, "05-vex-draft.json"))
 	dto := templates.OnePagerDTO{
 		RepoName:          name,
 		Score:             res.Score,
@@ -315,9 +320,12 @@ func buyerOnePager(root string, res validate.Result) string {
 		UnsignedLoud:      unsignedLoud,
 		AssuranceClass:    assuranceClass,
 		MechanicalSummary: mechanicalSummary,
-		ProvenanceHTML:    provenanceDL(res.Payload.PackID, bind, line, unsignedLoud),
+		ProvenanceHTML:    provenanceDL(res.Payload, bind, line, unsignedLoud, resultDigest, sbomDigest, vexDigest),
 		SourcesHTML:       sourcesStrip(root, res.Payload.PackID),
 		FooterPrefix:      footerHTML(line, unsignedLoud),
+		ResultDigest:      resultDigest,
+		SBOMDigest:        sbomDigest,
+		VEXDigest:         vexDigest,
 	}
 	return templates.BuyerOnePagerHTML(dto)
 }
@@ -342,7 +350,7 @@ func footerHTML(line string, unsignedLoud bool) string {
 	return html.EscapeString(line) + " · "
 }
 
-func provenanceDL(packID string, bind attest.BindInfo, line string, unsignedLoud bool) string {
+func provenanceDL(payload ir.GateFailurePayload, bind attest.BindInfo, line string, unsignedLoud bool, payloadDigest, sbomDigest, vexDigest string) string {
 	commit := bind.CommitSHA
 	if commit == "" || commit == "unknown" {
 		commit = "(no commit)"
@@ -363,19 +371,39 @@ func provenanceDL(packID string, bind attest.BindInfo, line string, unsignedLoud
 	if !unsignedLoud {
 		signOff = "Human-bound on this commit (ssh-agent-signed). Still not conformity assessment."
 	}
+
+	// Payload / file digests are source of truth for the share; bind values that
+	// disagree are emitted alongside so the offline reader can contradict.
+	// Digests never upgrade UNSIGNED / not-cryptographically-verified rendering.
+
 	var b strings.Builder
 	b.WriteString(`<dl class="prov">`)
-	fmt.Fprintf(&b, "<dt>Rule packs</dt><dd>%s</dd>\n", html.EscapeString(packID))
+	fmt.Fprintf(&b, "<dt>Rule packs</dt><dd>%s</dd>\n", html.EscapeString(payload.PackID))
 	fmt.Fprintf(&b, "<dt>Commit</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(commit)))
 	fmt.Fprintf(&b, "<dt>Attest</dt><dd>%s</dd>\n", html.EscapeString(line))
 	fmt.Fprintf(&b, "<dt>Signer</dt><dd>%s</dd>\n", html.EscapeString(signer))
 	fmt.Fprintf(&b, "<dt>User touch</dt><dd>%s</dd>\n", html.EscapeString(touch))
 	fmt.Fprintf(&b, "<dt>state_hash</dt><dd>%s</dd>\n", html.EscapeString(state))
-	if bind.SBOMDigest != "" {
-		fmt.Fprintf(&b, "<dt>sbom_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.SBOMDigest)))
+	fmt.Fprintf(&b, "<dt>result_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(payloadDigest)))
+	if bind.ResultDigest != "" && !digestPrefixAgree(payloadDigest, bind.ResultDigest) {
+		fmt.Fprintf(&b, "<dt>result_digest_bind</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.ResultDigest)))
 	}
-	if bind.VEXDigest != "" {
-		fmt.Fprintf(&b, "<dt>vex_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.VEXDigest)))
+	if sbomDigest != "" {
+		fmt.Fprintf(&b, "<dt>sbom_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(sbomDigest)))
+		if bind.SBOMDigest != "" && !digestPrefixAgree(sbomDigest, bind.SBOMDigest) {
+			fmt.Fprintf(&b, "<dt>sbom_digest_bind</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.SBOMDigest)))
+		}
+	} else if bind.SBOMDigest != "" {
+		// No file on disk — still surface bind claim so reader can leave it unconfirmed.
+		fmt.Fprintf(&b, "<dt>sbom_digest_bind</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.SBOMDigest)))
+	}
+	if vexDigest != "" {
+		fmt.Fprintf(&b, "<dt>vex_digest</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(vexDigest)))
+		if bind.VEXDigest != "" && !digestPrefixAgree(vexDigest, bind.VEXDigest) {
+			fmt.Fprintf(&b, "<dt>vex_digest_bind</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.VEXDigest)))
+		}
+	} else if bind.VEXDigest != "" {
+		fmt.Fprintf(&b, "<dt>vex_digest_bind</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(bind.VEXDigest)))
 	}
 	if name := strings.TrimSpace(bind.ReviewedBy); name != "" {
 		fmt.Fprintf(&b, "<dt>Reviewed by</dt><dd>%s — recorded review, not assessment.</dd>\n", html.EscapeString(name))
@@ -384,6 +412,34 @@ func provenanceDL(packID string, bind attest.BindInfo, line string, unsignedLoud
 	b.WriteString(`<dt>Verify</dt><dd>proof/index.html + local evidence pointer (client-side hash compare)</dd>`)
 	b.WriteString(`</dl>`)
 	return b.String()
+}
+
+func fileSHA256Hex(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return fmt.Sprintf("%x", sum)
+}
+
+// digestPrefixAgree mirrors the offline reviewer's truncateSHA / 12-hex prefix contract.
+func digestPrefixAgree(full, claimed string) bool {
+	claimed = strings.TrimSpace(claimed)
+	claimed = strings.TrimSuffix(claimed, "…")
+	claimed = strings.TrimSuffix(claimed, "...")
+	claimed = strings.TrimSpace(claimed)
+	if claimed == "" || full == "" {
+		return false
+	}
+	n := len(claimed)
+	if n > len(full) {
+		n = len(full)
+	}
+	if n > 12 {
+		n = 12
+	}
+	return strings.HasPrefix(full, claimed[:n])
 }
 
 // sourcesStrip adds claim-safe allowlisted citation links when a research packet exists

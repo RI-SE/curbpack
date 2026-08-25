@@ -100,8 +100,9 @@
           Curbpack
         </a>
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium">
-          <a href="/curbpack/for-builders/" class="text-ink-muted hover:text-ink transition-colors">Builders</a>
           <a href="/curbpack/for-reviewers/" class="text-ink-muted hover:text-ink transition-colors">Reviewers</a>
+          <a href="/curbpack/receiving-submissions/" class="text-ink-muted hover:text-ink transition-colors">Receiving</a>
+          <a href="/curbpack/for-builders/" class="text-ink-muted hover:text-ink transition-colors">Builders</a>
           <a href="/curbpack/for-authorities/" class="text-ink-muted hover:text-ink transition-colors">Authorities</a>
           <a href="/curbpack/art14/" class="text-ink-muted hover:text-ink transition-colors">Art 14</a>
           <a href="/curbpack/how-it-works/" class="text-ink-muted hover:text-ink transition-colors">How it works</a>
@@ -125,8 +126,14 @@
               Article 14 reporting starts 11 September 2026
             </h1>
             <p id="art14-countdown" class="font-mono text-base sm:text-lg text-rise font-medium mb-6" aria-live="polite">Article 14 reporting starts in 23 days (11 September 2026)</p>
-            <p class="text-lg sm:text-xl text-ink-muted mb-8 max-w-2xl leading-relaxed font-sans">
+            <p class="text-lg sm:text-xl text-ink-muted mb-6 max-w-2xl leading-relaxed font-sans">
               One command, writes nothing — not certification. Curbpack scans your repo read-only on your machine; we never see your code.
+            </p>
+            <p class="text-base sm:text-lg text-ink mb-2 max-w-2xl leading-relaxed font-sans">
+              The gate is deterministic, runs offline, and cannot be argued with.
+            </p>
+            <p class="text-base sm:text-lg text-ink-muted mb-8 max-w-2xl leading-relaxed font-sans">
+              We do not use a language model to decide whether you passed.
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 mb-3">
@@ -214,7 +221,9 @@
         <div class="text-center max-w-2xl mx-auto mb-16">
           <h2 class="font-serif text-3xl font-semibold text-ink mb-3">How it works</h2>
           <p class="text-ink-muted text-lg">Scan read-only → optional init → local check → review pack → human review.</p>
+          <p class="text-ink-muted text-base mt-3 max-w-xl mx-auto">The gate is deterministic, runs offline, and cannot be argued with. We do not use a language model to decide whether you passed.</p>
           <p class="text-ink-muted text-sm mt-3">Three ways in (Write, Bring, CI): <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/60-second-paths.md" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">60-second paths</a> · <a href="/curbpack/how-it-works/" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">how it works</a></p>
+          <p class="text-ink text-sm mt-4 font-medium">Receiving a pack? <a href="/curbpack/for-reviewers/#artifact-trust-table" class="font-mono underline decoration-paper-dark hover:text-rise">Artifact trust table</a> · <a href="/curbpack/receiving-submissions/" class="font-mono underline decoration-paper-dark hover:text-rise">Receiving submissions</a> · <a href="/curbpack/samples/review-pack/" class="font-mono underline decoration-paper-dark hover:text-rise">Sample review-pack</a></p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
@@ -259,6 +268,21 @@
         <div class="grid md:grid-cols-3 gap-8">
 
           <div class="group border-l-2 border-ink pl-6">
+            <h3 class="font-serif font-semibold text-2xl text-ink mb-2">Reviewers</h3>
+            <p class="text-ink-muted leading-relaxed mb-4">
+              Ask for a buyer one-pager and review-pack, then use the <a href="/curbpack/for-reviewers/#artifact-trust-table" class="text-ink underline decoration-paper-dark hover:text-rise">artifact trust table</a> — not a certification score. Receiving submissions? Triage offline with <code class="font-mono text-sm">curbpack review</code>.
+            </p>
+            <a href="/curbpack/for-reviewers/" class="font-mono text-sm font-semibold text-ink uppercase tracking-wide group-hover:text-rise transition-colors inline-flex items-center">
+              For reviewers <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+            </a>
+            <p class="mt-3 font-mono text-xs text-ink-muted">
+              <a href="/curbpack/for-reviewers/#artifact-trust-table" class="underline decoration-paper-dark hover:text-rise">Artifact trust table</a>
+              · <a href="/curbpack/receiving-submissions/" class="underline decoration-paper-dark hover:text-rise">Receiving submissions</a>
+              · <a href="/curbpack/samples/review-pack/" class="underline decoration-paper-dark hover:text-rise">Sample review-pack</a>
+            </p>
+          </div>
+
+          <div class="group border-l-2 border-paper-dark hover:border-ink transition-colors pl-6">
             <h3 class="font-serif font-semibold text-2xl text-ink mb-2">Suppliers &amp; builders</h3>
             <p class="text-ink-muted leading-relaxed mb-4">
               Green checks in your repo in under ten minutes. Dual install for Windows (PowerShell) and macOS/Linux — same doctor → demo → init → check → share ladder.
@@ -272,22 +296,9 @@
           </div>
 
           <div class="group border-l-2 border-paper-dark hover:border-ink transition-colors pl-6">
-            <h3 class="font-serif font-semibold text-2xl text-ink mb-2">Buyers &amp; reviewers</h3>
-            <p class="text-ink-muted leading-relaxed mb-4">
-              Ask for a buyer one-pager, then use the trust table — not a certification score.
-            </p>
-            <a href="/curbpack/for-reviewers/" class="font-mono text-sm font-semibold text-ink uppercase tracking-wide group-hover:text-rise transition-colors inline-flex items-center">
-              For reviewers <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
-            </a>
-            <p class="mt-3 font-mono text-xs text-ink-muted">
-              Sample: <a href="/curbpack/samples/onepager.html" class="underline decoration-paper-dark hover:text-rise">buyer one-pager</a>
-            </p>
-          </div>
-
-          <div class="group border-l-2 border-paper-dark hover:border-ink transition-colors pl-6">
             <h3 class="font-serif font-semibold text-2xl text-ink mb-2">Authorities</h3>
             <p class="text-ink-muted leading-relaxed mb-4">
-              What each artifact means and does not mean.
+              What each artifact means and does not mean — same trust table reviewers use, without treating gate green as conformity.
             </p>
             <a href="/curbpack/for-authorities/" class="font-mono text-sm font-semibold text-ink uppercase tracking-wide group-hover:text-rise transition-colors inline-flex items-center">
               View docs <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
@@ -321,6 +332,9 @@
             <a href="/curbpack/whitepaper/" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">White paper</a>
             <a href="/curbpack/security/" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Security</a>
             <a href="/curbpack/llms.txt" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Agent index (llms.txt)</a>
+            <a href="/curbpack/for-reviewers/#artifact-trust-table" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Artifact trust table</a>
+            <a href="/curbpack/receiving-submissions/" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Receiving submissions</a>
+            <a href="/curbpack/samples/review-pack/" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Sample review-pack</a>
             <a href="/curbpack/samples/onepager.html" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">One-pager sample</a>
             <a href="/curbpack/art14/" class="text-paper/70 hover:text-paper transition-colors text-left md:text-right">Art 14 scan</a>
           </div>

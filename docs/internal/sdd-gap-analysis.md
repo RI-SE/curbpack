@@ -28,7 +28,7 @@
 |----------|------------|
 | `internal/report` | Missing — findings re-declared across ~8 structures |
 | `internal/sign` | Missing — attest uses ssh-agent notes, not `ssh-keygen -Y` pack verify |
-| `verify` command | Missing — proof page is client-side hash compare only |
+| `verify` command | **Missing** — **`curbpack verify` is not a shipped CLI verb**; proof page is client-side hash compare only. Intended reader wedge name: future `curbpack review` (document triage). See [historical-verify-target.md](historical-verify-target.md). |
 | `references` check primitive | Missing |
 | Check-kind registry (§6.3) | Partial — `checkRegistry` map in `checks.go`, not unified `CheckKind` descriptor |
 | `packs init --from-repo` | Missing |

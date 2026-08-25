@@ -20,6 +20,14 @@ Suppliers may reach green via Write, Bring, or CI; that path is theirs. Optional
 | **Local gate score** | Not a certification score or market-access percentage |
 | **UNSIGNED** | Capsule may be present; not cryptographically verified |
 | **ssh-agent-signed** | Real SSH signature on the attest capsule |
+| **`curbpack review` triage** | Offline document consistency (confirmed / unconfirmed / contradicted, with cause split) — not a product verdict |
+
+**Offline / locked laptop:** install via [Ladder 3 — manual binary + checksums](install.md#ladder-3--manual-binary--checksums) (receive binary as file + `checksums.txt`, verify fail-closed). Then:
+
+```bash
+curbpack review <received-pack-dir>
+# terse default; --full for all findings + dropped tokens; --json for schema v2
+```
 
 Use the full [artifact trust table](../../site/for-reviewers/) before equating any artifact with legal conformity or CE readiness.
 

@@ -24,6 +24,7 @@ var commandRegistry = []commandEntry{
 	{name: "demo", handler: cmdDemo},
 	{name: "export", handler: cmdExport},
 	{name: "share", handler: cmdShare},
+	{name: "review", handler: cmdReview},
 	{name: "drift", handler: cmdDrift},
 	{name: "pathway", handler: cmdPathway},
 	{name: "research", handler: cmdResearch},

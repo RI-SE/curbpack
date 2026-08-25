@@ -14,23 +14,28 @@ const onePagerCoverMax = 12
 
 // OnePagerDTO is the stable input for buyer one-pager HTML generation.
 type OnePagerDTO struct {
-	RepoName       string
-	Score          int
-	Passed         bool
-	PackID         string
-	PackLabels     string // plain-words pack names for the cover; not in fingerprint
-	Timestamp      string
-	Failures       []OnePagerFailure
-	CoverRows      []OnePagerCoverRow // path + human question; not in fingerprint
-	Bind           attest.BindInfo
-	AttestLine     string
-	AttestClass    string
-	UnsignedLoud   bool
-	AssuranceClass string
+	RepoName          string
+	Score             int
+	Passed            bool
+	PackID            string
+	PackLabels        string // plain-words pack names for the cover; not in fingerprint
+	Timestamp         string
+	Failures          []OnePagerFailure
+	CoverRows         []OnePagerCoverRow // path + human question; not in fingerprint
+	Bind              attest.BindInfo
+	AttestLine        string
+	AttestClass       string
+	UnsignedLoud      bool
+	AssuranceClass    string
 	MechanicalSummary string // e.g. "5 of 7 gates mechanically evidenced"
-	ProvenanceHTML string
-	SourcesHTML    string
-	FooterPrefix   string
+	ProvenanceHTML    string
+	SourcesHTML       string
+	FooterPrefix      string
+	// Provenance digests (hex); empty when absent. Digests flip the fingerprint so
+	// prepare rewrites when digests appear, but never upgrade UNSIGNED trust class.
+	ResultDigest string
+	SBOMDigest   string
+	VEXDigest    string
 }
 
 // OnePagerFailure is one gate row for the one-pager table.
@@ -60,6 +65,7 @@ func OnePagerFingerprint(d OnePagerDTO) string {
 	for _, f := range d.Failures {
 		fmt.Fprintf(&fpSeed, "|%s:%s", f.GateID, f.Severity)
 	}
+	fmt.Fprintf(&fpSeed, "|%s|%s|%s", d.ResultDigest, d.SBOMDigest, d.VEXDigest)
 	sum := sha256.Sum256([]byte(fpSeed.String()))
 	return fmt.Sprintf("%x", sum[:16])
 }

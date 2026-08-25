@@ -1,12 +1,12 @@
 # Curbpack — Software Design Document
 
-> **Target state:** This document describes design intent — not everything here is shipped yet (e.g. `verify` is not in the CLI). For repository baseline vs this doc, see [internal SDD gap analysis](internal/sdd-gap-analysis.md).
+> **Target state — not a full shipped command catalog.** This document describes design intent. **`curbpack verify` is not a shipped CLI verb** (do not run it; do not resurrect that name). Recipient-side document triage **is shipped** as **`curbpack review <received-pack>`** (offline; confirmed / unconfirmed / contradicted — document only, not a product verdict). Nothing in this doc is certification, CE marking, or notified-body opinion. For repository baseline vs this doc, see [internal SDD gap analysis](internal/sdd-gap-analysis.md). Historical / target-only `verify` sketches: [internal/historical-verify-target.md](internal/historical-verify-target.md).
 
 **Version:** 1.0 · **Date:** 19 August 2026 · **Status:** target state
 **Applies to:** `github.com/RI-SE/curbpack`
 **Audience:** implementers and the agents working this repository
 
-This document describes the state curbpack is being built toward — the design, the reasoning behind it, and the work required to get there. It is the single source of design intent. Where it conflicts with older notes, plans or specifications, this document wins.
+This document describes the state curbpack is being built toward — the design, the reasoning behind it, and the work required to get there. It is the single source of design intent. Where it conflicts with older notes, plans or specifications, this document wins. **Shipped verbs** live in the CLI help / `AGENTS.md` loop — not in the aspirational tables below.
 
 Two lists in this document are load-bearing and must not be confused:
 
@@ -271,10 +271,12 @@ This closes the loop with no new infrastructure:
 
 ```
 asker publishes signed pack → supplier runs it locally →
-supplier returns signed evidence → asker runs `curbpack verify`
+supplier returns signed evidence → asker runs recipient triage
+  (TARGET ONLY — not shipped: historically sketched as `curbpack verify`;
+   intended ship name for document triage is `curbpack review`)
 ```
 
-No questionnaire round-trip, no portal, no registry.
+No questionnaire round-trip, no portal, no registry. Not conformity assessment.
 
 ---
 
@@ -288,10 +290,13 @@ Signing and verification use **OpenSSH signatures and `allowed_signers`**. No be
 
 ### 8.2 Operations
 
+> **TARGET / NOT SHIPPED:** the `verify` lines below are design sketches only. **`curbpack verify` is not a CLI verb today.** Recipient document triage is intended as future **`curbpack review`**. Pack signing / trust-import remain Wave B. Not certification.
+
 ```
-curbpack packs sign <pack>                     # ssh-keygen -Y sign -n <namespace>
-curbpack packs trust import <allowed_signers>  # HUMAN-ONLY — see §12
-curbpack verify <bundle|pack|onepager>         # ssh-keygen -Y verify
+curbpack packs sign <pack>                     # TARGET: ssh-keygen -Y sign -n <namespace>
+curbpack packs trust import <allowed_signers>  # HUMAN-ONLY — see §12; not built yet
+# NOT SHIPPED — do not run:
+# curbpack verify <bundle|pack|onepager>       # historical name; prefer future: curbpack review
 ```
 
 ### 8.3 Verdict states
@@ -349,18 +354,20 @@ The verb count does not grow with regimes or stakeholders. Each stakeholder uses
 | `init` | Configuration, hooks, editor integration — offered after first value | Yes |
 | `check` | Evaluate; exit code authoritative | Cache only |
 | `ask-my-suppliers` | Emit the question set and the pack | Yes, to a durable path |
-| **`verify`** | Verify a received artifact | **No** |
+| ~~`verify`~~ → **`review`** *(TARGET)* | Recipient document triage / artifact check | **No** — **not a shipped CLI verb**; do not run `curbpack verify` |
 | `packs init --from-repo` | Author a pack by example | Yes, one file |
 | `packs sign` / `packs trust import` | Sign a pack / import signers | Yes |
 | `export --<format>` | SARIF, context pack, buyer questions | Yes |
 | `attest` | Human-only capsule | Yes |
 | `doctor` | Environment diagnosis | No |
 
-### 9.1 `verify` — why it exists
+### 9.1 Recipient triage (`review`) — why it exists *(SHIPPED)*
+
+> **Shipped:** `curbpack review <received-pack>` triages a curbpack-native review-pack offline (no git, no network). States are **confirmed** / **unconfirmed** / **contradicted** about the **document** — never a product verdict. Historical SDD text used the verb name `verify`; **do not implement `curbpack verify`**. Not certification, not a conformity gate.
 
 Curbpack today serves producers. Buyers, assessors and distributors receive HTML they cannot check. One read-only verb converts every artifact recipient into a potential installer — and the recipient is the party deciding whether a supplier keeps the contract. A producer install serves one repository; a recipient install serves every supplier that recipient has.
 
-Output: the verdict, which claims resolve to real artifacts, which do not, and what could not be checked. Offline, no account.
+Output: the verdict, which claims resolve to real artifacts, which do not, and what could not be checked. Offline, no account. Structural evidence for human review only.
 
 ---
 
@@ -371,7 +378,7 @@ Every artifact that leaves the building carries, without exception:
 - the computed `assurance_class` and **"mechanically evidenced: X of Y"**;
 - the verification verdict, in the vocabulary of §8.3;
 - the claim boundary: *prepares evidence for human review — not a conformity assessment*;
-- the footer: *Generated locally by curbpack. Nothing was uploaded. Verify it yourself: `curbpack verify <file>`.*
+- the footer: *Generated locally by curbpack. Nothing was uploaded. Review the artifact yourself (TARGET: future `curbpack review` — **`curbpack verify` is not shipped**).*
 
 That footer converts a claim into an invitation, which is both the honest framing and the distribution mechanism.
 
@@ -489,7 +496,7 @@ Each wave states a precondition. Work that cannot name its consumer does not sta
 |---|---|
 | Check-kind registry (§6.3) | 1 d |
 | `references` (§6.1) | 2 d |
-| `verify` (§9.1) | 2 d |
+| Recipient triage / `review` (§9.1; historical name `verify`) | 2 d |
 | Signing, trust import, three verdict states (§8) | 1 d |
 | `packs init --from-repo` (§7.1) | 2 d |
 | Computed `assurance_class`, reviewer attestation, self-contained bundle | 1.5 d |

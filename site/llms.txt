@@ -32,6 +32,8 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 - Install (dual fence — PowerShell | macOS/Linux): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md
 - Troubleshooting: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/troubleshooting.md
 - Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
+- Reviewers / trust table: https://ri-se.github.io/curbpack/for-reviewers/
+- Receiving submissions (`curbpack review`): https://ri-se.github.io/curbpack/receiving-submissions/
 - Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
 - White paper: https://ri-se.github.io/curbpack/whitepaper/

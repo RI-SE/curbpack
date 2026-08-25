@@ -47,11 +47,9 @@ curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install
 curb doctor && curb demo
 ```
 
-From source:
+From source (maintainers / clone holders only):
 
-```bash
-go install github.com/afelin/curbpack/cmd/curbpack@v0.5.0
-```
+The Go module path remains `github.com/afelin/curbpack` until wave-2 migration. With the development repo private, strangers should use the binary installers above — do not treat `go install github.com/RI-SE/curbpack/...` as a working path (module path differs), and do not rely on `go install github.com/afelin/curbpack/...` as a public install.
 
 ## Pedagogy (unchanged gates)
 
