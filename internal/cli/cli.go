@@ -139,6 +139,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  ask-my-suppliers [--stdout-only] [--out path]\n")
 	fmt.Fprintf(os.Stderr, "                   Supplier checklist → stdout + review-pack/ (writes files)\n")
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
+	fmt.Fprintf(os.Stderr, "  review <pack-dir> Offline triage of a received review-pack (no git / no network)\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]   Multi-signal evidence checklist (exit 0 always)\n")
 	fmt.Fprintf(os.Stderr, "  prepare-release  Review-pack + evidence\n")
 	fmt.Fprintf(os.Stderr, "  attest [--allow-dirty] [--reviewed-by=Name]  Human Git Notes capsule (then proof verify)\n\n")
@@ -150,6 +151,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  export --sarif|--explain-packet|--watchlist-join|--buyer-questions|--lay-of-land|--context-pack [--spdx] [--slsa]\n")
 	fmt.Fprintf(os.Stderr, "                                Standards / airlock / buyer checklist / instrument map / ContextPack\n")
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal]   Recipe + optional Explorer/Finder reveal\n")
+	fmt.Fprintf(os.Stderr, "  review <pack-dir> [--json]    Received-pack triage: confirmed / unconfirmed / contradicted\n")
 	fmt.Fprintf(os.Stderr, "  drift [--json]                Evidence drift checklist (informational; exit 0)\n")
 	fmt.Fprintf(os.Stderr, "  pathway status|suggest|confirm-packs|confirm-prose|confirm-share|note\n")
 	fmt.Fprintf(os.Stderr, "                                Warm-start seed + HITL ticks + session notes (sole writer of pathway-seed.json)\n")
@@ -159,6 +161,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  view                          Show attest capsule for HEAD\n\n")
 	fmt.Fprintf(os.Stderr, "Exit codes: 0=success/soft-ok  1=gates/error  2=usage/env (incl. doctor --repair missing binary)\n")
 	fmt.Fprintf(os.Stderr, "  scan uses exit 0 when diagnosis completes, even when findings remain.\n")
+	fmt.Fprintf(os.Stderr, "  review exits 1 when any finding is contradicted (document triage, not product verdict).\n")
 	fmt.Fprintf(os.Stderr, "  doctor may report advisory issues without signalling gate failure.\n")
 	fmt.Fprintf(os.Stderr, "  Only check provides repository gate pass/fail.\n")
 }
