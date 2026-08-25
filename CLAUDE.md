@@ -34,4 +34,6 @@ Exit code is authoritative. Never claim certification. Pin **`@v0.5.2`**. Cite-o
 
 Claim discipline: [docs/claim-discipline.md](docs/claim-discipline.md) — never assert what the tool caused.
 
+**Repository policy:** RI-SE/curbpack is the public SoR. Never parity/mirror PRs; never copy private-fork docs to RI-SE; afelin is downstream catch-up only. [docs/internal/fork-policy.md](docs/internal/fork-policy.md).
+
 Thin MCP (optional): [examples/mcp/](examples/mcp/) — propose-only; no confirm/attest tools.

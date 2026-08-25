@@ -135,3 +135,10 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 21. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
 22. **Ship it:** on “ship it” / “merge PR” / “sync remotes” → `./scripts/curbpack-ship.sh preflight <pr#>` → wait for auto-merge → `./scripts/curbpack-ship.sh post-merge` → report. Never bump pin without human “approve pin bump” (human-only **pin-bump**). Never force-push. Never open a second `tabletop-evidence` issue (upsert only).
 23. **Human-only acts (verbatim):** `trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump` — never perform these; stop for a human.
+
+## Maintainers
+
+- **RI-SE/curbpack** is the public source of truth. Product PRs target RI-SE only.
+- Never open full-tree parity/mirror/sync PRs; never copy private-fork maintainer docs to RI-SE.
+- afelin catch-up (optional, one-way): `git fetch corp-origin && git merge corp-origin/main`.
+- Full policy: [docs/internal/fork-policy.md](../../docs/internal/fork-policy.md).

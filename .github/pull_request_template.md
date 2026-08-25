@@ -14,5 +14,10 @@
 - [ ] No direct push to `main` (PR merge only)
 - [ ] Confirm Pages deploy if site content changed
 
+## Repository policy
+- [ ] Product change targets **RI-SE/curbpack** (not afelin-only)
+- [ ] This is **not** a full-tree parity/mirror/sync PR
+- [ ] Fork-specific maintainer docs unchanged or intentionally scoped
+
 ## Risk / rollback
 - [ ] Rollback path is clear (revert PR or restore previous tag/pin docs as needed)

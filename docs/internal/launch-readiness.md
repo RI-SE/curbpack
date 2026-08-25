@@ -1,5 +1,7 @@
 # Launch readiness
 
+> **afelin-only maintainer doc — do not wholesale-merge to RI-SE**
+
 Private-fork launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack) (public SoR remains [RI-SE/curbpack](https://github.com/RI-SE/curbpack)).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 

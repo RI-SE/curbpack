@@ -11,6 +11,12 @@ preflight(){
   local pr="${1:?pr number required}"
   local cmd="./scripts/curbpack-ship.sh${DRY:+ --dry-run} preflight $pr" checks
   [[ -n "$(git status --porcelain)" ]] && pause "Save or discard local changes first" "$cmd"
+  if [[ $DRY -eq 0 ]]; then
+    base_repo="$(gh pr view "$pr" --json baseRepository --jq '.baseRepository.nameWithOwner' 2>/dev/null || true)"
+    if [[ -n "$base_repo" && "$base_repo" != "RI-SE/curbpack" ]]; then
+      echo "Warning: PR base repo is $base_repo (expected RI-SE/curbpack for product work). See docs/internal/fork-policy.md" >&2
+    fi
+  fi
   if [[ $DRY -eq 1 ]]; then echo "[dry-run] gh pr checks $pr --json"; checks="${CURBPACK_SHIP_CHECKS_JSON:-}"; [[ -n "$checks" ]] || pause "dry-run needs CURBPACK_SHIP_CHECKS_JSON" "$cmd"
   else checks="$(gh pr checks "$pr" --json name,state,bucket 2>/dev/null)" || pause "Could not read PR checks" "$cmd"; fi
   python3 - "$checks" "$PIN" <<'PY' || die "preflight evidence failed"
