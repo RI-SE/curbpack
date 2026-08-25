@@ -8,9 +8,10 @@
 # Atomic: download → checksum → temp → replace. Writes install-marker.json.
 set -eu
 
+# Piped `curl | sh` keeps baked MANIFEST_DEFAULT; only read adjacent manifest when $0 is a real file.
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" 2>/dev/null && pwd || true)
 MANIFEST_DEFAULT="v0.5.3"
-if [ -n "${SCRIPT_DIR:-}" ] && [ -f "${SCRIPT_DIR}/install-manifest.json" ]; then
+if [ -f "$0" ] && [ -n "${SCRIPT_DIR:-}" ] && [ -f "${SCRIPT_DIR}/install-manifest.json" ]; then
   MANIFEST_DEFAULT=$(sed -n 's/.*"default_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${SCRIPT_DIR}/install-manifest.json" | head -n 1)
   [ -n "$MANIFEST_DEFAULT" ] || MANIFEST_DEFAULT="v0.5.3"
 fi
@@ -105,6 +106,17 @@ if [ -z "${checksums_url:-}" ]; then
   exit 1
 fi
 
+echo "REPO=${REPO}"
+echo "VERSION=${tag:-$VERSION}"
+echo "ASSET=${asset}"
+echo "URL=${url}"
+echo "INSTALL_DIR=${INSTALL_DIR}"
+case ":$PATH:" in
+  *":${INSTALL_DIR}:"*) echo "PATH: INSTALL_DIR already on PATH" ;;
+  *) echo "PATH: INSTALL_DIR not on PATH (export hint after install if needed)" ;;
+esac
+echo
+
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 echo "Downloading ${tag:-latest} → ${asset}"
@@ -193,7 +205,6 @@ case ":$PATH:" in
       zsh) echo "  (zsh: put the export in ~/.zprofile)" ;;
       bash) echo "  (bash: put the export in ~/.bashrc)" ;;
     esac
-    echo "After OS update / PATH loss: curbpack doctor --repair"
     ;;
 esac
 
@@ -207,5 +218,6 @@ echo "Not ready to use a product repository?"
 echo "  curbpack demo"
 echo
 echo "Optional: curbpack doctor"
+echo "After OS update / PATH loss: curbpack doctor --repair"
 echo
 echo "${claim}"

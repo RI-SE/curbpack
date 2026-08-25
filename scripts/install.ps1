@@ -34,9 +34,14 @@ $ErrorActionPreference = "Stop"
 $Claim = "Prepares evidence for human review — not a conformity assessment."
 
 function Get-DefaultVersion {
-  $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+  # Piped `irm | iex` has no real script path — keep baked default only.
+  $scriptPath = $MyInvocation.MyCommand.Path
+  if (-not $scriptPath -or -not (Test-Path -LiteralPath $scriptPath)) {
+    return "v0.5.3"
+  }
+  $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $scriptPath }
   $manifest = Join-Path $here "install-manifest.json"
-  if (Test-Path $manifest) {
+  if (Test-Path -LiteralPath $manifest) {
     try {
       $j = Get-Content -Raw -Path $manifest | ConvertFrom-Json
       if ($j.default_version) { return [string]$j.default_version }
@@ -193,6 +198,16 @@ if (-not $checksumsUrl) {
   Write-Install404Guidance -Context "checksums.txt URL missing — refusing install (fail closed)" -FailedUrl ""
   exit 1
 }
+
+$pathParts = @($env:Path -split ';' | Where-Object { $_ -ne '' })
+$pathMember = if ($pathParts -contains $dir) { "INSTALL_DIR already on PATH" } else { "INSTALL_DIR not on PATH (User PATH updated after install)" }
+Write-Host "REPO=$Repo"
+Write-Host "VERSION=$tag"
+Write-Host "ASSET=$asset"
+Write-Host "URL=$url"
+Write-Host "INSTALL_DIR=$dir"
+Write-Host "PATH: $pathMember"
+Write-Host ""
 
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("curbpack-install-" + [guid]::NewGuid().ToString("n"))
 $null = New-Item -ItemType Directory -Force -Path $tmp

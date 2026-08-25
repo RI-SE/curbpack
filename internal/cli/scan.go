@@ -59,14 +59,17 @@ func cmdScan(args []string) error {
 	notStarted, failing := classifyFindings(res.Payload.Failures)
 	days := clock.DaysUntilUTC(clock.Art14ReportingStart)
 
+	claimLine := "Prepares evidence for human review — not a conformity assessment."
 	if flags.badge || flags.formatMarkdown {
 		fmt.Println(art14BadgeLine(root, clock.NowUTC()))
+		fmt.Println(claimLine)
 		return nil
 	}
 
 	tty.PrintHeader("CURBPACK SCAN")
 	fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "Read-only — no files written, no hooks, no init. Not conformity assessment."))
-	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Diagnosis only — readiness % is via curbpack check --score (not this command)."))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Diagnosis only — readiness % is via curbpack check --score (not this command)."))
+	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Exit 0 means diagnosis finished — not a pass or certification."))
 
 	product, source := productHint(root)
 	fmt.Printf("Product hint: %s (%s)\n", product, source)
@@ -134,7 +137,8 @@ func cmdScan(args []string) error {
 	} else {
 		fmt.Printf("%s\n", tty.C(tty.Dim, scanNextLine(res.Payload.Failures)))
 	}
-	fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
+	fmt.Printf("%s\n", tty.C(tty.Dim, claimLine))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Scan complete — repository unchanged."))
 	return nil
 }
 

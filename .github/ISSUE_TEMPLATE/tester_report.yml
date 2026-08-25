@@ -14,6 +14,7 @@ body:
       label: What did you run?
       options:
         - label: `curbpack demo` (sandbox)
+        - label: `curbpack scan` (read-only diagnosis)
         - label: `curbpack doctor`
         - label: GitHub Action `curbpack-check`
         - label: `curbpack check` on my own product repo

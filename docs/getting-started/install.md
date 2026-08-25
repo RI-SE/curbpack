@@ -123,7 +123,9 @@ Select-String -Path checksums.txt -Pattern 'curbpack_windows_amd64.exe'
 | PATH | Unix: print export hint; Windows: persist User PATH via `[Environment]::SetEnvironmentVariable` |
 | No silent auto-update | Repair never downloads |
 
-Env overrides: `CURBPACK_VERSION`, `CURBPACK_INSTALL_DIR`, `CURBPACK_REPO`, optional `GITHUB_TOKEN`.
+Env overrides: `CURBPACK_VERSION`, `CURBPACK_INSTALL_DIR`, optional `GITHUB_TOKEN`.
+
+**Repo override (advanced):** `CURBPACK_REPO` defaults to `RI-SE/curbpack`. Non-canonical values are **refused** unless you also set `CURBPACK_REPO_I_UNDERSTAND=1` (do not use `afelin/curbpack` for stranger installs — private fork; assets often 404).
 
 ---
 

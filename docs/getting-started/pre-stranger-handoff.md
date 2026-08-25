@@ -36,7 +36,7 @@ Clean env — no workspace binary on PATH.
 
 | OS | Install | Command | Pass |
 |----|---------|---------|------|
-| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-20):** v0.5.3 binary via install; exit 0; Art 14 + `Next:`; porcelain empty. Until manifest bump on main, bare curl installs v0.5.2 — bump merged post-tag. |
+| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-25):** `main` installer downloads **v0.5.3** (manifest bumped post-tag); exit 0; Art 14; porcelain empty. Do **not** pin stranger curl at `…/v0.5.3/scripts/install.sh` for new installer hardening — use `main` until the next tagged scripts ship. |
 | Linux | same | same | same |
 | Windows | `irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
 
@@ -67,7 +67,7 @@ Windows: `install.ps1` equivalent.
 
 **Gate:** 3 external repos × 2 successful `scan` runs each → log in spreadsheet or ADOPTERS draft PR → unlock Wave B (`verify` spike first per SDD).
 
-Collect per stranger: OS, install method, repo type, run 1 + run 2 stdout, Was `Next:` / `Next (optional):` clear? (both OK on v0.5.3 vs unreleased), blockers.
+Collect per stranger: OS, install method, repo type, run 1 + run 2 stdout, Exit 0 + Scan complete visible? Was `Next:` / `Next (optional):` clear when findings remained? (both OK on v0.5.3 vs unreleased), blockers.
 
 Log template: [stranger-validation-log.md](./stranger-validation-log.md).
 
