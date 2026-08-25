@@ -3,7 +3,7 @@
 Public Apache-2.0 launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
-## Status (2026-08-20)
+## Status (2026-08-25)
 
 | Item | State |
 |------|--------|
@@ -11,7 +11,7 @@ Coreward is **not** required to build, test, launch, or use Curbpack (optional `
 | Required checks on `main` | **Configured via API** — exact names below; `strict` (branches up to date) **on**; `enforce_admins` **on** |
 | SPDX | **Apache-2.0** |
 | Release pin | **`@v0.5.2`** Action / CI examples — cut only after merge: [release-v0.5.2 playbook](getting-started/release-v0.5.2.md) |
-| **v0.5.3 scan milestone** | **Pending human tag** — `scan` ships in branch CLI; stranger path = `install.sh`/`install.ps1` @ **v0.5.3** then `curbpack scan`; copy aligned in PR #73 stack; 3-OS smoke matrix after tag |
+| **v0.5.3 scan milestone** | **Shipped** — [RI-SE release v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) published **2026-08-25** (tag commit `f74cc96`); install+scan smoke **agent-verified**; stranger path = `install.sh`/`install.ps1` @ **v0.5.3** then `curbpack scan`. Site PR [#7](https://github.com/RI-SE/curbpack/pull/7) merged. **A2 / A3 still HUMAN** (no invite wave). |
 | Trust freeze (v0.5.2) | **Distribution + UX + repair** (Windows exe, `install.ps1`, `doctor --repair`, dual-fence docs). **Trust track deferred** — no Action resolve / SafeJoin / attest OCC / explain-airlock rewrite |
 | Discussion #4 body | **Verified** — claim-safe line + install ladder + Tester report pointer |
 | Discussion #4 pin | **Pinned** — confirmed via GraphQL `pinnedDiscussions` (2026-08-10); [Welcome to Curbpack](https://github.com/afelin/curbpack/discussions/4) |
@@ -49,6 +49,8 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 | **A4 TTG** | **PASS** — `TTG_MAX_SECONDS=600 ./scripts/time-to-green.sh` → **4s** wall (2026-08-25). |
 | **A5 mechanical** | Local `claim-safety.sh` OK; `redteam-pilot.sh` **13/13**. RI-SE `ci` on `main` green (latest observed 2026-08-24). Required-check names: verify Settings if API 404. |
 | **A3 Tier-3** | Agent surrogate: RI-SE + v0.5.3 in `install.sh`; doctor/demo/scan exit 0, porcelain clean in temp repo. **HUMAN:** fresh curl install + [Discussion #4](https://github.com/RI-SE/curbpack/discussions/4) comment still pending. |
+
+**v0.5.3 release (2026-08-25):** [RI-SE/curbpack v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) shipped at tag `f74cc96`. Install+scan smoke agent-verified. Does **not** close A2 or A3.
 
 **Sprint C (deferred):** Wave 2 tabletop after first stranger cohort; freeze renewal review by **2026-09-07**.
 
