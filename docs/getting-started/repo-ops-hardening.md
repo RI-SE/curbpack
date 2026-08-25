@@ -8,9 +8,20 @@ Operator runbook for [RI-SE/curbpack](https://github.com/RI-SE/curbpack).
 - **Public site:** https://ri-se.github.io/curbpack/
 - **Force-push:** never on `main`.
 
+## Remotes (local clone)
+
+| Remote | Repo | Use |
+|--------|------|-----|
+| `corp-origin` | RI-SE/curbpack | **Source of truth** — open product PRs here |
+| `origin` | afelin/curbpack | Optional dev fork — downstream catch-up only |
+
+Product work: branch → PR → merge on **RI-SE** only. After merge, optional afelin catch-up: `git fetch corp-origin && git merge corp-origin/main`.
+
+Full policy: [fork policy](../internal/fork-policy.md).
+
 ## Daily loop
 
-1. Feature branch → PR → CI green → merge.
+1. Feature branch → PR → CI green → merge on **RI-SE/curbpack**.
 2. Confirm Pages deploy if site content changed.
 
 ## Deprecated

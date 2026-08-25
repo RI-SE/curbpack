@@ -21,7 +21,7 @@ Engineering stops here. Agents must not merge, tag, disable Pages, or run strang
 - [x] Merge [PR #73](https://github.com/RI-SE/curbpack/pull/73) → `main` (merge commit preferred if tagging from merge SHA)
 - [x] Confirm `main` CI green (required: `test (ubuntu-latest)`, `test (macos-latest)`, `smoke`, `gauntlet`, `redteam-pilot`)
 - [x] ~~Run `./scripts/curb-sync.sh`~~ (deprecated — RI-SE is now canonical)
-- [x] Verify RI-SE `main` parity with afelin
+- [x] RI-SE merged; afelin catch-up optional (see [fork-policy](../internal/fork-policy.md))
 
 **Do not merge:** [PR #75](https://github.com/RI-SE/curbpack/pull/75) (`do-not-merge` staging). **ENISA:** preliminary mapping on `main` (not domain-verified) — see [docs/mappings/enisa-cra-mapping.md](../mappings/enisa-cra-mapping.md).
 

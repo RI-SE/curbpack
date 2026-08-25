@@ -131,11 +131,15 @@ else
 fi
 rm -rf "$THEATER" "$IMPORT_DEST"
 
-# --- 12) Stable contracts nave — internal/contract/ + go test ./... (CI) ---
+# --- 12) fork-policy guard (no parity/mirror wholesale copies) ---
+./scripts/fork-policy-check.sh >/dev/null 2>&1 && ok "12 fork-policy guard" || \
+  bad "12 fork-policy guard — parity/mirror branch or forbidden doc swap"
+
+# --- 13) Stable contracts nave — internal/contract/ + go test ./... (CI) ---
 [[ -f docs/stable-contracts.md && \
     -f internal/contract/explain_coreward_consumer_test.go ]] && \
-  ok "12 stable contracts (explain consumer + docs sync)" || \
-  bad "12 stable contracts nave — missing contract tests or docs/stable-contracts.md"
+  ok "13 stable contracts (explain consumer + docs sync)" || \
+  bad "13 stable contracts nave — missing contract tests or docs/stable-contracts.md"
 
 # --- 16) share --bundle offline schema marker ---
 TMPB="$(mktemp -d)"

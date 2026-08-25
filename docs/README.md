@@ -53,6 +53,7 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 
 | Doc | Purpose |
 |-----|---------|
+| [Fork policy](internal/fork-policy.md) | RI-SE-first; no parity/mirror PRs |
 | [Launch readiness](internal/launch-readiness.md) | Internal launch checklist |
 | [GitHub-readiness gaps](internal/github-readiness-gaps.md) | Stakeholder demand → Done/Polish/Ops/Reject + Evidence paths |
 | [SDD gap analysis](internal/sdd-gap-analysis.md) | Repository baseline vs software design document |
