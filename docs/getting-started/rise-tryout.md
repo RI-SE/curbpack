@@ -2,7 +2,7 @@
 
 **One RI-SE entry link for the 3 → 10 → 20 → 100 first-run rollout.** Purpose: test installation and one local `scan` only.
 
-**Pins (do not confuse):** install scripts download the CLI binary from RI-SE releases (currently **v0.5.3** until **v0.5.4**); the GitHub Action pin stays **`@v0.5.2`** — unrelated and frozen until human tabletop.
+**Pins (do not confuse):** install scripts download the CLI binary from RI-SE releases (currently **v0.5.4**); the GitHub Action pin stays **`@v0.5.2`** — unrelated and frozen until human tabletop.
 
 Installation is provided from the canonical Curbpack release repository. Full install SoR: [install.md](install.md). Recovery: [troubleshooting.md](troubleshooting.md). Do not copy alternate pins from this page.
 

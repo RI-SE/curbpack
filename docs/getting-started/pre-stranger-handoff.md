@@ -7,7 +7,8 @@ Engineering stops here. Agents must not merge, tag, disable Pages, or run strang
 **v0.5.3 shipped (2026-08-25):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) at tag `f74cc96`. Install+scan smoke **agent-verified**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human note (first-run feedback / Teams / ADOPTERS — Discussions not enabled) — do not send invites yet.
 
 **Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/RI-SE/curbpack/pull/73)  
-**Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.3**) then `curbpack scan`  
+**Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.4**) then `curbpack scan`  
+(Do **not** use `…/v0.5.4/scripts/install.sh` — tag tree baked older `MANIFEST_DEFAULT`.)
 **Action pin:** stays **`@v0.5.2`** until human tabletop approves bump ([AGENTS.md](../../AGENTS.md))
 
 ---
@@ -67,7 +68,7 @@ Windows: `install.ps1` equivalent.
 
 **Gate:** 3 external repos × 2 successful `scan` runs each → log in spreadsheet or ADOPTERS draft PR → unlock Wave B (`verify` spike first per SDD).
 
-Collect per stranger: OS, install method, repo type, run 1 + run 2 stdout, Exit 0 + Scan complete visible? Was `Next:` / `Next (optional):` clear when findings remained? (both OK on v0.5.3 vs unreleased), blockers.
+Collect per stranger: OS, install method, repo type, run 1 + run 2 stdout, Exit 0 + Scan complete visible? Was `Next (optional):` clear when findings remained? blockers.
 
 Log template: [stranger-validation-log.md](./stranger-validation-log.md).
 
