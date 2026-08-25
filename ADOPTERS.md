@@ -12,6 +12,6 @@ Gate green means **ready for human review** — not certification.
 | _SME slot 2 — name TBD_ | install **`v0.5.3`** → `curbpack scan` (permission pending) | Placeholder — add when partner opts in |
 | _SME slot 3 — name TBD_ | install **`v0.5.3`** → `curbpack scan` (permission pending) | Placeholder — add when partner opts in |
 
-To join: open a PR adding one row, or ask in Discussions. Anonymous use is fine — this list is never required.
+To join: open a PR adding one row. Anonymous use is fine — this list is never required.
 
 Optional `scan --share-stats` (deferred): would POST anonymous scan counts only — default off, no network on vanilla `scan`. Document in SECURITY.md before shipping.

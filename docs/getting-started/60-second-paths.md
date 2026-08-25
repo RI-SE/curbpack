@@ -27,7 +27,7 @@ cd C:\path\to\your\git\repo
 curbpack scan
 ```
 
-Read-only diagnosis. Packs line shows `cra-baseline` on a cold tree. Use `curbpack fix --art14` → `init` → `check --score` when you are ready to write files.
+Read-only diagnosis. Packs line shows `cra-baseline` on a cold tree. When ready (optional): `curbpack fix --art14` → `init` → `check --score` — not required for the first-run tryout (stop after scan).
 
 ## Three ways in
 

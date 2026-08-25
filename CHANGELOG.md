@@ -1,12 +1,23 @@
 # Changelog
 
-## Unreleased (on `main`, not yet pinned — `v0.5.2` tag is TAM-only at `b3ed5b1`)
+## Unreleased (on `main`, not yet pinned — Action pin stays `@v0.5.2`)
 
+- **First-run scan honesty** — `curbpack scan` prints Exit 0 invariant early + late; ends with `Scan complete — repository unchanged.`; `Next (optional):` only when findings remain; Satisfied vs Open; badge/`--format markdown` still emit claim line. Installers print REPO/VERSION/ASSET/URL/INSTALL_DIR/PATH membership before download; adjacent `install-manifest.json` only when `$0` is a real script file; footer points at `curbpack doctor --repair`. Non-`RI-SE/curbpack` `CURBPACK_REPO` refuses unless `CURBPACK_REPO_I_UNDERSTAND=1`; 404 guidance prefers RI-SE. RISE tryout: dual-pin (CLI install ≠ Action `@v0.5.2`); stop after scan; no Discussions CTA. Gate docs: Exit 0 + Scan complete always; Next only when findings. Pin stays `@v0.5.2`. Not certification.
 - **Slice A HITL honesty** — structural evidence for human review — not certification and not a CRA-compliant / CE / notified-body claim. GateFailure IR + ContextPack populate optional `agent_id` / `model_hash` / `active_mandate_id` from env; `source` is `self-declared` vs `bridge` when the Coreward sock path is present; missing sock fail-opens (`not_installed` / `unavailable`) and does not fail check; AgentIdentity is not in `state_hash`; no new sock ops. `TestNoVerdictSurface` locks public renderers so compliant / merge-allow are not a Curbpack verdict (`readiness_score` stays on GateFailurePayload). Opt-in `cra-baseline` file gate `docs/incident/art14-path.md` (Art 14 reporting rehearsal vs later handling clock; not house-policy default). **`--diff` always runs `anti_placeholder`** (committed heal stub + unrelated README change still fails `HOUSE-ANTI-PLACEHOLDER` / `CRA-ANTI-PLACEHOLDER` with scaffold body overlap). **`pathway confirm-prose` requires every displayed prose path independent** (not one-of); always runs inward cite-check (repo artifact or allowlisted cite; heal stubs / empty / agent-cache are not grounding). **Existing `cra-baseline` greens go red until `docs/incident/art14-path.md` is real prose.** `--heal` remaining red is intended. `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` unchanged. Counsel note: Art 14 reporting vs handling; AI Act Art 50 grace is not blanket. Example workflow: compose Trivy/Gitleaks beside check; never set `CURBPACK_ALLOW_CONFIRM=1` on the Action. Pin stays `@v0.5.2`. Pack catalog frozen (three ids). Trust-surface freeze continues (no Action resolve / SafeJoin / OCC / airlock / sock / pack catalog).
 - **Handoff honesty** — one-pager cover sheet (files-to-read front, gate score on the back); `anti_placeholder` fails DefaultScaffoldBody overlap (`--heal` remaining red is intended); drift `docs_changed_since_attest` / `docs_unchanged_since_attest` plus optional security.txt contact signals; medtech formhints guess path `docs/medtech/…`. Proof yes/no stamp copy; share prints `share_stale` first; doctor warns on `CURBPACK_ALLOW_CONFIRM=1`; optional attest `--reviewed-by` in evidence only. Structural evidence for human review — not certification. Pin stays `@v0.5.2`. Trust-surface freeze continues (no Action resolve / SafeJoin / OCC / airlock / sock / pack catalog).
 - **Premortem production fixes (PR #57)** — `init` gitignores cache/evidence; Action `heal` default **false** + scaffold≠readiness warning; pathway confirm requires `--i-am-human` / `CURBPACK_ALLOW_CONFIRM=1` (TTY alone refused); `LatestNoteCommit` walks notes (not HEAD-without-note); Action refuses Windows runners + red `REMEDIATION REVIEW` artifacts; claim-safety scans `*.ps1`; redteam **18/18**; maintainer playbook [`docs/getting-started/release-v0.5.2.md`](docs/getting-started/release-v0.5.2.md)
 - **validate OCC parent** — when HEAD is unresolved, omit parent SHA (empty string) and continue gate evaluation; never inject `000…0`
 - **Cross-OS TAM hardening** — gauntlet Action honesty assert (no `or True`); `doctor --repair` fail-closed after LookPath; marker BOM-safe + custom InstallDir; CI repair smoke without `|| true`; completions for `drift` / `--repair` / `--bundle` / `--reveal`; atomic `.new` cleanup; `share --reveal` empty-message; docs pin sweep `@v0.5.2`
+
+## v0.5.3
+
+Ladder 0 scan milestone — install + read-only `curbpack scan` for strangers. Action pin stayed `@v0.5.2`.
+
+- **`curbpack scan`** — read-only diagnosis (no init, no hooks, no score); Art 14 reporting clock; product hint; exit 0 = diagnosis finished (not pass/cert)
+- **Install** — `main` scripts download smoke-verified **v0.5.3** binary (manifest ≡ release-gate); Windows amd64 asset published
+- **Docs** — stranger Ladder 0, RISE tryout, troubleshooting scan section; Discussions not required for feedback
+- **Claim safety** — prepares evidence for human review — not CE / notified-body / certification
+
 ## v0.5.2
 
 Cross-OS TAM — distribution + UX + repair (Trust track deferred).
