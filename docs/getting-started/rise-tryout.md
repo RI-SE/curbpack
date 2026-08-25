@@ -33,7 +33,7 @@ irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | 
 Open a **new** PowerShell window if `curbpack` is not found.
 
 2. Choose a **git repository you are permitted to inspect**, then `cd` into its root (confirm the path).
-3. Run `curbpack scan`.
+3. Run `curbpack scan`. Cold `scan` defaults to `cra-baseline`; `init` defaults to `house-policy` — this tryout still **stops after scan**.
 4. **Stop after scan.** Do not run `init`, `check`, `share`, `attest`, pathway commands, or `./scripts/pilot-receipt.sh` for this tryout. Look for `Exit 0` + `Scan complete — repository unchanged.` (always). If the CLI prints `Next:` or `Next (optional): …`, that is the full golden path later — **ignore it for this tryout**.
 
 Optional write-free check:
