@@ -21,7 +21,7 @@ Engineering stops here. Agents must not merge, tag, disable Pages, or run strang
 - [x] Merge [PR #73](https://github.com/RI-SE/curbpack/pull/73) → `main` (merge commit preferred if tagging from merge SHA)
 - [x] Confirm `main` CI green (required: `test (ubuntu-latest)`, `test (macos-latest)`, `smoke`, `gauntlet`, `redteam-pilot`)
 - [x] ~~Run `./scripts/curb-sync.sh`~~ (deprecated — RI-SE is now canonical)
-- [x] Verify RI-SE `main` parity with afelin
+- [x] RI-SE merged; afelin catch-up optional (see [fork-policy](../internal/fork-policy.md))
 
 **Do not merge:** [PR #75](https://github.com/RI-SE/curbpack/pull/75) (`do-not-merge` staging). **ENISA:** preliminary mapping on `main` (not domain-verified) — see [docs/mappings/enisa-cra-mapping.md](../mappings/enisa-cra-mapping.md).
 
@@ -47,11 +47,9 @@ Record results: first-run feedback issue, Teams note, ADOPTERS draft PR, or inte
 
 ### 4. Ops housekeeping
 
-- [ ] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/
-  - **GitHub UI (CLI cannot disable source):** Repo **RI-SE/curbpack** → **Settings** → **Pages** → under **Build and deployment**, set **Source** to **None** (or delete the Pages workflow deployment if your org requires workflow-only). Confirm https://afelin.github.io/curbpack/ stops updating or returns 404.
-  - API check (2026-08-20): `gh api repos/RI-SE/curbpack/pages` → `html_url`: https://afelin.github.io/curbpack/ (still active).
+- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ (API DELETE 2026-08-25; GET → 404; confirm in browser)
 - [ ] **Card test:** logged-out phone → Slack + LinkedIn; paste https://ri-se.github.io/curbpack/ ; LinkedIn Post Inspector if stale cache
-- [ ] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
+- [x] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
 - [ ] RI-SE About/mirror wording still correct
 
 ### 5. Stranger program kit (after smoke green)

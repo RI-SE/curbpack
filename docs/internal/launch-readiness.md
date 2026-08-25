@@ -1,6 +1,8 @@
 # Launch readiness
 
-Public Apache-2.0 launch checklist for [RI-SE/curbpack](https://github.com/RI-SE/curbpack).
+> **afelin-only maintainer doc — do not wholesale-merge to RI-SE**
+
+Private-fork launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack) (public SoR remains [RI-SE/curbpack](https://github.com/RI-SE/curbpack)).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
 ## Status (2026-08-25)
@@ -41,7 +43,7 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 
 **Cold-reader pass — recorded 2026-08-24** (Sprint S1+S2 train @ `ebfd0b1`). Product sign-off.
 
-**Post-sprint parity — recorded 2026-08-24** (afelin/main @ `e62f813`): ENISA preliminary mapping and scan re-point shipped on RI-SE; `go.mod` / Action pin remain at RI-SE curbpack pin version v0.5.2 until wave 2 tabletop.
+**Post-sprint train — recorded 2026-08-24** @ `4bf5a9f`: RI-SE canonical stranger URLs; ENISA preliminary mapping refreshed in scan + site; `go.mod` remains `github.com/afelin/curbpack` until wave 2; public Action owner is RI SE curbpack at pin version v0.5.2.
 
 ### Sprint A — test launch readiness (2026-08-25)
 
