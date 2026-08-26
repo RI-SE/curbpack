@@ -440,21 +440,6 @@ func TestAirlockRedactThenEmit(t *testing.T) {
 	}
 }
 
-func writeMinimalConsistent(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	payload := ir.GateFailurePayload{SchemaVersion: "1", PackID: "house-policy", ReadinessScore: 80}
-	raw, _ := json.MarshalIndent(payload, "", "  ")
-	mustWrite(t, filepath.Join(dir, "01-gate-failures.json"), append(raw, '\n'))
-	mustWrite(t, filepath.Join(dir, "02-action-report.md"), []byte("ok\n"))
-	mustWrite(t, filepath.Join(dir, "03-executive-summary.md"), []byte("ok\n"))
-	digest := ir.ComputeResultDigest(payload)
-	mustWrite(t, filepath.Join(dir, "buyer-onepager.html"), []byte(`<!-- curbpack-onepager-fp:aaaaaaaaaaaaaaaa -->
-<dl class="prov"><dt>Rule packs</dt><dd>house-policy</dd>
-<dt>result_digest</dt><dd>`+digest[:12]+`…</dd></dl>`))
-	return dir
-}
-
 func mustPayload(t *testing.T, dir string) ir.GateFailurePayload {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join(dir, "01-gate-failures.json"))
