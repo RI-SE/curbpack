@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -379,4 +380,71 @@ func TestRepoWalkRefusesSymlinkedDocDir(t *testing.T) {
 	if !saw {
 		t.Fatalf("expected symlink or surface-absent finding, got %+v", rep.Findings)
 	}
+}
+
+func TestModeEquivalenceOnReferences(t *testing.T) {
+	// One directory that is both a valid review-pack and a document tree.
+	dir := writeFixture(t, fixtureSpec{
+		Shape: shapeBundle,
+		Files: map[string]string{
+			"SECURITY.md": "sec\n",
+		},
+		Surface: "02-action-report.md",
+		Refs: fixtureRefs{
+			Paths:  []string{"SECURITY.md", "docs/missing.md"},
+			Claims: []string{"HOUSE-SECURITY-MD"},
+			URLs:   []string{"https://example.com/docs"},
+		},
+	})
+	surfaces := []string{"02-action-report.md"}
+	bundle, err := review.Run(review.Options{
+		BundleRoot: dir, Writer: &bytes.Buffer{}, JSONOut: true,
+		TriageSurfaces: surfaces,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo, err := review.Run(review.Options{
+		BundleRoot: dir, Writer: &bytes.Buffer{}, JSONOut: true,
+		ReferencesOnly: true, TriageSurfaces: surfaces,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	refKey := func(f review.Finding) string {
+		return f.ID + "|" + string(f.State) + "|" + string(f.Cause) + "|" + f.Source
+	}
+	bundleRefs := map[string]review.Finding{}
+	for _, f := range bundle.Findings {
+		if strings.HasPrefix(f.ID, "reference:") {
+			bundleRefs[refKey(f)] = f
+		}
+	}
+	repoRefs := map[string]review.Finding{}
+	for _, f := range repo.Findings {
+		if strings.HasPrefix(f.ID, "reference:") {
+			repoRefs[refKey(f)] = f
+		}
+	}
+	if len(bundleRefs) == 0 {
+		t.Fatal("expected reference findings")
+	}
+	if len(bundleRefs) != len(repoRefs) {
+		t.Fatalf("reference count bundle=%d repo=%d\nbundle=%v\nrepo=%v",
+			len(bundleRefs), len(repoRefs), keysOfFindings(bundleRefs), keysOfFindings(repoRefs))
+	}
+	for k := range bundleRefs {
+		if _, ok := repoRefs[k]; !ok {
+			t.Fatalf("missing in repo mode: %s", k)
+		}
+	}
+}
+
+func keysOfFindings(m map[string]review.Finding) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
