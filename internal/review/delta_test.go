@@ -123,3 +123,60 @@ func TestDeltaMismatchRecordedNotOnlyPrinted(t *testing.T) {
 		t.Fatalf("false warn on matching versions: %q", same)
 	}
 }
+
+func TestDeltaGroupsBySource(t *testing.T) {
+	prior := review.Report{
+		Findings: []review.Finding{
+			{ID: "reference:path:a", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:b", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:c", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "SECURITY.md"},
+			{ID: "reference:path:c", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "SECURITY.md"}, // dup id ignored in map; use distinct
+		},
+	}
+	// Fix duplicate ID in prior — use distinct IDs
+	prior.Findings[3].ID = "reference:path:d"
+	current := review.Report{
+		Findings: []review.Finding{
+			{ID: "reference:path:a", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:b", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:e", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:f", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:g", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			{ID: "reference:path:h", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "docs/risk.md"},
+			// SECURITY.md cleared
+		},
+	}
+	groups := review.GroupUnresolvedBySource(prior, current)
+	if len(groups) < 2 {
+		t.Fatalf("groups=%+v", groups)
+	}
+	if groups[0].Source != "docs/risk.md" || groups[0].Current != 6 || groups[0].Prior != 2 {
+		t.Fatalf("risk group=%+v", groups[0])
+	}
+	block := review.FormatDelta(prior, current)
+	if !strings.Contains(block, "docs/risk.md") || !strings.Contains(block, "↑") {
+		t.Fatalf("delta missing per-doc decay: %q", block)
+	}
+	if !strings.Contains(block, "SECURITY.md") || !strings.Contains(block, "↓") {
+		t.Fatalf("delta missing cleared doc: %q", block)
+	}
+}
+
+func TestDeltaGroupOrderDeterministic(t *testing.T) {
+	prior := review.Report{}
+	current := review.Report{Findings: []review.Finding{
+		{ID: "1", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "b.md"},
+		{ID: "2", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "a.md"},
+		{ID: "3", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "a.md"},
+	}}
+	g1 := review.GroupUnresolvedBySource(prior, current)
+	g2 := review.GroupUnresolvedBySource(prior, current)
+	if len(g1) != 2 || g1[0].Source != "a.md" || g1[1].Source != "b.md" {
+		t.Fatalf("order=%+v", g1)
+	}
+	for i := range g1 {
+		if g1[i] != g2[i] {
+			t.Fatalf("nondeterministic: %+v vs %+v", g1, g2)
+		}
+	}
+}

@@ -440,6 +440,53 @@ func TestAirlockRedactThenEmit(t *testing.T) {
 	}
 }
 
+func TestSourcePopulatedAtAllSites(t *testing.T) {
+	dir := writeFixture(t, fixtureSpec{
+		Shape:   shapeBundle,
+		Surface: "02-action-report.md",
+		Refs: fixtureRefs{
+			Paths:  []string{"SECURITY.md"},
+			Claims: []string{"HOUSE-SECURITY-MD"},
+			URLs:   []string{"https://example.com/x"},
+		},
+	})
+	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: &bytes.Buffer{}, JSONOut: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sawURL, sawClaim, sawPath bool
+	for _, f := range rep.Findings {
+		switch {
+		case strings.HasPrefix(f.ID, "reference:url:"):
+			sawURL = true
+			if f.Source != "02-action-report.md" {
+				t.Fatalf("url Source=%q", f.Source)
+			}
+		case strings.HasPrefix(f.ID, "reference:claim:"):
+			sawClaim = true
+			if f.Source != "02-action-report.md" {
+				t.Fatalf("claim Source=%q", f.Source)
+			}
+		case strings.HasPrefix(f.ID, "reference:path:"):
+			sawPath = true
+			if f.Source != "02-action-report.md" {
+				t.Fatalf("path Source=%q", f.Source)
+			}
+		case f.ID == "reference:none":
+			if f.Source != "" {
+				t.Fatal("reference:none must omit Source")
+			}
+		case strings.HasPrefix(f.ID, "structure:") || strings.HasPrefix(f.ID, "digest:"):
+			if f.Source != "" {
+				t.Fatalf("non-edge %s must omit Source", f.ID)
+			}
+		}
+	}
+	if !sawURL || !sawClaim || !sawPath {
+		t.Fatalf("missing edge kinds url=%v claim=%v path=%v", sawURL, sawClaim, sawPath)
+	}
+}
+
 func mustPayload(t *testing.T, dir string) ir.GateFailurePayload {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join(dir, "01-gate-failures.json"))
@@ -484,16 +531,35 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 	if review.MethodID != "curbpack-review-method" {
 		t.Fatalf("MethodID=%q", review.MethodID)
 	}
-	if review.MethodVersion != "1.0.0" {
+	if review.MethodVersion != "1.1.0" {
 		t.Fatalf("MethodVersion=%q", review.MethodVersion)
 	}
 	root := repoRoot(t)
 	doc := filepath.Join(root, "docs", "method", "review-method-"+review.MethodVersion+".md")
-	if _, err := os.Stat(doc); err != nil {
+	raw, err := os.ReadFile(doc)
+	if err != nil {
 		t.Fatalf("method doc missing for MethodVersion %s: %v", review.MethodVersion, err)
+	}
+	body := string(raw)
+	for _, state := range []review.State{review.StateConfirmed, review.StateUnconfirmed, review.StateContradicted} {
+		if !strings.Contains(body, string(state)) {
+			t.Fatalf("method doc missing State %q", state)
+		}
+	}
+	for _, cause := range []review.Cause{
+		review.CauseProducer, review.CauseExtractor, review.CauseGenuine,
+		review.CauseExternal, review.CauseSelfDisagree,
+	} {
+		if !strings.Contains(body, string(cause)) {
+			t.Fatalf("method doc missing Cause %q", cause)
+		}
 	}
 	// Classifier remains independent; lock both stay non-empty and schema stable.
 	if review.ClassifierVersion == "" {
 		t.Fatal("ClassifierVersion empty")
+	}
+	// Prior method doc retained.
+	if _, err := os.Stat(filepath.Join(root, "docs", "method", "review-method-1.0.0.md")); err != nil {
+		t.Fatalf("1.0.0 method doc must be retained: %v", err)
 	}
 }

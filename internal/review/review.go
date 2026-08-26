@@ -33,7 +33,7 @@ const (
 
 	// MethodID / MethodVersion identify the published review method document.
 	MethodID      = "curbpack-review-method"
-	MethodVersion = "1.0.0" // must equal docs/method/review-method-<v>.md — see W6
+	MethodVersion = "1.1.0" // must equal docs/method/review-method-<v>.md — see W6/W10
 
 	maxFileBytes  = 8 << 20  // 8 MiB per file (parse reads)
 	maxTotalBytes = 64 << 20 // 64 MiB total across parse reads
@@ -72,6 +72,9 @@ type Finding struct {
 	State    State  `json:"state"`
 	Cause    Cause  `json:"cause,omitempty"`
 	Detail   string `json:"detail"`
+	// Source is the document the reference was extracted from; an edge without
+	// a Source is a bug, not an anonymous edge. Omitted on non-edge findings.
+	Source string `json:"source,omitempty"`
 }
 
 // Report is the offline review result (document triage only).
@@ -572,6 +575,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 			add(rep, Finding{
 				ID: "reference:size:" + name, Category: "reference", State: StateContradicted, Cause: CauseSelfDisagree,
 				Detail: name + " exceeded size cap while extracting references",
+				Source: filepath.ToSlash(name),
 			})
 			continue
 		}
@@ -601,6 +605,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 			add(rep, Finding{
 				ID: key, Category: "reference", State: StateUnconfirmed, Cause: CauseExternal,
 				Detail: detail,
+				Source: filepath.ToSlash(name),
 			})
 		}
 
@@ -617,6 +622,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 			add(rep, Finding{
 				ID: key, Category: "reference", State: StateConfirmed,
 				Detail: fmt.Sprintf("Pack claim id present in document: %s", m),
+				Source: filepath.ToSlash(name),
 			})
 		}
 
@@ -655,6 +661,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 				add(rep, Finding{
 					ID: key, Category: "reference", State: st, Cause: cause,
 					Detail: referenceKindDetail(kindLabel, detail+" (from "+name+")"),
+					Source: filepath.ToSlash(name),
 				})
 			}
 		}
@@ -765,6 +772,10 @@ func redactReportAirlock(rep *Report) bool {
 		}
 		if s, ok := redactAirlockString(rep.Findings[i].ID); ok {
 			rep.Findings[i].ID = s
+			changed = true
+		}
+		if s, ok := redactAirlockString(rep.Findings[i].Source); ok {
+			rep.Findings[i].Source = s
 			changed = true
 		}
 	}

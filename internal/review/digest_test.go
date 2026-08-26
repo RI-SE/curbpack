@@ -167,7 +167,7 @@ func TestMarkdownGoldenUnchangedExceptRecordLines(t *testing.T) {
 				t.Fatalf("too short: %q", got)
 			}
 			footer := lines[len(lines)-2:]
-			if !strings.HasPrefix(footer[0], "record_digest ") || !strings.Contains(footer[0], "method 1.0.0") {
+			if !strings.HasPrefix(footer[0], "record_digest ") || !strings.Contains(footer[0], "method "+review.MethodVersion) {
 				t.Fatalf("missing record_digest footer line: %q", footer[0])
 			}
 			if footer[1] != "Record of an offline structural check. Not a conformity assessment." {
