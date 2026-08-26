@@ -151,13 +151,27 @@ func EnvIs1(key string) bool {
 // IsCacheRel reports whether rel is under the agent cache (write-new or legacy).
 // Cache-only files are not independent grounding artifacts for confirm-prose.
 func IsCacheRel(rel string) bool {
+	return underRelFamily(rel, CacheRel, LegacyCacheRel)
+}
+
+// IsEvidenceRel reports whether rel is under the evidence dir (write-new or legacy).
+func IsEvidenceRel(rel string) bool {
+	return underRelFamily(rel, EvidenceRel, LegacyEvidenceRel)
+}
+
+// IsGraphRel reports whether rel is under the policy-graph dir (write-new or legacy).
+func IsGraphRel(rel string) bool {
+	return underRelFamily(rel, GraphRel, LegacyGraphRel)
+}
+
+func underRelFamily(rel, neu, legacy string) bool {
 	rel = filepath.ToSlash(strings.TrimSpace(rel))
 	rel = strings.TrimPrefix(rel, "./")
 	if rel == "" {
 		return false
 	}
-	return rel == CacheRel || strings.HasPrefix(rel, CacheRel+"/") ||
-		rel == LegacyCacheRel || strings.HasPrefix(rel, LegacyCacheRel+"/")
+	return rel == neu || strings.HasPrefix(rel, neu+"/") ||
+		rel == legacy || strings.HasPrefix(rel, legacy+"/")
 }
 
 func resolveDir(root, neuRel, legacyRel string) string {

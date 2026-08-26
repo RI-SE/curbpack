@@ -45,7 +45,24 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 National variations, guidance changes, and new standards are **pack version bumps** authored by domain owners — no Go change, no binary release. The pack format already carries jurisdiction, validity windows, citations, extends/overlays, supersession, and private pack dirs.
 
-A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.0.0.md](docs/method/review-method-1.0.0.md).
+A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.1.0.md](docs/method/review-method-1.1.0.md).
+
+### Review / reference graph prohibitions
+
+These apply to `review` and related surfaces (including `--repo`):
+
+1. **No model ships here.** Not embedded, not downloaded, not called.
+2. **No network call.** `review` records URLs and never fetches them.
+3. **No persistent index.** The record is a file the caller redirects; rebuild every run.
+4. **No similarity, fuzzy match, threshold, or confidence score on an edge.** An edge exists because the target was found. Outcomes are `confirmed` / `unconfirmed` / `contradicted` only.
+
+### Low-maintenance covenant (rules 7–9)
+
+5–6 live in product design docs; contributors must uphold:
+
+7. **Anything that can rot must be guarded by a test that fails when it rots** — method docs, reserved names, and frozen fixtures need failing guards (see `TestMethodVersionMatchesClassifier`, comparison digest pin).
+8. **Delete rather than deprecate** — a reserved name with no implementation gets an expiry date (`edges` expires at v1.2.0 if unused), not a permanent home.
+9. **Every shipped capability has a named consumer in the same commit** — an unwired feature is a maintenance cost with no benefit.
 
 ## Non-product docs
 

@@ -28,13 +28,15 @@ func commandUsage(cmd string) {
 		fmt.Fprintf(os.Stderr, "  Recipe: check → context-pack → buyer-questions → prepare-release.\n")
 	case "review":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack review <received-pack> [--json] [--full] [--since <prior-report.json>]\n")
+		fmt.Fprintf(os.Stderr, "       curbpack review --repo [path] [--json] [--full] [--since <prior-report.json>]\n")
 		fmt.Fprintf(os.Stderr, "       curbpack review --batch <parent-or-pack-dir>…\n")
 		fmt.Fprintf(os.Stderr, "  Offline triage of a curbpack-native review-pack (no git, no network).\n")
+		fmt.Fprintf(os.Stderr, "  --repo triages governed docs in a repository (default path: .); same method/classifier as pack mode.\n")
 		fmt.Fprintf(os.Stderr, "  States: confirmed | unconfirmed | contradicted — document only, not a product verdict.\n")
 		fmt.Fprintf(os.Stderr, "  Default output is terse; --full dumps all findings + dropped tokens; --json emits schema v2.\n")
 		fmt.Fprintf(os.Stderr, "  --since compares to a prior --json report (NEW / CLEARED / PERSISTING); does not change exit codes.\n")
 		fmt.Fprintf(os.Stderr, "  --batch expands a non-pack parent to immediate child packs; ranks unreadable, then contradicted, then genuine-desc.\n")
-		fmt.Fprintf(os.Stderr, "  --batch does not combine with --full, --json, or --since (run per-pack with those flags).\n")
+		fmt.Fprintf(os.Stderr, "  --batch does not combine with --full, --json, --since, or --repo (run per-pack with those flags).\n")
 		fmt.Fprintf(os.Stderr, "  Exit 1 if any finding is contradicted (or any --batch child is contradicted/unreadable); exit 2 on usage errors.\n")
 	case "drift":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack drift [--json]\n")
