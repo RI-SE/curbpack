@@ -37,11 +37,15 @@ Warm-start: `curbpack pathway status` — optional interview that suggests check
 | hooks + Action | `init` / `@v0.5.2` | Force re-check loop |
 | drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](getting-started/evidence-drift.md)) |
 | evidence bundle | `share --bundle` | `review-pack/evidence-bundle.html` offline handoff |
+| review (received pack) | `curbpack review <pack-dir>` | Offline document triage — not a product verdict |
+| review (in-repo) | `curbpack review --repo [path] [--packs a,b]` | Governed-doc triage via ProsePaths; cold default `house-policy`; write-free |
 
 ```bash
 curbpack export --context-pack
 # → .github/curbpack/cache/context-pack.json (+ .md)
 ```
+
+Reviewers: `curbpack review <received-pack>` on a share. Maintainers screening their own tree: `curbpack review --repo` (optional `--packs` / `--since`). Surfaces are **pack-governed documentation only** — thin packs yield few surfaces; that is scope, not classifier failure.
 
 ## Pack chooser (cold start)
 

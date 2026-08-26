@@ -60,6 +60,45 @@ func TestRepoModeUsesProsePaths(t *testing.T) {
 	}
 }
 
+func TestRepoModePacksFlag(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteCLI(t, filepath.Join(dir, "SECURITY.md"), []byte("# security\n`README.md`\n"))
+	mustWriteCLI(t, filepath.Join(dir, "README.md"), []byte("# readme\n"))
+	stdout, stderr := captureReview(t, func() {
+		err := Run([]string{"review", "--repo", dir, "--packs", "house-policy", "--json"})
+		if err != nil && ExitCode(err) != ExitOK && ExitCode(err) != ExitGates {
+			t.Fatalf("unexpected: %v code=%d", err, ExitCode(err))
+		}
+	})
+	var rep review.Report
+	if err := json.Unmarshal([]byte(stdout), &rep); err != nil {
+		t.Fatalf("json: %v\n%s", err, stdout)
+	}
+	if len(rep.TriageSurfaces) == 0 {
+		t.Fatal("triage_surfaces empty")
+	}
+	if rep.SurfacesDigest == "" {
+		t.Fatal("surfaces_digest empty")
+	}
+	if rep.MethodVersion != review.MethodVersion {
+		t.Fatalf("method=%q", rep.MethodVersion)
+	}
+	// house-policy ProsePaths is typically thin (≤2) → stderr scope note.
+	if len(rep.TriageSurfaces) <= 2 && !strings.Contains(stderr, "Scope-limited") {
+		t.Fatalf("expected thin-surfaces stderr when ≤2 surfaces; stderr=%q surfaces=%v", stderr, rep.TriageSurfaces)
+	}
+}
+
+func TestRepoModePacksRequiresRepo(t *testing.T) {
+	err := Run([]string{"review", "--packs", "house-policy", t.TempDir()})
+	if ExitCode(err) != ExitUsage {
+		t.Fatalf("want exit 2, got %d (%v)", ExitCode(err), err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "--packs only applies with --repo") {
+		t.Fatalf("message: %v", err)
+	}
+}
+
 func TestRepoModeComposesWithSince(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteCLI(t, filepath.Join(dir, "SECURITY.md"), []byte("# security\n"))

@@ -49,13 +49,19 @@ func ClassifyReference(token string) RefKind {
 // Identity rule: finding identity is the cleaned relative path as cited.
 // Basename fallback affects resolution only — never identity — so docs/x.md
 // and x.md remain two keys even if both resolve to the same file.
-func resolveBundleAnchor(bundleRoot, cand string, bundleFiles map[string]struct{}) (State, string, Cause, string) {
+//
+// repoMode selects Detail wording only (bundle bytes / comparison pin unchanged).
+func resolveBundleAnchor(bundleRoot, cand string, bundleFiles map[string]struct{}, repoMode bool) (State, string, Cause, string) {
 	cand = filepath.ToSlash(strings.TrimSpace(cand))
 	if cand == "" {
 		return StateUnconfirmed, "empty path", CauseExtractor, ""
 	}
 	if _, ok := bundleFiles[cand]; ok {
-		return StateConfirmed, "in-bundle path: " + cand, "", cand
+		prefix := "in-bundle path: "
+		if repoMode {
+			prefix = "in-repo path: "
+		}
+		return StateConfirmed, prefix + cand, "", cand
 	}
 	base := filepath.Base(cand)
 	if _, ok := bundleFiles[base]; ok {
@@ -69,16 +75,28 @@ func resolveBundleAnchor(bundleRoot, cand string, bundleFiles map[string]struct{
 				hit = base
 			}
 		}
-		return StateConfirmed, "in-bundle basename: " + cand + " → " + base, "", hit
+		prefix := "in-bundle basename: "
+		if repoMode {
+			prefix = "in-repo basename: "
+		}
+		return StateConfirmed, prefix + cand + " → " + base, "", hit
 	}
 	abs, err := jailJoin(bundleRoot, cand)
 	if err == nil {
 		if st, err := os.Lstat(abs); err == nil && st.Mode()&os.ModeSymlink == 0 && !st.IsDir() {
-			return StateConfirmed, "in-bundle relative path: " + cand, "", cand
+			prefix := "in-bundle relative path: "
+			if repoMode {
+				prefix = "in-repo relative path: "
+			}
+			return StateConfirmed, prefix + cand, "", cand
 		}
 	}
 	if looksLikeRepoPath(cand) {
-		return StateUnconfirmed, "repo-shaped path not in bundle: " + cand, CauseGenuine, ""
+		detail := "repo-shaped path not in bundle: " + cand
+		if repoMode {
+			detail = "path not found in repo: " + cand
+		}
+		return StateUnconfirmed, detail, CauseGenuine, ""
 	}
 	return StateUnconfirmed, "unresolved path: " + cand, CauseExtractor, ""
 }
