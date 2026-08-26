@@ -22,6 +22,7 @@ import (
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/pathjail"
+	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/research"
 )
 
@@ -94,16 +95,28 @@ type Report struct {
 	MethodVersion              string    `json:"method_version"`
 	BundleDigest               string    `json:"bundle_digest"`
 	RecordDigest               string    `json:"record_digest"`
+	// DigestScope names what BundleDigest covers: "bundle" (full tree) or "closure"
+	// (surfaces read + resolved path targets). Never compare across scopes.
+	DigestScope string `json:"digest_scope"`
 }
+
+// Digest scope values recorded on every report.
+const (
+	DigestScopeBundle  = "bundle"
+	DigestScopeClosure = "closure"
+)
 
 // Options for Run.
 type Options struct {
 	BundleRoot     string
 	Writer         io.Writer // triage markdown or JSON; default stdout
 	JSONOut        bool
-	Full           bool     // full dump + dropped list; default is terse
+	Full           bool // full dump + dropped list; default is terse
 	TriageSurfaces []string // optional; empty → defaultTriageSurfaces
 	Prior          *Report  // optional prior report for delta (CLI loads; Run stays pure)
+	// ReferencesOnly skips pack structure/load/digest checks and hashes the
+	// referenced closure instead of the full tree. Used for repository-root triage.
+	ReferencesOnly bool
 }
 
 var (
@@ -168,6 +181,10 @@ func Run(opts Options) (Report, error) {
 		return Report{}, fmt.Errorf("review pack path must be a directory (got file %s)", root)
 	}
 
+	scope := DigestScopeBundle
+	if opts.ReferencesOnly {
+		scope = DigestScopeClosure
+	}
 	rep := Report{
 		Schema:            schemaVersion,
 		ClassifierVersion: ClassifierVersion,
@@ -175,15 +192,30 @@ func Run(opts Options) (Report, error) {
 		Disclaimer:        "Document triage only — not a product verdict, not conformity assessment, not CE / notified-body approval.",
 		MethodID:          MethodID,
 		MethodVersion:     MethodVersion,
+		DigestScope:       scope,
 	}
 
 	tallyRoot := root // absolute path for IO only
 	budget := &readBudget{remaining: maxTotalBytes}
-	checkStructure(&rep, tallyRoot, budget)
-	payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
-	prov := extractProvenance(tallyRoot, budget)
-	checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
-	checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts))
+	kindLabel := "in-bundle-or-repo"
+	var closure *closureSet
+	if opts.ReferencesOnly {
+		kindLabel = "in-repo"
+		closure = newClosureSet()
+		checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts), refWalkOpts{
+			RepoIgnore: true,
+			KindLabel:  kindLabel,
+			Closure:    closure,
+		})
+	} else {
+		checkStructure(&rep, tallyRoot, budget)
+		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
+		prov := extractProvenance(tallyRoot, budget)
+		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
+		checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts), refWalkOpts{
+			KindLabel: kindLabel,
+		})
+	}
 
 	if redactReportAirlock(&rep) {
 		add(&rep, Finding{
@@ -199,7 +231,13 @@ func Run(opts Options) (Report, error) {
 	// Digest pass: after airlock/tally/sort, immediately before emit.
 	// Use ir.WriteLenPrefixed (attest's private copy is frozen; ir is already the digest home).
 	// No-git is a runtime guarantee (TestReviewNoGitRequired), not compile-time.
-	bundleDigest, oversize := computeBundleDigest(tallyRoot)
+	var bundleDigest string
+	var oversize bool
+	if opts.ReferencesOnly {
+		bundleDigest, oversize = computeClosureDigest(tallyRoot, closure)
+	} else {
+		bundleDigest, oversize = computeBundleDigest(tallyRoot)
+	}
 	rep.BundleDigest = bundleDigest
 	if oversize {
 		add(&rep, Finding{
@@ -503,8 +541,12 @@ func checkDigests(rep *Report, root string, payload ir.GateFailurePayload, paylo
 	}
 }
 
-func checkReferences(rep *Report, root string, budget *readBudget, surfaces []string) {
-	bundleFiles, _, walkFindings := walkBundleIndex(root)
+func checkReferences(rep *Report, root string, budget *readBudget, surfaces []string, opts refWalkOpts) {
+	kindLabel := opts.KindLabel
+	if kindLabel == "" {
+		kindLabel = "in-bundle-or-repo"
+	}
+	bundleFiles, _, walkFindings := walkBundleIndex(root, opts.RepoIgnore)
 	for _, f := range walkFindings {
 		add(rep, f)
 	}
@@ -515,6 +557,15 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 	for _, name := range surfaces {
 		data, truncated, err := readCapped(root, name, budget)
 		if err != nil {
+			// Bundle mode: optional triage surfaces (e.g. buyer-questions.md) may be absent —
+			// keep historical silent skip. ReferencesOnly (governed ProsePaths) must surface it.
+			if opts.RepoIgnore {
+				add(rep, Finding{
+					ID: "structure:surface-absent:" + filepath.ToSlash(name), Category: "structure",
+					State: StateUnconfirmed, Cause: CauseProducer,
+					Detail: "Governed triage surface absent or unreadable: " + fence(filepath.ToSlash(name)),
+				})
+			}
 			continue
 		}
 		if truncated {
@@ -523,6 +574,9 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 				Detail: name + " exceeded size cap while extracting references",
 			})
 			continue
+		}
+		if opts.Closure != nil {
+			opts.Closure.add(filepath.ToSlash(name))
 		}
 		text := string(data)
 
@@ -594,10 +648,13 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 					continue
 				}
 				seen[key] = struct{}{}
-				st, detail, cause := resolveBundleAnchor(root, identity, bundleFiles)
+				st, detail, cause, hit := resolveBundleAnchor(root, identity, bundleFiles)
+				if st == StateConfirmed && hit != "" && opts.Closure != nil {
+					opts.Closure.add(hit)
+				}
 				add(rep, Finding{
 					ID: key, Category: "reference", State: st, Cause: cause,
-					Detail: referenceKindDetail("in-bundle-or-repo", detail+" (from "+name+")"),
+					Detail: referenceKindDetail(kindLabel, detail+" (from "+name+")"),
 				})
 			}
 		}
@@ -786,7 +843,7 @@ func readCapped(root, rel string, budget *readBudget) (data []byte, truncated bo
 	return data, false, nil
 }
 
-func walkBundleIndex(root string) (map[string]struct{}, []string, []Finding) {
+func walkBundleIndex(root string, repoIgnore bool) (map[string]struct{}, []string, []Finding) {
 	files := map[string]struct{}{}
 	var relPaths []string
 	var findings []Finding
@@ -799,12 +856,22 @@ func walkBundleIndex(root string) (map[string]struct{}, []string, []Finding) {
 		if lerr != nil {
 			return nil
 		}
+		rel, rerr := filepath.Rel(root, path)
+		if rerr != nil {
+			return nil
+		}
+		slash := filepath.ToSlash(rel)
+		if slash == "." {
+			slash = ""
+		}
+		if st.IsDir() && repoIgnore && slash != "" && shouldSkipRepoDir(slash) {
+			return filepath.SkipDir
+		}
 		if st.Mode()&os.ModeSymlink != 0 {
-			rel, _ := filepath.Rel(root, path)
 			findings = append(findings, Finding{
-				ID: "structure:symlink:" + shortID(filepath.ToSlash(rel)),
+				ID: "structure:symlink:" + shortID(slash),
 				Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
-				Detail: "Symlink skipped under bundle: " + fence(filepath.ToSlash(rel)),
+				Detail: "Symlink skipped under bundle: " + fence(slash),
 			})
 			if st.IsDir() || (info != nil && info.IsDir()) {
 				return filepath.SkipDir
@@ -817,11 +884,6 @@ func walkBundleIndex(root string) (map[string]struct{}, []string, []Finding) {
 		if !st.Mode().IsRegular() {
 			return nil
 		}
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return nil
-		}
-		slash := filepath.ToSlash(rel)
 		if _, _, jerr := pathjail.Join(root, slash); jerr != nil {
 			findings = append(findings, Finding{
 				ID: "structure:jail:" + shortID(slash),
@@ -839,11 +901,132 @@ func walkBundleIndex(root string) (map[string]struct{}, []string, []Finding) {
 	return files, relPaths, findings
 }
 
+// shouldSkipRepoDir reports whether a directory (slash-relative) must be skipped
+// in ReferencesOnly walks. Fixed published list — no .gitignore parser.
+func shouldSkipRepoDir(relSlash string) bool {
+	relSlash = filepath.ToSlash(strings.TrimSpace(relSlash))
+	relSlash = strings.TrimPrefix(relSlash, "./")
+	if relSlash == "" {
+		return false
+	}
+	if relSlash == ".git" || strings.HasPrefix(relSlash, ".git/") {
+		return true
+	}
+	if relSlash == "review-pack" || strings.HasPrefix(relSlash, "review-pack/") {
+		return true
+	}
+	base := filepath.Base(relSlash)
+	switch base {
+	case ".git", "review-pack", "node_modules", "vendor", "dist", "build", "target", ".venv":
+		return true
+	}
+	if paths.IsCacheRel(relSlash) || paths.IsEvidenceRel(relSlash) || paths.IsGraphRel(relSlash) {
+		return true
+	}
+	// Entering a dual-path family mid-tree (e.g. .github/curbpack/cache as a dir node).
+	for _, prefix := range []string{
+		paths.CacheRel, paths.LegacyCacheRel,
+		paths.EvidenceRel, paths.LegacyEvidenceRel,
+		paths.GraphRel, paths.LegacyGraphRel,
+	} {
+		if relSlash == prefix || strings.HasPrefix(relSlash, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+type refWalkOpts struct {
+	RepoIgnore bool
+	KindLabel  string
+	Closure    *closureSet
+}
+
+type closureSet struct {
+	paths map[string]struct{}
+}
+
+func newClosureSet() *closureSet {
+	return &closureSet{paths: map[string]struct{}{}}
+}
+
+func (c *closureSet) add(rel string) {
+	if c == nil {
+		return
+	}
+	rel = filepath.ToSlash(strings.TrimSpace(rel))
+	rel = strings.TrimPrefix(rel, "./")
+	if rel == "" || rel == "." {
+		return
+	}
+	c.paths[rel] = struct{}{}
+}
+
+func (c *closureSet) sorted() []string {
+	if c == nil || len(c.paths) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(c.paths))
+	for p := range c.paths {
+		out = append(out, p)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// computeClosureDigest hashes the referenced closure (surfaces read + resolved path hits).
+// Same refuse-oversize ceiling as computeBundleDigest — never truncate.
+func computeClosureDigest(root string, closure *closureSet) (digest string, oversize bool) {
+	relPaths := closure.sorted()
+	var lstatSum int64
+	for _, rel := range relPaths {
+		full, _, err := pathjail.Join(root, rel)
+		if err != nil {
+			continue
+		}
+		st, err := os.Lstat(full)
+		if err != nil || !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
+			continue
+		}
+		lstatSum += st.Size()
+		if lstatSum > maxBundleDigestBytes {
+			return "", true
+		}
+	}
+
+	h := sha256.New()
+	var streamed int64
+	for _, rel := range relPaths {
+		full, _, err := pathjail.Join(root, rel)
+		if err != nil {
+			continue
+		}
+		st, err := os.Lstat(full)
+		if err != nil || st.Mode()&os.ModeSymlink != 0 || !st.Mode().IsRegular() {
+			continue
+		}
+		if streamed+st.Size() > maxBundleDigestBytes {
+			return "", true
+		}
+		fileHash, n, err := hashFileStreaming(full)
+		if err != nil {
+			continue
+		}
+		streamed += n
+		if streamed > maxBundleDigestBytes {
+			return "", true
+		}
+		ir.WriteLenPrefixed(h, rel)
+		ir.WriteLenPrefixed(h, fileHash)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), false
+}
+
 // computeBundleDigest streams full file contents under maxBundleDigestBytes.
 // On oversize: returns ("", true) — never a partial hash. Uses ir.WriteLenPrefixed
 // (attest kept private: frozen capsule surface; ir is already the digest package).
 func computeBundleDigest(root string) (digest string, oversize bool) {
-	_, relPaths, _ := walkBundleIndex(root)
+	_, relPaths, _ := walkBundleIndex(root, false)
 	var lstatSum int64
 	for _, rel := range relPaths {
 		full, _, err := pathjail.Join(root, rel)

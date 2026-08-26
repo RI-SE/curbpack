@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -48,29 +49,57 @@ func ClassifyReference(token string) RefKind {
 // Identity rule: finding identity is the cleaned relative path as cited.
 // Basename fallback affects resolution only — never identity — so docs/x.md
 // and x.md remain two keys even if both resolve to the same file.
-func resolveBundleAnchor(bundleRoot, cand string, bundleFiles map[string]struct{}) (State, string, Cause) {
+func resolveBundleAnchor(bundleRoot, cand string, bundleFiles map[string]struct{}) (State, string, Cause, string) {
 	cand = filepath.ToSlash(strings.TrimSpace(cand))
 	if cand == "" {
-		return StateUnconfirmed, "empty path", CauseExtractor
+		return StateUnconfirmed, "empty path", CauseExtractor, ""
 	}
 	if _, ok := bundleFiles[cand]; ok {
-		return StateConfirmed, "in-bundle path: " + cand, ""
+		return StateConfirmed, "in-bundle path: " + cand, "", cand
 	}
 	base := filepath.Base(cand)
 	if _, ok := bundleFiles[base]; ok {
-		// Resolution hit via basename — identity remains cand.
-		return StateConfirmed, "in-bundle basename: " + cand + " → " + base, ""
+		// Resolution hit via basename — identity remains cand; closure uses the hit file.
+		hit := cand
+		if abs, err := jailJoin(bundleRoot, cand); err != nil || fileMissing(abs) {
+			// Basename-only hit: prefer the indexed relative path when cand itself is absent.
+			if relHit := findIndexedRel(bundleFiles, base); relHit != "" {
+				hit = relHit
+			} else {
+				hit = base
+			}
+		}
+		return StateConfirmed, "in-bundle basename: " + cand + " → " + base, "", hit
 	}
 	abs, err := jailJoin(bundleRoot, cand)
 	if err == nil {
 		if st, err := os.Lstat(abs); err == nil && st.Mode()&os.ModeSymlink == 0 && !st.IsDir() {
-			return StateConfirmed, "in-bundle relative path: " + cand, ""
+			return StateConfirmed, "in-bundle relative path: " + cand, "", cand
 		}
 	}
 	if looksLikeRepoPath(cand) {
-		return StateUnconfirmed, "repo-shaped path not in bundle: " + cand, CauseGenuine
+		return StateUnconfirmed, "repo-shaped path not in bundle: " + cand, CauseGenuine, ""
 	}
-	return StateUnconfirmed, "unresolved path: " + cand, CauseExtractor
+	return StateUnconfirmed, "unresolved path: " + cand, CauseExtractor, ""
+}
+
+func fileMissing(abs string) bool {
+	_, err := os.Lstat(abs)
+	return err != nil
+}
+
+func findIndexedRel(bundleFiles map[string]struct{}, base string) string {
+	var hits []string
+	for p := range bundleFiles {
+		if strings.Contains(p, "/") && filepath.Base(p) == base {
+			hits = append(hits, p)
+		}
+	}
+	sort.Strings(hits)
+	if len(hits) == 0 {
+		return ""
+	}
+	return hits[0]
 }
 
 func looksLikeRepoPath(s string) bool {
