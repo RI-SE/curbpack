@@ -28,7 +28,8 @@ type Options struct {
 	RepoRoot          string
 	PackIDs           []string
 	OutDir            string
-	AllowFailingGates bool // if false, non-zero exit when gates fail (after writing review pack)
+	AllowFailingGates bool             // if false, non-zero exit when gates fail (after writing review pack)
+	Result            *validate.Result // when set, skip validate.Run (share threads one evaluation)
 }
 
 // Prepare writes the review pack: Annex VII drafts (if missing), three-layer reports, buyer HTML.
@@ -47,11 +48,21 @@ func Prepare(opts Options) error {
 		return err
 	}
 
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: opts.PackIDs, Quiet: true})
-	if err != nil {
-		return err
+	var res validate.Result
+	var err error
+	if opts.Result != nil {
+		res = *opts.Result
+	} else {
+		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: opts.PackIDs, Quiet: true})
+		if err != nil {
+			return err
+		}
 	}
 
+	return prepareWithResult(root, out, opts, res)
+}
+
+func prepareWithResult(root, out string, opts Options, res validate.Result) error {
 	var prepErrs []error
 	record := func(err error) {
 		if err != nil {

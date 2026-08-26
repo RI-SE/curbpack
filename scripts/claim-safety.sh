@@ -195,6 +195,14 @@ fi
 )
 scan_both "share-bundle" "$TMP/share-bundle.out" || FAIL=1
 scan_brand "share-bundle" "$TMP/share-bundle.out" || FAIL=1
+if [[ -f "$FIX/review-pack/buyer-questions.md" ]]; then
+  scan_both "buyer-questions" "$FIX/review-pack/buyer-questions.md" || FAIL=1
+  scan_brand "buyer-questions" "$FIX/review-pack/buyer-questions.md" || FAIL=1
+fi
+if [[ -f "$FIX/.github/curbpack/cache/buyer-questions.md" ]]; then
+  scan_both "buyer-questions-cache" "$FIX/.github/curbpack/cache/buyer-questions.md" || FAIL=1
+  scan_brand "buyer-questions-cache" "$FIX/.github/curbpack/cache/buyer-questions.md" || FAIL=1
+fi
 if [[ -f "$FIX/review-pack/evidence-bundle.html" ]]; then
   if ! grep -q 'curbpack-bundle-schema:1' "$FIX/review-pack/evidence-bundle.html"; then
     echo "CLAIM-SAFETY FAIL [bundle]: missing curbpack-bundle-schema marker" >&2

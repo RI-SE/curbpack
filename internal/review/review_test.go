@@ -506,6 +506,9 @@ func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
 
 func mustWrite(t *testing.T, path string, data []byte) {
 	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -531,7 +534,7 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 	if review.MethodID != "curbpack-review-method" {
 		t.Fatalf("MethodID=%q", review.MethodID)
 	}
-	if review.MethodVersion != "1.1.1" {
+	if review.MethodVersion != "1.2.0" {
 		t.Fatalf("MethodVersion=%q", review.MethodVersion)
 	}
 	root := repoRoot(t)
@@ -561,5 +564,87 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 	// Prior method doc retained.
 	if _, err := os.Stat(filepath.Join(root, "docs", "method", "review-method-1.0.0.md")); err != nil {
 		t.Fatalf("1.0.0 method doc must be retained: %v", err)
+	}
+}
+
+func TestSubjectCommitFromBundlePayload(t *testing.T) {
+	dir := t.TempDir()
+	payload := ir.GateFailurePayload{
+		SchemaVersion:  "1",
+		PackID:         "house-policy",
+		ReadinessScore: 80,
+		ConcurrencyControl: ir.ConcurrencyControl{
+			ExpectedParentCommitSHA: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+		},
+	}
+	raw, _ := json.MarshalIndent(payload, "", "  ")
+	mustWrite(t, filepath.Join(dir, "01-gate-failures.json"), append(raw, '\n'))
+	mustWrite(t, filepath.Join(dir, "02-action-report.md"), []byte("ok\n"))
+	mustWrite(t, filepath.Join(dir, "03-executive-summary.md"), []byte("ok\n"))
+	digest := ir.ComputeResultDigest(payload)
+	mustWrite(t, filepath.Join(dir, "buyer-onepager.html"), []byte(`<!-- curbpack-onepager-fp:aaaaaaaaaaaaaaaa -->
+<dl class="prov"><dt>Rule packs</dt><dd>house-policy</dd>
+<dt>result_digest</dt><dd>`+digest[:12]+`…</dd></dl>`))
+
+	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: ioDiscard{}, JSONOut: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SubjectCommit != "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" {
+		t.Fatalf("SubjectCommit=%q", rep.SubjectCommit)
+	}
+}
+
+func TestSubjectCommitFromOptionsInRepoMode(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "docs", "annex-vii", "risk_assessment.md"), []byte("risk\n"))
+	rep, err := review.Run(review.Options{
+		BundleRoot:     dir,
+		Writer:         ioDiscard{},
+		ReferencesOnly: true,
+		TriageSurfaces: []string{"docs/annex-vii/risk_assessment.md"},
+		SubjectCommit:  "repo-head-commit-sha",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SubjectCommit != "repo-head-commit-sha" {
+		t.Fatalf("SubjectCommit=%q", rep.SubjectCommit)
+	}
+	if rep.SubjectStateHash != "" {
+		t.Fatalf("repo mode SubjectStateHash must be empty, got %q", rep.SubjectStateHash)
+	}
+}
+
+func TestSubjectFieldsEmptyWhenAbsent(t *testing.T) {
+	dir := writeMinimalConsistent(t)
+	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: ioDiscard{}, JSONOut: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SubjectCommit != "" || rep.SubjectStateHash != "" {
+		t.Fatalf("want empty subject fields, got commit=%q hash=%q", rep.SubjectCommit, rep.SubjectStateHash)
+	}
+}
+
+func TestSubjectStateHashFromBundlePointer(t *testing.T) {
+	dir := t.TempDir()
+	payload := ir.GateFailurePayload{SchemaVersion: "1", PackID: "house-policy", ReadinessScore: 80}
+	raw, _ := json.MarshalIndent(payload, "", "  ")
+	mustWrite(t, filepath.Join(dir, "01-gate-failures.json"), append(raw, '\n'))
+	mustWrite(t, filepath.Join(dir, "02-action-report.md"), []byte("ok\n"))
+	mustWrite(t, filepath.Join(dir, "03-executive-summary.md"), []byte("ok\n"))
+	digest := ir.ComputeResultDigest(payload)
+	mustWrite(t, filepath.Join(dir, "buyer-onepager.html"), []byte(`<!-- curbpack-onepager-fp:bbbbbbbbbbbbbbbb -->
+<dl class="prov"><dt>Rule packs</dt><dd>house-policy</dd>
+<dt>result_digest</dt><dd>`+digest[:12]+`…</dd></dl>`))
+	mustWrite(t, filepath.Join(dir, "hpurl-pointer.json"), []byte(`{"state_hash":"state-from-pointer","commit_sha":"abc"}`+"\n"))
+
+	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: ioDiscard{}, JSONOut: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.SubjectStateHash != "state-from-pointer" {
+		t.Fatalf("SubjectStateHash=%q", rep.SubjectStateHash)
 	}
 }

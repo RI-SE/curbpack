@@ -22,6 +22,9 @@ type BuyerQuestion struct {
 	ArtifactPath    string `json:"artifact_path"`
 	AssuranceClass  string `json:"assurance_class"`
 	RemediationHint string `json:"remediation_hint"`
+	Answered        bool   `json:"answered"`
+	Evidence        string `json:"evidence,omitempty"`
+	VerifiedAt      string `json:"verified_at,omitempty"`
 }
 
 // BuyerQuestionsReport is Markdown+JSON checklist export (claim-safe).
@@ -32,6 +35,8 @@ type BuyerQuestionsReport struct {
 	AssuranceClass    string          `json:"assurance_class"`
 	AttestationStatus string          `json:"attestation_status"`
 	Questions         []BuyerQuestion `json:"questions"`
+	SkippedRules      int             `json:"skipped_rules,omitempty"`
+	AnswersSuppressed bool            `json:"answers_suppressed,omitempty"`
 }
 
 // CollectBuyerQuestions builds the same checklist rows WriteBuyerQuestions writes,
@@ -47,12 +52,16 @@ func CollectBuyerQuestions(root string, packIDs []string, res validate.Result) (
 	}
 	failRem := map[string]string{}
 	failPath := map[string]string{}
+	failed := map[string]struct{}{}
 	for _, f := range res.Payload.Failures {
+		failed[f.GateID] = struct{}{}
 		failRem[f.GateID] = f.Remediation.ActionRequired
 		if p := strings.TrimSpace(f.ASTCoordinates.TargetFile); p != "" {
 			failPath[f.GateID] = p
 		}
 	}
+	suppressAnswers := res.SkippedRules > 0
+	verifiedAt := strings.TrimSpace(res.Payload.ConcurrencyControl.ExpectedParentCommitSHA)
 	assurance := strings.TrimSpace(composed.AssuranceClass)
 	if assurance == "" {
 		assurance = buyerQuestionsAssuranceClass
@@ -70,14 +79,22 @@ func CollectBuyerQuestions(root string, packIDs []string, res validate.Result) (
 		if h, ok := failRem[r.ID]; ok && strings.TrimSpace(h) != "" {
 			hint = h
 		}
-		questions = append(questions, BuyerQuestion{
+		q := BuyerQuestion{
 			GateID:          r.ID,
 			Severity:        r.Severity,
 			HumanQuestion:   humanQuestionForRule(r),
 			ArtifactPath:    path,
 			AssuranceClass:  assurance,
 			RemediationHint: hint,
-		})
+		}
+		if !suppressAnswers {
+			if _, isFailed := failed[r.ID]; !isFailed {
+				q.Answered = true
+				q.Evidence = path
+				q.VerifiedAt = verifiedAt
+			}
+		}
+		questions = append(questions, q)
 	}
 	return questions, nil
 }
@@ -102,19 +119,24 @@ func PackPlainNames(packIDCSV string) string {
 
 // BuildBuyerQuestionsReport runs pack gates and assembles the checklist report (no filesystem writes).
 func BuildBuyerQuestionsReport(root string, packIDs []string) (BuyerQuestionsReport, error) {
-	return buildBuyerQuestionsReport(root, packIDs, false)
+	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
+	if err != nil {
+		return BuyerQuestionsReport{}, err
+	}
+	return BuildBuyerQuestionsReportFromResult(root, packIDs, res)
 }
 
 // BuildBuyerQuestionsReportReadOnly is like BuildBuyerQuestionsReport but does not write cache under .github/.
 func BuildBuyerQuestionsReportReadOnly(root string, packIDs []string) (BuyerQuestionsReport, error) {
-	return buildBuyerQuestionsReport(root, packIDs, true)
-}
-
-func buildBuyerQuestionsReport(root string, packIDs []string, readOnly bool) (BuyerQuestionsReport, error) {
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true, ReadOnly: readOnly})
+	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true, ReadOnly: true})
 	if err != nil {
 		return BuyerQuestionsReport{}, err
 	}
+	return BuildBuyerQuestionsReportFromResult(root, packIDs, res)
+}
+
+// BuildBuyerQuestionsReportFromResult assembles the checklist from a pre-built validate.Result.
+func BuildBuyerQuestionsReportFromResult(root string, packIDs []string, res validate.Result) (BuyerQuestionsReport, error) {
 	questions, err := CollectBuyerQuestions(root, packIDs, res)
 	if err != nil {
 		return BuyerQuestionsReport{}, err
@@ -131,14 +153,19 @@ func buildBuyerQuestionsReport(root string, packIDs []string, readOnly bool) (Bu
 	if assurance == "" {
 		assurance = buyerQuestionsAssuranceClass
 	}
-	return BuyerQuestionsReport{
+	report := BuyerQuestionsReport{
 		SchemaVersion:     "1",
 		Note:              "Local pack gates prepare evidence for human review. Not CE / not notified-body. Not a conformity assessment.",
 		PackID:            composed.ID,
 		AssuranceClass:    assurance,
 		AttestationStatus: attestationStatus(root),
 		Questions:         questions,
-	}, nil
+	}
+	if res.SkippedRules > 0 {
+		report.SkippedRules = res.SkippedRules
+		report.AnswersSuppressed = true
+	}
+	return report, nil
 }
 
 // WriteBuyerQuestions emits buyer-questions.md + .json under cache (or outPath stem).
@@ -147,6 +174,19 @@ func WriteBuyerQuestions(root string, packIDs []string, outPath string) (string,
 	if err != nil {
 		return "", 0, err
 	}
+	return writeBuyerQuestionsReport(root, packIDs, outPath, report)
+}
+
+// WriteBuyerQuestionsFromResult writes buyer-questions from a pre-built validate.Result.
+func WriteBuyerQuestionsFromResult(root string, packIDs []string, outPath string, res validate.Result) (string, int, error) {
+	report, err := BuildBuyerQuestionsReportFromResult(root, packIDs, res)
+	if err != nil {
+		return "", 0, err
+	}
+	return writeBuyerQuestionsReport(root, packIDs, outPath, report)
+}
+
+func writeBuyerQuestionsReport(root string, packIDs []string, outPath string, report BuyerQuestionsReport) (string, int, error) {
 	mdPath, jsonPath := buyerQuestionsPaths(root, outPath)
 	if err := writeBuyerQuestionsFiles(report, mdPath, jsonPath); err != nil {
 		return "", 0, err
@@ -243,10 +283,52 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 	fmt.Fprintf(&b, "- **Packs:** %s\n", report.PackID)
 	fmt.Fprintf(&b, "- **Assurance class:** `%s`\n", report.AssuranceClass)
 	fmt.Fprintf(&b, "- **Attestation status:** `%s`\n\n", report.AttestationStatus)
+
+	if report.AnswersSuppressed {
+		writeChecklistTable(&b, report.Questions)
+		fmt.Fprintf(&b, "\nAnswers not emitted: %d rules skipped (diff mode). Run a full check to produce answers.\n\n", report.SkippedRules)
+		return b.String()
+	}
+
+	b.WriteString("> Answer: Yes means the structural check passed at Verified at — not conformity, CE, or notified-body approval.\n\n")
+
+	var answered, unanswered []BuyerQuestion
+	for _, q := range report.Questions {
+		if q.Answered {
+			answered = append(answered, q)
+		} else {
+			unanswered = append(unanswered, q)
+		}
+	}
+
+	if len(answered) > 0 {
+		b.WriteString("## Answered (structural check passed)\n\n")
+		b.WriteString("| Question | Answer | Evidence | Verified at |\n")
+		b.WriteString("|---|---|---|---|\n")
+		for _, q := range answered {
+			fmt.Fprintf(&b, "| %s | Yes | %s | %s |\n",
+				mdCell(q.HumanQuestion),
+				mdCell(q.Evidence),
+				mdCell(q.VerifiedAt),
+			)
+		}
+		b.WriteString("\n")
+	}
+
+	if len(unanswered) > 0 {
+		b.WriteString("## Not yet evidenced (needs a person or a missing artifact)\n\n")
+		writeChecklistTable(&b, unanswered)
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+func writeChecklistTable(b *strings.Builder, questions []BuyerQuestion) {
 	b.WriteString("| gate_id | severity | human_question | artifact_path | assurance_class | remediation_hint |\n")
 	b.WriteString("|---|---|---|---|---|---|\n")
-	for _, q := range report.Questions {
-		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s |\n",
+	for _, q := range questions {
+		fmt.Fprintf(b, "| %s | %s | %s | %s | %s | %s |\n",
 			mdCell(q.GateID),
 			mdCell(q.Severity),
 			mdCell(q.HumanQuestion),
@@ -255,8 +337,6 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 			mdCell(q.RemediationHint),
 		)
 	}
-	b.WriteString("\n")
-	return b.String()
 }
 
 // FormatSupplierEmailTemplate returns a claim-safe copy-paste email for suppliers.
