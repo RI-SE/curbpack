@@ -33,7 +33,7 @@ const (
 
 	// MethodID / MethodVersion identify the published review method document.
 	MethodID      = "curbpack-review-method"
-	MethodVersion = "1.1.0" // must equal docs/method/review-method-<v>.md — see W6/W10
+	MethodVersion = "1.1.1" // must equal docs/method/review-method-<v>.md — see W6/W10
 
 	maxFileBytes  = 8 << 20  // 8 MiB per file (parse reads)
 	maxTotalBytes = 64 << 20 // 64 MiB total across parse reads
@@ -101,6 +101,11 @@ type Report struct {
 	// DigestScope names what BundleDigest covers: "bundle" (full tree) or "closure"
 	// (surfaces read + resolved path targets). Never compare across scopes.
 	DigestScope string `json:"digest_scope"`
+	// TriageSurfaces is the sorted list of surfaces used for reference extraction
+	// (always from ResolveTriageSurfaces). Same comparability class as DigestScope.
+	TriageSurfaces []string `json:"triage_surfaces"`
+	// SurfacesDigest is sha256 over sorted length-prefixed surface path bytes.
+	SurfacesDigest string `json:"surfaces_digest"`
 }
 
 // Digest scope values recorded on every report.
@@ -188,6 +193,9 @@ func Run(opts Options) (Report, error) {
 	if opts.ReferencesOnly {
 		scope = DigestScopeClosure
 	}
+	surfaces := ResolveTriageSurfaces(opts)
+	sortedSurfaces := append([]string(nil), surfaces...)
+	sort.Strings(sortedSurfaces)
 	rep := Report{
 		Schema:            schemaVersion,
 		ClassifierVersion: ClassifierVersion,
@@ -196,6 +204,8 @@ func Run(opts Options) (Report, error) {
 		MethodID:          MethodID,
 		MethodVersion:     MethodVersion,
 		DigestScope:       scope,
+		TriageSurfaces:    sortedSurfaces,
+		SurfacesDigest:    computeSurfacesDigest(sortedSurfaces),
 	}
 
 	tallyRoot := root // absolute path for IO only
@@ -205,7 +215,7 @@ func Run(opts Options) (Report, error) {
 	if opts.ReferencesOnly {
 		kindLabel = "in-repo"
 		closure = newClosureSet()
-		checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts), refWalkOpts{
+		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
 			RepoIgnore: true,
 			KindLabel:  kindLabel,
 			Closure:    closure,
@@ -215,7 +225,7 @@ func Run(opts Options) (Report, error) {
 		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
 		prov := extractProvenance(tallyRoot, budget)
 		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
-		checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts), refWalkOpts{
+		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
 			KindLabel: kindLabel,
 		})
 	}
@@ -654,7 +664,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 					continue
 				}
 				seen[key] = struct{}{}
-				st, detail, cause, hit := resolveBundleAnchor(root, identity, bundleFiles)
+				st, detail, cause, hit := resolveBundleAnchor(root, identity, bundleFiles, opts.RepoIgnore)
 				if st == StateConfirmed && hit != "" && opts.Closure != nil {
 					opts.Closure.add(hit)
 				}
@@ -1107,6 +1117,15 @@ func computeRecordDigest(rep Report) string {
 	}
 	sum := sha256.Sum256(b)
 	return fmt.Sprintf("%x", sum[:])
+}
+
+// computeSurfacesDigest hashes the sorted triage surface list (length-prefixed paths).
+func computeSurfacesDigest(surfaces []string) string {
+	h := sha256.New()
+	for _, s := range surfaces {
+		ir.WriteLenPrefixed(h, s)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 // TriageMarkdown returns a pasteable case-ticket note.

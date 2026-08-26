@@ -16,6 +16,9 @@ curbpack check             # exit code authoritative
 # red: curbpack check --heal && curbpack ask .github/curbpack/cache/latest_failure.json --propose
 # green: curbpack ask-my-suppliers  # durable buyer checklist + pack draft
 # green (share): curbpack share → hand review-pack/; reviewers: curbpack review <received-pack> (offline triage)
+# optional in-repo triage (write-free; not a gate):
+#   curbpack review --repo [path] [--packs a,b] [--json] [--full] [--since <prior.json>]
+#   Surfaces = pack-governed ProsePaths only; cold default packs = house-policy; thin packs → few surfaces
 # optional pathway sidecar (never gates check):
 curbpack pathway status    # human next ask by default (--technical for phase path)
 # optional research sidecar (never gates check): curbpack research [--fetch] [--gate-id=…]
@@ -42,7 +45,7 @@ trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
 
 1. After doc/dep edits → run `curbpack check` (exit code authoritative).
 2. On red → `curbpack check --heal` then `curbpack ask … --propose` — never invent certification; never auto-attest.
-3. On green → optional `curbpack export --context-pack` / `--buyer-questions` for humans; reviewers receiving a share can run `curbpack review <received-pack>` offline (document triage — not confirm/attest).
+3. On green → optional `curbpack export --context-pack` / `--buyer-questions` for humans; reviewers receiving a share can run `curbpack review <received-pack>` offline (document triage — not confirm/attest). Optional `curbpack review --repo` triages pack-governed docs in-tree (same method; `--packs` overrides; cold default `house-policy`; writes nothing).
 4. Prefer ContextPack + dual-rep IR over guessing cache files.
 5. Pin Action / examples at **`@v0.5.2`**. Never claim CE / notified-body approval.
 6. **Pathway:** call `curbpack pathway status|suggest|note` only — never forge `pathway-seed.json` or invent pack ids. Stop for human `confirm-*` and `attest`. Prefer ContextPack pathway next + RKG after confirm-packs; post-attest next is local proof verify (human). MCP never confirms/attests. Seed is not a gate input.

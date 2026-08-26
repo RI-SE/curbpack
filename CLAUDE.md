@@ -20,6 +20,7 @@ curbpack check
 # before confirm-prose: curbpack research --cite-check <draft.md>
 # green (optional share): curbpack export --context-pack
 # reviewers (offline): curbpack review <received-pack>  # document triage — not confirm/attest
+# optional in-repo: curbpack review --repo [path] [--packs a,b]  # ProsePaths; cold default house-policy
 ```
 
 ## Human-only acts

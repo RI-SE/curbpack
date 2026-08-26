@@ -82,6 +82,8 @@ curbpack export --lay-of-land
 curbpack export --buyer-questions
 curbpack export --context-pack   # one washed assistant artifact (prefer this)
 curbpack share [--bundle] [--reveal]  # Attach: abs paths; --reveal opens Explorer/Finder
+curbpack review <received-pack>  # offline triage of a share (document only)
+curbpack review --repo [path] [--packs a,b]  # in-repo governed-doc triage (ProsePaths; cold default house-policy; write-free)
 curbpack drift [--json]          # evidence checklist — exit 0 always (not a compliance meter)
 curbpack pathway status          # one next ask (human default; --technical for phase)
 curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes
