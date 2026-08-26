@@ -47,8 +47,14 @@ type Result struct {
 	ActionReport string
 }
 
+// RunInvocationHook, when non-nil, is invoked at the start of each Run (tests only).
+var RunInvocationHook func()
+
 // Run evaluates embedded pack rules against the repo tree.
 func Run(opts Options) (Result, error) {
+	if RunInvocationHook != nil {
+		RunInvocationHook()
+	}
 	prevFresh := freshStubPathsEval
 	freshStubPathsEval = opts.FreshStubPaths
 	defer func() { freshStubPathsEval = prevFresh }()

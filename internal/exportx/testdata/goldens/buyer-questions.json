@@ -11,7 +11,10 @@
       "human_question": "For human review: SECURITY.md missing, too short, or lacking required header?",
       "artifact_path": "SECURITY.md",
       "assurance_class": "structural_draft",
-      "remediation_hint": "Add SECURITY.md with vulnerability reporting and response expectations."
+      "remediation_hint": "Add SECURITY.md with vulnerability reporting and response expectations.",
+      "answered": true,
+      "evidence": "SECURITY.md",
+      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
     {
       "gate_id": "HOUSE-SECURITY-TXT",
@@ -19,7 +22,10 @@
       "human_question": "For human review: security.txt missing under .well-known/ (RFC 9116 style)?",
       "artifact_path": ".well-known/security.txt",
       "assurance_class": "structural_draft",
-      "remediation_hint": "Create .well-known/security.txt with Contact and Expires fields."
+      "remediation_hint": "Create .well-known/security.txt with Contact and Expires fields.",
+      "answered": true,
+      "evidence": ".well-known/security.txt",
+      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
     {
       "gate_id": "HOUSE-DEP-AXIOS-PIN",
@@ -27,7 +33,9 @@
       "human_question": "For human review: House policy bans vulnerable axios@1.6.0 pins in package.json?",
       "artifact_path": "",
       "assurance_class": "structural_draft",
-      "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile."
+      "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile.",
+      "answered": true,
+      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
     {
       "gate_id": "HOUSE-SECRET-PATHS",
@@ -35,7 +43,10 @@
       "human_question": "For human review: Likely secrets or private key material found in tracked policy docs or common agent secret paths?",
       "artifact_path": "README.md, SECURITY.md, .well-known/security.txt, .env, .env.local, credentials.json, service-account.json, id_rsa",
       "assurance_class": "structural_draft",
-      "remediation_hint": "Remove credentials from docs and agent-oops paths; rotate any exposed secrets; use a secret manager."
+      "remediation_hint": "Remove credentials from docs and agent-oops paths; rotate any exposed secrets; use a secret manager.",
+      "answered": true,
+      "evidence": "README.md, SECURITY.md, .well-known/security.txt, .env, .env.local, credentials.json, service-account.json, id_rsa",
+      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
     {
       "gate_id": "HOUSE-ANTI-PLACEHOLDER",
@@ -43,7 +54,10 @@
       "human_question": "For human review: House policy docs contain placeholder / boilerplate text?",
       "artifact_path": "SECURITY.md, .well-known/security.txt",
       "assurance_class": "structural_draft",
-      "remediation_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+      "remediation_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details.",
+      "answered": true,
+      "evidence": "SECURITY.md, .well-known/security.txt",
+      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     }
   ]
 }

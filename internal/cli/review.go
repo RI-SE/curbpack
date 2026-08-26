@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/attest"
 	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/review"
 	"github.com/afelin/curbpack/internal/tty"
@@ -123,6 +126,7 @@ func cmdReview(args []string) error {
 	if err != nil {
 		return usageErr(err.Error())
 	}
+	printReviewHPURLFragment(paths[0], rep, false)
 	if review.HasContradictions(rep) {
 		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "Contradicted findings present — see triage note above."))
 		return gatesErr()
@@ -166,6 +170,11 @@ func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, since
 				len(surfaces), strings.Join(packIDs, ","))))
 	}
 
+	var subjectCommit string
+	if head, err := gitutil.HeadSHA(root); err == nil {
+		subjectCommit = head
+	}
+
 	rep, err := review.Run(review.Options{
 		BundleRoot:     root,
 		Writer:         os.Stdout,
@@ -174,10 +183,12 @@ func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, since
 		Prior:          prior,
 		ReferencesOnly: true,
 		TriageSurfaces: surfaces,
+		SubjectCommit:  subjectCommit,
 	})
 	if err != nil {
 		return usageErr(err.Error())
 	}
+	printReviewHPURLFragment(root, rep, true)
 	if review.HasContradictions(rep) {
 		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "Contradicted findings present — see triage note above."))
 		return gatesErr()
@@ -222,6 +233,52 @@ func loadPriorReport(path string) (review.Report, error) {
 		return review.Report{}, fmt.Errorf("review --since: schema mismatch: prior %q current %q", rep.Schema, review.SchemaVersion)
 	}
 	return rep, nil
+}
+
+// printReviewHPURLFragment renders the offline HPURL fragment on stderr (CLI only; not in Report JSON).
+func printReviewHPURLFragment(bundleRoot string, rep review.Report, repoMode bool) {
+	if rep.SubjectStateHash == "" || rep.SubjectCommit == "" {
+		return
+	}
+	sigHint := reviewSigHint(bundleRoot, rep, repoMode)
+	frag := fmt.Sprintf("#?h=%s&p=%s&s=%s",
+		url.QueryEscape(rep.SubjectStateHash),
+		url.QueryEscape(rep.SubjectCommit),
+		url.QueryEscape(sigHint),
+	)
+	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "HPURL fragment: "+frag))
+}
+
+func reviewSigHint(bundleRoot string, rep review.Report, repoMode bool) string {
+	if repoMode {
+		bind, _ := attest.LatestBind(bundleRoot)
+		if s := strings.TrimSpace(bind.SSHSignature); s != "" {
+			return truncateReviewSig(s)
+		}
+		return "unsigned"
+	}
+	ptrPath := filepath.Join(bundleRoot, "hpurl-pointer.json")
+	b, err := os.ReadFile(ptrPath)
+	if err != nil {
+		return "unsigned"
+	}
+	var ptr struct {
+		HPURL string `json:"hpurl"`
+	}
+	if json.Unmarshal(b, &ptr) == nil && strings.TrimSpace(ptr.HPURL) != "" {
+		if parts, ok := attest.ParseHPURLFragment(ptr.HPURL); ok && strings.TrimSpace(parts.SigHint) != "" {
+			return parts.SigHint
+		}
+	}
+	return "unsigned"
+}
+
+func truncateReviewSig(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) > 32 {
+		return s[:32]
+	}
+	return s
 }
 
 type batchRow struct {

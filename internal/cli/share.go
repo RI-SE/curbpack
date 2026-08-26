@@ -52,7 +52,7 @@ func cmdShare(args []string) error {
 	}
 	printAttach(reviewCP)
 
-	bq, n, err := exportx.WriteBuyerQuestions(root, packIDs, "")
+	bq, n, err := exportx.WriteBuyerQuestionsFromResult(root, packIDs, "", res)
 	if err != nil {
 		return err
 	}
@@ -63,6 +63,12 @@ func cmdShare(args []string) error {
 	}
 	printAttach(reviewBQ)
 
+	if reviewHPURL, err := copyEvidenceHPURLPointerToReviewPack(root); err != nil {
+		return err
+	} else if reviewHPURL != "" {
+		printAttach(reviewHPURL)
+	}
+
 	var revealTarget string
 	prepared := false
 	onepager := filepath.Join(root, "review-pack", "buyer-onepager.html")
@@ -71,6 +77,7 @@ func cmdShare(args []string) error {
 			RepoRoot:          root,
 			PackIDs:           packIDs,
 			AllowFailingGates: true,
+			Result:            &res,
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "prepare-release: "+err.Error()))
 		} else {
@@ -144,6 +151,19 @@ func printAttach(path string) {
 		abs = path
 	}
 	fmt.Printf("Attach: %s\n", abs)
+}
+
+// copyEvidenceHPURLPointerToReviewPack copies attest hpurl-pointer.json into review-pack/
+// when present under .github/curbpack/evidence/. Absent file is not an error.
+func copyEvidenceHPURLPointerToReviewPack(root string) (string, error) {
+	src := filepath.Join(root, ".github", "curbpack", "evidence", "hpurl-pointer.json")
+	if _, err := os.Stat(src); err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return copyFileIntoReviewPack(root, src)
 }
 
 // copyShareArtifactToReviewPack copies a cache share artifact into review-pack/

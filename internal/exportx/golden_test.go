@@ -163,7 +163,22 @@ func TestGoldenBuyerQuestions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	compareGoldenBytes(t, "buyer-questions.json", got, assertBuyerQuestionsGoldenStruct)
+	golden := filepath.Join("testdata", "goldens", "buyer-questions.json")
+	if *updateGoldens {
+		if err := os.MkdirAll(filepath.Dir(golden), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(golden, got, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		t.Log("updated", golden)
+		return
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("missing golden %s (run with -update): %v", golden, err)
+	}
+	assertBuyerQuestionsGoldenStruct(t, got, want)
 }
 
 func assertBuyerQuestionsGoldenStruct(t *testing.T, got, want []byte) {
@@ -183,6 +198,16 @@ func assertBuyerQuestionsGoldenStruct(t *testing.T, got, want []byte) {
 	}
 	if len(gotReport.Questions) != len(wantReport.Questions) {
 		t.Fatalf("questions len got=%d want=%d", len(gotReport.Questions), len(wantReport.Questions))
+	}
+	for i := range gotReport.Questions {
+		gq, wq := gotReport.Questions[i], wantReport.Questions[i]
+		gq.VerifiedAt, wq.VerifiedAt = "", ""
+		if gq != wq {
+			t.Fatalf("question[%d] drift: got=%+v want=%+v", i, gq, wq)
+		}
+	}
+	if strings.TrimSpace(gotReport.Questions[0].VerifiedAt) == "" {
+		t.Fatal("verified_at must be populated from payload commit (non-empty)")
 	}
 }
 
