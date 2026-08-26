@@ -85,7 +85,7 @@ Frozen ops (unchanged): `validate_delta`, `get_latest_failure`, `graph_summary`,
 
 ## Review report (`curbpack review`)
 
-Offline document triage of a received curbpack-native review-pack. **Not** a product verdict or conformity assessment. No current MCP / `exportx` consumer — CLI-local assessor surface; treat JSON as the product contract for future intake.
+Offline document triage of a received curbpack-native review-pack **or** a repository tree (`review --repo`). **Not** a product verdict or conformity assessment. No current MCP / `exportx` consumer — CLI-local assessor surface; treat JSON as the product contract for future intake.
 
 | Contract | Rule |
 |----------|------|
@@ -95,12 +95,15 @@ Offline document triage of a received curbpack-native review-pack. **Not** a pro
 | Additive `cause` | Unconfirmed: `producer` \| `extractor` \| `genuine` \| `external`. Contradicted: `self_disagree` (digest/structure contradictions) |
 | Counters | Split unconfirmed/contradicted-by-cause fields; `dropped_count` (+ `dropped` under `--full`) |
 | Digests | Producer emits payload/file digests; bind disagreements appear as sibling `*_bind` keys — reader contradicts, never silently prefers bind |
-| Airlock | Redact-then-emit home-path/PEM in findings, then fail closed via `PacketLooksAirlocked` |
-| Exit | `1` if any contradicted (or `--batch` child unreadable/contradicted); usage → `2`. `--batch --full` / `--batch --json` → usage |
-| Method | `method_id` = `curbpack-review-method`; `method_version` equals the version of [`docs/method/review-method-<v>.md`](method/review-method-1.0.0.md) |
+| Airlock | Redact-then-emit home-path/PEM in findings (`detail`, `id`, `source`, `dropped`), then fail closed via `PacketLooksAirlocked` |
+| Exit | `1` if any contradicted (or `--batch` child unreadable/contradicted); usage → `2`. `--batch --full` / `--batch --json` / `--repo --batch` → usage |
+| Method | `method_id` = `curbpack-review-method`; `method_version` equals the version of [`docs/method/review-method-<v>.md`](method/review-method-1.1.0.md) |
 | `bundle_digest` | sha256 over sorted relative slash paths, each length-prefixed, each followed by the length-prefixed sha256 of the **full** file contents (streamed; not subject to the per-file parse cap). Symlinks and out-of-jail paths excluded. **Refuse-oversize ceiling** (64 MiB total): when Lstat size sum or streamed bytes would exceed the ceiling → contradicted `structure:bundle-size-cap`, `bundle_digest` left **empty** — never truncate, never partial hash |
+| `digest_scope` | Always emitted: `bundle` (full walked tree) or `closure` (surfaces read + resolved path targets). **Never compare digests across scopes** |
 | `record_digest` | sha256 over the canonical JSON record with `record_digest` **and `bundle_root`** empty. Digests are computed **after** airlock → tally → sortFindings (and after any size-cap finding re-tally/sort), immediately before emit. `bundle_root` is excluded because it is directory-name dependent |
 | `Finding.ID` | **Stable contract.** Shapes: `reference:path:<p>`, `reference:url:<short>`, `structure:<file>`, `digest:<key>`. Consumers may key on these; changes require a pin bump |
-| Reserved | An optional `edges` array is **reserved and not implemented**. Do not repurpose the name |
+| `source` | Document the reference was extracted from; present on reference edges; omitted (`omitempty`) on non-edges. Not baked into `Finding.ID` |
+| `ReferencesOnly` | When true: skip pack structure/load/digest checks; walk with fixed ignore list (`.git/`, cache+evidence+graph helpers + legacy, `review-pack/`, `node_modules`/`vendor`/`dist`/`build`/`target`/`.venv`); emit `digest_scope=closure`; missing governed surfaces → `structure:surface-absent:<path>`. No `.gitignore` parser |
+| Reserved | An optional `edges` array is **reserved and not implemented**. Do not repurpose the name. **Expires at method/product v1.2.0 if still unused** (delete the reservation rather than leave folklore) |
 
-See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md) · [Review method 1.0.0](method/review-method-1.0.0.md)
+See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md) · [Review method 1.1.0](method/review-method-1.1.0.md)

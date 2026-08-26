@@ -198,6 +198,19 @@ scan_brand "help" "$TMP/help.out" || FAIL=1
 "$BIN" review "$ROOT/testdata/sample-review-pack" >"$TMP/review.out" 2>&1 || true
 scan_text "review" "$TMP/review.out" || FAIL=1
 
+# Repository-mode capture (in-repo label + governed surfaces) — must stay claim-safe.
+"$BIN" review --repo "$ROOT" --json >"$TMP/review-repo.json" 2>"$TMP/review-repo.err" || true
+scan_text "review-repo" "$TMP/review-repo.json" || FAIL=1
+scan_text "review-repo-err" "$TMP/review-repo.err" || FAIL=1
+if ! grep -q '"digest_scope": "closure"' "$TMP/review-repo.json" 2>/dev/null; then
+  echo "CLAIM-SAFETY FAIL [review-repo]: expected digest_scope closure in --repo JSON" >&2
+  FAIL=1
+fi
+if ! grep -qi 'in-repo' "$TMP/review-repo.err"; then
+  echo "CLAIM-SAFETY FAIL [review-repo]: missing in-repo mode marker on stderr" >&2
+  FAIL=1
+fi
+
 # scan --badge: deny state assertions (grep-based; badge text is time-dependent).
 BADGE="$TMP/badge"
 mkdir -p "$BADGE"

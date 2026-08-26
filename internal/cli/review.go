@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/review"
 	"github.com/afelin/curbpack/internal/tty"
 )
@@ -17,6 +19,8 @@ func cmdReview(args []string) error {
 	jsonOut := false
 	full := false
 	batch := false
+	repoMode := false
+	repoPath := "."
 	sincePath := ""
 	var paths []string
 	for i := 0; i < len(args); i++ {
@@ -30,6 +34,12 @@ func cmdReview(args []string) error {
 			full = true
 		case a == "--batch":
 			batch = true
+		case a == "--repo":
+			repoMode = true
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				repoPath = args[i]
+			}
 		case a == "--since":
 			if i+1 >= len(args) {
 				return usageErr("review --since requires a path to a prior report JSON")
@@ -42,9 +52,18 @@ func cmdReview(args []string) error {
 			paths = append(paths, a)
 		}
 	}
+	if repoMode && batch {
+		return usageErr("review --repo does not combine with --batch")
+	}
+	if repoMode {
+		if len(paths) != 0 {
+			return usageErr("review --repo does not take a pack path argument (got " + strings.Join(paths, ", ") + ")")
+		}
+		return runReviewRepo(repoPath, jsonOut, full, sincePath)
+	}
 	if len(paths) == 0 {
 		commandUsage("review")
-		return usageErr("review requires a path to a received review-pack directory")
+		return usageErr("review requires a path to a received review-pack directory (or --repo)")
 	}
 	if batch {
 		if sincePath != "" {
@@ -82,6 +101,56 @@ func cmdReview(args []string) error {
 		JSONOut:    jsonOut,
 		Full:       full,
 		Prior:      prior,
+	})
+	if err != nil {
+		return usageErr(err.Error())
+	}
+	if review.HasContradictions(rep) {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "Contradicted findings present — see triage note above."))
+		return gatesErr()
+	}
+	return nil
+}
+
+func runReviewRepo(repoPath string, jsonOut, full bool, sincePath string) error {
+	root, err := filepath.Abs(filepath.Clean(strings.TrimSpace(repoPath)))
+	if err != nil {
+		return usageErr(fmt.Sprintf("review --repo: resolve path %q: %v", repoPath, err))
+	}
+	packIDs, err := config.ResolvePackIDs(root, nil)
+	if err != nil {
+		return usageErr(fmt.Sprintf("review --repo: resolve packs at %s: %v — fix .curbpack.json or review a received pack directory", root, err))
+	}
+	surfaces, err := pathway.ProsePaths(packIDs)
+	if err != nil {
+		return usageErr(fmt.Sprintf("review --repo: compose pack surfaces: %v — fix pack selection (`curbpack packs doctor`) or review a received pack directory", err))
+	}
+	if len(surfaces) == 0 {
+		return usageErr("review --repo: no governed documentation surfaces from packs — add annex_file/file_present/anti_placeholder rules or review a received pack directory")
+	}
+
+	var prior *review.Report
+	if sincePath != "" {
+		p, err := loadPriorReport(sincePath)
+		if err != nil {
+			return usageErr(err.Error())
+		}
+		prior = &p
+	}
+
+	if !jsonOut {
+		tty.PrintHeader("curbpack review --repo")
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline in-repo document triage — not a product verdict."))
+
+	rep, err := review.Run(review.Options{
+		BundleRoot:     root,
+		Writer:         os.Stdout,
+		JSONOut:        jsonOut,
+		Full:           full,
+		Prior:          prior,
+		ReferencesOnly: true,
+		TriageSurfaces: surfaces,
 	})
 	if err != nil {
 		return usageErr(err.Error())
