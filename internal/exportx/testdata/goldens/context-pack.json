@@ -4,6 +4,7 @@
   "pack_ids": [
     "house-policy"
   ],
+  "pack_versions": "house-policy@0.1.0",
   "readiness_score": 100,
   "ok": true,
   "failures": [],
