@@ -50,7 +50,9 @@ func cmdReview(args []string) error {
 		return usageErr("review accepts a single pack directory (use --batch for many)")
 	}
 
-	tty.PrintHeader("curbpack review")
+	if !jsonOut {
+		tty.PrintHeader("curbpack review")
+	}
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline document triage — not a product verdict."))
 
 	rep, err := review.Run(review.Options{
@@ -80,6 +82,7 @@ type batchRow struct {
 }
 
 func runReviewBatch(paths []string) error {
+	// --batch already refuses --json above; header stays on stdout (no JSON redirection case).
 	tty.PrintHeader("curbpack review --batch")
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline document triage — not a product verdict."))
 
