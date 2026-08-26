@@ -5,9 +5,31 @@
     "house-policy"
   ],
   "pack_versions": "house-policy@0.1.0",
-  "readiness_score": 100,
-  "ok": true,
-  "failures": [],
+  "readiness_score": 40,
+  "ok": false,
+  "failures": [
+    {
+      "gate_id": "HOUSE-DEP-AXIOS-PIN",
+      "severity": "critical",
+      "description": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)",
+      "target_file": "package.json",
+      "action_hint": "Upgrade axios to a patched release and refresh the lockfile."
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "target_file": "SECURITY.md",
+      "action_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "target_file": ".well-known/security.txt",
+      "action_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+    }
+  ],
   "instrument": {
     "deps_count": 0,
     "deps_fp": "e3b0c44298fc1c14",

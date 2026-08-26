@@ -97,5 +97,10 @@ Offline document triage of a received curbpack-native review-pack. **Not** a pro
 | Digests | Producer emits payload/file digests; bind disagreements appear as sibling `*_bind` keys — reader contradicts, never silently prefers bind |
 | Airlock | Redact-then-emit home-path/PEM in findings, then fail closed via `PacketLooksAirlocked` |
 | Exit | `1` if any contradicted (or `--batch` child unreadable/contradicted); usage → `2`. `--batch --full` / `--batch --json` → usage |
+| Method | `method_id` = `curbpack-review-method`; `method_version` equals the version of [`docs/method/review-method-<v>.md`](method/review-method-1.0.0.md) |
+| `bundle_digest` | sha256 over sorted relative slash paths, each length-prefixed, each followed by the length-prefixed sha256 of the **full** file contents (streamed; not subject to the per-file parse cap). Symlinks and out-of-jail paths excluded. **Refuse-oversize ceiling** (64 MiB total): when Lstat size sum or streamed bytes would exceed the ceiling → contradicted `structure:bundle-size-cap`, `bundle_digest` left **empty** — never truncate, never partial hash |
+| `record_digest` | sha256 over the canonical JSON record with `record_digest` **and `bundle_root`** empty. Digests are computed **after** airlock → tally → sortFindings (and after any size-cap finding re-tally/sort), immediately before emit. `bundle_root` is excluded because it is directory-name dependent |
+| `Finding.ID` | **Stable contract.** Shapes: `reference:path:<p>`, `reference:url:<short>`, `structure:<file>`, `digest:<key>`. Consumers may key on these; changes require a pin bump |
+| Reserved | An optional `edges` array is **reserved and not implemented**. Do not repurpose the name |
 
-See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md)
+See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md) · [Review method 1.0.0](method/review-method-1.0.0.md)

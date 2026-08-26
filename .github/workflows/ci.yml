@@ -230,6 +230,8 @@ jobs:
           "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy --hooks --skill --ide
           test -x .git/hooks/pre-commit
           grep -q 'curbpack check --heal' .git/hooks/pre-commit
+          # Fail-closed message (ASCII); -aF avoids locale/binary-file grep false negatives
+          grep -aF 'refusing commit' .git/hooks/pre-commit
           # LF-only hooks
           ! grep -q $'\r' .git/hooks/pre-commit
           test -f .cursor/skills/curbpack/SKILL.md
@@ -270,9 +272,14 @@ jobs:
           assert p.get("state_hash") and p["state_hash"] in p.get("hpurl","")
           print("hpurl pointer ok", p["state_hash"][:12])
           PY
-          # Hook dry-run: script is executable and references check
+          # Hook dry-run: still fail-closed after attest (dump on miss)
           head -n 5 .git/hooks/pre-commit
-          grep -q 'refusing commit' .git/hooks/pre-commit
+          grep -aF 'refusing commit' .git/hooks/pre-commit || {
+            echo "hook missing 'refusing commit' after attest:" >&2
+            wc -c .git/hooks/pre-commit >&2
+            cat -v .git/hooks/pre-commit >&2
+            exit 1
+          }
           H1=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')
           "$GITHUB_WORKSPACE/bin/curbpack" attest --allow-dirty >/dev/null
           H2=$(python3 -c 'import json;print(json.load(open(".github/curbpack/evidence/hpurl-pointer.json"))["state_hash"])')

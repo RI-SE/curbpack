@@ -18,9 +18,9 @@ trap 'rm -rf "$TMP"' EXIT
 
 # Combined deny patterns (positive certification theater).
 # Lines with claim-safe negation framing are filtered out in Python.
-DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|curbpack certifies|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|EU CRA Baseline|we are CRA compliant|CRA compliant|RISE[- ]approved|RISE[- ]certified|FRA[- ]approved|NCSC[- ]approved|agency[- ]endorsed'
+DENY_RE='we are (CE[- ])?certified|product is certified|officially certified|curbpack certifies|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|EU CRA Baseline|we are CRA compliant|CRA compliant|RISE[- ]approved|RISE[- ]certified|FRA[- ]approved|NCSC[- ]approved|agency[- ]endorsed|accredited (procedure|method|assessment)|designation[- ]ready|qualifies (you|your body) as a notified body|meets Article 39|Article 39 compliant|accreditation (granted|achieved)|proficiency[- ]tested|equivalent to a notified[- ]body (assessment|opinion)|recognised by (Swedac|a national accreditation body)'
 
-SAFE_RE='not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|replace a notified|notified-body approval|certification_claimed.: false|Certification claimed: \*\*no\*\*|not a certification product|Not a certification|informational|draft structure|not essential-requirements|structural_draft|structural (file/header )?gates|not conformity assessment|funder, not certifier|not product certifier|not (this product.s )?certifier'
+SAFE_RE='not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|replace a notified|notified-body approval|certification_claimed.: false|Certification claimed: \*\*no\*\*|not a certification product|Not a certification|informational|draft structure|not essential-requirements|structural_draft|structural (file/header )?gates|not conformity assessment|funder, not certifier|not product certifier|not (this product.s )?certifier|does not (make|render) (you|your body) a notified body|not accreditation|does not confer|Article 39 is a requirement on the body, not on this tool'
 
 scan_text() {
   local label="$1"
@@ -194,6 +194,9 @@ fi
 "$BIN" help >"$TMP/help.out" 2>&1 || true
 scan_text "help" "$TMP/help.out" || FAIL=1
 scan_brand "help" "$TMP/help.out" || FAIL=1
+
+"$BIN" review "$ROOT/testdata/sample-review-pack" >"$TMP/review.out" 2>&1 || true
+scan_text "review" "$TMP/review.out" || FAIL=1
 
 # scan --badge: deny state assertions (grep-based; badge text is time-dependent).
 BADGE="$TMP/badge"

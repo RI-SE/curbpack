@@ -1,0 +1,116 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "curbpack",
+          "informationUri": "https://github.com/RI-SE/curbpack",
+          "rules": [
+            {
+              "id": "HOUSE-ANTI-PLACEHOLDER",
+              "shortDescription": {
+                "text": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)"
+              }
+            },
+            {
+              "id": "HOUSE-DEP-AXIOS-PIN",
+              "shortDescription": {
+                "text": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "HOUSE-ANTI-PLACEHOLDER",
+          "level": "error",
+          "message": {
+            "text": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SECURITY.md"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "assurance_class": "structural_draft",
+            "certification_claimed": false,
+            "instrument_panel": true,
+            "note": "Structural evidence for human review — not a conformity assessment."
+          }
+        },
+        {
+          "ruleId": "HOUSE-ANTI-PLACEHOLDER",
+          "level": "error",
+          "message": {
+            "text": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".well-known/security.txt"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "assurance_class": "structural_draft",
+            "certification_claimed": false,
+            "instrument_panel": true,
+            "note": "Structural evidence for human review — not a conformity assessment."
+          }
+        },
+        {
+          "ruleId": "HOUSE-DEP-AXIOS-PIN",
+          "level": "error",
+          "message": {
+            "text": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "assurance_class": "structural_draft",
+            "certification_claimed": false,
+            "instrument_panel": true,
+            "note": "Structural evidence for human review — not a conformity assessment."
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "properties": {
+            "assurance_class": "structural_draft",
+            "certification_claimed": false,
+            "instrument_panel": true,
+            "note": "Structural evidence for human review — not a conformity assessment."
+          }
+        }
+      ]
+    }
+  ]
+}

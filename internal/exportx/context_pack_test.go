@@ -200,3 +200,30 @@ func TestWriteContextPack_SurfacesAgentIdentity(t *testing.T) {
 		t.Fatalf("md missing identity: %s", mdBytes)
 	}
 }
+
+func TestContextPackCarriesPackVersions(t *testing.T) {
+	t.Setenv("CURBPACK_SOCK", "")
+	t.Setenv("CYBERREADY_SOCK", "")
+	dir := t.TempDir()
+	mustRealGit(t, dir)
+	writeMinimalHouseFail(t, dir)
+
+	path, err := exportx.WriteContextPack(dir, []string{"medtech-iec62304"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pack exportx.ContextPack
+	if err := json.Unmarshal(data, &pack); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(pack.PackVersions, "cra-baseline@") {
+		t.Fatalf("pack_versions missing cra-baseline@: %q", pack.PackVersions)
+	}
+	if !strings.Contains(pack.PackVersions, "medtech-iec62304@") {
+		t.Fatalf("pack_versions missing medtech-iec62304@: %q", pack.PackVersions)
+	}
+}
