@@ -810,4 +810,3 @@ func cmdAttest(args []string) error {
 	})
 	return err
 }
-

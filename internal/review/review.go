@@ -79,25 +79,25 @@ type Finding struct {
 
 // Report is the offline review result (document triage only).
 type Report struct {
-	Schema                     string    `json:"schema"`
-	ClassifierVersion          string    `json:"classifier_version"`
-	BundleRoot                 string    `json:"bundle_root"`
-	Findings                   []Finding `json:"findings"`
-	ConfirmedCount             int       `json:"confirmed_count"`
-	UnconfirmedCount           int       `json:"unconfirmed_count"`
-	ContradictedCount          int       `json:"contradicted_count"`
-	UnconfirmedProducer        int       `json:"unconfirmed_producer"`
-	UnconfirmedExtractor       int       `json:"unconfirmed_extractor"`
-	UnconfirmedGenuine         int       `json:"unconfirmed_genuine"`
-	UnconfirmedExternal        int       `json:"unconfirmed_external"`
-	ContradictedSelfDisagree   int       `json:"contradicted_self_disagree"`
-	DroppedCount               int       `json:"dropped_count"`
-	Dropped                    []string  `json:"dropped,omitempty"`
-	Disclaimer                 string    `json:"disclaimer"`
-	MethodID                   string    `json:"method_id"`
-	MethodVersion              string    `json:"method_version"`
-	BundleDigest               string    `json:"bundle_digest"`
-	RecordDigest               string    `json:"record_digest"`
+	Schema                   string    `json:"schema"`
+	ClassifierVersion        string    `json:"classifier_version"`
+	BundleRoot               string    `json:"bundle_root"`
+	Findings                 []Finding `json:"findings"`
+	ConfirmedCount           int       `json:"confirmed_count"`
+	UnconfirmedCount         int       `json:"unconfirmed_count"`
+	ContradictedCount        int       `json:"contradicted_count"`
+	UnconfirmedProducer      int       `json:"unconfirmed_producer"`
+	UnconfirmedExtractor     int       `json:"unconfirmed_extractor"`
+	UnconfirmedGenuine       int       `json:"unconfirmed_genuine"`
+	UnconfirmedExternal      int       `json:"unconfirmed_external"`
+	ContradictedSelfDisagree int       `json:"contradicted_self_disagree"`
+	DroppedCount             int       `json:"dropped_count"`
+	Dropped                  []string  `json:"dropped,omitempty"`
+	Disclaimer               string    `json:"disclaimer"`
+	MethodID                 string    `json:"method_id"`
+	MethodVersion            string    `json:"method_version"`
+	BundleDigest             string    `json:"bundle_digest"`
+	RecordDigest             string    `json:"record_digest"`
 	// DigestScope names what BundleDigest covers: "bundle" (full tree) or "closure"
 	// (surfaces read + resolved path targets). Never compare across scopes.
 	DigestScope string `json:"digest_scope"`
@@ -119,7 +119,7 @@ type Options struct {
 	BundleRoot     string
 	Writer         io.Writer // triage markdown or JSON; default stdout
 	JSONOut        bool
-	Full           bool // full dump + dropped list; default is terse
+	Full           bool     // full dump + dropped list; default is terse
 	TriageSurfaces []string // optional; empty → defaultTriageSurfaces
 	Prior          *Report  // optional prior report for delta (CLI loads; Run stays pure)
 	// ReferencesOnly skips pack structure/load/digest checks and hashes the
@@ -914,7 +914,7 @@ func walkBundleIndex(root string, repoIgnore bool) (map[string]struct{}, []strin
 		}
 		if st.Mode()&os.ModeSymlink != 0 {
 			findings = append(findings, Finding{
-				ID: "structure:symlink:" + shortID(slash),
+				ID:       "structure:symlink:" + shortID(slash),
 				Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
 				Detail: "Symlink skipped under bundle: " + fence(slash),
 			})
@@ -931,7 +931,7 @@ func walkBundleIndex(root string, repoIgnore bool) (map[string]struct{}, []strin
 		}
 		if _, _, jerr := pathjail.Join(root, slash); jerr != nil {
 			findings = append(findings, Finding{
-				ID: "structure:jail:" + shortID(slash),
+				ID:       "structure:jail:" + shortID(slash),
 				Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
 				Detail: "Path outside jail skipped: " + fence(slash),
 			})

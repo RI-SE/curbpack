@@ -46,9 +46,9 @@ func TestStatus_GoldenPhases(t *testing.T) {
 	mustWriteCyberreadyJSON(t, dir, []string{"house-policy"})
 
 	cases := []struct {
-		name    string
-		setup   func(t *testing.T)
-		wantVerb string
+		name      string
+		setup     func(t *testing.T)
+		wantVerb  string
 		wantPhase Phase
 	}{
 		{

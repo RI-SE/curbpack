@@ -15,8 +15,8 @@ import (
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/packs"
-	"github.com/afelin/curbpack/internal/tty"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/tty"
 )
 
 // List prints embedded packs and watchlist summary.

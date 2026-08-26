@@ -105,8 +105,8 @@ func TestFromGateFailures_SARIFLooksAirlocked(t *testing.T) {
 				TargetFile: "/Users/adversary/project/SECURITY.md",
 			},
 		}, {
-			GateID: "HOUSE-PEM",
-			Severity: "medium",
+			GateID:               "HOUSE-PEM",
+			Severity:             "medium",
 			SanitizedDescription: "key material -----BEGIN PRIVATE KEY-----\nABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n-----END PRIVATE KEY-----",
 		}},
 	}

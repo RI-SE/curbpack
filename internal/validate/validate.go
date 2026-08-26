@@ -17,8 +17,8 @@ import (
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/ir"
-	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/tty"
 )

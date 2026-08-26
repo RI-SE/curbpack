@@ -260,5 +260,13 @@ rm -rf "$TMP21"
 [[ "$case21_code" -eq 0 ]] && ok "21 SECURITY.md symlink escape refused (pathjail)" || \
   bad "21 symlink escape must refuse via pathjail"
 
+
+# --- 22) gofmt clean on internal + cmd ---
+if [[ -z "$(gofmt -l ./internal ./cmd)" ]]; then
+  ok "22 gofmt clean (internal, cmd)"
+else
+  bad "22 gofmt -l ./internal ./cmd must be empty"
+fi
+
 echo -e "\nredteam-pilot: $PASS passed, $FAIL failed"
 exit $(( FAIL > 0 ))

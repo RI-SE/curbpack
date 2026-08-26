@@ -21,8 +21,8 @@ func TestDeltaThreeBuckets(t *testing.T) {
 	current := review.Report{
 		Schema: review.SchemaVersion,
 		Findings: []review.Finding{
-			{ID: "a", State: review.StateConfirmed},                          // cleared
-			{ID: "b", State: review.StateUnconfirmed, Cause: review.CauseGenuine}, // persisting
+			{ID: "a", State: review.StateConfirmed},                                     // cleared
+			{ID: "b", State: review.StateUnconfirmed, Cause: review.CauseGenuine},       // persisting
 			{ID: "d", State: review.StateContradicted, Cause: review.CauseSelfDisagree}, // new
 		},
 	}

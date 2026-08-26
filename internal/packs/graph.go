@@ -24,8 +24,8 @@ type PolicyGraph struct {
 
 // GraphNode is one RKG node.
 type GraphNode struct {
-	ID   string            `json:"id"`
-	Type string            `json:"type"` // instrument|clause|pack|rule|watchlist
+	ID    string            `json:"id"`
+	Type  string            `json:"type"` // instrument|clause|pack|rule|watchlist
 	Attrs map[string]string `json:"attrs,omitempty"`
 }
 

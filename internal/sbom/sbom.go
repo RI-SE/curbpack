@@ -16,14 +16,14 @@ import (
 
 // Summary is a lightweight SBOM digest kept for backward compatibility.
 type Summary struct {
-	Status       string   `json:"status"`
-	Format       string   `json:"format"`
-	GeneratedAt  string   `json:"generated_at"`
-	Source       string   `json:"source,omitempty"`
-	PackageCount int      `json:"package_count"`
-	Packages     []string `json:"packages,omitempty"`
-	Note         string   `json:"note"`
-	CycloneDXPath string  `json:"cyclonedx_path,omitempty"`
+	Status        string   `json:"status"`
+	Format        string   `json:"format"`
+	GeneratedAt   string   `json:"generated_at"`
+	Source        string   `json:"source,omitempty"`
+	PackageCount  int      `json:"package_count"`
+	Packages      []string `json:"packages,omitempty"`
+	Note          string   `json:"note"`
+	CycloneDXPath string   `json:"cyclonedx_path,omitempty"`
 }
 
 // Component is one CycloneDX component.

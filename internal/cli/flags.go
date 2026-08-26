@@ -213,9 +213,9 @@ func parsePrepareReleaseFlags(args []string) (prepareReleaseFlags, error) {
 }
 
 type exportFlags struct {
-	packIDs                                           []string
-	out                                               string
-	wantSARIF, wantExplain, wantJoin, wantBuyerQ        bool
+	packIDs                                            []string
+	out                                                string
+	wantSARIF, wantExplain, wantJoin, wantBuyerQ       bool
 	wantLayOfLand, wantContextPack, wantSPDX, wantSLSA bool
 }
 
@@ -273,7 +273,10 @@ func parseAskMySuppliersFlags(args []string) (askMySuppliersFlags, error) {
 	return f, nil
 }
 
-type askFlags struct{ path string; propose bool }
+type askFlags struct {
+	path    string
+	propose bool
+}
 
 func parseAskFlags(args []string) (askFlags, error) {
 	fs := newCommandFlagSet("ask")
@@ -291,7 +294,10 @@ func parseAskFlags(args []string) (askFlags, error) {
 	return f, nil
 }
 
-type attestFlags struct{ allowDirty bool; reviewedBy string }
+type attestFlags struct {
+	allowDirty bool
+	reviewedBy string
+}
 
 func parseAttestFlags(args []string) (attestFlags, error) {
 	var f attestFlags
@@ -318,7 +324,7 @@ func parseAttestFlags(args []string) (attestFlags, error) {
 }
 
 type shareFlags struct {
-	packIDs                   []string
+	packIDs                             []string
 	skipPrepare, wantBundle, wantReveal bool
 }
 
