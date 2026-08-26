@@ -83,11 +83,12 @@ func FromAdvisories(product string, advisories []Advisory) Document {
 	if len(seed) > 16 {
 		seed = seed[:16]
 	}
+	ts := clock.RFC3339ForEvidence()
 	return Document{
 		Context:    "https://openvex.dev/ns/v0.2.0",
 		ID:         "https://curbpack.local/vex/" + seed,
 		Author:     "curbpack",
-		Timestamp:  clock.RFC3339(),
+		Timestamp:  ts,
 		Version:    1,
 		Statements: stmts,
 		Status:     "draft_pending_attest",

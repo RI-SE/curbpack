@@ -82,3 +82,38 @@ func TestBuildCycloneDXStableBytes(t *testing.T) {
 		t.Fatal("cyclonedx write not byte-stable")
 	}
 }
+
+func TestBuildCycloneDXStableWithoutSourceDateEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "")
+	_ = os.Unsetenv("SOURCE_DATE_EPOCH")
+	dir := t.TempDir()
+	lock := filepath.Join(dir, "package-lock.json")
+	body := `{
+  "name": "demo",
+  "lockfileVersion": 3,
+  "packages": {
+    "": { "name": "demo" },
+    "node_modules/left-pad": { "version": "1.3.0" }
+  }
+}`
+	if err := os.WriteFile(lock, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkgs, source, err := sbom.CollectPackages(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docA := sbom.BuildCycloneDX(dir, pkgs, source)
+	docB := sbom.BuildCycloneDX(dir, pkgs, source)
+	if docA.Metadata.Timestamp != docB.Metadata.Timestamp {
+		t.Fatalf("timestamp drifted without SOURCE_DATE_EPOCH: %q vs %q", docA.Metadata.Timestamp, docB.Metadata.Timestamp)
+	}
+	if docA.Metadata.Timestamp != "1970-01-01T00:00:00Z" {
+		t.Fatalf("want fixed evidence epoch, got %q", docA.Metadata.Timestamp)
+	}
+	bA, _ := json.Marshal(docA)
+	bB, _ := json.Marshal(docB)
+	if string(bA) != string(bB) {
+		t.Fatal("cyclonedx must be byte-stable across wall-clock seconds")
+	}
+}
