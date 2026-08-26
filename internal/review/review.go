@@ -29,8 +29,15 @@ const (
 	schemaVersion     = "curbpack-review-report:2"
 	ClassifierVersion = "refclass:1"
 
-	maxFileBytes  = 8 << 20  // 8 MiB per file
-	maxTotalBytes = 64 << 20 // 64 MiB total across reads
+	// MethodID / MethodVersion identify the published review method document.
+	MethodID      = "curbpack-review-method"
+	MethodVersion = "1.0.0" // must equal docs/method/review-method-<v>.md — see W6
+
+	maxFileBytes  = 8 << 20  // 8 MiB per file (parse reads)
+	maxTotalBytes = 64 << 20 // 64 MiB total across parse reads
+	// maxBundleDigestBytes is the refuse-oversize ceiling for streaming bundle_digest.
+	// Same magnitude as maxTotalBytes; never truncate — refuse with empty digest.
+	maxBundleDigestBytes = 64 << 20
 )
 
 // State is one finding outcome. Never conflate these three.
@@ -79,6 +86,10 @@ type Report struct {
 	DroppedCount               int       `json:"dropped_count"`
 	Dropped                    []string  `json:"dropped,omitempty"`
 	Disclaimer                 string    `json:"disclaimer"`
+	MethodID                   string    `json:"method_id"`
+	MethodVersion              string    `json:"method_version"`
+	BundleDigest               string    `json:"bundle_digest"`
+	RecordDigest               string    `json:"record_digest"`
 }
 
 // Options for Run.
@@ -157,6 +168,8 @@ func Run(opts Options) (Report, error) {
 		ClassifierVersion: ClassifierVersion,
 		BundleRoot:        filepath.Base(root), // basename only — airlock refuses absolute homes
 		Disclaimer:        "Document triage only — not a product verdict, not conformity assessment, not CE / notified-body approval.",
+		MethodID:          MethodID,
+		MethodVersion:     MethodVersion,
 	}
 
 	tallyRoot := root // absolute path for IO only
@@ -177,6 +190,31 @@ func Run(opts Options) (Report, error) {
 
 	tally(&rep)
 	sortFindings(rep.Findings)
+
+	// Digest pass: after airlock/tally/sort, immediately before emit.
+	// Use ir.WriteLenPrefixed (attest's private copy is frozen; ir is already the digest home).
+	// No-git is a runtime guarantee (TestReviewNoGitRequired), not compile-time.
+	bundleDigest, oversize := computeBundleDigest(tallyRoot)
+	rep.BundleDigest = bundleDigest
+	if oversize {
+		add(&rep, Finding{
+			ID: "structure:bundle-size-cap", Category: "structure",
+			State: StateContradicted, Cause: CauseSelfDisagree,
+			Detail: "Bundle exceeds digest size ceiling — bundle_digest left empty (refused, never truncated)",
+		})
+		// Reset counters then re-tally/sort after appending the size finding.
+		rep.ConfirmedCount = 0
+		rep.UnconfirmedCount = 0
+		rep.ContradictedCount = 0
+		rep.UnconfirmedProducer = 0
+		rep.UnconfirmedExtractor = 0
+		rep.UnconfirmedGenuine = 0
+		rep.UnconfirmedExternal = 0
+		rep.ContradictedSelfDisagree = 0
+		tally(&rep)
+		sortFindings(rep.Findings)
+	}
+	rep.RecordDigest = computeRecordDigest(rep)
 
 	w := opts.Writer
 	if w == nil {
@@ -458,7 +496,7 @@ func checkDigests(rep *Report, root string, payload ir.GateFailurePayload, paylo
 }
 
 func checkReferences(rep *Report, root string, budget *readBudget, surfaces []string) {
-	bundleFiles, walkFindings := walkBundleIndex(root)
+	bundleFiles, _, walkFindings := walkBundleIndex(root)
 	for _, f := range walkFindings {
 		add(rep, f)
 	}
@@ -740,8 +778,9 @@ func readCapped(root, rel string, budget *readBudget) (data []byte, truncated bo
 	return data, false, nil
 }
 
-func walkBundleIndex(root string) (map[string]struct{}, []Finding) {
+func walkBundleIndex(root string) (map[string]struct{}, []string, []Finding) {
 	files := map[string]struct{}{}
+	var relPaths []string
 	var findings []Finding
 	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -767,6 +806,9 @@ func walkBundleIndex(root string) (map[string]struct{}, []Finding) {
 		if st.IsDir() {
 			return nil
 		}
+		if !st.Mode().IsRegular() {
+			return nil
+		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return nil
@@ -782,9 +824,87 @@ func walkBundleIndex(root string) (map[string]struct{}, []Finding) {
 		}
 		files[slash] = struct{}{}
 		files[filepath.Base(path)] = struct{}{}
+		relPaths = append(relPaths, slash)
 		return nil
 	})
-	return files, findings
+	sort.Strings(relPaths)
+	return files, relPaths, findings
+}
+
+// computeBundleDigest streams full file contents under maxBundleDigestBytes.
+// On oversize: returns ("", true) — never a partial hash. Uses ir.WriteLenPrefixed
+// (attest kept private: frozen capsule surface; ir is already the digest package).
+func computeBundleDigest(root string) (digest string, oversize bool) {
+	_, relPaths, _ := walkBundleIndex(root)
+	var lstatSum int64
+	for _, rel := range relPaths {
+		full, _, err := pathjail.Join(root, rel)
+		if err != nil {
+			continue
+		}
+		st, err := os.Lstat(full)
+		if err != nil || !st.Mode().IsRegular() {
+			continue
+		}
+		lstatSum += st.Size()
+		if lstatSum > maxBundleDigestBytes {
+			return "", true
+		}
+	}
+
+	h := sha256.New()
+	var streamed int64
+	for _, rel := range relPaths {
+		full, _, err := pathjail.Join(root, rel)
+		if err != nil {
+			continue
+		}
+		st, err := os.Lstat(full)
+		if err != nil || st.Mode()&os.ModeSymlink != 0 || !st.Mode().IsRegular() {
+			continue
+		}
+		if streamed+st.Size() > maxBundleDigestBytes {
+			return "", true
+		}
+		fileHash, n, err := hashFileStreaming(full)
+		if err != nil {
+			continue
+		}
+		streamed += n
+		if streamed > maxBundleDigestBytes {
+			return "", true
+		}
+		ir.WriteLenPrefixed(h, rel)
+		ir.WriteLenPrefixed(h, fileHash)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), false
+}
+
+func hashFileStreaming(path string) (hex string, n int64, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close()
+	h := sha256.New()
+	n, err = io.Copy(h, f)
+	if err != nil {
+		return "", n, err
+	}
+	return fmt.Sprintf("%x", h.Sum(nil)), n, nil
+}
+
+func computeRecordDigest(rep Report) string {
+	// Exclude record_digest and bundle_root (directory-name dependent).
+	cp := rep
+	cp.RecordDigest = ""
+	cp.BundleRoot = ""
+	b, err := json.Marshal(cp)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(b)
+	return fmt.Sprintf("%x", sum[:])
 }
 
 // TriageMarkdown returns a pasteable case-ticket note.
@@ -823,6 +943,7 @@ func TriageMarkdown(rep Report, full bool) string {
 		}
 		b.WriteString("---\n")
 		b.WriteString("Generated by `curbpack review` (offline). Exit 1 if any finding is contradicted.\n")
+		writeRecordDigestFooter(&b, rep)
 		return b.String()
 	}
 
@@ -868,5 +989,15 @@ func TriageMarkdown(rep Report, full bool) string {
 
 	b.WriteString("---\n")
 	b.WriteString("Generated by `curbpack review --full` (offline). Exit 1 if any finding is contradicted.\n")
+	writeRecordDigestFooter(&b, rep)
 	return b.String()
+}
+
+func writeRecordDigestFooter(b *strings.Builder, rep Report) {
+	short := rep.RecordDigest
+	if len(short) > 8 {
+		short = short[:8]
+	}
+	fmt.Fprintf(b, "record_digest %s…  ·  method %s\n", short, rep.MethodVersion)
+	b.WriteString("Record of an offline structural check. Not a conformity assessment.\n")
 }
