@@ -86,3 +86,40 @@ func TestDeltaRejectsSchemaMismatch(t *testing.T) {
 		t.Fatal("SchemaVersion empty")
 	}
 }
+
+func TestDeltaWarnsOnMethodVersionMismatch(t *testing.T) {
+	prior := review.Report{
+		Schema: review.SchemaVersion, MethodVersion: "1.0.0",
+		RecordDigest: "aabbccdd11223344",
+		Findings:     []review.Finding{{ID: "a", State: review.StateUnconfirmed, Cause: review.CauseGenuine}},
+	}
+	current := review.Report{
+		Schema: review.SchemaVersion, MethodVersion: "1.1.0",
+		Findings: []review.Finding{{ID: "a", State: review.StateUnconfirmed, Cause: review.CauseGenuine}},
+	}
+	block := review.FormatDelta(prior, current)
+	want := "method_version differs: prior 1.0.0 · current 1.1.0 — findings may not be comparable"
+	if !strings.Contains(block, want) {
+		t.Fatalf("missing warn: %q", block)
+	}
+}
+
+func TestDeltaMismatchRecordedNotOnlyPrinted(t *testing.T) {
+	// Warn must live in FormatDelta output (redirectable stdout), not stderr-only.
+	prior := review.Report{Schema: review.SchemaVersion, MethodVersion: "1.0.0", RecordDigest: "deadbeef"}
+	current := review.Report{Schema: review.SchemaVersion, MethodVersion: "1.1.0"}
+	block := review.FormatDelta(prior, current)
+	if strings.TrimSpace(block) == "" {
+		t.Fatal("empty delta block")
+	}
+	if !strings.Contains(block, "method_version differs") {
+		t.Fatalf("warn not in recorded delta block: %q", block)
+	}
+	same := review.FormatDelta(
+		review.Report{Schema: review.SchemaVersion, MethodVersion: "1.1.0", RecordDigest: "deadbeef"},
+		review.Report{Schema: review.SchemaVersion, MethodVersion: "1.1.0"},
+	)
+	if strings.Contains(same, "method_version differs") {
+		t.Fatalf("false warn on matching versions: %q", same)
+	}
+}

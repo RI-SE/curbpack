@@ -70,7 +70,12 @@ func FormatDelta(prior, current Report) string {
 		short = "unknown"
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "\ndelta since record %s…\n\n", short)
+	fmt.Fprintf(&b, "\ndelta since record %s…\n", short)
+	if prior.MethodVersion != "" && current.MethodVersion != "" && prior.MethodVersion != current.MethodVersion {
+		fmt.Fprintf(&b, "method_version differs: prior %s · current %s — findings may not be comparable\n",
+			prior.MethodVersion, current.MethodVersion)
+	}
+	fmt.Fprintf(&b, "\n")
 	fmt.Fprintf(&b, "  NEW          %3d   confirmed before, not now\n", len(d.New))
 	fmt.Fprintf(&b, "  CLEARED      %3d   present before, absent now\n", len(d.Cleared))
 	fmt.Fprintf(&b, "  PERSISTING   %3d   unresolved in both\n", len(d.Persisting))
