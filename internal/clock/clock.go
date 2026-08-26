@@ -22,6 +22,21 @@ func RFC3339() string {
 	return NowUTC().Format(time.RFC3339)
 }
 
+// EvidenceEpoch is the fixed synthetic UTC timestamp used for digest-bound
+// evidence fields when SOURCE_DATE_EPOCH is unset.
+const EvidenceEpoch = "1970-01-01T00:00:00Z"
+
+// RFC3339ForEvidence returns a stable UTC RFC3339 timestamp for digest-bound
+// evidence (SBOM metadata.timestamp / VEX timestamp). Honors SOURCE_DATE_EPOCH
+// when set; otherwise uses EvidenceEpoch so re-attest on the same inputs is
+// idempotent without encoding hash entropy into the clock field.
+func RFC3339ForEvidence() string {
+	if v := stringsTrim(os.Getenv("SOURCE_DATE_EPOCH")); v != "" {
+		return RFC3339()
+	}
+	return EvidenceEpoch
+}
+
 // Art14ReportingStart is the CRA Art 14 reporting clock start (UTC date).
 // EC reporting date — see https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847
 var Art14ReportingStart = time.Date(2026, 9, 11, 0, 0, 0, 0, time.UTC)
