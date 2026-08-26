@@ -1,4 +1,4 @@
-# Reserved `edges` array — v1.2.0 calendar
+# Reserved `edges` array — product release calendar
 
 > Maintainer note. Structural evidence for human review — not conformity assessment.
 
@@ -12,10 +12,10 @@
 |------|------|
 | Name | `edges` (JSON field on review Report) |
 | Status | Reserved / unused |
-| Expires | **method/product v1.2.0** if still unused |
+| Expires | **curbpack product release v0.6.0** if still unused |
 | Action on expiry | **Delete** the reservation (CONTRIBUTING “delete rather than deprecate”) — do not leave folklore |
 
-## Decision at v1.2.0
+## Decision at v0.6.0
 
 - If still unused → remove the reserved row from stable-contracts and any calendar pointer.
 - If implemented before then → replace this stub with the shipped contract and bump method docs accordingly.

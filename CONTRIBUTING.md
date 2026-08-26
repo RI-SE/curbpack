@@ -61,7 +61,7 @@ These apply to `review` and related surfaces (including `--repo`):
 5–6 live in product design docs; contributors must uphold:
 
 7. **Anything that can rot must be guarded by a test that fails when it rots** — method docs, reserved names, and frozen fixtures need failing guards (see `TestMethodVersionMatchesClassifier`, comparison digest pin).
-8. **Delete rather than deprecate** — a reserved name with no implementation gets an expiry date (`edges` expires at v1.2.0 if unused), not a permanent home.
+8. **Delete rather than deprecate** — a reserved name with no implementation gets an expiry date (`edges` expires at curbpack product release v0.6.0 if unused), not a permanent home.
 9. **Every shipped capability has a named consumer in the same commit** — an unwired feature is a maintenance cost with no benefit.
 
 ## Non-product docs
