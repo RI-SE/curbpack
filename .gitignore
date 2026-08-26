@@ -11,3 +11,18 @@
 /review-pack/
 .tools/
 *.sock
+
+# Secrets / local credentials (never commit)
+.env
+.env.*
+!.env.example
+credentials.json
+**/credentials.json
+service-account.json
+**/service-account.json
+id_rsa
+id_rsa.*
+*.pem
+*.p12
+*.key
+!.github/**/*.example.key
