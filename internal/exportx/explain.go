@@ -12,9 +12,9 @@ import (
 	"github.com/afelin/curbpack/internal/formhints"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
+	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/validate"
-	"github.com/afelin/curbpack/internal/paths"
 )
 
 // ExplainPacket is a sanitized teaching surface for Coreward / local chat.

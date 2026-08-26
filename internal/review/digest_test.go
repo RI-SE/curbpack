@@ -223,3 +223,30 @@ func sha256SumHex(b []byte) string {
 	sum := sha256.Sum256(b)
 	return fmt.Sprintf("%x", sum[:])
 }
+
+func TestDigestIncompleteOnUnreadablePath(t *testing.T) {
+	dir := writeMinimalConsistent(t)
+	secret := filepath.Join(dir, "secret.dat")
+	mustWrite(t, secret, []byte("x"))
+	if err := os.Chmod(secret, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(secret, 0o644) })
+
+	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: ioDiscard{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.BundleDigest != "" {
+		t.Fatalf("unreadable path must refuse bundle_digest, got %q", rep.BundleDigest)
+	}
+	found := false
+	for _, f := range rep.Findings {
+		if f.ID == "structure:digest-incomplete" && f.State == review.StateContradicted {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("want structure:digest-incomplete, findings=%+v", rep.Findings)
+	}
+}

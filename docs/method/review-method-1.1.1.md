@@ -71,6 +71,9 @@ Placement inside `Run`: after airlock → tally → sortFindings, **immediately 
 
 `triage_surfaces` (sorted) and `surfaces_digest` are always recorded from `ResolveTriageSurfaces` — same comparability class as `digest_scope`. Two `--packs` runs are not comparable unless these fields match.
 
+
+One digest algorithm for both scopes: sorted length-prefixed relative paths, each followed by the length-prefixed sha256 of full file contents (streamed via a single pass per file). Scope differs only by which paths are included (`bundle` walk vs `closure` union). If any digest path is unreadable or skipped, emit contradicted `structure:digest-incomplete` and leave `bundle_digest` empty — never silently omit paths.
+
 ### `bundle_digest` when `digest_scope=bundle`
 
 sha256 over sorted relative slash paths; each path is length-prefixed, then the length-prefixed sha256 of the **full** file contents (streamed; not subject to the per-file parse read cap). Symlinks and out-of-jail paths are excluded.

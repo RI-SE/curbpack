@@ -4,8 +4,8 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/pathjail"
+	"github.com/afelin/curbpack/internal/paths"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,28 +33,28 @@ var supportedChecks = map[string]struct{}{
 
 // Rule is a single pack gate definition (JSON-eval, no OPA).
 type Rule struct {
-	ID               string     `json:"id"`
-	Severity         string     `json:"severity"`
-	Type             string     `json:"type"`
-	Check            string     `json:"check"`
-	Path             string     `json:"path,omitempty"`
-	Paths            []string   `json:"paths,omitempty"`
-	MinBytes         int        `json:"min_bytes,omitempty"`
-	MinWords         int        `json:"min_words,omitempty"`
-	RequireHeaders   []string   `json:"require_headers,omitempty"`
-	BindRepoToken    bool       `json:"bind_repo_token,omitempty"`
-	RequireTreePaths []string   `json:"require_tree_paths,omitempty"`
-	Package          string     `json:"package,omitempty"`
-	BannedVersions   []string   `json:"banned_versions,omitempty"`
-	Pattern                string `json:"pattern,omitempty"`
-	MaxAgeDays             int    `json:"max_age_days,omitempty"`
-	SinceRef               string `json:"since_ref,omitempty"`
-	RequireGitAuthorEmail  string `json:"require_git_author_email,omitempty"`
-	RequireGitAuthorName   string `json:"require_git_author_name,omitempty"`
-	Description            string `json:"description"`
-	Remediation      string     `json:"remediation"`
-	Expected         string     `json:"expected"`
-	Citations        []Citation `json:"citations,omitempty"`
+	ID                    string     `json:"id"`
+	Severity              string     `json:"severity"`
+	Type                  string     `json:"type"`
+	Check                 string     `json:"check"`
+	Path                  string     `json:"path,omitempty"`
+	Paths                 []string   `json:"paths,omitempty"`
+	MinBytes              int        `json:"min_bytes,omitempty"`
+	MinWords              int        `json:"min_words,omitempty"`
+	RequireHeaders        []string   `json:"require_headers,omitempty"`
+	BindRepoToken         bool       `json:"bind_repo_token,omitempty"`
+	RequireTreePaths      []string   `json:"require_tree_paths,omitempty"`
+	Package               string     `json:"package,omitempty"`
+	BannedVersions        []string   `json:"banned_versions,omitempty"`
+	Pattern               string     `json:"pattern,omitempty"`
+	MaxAgeDays            int        `json:"max_age_days,omitempty"`
+	SinceRef              string     `json:"since_ref,omitempty"`
+	RequireGitAuthorEmail string     `json:"require_git_author_email,omitempty"`
+	RequireGitAuthorName  string     `json:"require_git_author_name,omitempty"`
+	Description           string     `json:"description"`
+	Remediation           string     `json:"remediation"`
+	Expected              string     `json:"expected"`
+	Citations             []Citation `json:"citations,omitempty"`
 }
 
 // Citation links a pack/rule/watchlist entry to a regulatory instrument (informational).

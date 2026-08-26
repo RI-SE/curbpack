@@ -30,9 +30,9 @@ type SARIFTool struct {
 }
 
 type SARIFDriver struct {
-	Name            string       `json:"name"`
-	InformationURI  string       `json:"informationUri,omitempty"`
-	Rules           []SARIFRule  `json:"rules"`
+	Name           string      `json:"name"`
+	InformationURI string      `json:"informationUri,omitempty"`
+	Rules          []SARIFRule `json:"rules"`
 }
 
 type SARIFRule struct {

@@ -25,7 +25,7 @@ func ReportFromPayload(payload ir.GateFailurePayload) Report {
 		out.Failures = append(out.Failures, ReportFinding{
 			GateID: f.GateID, Severity: f.Severity,
 			Description: f.SanitizedDescription,
-			TargetFile: strings.TrimSpace(f.ASTCoordinates.TargetFile),
+			TargetFile:  strings.TrimSpace(f.ASTCoordinates.TargetFile),
 		})
 	}
 	sort.Slice(out.Failures, func(i, j int) bool { return out.Failures[i].GateID < out.Failures[j].GateID })
@@ -101,7 +101,6 @@ func RenderSARIF(rep Report, repoRoot string) SARIFDocument {
 		}},
 	}
 }
-
 
 func FromGateFailures(payload ir.GateFailurePayload, repoRoot string) SARIFDocument {
 	return RenderSARIF(ReportFromPayload(payload), repoRoot)

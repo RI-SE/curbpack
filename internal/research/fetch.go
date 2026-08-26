@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	fetchTimeout   = 10 * time.Second
-	fetchMaxBytes  = 64 * 1024 // 64 KiB cap
+	fetchTimeout    = 10 * time.Second
+	fetchMaxBytes   = 64 * 1024 // 64 KiB cap
 	fetchExcerptMax = 1200
 )
 

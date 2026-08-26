@@ -47,6 +47,11 @@ National variations, guidance changes, and new standards are **pack version bump
 
 A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.1.1.md](docs/method/review-method-1.1.1.md).
 
+
+### Review digest (one algorithm)
+
+**One digest algorithm** for `bundle` and `closure` scopes — scope differs only via which relative paths are hashed (`digest_scope` + path list). Do not fork streaming/hash logic between modes.
+
 ### Review / reference graph prohibitions
 
 These apply to `review` and related surfaces (including `--repo`):
