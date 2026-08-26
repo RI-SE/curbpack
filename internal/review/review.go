@@ -83,10 +83,11 @@ type Report struct {
 
 // Options for Run.
 type Options struct {
-	BundleRoot string
-	Writer     io.Writer // triage markdown or JSON; default stdout
-	JSONOut    bool
-	Full       bool // full dump + dropped list; default is terse
+	BundleRoot     string
+	Writer         io.Writer // triage markdown or JSON; default stdout
+	JSONOut        bool
+	Full           bool     // full dump + dropped list; default is terse
+	TriageSurfaces []string // optional; empty → defaultTriageSurfaces
 }
 
 var (
@@ -119,9 +120,19 @@ var optionalStructureFiles = []string{
 	"context-pack.json", "buyer-questions.md",
 }
 
-var triageSurfaces = []string{
+var defaultTriageSurfaces = []string{
 	"02-action-report.md", "03-executive-summary.md",
 	"buyer-questions.md", "buyer-onepager.html",
+}
+
+// ResolveTriageSurfaces returns opts.TriageSurfaces when set, else the default four-name list.
+func ResolveTriageSurfaces(opts Options) []string {
+	if len(opts.TriageSurfaces) > 0 {
+		return opts.TriageSurfaces
+	}
+	out := make([]string, len(defaultTriageSurfaces))
+	copy(out, defaultTriageSurfaces)
+	return out
 }
 
 // Run triages a received review-pack directory. Does not call git or network.
@@ -154,7 +165,7 @@ func Run(opts Options) (Report, error) {
 	payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
 	prov := extractProvenance(tallyRoot, budget)
 	checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
-	checkReferences(&rep, tallyRoot, budget)
+	checkReferences(&rep, tallyRoot, budget, ResolveTriageSurfaces(opts))
 
 	if redactReportAirlock(&rep) {
 		add(&rep, Finding{
@@ -446,7 +457,7 @@ func checkDigests(rep *Report, root string, payload ir.GateFailurePayload, paylo
 	}
 }
 
-func checkReferences(rep *Report, root string, budget *readBudget) {
+func checkReferences(rep *Report, root string, budget *readBudget, surfaces []string) {
 	bundleFiles, walkFindings := walkBundleIndex(root)
 	for _, f := range walkFindings {
 		add(rep, f)
@@ -455,7 +466,7 @@ func checkReferences(rep *Report, root string, budget *readBudget) {
 	seen := map[string]struct{}{} // one finding per identity key
 	var dropped []string
 
-	for _, name := range triageSurfaces {
+	for _, name := range surfaces {
 		data, truncated, err := readCapped(root, name, budget)
 		if err != nil {
 			continue
