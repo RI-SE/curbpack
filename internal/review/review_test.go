@@ -478,3 +478,37 @@ func mustWrite(t *testing.T, path string, data []byte) {
 		t.Fatal(err)
 	}
 }
+
+func TestDefaultSurfaceListUnchanged(t *testing.T) {
+	got := review.ResolveTriageSurfaces(review.Options{})
+	want := []string{
+		"02-action-report.md", "03-executive-summary.md",
+		"buyer-questions.md", "buyer-onepager.html",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("surface count %d want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("surface[%d]=%q want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestMethodVersionMatchesClassifier(t *testing.T) {
+	if review.MethodID != "curbpack-review-method" {
+		t.Fatalf("MethodID=%q", review.MethodID)
+	}
+	if review.MethodVersion != "1.0.0" {
+		t.Fatalf("MethodVersion=%q", review.MethodVersion)
+	}
+	root := repoRoot(t)
+	doc := filepath.Join(root, "docs", "method", "review-method-"+review.MethodVersion+".md")
+	if _, err := os.Stat(doc); err != nil {
+		t.Fatalf("method doc missing for MethodVersion %s: %v", review.MethodVersion, err)
+	}
+	// Classifier remains independent; lock both stay non-empty and schema stable.
+	if review.ClassifierVersion == "" {
+		t.Fatal("ClassifierVersion empty")
+	}
+}

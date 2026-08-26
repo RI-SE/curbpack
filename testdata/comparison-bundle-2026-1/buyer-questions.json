@@ -1,0 +1,49 @@
+{
+  "schema_version": "1",
+  "note": "Local pack gates prepare evidence for human review. Not CE / not notified-body. Not a conformity assessment.",
+  "pack_id": "house-policy",
+  "assurance_class": "structural_draft",
+  "attestation_status": "none",
+  "questions": [
+    {
+      "gate_id": "HOUSE-SECURITY-MD",
+      "severity": "high",
+      "human_question": "For human review: SECURITY.md missing, too short, or lacking required header?",
+      "artifact_path": "SECURITY.md",
+      "assurance_class": "structural_draft",
+      "remediation_hint": "Add SECURITY.md with vulnerability reporting and response expectations."
+    },
+    {
+      "gate_id": "HOUSE-SECURITY-TXT",
+      "severity": "medium",
+      "human_question": "For human review: security.txt missing under .well-known/ (RFC 9116 style)?",
+      "artifact_path": ".well-known/security.txt",
+      "assurance_class": "structural_draft",
+      "remediation_hint": "Create .well-known/security.txt with Contact and Expires fields."
+    },
+    {
+      "gate_id": "HOUSE-DEP-AXIOS-PIN",
+      "severity": "critical",
+      "human_question": "For human review: House policy bans vulnerable axios@1.6.0 pins in package.json?",
+      "artifact_path": "package.json",
+      "assurance_class": "structural_draft",
+      "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile."
+    },
+    {
+      "gate_id": "HOUSE-SECRET-PATHS",
+      "severity": "critical",
+      "human_question": "For human review: Likely secrets or private key material found in tracked policy docs or common agent secret paths?",
+      "artifact_path": "README.md, SECURITY.md, .well-known/security.txt, .env, .env.local, credentials.json, service-account.json, id_rsa",
+      "assurance_class": "structural_draft",
+      "remediation_hint": "Remove credentials from docs and agent-oops paths; rotate any exposed secrets; use a secret manager."
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "human_question": "For human review: House policy docs contain placeholder / boilerplate text?",
+      "artifact_path": ".well-known/security.txt",
+      "assurance_class": "structural_draft",
+      "remediation_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+    }
+  ]
+}

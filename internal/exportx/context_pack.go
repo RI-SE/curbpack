@@ -12,6 +12,7 @@ import (
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/instrument"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/pathway"
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/research"
@@ -69,6 +70,7 @@ type ContextPack struct {
 	SchemaVersion        string                   `json:"schema_version"`
 	Note                 string                   `json:"note"`
 	PackIDs              []string                 `json:"pack_ids"`
+	PackVersions         string                   `json:"pack_versions,omitempty"`
 	ReadinessScore       int                      `json:"readiness_score"`
 	OK                   bool                     `json:"ok"`
 	Failures             []ContextFailure         `json:"failures"`
@@ -137,10 +139,16 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		score = payload.ReadinessScore
 	}
 
+	packVersions := ""
+	if composed, _, cerr := packs.Compose(ids); cerr == nil {
+		packVersions = strings.TrimSpace(composed.Version)
+	}
+
 	pack := ContextPack{
 		SchemaVersion:  contextPackSchema,
 		Note:           contextPackNote,
 		PackIDs:        ids,
+		PackVersions:   packVersions,
 		ReadinessScore: score,
 		OK:             ok,
 		Failures:       top,

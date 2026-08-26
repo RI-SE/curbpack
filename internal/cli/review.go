@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +17,7 @@ func cmdReview(args []string) error {
 	jsonOut := false
 	full := false
 	batch := false
+	sincePath := ""
 	var paths []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -27,6 +30,12 @@ func cmdReview(args []string) error {
 			full = true
 		case a == "--batch":
 			batch = true
+		case a == "--since":
+			if i+1 >= len(args) {
+				return usageErr("review --since requires a path to a prior report JSON")
+			}
+			i++
+			sincePath = args[i]
 		case strings.HasPrefix(a, "-"):
 			return usageErr("unknown flag for review: " + a)
 		default:
@@ -38,6 +47,9 @@ func cmdReview(args []string) error {
 		return usageErr("review requires a path to a received review-pack directory")
 	}
 	if batch {
+		if sincePath != "" {
+			return usageErr("review --batch does not combine with --since")
+		}
 		if jsonOut {
 			return usageErr("review --batch does not combine with --json (run per-child with --json)")
 		}
@@ -50,7 +62,18 @@ func cmdReview(args []string) error {
 		return usageErr("review accepts a single pack directory (use --batch for many)")
 	}
 
-	tty.PrintHeader("curbpack review")
+	var prior *review.Report
+	if sincePath != "" {
+		p, err := loadPriorReport(sincePath)
+		if err != nil {
+			return usageErr(err.Error())
+		}
+		prior = &p
+	}
+
+	if !jsonOut {
+		tty.PrintHeader("curbpack review")
+	}
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline document triage — not a product verdict."))
 
 	rep, err := review.Run(review.Options{
@@ -58,6 +81,7 @@ func cmdReview(args []string) error {
 		Writer:     os.Stdout,
 		JSONOut:    jsonOut,
 		Full:       full,
+		Prior:      prior,
 	})
 	if err != nil {
 		return usageErr(err.Error())
@@ -67,6 +91,45 @@ func cmdReview(args []string) error {
 		return gatesErr()
 	}
 	return nil
+}
+
+// loadPriorReport reads a prior review --json report. Errors are usage/env (exit 2).
+func loadPriorReport(path string) (review.Report, error) {
+	path = filepath.Clean(strings.TrimSpace(path))
+	st, err := os.Lstat(path)
+	if err != nil {
+		return review.Report{}, fmt.Errorf("review --since: cannot read prior report %s: %w", path, err)
+	}
+	if st.Mode()&os.ModeSymlink != 0 {
+		return review.Report{}, fmt.Errorf("review --since: refuses symlink %s", path)
+	}
+	if !st.Mode().IsRegular() {
+		return review.Report{}, fmt.Errorf("review --since: prior report must be a file: %s", path)
+	}
+	if st.Size() > review.MaxPriorReportBytes {
+		return review.Report{}, fmt.Errorf("review --since: prior report exceeds size cap: %s", path)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return review.Report{}, fmt.Errorf("review --since: cannot read prior report %s: %w", path, err)
+	}
+	defer f.Close()
+	limited := io.LimitReader(f, review.MaxPriorReportBytes+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return review.Report{}, fmt.Errorf("review --since: cannot read prior report %s: %w", path, err)
+	}
+	if int64(len(data)) > review.MaxPriorReportBytes {
+		return review.Report{}, fmt.Errorf("review --since: prior report exceeds size cap: %s", path)
+	}
+	var rep review.Report
+	if err := json.Unmarshal(data, &rep); err != nil {
+		return review.Report{}, fmt.Errorf("review --since: prior report is not valid JSON: %s: %v", path, err)
+	}
+	if rep.Schema != review.SchemaVersion {
+		return review.Report{}, fmt.Errorf("review --since: schema mismatch: prior %q current %q", rep.Schema, review.SchemaVersion)
+	}
+	return rep, nil
 }
 
 type batchRow struct {
@@ -80,6 +143,7 @@ type batchRow struct {
 }
 
 func runReviewBatch(paths []string) error {
+	// --batch already refuses --json above; header stays on stdout (no JSON redirection case).
 	tty.PrintHeader("curbpack review --batch")
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline document triage — not a product verdict."))
 
