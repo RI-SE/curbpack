@@ -1,0 +1,27 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://curbpack.local/vex/f55f13355b38f143",
+  "author": "curbpack",
+  "timestamp": "2026-08-26T17:47:18Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://curbpack.local/advisory/HOUSE-DEP-AXIOS-PIN",
+        "name": "HOUSE-DEP-AXIOS-PIN",
+        "description": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/comparison-bundle-2026-1"
+        }
+      ],
+      "status": "under_investigation",
+      "action_statement": "Upgrade axios to a patched release and refresh the lockfile."
+    }
+  ],
+  "status": "draft_pending_attest",
+  "note": "Pending OpenVEX draft for dependency/advisory rows with PURLs only. Documentation gates stay in GateFailure IR — not emitted as CVEs. Bind digest into attest capsule before treating as release evidence. Not a certification.",
+  "digest": "f55f13355b38f143abb7c9a93a7ae13946b621346ed9cced96691914339cead0",
+  "gate_digest": "5c0174e541146abfab2615d9bff5e240a3caff33509d5b001906dc95059a6bcc"
+}

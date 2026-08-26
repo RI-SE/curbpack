@@ -1,0 +1,78 @@
+{
+  "schema_version": "1",
+  "timestamp": "2026-08-26T17:47:18Z",
+  "concurrency_control": {
+    "expected_parent_commit_sha": "",
+    "state_version_token": "v3.33-OCC"
+  },
+  "statechart_context": {
+    "active_parent_state_path": [
+      "Root",
+      "ActiveVerification",
+      "PackEval"
+    ],
+    "failed_orthogonal_regions": [
+      "HOUSE-DEP-AXIOS-PIN",
+      "HOUSE-ANTI-PLACEHOLDER"
+    ]
+  },
+  "agent_identity": {
+    "agent_id": "",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared",
+    "reason": "not_installed"
+  },
+  "failures": [
+    {
+      "gate_id": "HOUSE-DEP-AXIOS-PIN",
+      "severity": "critical",
+      "type": "SYS_TRACE_VIOLATION",
+      "sanitized_description": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)",
+      "ast_coordinates": {
+        "target_file": "package.json",
+        "node_path": "",
+        "target_symbol": "",
+        "fallback_lines": ""
+      },
+      "remediation": {
+        "action_required": "Upgrade axios to a patched release and refresh the lockfile.",
+        "expected_state": "No banned axios versions in dependencies or devDependencies."
+      }
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "sanitized_description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "ast_coordinates": {
+        "target_file": "SECURITY.md",
+        "node_path": "",
+        "target_symbol": "",
+        "fallback_lines": ""
+      },
+      "remediation": {
+        "action_required": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details.",
+        "expected_state": "No placeholder patterns in required security docs."
+      }
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "sanitized_description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "ast_coordinates": {
+        "target_file": ".well-known/security.txt",
+        "node_path": "",
+        "target_symbol": "",
+        "fallback_lines": ""
+      },
+      "remediation": {
+        "action_required": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details.",
+        "expected_state": "No placeholder patterns in required security docs."
+      }
+    }
+  ],
+  "pack_id": "house-policy",
+  "readiness_score": 40
+}

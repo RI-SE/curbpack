@@ -1,0 +1,6 @@
+{
+  "schema_version": "1",
+  "status": "unavailable",
+  "findings": null,
+  "note": "No supported lockfile/manifest for join (no package-lock.json, pnpm-lock.yaml, package.json, or go.mod)"
+}

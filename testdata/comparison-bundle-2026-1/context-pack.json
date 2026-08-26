@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "note": "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run curbpack check before claiming fixed. Pathway confirms/attest are human-only.",
+  "pack_ids": [
+    "house-policy"
+  ],
+  "pack_versions": "house-policy@0.1.0",
+  "readiness_score": 40,
+  "ok": false,
+  "failures": [
+    {
+      "gate_id": "HOUSE-DEP-AXIOS-PIN",
+      "severity": "critical",
+      "description": "House policy bans vulnerable axios@1.6.0 pins in package.json. (target absent)",
+      "target_file": "package.json",
+      "action_hint": "Upgrade axios to a patched release and refresh the lockfile."
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "target_file": "SECURITY.md",
+      "action_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+    },
+    {
+      "gate_id": "HOUSE-ANTI-PLACEHOLDER",
+      "severity": "high",
+      "description": "House policy docs contain placeholder / boilerplate text. (scaffold body overlap)",
+      "target_file": ".well-known/security.txt",
+      "action_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+    }
+  ],
+  "instrument": {
+    "deps_count": 0,
+    "deps_fp": "e3b0c44298fc1c14",
+    "secret_hits": 0,
+    "note": "Instrument panel map — not a security program · not conformity assessment"
+  },
+  "remediation_hints": [],
+  "pathway": {
+    "phase": "AwaitSuggest",
+    "parent_path": "Root / Pathway / AwaitSuggest",
+    "next_verb": "suggest packs",
+    "next_cmd": "curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
+    "next_note": "enum seed only — see docs/getting-started/pathway.md",
+    "packs_confirmed": false,
+    "prose_owned": false,
+    "share_reviewed": false,
+    "note": "Re-check locally. Not certification. confirm-* / attest are human-only. Seed is not a gate input."
+  },
+  "agent_identity": {
+    "agent_id": "",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared",
+    "reason": "not_installed"
+  },
+  "paths": {
+    "buyer_questions": ".github/curbpack/cache/buyer-questions.md",
+    "context_pack": ".github/curbpack/cache/context-pack.json",
+    "context_pack_md": ".github/curbpack/cache/context-pack.md",
+    "explain_packet": ".github/curbpack/cache/explain-packet.json",
+    "instrument": ".github/curbpack/cache/instrument.json",
+    "latest_failure": ".github/curbpack/cache/latest_failure.json",
+    "pathway_seed": ".github/curbpack/cache/pathway-seed.json",
+    "pathway_status_hint": "curbpack pathway suggest --product=hygiene --eu-docs=no --medtech=no --sector=none --house-first=yes",
+    "policy_graph": ".github/curbpack/graph/policy-graph.json",
+    "remediations": ".github/curbpack/cache/remediations.json",
+    "research_brief": ".github/curbpack/cache/research-brief.md",
+    "research_packet": ".github/curbpack/cache/research-packet.json",
+    "research_packet_present": "false"
+  },
+  "certification_claimed": false
+}
