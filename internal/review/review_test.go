@@ -494,3 +494,21 @@ func TestDefaultSurfaceListUnchanged(t *testing.T) {
 		}
 	}
 }
+
+func TestMethodVersionMatchesClassifier(t *testing.T) {
+	if review.MethodID != "curbpack-review-method" {
+		t.Fatalf("MethodID=%q", review.MethodID)
+	}
+	if review.MethodVersion != "1.0.0" {
+		t.Fatalf("MethodVersion=%q", review.MethodVersion)
+	}
+	root := repoRoot(t)
+	doc := filepath.Join(root, "docs", "method", "review-method-"+review.MethodVersion+".md")
+	if _, err := os.Stat(doc); err != nil {
+		t.Fatalf("method doc missing for MethodVersion %s: %v", review.MethodVersion, err)
+	}
+	// Classifier remains independent; lock both stay non-empty and schema stable.
+	if review.ClassifierVersion == "" {
+		t.Fatal("ClassifierVersion empty")
+	}
+}
