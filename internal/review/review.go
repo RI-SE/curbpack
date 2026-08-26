@@ -27,6 +27,7 @@ import (
 
 const (
 	schemaVersion     = "curbpack-review-report:2"
+	SchemaVersion     = schemaVersion // exported for CLI --since schema check
 	ClassifierVersion = "refclass:1"
 
 	// MethodID / MethodVersion identify the published review method document.
@@ -38,6 +39,9 @@ const (
 	// maxBundleDigestBytes is the refuse-oversize ceiling for streaming bundle_digest.
 	// Same magnitude as maxTotalBytes; never truncate — refuse with empty digest.
 	maxBundleDigestBytes = 64 << 20
+
+	// MaxPriorReportBytes caps --since prior JSON reads (CLI); same as per-file parse cap.
+	MaxPriorReportBytes = maxFileBytes
 )
 
 // State is one finding outcome. Never conflate these three.
@@ -99,6 +103,7 @@ type Options struct {
 	JSONOut        bool
 	Full           bool     // full dump + dropped list; default is terse
 	TriageSurfaces []string // optional; empty → defaultTriageSurfaces
+	Prior          *Report  // optional prior report for delta (CLI loads; Run stays pure)
 }
 
 var (
@@ -232,6 +237,9 @@ func Run(opts Options) (Report, error) {
 		out = []byte(buf.String())
 	} else {
 		out = []byte(TriageMarkdown(rep, opts.Full))
+		if opts.Prior != nil {
+			out = append(out, []byte(FormatDelta(*opts.Prior, rep))...)
+		}
 	}
 	if err := exportx.PacketLooksAirlocked(out); err != nil {
 		return rep, fmt.Errorf("review output failed airlock: %w", err)
