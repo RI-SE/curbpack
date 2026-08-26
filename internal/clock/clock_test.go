@@ -1,6 +1,7 @@
 package clock_test
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -46,5 +47,27 @@ func TestDaysUntilArt14Reporting(t *testing.T) {
 	}
 	if clock.Art14ReportingStart != time.Date(2026, 9, 11, 0, 0, 0, 0, time.UTC) {
 		t.Fatal("Art14ReportingStart date drift")
+	}
+}
+
+func TestRFC3339ForEvidenceStableWithoutEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "")
+	_ = os.Unsetenv("SOURCE_DATE_EPOCH")
+	a := clock.RFC3339ForEvidence()
+	b := clock.RFC3339ForEvidence()
+	if a != b {
+		t.Fatalf("evidence RFC3339 drifted: %q vs %q", a, b)
+	}
+	if a != clock.EvidenceEpoch {
+		t.Fatalf("want fixed EvidenceEpoch %q, got %q", clock.EvidenceEpoch, a)
+	}
+}
+
+func TestRFC3339ForEvidenceHonorsSourceDateEpoch(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "1704067200") // 2024-01-01 UTC
+	got := clock.RFC3339ForEvidence()
+	want := "2024-01-01T00:00:00Z"
+	if got != want {
+		t.Fatalf("RFC3339ForEvidence() = %q, want %q", got, want)
 	}
 }

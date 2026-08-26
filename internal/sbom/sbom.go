@@ -154,7 +154,7 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 	doc.SpecVersion = "1.5"
 	doc.SerialNumber = serial
 	doc.Version = 1
-	doc.Metadata.Timestamp = clock.RFC3339()
+	doc.Metadata.Timestamp = clock.RFC3339ForEvidence()
 	doc.Metadata.Tools.Components = []Component{{
 		Type:    "application",
 		Name:    "curbpack",
