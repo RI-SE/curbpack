@@ -346,11 +346,12 @@ func installPreCommitHook(root string) error {
 		return err
 	}
 	path := filepath.Join(hookDir, "pre-commit")
-	// LF-only: never write CRLF (Windows Git may otherwise break sh hooks).
+	// LF-only ASCII: never write CRLF; avoid non-ASCII so CI grep -F is never
+	// locale/"binary file" sensitive on the fail-closed assertion string.
 	script := "#!/bin/sh\n" +
-		"# Curbpack — fail commit on high/critical gate findings\n" +
+		"# Curbpack - fail commit on high/critical gate findings\n" +
 		"# --heal: create missing stubs only (never overwrite filled docs; never attest)\n" +
-		"# Hooks enabled ⇒ missing binary is fail-closed (no silent skip).\n" +
+		"# Hooks enabled => missing binary is fail-closed (no silent skip).\n" +
 		"if command -v curbpack >/dev/null 2>&1; then\n" +
 		"  exec curbpack check --heal\n" +
 		"elif [ -x ./bin/curbpack ]; then\n" +
@@ -358,7 +359,7 @@ func installPreCommitHook(root string) error {
 		"elif [ -x ./curbpack ]; then\n" +
 		"  exec ./curbpack check --heal\n" +
 		"else\n" +
-		"  echo \"curbpack not on PATH — refusing commit (hooks enabled)\" >&2\n" +
+		"  echo \"curbpack not on PATH - refusing commit (hooks enabled)\" >&2\n" +
 		"  exit 1\n" +
 		"fi\n"
 	if strings.Contains(script, "\r") {
