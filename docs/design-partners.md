@@ -39,7 +39,7 @@ Prefer [First move stuck](../.github/ISSUE_TEMPLATE/first_move_stuck.yml) when a
 
 Do **not** send partners to `docs/gtm-oss/` (non-product).
 
-## What we measure
+## What we count
 
 - First-move completion (≥4/5)
 - Second green within 7 days (≥3/5)

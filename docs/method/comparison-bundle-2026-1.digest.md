@@ -2,11 +2,11 @@
 
 Frozen input: [`testdata/comparison-bundle-2026-1/`](../../testdata/comparison-bundle-2026-1/).
 
-Method: `curbpack-review-method` **1.1.0**.
+Method: `curbpack-review-method` **1.1.1**.
 
 | Field | Value |
 |-------|--------|
-| `record_digest` | `098590e91597ec823df3e02c631ea1caf22dd9ad329f61871c4290cb952f4fe8` |
+| `record_digest` | `1cab72f82fb8275f972cca251ca40b56c2a2d217650fa6bcf91107e93b700773` |
 
 Divergence means a different tool version, a modified tool, or altered input — never operator variation.
 

@@ -531,7 +531,7 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 	if review.MethodID != "curbpack-review-method" {
 		t.Fatalf("MethodID=%q", review.MethodID)
 	}
-	if review.MethodVersion != "1.1.0" {
+	if review.MethodVersion != "1.1.1" {
 		t.Fatalf("MethodVersion=%q", review.MethodVersion)
 	}
 	root := repoRoot(t)

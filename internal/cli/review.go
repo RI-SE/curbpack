@@ -22,6 +22,7 @@ func cmdReview(args []string) error {
 	repoMode := false
 	repoPath := "."
 	sincePath := ""
+	var packList []string
 	var paths []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
@@ -40,6 +41,20 @@ func cmdReview(args []string) error {
 				i++
 				repoPath = args[i]
 			}
+		case a == "--packs":
+			if i+1 >= len(args) {
+				return usageErr("review --packs requires a value")
+			}
+			i++
+			packList = config.ParsePacksFlag(args[i])
+			if len(packList) == 0 {
+				return usageErr("review --packs requires at least one pack id")
+			}
+		case strings.HasPrefix(a, "--packs="):
+			packList = config.ParsePacksFlag(strings.TrimPrefix(a, "--packs="))
+			if len(packList) == 0 {
+				return usageErr("review --packs requires at least one pack id")
+			}
 		case a == "--since":
 			if i+1 >= len(args) {
 				return usageErr("review --since requires a path to a prior report JSON")
@@ -55,11 +70,14 @@ func cmdReview(args []string) error {
 	if repoMode && batch {
 		return usageErr("review --repo does not combine with --batch")
 	}
+	if len(packList) > 0 && !repoMode {
+		return usageErr("review --packs only applies with --repo")
+	}
 	if repoMode {
 		if len(paths) != 0 {
 			return usageErr("review --repo does not take a pack path argument (got " + strings.Join(paths, ", ") + ")")
 		}
-		return runReviewRepo(repoPath, jsonOut, full, sincePath)
+		return runReviewRepo(repoPath, packList, jsonOut, full, sincePath)
 	}
 	if len(paths) == 0 {
 		commandUsage("review")
@@ -112,12 +130,12 @@ func cmdReview(args []string) error {
 	return nil
 }
 
-func runReviewRepo(repoPath string, jsonOut, full bool, sincePath string) error {
+func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, sincePath string) error {
 	root, err := filepath.Abs(filepath.Clean(strings.TrimSpace(repoPath)))
 	if err != nil {
 		return usageErr(fmt.Sprintf("review --repo: resolve path %q: %v", repoPath, err))
 	}
-	packIDs, err := config.ResolvePackIDs(root, nil)
+	packIDs, err := config.ResolvePackIDs(root, packList)
 	if err != nil {
 		return usageErr(fmt.Sprintf("review --repo: resolve packs at %s: %v — fix .curbpack.json or review a received pack directory", root, err))
 	}
@@ -142,6 +160,11 @@ func runReviewRepo(repoPath string, jsonOut, full bool, sincePath string) error 
 		tty.PrintHeader("curbpack review --repo")
 	}
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "Offline in-repo document triage — not a product verdict."))
+	if len(surfaces) <= 2 {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow,
+			fmt.Sprintf("Scope-limited: only %d governed surface(s) from packs %s — use --packs for denser packs (e.g. cra-baseline).",
+				len(surfaces), strings.Join(packIDs, ","))))
+	}
 
 	rep, err := review.Run(review.Options{
 		BundleRoot:     root,

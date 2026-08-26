@@ -9,12 +9,12 @@ import (
 )
 
 // pinnedComparisonRecordDigest is the expected record_digest for
-// testdata/comparison-bundle-2026-1 under MethodVersion 1.1.0.
+// testdata/comparison-bundle-2026-1 under MethodVersion 1.1.1.
 //
 // Update this pin whenever MethodVersion (or classifier / digest algorithm /
 // bundle bytes) changes — method_version is inside the digested record, so a
 // bump is an expected deliberate failure, not a mystery breakage.
-const pinnedComparisonRecordDigest = "098590e91597ec823df3e02c631ea1caf22dd9ad329f61871c4290cb952f4fe8"
+const pinnedComparisonRecordDigest = "1cab72f82fb8275f972cca251ca40b56c2a2d217650fa6bcf91107e93b700773"
 
 func TestComparisonBundleDigestPinned(t *testing.T) {
 	root := repoRoot(t)

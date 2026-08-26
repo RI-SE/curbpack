@@ -45,7 +45,7 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 National variations, guidance changes, and new standards are **pack version bumps** authored by domain owners — no Go change, no binary release. The pack format already carries jurisdiction, validity windows, citations, extends/overlays, supersession, and private pack dirs.
 
-A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.1.0.md](docs/method/review-method-1.1.0.md).
+A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.1.1.md](docs/method/review-method-1.1.1.md).
 
 ### Review / reference graph prohibitions
 
