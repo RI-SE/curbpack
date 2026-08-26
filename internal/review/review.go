@@ -212,6 +212,8 @@ func Run(opts Options) (Report, error) {
 	budget := &readBudget{remaining: maxTotalBytes}
 	kindLabel := "in-bundle-or-repo"
 	var closure *closureSet
+	var bundleIndex *bundleWalkIndex
+	var bundleRelPaths []string
 	if opts.ReferencesOnly {
 		kindLabel = "in-repo"
 		closure = newClosureSet()
@@ -221,12 +223,16 @@ func Run(opts Options) (Report, error) {
 			Closure:    closure,
 		})
 	} else {
+		files, relPaths, walkFindings := walkBundleIndex(tallyRoot, false)
+		bundleIndex = &bundleWalkIndex{files: files, relPaths: relPaths, findings: walkFindings}
+		bundleRelPaths = relPaths
 		checkStructure(&rep, tallyRoot, budget)
 		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
 		prov := extractProvenance(tallyRoot, budget)
 		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
 		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
 			KindLabel: kindLabel,
+			Index:     bundleIndex,
 		})
 	}
 
@@ -246,19 +252,30 @@ func Run(opts Options) (Report, error) {
 	// No-git is a runtime guarantee (TestReviewNoGitRequired), not compile-time.
 	var bundleDigest string
 	var oversize bool
+	var digestSkipped int
 	if opts.ReferencesOnly {
-		bundleDigest, oversize = computeClosureDigest(tallyRoot, closure)
+		bundleDigest, oversize, digestSkipped = computeClosureDigest(tallyRoot, closure)
 	} else {
-		bundleDigest, oversize = computeBundleDigest(tallyRoot)
+		bundleDigest, oversize, digestSkipped = computeBundleDigest(tallyRoot, bundleRelPaths)
 	}
 	rep.BundleDigest = bundleDigest
-	if oversize {
-		add(&rep, Finding{
-			ID: "structure:bundle-size-cap", Category: "structure",
-			State: StateContradicted, Cause: CauseSelfDisagree,
-			Detail: "Bundle exceeds digest size ceiling — bundle_digest left empty (refused, never truncated)",
-		})
-		// Reset counters then re-tally/sort after appending the size finding.
+	if oversize || digestSkipped > 0 {
+		if oversize {
+			add(&rep, Finding{
+				ID: "structure:bundle-size-cap", Category: "structure",
+				State: StateContradicted, Cause: CauseSelfDisagree,
+				Detail: "Bundle exceeds digest size ceiling — bundle_digest left empty (refused, never truncated)",
+			})
+		}
+		if digestSkipped > 0 {
+			rep.BundleDigest = ""
+			add(&rep, Finding{
+				ID: "structure:digest-incomplete", Category: "structure",
+				State: StateContradicted, Cause: CauseSelfDisagree,
+				Detail: fmt.Sprintf("%d digest path(s) unreadable or skipped — bundle_digest left empty (refused, never truncated)", digestSkipped),
+			})
+		}
+		// Reset counters then re-tally/sort after appending refuse findings.
 		rep.ConfirmedCount = 0
 		rep.UnconfirmedCount = 0
 		rep.ContradictedCount = 0
@@ -559,7 +576,14 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 	if kindLabel == "" {
 		kindLabel = "in-bundle-or-repo"
 	}
-	bundleFiles, _, walkFindings := walkBundleIndex(root, opts.RepoIgnore)
+	var bundleFiles map[string]struct{}
+	var walkFindings []Finding
+	if opts.Index != nil {
+		bundleFiles = opts.Index.files
+		walkFindings = opts.Index.findings
+	} else {
+		bundleFiles, _, walkFindings = walkBundleIndex(root, opts.RepoIgnore)
+	}
 	for _, f := range walkFindings {
 		add(rep, f)
 	}
@@ -957,10 +981,17 @@ func shouldSkipRepoDir(relSlash string) bool {
 	return false
 }
 
+type bundleWalkIndex struct {
+	files    map[string]struct{}
+	relPaths []string
+	findings []Finding
+}
+
 type refWalkOpts struct {
 	RepoIgnore bool
 	KindLabel  string
 	Closure    *closureSet
+	Index      *bundleWalkIndex // bundle mode: pre-walked tree (avoids double walk)
 }
 
 type closureSet struct {
@@ -995,131 +1026,6 @@ func (c *closureSet) sorted() []string {
 	return out
 }
 
-// computeClosureDigest hashes the referenced closure (surfaces read + resolved path hits).
-// Same refuse-oversize ceiling as computeBundleDigest — never truncate.
-func computeClosureDigest(root string, closure *closureSet) (digest string, oversize bool) {
-	relPaths := closure.sorted()
-	var lstatSum int64
-	for _, rel := range relPaths {
-		full, _, err := pathjail.Join(root, rel)
-		if err != nil {
-			continue
-		}
-		st, err := os.Lstat(full)
-		if err != nil || !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-		lstatSum += st.Size()
-		if lstatSum > maxBundleDigestBytes {
-			return "", true
-		}
-	}
-
-	h := sha256.New()
-	var streamed int64
-	for _, rel := range relPaths {
-		full, _, err := pathjail.Join(root, rel)
-		if err != nil {
-			continue
-		}
-		st, err := os.Lstat(full)
-		if err != nil || st.Mode()&os.ModeSymlink != 0 || !st.Mode().IsRegular() {
-			continue
-		}
-		if streamed+st.Size() > maxBundleDigestBytes {
-			return "", true
-		}
-		fileHash, n, err := hashFileStreaming(full)
-		if err != nil {
-			continue
-		}
-		streamed += n
-		if streamed > maxBundleDigestBytes {
-			return "", true
-		}
-		ir.WriteLenPrefixed(h, rel)
-		ir.WriteLenPrefixed(h, fileHash)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), false
-}
-
-// computeBundleDigest streams full file contents under maxBundleDigestBytes.
-// On oversize: returns ("", true) — never a partial hash. Uses ir.WriteLenPrefixed
-// (attest kept private: frozen capsule surface; ir is already the digest package).
-func computeBundleDigest(root string) (digest string, oversize bool) {
-	_, relPaths, _ := walkBundleIndex(root, false)
-	var lstatSum int64
-	for _, rel := range relPaths {
-		full, _, err := pathjail.Join(root, rel)
-		if err != nil {
-			continue
-		}
-		st, err := os.Lstat(full)
-		if err != nil || !st.Mode().IsRegular() {
-			continue
-		}
-		lstatSum += st.Size()
-		if lstatSum > maxBundleDigestBytes {
-			return "", true
-		}
-	}
-
-	h := sha256.New()
-	var streamed int64
-	for _, rel := range relPaths {
-		full, _, err := pathjail.Join(root, rel)
-		if err != nil {
-			continue
-		}
-		st, err := os.Lstat(full)
-		if err != nil || st.Mode()&os.ModeSymlink != 0 || !st.Mode().IsRegular() {
-			continue
-		}
-		if streamed+st.Size() > maxBundleDigestBytes {
-			return "", true
-		}
-		fileHash, n, err := hashFileStreaming(full)
-		if err != nil {
-			continue
-		}
-		streamed += n
-		if streamed > maxBundleDigestBytes {
-			return "", true
-		}
-		ir.WriteLenPrefixed(h, rel)
-		ir.WriteLenPrefixed(h, fileHash)
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), false
-}
-
-func hashFileStreaming(path string) (hex string, n int64, err error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", 0, err
-	}
-	defer f.Close()
-	h := sha256.New()
-	n, err = io.Copy(h, f)
-	if err != nil {
-		return "", n, err
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), n, nil
-}
-
-func computeRecordDigest(rep Report) string {
-	// Exclude record_digest and bundle_root (directory-name dependent).
-	cp := rep
-	cp.RecordDigest = ""
-	cp.BundleRoot = ""
-	b, err := json.Marshal(cp)
-	if err != nil {
-		return ""
-	}
-	sum := sha256.Sum256(b)
-	return fmt.Sprintf("%x", sum[:])
-}
-
-// computeSurfacesDigest hashes the sorted triage surface list (length-prefixed paths).
 func computeSurfacesDigest(surfaces []string) string {
 	h := sha256.New()
 	for _, s := range surfaces {
