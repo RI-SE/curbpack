@@ -48,7 +48,7 @@ func TestShareStale_match(t *testing.T) {
 		Timestamp: "2026-01-01T00:00:00Z", AttestLine: "UNSIGNED — not cryptographically verified",
 		AttestClass: "unsigned", UnsignedLoud: true,
 		ProvenanceHTML: "<dl></dl>", FooterPrefix: "x · ",
-		ResultDigest:   ir.ComputeResultDigest(payload),
+		ResultDigest: ir.ComputeResultDigest(payload),
 	})
 	if !strings.Contains(htmlDoc, fp) {
 		t.Fatalf("html missing fp marker %s", fp)
@@ -88,7 +88,7 @@ func TestFingerprintFromGatePayload_MatchesHTML(t *testing.T) {
 	dto := templates.OnePagerDTO{
 		Score: 80, Passed: false, PackID: payload.PackID,
 		Failures: []templates.OnePagerFailure{{GateID: "G-1", Severity: "high"}},
-		Bind: bind, AttestLine: "UNSIGNED — not cryptographically verified",
+		Bind:     bind, AttestLine: "UNSIGNED — not cryptographically verified",
 		UnsignedLoud: true, ResultDigest: rd,
 	}
 	htmlFP := templates.OnePagerFingerprint(dto)
@@ -118,9 +118,9 @@ func TestShareStale_coherentWithDigests(t *testing.T) {
 		Timestamp: "2026-01-01T00:00:00Z", AttestLine: "UNSIGNED — not cryptographically verified",
 		AttestClass: "unsigned", UnsignedLoud: true,
 		ProvenanceHTML: "<dl><dt>result_digest</dt><dd>x</dd></dl>", FooterPrefix: "x · ",
-		ResultDigest:   ir.ComputeResultDigest(payload),
-		SBOMDigest:     mustFileSHA(t, filepath.Join(packDir, "04-sbom.cdx.json")),
-		VEXDigest:      mustFileSHA(t, filepath.Join(packDir, "05-vex-draft.json")),
+		ResultDigest: ir.ComputeResultDigest(payload),
+		SBOMDigest:   mustFileSHA(t, filepath.Join(packDir, "04-sbom.cdx.json")),
+		VEXDigest:    mustFileSHA(t, filepath.Join(packDir, "05-vex-draft.json")),
 	})
 	if !strings.Contains(htmlDoc, fp) {
 		t.Fatalf("html missing fp %s", fp)

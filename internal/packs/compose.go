@@ -124,11 +124,11 @@ func Compose(ids []string) (Pack, []string, error) {
 		Description:    "Composed pack view (extends/overlays merged; later rule id wins).",
 		AssuranceClass: assuranceClass,
 		Jurisdiction:   jurisdiction,
-		Validity:     validity,
-		Supersedes:   supersedes,
-		SupersededBy: supersededBy,
-		Citations:    citations,
-		Rules:        rules,
+		Validity:       validity,
+		Supersedes:     supersedes,
+		SupersededBy:   supersededBy,
+		Citations:      citations,
+		Rules:          rules,
 	}
 	if err := ValidatePack(out); err != nil {
 		return Pack{}, nil, fmt.Errorf("composed pack invalid: %w", err)

@@ -173,9 +173,9 @@ func TestRepoWalkIgnoresDotGit(t *testing.T) {
 		Shape:   shapeRepo,
 		Surface: "note.md",
 		Files: map[string]string{
-			"note.md":            "`tracked.md`\n",
-			"tracked.md":         "t\n",
-			".git/objects/fake":  "should-not-enter-closure\n",
+			"note.md":           "`tracked.md`\n",
+			"tracked.md":        "t\n",
+			".git/objects/fake": "should-not-enter-closure\n",
 		},
 		Dirs: []string{".git/objects"},
 	})
@@ -235,9 +235,9 @@ func TestClosureDigestStableUnderUnrelatedEdit(t *testing.T) {
 		Shape:   shapeRepo,
 		Surface: "note.md",
 		Files: map[string]string{
-			"note.md":    "`hit.md`\n",
-			"hit.md":     "hit\n",
-			"README.md":  "unrelated\n",
+			"note.md":   "`hit.md`\n",
+			"hit.md":    "hit\n",
+			"README.md": "unrelated\n",
 		},
 	})
 	opts := review.Options{

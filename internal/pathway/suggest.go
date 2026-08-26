@@ -13,10 +13,10 @@ type SuggestResult struct {
 }
 
 var (
-	enumProduct    = map[string]struct{}{"hygiene": {}, "shipping": {}}
-	enumYesNo      = map[string]struct{}{"yes": {}, "no": {}}
-	enumSector     = map[string]struct{}{"none": {}, "other": {}}
-	enumCeContext  = map[string]struct{}{"none": {}, "in_procedure": {}}
+	enumProduct   = map[string]struct{}{"hygiene": {}, "shipping": {}}
+	enumYesNo     = map[string]struct{}{"yes": {}, "no": {}}
+	enumSector    = map[string]struct{}{"none": {}, "other": {}}
+	enumCeContext = map[string]struct{}{"none": {}, "in_procedure": {}}
 )
 
 // ValidateAnswers checks closed enum sets. Returns a usage-style error on unknown values.

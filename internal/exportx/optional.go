@@ -79,9 +79,9 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 	sbomPath := filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json")
 	sbomDig := sbom.FileDigest(sbomPath)
 	predicate := map[string]any{
-		"_type": "https://slsa.dev/provenance/v0.2",
+		"_type":     "https://slsa.dev/provenance/v0.2",
 		"buildType": "https://curbpack.local/slsa/prepare-release",
-		"builder": map[string]any{"id": "curbpack"},
+		"builder":   map[string]any{"id": "curbpack"},
 		"invocation": map[string]any{
 			"configSource": map[string]any{"uri": "local", "digest": map[string]string{"sha256": gateDigest}},
 		},
