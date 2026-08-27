@@ -2,10 +2,10 @@
 
 Drop-in for `docs/shared-frame.md`. Written read-only; nothing was applied to any repository.
 
-> **Pin.** Source of record is `RI-SE/curbpack@eac1ab3` · review method **1.3.0** · classifier **`refclass:2`** · 27 Aug 2026.
+> **Pin.** Source of record is `RI-SE/curbpack@a36aeef` · review method **1.3.0** · classifier **`refclass:2`** · 27 Aug 2026.
 > **Not** any PDF, including v8. The concept document is *intent*; this tree is *record*. When they disagree, the tree wins.
 >
-> *Pin stays `eac1ab3` until the v6 reference-integrity train merges to RI-SE `main`; then bump this pin to the merge SHA. Treat any fork-local sha as unverifiable by the other party until then.*
+> *Pinned to RI-SE merge of the v6 reference-integrity train (`a36aeef`). Treat any fork-local sha as unverifiable by the other party.*
 >
 > **Mapper hard-invalidate:** a `classifier_version` bump (including `refclass:1` → `refclass:2`) **invalidates** previously accepted links. Soft-note only on `method_version`. `reference:claim:<id>` confirmed means the claim id string is present — **not** that the requirement is met.
 

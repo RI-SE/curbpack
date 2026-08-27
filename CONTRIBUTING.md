@@ -64,7 +64,7 @@ These apply to `review` and related surfaces (including `--repo`):
 
 ### Shared Frame
 
-Cross-product seam with Claim-to-Artifact Mapper: [`docs/shared-frame.md`](docs/shared-frame.md) (+ [`annexes`](docs/shared-frame-annexes.md)). Pin shared artifacts to `RI-SE/curbpack@eac1ab3`. Do not invent Mapper adapter schemas here until Shared Frame **0b** freezes.
+Cross-product seam with Claim-to-Artifact Mapper: [`docs/shared-frame.md`](docs/shared-frame.md) (+ [`annexes`](docs/shared-frame-annexes.md)). Pin shared artifacts to `RI-SE/curbpack@a36aeef`. Do not invent Mapper adapter schemas here until Shared Frame **0b** freezes.
 
 ### Low-maintenance covenant (rules 7–9)
 
