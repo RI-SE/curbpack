@@ -87,4 +87,4 @@ Regulation prose and raw source stay off the default tutor path. Dual-rep IR + C
 
 - [60-second paths](getting-started/60-second-paths.md) · [Buyer evidence](getting-started/buyer-evidence.md) · [Pathway](getting-started/pathway.md) · [Daily loop](getting-started/daily-loop.md)
 - [Stable contracts](stable-contracts.md) · [For authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md)
-- [Shared Frame](shared-frame.md) · [Shared Frame annexes](shared-frame-annexes.md) — curbpack ⇄ Mapper seam (pin `eac1ab3`)
+- [Shared Frame](shared-frame.md) · [Shared Frame annexes](shared-frame-annexes.md) — curbpack ⇄ Mapper seam (pin `a36aeef`)
