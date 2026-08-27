@@ -33,7 +33,7 @@ const (
 
 	// MethodID / MethodVersion identify the published review method document.
 	MethodID      = "curbpack-review-method"
-	MethodVersion = "1.1.1" // must equal docs/method/review-method-<v>.md — see W6/W10
+	MethodVersion = "1.2.0" // must equal docs/method/review-method-<v>.md — see W6/W10
 
 	maxFileBytes  = 8 << 20  // 8 MiB per file (parse reads)
 	maxTotalBytes = 64 << 20 // 64 MiB total across parse reads
@@ -106,6 +106,10 @@ type Report struct {
 	TriageSurfaces []string `json:"triage_surfaces"`
 	// SurfacesDigest is sha256 over sorted length-prefixed surface path bytes.
 	SurfacesDigest string `json:"surfaces_digest"`
+	// SubjectCommit is the producer commit the bundle claims (bundle: gate payload; repo: CLI git read).
+	SubjectCommit string `json:"subject_commit,omitempty"`
+	// SubjectStateHash is the producer state_hash when present in bundle hpurl-pointer.json.
+	SubjectStateHash string `json:"subject_state_hash,omitempty"`
 }
 
 // Digest scope values recorded on every report.
@@ -125,6 +129,8 @@ type Options struct {
 	// ReferencesOnly skips pack structure/load/digest checks and hashes the
 	// referenced closure instead of the full tree. Used for repository-root triage.
 	ReferencesOnly bool
+	// SubjectCommit is set by CLI in repo mode (internal/review never calls git).
+	SubjectCommit string
 }
 
 var (
@@ -222,12 +228,14 @@ func Run(opts Options) (Report, error) {
 			KindLabel:  kindLabel,
 			Closure:    closure,
 		})
+		rep.SubjectCommit = strings.TrimSpace(opts.SubjectCommit)
 	} else {
 		files, relPaths, walkFindings := walkBundleIndex(tallyRoot, false)
 		bundleIndex = &bundleWalkIndex{files: files, relPaths: relPaths, findings: walkFindings}
 		bundleRelPaths = relPaths
 		checkStructure(&rep, tallyRoot, budget)
 		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
+		applySubjectFields(&rep, tallyRoot, budget, payload, payloadOK)
 		prov := extractProvenance(tallyRoot, budget)
 		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
 		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
@@ -450,6 +458,22 @@ func loadPayload(rep *Report, root string, budget *readBudget) (ir.GateFailurePa
 			fence(strings.TrimSpace(p.PackID)), p.ReadinessScore, len(p.Failures)),
 	})
 	return p, true
+}
+
+func applySubjectFields(rep *Report, root string, budget *readBudget, payload ir.GateFailurePayload, payloadOK bool) {
+	if payloadOK {
+		rep.SubjectCommit = strings.TrimSpace(payload.ConcurrencyControl.ExpectedParentCommitSHA)
+	}
+	data, truncated, err := readCapped(root, "hpurl-pointer.json", budget)
+	if err != nil || truncated || len(data) == 0 {
+		return
+	}
+	var ptr struct {
+		StateHash string `json:"state_hash"`
+	}
+	if json.Unmarshal(data, &ptr) == nil {
+		rep.SubjectStateHash = strings.TrimSpace(ptr.StateHash)
+	}
 }
 
 func checkDigests(rep *Report, root string, payload ir.GateFailurePayload, payloadOK bool, prov map[string]string, budget *readBudget) {

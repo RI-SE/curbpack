@@ -58,3 +58,36 @@ func TestShareLadderLines_attestBehind(t *testing.T) {
 		t.Fatalf("want attest_commit_behind mentioning bind, got %v", lines)
 	}
 }
+
+func TestCopyEvidenceHPURLPointerToReviewPack(t *testing.T) {
+	dir := t.TempDir()
+	dest, err := copyEvidenceHPURLPointerToReviewPack(dir)
+	if err != nil || dest != "" {
+		t.Fatalf("absent pointer: dest=%q err=%v", dest, err)
+	}
+
+	evidence := filepath.Join(dir, ".github", "curbpack", "evidence")
+	if err := os.MkdirAll(evidence, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	want := []byte(`{"state_hash":"abc123","commit_sha":"deadbeef"}` + "\n")
+	src := filepath.Join(evidence, "hpurl-pointer.json")
+	if err := os.WriteFile(src, want, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dest, err = copyEvidenceHPURLPointerToReviewPack(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	review := filepath.Join(dir, "review-pack", "hpurl-pointer.json")
+	if dest != review {
+		t.Fatalf("dest=%q want %q", dest, review)
+	}
+	got, err := os.ReadFile(review)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
