@@ -1,6 +1,6 @@
 # Shared Frame v1 — Annexes
 
-Companion to [`shared-frame.md`](shared-frame.md). Pinned to `RI-SE/curbpack@eac1ab3`, method 1.2.0, 27 Aug 2026.
+Companion to [`shared-frame.md`](shared-frame.md). Pinned to `RI-SE/curbpack@a36aeef`, method 1.3.0 · `refclass:2`, 27 Aug 2026.
 
 **These are annexes on purpose.** Onboarding teaches the seam. Law, research framing, and backlog are looked up when needed, not read on day one.
 
@@ -156,7 +156,8 @@ Demoted from the v8 review. **Aslak's side unless marked otherwise. None of it b
 
 | Claim | Status |
 |---|---|
-| Main `eac1ab3`, method `1.2.0`, classifier `refclass:1` | **VERIFIED** — read-only clone, 27 Aug 2026 |
+| Main `a36aeef`, method `1.3.0`, classifier `refclass:2` | **VERIFIED** — RI-SE #31 merge, 27 Aug 2026 |
+| Prior pin `eac1ab3` / method `1.2.0` / `refclass:1` | **SUPERSEDED** — hard-invalidate Mapper links on classifier bump |
 | `4a519d7` not reachable on `RI-SE/curbpack` at depth 50 | **VERIFIED, scoped** — may exist fork-locally; unverifiable from here |
 | `Answered`/`Evidence`/`VerifiedAt` shipped; `AnswersSuppressed` forced when `SkippedRules > 0` | **VERIFIED** — `buyer_questions.go:25–27, 63, 89–95, 166` |
 | `SubjectCommit` / `SubjectStateHash` shipped | **VERIFIED** — `review.go:109–112`; method 1.2.0 §2 |
