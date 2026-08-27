@@ -38,6 +38,26 @@ Curbpack evaluates **declared policy packs**. The engine has no CRA/FDA/SOC2 bra
 }
 ```
 
+### Settlement (false-green trap)
+
+Structural checks answer *is the file/structure present?* — not *is the positive regulatory content true?*
+
+| `settlement` | Meaning | Buyer answer when structural check passes |
+|--------------|---------|-------------------------------------------|
+| unset / `settles` | Existence / house hygiene may settle the question | **Yes** |
+| `indicative` | Framework-cited positive content (shape 5) or absence-with-justification (shape 7) — human/`edges` territory | **Present, not settled** |
+
+**ValidatePack fail-closed:** any rule with `citations[].framework` MUST set `settlement` explicitly (`settles` or `indicative`). Authors cannot reintroduce false Yes on CRA annex / Art 14 / medtech structural rules by omitting the field.
+
+Shape 5 (positive content) and shape 7 (absence-with-justification) stay human review — the nine check kinds never invent that assurance. Shape 6 (reference resolve) is already `review` / `checkReferences`.
+
+```json
+"settlement": "indicative",
+"citations": [
+  { "framework": "EU", "instrument": "CRA", "annex": "VII" }
+]
+```
+
 ### Pack-level fields
 
 | Field | Notes |
@@ -97,7 +117,7 @@ curbpack check
 
 ## Schema validation
 
-Packs are validated on load (id/name/version/rules, supported checks, path jail, citation date windows). Invalid packs fail fast — they never silently skip. `Compose` rejects unknown `extends` cycles.
+Packs are validated on load (id/name/version/rules, supported checks, path jail, citation date windows, **settlement when a rule citation names `framework`**). Invalid packs fail fast — they never silently skip. `Compose` rejects unknown `extends` cycles.
 
 ## Claim safety
 

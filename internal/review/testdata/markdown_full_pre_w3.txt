@@ -3,7 +3,7 @@
 > Document triage only — not a product verdict, not conformity assessment, not CE / notified-body approval.
 
 - **Bundle:** `sample-review-pack`
-- **Classifier:** `refclass:1`
+- **Classifier:** `refclass:2`
 - **Confirmed:** 10 · **Unconfirmed:** 9 (producer 7 · extractor 0 · genuine 1 · external 1) · **Contradicted:** 0 (self_disagree 0)
 - **Dropped tokens:** 0
 

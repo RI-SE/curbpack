@@ -147,6 +147,59 @@ func TestValidatePackCitationDates(t *testing.T) {
 	}
 }
 
+func TestValidatePackFrameworkRequiresSettlement(t *testing.T) {
+	bad := packs.Pack{ID: "x", Name: "X", Version: "1", Rules: []packs.Rule{{
+		ID: "R1", Check: "file_present", Path: "SECURITY.md", Severity: "high",
+		Description: "d", Remediation: "r", Expected: "e",
+		Citations: []packs.Citation{{Framework: "EU", Instrument: "CRA"}},
+	}}}
+	err := packs.ValidatePack(bad)
+	if err == nil {
+		t.Fatal("expected settlement required when framework citation present")
+	}
+	if !strings.Contains(err.Error(), "settlement required") {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	bad.Rules[0].Settlement = "maybe"
+	if err := packs.ValidatePack(bad); err == nil {
+		t.Fatal("expected invalid settlement value")
+	}
+	bad.Rules[0].Settlement = packs.SettlementIndicative
+	if err := packs.ValidatePack(bad); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCRAAnnexRulesIndicative(t *testing.T) {
+	p, err := packs.LoadPack("cra-baseline")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range p.Rules {
+		if r.ID == "CRA-DEP-AXIOS-PIN" {
+			if packs.EffectiveSettlement(r) != packs.SettlementSettles {
+				t.Fatalf("%s settlement=%q want settles", r.ID, r.Settlement)
+			}
+			continue
+		}
+		if packs.EffectiveSettlement(r) != packs.SettlementIndicative {
+			t.Fatalf("%s settlement=%q want indicative", r.ID, r.Settlement)
+		}
+		if !packs.RuleHasFrameworkCitation(r) {
+			t.Fatalf("%s missing rule-level framework citation", r.ID)
+		}
+	}
+	md, err := packs.LoadPack("medtech-iec62304")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range md.Rules {
+		if packs.EffectiveSettlement(r) != packs.SettlementIndicative {
+			t.Fatalf("%s settlement=%q want indicative", r.ID, r.Settlement)
+		}
+	}
+}
+
 func TestBuildPolicyGraphSchema(t *testing.T) {
 	g, err := packs.BuildPolicyGraph([]string{"house-policy"})
 	if err != nil {

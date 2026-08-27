@@ -26,6 +26,7 @@
       "description": "IEC 62304 software safety classification rationale missing.",
       "remediation": "Document Class A/B/C rationale in docs/medtech/software_safety_class.md.",
       "expected": "Safety class declared with rationale.",
+      "settlement": "indicative",
       "citations": [
         {
           "framework": "IEC",
@@ -45,7 +46,16 @@
       "require_headers": ["# SOUP List", "## Items"],
       "description": "SOUP (software of unknown provenance) inventory missing.",
       "remediation": "Maintain a SOUP inventory under docs/medtech/soup_list.md.",
-      "expected": "SOUP list present with Items section."
+      "expected": "SOUP list present with Items section.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "IEC",
+          "instrument": "IEC 62304",
+          "article": "software lifecycle",
+          "url": "https://www.iso.org/standard/38421.html"
+        }
+      ]
     },
     {
       "id": "MD-PROBLEM-RESOLUTION",
@@ -57,7 +67,16 @@
       "require_headers": ["# Problem Resolution", "## Process"],
       "description": "Problem resolution process document missing.",
       "remediation": "Describe defect intake and resolution process.",
-      "expected": "Problem resolution process documented."
+      "expected": "Problem resolution process documented.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "IEC",
+          "instrument": "IEC 62304",
+          "article": "software lifecycle",
+          "url": "https://www.iso.org/standard/38421.html"
+        }
+      ]
     },
     {
       "id": "MD-ANTI-PLACEHOLDER",
@@ -71,7 +90,16 @@
       ],
       "description": "MedTech evidence drafts contain placeholder text.",
       "remediation": "Replace placeholders with device-specific content before release review.",
-      "expected": "No placeholder patterns in medtech evidence docs."
+      "expected": "No placeholder patterns in medtech evidence docs.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "IEC",
+          "instrument": "IEC 62304",
+          "article": "software lifecycle",
+          "url": "https://www.iso.org/standard/38421.html"
+        }
+      ]
     }
   ]
 }

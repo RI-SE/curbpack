@@ -1,4 +1,16 @@
-# Curbpack thin MCP (example)
+# Curbpack MCP
+
+**Production binary:** [`cmd/curbpack-mcp`](../../cmd/curbpack-mcp) — library-backed stdio MCP (`resolve_references`, `check_citation_currency`, `record_digest`). Read-only; no confirm/attest/doc generation; no listening socket; must not link `net/http`.
+
+```bash
+go build -o curbpack-mcp ./cmd/curbpack-mcp
+```
+
+This `examples/mcp` tree remains a **legacy shell-out / optional sock** reference. Prefer `cmd/curbpack-mcp` for agent resolution. Trust boundary = local repo — never expose to third parties. See [security model](../../docs/security-model.md).
+
+---
+
+# Legacy thin MCP (example shell-out)
 
 Stdio MCP server that **shells out** to PATH `curbpack` (or `CURBPACK_BIN`). **CLI-only by default** — optional sock when `CURBPACK_SOCK` is set and a sidecar is running.
 
@@ -9,7 +21,7 @@ Structural evidence for human review — **not** a conformity assessment or cert
 ## Build
 
 ```bash
-go build -o curbpack-mcp ./examples/mcp
+go build -o curbpack-mcp-legacy ./examples/mcp
 go build -o curbpack-sock ./examples/mcp/cmd/curbpack-sock   # optional sidecar (Unix)
 go run ./examples/mcp
 ```

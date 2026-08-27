@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,6 +24,7 @@ func cmdReview(args []string) error {
 	repoMode := false
 	repoPath := "."
 	sincePath := ""
+	verifyChain := false
 	var packList []string
 	var paths []string
 	for i := 0; i < len(args); i++ {
@@ -38,6 +38,8 @@ func cmdReview(args []string) error {
 			full = true
 		case a == "--batch":
 			batch = true
+		case a == "--verify-chain":
+			verifyChain = true
 		case a == "--repo":
 			repoMode = true
 			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
@@ -69,6 +71,15 @@ func cmdReview(args []string) error {
 		default:
 			paths = append(paths, a)
 		}
+	}
+	if verifyChain {
+		if repoMode || batch || sincePath != "" || len(packList) > 0 || jsonOut || full {
+			return usageErr("review --verify-chain is exclusive (no --repo/--batch/--since/--packs/--json/--full)")
+		}
+		if len(paths) != 2 {
+			return usageErr("review --verify-chain requires <parent.json> <child.json>")
+		}
+		return runVerifyChain(paths[0], paths[1])
 	}
 	if repoMode && batch {
 		return usageErr("review --repo does not combine with --batch")
@@ -235,17 +246,40 @@ func loadPriorReport(path string) (review.Report, error) {
 	return rep, nil
 }
 
+func runVerifyChain(parentPath, childPath string) error {
+	parent, err := loadPriorReport(parentPath)
+	if err != nil {
+		return usageErr(err.Error())
+	}
+	child, err := loadPriorReport(childPath)
+	if err != nil {
+		return usageErr(err.Error())
+	}
+	want := strings.TrimSpace(parent.RecordDigest)
+	got := strings.TrimSpace(child.ParentRecordDigest)
+	if want == "" {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "parent record_digest empty"))
+		return gatesErr()
+	}
+	if got == "" {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "child parent_record_digest empty"))
+		return gatesErr()
+	}
+	if got != want {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, fmt.Sprintf("chain break: child parent_record_digest=%s parent record_digest=%s", got, want)))
+		return gatesErr()
+	}
+	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "record chain ok"))
+	return nil
+}
+
 // printReviewHPURLFragment renders the offline HPURL fragment on stderr (CLI only; not in Report JSON).
 func printReviewHPURLFragment(bundleRoot string, rep review.Report, repoMode bool) {
 	if rep.SubjectStateHash == "" || rep.SubjectCommit == "" {
 		return
 	}
 	sigHint := reviewSigHint(bundleRoot, rep, repoMode)
-	frag := fmt.Sprintf("#?h=%s&p=%s&s=%s",
-		url.QueryEscape(rep.SubjectStateHash),
-		url.QueryEscape(rep.SubjectCommit),
-		url.QueryEscape(sigHint),
-	)
+	frag := attest.FormatHPURLFragment(rep.SubjectStateHash, rep.SubjectCommit, sigHint)
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "HPURL fragment: "+frag))
 }
 

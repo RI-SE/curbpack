@@ -33,39 +33,71 @@ var supportedChecks = map[string]struct{}{
 
 // Rule is a single pack gate definition (JSON-eval, no OPA).
 type Rule struct {
-	ID                    string     `json:"id"`
-	Severity              string     `json:"severity"`
-	Type                  string     `json:"type"`
-	Check                 string     `json:"check"`
-	Path                  string     `json:"path,omitempty"`
-	Paths                 []string   `json:"paths,omitempty"`
-	MinBytes              int        `json:"min_bytes,omitempty"`
-	MinWords              int        `json:"min_words,omitempty"`
-	RequireHeaders        []string   `json:"require_headers,omitempty"`
-	BindRepoToken         bool       `json:"bind_repo_token,omitempty"`
-	RequireTreePaths      []string   `json:"require_tree_paths,omitempty"`
-	Package               string     `json:"package,omitempty"`
-	BannedVersions        []string   `json:"banned_versions,omitempty"`
-	Pattern               string     `json:"pattern,omitempty"`
-	MaxAgeDays            int        `json:"max_age_days,omitempty"`
-	SinceRef              string     `json:"since_ref,omitempty"`
-	RequireGitAuthorEmail string     `json:"require_git_author_email,omitempty"`
-	RequireGitAuthorName  string     `json:"require_git_author_name,omitempty"`
-	Description           string     `json:"description"`
-	Remediation           string     `json:"remediation"`
-	Expected              string     `json:"expected"`
-	Citations             []Citation `json:"citations,omitempty"`
+	ID                    string   `json:"id"`
+	Severity              string   `json:"severity"`
+	Type                  string   `json:"type"`
+	Check                 string   `json:"check"`
+	Path                  string   `json:"path,omitempty"`
+	Paths                 []string `json:"paths,omitempty"`
+	MinBytes              int      `json:"min_bytes,omitempty"`
+	MinWords              int      `json:"min_words,omitempty"`
+	RequireHeaders        []string `json:"require_headers,omitempty"`
+	BindRepoToken         bool     `json:"bind_repo_token,omitempty"`
+	RequireTreePaths      []string `json:"require_tree_paths,omitempty"`
+	Package               string   `json:"package,omitempty"`
+	BannedVersions        []string `json:"banned_versions,omitempty"`
+	Pattern               string   `json:"pattern,omitempty"`
+	MaxAgeDays            int      `json:"max_age_days,omitempty"`
+	SinceRef              string   `json:"since_ref,omitempty"`
+	RequireGitAuthorEmail string   `json:"require_git_author_email,omitempty"`
+	RequireGitAuthorName  string   `json:"require_git_author_name,omitempty"`
+	Description           string   `json:"description"`
+	Remediation           string   `json:"remediation"`
+	Expected              string   `json:"expected"`
+	// Settlement is the render axis for buyer answers: "settles" (default) or "indicative".
+	// Rules with citations[].framework MUST set this explicitly (ValidatePack fail-closed).
+	Settlement string     `json:"settlement,omitempty"`
+	Citations  []Citation `json:"citations,omitempty"`
+}
+
+// Settlement values for Rule.Settlement.
+const (
+	SettlementSettles    = "settles"
+	SettlementIndicative = "indicative"
+)
+
+// EffectiveSettlement returns the rule's settlement, defaulting to settles when unset.
+func EffectiveSettlement(r Rule) string {
+	s := strings.TrimSpace(r.Settlement)
+	if s == "" {
+		return SettlementSettles
+	}
+	return s
+}
+
+// RuleHasFrameworkCitation reports whether any rule citation names a framework.
+func RuleHasFrameworkCitation(r Rule) bool {
+	for _, c := range r.Citations {
+		if strings.TrimSpace(c.Framework) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // Citation links a pack/rule/watchlist entry to a regulatory instrument (informational).
 type Citation struct {
-	Framework     string `json:"framework,omitempty"`
-	Instrument    string `json:"instrument,omitempty"`
-	Article       string `json:"article,omitempty"`
-	Annex         string `json:"annex,omitempty"`
-	URL           string `json:"url,omitempty"`
-	EffectiveFrom string `json:"effective_from,omitempty"`
-	EffectiveTo   string `json:"effective_to,omitempty"`
+	Framework       string `json:"framework,omitempty"`
+	Instrument      string `json:"instrument,omitempty"`
+	Article         string `json:"article,omitempty"`
+	Annex           string `json:"annex,omitempty"`
+	URL             string `json:"url,omitempty"`
+	EffectiveFrom   string `json:"effective_from,omitempty"`
+	EffectiveTo     string `json:"effective_to,omitempty"`
+	Edition         string `json:"edition,omitempty"`
+	VerifiedAgainst string `json:"verified_against,omitempty"`
+	VerifiedOn      string `json:"verified_on,omitempty"` // YYYY-MM-DD
+	EditionPinned   bool   `json:"edition_pinned,omitempty"`
 }
 
 // Validity is an optional pack-level effective window (YYYY-MM-DD or RFC3339 date).
@@ -89,7 +121,9 @@ type Pack struct {
 	Supersedes     string          `json:"supersedes,omitempty"`
 	SupersededBy   string          `json:"superseded_by,omitempty"`
 	Citations      []Citation      `json:"citations,omitempty"`
-	Rules          []Rule          `json:"rules"`
+	// RecheckIntervalDays is author-set citation currency age (doctor stale); no invented default.
+	RecheckIntervalDays int    `json:"recheck_interval_days,omitempty"`
+	Rules               []Rule `json:"rules"`
 }
 
 // Watchlist is informational only.
@@ -218,6 +252,13 @@ func ValidatePack(p Pack) error {
 		}
 		if err := validateCitations(r.Citations, fmt.Sprintf("pack %q rule %q", p.ID, r.ID)); err != nil {
 			return err
+		}
+		settlement := strings.TrimSpace(r.Settlement)
+		if settlement != "" && settlement != SettlementSettles && settlement != SettlementIndicative {
+			return fmt.Errorf("pack %q rule %q: settlement must be %q or %q", p.ID, r.ID, SettlementSettles, SettlementIndicative)
+		}
+		if RuleHasFrameworkCitation(r) && settlement == "" {
+			return fmt.Errorf("pack %q rule %q: settlement required when citations include framework (%s|%s)", p.ID, r.ID, SettlementSettles, SettlementIndicative)
 		}
 		for _, tp := range r.RequireTreePaths {
 			if err := ValidateRelPath(tp); err != nil {

@@ -160,6 +160,11 @@ func TestClassifyReferenceGolden(t *testing.T) {
 		{"HOUSE-SECURITY-MD", review.RefClaim},
 		{"CRA-VULN-HANDLING", review.RefClaim},
 		{"MEDTECH-RISK-1", review.RefClaim},
+		{"MD-SW-CLASS", review.RefClaim},
+		{"ACME-SEC-1", review.RefClaim},
+		{"RFC-2119", review.RefDrop},
+		{"SHA-256", review.RefDrop},
+		{"SPDX-License-Identifier", review.RefDrop},
 		{"https://example.com/x", review.RefURL},
 		{"docs/foo.md", review.RefPath},
 		{"SECURITY.md", review.RefPath},
@@ -534,7 +539,7 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 	if review.MethodID != "curbpack-review-method" {
 		t.Fatalf("MethodID=%q", review.MethodID)
 	}
-	if review.MethodVersion != "1.2.0" {
+	if review.MethodVersion != "1.3.0" {
 		t.Fatalf("MethodVersion=%q", review.MethodVersion)
 	}
 	root := repoRoot(t)

@@ -13,6 +13,7 @@
       "assurance_class": "structural_draft",
       "remediation_hint": "Add SECURITY.md with vulnerability reporting and response expectations.",
       "answered": true,
+      "settlement": "settles",
       "evidence": "SECURITY.md",
       "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
@@ -24,6 +25,7 @@
       "assurance_class": "structural_draft",
       "remediation_hint": "Create .well-known/security.txt with Contact and Expires fields.",
       "answered": true,
+      "settlement": "settles",
       "evidence": ".well-known/security.txt",
       "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
@@ -35,6 +37,7 @@
       "assurance_class": "structural_draft",
       "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile.",
       "answered": true,
+      "settlement": "settles",
       "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
     {
@@ -45,6 +48,7 @@
       "assurance_class": "structural_draft",
       "remediation_hint": "Remove credentials from docs and agent-oops paths; rotate any exposed secrets; use a secret manager.",
       "answered": true,
+      "settlement": "settles",
       "evidence": "README.md, SECURITY.md, .well-known/security.txt, .env, .env.local, credentials.json, service-account.json, id_rsa",
       "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     },
@@ -56,6 +60,7 @@
       "assurance_class": "structural_draft",
       "remediation_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details.",
       "answered": true,
+      "settlement": "settles",
       "evidence": "SECURITY.md, .well-known/security.txt",
       "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
     }

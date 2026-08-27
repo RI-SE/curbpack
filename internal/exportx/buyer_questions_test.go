@@ -10,6 +10,7 @@ import (
 
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/release/templates"
 	"github.com/afelin/curbpack/internal/validate"
@@ -126,6 +127,9 @@ func TestAnsweredDerivedFromFailures(t *testing.T) {
 	if !okQ.Answered {
 		t.Fatal("passing gate must be answered")
 	}
+	if okQ.Settlement != packs.SettlementSettles {
+		t.Fatalf("house-policy settlement=%q want settles", okQ.Settlement)
+	}
 }
 
 func TestSkippedRulesSuppressAnswers(t *testing.T) {
@@ -163,6 +167,81 @@ func TestSkippedRulesSuppressAnswers(t *testing.T) {
 	}
 	if strings.Contains(md, "| Yes |") {
 		t.Fatal("must not emit Yes answers when suppressed")
+	}
+	if strings.Contains(md, "Present, not settled") {
+		t.Fatal("must not emit Present answers when suppressed")
+	}
+}
+
+func TestIndicativeNeverRendersYes(t *testing.T) {
+	dir := t.TempDir()
+	res := validate.Result{
+		Payload: ir.GateFailurePayload{
+			PackID: "cra-baseline",
+			ConcurrencyControl: ir.ConcurrencyControl{
+				ExpectedParentCommitSHA: "deadbeef",
+			},
+		},
+	}
+	qs, err := exportx.CollectBuyerQuestions(dir, []string{"cra-baseline"}, res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := exportx.BuyerQuestionsReport{
+		SchemaVersion:  "1",
+		PackID:         "cra-baseline",
+		AssuranceClass: "structural_draft",
+		Questions:      qs,
+	}
+	md := exportx.FormatBuyerQuestionsMarkdown(report)
+	var annexAnswered bool
+	for _, q := range qs {
+		if q.GateID == "CRA-ANNEX-VII-RISK" {
+			annexAnswered = q.Answered
+			if q.Settlement != packs.SettlementIndicative {
+				t.Fatalf("settlement=%q", q.Settlement)
+			}
+			if !q.Answered {
+				t.Fatal("CRA annex green path must keep Answered=true (pass/fail axis)")
+			}
+		}
+	}
+	if !annexAnswered {
+		t.Fatal("expected CRA-ANNEX-VII-RISK answered")
+	}
+	if strings.Contains(md, "| Yes |") {
+		// CRA-DEP may still Yes — that's OK; annex must not
+		for _, line := range strings.Split(md, "\n") {
+			if strings.Contains(line, "Annex VII risk") && strings.Contains(line, "| Yes |") {
+				t.Fatalf("indicative annex must not render Yes: %s", line)
+			}
+		}
+	}
+	if !strings.Contains(md, "Present, not settled") {
+		t.Fatal("CRA annex green must render Present, not settled")
+	}
+}
+
+func TestHousePolicyYesStillWorks(t *testing.T) {
+	dir := t.TempDir()
+	res := validate.Result{
+		Payload: ir.GateFailurePayload{
+			PackID: "house-policy",
+			ConcurrencyControl: ir.ConcurrencyControl{
+				ExpectedParentCommitSHA: "abc",
+			},
+		},
+	}
+	report, err := exportx.BuildBuyerQuestionsReportFromResult(dir, []string{"house-policy"}, res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	md := exportx.FormatBuyerQuestionsMarkdown(report)
+	if !strings.Contains(md, "| Yes |") {
+		t.Fatal("house-policy answered rows must still render Yes")
+	}
+	if strings.Contains(md, "| Present, not settled |") {
+		t.Fatal("house-policy must not render Present, not settled")
 	}
 }
 

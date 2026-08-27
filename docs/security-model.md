@@ -16,7 +16,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 ### Pilot deploy + freeze
 
-- Grade: `./scripts/redteam-pilot.sh` must be green (**13/13** cases).
+- Grade: `./scripts/redteam-pilot.sh` must be green (**15/15** cases).
 - **CI required check:** merges to `main` require the GitHub Actions job named **`redteam-pilot`** green under branch protection. Feature count cannot replace this scoreboard.
 - Scoreboard locks (wrap existing unit tests — no logic fork): Action resolve, `--diff` false-green, ApplyStubs `.git` jail, pack path escape, claim-safety (incl. promotion-firewall endorsement DENY), overlay compose, SARIF `ruleId`, policy-graph schema, explain airlock, pack catalog freeze, import `assurance_class`, stable sock ops, attest dirty/`--allow-dirty`, forged attest note, tampered cache, symlink escape, packs SHA256 pin, demo `--out` jail.
 - Pin: Action/consumers use `@v0.5.2` (prefer tag + commit SHA).
@@ -34,6 +34,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
 | HPURL / proof page | Client-side compare of fragment `h=` to local pointer | Remote server verification or certification |
 | Optional sock IPC | Optional MCP sidecar at `examples/mcp/`; private socket (mode `0600`); fail-open if absent | Auth beyond filesystem permissions |
+| Production MCP | `cmd/curbpack-mcp` stdio only; library-backed resolve/doctor/digest; **no `net/http`**; trust boundary = local repo — never expose to third parties | Network MCP / third-party hosting |
 | Pack network update | Only when `CURBPACK_PACKS_URL` **and** `CURBPACK_PACKS_SHA256` are set | Fetching packs from a URL without a pin |
 
 ## Install integrity

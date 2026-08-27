@@ -215,8 +215,10 @@ func parsePrepareReleaseFlags(args []string) (prepareReleaseFlags, error) {
 type exportFlags struct {
 	packIDs                                            []string
 	out                                                string
+	since                                              string
 	wantSARIF, wantExplain, wantJoin, wantBuyerQ       bool
 	wantLayOfLand, wantContextPack, wantSPDX, wantSLSA bool
+	wantHoldingReport                                  bool
 }
 
 func parseExportFlags(args []string) (exportFlags, error) {
@@ -231,7 +233,9 @@ func parseExportFlags(args []string) (exportFlags, error) {
 	fs.BoolVar(&f.wantContextPack, "context-pack", false, "")
 	fs.BoolVar(&f.wantSPDX, "spdx", false, "")
 	fs.BoolVar(&f.wantSLSA, "slsa", false, "")
+	fs.BoolVar(&f.wantHoldingReport, "holding-report", false, "")
 	fs.StringVar(&f.out, "out", "", "")
+	fs.StringVar(&f.since, "since", "", "")
 	fs.StringVar(&packsFlag, "packs", "", "")
 	if err := fs.Parse(args); err != nil {
 		return f, flagUsageErr("export", err.Error())
@@ -242,8 +246,11 @@ func parseExportFlags(args []string) (exportFlags, error) {
 	if fs.NArg() > 0 {
 		return f, usageErr(fmt.Sprintf("export: unknown argument %q", fs.Arg(0)))
 	}
-	if !f.wantSARIF && !f.wantExplain && !f.wantJoin && !f.wantBuyerQ && !f.wantLayOfLand && !f.wantContextPack && !f.wantSPDX && !f.wantSLSA {
-		return f, usageErr("export requires --sarif, --explain-packet, --watchlist-join, --buyer-questions, --lay-of-land, --context-pack, and/or --spdx/--slsa")
+	if !f.wantSARIF && !f.wantExplain && !f.wantJoin && !f.wantBuyerQ && !f.wantLayOfLand && !f.wantContextPack && !f.wantSPDX && !f.wantSLSA && !f.wantHoldingReport {
+		return f, usageErr("export requires --sarif, --explain-packet, --watchlist-join, --buyer-questions, --lay-of-land, --context-pack, --holding-report, and/or --spdx/--slsa")
+	}
+	if f.wantHoldingReport && strings.TrimSpace(f.since) == "" {
+		return f, usageErr("export --holding-report requires --since <prior-report.json>")
 	}
 	return f, nil
 }

@@ -156,7 +156,7 @@ func Run(opts Options) (Capsule, error) {
 		Signer:          signer,
 		SSHSignature:    sshSig,
 		UserTouch:       userTouch,
-		HPURLFragment:   fmt.Sprintf("#?h=%s&p=%s&s=%s", url.QueryEscape(stateHash), url.QueryEscape(commit), url.QueryEscape(truncate(sshSig, 32))),
+		HPURLFragment:   FormatHPURLFragment(stateHash, commit, truncate(sshSig, 32)),
 		Evidence:        evidence,
 	}
 
@@ -224,6 +224,18 @@ type HPURLParts struct {
 	StateHash string
 	Commit    string
 	SigHint   string
+}
+
+// FormatHPURLFragment builds the stderr/pointer fragment from parts (same shape as attest emit).
+func FormatHPURLFragment(stateHash, commit, sigHint string) string {
+	if strings.TrimSpace(sigHint) == "" {
+		sigHint = "unsigned"
+	}
+	return fmt.Sprintf("#?h=%s&p=%s&s=%s",
+		url.QueryEscape(stateHash),
+		url.QueryEscape(commit),
+		url.QueryEscape(truncate(sigHint, 32)),
+	)
 }
 
 // ParseHPURLFragment parses an HPURL fragment per spec §3–4 shape:

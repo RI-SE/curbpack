@@ -46,7 +46,7 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 National variations, guidance changes, and new standards are **pack version bumps** authored by domain owners — no Go change, no binary release. The pack format already carries jurisdiction, validity windows, citations, extends/overlays, supersession, and private pack dirs.
 
-A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.2.0.md](docs/method/review-method-1.2.0.md).
+A tenth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the nine — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.3.0.md](docs/method/review-method-1.3.0.md).
 
 
 ### Review digest (one algorithm)
@@ -61,6 +61,10 @@ These apply to `review` and related surfaces (including `--repo`):
 2. **No network call.** `review` records URLs and never fetches them.
 3. **No persistent index.** The record is a file the caller redirects; rebuild every run.
 4. **No similarity, fuzzy match, threshold, or confidence score on an edge.** An edge exists because the target was found. Outcomes are `confirmed` / `unconfirmed` / `contradicted` only.
+
+### Shared Frame
+
+Cross-product seam with Claim-to-Artifact Mapper: [`docs/shared-frame.md`](docs/shared-frame.md) (+ [`annexes`](docs/shared-frame-annexes.md)). Pin shared artifacts to `RI-SE/curbpack@eac1ab3`. Do not invent Mapper adapter schemas here until Shared Frame **0b** freezes.
 
 ### Low-maintenance covenant (rules 7–9)
 

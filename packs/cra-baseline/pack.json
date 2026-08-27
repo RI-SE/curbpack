@@ -26,7 +26,16 @@
       "require_tree_paths": ["README.md"],
       "description": "CRA Annex VII risk assessment draft missing, too short, or lacking required section headers.",
       "remediation": "Populate docs/annex-vii/risk_assessment.md with product-specific risk models (no placeholders). Mention this product (package.json name, go.mod module, or repo directory name) and keep README.md present.",
-      "expected": "Risk assessment exceeds structural thresholds, contains required headers, and is bound to this repository."
+      "expected": "Risk assessment exceeds structural thresholds, contains required headers, and is bound to this repository.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "EU",
+          "instrument": "CRA",
+          "annex": "VII",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+        }
+      ]
     },
     {
       "id": "CRA-ANNEX-VII-SUPPORT",
@@ -39,7 +48,16 @@
       "bind_repo_token": true,
       "description": "Support period rationale missing or incomplete.",
       "remediation": "Declare a concrete product support period and rationale in docs/annex-vii/support_period.md. Mention this product (package.json name, go.mod module, or repo directory name).",
-      "expected": "Support period document present with End of Support section and repo-bound product mention."
+      "expected": "Support period document present with End of Support section and repo-bound product mention.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "EU",
+          "instrument": "CRA",
+          "annex": "VII",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+        }
+      ]
     },
     {
       "id": "CRA-ANNEX-VII-MANUAL",
@@ -52,7 +70,16 @@
       "bind_repo_token": true,
       "description": "Security-relevant user manual sections missing.",
       "remediation": "Add Secure Configuration and Product Disposal guidance. Mention this product (package.json name, go.mod module, or repo directory name).",
-      "expected": "User manual security sections present and bound to this repository."
+      "expected": "User manual security sections present and bound to this repository.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "EU",
+          "instrument": "CRA",
+          "annex": "VII",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+        }
+      ]
     },
     {
       "id": "CRA-ART14-PATH",
@@ -72,6 +99,7 @@
       "description": "CRA Art 14 reporting path file missing, too short, or lacking required section headers. Structural file gate only — documents the path; does not mean tabletop rehearsed. Not a live SRP or EU Login check; not vulnerability-handling/SPOC evidence.",
       "remediation": "Populate docs/incident/art14-path.md with this product's Art 14 reporting path (named owner + Drafted date). After you run a tabletop, record the date in `Last tabletop:`. Distinguish reporting (11 Sept 2026) from vulnerability-handling/public SPOC (later clock). Do not claim EU Login works. Mention this product (package.json name, go.mod module, or repo directory name).",
       "expected": "Art 14 reporting path file present with required headers and a repo-bound product mention. Documented draft only — not a live SRP check; badge shows rehearsed only after human fills Last tabletop:.",
+      "settlement": "indicative",
       "citations": [
         {
           "framework": "EU",
@@ -95,7 +123,16 @@
       ],
       "description": "Annex VII drafts or Art 14 path file contain placeholder / boilerplate text.",
       "remediation": "Replace TODO / lorem ipsum / [insert ...] placeholders with real product content.",
-      "expected": "No placeholder patterns in Annex VII drafts or the Art 14 path file."
+      "expected": "No placeholder patterns in Annex VII drafts or the Art 14 path file.",
+      "settlement": "indicative",
+      "citations": [
+        {
+          "framework": "EU",
+          "instrument": "CRA",
+          "annex": "VII",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+        }
+      ]
     },
     {
       "id": "CRA-DEP-AXIOS-PIN",

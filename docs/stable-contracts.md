@@ -90,23 +90,36 @@ Offline document triage of a received curbpack-native review-pack **or** a repos
 | Contract | Rule |
 |----------|------|
 | Schema | `curbpack-review-report:2` (`--json`) |
-| Classifier | `classifier_version` string (e.g. `refclass:1`) — golden list; changes that move the reference denominator must be visible |
+| Classifier | `classifier_version` string (current tip: `refclass:2`) — golden list; changes that move the reference denominator **hard-invalidate** accepted Mapper links |
 | States | `confirmed` \| `unconfirmed` \| `contradicted` only |
 | Additive `cause` | Unconfirmed: `producer` \| `extractor` \| `genuine` \| `external`. Contradicted: `self_disagree` (digest/structure contradictions) |
 | Counters | Split unconfirmed/contradicted-by-cause fields; `dropped_count` (+ `dropped` under `--full`) |
 | Digests | Producer emits payload/file digests; bind disagreements appear as sibling `*_bind` keys — reader contradicts, never silently prefers bind |
+| `subject_commit` | Producer commit the bundle/repo claims (`subject_commit`, omitempty). Bundle: from gate payload; repo: CLI git read (review never calls git). |
+| `subject_state_hash` | Producer `state_hash` when present in bundle `hpurl-pointer.json` (`subject_state_hash`, omitempty). |
+| `parent_record_digest` | When `--since <prior.json>` is set: prior report's `record_digest`, written **before** child `record_digest` (hashed in). Empty when no `--since`. |
+| `review --verify-chain` | Exclusive mode: `curbpack review --verify-chain <parent.json> <child.json>`. Exit **0** when `child.parent_record_digest == parent.record_digest` (both non-empty); exit **1** on empty digests or mismatch; usage → **2**. No `--repo`/`--batch`/`--since`/`--packs`/`--json`/`--full`. |
 | Airlock | Redact-then-emit home-path/PEM in findings (`detail`, `id`, `source`, `dropped`), then fail closed via `PacketLooksAirlocked` |
 | Exit | `1` if any contradicted (or `--batch` child unreadable/contradicted); usage → `2`. `--batch --full` / `--batch --json` / `--repo --batch` → usage |
-| Method | `method_id` = `curbpack-review-method`; `method_version` equals the version of [`docs/method/review-method-<v>.md`](method/review-method-1.1.1.md) |
+| Method | `method_id` = `curbpack-review-method`; tip `method_version` = **1.3.0** ([`docs/method/review-method-1.3.0.md`](method/review-method-1.3.0.md)); must equal `review.MethodVersion` |
 | `bundle_digest` | sha256 over sorted relative slash paths, each length-prefixed, each followed by the length-prefixed sha256 of the **full** file contents (streamed; not subject to the per-file parse cap). Symlinks and out-of-jail paths excluded. **Refuse-oversize ceiling** (64 MiB total): when Lstat size sum or streamed bytes would exceed the ceiling → contradicted `structure:bundle-size-cap`, `bundle_digest` left **empty** — never truncate, never partial hash |
 | `structure:digest-incomplete` | When any digest-path file is unreadable or skipped during streaming → contradicted finding, `bundle_digest` left **empty** (refused, never truncated) — same refuse-closed class as `structure:bundle-size-cap` |
 | `digest_scope` | Always emitted: `bundle` (full walked tree) or `closure` (surfaces read + resolved path targets). **Never compare digests across scopes** |
 | `record_digest` | sha256 over the canonical JSON record with `record_digest` **and `bundle_root`** empty. Digests are computed **after** airlock → tally → sortFindings (and after any size-cap finding re-tally/sort), immediately before emit. `bundle_root` is excluded because it is directory-name dependent |
-| `Finding.ID` | **Stable contract.** Shapes: `reference:path:<p>`, `reference:url:<short>`, `structure:<file>`, `digest:<key>`. Consumers may key on these; changes require a pin bump |
+| `Finding.ID` | **Stable contract.** Shapes: `reference:path:<p>`, `reference:url:<short>`, `reference:claim:<rule-id>`, `structure:<file>`, `digest:<key>`. Consumers may key on these; changes require a pin bump |
 | `source` | Document the reference was extracted from; present on reference edges; omitted (`omitempty`) on non-edges. Not baked into `Finding.ID` |
 | `ReferencesOnly` | When true: skip pack structure/load/digest checks; walk with fixed ignore list (`.git/`, cache+evidence+graph helpers + legacy, `review-pack/`, `node_modules`/`vendor`/`dist`/`build`/`target`/`.venv`); emit `digest_scope=closure`; missing governed surfaces → `structure:surface-absent:<path>`. No `.gitignore` parser |
-| Reserved | An optional `edges` array is **reserved and not implemented**. Do not repurpose the name. **Expires at curbpack product release v0.6.0 if still unused** (delete the reservation rather than leave folklore). Calendar: [edges reservation expiry](internal/edges-reservation-expiry.md) |
+| Reserved | An optional `edges` array is **reserved and not implemented**. Do not repurpose the name. **Expires at curbpack product release v0.6.0 if still unused** (delete the reservation rather than leave folklore). Calendar: [edges reservation expiry](internal/edges-reservation-expiry.md). Shared Frame **0b** must freeze before any writer. |
 | `triage_surfaces` | Sorted list of surfaces actually used for reference extraction (from `ResolveTriageSurfaces`). Always populated — same comparability class as `digest_scope` |
 | `surfaces_digest` | sha256 over sorted length-prefixed surface path bytes. Always populated |
 
-See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md) · [Review method 1.1.1](method/review-method-1.1.1.md) · [Substantial-modification screening (delivered)](internal/substantial-modification-screening.md)
+## Buyer questions / holding report (settlement)
+
+| Contract | Rule |
+|----------|------|
+| `BuyerQuestion.settlement` | `settles` \| `indicative` (render axis). `answered` remains structural pass/fail. |
+| Three-state render | Answered + `settles` → **Yes**; answered + `indicative` → **Present, not settled** — never **Yes** on indicative. |
+| `answers_suppressed` | When true (e.g. `--diff` / skipped rules), consumers **refuse the import** — do not treat every `answered: false` as failure. |
+| `export --holding-report` | Requires `--since <prior-report.json>`. **Refuses** section 1 when `answers_suppressed`. Never renders **Yes** on indicative settlement rows. Emits `parent_record_digest` when chained. |
+
+See also: [Strategy boundary](strategy-boundary.md) · [Coreward bridge](coreward-bridge.md) · [Security model](security-model.md) · [Phase 6 kill-test](internal/phase6-kill-test.md) · [Review method 1.3.0](method/review-method-1.3.0.md) · [Shared Frame](shared-frame.md) · [Substantial-modification screening (delivered)](internal/substantial-modification-screening.md)
