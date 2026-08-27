@@ -29,7 +29,7 @@ for ctx in req:
  if not c or c.get("bucket")!="pass": sys.exit(f"check not green: {ctx}")
 base=subprocess.check_output(["git","merge-base","origin/main","HEAD"],text=True).strip()
 diff=subprocess.check_output(["git","diff",f"{base}..HEAD"],text=True)
-if re.search(rf"[+-].*{re.escape(pin)}",diff):
+if re.search(rf"(?m)^[+-].*{re.escape(pin)}",diff):
  log=subprocess.check_output(["git","log",f"{base}..HEAD","--format=%B"],text=True)
  if "Approve-Pin-Bump:" not in log: sys.exit("pin changed without Approve-Pin-Bump")
 PY
