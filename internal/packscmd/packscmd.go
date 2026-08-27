@@ -248,15 +248,16 @@ func ExportGraph(args []string) error {
 	return nil
 }
 
-// Doctor reports expired/superseded/pin-skew pack issues.
+// Doctor reports expired/superseded/pin-skew/citation-currency pack issues (always exit 0).
 func Doctor() error {
 	f, err := packs.DoctorPacks()
 	if err != nil {
 		return err
 	}
-	fmt.Println(tty.C(tty.Bold+tty.Cyan, "Packs doctor (validity / supersession / pin skew)"))
-	if len(f.Expired) == 0 && len(f.Superseded) == 0 && len(f.PinSkew) == 0 && len(f.UnknownBase) == 0 {
-		tty.PrintStatus("packs doctor", true, "no expired/superseded/pin-skew issues")
+	fmt.Println(tty.C(tty.Bold+tty.Cyan, "Packs doctor (validity / supersession / pin skew / citation currency)"))
+	quiet := len(f.Expired) == 0 && len(f.Superseded) == 0 && len(f.PinSkew) == 0 && len(f.UnknownBase) == 0 && len(f.Unverified) == 0 && len(f.Stale) == 0
+	if quiet {
+		tty.PrintStatus("packs doctor", true, "no expired/superseded/pin-skew/unverified/stale issues")
 		return nil
 	}
 	for _, e := range f.Expired {
@@ -271,6 +272,12 @@ func Doctor() error {
 	for _, e := range f.UnknownBase {
 		tty.PrintStatus("extends", false, e)
 	}
-	fmt.Println(tty.C(tty.Dim, "Refresh via checksummed packs update/import — no unpinned law crawl."))
+	for _, e := range f.Unverified {
+		tty.PrintStatus("unverified", false, e)
+	}
+	for _, e := range f.Stale {
+		tty.PrintStatus("stale", false, e)
+	}
+	fmt.Println(tty.C(tty.Dim, "Refresh via checksummed packs update/import — no unpinned law crawl. Doctor stays exit 0."))
 	return nil
 }

@@ -67,7 +67,7 @@ Catalog is frozen to those three ids until freeze review. See [Intent vs Scope](
 | **GitHub Copilot** | [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) | Auto-picked in this repo; copy into adopters if useful |
 | **Claude Code / Claude in IDE** | Root [`CLAUDE.md`](../CLAUDE.md) | Drop-in; link this doc |
 | **Generic agents** (Codex, Windsurf, Cline, Aider, Continue, …) | Root [`AGENTS.md`](../AGENTS.md) | De-facto agent readme |
-| **Claude Desktop / Cursor MCP / VS Code MCP** | Thin MCP [examples/mcp/](../examples/mcp/) | Tools call CLI; CLI remains SoR |
+| **Claude Desktop / Cursor MCP / VS Code MCP** | Thin MCP [`cmd/curbpack-mcp`](../cmd/curbpack-mcp) (library-backed; prefer over [`examples/mcp/`](../examples/mcp/)) | Tools are read-only resolve/doctor/digest; CLI remains SoR for check/attest |
 | **ChatGPT / web Claude / Gemini** (no repo tools) | Paste `context-pack.md` or explain-packet only | Human must re-run `check` locally — no false “fixed” |
 | **CI-only** | Action `@v0.5.2` + SARIF (+ ContextPack artifact when available) | Primary PR path |
 
@@ -87,3 +87,4 @@ Regulation prose and raw source stay off the default tutor path. Dual-rep IR + C
 
 - [60-second paths](getting-started/60-second-paths.md) · [Buyer evidence](getting-started/buyer-evidence.md) · [Pathway](getting-started/pathway.md) · [Daily loop](getting-started/daily-loop.md)
 - [Stable contracts](stable-contracts.md) · [For authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md)
+- [Shared Frame](shared-frame.md) · [Shared Frame annexes](shared-frame-annexes.md) — curbpack ⇄ Mapper seam (pin `eac1ab3`)

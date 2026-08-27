@@ -16,13 +16,14 @@ import (
 
 // Hint is a deterministic gate→snippet proposal (Witness-style templates).
 type Hint struct {
-	GateID    string
-	File      string
-	Snippet   string
-	Action    string
-	Applied   bool
-	Proposed  bool
-	FromCache bool
+	GateID     string
+	File       string
+	Snippet    string
+	Action     string
+	Applied    bool
+	Proposed   bool
+	FromCache  bool
+	Diagnostic string // named when gate has no path guess and IR TargetFile empty
 }
 
 // ForFailures maps each failure to a file + exact scaffold snippet.
@@ -39,6 +40,9 @@ func ForFailuresCached(failures []ir.Failure, cache remediation.Cache) []Hint {
 			GateID: f.GateID,
 			File:   resolveFile(f),
 			Action: f.Remediation.ActionRequired,
+		}
+		if h.File == "" && strings.TrimSpace(f.ASTCoordinates.TargetFile) == "" {
+			h.Diagnostic = "unknown-gate-path: no formhint path for gate " + f.GateID
 		}
 		if e, ok := remediation.Lookup(cache, f.GateID); ok {
 			if e.File != "" {
@@ -94,6 +98,9 @@ func Format(hints []Hint) string {
 	b.WriteString("Heal never auto-attests and never marks VEX final.\n\n")
 	for _, h := range hints {
 		b.WriteString(fmt.Sprintf("### %s\n", h.GateID))
+		if h.Diagnostic != "" {
+			b.WriteString(fmt.Sprintf("- Diagnostic: %s\n", h.Diagnostic))
+		}
 		if h.File != "" {
 			b.WriteString(fmt.Sprintf("- Target: `%s`\n", h.File))
 		}

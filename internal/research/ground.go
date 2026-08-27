@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/claimid"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/paths"
@@ -29,7 +30,6 @@ type Catalog struct {
 
 var (
 	reBacktick   = regexp.MustCompile("`([^`]+)`")
-	reClaimID    = regexp.MustCompile(`\b(?:HOUSE|CRA|MEDTECH)-[A-Z0-9-]+\b`)
 	reTestName   = regexp.MustCompile(`\bTest[A-Z][A-Za-z0-9_]+\b`)
 	reSHA        = regexp.MustCompile(`\b[0-9a-f]{7,40}\b`)
 	reHTTPS      = regexp.MustCompile(`https://[^\s)>\]]+`)
@@ -275,7 +275,10 @@ func (c Catalog) lineHitsArtifact(line string, pkt Packet) bool {
 	if reConfigFile.FindString(line) != "" && c.configPresent() {
 		return true
 	}
-	for _, id := range reClaimID.FindAllString(line, -1) {
+	for _, id := range claimid.FindAll(line) {
+		if !claimid.IsClaim(id) {
+			continue
+		}
 		if c.knownID(id, pkt) {
 			return true
 		}

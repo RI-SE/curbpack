@@ -23,8 +23,10 @@ type BuyerQuestion struct {
 	AssuranceClass  string `json:"assurance_class"`
 	RemediationHint string `json:"remediation_hint"`
 	Answered        bool   `json:"answered"`
-	Evidence        string `json:"evidence,omitempty"`
-	VerifiedAt      string `json:"verified_at,omitempty"`
+	// Settlement is packs.SettlementSettles or packs.SettlementIndicative (render axis; Answered stays pass/fail).
+	Settlement string `json:"settlement,omitempty"`
+	Evidence   string `json:"evidence,omitempty"`
+	VerifiedAt string `json:"verified_at,omitempty"`
 }
 
 // BuyerQuestionsReport is Markdown+JSON checklist export (claim-safe).
@@ -86,6 +88,7 @@ func CollectBuyerQuestions(root string, packIDs []string, res validate.Result) (
 			ArtifactPath:    path,
 			AssuranceClass:  assurance,
 			RemediationHint: hint,
+			Settlement:      packs.EffectiveSettlement(r),
 		}
 		if !suppressAnswers {
 			if _, isFailed := failed[r.ID]; !isFailed {
@@ -290,7 +293,8 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 		return b.String()
 	}
 
-	b.WriteString("> Answer: Yes means the structural check passed at Verified at — not conformity, CE, or notified-body approval.\n\n")
+	b.WriteString("> Answer: Yes means the structural check passed at Verified at — not conformity, CE, or notified-body approval.\n")
+	b.WriteString("> Present, not settled means the file/structure is present; framework-cited positive content is not settled by this tool.\n\n")
 
 	var answered, unanswered []BuyerQuestion
 	for _, q := range report.Questions {
@@ -306,8 +310,9 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 		b.WriteString("| Question | Answer | Evidence | Verified at |\n")
 		b.WriteString("|---|---|---|---|\n")
 		for _, q := range answered {
-			fmt.Fprintf(&b, "| %s | Yes | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
 				mdCell(q.HumanQuestion),
+				mdCell(buyerAnswerLabel(q)),
 				mdCell(q.Evidence),
 				mdCell(q.VerifiedAt),
 			)
@@ -360,6 +365,17 @@ func mdCell(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\n", " ")
 	return s
+}
+
+// buyerAnswerLabel is the three-state render: Yes | Present, not settled | (unanswered rows use the checklist table).
+func buyerAnswerLabel(q BuyerQuestion) string {
+	if !q.Answered {
+		return ""
+	}
+	if q.Settlement == packs.SettlementIndicative {
+		return "Present, not settled"
+	}
+	return "Yes"
 }
 
 // attestationStatus returns none | ssh-agent via LatestBind (not HEAD-only).

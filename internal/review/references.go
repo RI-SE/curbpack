@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/afelin/curbpack/internal/claimid"
 )
 
-// RefKind is the reference classifier outcome (ClassifierVersion / refclass:1).
+// RefKind is the reference classifier outcome (ClassifierVersion / refclass:2).
 type RefKind string
 
 const (
@@ -20,7 +22,7 @@ const (
 
 // ClassifyReference encodes the reference definition:
 //
-//	claim — HOUSE|CRA|MEDTECH-…
+//	claim — claimid.IsClaim (provisional shape + deny-list)
 //	url   — https://…
 //	path  — contains / or known extension or exact SECURITY.md / README.md
 //	drop  — everything else (markup, booleans, JSON keys, versions, truncated hashes)
@@ -32,7 +34,7 @@ func ClassifyReference(token string) RefKind {
 	if strings.HasPrefix(s, "https://") {
 		return RefURL
 	}
-	if reClaimID.MatchString(s) && reClaimID.FindString(s) == s {
+	if claimid.IsClaim(s) {
 		return RefClaim
 	}
 	if looksLikeRepoPath(s) {

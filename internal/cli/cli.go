@@ -721,6 +721,13 @@ func cmdExport(args []string) error {
 		}
 		tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", path, n))
 	}
+	if f.wantHoldingReport {
+		path, err := exportx.WriteHoldingReport(root, f.packIDs, f.since, takeOut())
+		if err != nil {
+			return err
+		}
+		tty.PrintStatus("holding-report", true, path)
+	}
 	if f.wantLayOfLand {
 		path, err := exportx.WriteLayOfLand(root, takeOut())
 		if err != nil {

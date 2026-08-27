@@ -15,7 +15,7 @@
   ],
   "notes": {
     "action": "GitHub Action runners are Linux/macOS only in v0.5.2 — local Windows CLI is supported.",
-    "mcp": "Thin MCP example shells out to CLI; optional Unix sock reference in examples/mcp/sock (not in main binary).",
+    "mcp": "Production MCP: cmd/curbpack-mcp (stdio, library-backed resolve/doctor/digest; no net/http). Legacy shell-out / optional sock remain under examples/mcp only.",
     "deferred": "winget, windows/arm64, and pwsh completion are out of scope for this train."
   }
 }

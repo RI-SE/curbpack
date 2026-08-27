@@ -19,21 +19,22 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/afelin/curbpack/internal/exportx"
+	"github.com/afelin/curbpack/internal/airlock"
+	"github.com/afelin/curbpack/internal/claimid"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/paths"
-	"github.com/afelin/curbpack/internal/research"
+	"github.com/afelin/curbpack/internal/sourceurl"
 )
 
 const (
 	schemaVersion     = "curbpack-review-report:2"
 	SchemaVersion     = schemaVersion // exported for CLI --since schema check
-	ClassifierVersion = "refclass:1"
+	ClassifierVersion = "refclass:2"
 
 	// MethodID / MethodVersion identify the published review method document.
 	MethodID      = "curbpack-review-method"
-	MethodVersion = "1.2.0" // must equal docs/method/review-method-<v>.md — see W6/W10
+	MethodVersion = "1.3.0" // must equal docs/method/review-method-<v>.md
 
 	maxFileBytes  = 8 << 20  // 8 MiB per file (parse reads)
 	maxTotalBytes = 64 << 20 // 64 MiB total across parse reads
@@ -110,6 +111,8 @@ type Report struct {
 	SubjectCommit string `json:"subject_commit,omitempty"`
 	// SubjectStateHash is the producer state_hash when present in bundle hpurl-pointer.json.
 	SubjectStateHash string `json:"subject_state_hash,omitempty"`
+	// ParentRecordDigest is the prior report's record_digest when --since is set (hashed in).
+	ParentRecordDigest string `json:"parent_record_digest,omitempty"`
 }
 
 // Digest scope values recorded on every report.
@@ -138,7 +141,6 @@ var (
 	reProvDD     = regexp.MustCompile(`(?s)<dt>([^<]+)</dt>\s*<dd>([^<]*)</dd>`)
 	reHTTPS      = regexp.MustCompile(`https://[^\s<>)"'\]]+`)
 	reBacktick   = regexp.MustCompile("`([^`]+)`")
-	reClaimID    = regexp.MustCompile(`\b(?:HOUSE|CRA|MEDTECH)-[A-Z0-9-]+\b`)
 )
 
 // Expected curbpack-native review-pack layers (v1 scope lock).
@@ -295,6 +297,9 @@ func Run(opts Options) (Report, error) {
 		tally(&rep)
 		sortFindings(rep.Findings)
 	}
+	if opts.Prior != nil {
+		rep.ParentRecordDigest = strings.TrimSpace(opts.Prior.RecordDigest)
+	}
 	rep.RecordDigest = computeRecordDigest(rep)
 
 	w := opts.Writer
@@ -317,7 +322,7 @@ func Run(opts Options) (Report, error) {
 			out = append(out, []byte(FormatDelta(*opts.Prior, rep))...)
 		}
 	}
-	if err := exportx.PacketLooksAirlocked(out); err != nil {
+	if err := airlock.PacketLooksAirlocked(out); err != nil {
 		return rep, fmt.Errorf("review output failed airlock: %w", err)
 	}
 	if _, err := w.Write(out); err != nil {
@@ -657,7 +662,7 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 			}
 			seen[key] = struct{}{}
 			detail := fmt.Sprintf("External link recorded (never fetched) from %s: %s", name, fence(u))
-			if err := research.ValidateSourceURL(u); err == nil {
+			if err := sourceurl.Validate(u); err == nil {
 				detail = fmt.Sprintf("Allowlisted external link recorded (never fetched) from %s: %s", name, fence(u))
 			}
 			add(rep, Finding{
@@ -667,9 +672,17 @@ func checkReferences(rep *Report, root string, budget *readBudget, surfaces []st
 			})
 		}
 
-		for _, m := range reClaimID.FindAllString(text, -1) {
+		for _, m := range claimid.FindAll(text) {
+			if claimid.Denied(m) {
+				dropped = appendUnique(dropped, claimid.FormatDrop(m, "deny-list"))
+				continue
+			}
+			if !claimid.IsClaim(m) {
+				dropped = appendUnique(dropped, claimid.FormatDrop(m, claimid.DropUnknownNamespace))
+				continue
+			}
 			if ClassifyReference(m) != RefClaim {
-				dropped = appendUnique(dropped, m)
+				dropped = appendUnique(dropped, claimid.FormatDrop(m, claimid.DropUnknownNamespace))
 				continue
 			}
 			key := "reference:claim:" + m

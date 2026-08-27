@@ -19,7 +19,7 @@ var (
 	reFootnoteRef  = regexp.MustCompile(`\[\^([a-zA-Z0-9_-]+)\]`)
 	reCiteComment  = regexp.MustCompile(`<!--\s*cite:([a-zA-Z0-9_-]+)\s*-->`)
 	reSourceLine   = regexp.MustCompile(`(?i)^\s*Source:\s*([a-zA-Z0-9_-]+)\s*$`)
-	reBannedClaims = regexp.MustCompile(`(?i)\b(we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|we are CRA compliant|CRA compliant|compliant with (the )?CRA|compliant with CE)\b`)
+	reBannedClaims = regexp.MustCompile(`(?i)\b(we are (CE[- ])?certified|product is certified|officially certified|cyberready certifies|notified[- ]body approved|approved by (a )?notified body|conformity assessment (complete|passed|successful)|CE marking (issued|granted|obtained)|is CE[- ]marked|has been CE[- ]marked|certified conformity|we are CRA compliant|CRA compliant|compliant with (the )?CRA|compliant with CE|certified under (the )?[A-Z0-9][-A-Z0-9 ]+|approved under (the )?[A-Z0-9][-A-Z0-9 ]+|is certified (for|against|to) )\b`)
 	// Fence-like negation only — bare "informational" / "structural_draft" must NOT
 	// greenlight banned claims (e.g. "We are CRA compliant — informational only.").
 	reSafeNegation  = regexp.MustCompile(`(?i)not (a |an )?(conformity|certif|CE)|does not certify|never claim|no certification|not CE|not conformity assessment|structural (file/header )?gates|prepares evidence for human review|not a conformity assessment`)

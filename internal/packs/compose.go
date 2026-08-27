@@ -202,16 +202,19 @@ func mergePatch(target, patch map[string]any) map[string]any {
 	return out
 }
 
-// DoctorFindings reports expired / superseded / pin-skew signals (informational).
+// DoctorFindings reports expired / superseded / pin-skew / citation-currency signals (informational).
 type DoctorFindings struct {
 	Expired     []string `json:"expired,omitempty"`
 	Superseded  []string `json:"superseded,omitempty"`
 	PinSkew     []string `json:"pin_skew,omitempty"`
 	UnknownBase []string `json:"unknown_extends,omitempty"`
+	Unverified  []string `json:"unverified,omitempty"`
+	Stale       []string `json:"stale,omitempty"`
 	OK          bool     `json:"ok"`
 }
 
-// DoctorPacks inspects embedded (or override) packs for validity/supersession issues.
+// DoctorPacks inspects embedded (or override) packs for validity/supersession/citation-currency issues.
+// Never exits non-zero via CLI — findings are advisory (exit 0).
 func DoctorPacks() (DoctorFindings, error) {
 	ids, err := ListIDs()
 	if err != nil {
@@ -242,6 +245,10 @@ func DoctorPacks() (DoctorFindings, error) {
 				f.OK = false
 			}
 		}
+		collectCitationCurrency(&f, id, "pack", p.Citations, p.RecheckIntervalDays, now)
+		for _, r := range p.Rules {
+			collectCitationCurrency(&f, id, "rule "+r.ID, r.Citations, p.RecheckIntervalDays, now)
+		}
 	}
 	// Pin skew: CURBPACK_PACKS_DIR / legacy CYBERREADY_PACKS_DIR present but versions differ from embed for same id.
 	if dir := strings.TrimSpace(envPacksDir()); dir != "" {
@@ -261,6 +268,45 @@ func DoctorPacks() (DoctorFindings, error) {
 		}
 	}
 	return f, nil
+}
+
+func collectCitationCurrency(f *DoctorFindings, packID, ctx string, cs []Citation, intervalDays int, now time.Time) {
+	for i, c := range cs {
+		if strings.TrimSpace(c.Framework) == "" {
+			continue
+		}
+		label := fmt.Sprintf("%s %s citations[%d]", packID, ctx, i)
+		if strings.TrimSpace(c.VerifiedOn) == "" {
+			f.Unverified = append(f.Unverified, label+" framework citation missing verified_on")
+			f.OK = false
+			continue
+		}
+		if c.EditionPinned {
+			continue
+		}
+		if intervalDays <= 0 {
+			continue
+		}
+		verified, err := parseCitationDate(c.VerifiedOn)
+		if err != nil {
+			f.Stale = append(f.Stale, label+" verified_on unparseable")
+			f.OK = false
+			continue
+		}
+		ageDays := int(now.Sub(verified).Hours() / 24)
+		if ageDays > intervalDays {
+			f.Stale = append(f.Stale, fmt.Sprintf("%s verified_on=%s older than recheck_interval_days=%d", label, c.VerifiedOn, intervalDays))
+			f.OK = false
+		}
+	}
+}
+
+func parseCitationDate(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return t, nil
+	}
+	return time.Parse(time.RFC3339, s)
 }
 
 func timeNowDate() time.Time {

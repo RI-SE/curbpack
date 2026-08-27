@@ -2,11 +2,11 @@
 
 Frozen input: [`testdata/comparison-bundle-2026-1/`](../../testdata/comparison-bundle-2026-1/).
 
-Method: `curbpack-review-method` **1.2.0**.
+Method: `curbpack-review-method` **1.3.0** · classifier **`refclass:2`**.
 
 | Field | Value |
 |-------|--------|
-| `record_digest` | `83542b87d0381c71bc10252e0f64ee541a612f5281eb616a7afa295d3ed08fe4` |
+| `record_digest` | `fd822e2ebdab2f9dcd6cbffaf1f2085acd08926e60af149db1de0e1473f8c41e` |
 
 Divergence means a different tool version, a modified tool, or altered input — never operator variation.
 
@@ -16,4 +16,4 @@ Recompute:
 curbpack review ./testdata/comparison-bundle-2026-1 --json 2>/dev/null | jq -r .record_digest
 ```
 
-When `MethodVersion` changes, update this file and `TestComparisonBundleDigestPinned` together.
+When `MethodVersion` or `ClassifierVersion` changes, update this file and `TestComparisonBundleDigestPinned` together.

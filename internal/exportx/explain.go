@@ -1,14 +1,13 @@
 package exportx
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/afelin/curbpack/internal/airlock"
 	"github.com/afelin/curbpack/internal/formhints"
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
@@ -244,22 +243,5 @@ func repoRelative(p, repoRoot string) (string, bool) {
 // PacketLooksAirlocked reports whether packet bytes avoid absolute homes / PEM blobs.
 // Kept in lockstep with sanitizeText layers (PEM, UserHomeDir when usable, homePathRE).
 func PacketLooksAirlocked(data []byte) error {
-	if pemBlobRE.Match(data) {
-		return fmt.Errorf("explain-packet contains PEM-looking blob")
-	}
-	if homePathRE.Match(data) {
-		return fmt.Errorf("explain-packet contains absolute home path")
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		home = strings.TrimSpace(home)
-		if usableHome(home) {
-			if bytes.Contains(data, []byte(home)) {
-				return fmt.Errorf("explain-packet contains user home directory path")
-			}
-			if slash := filepath.ToSlash(home); slash != home && bytes.Contains(data, []byte(slash)) {
-				return fmt.Errorf("explain-packet contains user home directory path")
-			}
-		}
-	}
-	return nil
+	return airlock.PacketLooksAirlocked(data)
 }
