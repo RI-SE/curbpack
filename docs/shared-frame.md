@@ -130,9 +130,16 @@ Shipped in [`internal/claimid`](../internal/claimid): pattern `[A-Z][A-Z0-9]{1,1
 
 **Mapper impact:** hard-invalidate accepted links keyed under `refclass:1`. Soft-note only for method `1.2.0` → `1.3.0`.
 
-### 0b · The `edges` schema — **OPEN**
+### 0b · The `edges` schema — **DECIDED**
 
-Freeze §6's last block. One conversation. Blocks the `edges` writer only. **No `edges` writer ships while 0b is open (W7 gated).**
+The schema is **frozen** in the **§6 TO block** (canonical field definitions live there only — do not duplicate the table elsewhere).
+
+**Writer not shipped** on curbpack (W7 gated). CTAM may implement the `edges` writer after this decision merges.
+
+- Tracking: [RI-SE/ctam#2](https://github.com/RI-SE/ctam/issues/2)
+- Integration seam: [curbpack-seam.md](https://github.com/RI-SE/ctam/blob/main/docs/integration/curbpack-seam.md)
+
+**Changing any §6 TO field** requires an explicit decision and a tracked issue — not drive-by edits.
 
 ---
 
