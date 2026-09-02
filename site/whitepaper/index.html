@@ -71,7 +71,7 @@
       <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
                                     ↓
                          Review pack / evidence + optional attest</pre>
-      <p>The engine is industry-agnostic. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
+      <p>The engine has <strong>nine frozen check kinds</strong> (<code>annex_file</code>, <code>file_present</code>, <code>anti_placeholder</code>, <code>npm_dep_ban</code>, <code>manifest_dep_ban</code>, <code>text_forbid</code>, <code>import_reach</code>, <code>fresh</code>, <code>owned</code>) — packs are malleable; kinds are not. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
 
       <h3>End-to-end flow</h3>
       <pre class="mermaid">
@@ -93,7 +93,7 @@ flowchart LR
   humanReview --> attest[OptionalAttest]
   attest --> proofVerify[ProofVerify]
       </pre>
-      <p><strong>Write path:</strong> curb outlines → human confirm-packs → local pack→rule map → optional dual drafts + cite-check → check.<br/>
+      <p><strong>Write path:</strong> curb outlines → human confirm-packs → local pack→rule map (<code>packs export-graph</code> drafting graph — not claim-to-artifact mapping) → optional dual drafts + cite-check → check.<br/>
       <strong>Bring and CI:</strong> skip outlines; go straight to check.<br/>
       <strong>After green:</strong> review pack → human review → optional attest → local proof verify.</p>
 
@@ -128,13 +128,15 @@ flowchart LR
         <tbody>
           <tr><td>Git repo + pack JSON</td><td><code>init</code></td><td>Scaffold, hooks, skill, <code>.curbpack.json</code></td><td>Choose packs; confirm pathway if Write</td></tr>
           <tr><td>Pathway enums</td><td><code>pathway suggest</code></td><td>Closed-world pack suggestions in seed</td><td><code>confirm-packs</code> (TTY / <code>--i-am-human</code>)</td></tr>
-          <tr><td>Confirmed packs</td><td><code>packs export-graph</code></td><td>Local pack→rule map JSON</td><td>Use map to steer drafts—not as law</td></tr>
+          <tr><td>Confirmed packs</td><td><code>packs export-graph</code></td><td>Local pack→rule map JSON (drafting graph)</td><td>Use map to steer drafts—not as law or claim-linking</td></tr>
           <tr><td>Repo tree</td><td><code>check</code> / <code>validate</code></td><td>GateFailure IR; exit 0/1/2</td><td>Remediate on red; never invent green</td></tr>
           <tr><td>GateFailure JSON</td><td><code>ask --propose</code></td><td>Propose-only remediation hints</td><td>Apply in editor; re-check</td></tr>
           <tr><td>Allowlisted URLs</td><td><code>research [--fetch]</code></td><td>Citation packet + human brief</td><td>Inform drafts; never gates check</td></tr>
           <tr><td>Draft markdown</td><td><code>research --cite-check</code></td><td>Pass/fail on uncited Claims</td><td>Fix cites before <code>confirm-prose</code></td></tr>
           <tr><td>Dual drafts</td><td>Assistant + human</td><td>Option A / B + Recommended A|B</td><td>Pick A, B, or edit; record via <code>pathway note</code></td></tr>
           <tr><td>Green tree</td><td><code>share</code> / <code>prepare-release</code></td><td>Review pack + buyer one-pager</td><td><code>confirm-share</code>; hand to buyer</td></tr>
+          <tr><td>Received review-pack</td><td><code>review &lt;dir&gt;</code></td><td>Offline triage: confirmed / unconfirmed / contradicted</td><td>Document consistency only — not conformity</td></tr>
+          <tr><td>Repo + packs</td><td><code>review --repo [.]</code></td><td>Same triage on pack-governed ProsePaths</td><td>Write-free screen; not a product verdict</td></tr>
           <tr><td>Ready state</td><td><code>attest</code></td><td>Git Notes capsule + SBOM/VEX drafts</td><td>Human sign-off; unsigned ≠ verified</td></tr>
           <tr><td>Attest capsule</td><td><code>proof/index.html</code></td><td>Local hash compare</td><td>Human judgment—not conformity assessment</td></tr>
         </tbody>
@@ -151,9 +153,10 @@ flowchart LR
           <tr><td><strong>research / cite-check</strong></td><td>Allowlisted brief; never gates check; cite-or-refuse before confirm-prose</td></tr>
           <tr><td><strong>export / share</strong></td><td>SARIF, ContextPack, buyer-questions; <code>share</code> handoff recipe</td></tr>
           <tr><td><strong>prepare-release / attest</strong></td><td>Review pack + buyer one-pager; human Git Notes (never auto-attest)</td></tr>
+          <tr><td><strong>review</strong></td><td>Offline triage on a received pack or <code>--repo</code>; confirmed / unconfirmed / contradicted ≠ conformity; optional <code>--json</code> / <code>--full</code> / <code>--since</code> / <code>--verify-chain</code></td></tr>
           <tr><td><strong>proof verify</strong></td><td>Local <code>proof/index.html</code> vs evidence pointer—still human judgment</td></tr>
           <tr><td><strong>Platforms</strong></td><td>Release binaries: <code>darwin_*</code>, <code>linux_*</code>, <code>windows_amd64</code> (local CLI). GitHub Action = <strong>Linux/macOS only</strong></td></tr>
-          <tr><td><strong>packs / Action</strong></td><td>list / import / local pack→rule map (<code>export-graph</code>); pin <code>RI-SE/curbpack@v0.5.2</code>; alias <code>curb</code></td></tr>
+          <tr><td><strong>packs / Action</strong></td><td>list / import / local pack→rule map via <code>export-graph</code> (drafting graph, not claim-linking); pin <code>RI-SE/curbpack@v0.5.2</code>; alias <code>curb</code></td></tr>
         </tbody>
       </table>
       <p>Exit codes: <strong>0</strong> pass · <strong>1</strong> gates/error · <strong>2</strong> usage/env. Optional thin MCP wraps the CLI; no confirm/attest tools.</p>

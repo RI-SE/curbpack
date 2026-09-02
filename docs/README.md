@@ -8,9 +8,9 @@
 | Buyer / reviewer | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) |
 | CISO / authority / auditor | [For authorities](for-authorities.md) · [Intent](intent-vs-scope.md) · [security model](security-model.md) · [promotion firewall](promotion-firewall.md) |
 | Pack author / partner / agent | [assistant-loop](assistant-loop.md) · [Software design document](software-design-document.md) · [SDD gap analysis](internal/sdd-gap-analysis.md) · [write-your-own-pack](write-your-own-pack.md) · [design partners](design-partners.md) · skill (`internal/skilldata/SKILL.md`) · [strategy boundary](strategy-boundary.md) |
-| Integrator / tutor author | [Stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) · [Coreward pointer](coreward-pointer.md) |
+| Integrator / tutor author | [Stable contracts](stable-contracts.md) · [Shared Frame](shared-frame.md) (pin `a36aeef`) · [Coreward bridge](coreward-bridge.md) · [Coreward pointer](coreward-pointer.md) |
 
-Full audience table: [glossary and audience](glossary-and-audience.md). Public sentence voice: [voice and terms](voice-and-terms.md).
+Full audience table: [glossary and audience](glossary-and-audience.md). Public sentence voice: [voice and terms](voice-and-terms.md). Claim fence: [claim-discipline](claim-discipline.md). Review method tip: [review-method-1.3.0](method/review-method-1.3.0.md).
 
 RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](../NOTICE) — funder, not certifier.
 
@@ -25,6 +25,9 @@ RISE / agency liaison: [promotion firewall](promotion-firewall.md) + [NOTICE](..
 | [Intent vs Scope](intent-vs-scope.md) | What Curbpack is / is not |
 | [Strategy boundary](strategy-boundary.md) | Curbpack standalone; claim boundaries |
 | [Stable contracts](stable-contracts.md) | Explain airlock, GateFailure IR (nave freeze) |
+| [Shared Frame](shared-frame.md) | curbpack ⇄ CTAM Mapper seam; schema SoR pin `a36aeef`; method 1.3.0 |
+| [Claim discipline](claim-discipline.md) | Artifacts must not assert what the tool caused |
+| [Review method 1.3.0](method/review-method-1.3.0.md) | Published review method (tip) |
 | [Security model](security-model.md) | Trust boundaries, required CI, freeze |
 | [Promotion firewall](promotion-firewall.md) | RISE-neutral publish language + MoU checklist |
 | [Write your own pack](write-your-own-pack.md) | Pack authoring |

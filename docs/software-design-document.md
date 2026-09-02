@@ -290,13 +290,13 @@ Signing and verification use **OpenSSH signatures and `allowed_signers`**. No be
 
 ### 8.2 Operations
 
-> **TARGET / NOT SHIPPED:** the `verify` lines below are design sketches only. **`curbpack verify` is not a CLI verb today.** Recipient document triage is intended as future **`curbpack review`**. Pack signing / trust-import remain Wave B. Not certification.
+> **TARGET / NOT SHIPPED (signing / trust-import):** the `packs sign` / `trust import` lines below are design sketches. Pack signing / trust-import remain Wave B. **Recipient document triage is SHIPPED** as `curbpack review` (§9.1). Historical name `curbpack verify` is not a CLI verb. Not certification.
 
 ```
 curbpack packs sign <pack>                     # TARGET: ssh-keygen -Y sign -n <namespace>
 curbpack packs trust import <allowed_signers>  # HUMAN-ONLY — see §12; not built yet
-# NOT SHIPPED — do not run:
-# curbpack verify <bundle|pack|onepager>       # historical name; prefer future: curbpack review
+# SHIPPED document triage (not the historical verify name):
+# curbpack review <received-pack| --repo …>
 ```
 
 ### 8.3 Verdict states
@@ -378,7 +378,7 @@ Every artifact that leaves the building carries, without exception:
 - the computed `assurance_class` and **"mechanically evidenced: X of Y"**;
 - the verification verdict, in the vocabulary of §8.3;
 - the claim boundary: *prepares evidence for human review — not a conformity assessment*;
-- the footer: *Generated locally by curbpack. Nothing was uploaded. Review the artifact yourself (TARGET: future `curbpack review` — **`curbpack verify` is not shipped**).*
+- the footer: *Generated locally by curbpack. Nothing was uploaded. Review the artifact yourself (`curbpack review` — document triage; **`curbpack verify` is not a CLI verb**).*
 
 That footer converts a claim into an invitation, which is both the honest framing and the distribution mechanism.
 
@@ -496,7 +496,7 @@ Each wave states a precondition. Work that cannot name its consumer does not sta
 |---|---|
 | Check-kind registry (§6.3) | 1 d |
 | `references` (§6.1) | 2 d |
-| Recipient triage / `review` (§9.1; historical name `verify`) | 2 d |
+| Recipient triage / `review` (§9.1; SHIPPED; historical name `verify`) | done |
 | Signing, trust import, three verdict states (§8) | 1 d |
 | `packs init --from-repo` (§7.1) | 2 d |
 | Computed `assurance_class`, reviewer attestation, self-contained bundle | 1.5 d |
