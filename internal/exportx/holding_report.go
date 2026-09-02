@@ -57,7 +57,6 @@ func WriteHoldingReport(root string, packIDs []string, sincePath, outPath string
 	cur, err := review.Run(review.Options{
 		BundleRoot:     root,
 		Writer:         ioDiscard{},
-		JSONOut:        true,
 		ReferencesOnly: true,
 		TriageSurfaces: surfaces,
 		Prior:          &prior,

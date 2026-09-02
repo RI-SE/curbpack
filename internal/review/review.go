@@ -113,6 +113,8 @@ type Report struct {
 	SubjectStateHash string `json:"subject_state_hash,omitempty"`
 	// ParentRecordDigest is the prior report's record_digest when --since is set (hashed in).
 	ParentRecordDigest string `json:"parent_record_digest,omitempty"`
+	// Edges are human-approved gate→finding mappings (ingest only; omitted when absent).
+	Edges []Edge `json:"edges,omitempty"`
 }
 
 // Digest scope values recorded on every report.
@@ -134,6 +136,8 @@ type Options struct {
 	ReferencesOnly bool
 	// SubjectCommit is set by CLI in repo mode (internal/review never calls git).
 	SubjectCommit string
+	// Edges validated upstream; merged before record_digest when non-empty.
+	Edges []Edge
 }
 
 var (
@@ -300,27 +304,22 @@ func Run(opts Options) (Report, error) {
 	if opts.Prior != nil {
 		rep.ParentRecordDigest = strings.TrimSpace(opts.Prior.RecordDigest)
 	}
+	if len(opts.Edges) > 0 {
+		rep.Edges = append([]Edge(nil), opts.Edges...)
+	}
 	rep.RecordDigest = computeRecordDigest(rep)
+
+	if opts.JSONOut {
+		return rep, nil
+	}
 
 	w := opts.Writer
 	if w == nil {
 		w = os.Stdout
 	}
-
-	var out []byte
-	if opts.JSONOut {
-		var buf strings.Builder
-		enc := json.NewEncoder(&buf)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
-			return rep, err
-		}
-		out = []byte(buf.String())
-	} else {
-		out = []byte(TriageMarkdown(rep, opts.Full))
-		if opts.Prior != nil {
-			out = append(out, []byte(FormatDelta(*opts.Prior, rep))...)
-		}
+	out := []byte(TriageMarkdown(rep, opts.Full))
+	if opts.Prior != nil {
+		out = append(out, []byte(FormatDelta(*opts.Prior, rep))...)
 	}
 	if err := airlock.PacketLooksAirlocked(out); err != nil {
 		return rep, fmt.Errorf("review output failed airlock: %w", err)
@@ -329,6 +328,25 @@ func Run(opts Options) (Report, error) {
 		return rep, err
 	}
 	return rep, nil
+}
+
+// WriteJSON encodes rep as indented JSON and writes w after airlock checks.
+func WriteJSON(rep Report, w io.Writer) error {
+	if w == nil {
+		w = os.Stdout
+	}
+	var buf strings.Builder
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(rep); err != nil {
+		return err
+	}
+	out := []byte(buf.String())
+	if err := airlock.PacketLooksAirlocked(out); err != nil {
+		return fmt.Errorf("review output failed airlock: %w", err)
+	}
+	_, err := w.Write(out)
+	return err
 }
 
 // HasContradictions reports whether any finding is contradicted.
