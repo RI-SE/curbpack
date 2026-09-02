@@ -40,7 +40,7 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
                                     └─────────────────────────┘
 ```
 
-- **Engine:** industry-agnostic check kinds (`file_present`, `text_forbid`, dependency bans, etc.).
+- **Engine:** nine frozen check kinds (`annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned`). Packs are malleable; kinds are not.
 - **Packs:** data only — CRA-shaped annex drafts, house policy, sector templates.
 - **No remote policy service** required for daily `check`.
 - **Thin MCP example** shells out to CLI; optional Unix sock sidecar (`curbpack-sock` in `examples/mcp/`) for integrators — not in the main binary.
@@ -85,7 +85,7 @@ Every path ends in the same local `check`. Optional drafts never replace check.
 
 ### Local pack→rule map
 
-After human `confirm-packs`, Curbpack builds a **local pack→rule map** (closed-world suggest → confirm → local map → drafts). Use it to navigate house drafting; it is not regulation text and does not replace check. Optional refresh: `curbpack packs export-graph`.
+After human `confirm-packs`, Curbpack builds a **local pack→rule map** via `packs export-graph` (closed-world suggest → confirm → local map → drafts). Use it to navigate house drafting; it is not regulation text, not claim-to-artifact mapping, and does not replace check. Optional refresh: `curbpack packs export-graph`.
 
 Mnemonic: *Curb outlines → packs → check → hand off.*
 
@@ -95,13 +95,15 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 |-------|-----------|--------|----------------|
 | Git repo + pack JSON | `init` | Scaffold, hooks, skill, `.curbpack.json` | Choose packs; confirm pathway if Write |
 | Pathway enums | `pathway suggest` | Closed-world pack suggestions in seed | `confirm-packs` (TTY / `--i-am-human`) |
-| Confirmed packs | `packs export-graph` | Local pack→rule map JSON | Use map to steer drafts—not as law |
+| Confirmed packs | `packs export-graph` | Local pack→rule map JSON (drafting graph) | Use map to steer drafts—not as law or claim-linking |
 | Repo tree | `check` / `validate` | GateFailure IR (JSON + markdown); exit 0/1/2 | Remediate on red; never invent green |
 | GateFailure JSON | `ask --propose` | Propose-only remediation hints | Apply in editor; re-check |
 | Allowlisted URLs | `research [--fetch]` | Citation packet + human brief | Inform drafts; never gates check |
 | Draft markdown | `research --cite-check` | Pass/fail on uncited Claims | Fix cites before `confirm-prose` |
 | Dual drafts | Assistant + human | Option A / B + Recommended A\|B | Pick A, B, or edit; record via `pathway note` |
 | Green tree | `share` / `prepare-release` | Review pack + buyer one-pager | `confirm-share`; hand to buyer |
+| Received review-pack | `review <dir>` | Offline triage: confirmed / unconfirmed / contradicted | Document consistency only — not conformity |
+| Repo + packs | `review --repo [.]` | Same triage on pack-governed ProsePaths | Write-free screen; not a product verdict |
 | Ready state | `attest` | Git Notes capsule + SBOM/VEX drafts | Human sign-off; unsigned ≠ verified |
 | Attest capsule | `proof/index.html` | Local hash compare | Human judgment—not conformity assessment |
 
@@ -116,11 +118,14 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | **research / cite-check** | Allowlisted citation packet + human brief; never gates check; cite-or-refuse before `confirm-prose` |
 | **export / share** | SARIF, ContextPack, buyer-questions, lay-of-land, explain-packet; `share` = check → context-pack → buyer-questions → prepare-release |
 | **prepare-release / attest** | Review pack + buyer one-pager; human Git Notes capsule (never auto-attest) |
+| **review** | Offline document triage on a received pack **or** `--repo` (ProsePaths); states confirmed / unconfirmed / contradicted ≠ conformity; optional `--json` / `--full` / `--since` / `--verify-chain` |
 | **proof verify** | After attest, open local `proof/index.html` and compare the evidence pointer hash—still human judgment |
-| **packs** | `list` / `import` / local pack→rule map (`export-graph`) / `doctor` |
+| **packs** | `list` / `import` / local pack→rule map (`export-graph` drafting graph) / `doctor` |
 | **Platforms** | Release binaries: `darwin_*`, `linux_*`, `windows_amd64` (local CLI). GitHub Action = **Linux/macOS only** |
 | **Action / alias** | `RI-SE/curbpack@v0.5.2`; short alias `curb` = `curbpack` |
 | **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
+
+Nine check kinds are **frozen** (packs malleable; kinds not): `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned`.
 
 Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/env.
 

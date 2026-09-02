@@ -38,14 +38,15 @@ Warm-start: `curbpack pathway status` — optional interview that suggests check
 | drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](getting-started/evidence-drift.md)) |
 | evidence bundle | `share --bundle` | `review-pack/evidence-bundle.html` offline handoff |
 | review (received pack) | `curbpack review <pack-dir>` | Offline document triage — not a product verdict |
-| review (in-repo) | `curbpack review --repo [path] [--packs a,b]` | Governed-doc triage via ProsePaths; cold default `house-policy`; write-free |
+| review (in-repo) | `curbpack review --repo [path] [--packs a,b] [--json] [--full] [--since] [--edges]` | Governed-doc triage via ProsePaths; cold default `house-policy`; write-free; `--edges` ingest-only with `--json` |
+| review (chain) | `curbpack review --verify-chain <parent.json> <child.json>` | Exclusive digest-chain check between prior JSON reports |
 
 ```bash
 curbpack export --context-pack
 # → .github/curbpack/cache/context-pack.json (+ .md)
 ```
 
-Reviewers: `curbpack review <received-pack>` on a share. Maintainers screening their own tree: `curbpack review --repo` (optional `--packs` / `--since`). Surfaces are **pack-governed documentation only** — thin packs yield few surfaces; that is scope, not classifier failure.
+Reviewers: `curbpack review <received-pack>` on a share. Maintainers screening their own tree: `curbpack review --repo` (optional `--packs` / `--since` / `--verify-chain`). Surfaces are **pack-governed documentation only** — thin packs yield few surfaces; that is scope, not classifier failure. `--edges` is integrator ingest-only (`--repo --json`).
 
 ## Pack chooser (cold start)
 

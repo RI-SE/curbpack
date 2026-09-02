@@ -20,7 +20,8 @@ curbpack check
 # before confirm-prose: curbpack research --cite-check <draft.md>
 # green (optional share): curbpack export --context-pack
 # reviewers (offline): curbpack review <received-pack>  # document triage — not confirm/attest
-# optional in-repo: curbpack review --repo [path] [--packs a,b]  # ProsePaths; cold default house-policy
+# optional in-repo: curbpack review --repo [path] [--packs a,b] [--json] [--full] [--since <prior.json>] [--edges <edges.json>]
+#   --edges requires --repo --json (ingest-only). --verify-chain <parent.json> <child.json> is exclusive.
 ```
 
 ## Human-only acts

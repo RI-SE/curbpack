@@ -38,10 +38,14 @@
       </ul>
 
       <h3>Offline document triage</h3>
-      <p>When you receive a curbpack-native review-pack, unzip it on your machine and run:</p>
+      <p>Two paths — both write-free document triage (confirmed / unconfirmed / contradicted). Neither is a product verdict, conformity assessment, or claim-to-artifact linking.</p>
+      <p><strong>Received pack</strong> (supplier handoff):</p>
       <pre class="mono"><code>curbpack review &lt;received-pack-dir&gt;
-# terse default · --full for all findings · --json for schema v2</code></pre>
-      <p>You get pasteable triage: <strong>confirmed</strong>, <strong>unconfirmed</strong>, or <strong>contradicted</strong> findings about the document (structure, digests, references) — not a product verdict. Teaching folder: <a href="/curbpack/samples/review-pack/">/curbpack/samples/review-pack/</a>. Longer path: <a href="/curbpack/receiving-submissions/">Are you receiving submissions?</a></p>
+# terse default · --full for all findings · --json for schema v2 · --since &lt;prior.json&gt;</code></pre>
+      <p><strong>In-repo</strong> (governed docs in a tree you already have):</p>
+      <pre class="mono"><code>curbpack review --repo [.] [--packs a,b] [--json] [--full] [--since prior.json]</code></pre>
+      <p class="muted">Advanced: <code>curbpack review --verify-chain &lt;parent.json&gt; &lt;child.json&gt;</code> checks record digests between prior JSON reports — still not a product verdict.</p>
+      <p>Teaching folder: <a href="/curbpack/samples/review-pack/">/curbpack/samples/review-pack/</a>. Longer path: <a href="/curbpack/receiving-submissions/">Are you receiving submissions?</a></p>
       <p class="muted">Locked laptop? Receive the release binary as a file (email/USB) with <code>checksums.txt</code>, verify sha256, then PATH — <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md#ladder-3--manual-binary--checksums">Ladder 3</a>. No installer engineering required.</p>
 
       <h3 id="artifact-trust-table">Artifact trust table</h3>

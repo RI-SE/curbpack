@@ -2,7 +2,7 @@
 
 Drop-in for `docs/shared-frame.md`. Written read-only; nothing was applied to any repository.
 
-> **Pin.** Source of record is `RI-SE/curbpack@a36aeef` · review method **1.3.0** · classifier **`refclass:2`** · 27 Aug 2026.
+> **Pin.** Schema SoR is `RI-SE/curbpack@a36aeef` · review method **1.3.0** · classifier **`refclass:2`** · 27 Aug 2026. Tip may be ahead (0b docs + W7 ingest) without rebasing that pin.
 > **Not** any PDF, including v8. The concept document is *intent*; this tree is *record*. When they disagree, the tree wins.
 >
 > *Pin is the RI-SE merge SHA of the v6 reference-integrity train ([PR #31](https://github.com/RI-SE/curbpack/pull/31)). Treat any fork-local sha as unverifiable by the other party.*
@@ -62,11 +62,11 @@ Three things shipped after the v8 concept was verified. Each removes work from t
 
 | Shipped | Where | Consume it as |
 |---|---|---|
-| `BuyerQuestion.Answered` / `Evidence` / `VerifiedAt` | `internal/exportx/buyer_questions.go:25–27` | **The structural answer already exists.** Map only the residual set the nine kinds cannot express |
-| `Report.SubjectCommit` / `SubjectStateHash` | `internal/review/review.go:109–112` | **Read `subject_commit` as `repository.commit`.** Do not shell out to `git rev-parse` — a Mapper-computed and a record-supplied commit can disagree, and that class of defect takes a week to find |
+| `BuyerQuestion.Answered` / `Evidence` / `VerifiedAt` | `internal/exportx/buyer_questions.go` | **The structural answer already exists.** Map only the residual set the nine kinds cannot express |
+| `Report.SubjectCommit` / `SubjectStateHash` | `internal/review/review.go` (`subject_*` fields) | **Read `subject_commit` as `repository.commit`.** Do not shell out to `git rev-parse` — a Mapper-computed and a record-supplied commit can disagree, and that class of defect takes a week to find |
 | Method `1.3.0` + classifier `refclass:2` | `review.go` + `internal/claimid` | **Hard-invalidate accepted links on `classifier_version` change; soft-note on `method_version`.** `parent_record_digest` / `review --verify-chain` chain prior records. v8 keys freshness on `pack_versions` only, which covers pack drift but not engine drift |
 
-**One silent trap.** `buyer_questions.go:63,166`: when `res.SkippedRules > 0` (diff mode), **every `Answered` is forced false and `answers_suppressed` is set true.** A consumer reading `answered` without reading `answers_suppressed` concludes everything failed. **Refuse the import** rather than warn.
+**One silent trap.** In `buyer_questions.go` (diff mode): when `res.SkippedRules > 0`, **every `Answered` is forced false and `answers_suppressed` is set true.** A consumer reading `answered` without reading `answers_suppressed` concludes everything failed. **Refuse the import** rather than warn.
 
 **Edges ingest (W7):** curbpack accepts human-approved `edges` via `review --repo --json --edges <file>` (ingest only — no synthesis). CTAM still owns export; the Mapper milestone is one accepted mapping round-tripped end to end.
 
@@ -101,7 +101,7 @@ TO curbpack (the reserved `edges` payload):
 
 **Rule for the last block: nothing enters `edges` that a human has not accepted.** That is the axiom applied at the seam.
 
-**One semantic that is easy to misread.** `reference:claim:<rule-id>` is emitted with `StateConfirmed` and the detail *"Pack claim id present in document"* (`review.go:679–683`). **Confirmed means the string is present. It does not mean the requirement is met.** Render it as *"the documentation cites this rule"* — never as a green tick beside a requirement. That would assert something curbpack did not say.
+**One semantic that is easy to misread.** `reference:claim:<rule-id>` is emitted with `StateConfirmed` and the detail *"Pack claim id present in document"* (see `review.go` reference:claim path). **Confirmed means the string is present. It does not mean the requirement is met.** Render it as *"the documentation cites this rule"* — never as a green tick beside a requirement. That would assert something curbpack did not say.
 
 ---
 
@@ -146,22 +146,21 @@ The schema is **frozen** in the **§6 TO block** (canonical field definitions li
 ## 9. This week
 
 ```
-Daniel:  run `curbpack review --repo . --json` on three real trees; read source + id
-         (ten minutes, more informative than any spec — needs nothing from anyone)
-Aslak:   stable-contracts gaps — add `reference:claim`, `subject_commit`,
-         `subject_state_hash`; fix the stale 1.1.1 links            [minutes]
-Both:    0b edges schema freeze (0a closed as Option A / refclass:2)
+Done:    0a Option A / refclass:2; 0b §6 TO frozen; W7 curbpack ingest
+         (`review --repo --json --edges`) shipped on tip (#35)
 
-Then:
-Daniel:  import buyer-questions (refuse suppressed); hard-invalidate on refclass:2; MVP UI on the residual set
-Aslak:   pin is `a36aeef` (PR #31 merge); no edges writer until 0b
+Next:
+Daniel:  CTAM export of human-accepted edges; import buyer-questions
+         (refuse `answers_suppressed`); hard-invalidate on refclass:2;
+         MVP UI on the residual set the nine kinds cannot express
+Both:    one end-to-end round-trip (CTAM export → curbpack ingest) —
+         that is the reservation clock (deleted at product v0.6.0 if unused)
 
-Milestone that earns the `edges` reservation:
-         one human-accepted dummy mapping, end to end, into `edges`
-         — the reservation is DELETED at product release v0.6.0 if unused
+SoR:     schema pin remains `a36aeef` (PR #31); tip may be ahead for
+         decided docs + W7 without rebasing the pin
 ```
 
-**Nobody waits for perfect contracts.** Daniel's first item runs today; only the adapter write waits on **0b**.
+**Nobody waits for perfect contracts.** Curbpack ingest is shipped; the partner-led round-trip is what earns the reservation.
 
 ---
 

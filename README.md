@@ -147,9 +147,10 @@ Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone
 | `validate [--json]` | Pack gates (dual-rep); prefer `check` daily |
 | `check --diff` | Delta mode — **not** release-gate safe |
 | `ask [file] --propose` | Explain GateFailure JSON (propose-only) |
-| `packs list\|update\|import\|export-graph\|doctor` | Packs, local pack→rule map export, validity doctor |
+| `packs list\|update\|import\|export-graph\|doctor` | Packs, local pack→rule map export (drafting graph via `export-graph`), validity doctor |
 | `export --sarif\|--explain-packet\|--watchlist-join\|--buyer-questions\|--lay-of-land\|--context-pack` | Standards / tutor packet / buyer checklist / map / ContextPack |
 | `share` | Thin recipe: check → context-pack → buyer-questions → prepare-release |
+| `review [--repo] [--json] [--full] [--since] [--verify-chain]` | Offline document triage (received pack or in-repo); `--edges` ingest-only / integrators (`--repo --json` only) |
 | `pathway status` | One next ask (human default; `--technical` for phase path) |
 | `pathway suggest\|note` | Warm-start seed + session notes — not a gate input |
 | `pathway confirm-*` | Human only — `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` |
@@ -159,6 +160,6 @@ Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/curbpack.yml` if missing |
 
-Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Security model](docs/security-model.md) · [Write your own pack](docs/write-your-own-pack.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [Adopters](ADOPTERS.md)
+Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Security model](docs/security-model.md) · [Write your own pack](docs/write-your-own-pack.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [Adopters](ADOPTERS.md) · [Shared Frame](docs/shared-frame.md) (CTAM Mapper seam; residual claim-linking is Mapper-owned) · [Claim discipline](docs/claim-discipline.md)
 
 Claim-safe wording enforced by `scripts/claim-safety.sh`. Preferred public language: [docs/voice-and-terms.md](docs/voice-and-terms.md).

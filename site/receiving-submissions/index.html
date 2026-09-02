@@ -32,10 +32,14 @@
       <h3>What you do</h3>
       <ol>
         <li>Unzip a <strong>curbpack-native review-pack</strong> from the supplier (folder of gate JSON, action report, executive summary, buyer one-pager, and optional SBOM/VEX layers).</li>
-        <li>Run offline document triage: <code>curbpack review &lt;dir&gt;</code></li>
+        <li>Run offline document triage on the received pack: <code>curbpack review &lt;dir&gt;</code> (primary teaching path).</li>
         <li>Paste the triage into your notes — rows are <strong>confirmed</strong>, <strong>unconfirmed</strong>, or <strong>contradicted</strong> about the received document (structure, digests, references). That is not a product verdict.</li>
       </ol>
-      <pre class="mono"><code>curbpack review ./received-review-pack</code></pre>
+      <pre class="mono"><code>curbpack review ./received-review-pack
+# optional: --json · --full · --since &lt;prior.json&gt;</code></pre>
+      <p>Same method on a repository you already have (in-repo ProsePaths; write-free):</p>
+      <pre class="mono"><code>curbpack review --repo [.] [--packs a,b] [--json] [--full] [--since prior.json]</code></pre>
+      <p class="muted">Advanced: <code>curbpack review --verify-chain &lt;parent.json&gt; &lt;child.json&gt;</code> — record digest chain only; not a product verdict or claim-linking step.</p>
 
       <h3>What the gate is</h3>
       <p>The supplier’s pack gates are deterministic and run offline. Curbpack does not use a language model to decide whether a tree passed. Your <code>curbpack review</code> pass is likewise offline document triage — same inputs, same triage.</p>

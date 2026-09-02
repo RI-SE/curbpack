@@ -64,7 +64,7 @@ These apply to `review` and related surfaces (including `--repo`):
 
 ### Shared Frame
 
-Cross-product seam with Claim-to-Artifact Mapper: [`docs/shared-frame.md`](docs/shared-frame.md) (+ [`annexes`](docs/shared-frame-annexes.md)). Pin shared artifacts to `RI-SE/curbpack@a36aeef`. Do not invent Mapper adapter schemas here until Shared Frame **0b** freezes.
+Cross-product seam with Claim-to-Artifact Mapper: [`docs/shared-frame.md`](docs/shared-frame.md) (+ [`annexes`](docs/shared-frame-annexes.md)). Integration pin `RI-SE/curbpack@a36aeef` is the **schema SoR**; tip may be ahead (0b docs, W7 ingest). Shared Frame **0b** is **DECIDED** — follow §6 TO field set only; do not invent fields. W7 is curbpack ingest-only (`review --repo --json --edges`); CTAM owns export.
 
 ### Low-maintenance covenant (rules 7–9)
 
