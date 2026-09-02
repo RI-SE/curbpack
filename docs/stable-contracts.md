@@ -109,7 +109,7 @@ Offline document triage of a received curbpack-native review-pack **or** a repos
 | `Finding.ID` | **Stable contract.** Shapes: `reference:path:<p>`, `reference:url:<short>`, `reference:claim:<rule-id>`, `structure:<file>`, `digest:<key>`. Consumers may key on these; changes require a pin bump |
 | `source` | Document the reference was extracted from; present on reference edges; omitted (`omitempty`) on non-edges. Not baked into `Finding.ID` |
 | `ReferencesOnly` | When true: skip pack structure/load/digest checks; walk with fixed ignore list (`.git/`, cache+evidence+graph helpers + legacy, `review-pack/`, `node_modules`/`vendor`/`dist`/`build`/`target`/`.venv`); emit `digest_scope=closure`; missing governed surfaces → `structure:surface-absent:<path>`. No `.gitignore` parser |
-| `edges` | Schema **frozen** (Shared Frame §6 TO, **0b DECIDED**). **Writer not implemented** (W7). Human-approved export only. v0.6.0 expiry unchanged. CTAM: [seam doc](https://github.com/RI-SE/ctam/blob/main/docs/integration/curbpack-seam.md). |
+| `edges` | Schema **frozen** (Shared Frame §6 TO, **0b DECIDED**). **Writer:** `review --repo --json --edges <file>` (ingest only; W7). Human-approved export only. v0.6.0 expiry unchanged. CTAM: [seam doc](https://github.com/RI-SE/ctam/blob/main/docs/integration/curbpack-seam.md). |
 | `triage_surfaces` | Sorted list of surfaces actually used for reference extraction (from `ResolveTriageSurfaces`). Always populated — same comparability class as `digest_scope` |
 | `surfaces_digest` | sha256 over sorted length-prefixed surface path bytes. Always populated |
 

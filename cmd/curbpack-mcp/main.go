@@ -217,7 +217,6 @@ func runReviewCached(path string, repoMode bool) (review.Report, error) {
 	opts := review.Options{
 		BundleRoot: abs,
 		Writer:     io.Discard,
-		JSONOut:    true,
 	}
 	if repoMode {
 		opts.ReferencesOnly = true

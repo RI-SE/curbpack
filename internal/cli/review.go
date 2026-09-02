@@ -25,6 +25,7 @@ func cmdReview(args []string) error {
 	repoPath := "."
 	sincePath := ""
 	verifyChain := false
+	edgesPath := ""
 	var packList []string
 	var paths []string
 	for i := 0; i < len(args); i++ {
@@ -66,6 +67,12 @@ func cmdReview(args []string) error {
 			}
 			i++
 			sincePath = args[i]
+		case a == "--edges":
+			if i+1 >= len(args) {
+				return usageErr("review --edges requires a path to an edges JSON file")
+			}
+			i++
+			edgesPath = args[i]
 		case strings.HasPrefix(a, "-"):
 			return usageErr("unknown flag for review: " + a)
 		default:
@@ -73,13 +80,27 @@ func cmdReview(args []string) error {
 		}
 	}
 	if verifyChain {
-		if repoMode || batch || sincePath != "" || len(packList) > 0 || jsonOut || full {
+		if repoMode || batch || sincePath != "" || edgesPath != "" || len(packList) > 0 || jsonOut || full {
 			return usageErr("review --verify-chain is exclusive (no --repo/--batch/--since/--packs/--json/--full)")
 		}
 		if len(paths) != 2 {
 			return usageErr("review --verify-chain requires <parent.json> <child.json>")
 		}
 		return runVerifyChain(paths[0], paths[1])
+	}
+	if edgesPath != "" {
+		if !repoMode {
+			return usageErr("review --edges only applies with --repo")
+		}
+		if !jsonOut {
+			return usageErr("review --edges requires --json")
+		}
+		if batch {
+			return usageErr("review --edges does not combine with --batch")
+		}
+		if verifyChain {
+			return usageErr("review --edges does not combine with --verify-chain")
+		}
 	}
 	if repoMode && batch {
 		return usageErr("review --repo does not combine with --batch")
@@ -91,7 +112,7 @@ func cmdReview(args []string) error {
 		if len(paths) != 0 {
 			return usageErr("review --repo does not take a pack path argument (got " + strings.Join(paths, ", ") + ")")
 		}
-		return runReviewRepo(repoPath, packList, jsonOut, full, sincePath)
+		return runReviewRepo(repoPath, packList, jsonOut, full, sincePath, edgesPath)
 	}
 	if len(paths) == 0 {
 		commandUsage("review")
@@ -137,6 +158,11 @@ func cmdReview(args []string) error {
 	if err != nil {
 		return usageErr(err.Error())
 	}
+	if jsonOut {
+		if err := review.WriteJSON(rep, os.Stdout); err != nil {
+			return usageErr(err.Error())
+		}
+	}
 	printReviewHPURLFragment(paths[0], rep, false)
 	if review.HasContradictions(rep) {
 		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "Contradicted findings present — see triage note above."))
@@ -145,7 +171,7 @@ func cmdReview(args []string) error {
 	return nil
 }
 
-func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, sincePath string) error {
+func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, sincePath, edgesPath string) error {
 	root, err := filepath.Abs(filepath.Clean(strings.TrimSpace(repoPath)))
 	if err != nil {
 		return usageErr(fmt.Sprintf("review --repo: resolve path %q: %v", repoPath, err))
@@ -198,6 +224,21 @@ func runReviewRepo(repoPath string, packList []string, jsonOut, full bool, since
 	})
 	if err != nil {
 		return usageErr(err.Error())
+	}
+	if edgesPath != "" {
+		loaded, err := review.LoadEdgesFile(edgesPath)
+		if err != nil {
+			return usageErr(err.Error())
+		}
+		rep, err = review.AttachEdges(rep, loaded)
+		if err != nil {
+			return usageErr(err.Error())
+		}
+	}
+	if jsonOut {
+		if err := review.WriteJSON(rep, os.Stdout); err != nil {
+			return usageErr(err.Error())
+		}
 	}
 	printReviewHPURLFragment(root, rep, true)
 	if review.HasContradictions(rep) {

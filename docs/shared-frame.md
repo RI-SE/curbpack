@@ -68,7 +68,7 @@ Three things shipped after the v8 concept was verified. Each removes work from t
 
 **One silent trap.** `buyer_questions.go:63,166`: when `res.SkippedRules > 0` (diff mode), **every `Answered` is forced false and `answers_suppressed` is set true.** A consumer reading `answered` without reading `answers_suppressed` concludes everything failed. **Refuse the import** rather than warn.
 
-**What is still absent, stated plainly:** the `edges` writer does not exist. Of v8 §7's pilot steps, running `review --repo --json` and reading `GateID`/`Finding.ID`/`Source` work today; **exporting an accepted mapping into `edges` does not, on either side.** That step is item 7 below, and it is the one with a clock on it.
+**Edges ingest (W7):** curbpack accepts human-approved `edges` via `review --repo --json --edges <file>` (ingest only — no synthesis). CTAM still owns export; the Mapper milestone is one accepted mapping round-tripped end to end.
 
 ---
 
@@ -134,7 +134,7 @@ Shipped in [`internal/claimid`](../internal/claimid): pattern `[A-Z][A-Z0-9]{1,1
 
 The schema is **frozen** in the **§6 TO block** (canonical field definitions live there only — do not duplicate the table elsewhere).
 
-**Writer not shipped** on curbpack (W7 gated). CTAM may implement the `edges` writer after this decision merges.
+**Writer shipped (W7)** on curbpack — `review --repo --json --edges <file>` ingests only. CTAM implements the export side.
 
 - Tracking: [RI-SE/ctam#2](https://github.com/RI-SE/ctam/issues/2)
 - Integration seam: [curbpack-seam.md](https://github.com/RI-SE/ctam/blob/main/docs/integration/curbpack-seam.md)
