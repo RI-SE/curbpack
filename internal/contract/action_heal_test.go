@@ -100,6 +100,27 @@ func TestCLICheckHealUninitialized(t *testing.T) {
 	}
 }
 
+func TestActionHealPreservesRedResult(t *testing.T) {
+	body, err := os.ReadFile(filepath.Join(repoRoot(t), "action.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, want := range []string{
+		`EXTRA+=(--heal)`,
+		`echo "passed=false" >> "$GITHUB_OUTPUT"`,
+		`if: steps.run.outputs.passed != 'true'`,
+		`exit 1`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("action.yml must preserve a red heal result; missing %q", want)
+		}
+	}
+	if strings.Contains(text, "scaffold green") {
+		t.Fatal("action.yml must not describe generated scaffold as green")
+	}
+}
+
 func buildCyberready(t *testing.T) string {
 	t.Helper()
 	name := "curbpack"

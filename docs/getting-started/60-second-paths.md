@@ -94,11 +94,11 @@ Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On 
 
 1. Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack-check.yml) → `.github/workflows/curbpack.yml`.
 2. Push / open a PR. Pin stays **`@v0.5.2`**. Action = Linux/macOS only. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
-3. Expect: uninitialized repos resolve **`house-policy`**; Action `heal` defaults to **false**; set `heal: true` to write missing stubs (scaffold ≠ readiness). Green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
+3. Expect: uninitialized repos resolve **`house-policy`**; Action `heal` defaults to **false**; set `heal: true` to write missing stubs. Generated scaffold remains red until replaced with product-specific content. Green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
 
 Optional local equivalent: `curbpack init --workflow` writes the same drop-in workflow **only if missing** (never overwrites; not enabled by default `init`).
 
-Local Action-equivalent smoke: temp git repo **without** `.curbpack.json` → `curbpack check --heal` → exit 0 (or deterministic red after stubs if content gates remain).
+Local Action-equivalent smoke: temp git repo **without** `.curbpack.json` → `curbpack check --heal` → deterministic exit 1 with anti-placeholder failures after writing stubs.
 
 Maintainer bar: `./scripts/time-to-green.sh` (demo + init→check wall-clock; fail if &gt;10 min).
 

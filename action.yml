@@ -19,7 +19,7 @@ inputs:
     required: false
     default: 'false'
   heal:
-    description: 'If true, run check --heal (missing stubs only; never attest). Default false — opt in explicitly; scaffold ≠ readiness.'
+    description: 'If true, run check --heal (missing stubs only; never attest). Default false — opt in explicitly; generated scaffold remains red until replaced.'
     required: false
     default: 'false'
   prepare_release:
@@ -168,9 +168,9 @@ runs:
         else
           echo "passed=false" >> "$GITHUB_OUTPUT"
         fi
-        if [ "${{ inputs.heal }}" = "true" ] && grep -qE 'applied [1-9][0-9]* missing stub|scaffold green ≠ readiness|heal wrote missing stubs' /tmp/curbpack-check.txt; then
-          echo "::warning::scaffold green ≠ readiness / not certification — heal wrote missing stubs only"
-          echo "HEAL STUBS WRITTEN — scaffold green ≠ readiness / not a certification" >&2
+        if [ "${{ inputs.heal }}" = "true" ] && grep -qE 'applied [1-9][0-9]* missing stub|heal wrote missing stubs' /tmp/curbpack-check.txt; then
+          echo "::warning::Heal wrote missing stubs; generated scaffold remains red until replaced with product-specific content."
+          echo "HEAL STUBS WRITTEN — post-heal check result remains authoritative" >&2
         fi
         mkdir -p .github/curbpack/cache
         cp /tmp/curbpack-check.txt .github/curbpack/cache/ci-check-log.txt || true
