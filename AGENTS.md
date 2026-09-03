@@ -54,6 +54,7 @@ trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
 9. **Claim discipline:** an artifact must never assert something the tool caused — see [docs/claim-discipline.md](docs/claim-discipline.md).
 10. **Repository policy:** **RI-SE/curbpack** is the sole public source of truth. Never open full-tree parity/mirror/sync PRs. Never copy private-fork maintainer docs onto RI-SE. **afelin/curbpack** is downstream catch-up only (`git fetch corp-origin && git merge corp-origin/main`). See [docs/internal/fork-policy.md](docs/internal/fork-policy.md).
+11. **Concurrent agents:** use one independent clone per writer, one `<agent>/<story>` branch, and WIP=1 per agent. Reserve non-overlapping repository-relative paths in the operator registry, run its advisory preflight before editing, and stage named paths only (`git add -- <paths>`; never `git add .` or `git add -A`). Preflight catches honest mistakes; clone isolation and GitHub rules are the enforced boundaries.
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
 
