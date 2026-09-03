@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/afelin/curbpack/internal/config"
+	"github.com/afelin/curbpack/internal/githook"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/paths"
@@ -92,21 +93,26 @@ func Run(opts Options) error {
 		} else {
 			printCheck(".curbpack.json", true, "packs="+strings.Join(cfg.Packs, ","))
 			if cfg.Hooks {
-				hook := filepath.Join(root, ".git", "hooks", "pre-commit")
+				hook := githook.Path(root)
 				b, err := os.ReadFile(hook)
 				if err != nil {
 					printCheck("pre-commit hook", false, "hooks=true but hook missing")
-				} else if !strings.Contains(string(b), "curbpack") {
-					printCheck("pre-commit hook", false, "present but does not call curbpack")
+				} else if strings.Contains(string(b), "\r") {
+					printCheck("pre-commit hook", false, "CRLF detected — convert to LF; init --hooks only replaces exact known Curbpack bodies")
 				} else {
-					detail := "curbpack check"
-					if strings.Contains(string(b), "--heal") {
-						detail = "curbpack check --heal"
-					}
-					if strings.Contains(string(b), "\r") {
-						printCheck("pre-commit hook", false, "CRLF detected — re-run curbpack init --hooks (LF-only)")
-					} else {
-						printCheck("pre-commit hook", true, detail)
+					switch githook.Classify(b) {
+					case githook.KindCurrent:
+						printCheck("pre-commit hook", true, "curbpack check")
+					case githook.KindLegacyHeal:
+						printCheck("pre-commit hook", false, "legacy curbpack check --heal (v0.5.2–v0.5.4) — run: curbpack init --hooks (exact-match migrate; backs up to .curbpack-legacy.bak)")
+					default:
+						if !strings.Contains(string(b), "curbpack") {
+							printCheck("pre-commit hook", false, "present but does not call curbpack")
+						} else if githook.ContainsHeal(b) {
+							printCheck("pre-commit hook", false, "custom hook still runs check --heal — edit manually; do not blind-overwrite with init --hooks")
+						} else {
+							printCheck("pre-commit hook", true, "custom hook calls curbpack (not an exact Curbpack body)")
+						}
 					}
 				}
 			} else {

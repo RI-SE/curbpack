@@ -21,6 +21,8 @@ Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack
 
 Opinionated `curbpack init` installs a non-healing pre-commit hook by default. **Keep it** for agent PRs so every edit re-enters `curbpack check`; remediation remains an explicit command.
 
+Upgrading from v0.5.2–v0.5.4: those releases wrote `check --heal` into the hook. Doctor fails that exact legacy body. `curbpack init --hooks` replaces **only** that exact known body (and writes `.git/hooks/pre-commit.curbpack-legacy.bak`). Custom or composed hooks are refused — edit them manually to drop `--heal`; do not overwrite them blindly.
+
 ## Local day
 
 ```bash

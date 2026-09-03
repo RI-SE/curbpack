@@ -17,6 +17,7 @@ import (
 	"github.com/afelin/curbpack/internal/drift"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/formhints"
+	"github.com/afelin/curbpack/internal/githook"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/instrument"
 	"github.com/afelin/curbpack/internal/ir"
@@ -346,32 +347,12 @@ func profilePacks(name string) []string {
 }
 
 func installPreCommitHook(root string) error {
-	hookDir := filepath.Join(root, ".git", "hooks")
-	if err := os.MkdirAll(hookDir, 0o755); err != nil {
+	res, err := githook.Install(root)
+	if err != nil {
 		return err
 	}
-	path := filepath.Join(hookDir, "pre-commit")
-	// LF-only ASCII: never write CRLF; avoid non-ASCII so CI grep -F is never
-	// locale/"binary file" sensitive on the fail-closed assertion string.
-	script := "#!/bin/sh\n" +
-		"# Curbpack - fail commit on high/critical gate findings\n" +
-		"# Remediation is explicit; a commit hook must not create or edit tracked files.\n" +
-		"# Hooks enabled => missing binary is fail-closed (no silent skip).\n" +
-		"if command -v curbpack >/dev/null 2>&1; then\n" +
-		"  exec curbpack check\n" +
-		"elif [ -x ./bin/curbpack ]; then\n" +
-		"  exec ./bin/curbpack check\n" +
-		"elif [ -x ./curbpack ]; then\n" +
-		"  exec ./curbpack check\n" +
-		"else\n" +
-		"  echo \"curbpack not on PATH - refusing commit (hooks enabled)\" >&2\n" +
-		"  exit 1\n" +
-		"fi\n"
-	if strings.Contains(script, "\r") {
-		return fmt.Errorf("internal: hook script must be LF-only")
-	}
-	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		return err
+	if res.ReplacedLegacy {
+		tty.PrintStatus("pre-commit migrate", true, "replaced exact v0.5.2–v0.5.4 heal hook (backup .curbpack-legacy.bak)")
 	}
 	if cfg, err := config.Load(root); err == nil && cfg != nil {
 		cfg.Hooks = true
