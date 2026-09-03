@@ -10,7 +10,7 @@ Not conformity assessment — a green `check` is local structural evidence for h
 2. **Install / checksum fail** → re-fetch from pinned **`v0.5.4`** release URL (not `main`) → verify `checksums.txt` → refuse on mismatch.
 3. **`doctor` / `demo` / `check` fail for missing `git`** → install Git, reopen shell.
 4. **macOS Gatekeeper / Windows SmartScreen** → verify sha256 first → Allow / Unblock → then quarantine/`Unblock-File` only after checksum OK.
-5. **Hooks / CRLF / WSL+NTFS weirdness** → re-`init --hooks` (LF-only) or prefer native Windows exe on NTFS vs Linux binary on Linux FS.
+5. **Hooks / CRLF / WSL+NTFS weirdness** → convert to LF; `init --hooks` only replaces exact known Curbpack bodies (see Hooks section). Prefer native Windows exe on NTFS vs Linux binary on Linux FS.
 6. **Still stuck** → [first-move stuck](../../.github/ISSUE_TEMPLATE/first_move_stuck.yml) with pin + exit code; no certification language.
 
 ---
@@ -71,15 +71,20 @@ Prefer the native Windows exe on NTFS repos opened from PowerShell/cmd, or the L
 
 ---
 
-## Hooks / CRLF
+## Hooks / CRLF / legacy heal
 
-`curbpack init --hooks` writes LF-only `pre-commit`. If doctor reports CRLF, re-run init hooks or convert:
+`curbpack init --hooks` installs an LF-only non-healing `pre-commit` when missing, or replaces an **exact** known Curbpack body from v0.5.2–v0.5.4 (`check --heal`). It refuses custom or composed hooks and never silently overwrites them.
+
+| Doctor finding | Action |
+|----------------|--------|
+| `legacy curbpack check --heal (v0.5.2–v0.5.4)` | Safe: `curbpack init --hooks` (exact-match migrate; backup `.curbpack-legacy.bak`) |
+| `custom hook still runs check --heal` | Edit the hook by hand to remove `--heal`. Do **not** blind-run `init --hooks` — it will refuse and leave your hook intact. |
+| `CRLF detected` | Convert the file to LF. `init --hooks` only rewrites exact known Curbpack bodies. |
 
 ```bash
-# from repo root
+# safe only when doctor reports the exact legacy heal body
 curbpack init --hooks
 ```
-
 ---
 
 ## `doctor --repair` exit 2

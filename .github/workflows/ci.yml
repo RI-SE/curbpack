@@ -229,7 +229,8 @@ jobs:
           git commit --allow-empty -m init -q
           "$GITHUB_WORKSPACE/bin/curbpack" init --packs house-policy --hooks --skill --ide
           test -x .git/hooks/pre-commit
-          grep -q 'curbpack check --heal' .git/hooks/pre-commit
+          grep -q 'curbpack check' .git/hooks/pre-commit
+          ! grep -q -- '--heal' .git/hooks/pre-commit
           # Fail-closed message (ASCII); -aF avoids locale/binary-file grep false negatives
           grep -aF 'refusing commit' .git/hooks/pre-commit
           # LF-only hooks
