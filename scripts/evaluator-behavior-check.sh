@@ -8,6 +8,6 @@ cd "$ROOT"
 
 echo "evaluator-behavior-check: internal/validate vacuous-pass / target-absent / anti_placeholder"
 go test ./internal/validate/ \
-  -run 'TestAntiPlaceholderTargetAbsentWhenAllMissing|TestNPMDepBanVacuousPassPresentManifest|TestNPMDepBanTargetAbsentMissingManifest|TestAntiPlaceholderUntouchedStubFails|TestAntiPlaceholderStubPlusProductNameStillFails|TestFreshStubPathsSkipsAntiPlaceholderSameRun' \
+  -run 'TestAntiPlaceholderTargetAbsentWhenAllMissing|TestNPMDepBanVacuousPassPresentManifest|TestNPMDepBanTargetAbsentMissingManifest|TestAntiPlaceholderUntouchedStubFails|TestAntiPlaceholderStubPlusProductNameStillFails|TestFreshStubFailsAntiPlaceholderInSameRun|TestFreshStubCannotProduceGreenResult' \
   -count=1
 echo "evaluator-behavior-check: ok"

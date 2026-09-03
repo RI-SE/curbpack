@@ -404,14 +404,12 @@ func cmdCheck(args []string) error {
 	var lastHints []formhints.Hint
 	checkDiff := diffOnly
 	stubsWritten := 0
-	freshStubs := map[string]struct{}{}
 	for round := 0; round <= healMaxRounds; round++ {
 		res, err = validate.Run(validate.Options{
-			RepoRoot:       root,
-			PackIDs:        packIDs,
-			DiffOnly:       checkDiff,
-			Quiet:          jsonOut,
-			FreshStubPaths: freshStubs,
+			RepoRoot: root,
+			PackIDs:  packIDs,
+			DiffOnly: checkDiff,
+			Quiet:    jsonOut,
 		})
 		if err != nil {
 			return err
@@ -433,7 +431,6 @@ func cmdCheck(args []string) error {
 		for _, h := range hints {
 			if h.Applied {
 				applied++
-				freshStubs[filepath.ToSlash(h.File)] = struct{}{}
 			}
 		}
 		stubsWritten += applied
@@ -465,7 +462,7 @@ func cmdCheck(args []string) error {
 			}
 		}
 		if heal && stubsWritten > 0 {
-			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] heal wrote missing stubs; result reflects the post-heal tree — review generated files"))
 		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
@@ -490,7 +487,7 @@ func cmdCheck(args []string) error {
 			}
 		}
 		if heal && stubsWritten > 0 {
-			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] scaffold green ≠ readiness / not certification — heal wrote missing stubs only"))
+			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] heal wrote missing stubs; result reflects the post-heal tree — review generated files"))
 		}
 		// Failures: top 3 + ask pointer (no log archaeology).
 		fmt.Println(topFailuresSummary(res, 3))

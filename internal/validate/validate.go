@@ -33,9 +33,6 @@ type Options struct {
 	Quiet    bool
 	DiffOnly bool // skip rules whose paths are untouched by git diff
 	ReadOnly bool // skip cache writes (scan / read-only paths)
-	// FreshStubPaths: paths written by init/--heal in the same CLI invocation —
-	// skip anti_placeholder scaffold overlap (next run still scores them).
-	FreshStubPaths map[string]struct{}
 }
 
 // Result is the outcome of a validate run.
@@ -55,10 +52,6 @@ func Run(opts Options) (Result, error) {
 	if RunInvocationHook != nil {
 		RunInvocationHook()
 	}
-	prevFresh := freshStubPathsEval
-	freshStubPathsEval = opts.FreshStubPaths
-	defer func() { freshStubPathsEval = prevFresh }()
-
 	root := opts.RepoRoot
 	if root == "" {
 		var err error
@@ -322,11 +315,6 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 			out = append(out, failFromRule(rule, rel, err.Error()))
 			continue
 		}
-		if freshStubPathsEval != nil {
-			if _, skip := freshStubPathsEval[filepath.ToSlash(clean)]; skip {
-				continue
-			}
-		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			if firstAbsent == "" {
@@ -348,8 +336,6 @@ func checkAntiPlaceholder(root string, rule packs.Rule) []ir.Failure {
 	}
 	return out
 }
-
-var freshStubPathsEval map[string]struct{}
 
 func checkTextForbid(root string, rule packs.Rule) []ir.Failure {
 	if err := packs.ValidateRegexPattern(rule.Pattern); err != nil {

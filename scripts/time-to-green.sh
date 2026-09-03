@@ -4,7 +4,7 @@
 #
 # Paths:
 #   (A) demo from built/installed binary
-#   (B) temp git repo → init → check --heal → green
+#   (B) temp git repo → init → heal red → complete stubs → check green
 #
 # Usage:
 #   ./scripts/time-to-green.sh
@@ -53,7 +53,7 @@ test -f "$DEMO_DIR/review-pack/buyer-onepager.html"
 SEC_A="$(elapsed "$START_A")"
 echo "  PASS  A demo green in ${SEC_A}s"
 
-# --- (B) init → check --heal ---
+# --- (B) init → heal red → complete stubs → check green ---
 START_B="$(date +%s)"
 REPO_DIR="$(mktemp -d)"
 (
@@ -67,10 +67,30 @@ REPO_DIR="$(mktemp -d)"
   git add README.md
   git -c commit.gpgsign=false commit --no-verify -m scaffold -q
   "$BIN" init >/dev/null
-  "$BIN" check --heal >/dev/null
+  if "$BIN" check --heal >/dev/null; then
+    echo "time-to-green: heal-generated stubs must remain red" >&2
+    exit 1
+  fi
+  cat > SECURITY.md <<'EOF'
+# Security
+
+## Reporting
+
+Email security@example.org with vulnerability details through a private channel.
+
+## Response
+
+We acknowledge reports, investigate impact, coordinate remediation, and agree disclosure timing with the reporter.
+EOF
+  cat > .well-known/security.txt <<'EOF'
+Contact: mailto:security@example.org
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+EOF
+  "$BIN" check >/dev/null
 )
 SEC_B="$(elapsed "$START_B")"
-echo "  PASS  B init→check --heal green in ${SEC_B}s"
+echo "  PASS  B init→heal red→complete→check green in ${SEC_B}s"
 
 TOTAL="$(elapsed "$START_ALL")"
 echo "time-to-green: ${TOTAL}s (A=${SEC_A}s B=${SEC_B}s)"

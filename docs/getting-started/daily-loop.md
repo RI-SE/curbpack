@@ -31,6 +31,8 @@ curbpack check
 
 When a prior evidence cache exists, quiet dim lines show `Δ readiness`, and (when prior `instrument.json` exists) `Δ deps` / `Δ secret-hits`. Every check also prints the instrument-panel covenant. No dashboard.
 
+When `check --heal` creates missing stubs, that invocation remains red until product-specific content replaces any generated scaffold text.
+
 ## Release
 
 ```bash
