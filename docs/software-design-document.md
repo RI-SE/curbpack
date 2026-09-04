@@ -239,7 +239,11 @@ Current limitations:
 - Cache writes use direct `os.WriteFile` calls and `latest_*` names.
 - Findings and trust states are re-declared across components.
 - `review` recomputes some digests but accepts variable-length digest prefixes.
+- `review --verify-chain` compares artifact-supplied digest strings without
+  recomputing either record digest.
 - Attestation can fall back to keys from the current SSH agent.
+- The OpenSSH verifier invocation omits the required signer identity and is
+  covered by a fake binary rather than a real-signature integration test.
 - No crossing format has a schema under a canonical `schema/` directory.
 
 ### 3.2 Target architecture
@@ -474,7 +478,7 @@ invariant when its observable crosses boundaries.
 
 | Metric | Release target | Baseline status |
 |---|---:|---|
-| `false_green_paths_open` | 0 | **6 open** |
+| `false_green_paths_open` | 0 | **7 open** |
 | `reference_green_pass_rate` | 100% | Unmeasured; private positive fixture pending |
 | `required_mutation_detection_rate` | 100% | Public gauntlet 10/10; full corpus pending |
 | `incomplete_reported_as_pass` | 0 | Failing: diff-skip path |
@@ -512,7 +516,8 @@ Measurements below were executed at the pinned baseline. Coverage used
 | Required CI contexts | 5 in [required-checks.json](../.github/required-checks.json) |
 | Third-party Go requirements | 0 in [go.mod](../go.mod) |
 | Canonical schema files | 0 |
-| `go test ./...`, `go test -race ./...` | Passing |
+| `go test ./...` | **Failing when run uncached**; heal-equivalence JSON includes wall-clock time |
+| `go test -race ./...` | Passing at the pinned baseline; rerun after the timing fix |
 | `go build ./...`, `go vet ./...` | Passing |
 | Claim safety | Passing |
 | Red-team pilot | 15 passed, 0 failed |
@@ -527,7 +532,7 @@ Invariant status:
 |---|---|---|
 | INV-01 | Claim boundary | Passing automated claim-safety; human regulatory review pending |
 | INV-02 | Independent verification | **Failing** |
-| INV-03 | Write/read result equivalence | Heal regression passing; other write paths unverified |
+| INV-03 | Write/read result equivalence | Heal outcome parity passes; exact JSON parity is timing-dependent |
 | INV-04 | Deterministic canonical evaluation | **Failing**; evaluation and receipt not separated |
 | INV-05 | Path, subprocess, and untrusted-input containment | **Failing**; path jail passes, Git option/config paths remain |
 | INV-06 | Resource bounds and privacy | Partial; review caps exist, evaluator-wide budgets do not |
@@ -543,8 +548,8 @@ Invariant status:
 
 The v1.1 reproduction established seven paths. The heal-consistency repair in
 [`99870c5`](https://github.com/RI-SE/curbpack/commit/99870c57fde2d3d4eb2b5a6e60455eafb39a2007)
-closed the first. The other implementation paths are unchanged from the
-reproduced baseline and remain open.
+closed the original outcome-parity defect. Current-baseline execution then
+identified a separate chain-verification path, so seven false-green paths remain.
 
 | ID | Reproducible path | Location | Invariants |
 |---|---|---|---|
@@ -554,22 +559,31 @@ reproduced baseline and remain open.
 | FG-04 | A one-character claimed digest can confirm because comparison length derives from the claim | [`review.go`](../internal/review/review.go) | INV-02 |
 | FG-05 | `--diff` can skip rules while machine cache records a complete-looking score without skip state | [`validate.go`](../internal/validate/validate.go) | INV-07, INV-08 |
 | FG-06 | A present but unreadable required gate JSON layer is first confirmed and its parse/digest findings can disappear | [`review.go`](../internal/review/review.go) | INV-06, INV-07 |
+| FG-07 | `review --verify-chain` accepts two fabricated reports when the child copies the parent-supplied digest; neither digest is recomputed | [`review.go`](../internal/cli/review.go) | INV-02 |
 
 Closed regression:
 
 | ID | Prior path | Evidence |
 |---|---|---|
-| REG-HEAL-01 | `check --heal` returned 100/0/exit-0 while immediate `check` returned 60/2/exit-1 | [`check_json_heal_test.go`](../internal/cli/check_json_heal_test.go), [PR #40](https://github.com/RI-SE/curbpack/pull/40) |
+| REG-HEAL-01 | `check --heal` returned 100/0/exit-0 while immediate `check` returned 60/2/exit-1; score, findings, and exit parity are repaired, but byte parity remains open under INV-04 | [`check_json_heal_test.go`](../internal/cli/check_json_heal_test.go), [PR #40](https://github.com/RI-SE/curbpack/pull/40) |
 
 Additional open violations are tracked separately from the false-green count:
 
 - Git subprocesses do not neutralize repository-local execution configuration.
 - Pack `since_ref` can be interpreted as a Git option because it is not validated
-  before entering the argument list.
+  before entering the argument list. Current-baseline execution demonstrated an
+  option-shaped value causing Git to create an output file.
 - The documented `curbpack ask <path> --propose` order fails because Go flag
   parsing stops at the positional argument.
 - Direct cache writes are non-atomic and cache-write failure is warning-only.
 - Current records include implicit time and environment-derived identity.
+- `go test ./... -count=1` fails because the heal-equivalence test compares JSON
+  records whose wall-clock timestamps can cross a one-second boundary.
+- The real `ssh-keygen -Y verify` invocation fails because it omits `-I` and does
+  not provide the signed message on standard input; current tests stub the binary.
+- Public surfaces still say that the gate is deterministic and "cannot be argued
+  with," describe green as expensive to fake, and contain a stale static countdown.
+  These claims are contradicted or unsupported by the current verified baseline.
 - The Go module path remains `github.com/afelin/curbpack` while the public source
   of truth is `RI-SE/curbpack`; migration requires a major-version plan.
 
@@ -674,13 +688,13 @@ smaller merge grouping. A later package does not start before its entry gate.
 | WP | Work | Entry gate | Exit evaluation | Rollback |
 |---|---|---|---|---|
 | **W0** | Adopt SDD v1.2 | Current baseline reproduced | One-file review; all statuses sourced | Revert SDD commit |
-| **W1** | Close FG-01 through FG-06; remove `import_reach` | W0 human-merged | `false_green_paths_open=0`; regressions red before fix | Revert each independent fix |
+| **W1** | Correct contradicted public claims; close FG-01 through FG-07; remove `import_reach`; neutralize executable Git configuration and validate option-like Git inputs | W0 human-merged | `false_green_paths_open=0`; hostile Git configuration cannot execute; option-shaped refs fail closed; regressions red before fix | Revert each independent fix |
 | **W2** | Canonical evaluation, typed outcome, receipt split, atomic content-addressed cache | W1 complete | Repeated bytes/digests equal; interruption and concurrency tests | Preserve legacy readers behind adapter |
-| **W3** | Command metadata and explicit remediation; deprecate `--heal` | W2 stable | Agent/Action/hook/no-code migration matrix | Restore compatibility alias only |
-| **W4** | Independent OpenSSH trust policy and typed trust assessment | W2 stable; real OpenSSH spike passes | Real binary tests; no embedded or agent-fallback trust | Disable optional authenticity adapter |
+| **W3** | Command metadata and explicit remediation; correct `ask` syntax and human-acknowledgement wording; deprecate `--heal` | W2 stable | Generated command-truth tests and Agent/Action/hook/no-code migration matrix | Restore compatibility alias only |
+| **W4** | Independent OpenSSH trust policy and typed trust assessment | W2 stable | Real-binary sign/verify tests; no embedded or agent-fallback trust; missing or unusable OpenSSH reports `not_checked` | Disable optional authenticity adapter |
 | **W5** | Four versioned schemas and generic external evidence | W2 model frozen | Golden round trips and unknown-field compatibility | Keep schemas supporting until promoted |
 | **W6** | Release identity, immutable references, Windows promotion evidence, module-path plan | W1-W5 required slices green | Install/action/release matrix and checksums | Retain prior release and pins |
-| **W7** | Transparent public-document consolidation | W0 merged; RI-SE wording review | Links, claim safety, history references, current pins | Revert documentation commit |
+| **W7** | Consolidate historical public documents after W1 has corrected current product claims | W1 complete; RI-SE wording review | Links, claim safety, history references, current pins | Revert documentation commit |
 | **W8** | Optional hosted coordination and payment | Private adoption gate and human budget owner | Core works during hosted outage and after entitlement expiry | Disable hosted service; files remain usable |
 
 W0 is the only product-repository change authorized by this document's adoption
