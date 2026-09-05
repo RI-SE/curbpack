@@ -1,19 +1,9 @@
 # Curbpack
 
-> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — clone, install, releases, and docs. Development supported by RISE as an applied research / competence object; RISE does not certify products that use Curbpack gate results. GitHub Action pin: **`RI-SE/curbpack@v0.5.2`** (version bump still needs human tabletop).
+> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) contains the code, releases, and documentation. Development is supported by RISE as an applied research / competence object; see the [NOTICE](NOTICE). RISE does not certify products that use Curbpack gate results. The GitHub Action remains pinned to **`RI-SE/curbpack@v0.5.2`** until the next human tabletop permits a version bump; see the [release gate](scripts/release-gate.json).
 
 [![ci](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml/badge.svg)](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-> Article 14 reporting starts **11 September 2026**. Install once, then scan — writes nothing:
->
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
-> cd /path/to/your/git/repo
-> curbpack scan
-> ```
->
-> Not conformity assessment. We never see your repo.
 
 Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor—on your machine, without claiming certification.
 
@@ -21,17 +11,11 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 [Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
-## Who are you?
+## Start with a read-only scan
 
-| You are | Start here |
-|---------|------------|
-| **Supplier / builder** | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
-| **Buyer / reviewer** | [For reviewers](site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](site/samples/onepager.html) |
-| **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site Authorities](site/for-authorities/) |
+[Article 14 incident-reporting obligations](https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng) apply from **11 September 2026**. Install Curbpack, change to any git repository, and run `scan`. This first step writes no files.
 
-## Quickstart (install + scan)
-
-Inside any git repo — read-only diagnosis after a one-line install. Pin install URLs to **`v0.5.4`** (Action stays **`@v0.5.2`** until human pin bump).
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
@@ -39,25 +23,29 @@ cd /path/to/your/git/repo
 curbpack scan
 ```
 
-Scan defaults to **`cra-baseline`** and prints the Art 14 reporting clock. `scan` uses exit 0 when diagnosis completes, even when findings remain — use `curbpack check` for repository gate pass/fail. When you want hooks and a daily score, use the full ladder below. Stuck? [troubleshooting](docs/getting-started/troubleshooting.md).
-
-## Full ladder (below)
-
-Install when you want a local binary (Windows PowerShell · macOS/Linux curl): [install](docs/getting-started/install.md). After install, `curb` is a short alias for `curbpack`.
-
 **Windows (PowerShell)**
 
 ```powershell
 irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
+cd C:\path\to\your\git\repo
+curbpack scan
 ```
 
-**macOS / Linux**
+`scan` defaults to **`cra-baseline`** and prints the Article 14 reporting clock. Exit 0 means diagnosis completed; findings may remain. Use `curbpack check` when you need repository gate pass/fail. See [troubleshooting](docs/getting-started/troubleshooting.md) if the command is unavailable.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
-```
+## Choose the relevant guide
 
-Then the same ladder on every OS:
+| You are | Start here |
+|---------|------------|
+| **Supplier / builder** | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
+| **Buyer / reviewer** | [For reviewers](site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](site/samples/onepager.html) |
+| **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site for authorities](site/for-authorities/) |
+
+For the complete system, read the [white paper](papers/curbpack-whitepaper.md) and [how it works](site/how-it-works/). Definitions are in the [glossary and audience guide](docs/glossary-and-audience.md).
+
+## Continue to the full workflow
+
+After installation, the same workflow applies on every supported OS. `curb` is a short alias for `curbpack`.
 
 ```bash
 curbpack doctor
@@ -75,9 +63,7 @@ curbpack attest
 
 `curbpack ask-my-suppliers` emits the same buyer checklist as `export --buyer-questions`. On red: `curbpack check --heal` then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`, then re-check. Optional drift checklist: `curbpack drift` (exit 0 always). After OS update / PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also: `install.ps1 -Repair`).
 
-## Three ways in
-
-Every path ends in the same local `check`. Write adds optional pathway drafts first; Bring and CI skip outlines. Full table and ladders: [60-second paths](docs/getting-started/60-second-paths.md) · [pathway guide](docs/getting-started/pathway.md).
+Write, Bring, and CI all end in the same local `check`. Write can add optional pathway drafts first; Bring and CI proceed directly to checks. Compare the paths in [60-second paths](docs/getting-started/60-second-paths.md) or read the [pathway guide](docs/getting-started/pathway.md).
 
 ## What you get
 
@@ -108,16 +94,6 @@ Optional exports: SARIF, ContextPack, buyer-questions, lay-of-land. Teaching sam
 
 Gate pass is **not** certification, CE marking, or notified-body approval. Humans decide what to claim. Only **`check`** provides repository gate pass/fail.
 
-## Where to go deeper
-
-| Reader | Start |
-|--------|--------|
-| Builder | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [pathway](docs/getting-started/pathway.md) · [daily loop](docs/getting-started/daily-loop.md) |
-| Buyer / reviewer | [Buyer evidence](docs/getting-started/buyer-evidence.md) · [for-reviewers](site/for-reviewers/) |
-| CISO / authority | [For authorities](docs/for-authorities.md) · [site Authorities](site/for-authorities/) |
-| Full system | [White paper](papers/curbpack-whitepaper.md) · [how it works](site/how-it-works/) |
-| Abbreviations | [Glossary and audience](docs/glossary-and-audience.md) |
-
 ## GitHub Action
 
 Action runners are **Linux/macOS only** (local Windows CLI is supported separately).
@@ -136,7 +112,7 @@ Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](ex
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
 
-**Compose, do not conquer:** Curbpack prepares structural evidence for product repos. Pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth — not a security program. Boundary: [strategy boundary](docs/strategy-boundary.md).
+Curbpack prepares structural evidence for product repositories. It does not replace software composition analysis or secret scanning; use dedicated tools such as Trivy, OSV, or Gitleaks for those checks. See the [strategy boundary](docs/strategy-boundary.md).
 
 Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 

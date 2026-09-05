@@ -4,12 +4,9 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Scan-first (cold repo, no init):** install from release **`v0.5.4`**, then `curbpack scan` — read-only; defaults to **`cra-baseline`** + Art 14 clock.  
-**Init / check cold default:** **`house-policy`** (via `curbpack init` or uninitialized `check`). CRA / medtech are opt-in via `--packs`. Pick **exactly one** first move for your audience.
-
 ## Scan-first (fastest)
 
-Install once, then scan inside any git repo — **no init**, **no files written**:
+Install release **`v0.5.4`** once, then scan inside any git repository. `scan` does not initialize Curbpack or write files.
 
 **macOS / Linux**
 
@@ -27,37 +24,23 @@ cd C:\path\to\your\git\repo
 curbpack scan
 ```
 
-Read-only diagnosis. Packs line shows `cra-baseline` on a cold tree. When ready (optional): `curbpack fix --art14` → `init` → `check --score` — not required for the first-run tryout (stop after scan).
+On an uninitialized repository, `scan` uses `cra-baseline`. For the first-run tryout, stop after the scan. To continue later, run `curbpack fix --art14`, `curbpack init`, and `curbpack check --score` in that order.
 
-## Three ways in
+## Choose a working path
 
-Same local `check` for all three — Write adds optional draft choice first; Bring and CI go straight to check.
+Write, Bring, and CI use the same local `check` result.
 
 | Way | What you do |
 |-----|-------------|
-| **Write→Check** | Optional [pathway](pathway.md) interview that suggests checklists → confirm packs (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`) → optional research brief → two drafts + Recommended A\|B → you pick → cite-check (refuses ungrounded Claims; stub-only confirm refuses) → `check`. |
-| **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then `check`. No portal PDF ingest. |
-| **CI** | Action-only (or local `check` alone). Pin **`@v0.5.2`**. Action = Linux/macOS runners. |
+| **Write → Check** | Use the optional [pathway](pathway.md) to choose packs and prepare grounded drafts with human confirmation, then run `check`. |
+| **Bring docs → Check** | Place existing policies at the configured pack paths, or point a custom pack at those paths, then run `check`. Portal PDF ingestion is not supported. |
+| **CI** | Run the Action or a local `check`. Pin the Action to **`@v0.5.2`**; Action runners are Linux and macOS. |
 
 Builders site: [Three ways in](../../site/for-builders/). Install hub: [install](install.md) · [troubleshooting](troubleshooting.md). Write depth: [pathway](pathway.md).
 
-## Human — safe try
+## Try the demo
 
-Under ten minutes (install pin **`v0.5.4`**; Action pin **`@v0.5.2`**): install → `doctor` → `demo`. Gate green ≠ certification. Full ladders: [install](install.md).
-
-**Windows (PowerShell)**
-
-```powershell
-irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
-```
-
-**macOS / Linux**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
-```
-
-Then:
+After installation, run `doctor` and the isolated demo. A green demo is not certification. See [install](install.md) for the complete installation options.
 
 ```bash
 curbpack doctor
@@ -65,7 +48,7 @@ curbpack demo                          # sandbox green + one-pager path (no brow
 # curbpack demo --open                 # opt-in: open the one-pager in the OS browser
 ```
 
-## Human — product repo
+## Use Curbpack in a product repository
 
 ```bash
 cd my-product
@@ -75,7 +58,7 @@ curbpack share                         # optional --bundle
 # human when ready: curbpack attest → proof/index.html
 ```
 
-On red: `curbpack check --heal` then `curbpack ask … --propose`, then re-check. After first green: `curbpack share` for the handoff recipe (review pack + buyer one-pager). Optional: `curbpack drift` (informational checklist, exit 0).
+If `check` is red, run `curbpack check --heal`, then `curbpack ask … --propose`, and re-run `check`. After the first green result, `curbpack share` prepares the review pack and buyer one-pager. `curbpack drift` is an optional informational checklist and always exits 0.
 
 ## Agent
 
@@ -86,7 +69,7 @@ curbpack check --form-hints            # propose-only snippets
 # optional: curbpack check --form-hints --apply-stub   # write missing stubs only
 ```
 
-Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On green: prefer `share` or `export --context-pack`. Never claim certification. Full contract: [assistant-loop](../assistant-loop.md) (Cursor / Copilot / Claude / others).
+After documentation or dependency edits, an agent must re-run `check`. On red, use heal and propose-only guidance, then re-check. On green, use `share` or `export --context-pack`. The [assistant loop](../assistant-loop.md) defines the complete contract for Cursor, Copilot, Claude, and other assistants.
 
 ## CI-only
 
@@ -94,7 +77,7 @@ Agent rule: after doc/dep edits, re-run `check`. On red: heal + ask propose. On 
 
 1. Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack-check.yml) → `.github/workflows/curbpack.yml`.
 2. Push / open a PR. Pin stays **`@v0.5.2`**. Action = Linux/macOS only. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
-3. Expect: uninitialized repos resolve **`house-policy`**; Action `heal` defaults to **false**; set `heal: true` to write missing stubs. Generated scaffold remains red until replaced with product-specific content. Green sticky once, or red with heal stubs + top-3 ask pointer — still felt value. Claim-safe: gate pass ≠ certification.
+3. On an uninitialized repository, the Action selects **`house-policy`**. `heal` defaults to **false**; set `heal: true` to write missing stubs. Generated scaffold remains red until replaced with product-specific content. Stubs do not establish readiness, and a gate pass is not certification.
 
 Optional local equivalent: `curbpack init --workflow` writes the same drop-in workflow **only if missing** (never overwrites; not enabled by default `init`).
 
@@ -106,7 +89,7 @@ Maintainer bar: `./scripts/time-to-green.sh` (demo + init→check wall-clock; fa
 
 1. Open the supplier’s `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact), or the committed sample at `site/samples/onepager.html`.
 2. Or open the proof page (`proof/index.html`) with a hash fragment.
-3. One screen: local gate score, top gaps, disclaimer — no account required. Not a certificate.
+3. Review the local gate score, highest-priority gaps, and disclaimer on one screen. No account is required, and the page is not a certificate.
 
 Runs deposit cache + review-pack under `.github/curbpack/`; attest when a human is ready.
 
