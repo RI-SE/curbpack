@@ -23,7 +23,7 @@ func TestResultDigestSameGateFailureOrder(t *testing.T) {
 	a := ir.Failure{GateID: "A", Severity: "high", Type: "missing", ASTCoordinates: ir.ASTCoordinates{TargetFile: "a.md"}}
 	b := a
 	b.ASTCoordinates.TargetFile = "b.md"
-	p := ir.GateFailurePayload{Failures: []ir.Failure{a, b}}
+	p := ir.GateFailurePayload{Outcome: ir.OutcomeFindings, Failures: []ir.Failure{a, b}}
 	q := p
 	q.Failures = []ir.Failure{b, a}
 	if ir.ComputeResultDigest(p) != ir.ComputeResultDigest(q) {
