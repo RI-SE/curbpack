@@ -33,7 +33,9 @@ func EvidenceBundleHTML(d BundleDTO) string {
 		hpurlBlock = fmt.Sprintf(`<section><h2>Evidence stamp (offline)</h2><code>%s</code></section>`, html.EscapeString(d.HPURLFragment))
 	}
 	if d.HPURLEmbedJSON != "" {
-		hpurlBlock += fmt.Sprintf(`<script type="application/json" id="curbpack-hpurl-pointer">%s</script>`, d.HPURLEmbedJSON)
+		// FG-02 / MUST-43: never embed repository-derived JSON raw inside <script>.
+		// Unicode escapes keep JSON valid while preventing </script> breakout.
+		hpurlBlock += fmt.Sprintf(`<script type="application/json" id="curbpack-hpurl-pointer">%s</script>`, escapeJSONForHTMLScript(d.HPURLEmbedJSON))
 	}
 	onePager := d.OnePagerBody
 	if onePager == "" {
@@ -74,6 +76,17 @@ func EvidenceBundleHTML(d BundleDTO) string {
 </body>
 </html>
 `, banner, html.EscapeString(d.RepoName), html.EscapeString(status), d.Score, html.EscapeString(d.Timestamp), onePager, hpurlBlock)
+}
+
+// escapeJSONForHTMLScript makes JSON safe as text inside an HTML <script> element.
+// HTML5 script data ends at a literal "</script>" (case-insensitive); escaping
+// "<", ">", and "&" to JSON Unicode escapes prevents breakout while remaining
+// valid JSON for offline consumers (INV-05, INV-06).
+func escapeJSONForHTMLScript(s string) string {
+	s = strings.ReplaceAll(s, `&`, `\u0026`)
+	s = strings.ReplaceAll(s, `<`, `\u003c`)
+	s = strings.ReplaceAll(s, `>`, `\u003e`)
+	return s
 }
 
 // ExtractOnePagerMain returns inner main content from full one-pager HTML for bundle embed.
