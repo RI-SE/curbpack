@@ -26,7 +26,6 @@ var supportedChecks = map[string]struct{}{
 	"npm_dep_ban":      {},
 	"manifest_dep_ban": {},
 	"text_forbid":      {},
-	"import_reach":     {},
 	"fresh":            {},
 	"owned":            {},
 }

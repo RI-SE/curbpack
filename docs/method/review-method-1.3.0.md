@@ -122,9 +122,9 @@ When the caller supplies a prior report (`--since`), the engine copies the prior
 
 ## 8. Governance — packs vs check kinds
 
-**Packs are infinitely malleable. The nine check kinds are frozen.**
+**Packs are infinitely malleable. The eight check kinds are frozen.**
 
-The nine: `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned`.
+The eight: `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `fresh`, `owned`.
 
 ## 9. Comparison scheme
 
