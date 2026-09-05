@@ -356,14 +356,14 @@ their libraries, require their credentials, or depend on their availability.
 
 ### 5.1 Check kinds
 
-**Current.** Nine kinds are registered in
+**Current.** Eight kinds are registered in
 [`internal/validate/checks.go`](../internal/validate/checks.go):
 `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`,
-`manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, and `owned`.
+`manifest_dep_ban`, `text_forbid`, `fresh`, and `owned`.
 
-**Decided.** `import_reach` is removed because it ignores its declared target,
-passes missing or unparsable input, and has no embedded-pack consumer. The
-remaining eight kinds form the closed evaluator algebra. `references` belongs
+**Decided.** `import_reach` was removed because it ignored its declared target,
+passed missing or unparsable input, and had no embedded-pack consumer. The
+eight kinds form the closed evaluator algebra. `references` belongs
 to offline review; human-approved trace edges belong to an external crossing
 format. Neither becomes a tenth evaluator kind without an ADR proving that
 composition and external evidence are insufficient.
@@ -481,11 +481,11 @@ invariant when its observable crosses boundaries.
 
 | Metric | Release target | Baseline status |
 |---|---:|---|
-| `false_green_paths_open` | 0 | **1 open** |
+| `false_green_paths_open` | 0 | **0 open** |
 | `reference_green_pass_rate` | 100% | Unmeasured; private positive fixture pending |
 | `required_mutation_detection_rate` | 100% | Public gauntlet 10/10; full corpus pending |
 | `incomplete_reported_as_pass` | 0 | Passing: `--diff` skip records incomplete + skipped_rules in cache |
-| `channel_parity_failures` | 0 | Partial: FG-05 skip/cache closed; FG-03 remains |
+| `channel_parity_failures` | 0 | Passing: FG-01–FG-07 closed |
 | `time_to_first_valid_evidence` | <= 60 s | Passing: 6 s local baseline |
 
 No global statement-coverage threshold is a release gate. Coverage guides test
@@ -514,7 +514,7 @@ Measurements below were executed at the pinned baseline. Coverage used
 | `t.Run` subtests | 23 |
 | Statement coverage | 57.2% |
 | Registered top-level commands | 20 |
-| Registered check kinds | 9 |
+| Registered check kinds | 8 |
 | Embedded packs | 3 |
 | Required CI contexts | 5 in [required-checks.json](../.github/required-checks.json) |
 | Third-party Go requirements | 0 in [go.mod](../go.mod) |
@@ -537,9 +537,9 @@ Invariant status:
 | INV-02 | Independent verification | **Failing** |
 | INV-03 | Write/read result equivalence | Heal outcome parity passes; exact JSON parity is timing-dependent |
 | INV-04 | Deterministic canonical evaluation | **Failing**; evaluation and receipt not separated |
-| INV-05 | Path, subprocess, and untrusted-input containment | **Failing**; path jail passes, Git option/config paths remain |
+| INV-05 | Path, subprocess, and untrusted-input containment | Partial; path jail passes; evaluator Git config neutralized and option-shaped refs fail closed |
 | INV-06 | Resource bounds and privacy | Partial; review caps exist, evaluator-wide budgets do not |
-| INV-07 | Channel and outcome parity | **Failing** |
+| INV-07 | Channel and outcome parity | Partial; FG false-greens closed; broader receipt/parity work remains in later WPs |
 | INV-08 | Atomic, non-authoritative cache | **Failing** |
 | INV-09 | Command truth and effect declaration | **Failing** |
 | INV-10 | Human authority described accurately | **Failing**; acknowledgement is labelled as a gate |
@@ -552,17 +552,14 @@ Invariant status:
 The v1.1 reproduction established seven paths. The heal-consistency repair in
 [`99870c5`](https://github.com/RI-SE/curbpack/commit/99870c57fde2d3d4eb2b5a6e60455eafb39a2007)
 closed the original outcome-parity defect. Current-baseline execution then
-identified a separate chain-verification path. FG-07, FG-04, FG-01, FG-06, FG-02, and
-FG-05 are closed; one false-green path remains.
-
-| ID | Reproducible path | Location | Invariants |
-|---|---|---|---|
-| FG-03 | `import_reach` ignores the declared path and passes missing or unparsable `src/payment.go` | [`validate.go`](../internal/validate/validate.go) | INV-05, INV-07 |
+identified a separate chain-verification path. FG-01 through FG-07 are closed;
+`false_green_paths_open` is 0.
 
 Closed:
 
 | ID | Prior path | Evidence |
 |---|---|---|
+| FG-03 | `import_reach` ignored the declared path and passed missing or unparsable `src/payment.go`; kind removed from registry and pack validate (eight kinds remain) | [`checks.go`](../internal/validate/checks.go), [`validate.go`](../internal/validate/validate.go), [`packs.go`](../internal/packs/packs.go), [`import_reach_removed_test.go`](../internal/validate/import_reach_removed_test.go) | INV-05, INV-07 |
 | FG-02 | Repository-derived JSON was embedded raw in a script element and could alter offline bundle presentation; embed now uses JSON Unicode escapes for `&`, `<`, and `>` (MUST-43) | [`bundle.go`](../internal/release/templates/bundle.go), [`script_embed_test.go`](../internal/release/templates/script_embed_test.go) |
 | FG-05 | `--diff` could skip rules while machine cache recorded a complete-looking score without skip state; cache and JSON now carry `outcome=incomplete` and `skipped_rules` (MUST-23, MUST-52) | [`validate.go`](../internal/validate/validate.go), [`gatefailure.go`](../internal/ir/gatefailure.go), [`diff_skip_cache_test.go`](../internal/validate/diff_skip_cache_test.go) |
 | FG-01 | A forged one-pager that copied the current fingerprint marker could suppress rewrite and present the marker as confirmed; rewrite now compares content fingerprints, and marker presence is unconfirmed/producer | [`release.go`](../internal/release/release.go), [`review.go`](../internal/review/review.go), [`fingerprint_forge_test.go`](../internal/release/fingerprint_forge_test.go) |
@@ -573,10 +570,10 @@ Closed:
 
 Additional open violations are tracked separately from the false-green count:
 
-- Git subprocesses do not neutralize repository-local execution configuration.
-- Pack `since_ref` can be interpreted as a Git option because it is not validated
-  before entering the argument list. Current-baseline execution demonstrated an
-  option-shaped value causing Git to create an output file.
+- Evaluator Git subprocesses neutralize repository-local executable configuration
+  (`-c` overrides + stripped dangerous `GIT_*` env) and reject option-shaped refs
+  (MUST-41, MUST-45); see [`gitutil.go`](../internal/gitutil/gitutil.go) and
+  [`git_harden_test.go`](../internal/gitutil/git_harden_test.go).
 - The documented `curbpack ask <path> --propose` order fails because Go flag
   parsing stops at the positional argument.
 - Direct cache writes are non-atomic and cache-write failure is warning-only.

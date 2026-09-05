@@ -49,7 +49,7 @@ Structural checks answer *is the file/structure present?* — not *is the positi
 
 **ValidatePack fail-closed:** any rule with `citations[].framework` MUST set `settlement` explicitly (`settles` or `indicative`). Authors cannot reintroduce false Yes on CRA annex / Art 14 / medtech structural rules by omitting the field.
 
-Shape 5 (positive content) and shape 7 (absence-with-justification) stay human review — the nine check kinds never invent that assurance. Shape 6 (reference resolve) is already `review` / `checkReferences`.
+Shape 5 (positive content) and shape 7 (absence-with-justification) stay human review — the eight check kinds never invent that assurance. Shape 6 (reference resolve) is already `review` / `checkReferences`.
 
 ```json
 "settlement": "indicative",
@@ -94,7 +94,6 @@ curbpack packs doctor                    # expired / superseded / pin skew
 | `anti_placeholder` | `paths` | Reject TODO / lorem / `[insert …]` in listed annex drafts |
 | `manifest_dep_ban` / `npm_dep_ban` | `package`, `banned_versions` | Ban pins in `package.json` |
 | `text_forbid` | `paths`, `pattern` | Regex forbid (e.g. secret-like strings) |
-| `import_reach` | — | Optional AST reachability (MVP) |
 | `fresh` | `path`, `max_age_days` and/or `since_ref` | File must exist and last commit must be within age or after ref |
 | `owned` | `path`, `bind_repo_token: true`; optional `require_git_author_email`, `require_git_author_name` | Repo-bound draft; optional git author match on last commit touching path |
 

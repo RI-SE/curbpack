@@ -3,9 +3,6 @@ package validate
 import (
 	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -477,48 +474,6 @@ func notStartedTTYDetail(f ir.Failure) string {
 	default:
 		return "not started"
 	}
-}
-
-func auditASTReachability(gitRoot string, rule packs.Rule) []ir.Failure {
-	targetFile := filepath.Join(gitRoot, "src", "payment.go")
-	if _, err := os.Stat(targetFile); os.IsNotExist(err) {
-		return nil
-	}
-	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, targetFile, nil, parser.ParseComments)
-	if err != nil {
-		return nil
-	}
-	found := false
-	var nodePos token.Position
-	ast.Inspect(node, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-		ident, ok := sel.X.(*ast.Ident)
-		if !ok {
-			return true
-		}
-		if ident.Name == "axios" && sel.Sel.Name == "Post" {
-			found = true
-			nodePos = fset.Position(n.Pos())
-			return false
-		}
-		return true
-	})
-	if !found {
-		return nil
-	}
-	f := failFromRule(rule, "src/payment.go", "direct axios.Post call detected via AST inspector")
-	f.ASTCoordinates.NodePath = "CallExpr.SelectorExpr[axios.Post]"
-	f.ASTCoordinates.TargetSymbol = "axios.Post"
-	f.ASTCoordinates.FallbackLines = fmt.Sprintf("Line %d", nodePos.Line)
-	return []ir.Failure{f}
 }
 
 func unique(in []string) []string {

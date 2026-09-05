@@ -34,9 +34,75 @@ func RepoRoot(start string) (string, error) {
 	}
 }
 
+// validateGitRev rejects empty and option-shaped Git revisions (MUST-41).
+func validateGitRev(rev string) error {
+	rev = strings.TrimSpace(rev)
+	if rev == "" {
+		return fmt.Errorf("empty git revision")
+	}
+	if strings.HasPrefix(rev, "-") {
+		return fmt.Errorf("git revision looks like an option: %q", rev)
+	}
+	if strings.ContainsAny(rev, " \t\n\r") {
+		return fmt.Errorf("git revision contains whitespace")
+	}
+	return nil
+}
+
+// emptyHooksPath is a directory with no hook scripts (MUST-45).
+func emptyHooksPath() string {
+	dir := filepath.Join(os.TempDir(), "curbpack-empty-hooks")
+	_ = os.MkdirAll(dir, 0o700)
+	return dir
+}
+
+// gitNeutralizeArgs overrides repository-local executable configuration (MUST-45).
+func gitNeutralizeArgs(args ...string) []string {
+	out := []string{
+		"-c", "core.hooksPath=" + emptyHooksPath(),
+		"-c", "core.fsmonitor=",
+		"-c", "core.sshCommand=",
+		"-c", "core.pager=",
+		"-c", "diff.external=",
+		"-c", "gpg.program=",
+		"-c", "sequence.editor=",
+		"-c", "core.editor=",
+	}
+	return append(out, args...)
+}
+
+func gitEnv() []string {
+	env := os.Environ()
+	out := make([]string, 0, len(env)+4)
+	deny := map[string]struct{}{
+		"GIT_EXTERNAL_DIFF": {},
+		"GIT_SSH_COMMAND":   {},
+		"GIT_SSH":           {},
+		"GIT_CONFIG":        {},
+		"GIT_CONFIG_GLOBAL": {},
+		"GIT_CONFIG_SYSTEM": {},
+		"GIT_EXEC_PATH":     {},
+	}
+	for _, e := range env {
+		key, _, _ := strings.Cut(e, "=")
+		if _, bad := deny[key]; bad {
+			continue
+		}
+		out = append(out, e)
+	}
+	out = append(out,
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL="+os.DevNull,
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_OPTIONAL_LOCKS=0",
+	)
+	return out
+}
+
 func runGit(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.Command("git", gitNeutralizeArgs(args...)...)
 	cmd.Dir = dir
+	cmd.Env = gitEnv()
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -135,8 +201,11 @@ func ChangedFiles(repoRoot string) (map[string]struct{}, error) {
 // When pathspecs is non-empty, they are passed after `--` (git diff --name-only A B -- paths).
 // Empty pathspecs returns nil (does not dump the whole tree). Results are sorted.
 func DiffNameOnly(repoRoot, fromRev, toRev string, pathspecs []string) ([]string, error) {
-	if strings.TrimSpace(fromRev) == "" || strings.TrimSpace(toRev) == "" {
-		return nil, fmt.Errorf("git diff --name-only: empty revision")
+	if err := validateGitRev(fromRev); err != nil {
+		return nil, fmt.Errorf("git diff --name-only: %w", err)
+	}
+	if err := validateGitRev(toRev); err != nil {
+		return nil, fmt.Errorf("git diff --name-only: %w", err)
 	}
 	if len(pathspecs) == 0 {
 		return nil, nil
@@ -279,6 +348,9 @@ func FileTouchedSinceRef(repoRoot, sinceRef, rel string) (bool, error) {
 	sinceRef = strings.TrimSpace(sinceRef)
 	if sinceRef == "" {
 		return false, fmt.Errorf("empty since_ref")
+	}
+	if err := validateGitRev(sinceRef); err != nil {
+		return false, fmt.Errorf("since_ref: %w", err)
 	}
 	out, err := runGit(repoRoot, "log", "-1", "--format=%H", sinceRef+"..HEAD", "--", rel)
 	if err != nil {

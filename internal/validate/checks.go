@@ -14,7 +14,6 @@ const (
 	CheckNPMDepBan       CheckKind = "npm_dep_ban"
 	CheckManifestDepBan  CheckKind = "manifest_dep_ban"
 	CheckTextForbid      CheckKind = "text_forbid"
-	CheckImportReach     CheckKind = "import_reach"
 	CheckFresh           CheckKind = "fresh"
 	CheckOwned           CheckKind = "owned"
 )
@@ -28,7 +27,6 @@ var checkRegistry = map[CheckKind]checkFn{
 	CheckNPMDepBan:       checkNPMDepBan,
 	CheckManifestDepBan:  checkNPMDepBan,
 	CheckTextForbid:      checkTextForbid,
-	CheckImportReach:     func(root string, rule packs.Rule) []ir.Failure { return auditASTReachability(root, rule) },
 	CheckFresh:           checkFresh,
 	CheckOwned:           checkOwned,
 }
