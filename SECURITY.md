@@ -2,20 +2,19 @@
 
 ## Reporting
 
-Email **security@curbpack.dev** (or open a private GitHub Security Advisory on
-[RI-SE/curbpack](https://github.com/RI-SE/curbpack)) with vulnerability details.
-Do **not** open public issues for sensitive reports.
+Use [GitHub private vulnerability reporting](https://github.com/RI-SE/curbpack/security/advisories/new)
+for vulnerability details. Do **not** open public issues for sensitive reports.
 
 Include: affected version/commit, reproduction steps, impact, and any suggested fix.
 
 ## Response
 
-We acknowledge within **two business days** and coordinate disclosure timelines with reporters.
+Disclosure timelines are coordinated through the private report. No fixed response-time service level is offered.
 Critical issues affecting install integrity or evidence tampering are prioritized.
 
 ## Scope
 
-In scope: the `curbpack` CLI, embedded packs, GitHub Action, `scripts/install.sh`, and the **`curbpack` npm wrapper** (cached binary under `~/.curbpack/bin` or `%LOCALAPPDATA%\curbpack`).
+In scope: the `curbpack` CLI, embedded packs, GitHub Action, `scripts/install.sh`, and the release binaries. The npm wrapper is deferred and is not a supported installation channel.
 
 Out of scope: customer product repos scanned by Curbpack; third-party packs you import;
 misuse of gate results as certification claims.

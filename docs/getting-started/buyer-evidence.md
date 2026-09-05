@@ -16,7 +16,7 @@ Suppliers may reach green via Write, Bring, or CI; that path is theirs. Optional
 
 | Signal | Meaning |
 |--------|---------|
-| **Gates passed** | Deterministic rule-pack checks did not fail on the tree shown — humans still judge annex drafts and risk |
+| **Gates passed** | Local rule-pack checks did not fail on the tree shown — humans still judge annex drafts and risk |
 | **Local gate score** | Not a certification score or market-access percentage |
 | **UNSIGNED** | Capsule may be present; not cryptographically verified |
 | **ssh-agent-signed** | Real SSH signature on the attest capsule |

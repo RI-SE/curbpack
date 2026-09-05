@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Curbpack — local pack gates for human review</title>
-  <meta name="description" content="One read-only command tells you where your product stands on CRA Article 14. Runs locally. Writes nothing. Not conformity assessment." />
+  <meta name="description" content="Read-only checks of repository documents against local CRA rule packs. Runs locally. Writes nothing. Not conformity assessment." />
   <meta property="og:title" content="Article 14 starts 11 September 2026 — check your product in 60 seconds" />
-  <meta property="og:description" content="One read-only command tells you where your product stands on CRA Article 14. Runs locally. Writes nothing. Not conformity assessment." />
+  <meta property="og:description" content="Read-only checks of repository documents against local CRA rule packs. Runs locally. Writes nothing. Not conformity assessment." />
   <meta property="og:url" content="https://ri-se.github.io/curbpack/" />
   <meta property="og:image" content="https://ri-se.github.io/curbpack/assets/og-campaign.png" />
   <meta property="og:image:width" content="1200" />
@@ -125,12 +125,12 @@
             <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1] mb-4">
               Article 14 reporting starts 11 September 2026
             </h1>
-            <p id="art14-countdown" class="font-mono text-base sm:text-lg text-rise font-medium mb-6" aria-live="polite">Article 14 reporting starts in 23 days (11 September 2026)</p>
+            <p id="art14-countdown" class="font-mono text-base sm:text-lg text-rise font-medium mb-6" aria-live="polite">Article 14 reporting applies from 11 September 2026</p>
             <p class="text-lg sm:text-xl text-ink-muted mb-6 max-w-2xl leading-relaxed font-sans">
               One command, writes nothing — not certification. Curbpack scans your repo read-only on your machine; we never see your code.
             </p>
             <p class="text-base sm:text-lg text-ink mb-2 max-w-2xl leading-relaxed font-sans">
-              The gate is deterministic, runs offline, and cannot be argued with.
+              Curbpack runs local rule-pack checks offline. Findings are structural evidence for human review.
             </p>
             <p class="text-base sm:text-lg text-ink-muted mb-8 max-w-2xl leading-relaxed font-sans">
               We do not use a language model to decide whether you passed.
@@ -221,7 +221,7 @@
         <div class="text-center max-w-2xl mx-auto mb-16">
           <h2 class="font-serif text-3xl font-semibold text-ink mb-3">How it works</h2>
           <p class="text-ink-muted text-lg">Scan read-only → optional init → local check → review pack → human review.</p>
-          <p class="text-ink-muted text-base mt-3 max-w-xl mx-auto">The gate is deterministic, runs offline, and cannot be argued with. We do not use a language model to decide whether you passed.</p>
+          <p class="text-ink-muted text-base mt-3 max-w-xl mx-auto">Curbpack runs local rule-pack checks offline. Findings are structural evidence for human review. We do not use a language model to decide whether you passed.</p>
           <p class="text-ink-muted text-sm mt-3">Three ways in (Write, Bring, CI): <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/60-second-paths.md" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">60-second paths</a> · <a href="/curbpack/how-it-works/" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">how it works</a></p>
           <p class="text-ink text-sm mt-4 font-medium">Receiving a pack? <a href="/curbpack/for-reviewers/#artifact-trust-table" class="font-mono underline decoration-paper-dark hover:text-rise">Artifact trust table</a> · <a href="/curbpack/receiving-submissions/" class="font-mono underline decoration-paper-dark hover:text-rise">Receiving submissions</a> · <a href="/curbpack/samples/review-pack/" class="font-mono underline decoration-paper-dark hover:text-rise">Sample review-pack</a> · In-repo: <code class="font-mono">curbpack review --repo</code> (<a href="/curbpack/for-reviewers/" class="font-mono underline decoration-paper-dark hover:text-rise">for reviewers</a>)</p>
         </div>
@@ -310,6 +310,8 @@
     </section>
 
   </main>
+
+  <p class="text-center px-6 py-4"><a href="https://github.com/RI-SE/curbpack/blob/main/docs/launch-status.md">Release status and audit limitations</a>: the installer supplies v0.5.4; later repository repairs require a new reviewed release.</p>
 
   <footer class="bg-ink text-paper py-16 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

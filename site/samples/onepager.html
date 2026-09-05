@@ -114,7 +114,7 @@
         <div class="meter">After fix, local gate score on this tree: <strong>100%</strong> — not certification
           <div class="bar"><span class="green"></span></div>
         </div>
-        <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>curbpack attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
+        <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. <code>curbpack attest</code> records a state hash. A valid signature proves key use, not human review or approval; unsigned ≠ verified.</p>
         <dl class="prov">
           <dt>Rule packs</dt><dd>house-policy</dd>
           <dt>Commit</dt><dd>teaching-sample (not a real SHA)</dd>
@@ -122,7 +122,7 @@
           <dt>Signer</dt><dd>local-unsigned</dd>
           <dt>User touch</dt><dd>not-verified</dd>
           <dt>state_hash</dt><dd>(none — run curbpack attest after human review)</dd>
-          <dt>Human sign-off</dt><dd>Pending human review. A reviewer runs curbpack attest; ssh-agent-signed = human-bound on this commit.</dd>
+          <dt>Human sign-off</dt><dd>Pending human review. A signature does not establish human review or approval.</dd>
           <dt>Verify</dt><dd>proof/index.html + local evidence pointer (client-side hash compare)</dd>
         </dl>
         <p class="label" style="margin-top:1rem">Sources (informational — not a gate input)</p>

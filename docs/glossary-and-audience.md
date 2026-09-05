@@ -26,7 +26,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **CI** | Continuous Integration — e.g. GitHub Actions pin `@v0.5.2`. |
 | **SCA** | Software Composition Analysis — pair Curbpack with tools such as Trivy/OSV for depth; Curbpack is not an SCA platform. |
 | **CVE** | Common Vulnerabilities and Exposures — watchlist∩SBOM is look-here only, not CVE management. |
-| **Gate** / **check** | A deterministic rule-pack evaluation. Exit `0` = gates passed on this tree for human review — **not** certification. |
+| **Gate** / **check** | A local rule-pack evaluation. Exit `0` = gates passed on this tree for human review — **not** certification. |
 | **Curb outlines** | Pathway warm-start entry (Write→Check): sketch what you are curbing before packs/check. Bring/CI skip outlines. |
 | **Rule pack** / **pack** | JSON rule set (house-policy by default; CRA-shaped annex drafts or sector templates when opted in). Data, not hard-coded industry law. |
 | **Review pack** | Folder of evidence for human review from `prepare-release` (JSON, markdown, optional buyer one-pager). |
