@@ -3,7 +3,7 @@
 > Document triage only — not a product verdict, not conformity assessment, not CE / notified-body approval.
 
 sample-review-pack — 1 genuine unresolved · 0 contradicted
-Confirmed 10 · producer 7 · external 1. (--full for all)
+Confirmed 9 · producer 8 · external 1. (--full for all)
 
   · **[unconfirmed]** `reference:path:SECURITY.md` — [in-bundle-or-repo] repo-shaped path not in bundle: SECURITY.md (from 02-action-report.md)
 

@@ -510,9 +510,11 @@ func checkDigests(rep *Report, root string, payload ir.GateFailurePayload, paylo
 	fp := ""
 	if m := reOnePagerFP.FindSubmatch(htmlDoc); m != nil {
 		fp = string(m[1])
+		// FG-01 / INV-02: marker presence is producer-supplied, not independent confirmation.
 		add(rep, Finding{
-			ID: "digest:onepager-fp-marker", Category: "digest", State: StateConfirmed,
-			Detail: "buyer-onepager.html carries curbpack-onepager-fp marker " + fp[:min(12, len(fp))],
+			ID: "digest:onepager-fp-marker", Category: "digest", State: StateUnconfirmed, Cause: CauseProducer,
+			Detail: "buyer-onepager.html carries curbpack-onepager-fp marker " + fp[:min(12, len(fp))] +
+				" (presence is not independent confirmation)",
 		})
 	} else if len(htmlDoc) > 0 && err == nil && !truncated {
 		add(rep, Finding{

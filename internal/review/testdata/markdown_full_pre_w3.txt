@@ -4,11 +4,12 @@
 
 - **Bundle:** `sample-review-pack`
 - **Classifier:** `refclass:2`
-- **Confirmed:** 10 · **Unconfirmed:** 9 (producer 7 · extractor 0 · genuine 1 · external 1) · **Contradicted:** 0 (self_disagree 0)
+- **Confirmed:** 9 · **Unconfirmed:** 10 (producer 8 · extractor 0 · genuine 1 · external 1) · **Contradicted:** 0 (self_disagree 0)
 - **Dropped tokens:** 0
 
 ## Unconfirmed
 
+- **[unconfirmed]** `digest:onepager-fp-marker` (producer) — buyer-onepager.html carries curbpack-onepager-fp marker a1b2c3d4e5f6 (presence is not independent confirmation)
 - **[unconfirmed]** `reference:path:SECURITY.md` (genuine) — [in-bundle-or-repo] repo-shaped path not in bundle: SECURITY.md (from 02-action-report.md)
 - **[unconfirmed]** `reference:url:5b466e7c1fd8` (external) — Allowlisted external link recorded (never fetched) from buyer-onepager.html: <untrusted_metadata>https://eur-lex.europa.eu/eli/reg/2024/2847/oj</untrusted_metadata>
 - **[unconfirmed]** `structure:04-sbom-summary.json` (producer) — Optional layer absent: 04-sbom-summary.json
@@ -22,7 +23,6 @@
 ## Confirmed
 
 - **[confirmed]** `digest:gate-json-parse` — 01-gate-failures.json parses (pack_id=<untrusted_metadata>house-policy</untrusted_metadata> score=62 failures=1)
-- **[confirmed]** `digest:onepager-fp-marker` — buyer-onepager.html carries curbpack-onepager-fp marker a1b2c3d4e5f6
 - **[confirmed]** `digest:pack-id-agree` — One-pager Rule packs agrees with 01-gate-failures.json pack_id
 - **[confirmed]** `digest:result-digest` — Recomputed result_digest from 01-gate-failures.json: 484f02efcf8b5bfe
 - **[confirmed]** `digest:result-digest-match` — Provenance result_digest agrees with recomputed digest
