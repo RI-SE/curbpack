@@ -412,6 +412,9 @@ func cmdCheck(args []string) error {
 			Quiet:    jsonOut,
 		})
 		if err != nil {
+			if jsonOut && res.Payload.SchemaVersion != "" {
+				_ = json.NewEncoder(os.Stdout).Encode(res.Payload)
+			}
 			return err
 		}
 		if res.Passed || !heal || round == healMaxRounds {
@@ -551,6 +554,9 @@ func cmdValidate(args []string) error {
 	}
 	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut})
 	if err != nil {
+		if jsonOut && res.Payload.SchemaVersion != "" {
+			_ = json.NewEncoder(os.Stdout).Encode(res.Payload)
+		}
 		return err
 	}
 	if jsonOut {

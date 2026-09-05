@@ -146,20 +146,15 @@ func Run(opts Options) (Result, error) {
 
 	action := ActionReportMarkdown(payload, skipped)
 	if !opts.ReadOnly {
-		cacheDir := filepath.Join(root, ".github", "curbpack", "cache")
-		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-			tty.WarnCacheWrite("mkdir cache: " + err.Error())
+		b, err := json.MarshalIndent(payload, "", "  ")
+		if err == nil {
+			err = writeEvaluationCache(root, b, action)
 		}
-		b, _ := json.MarshalIndent(payload, "", "  ")
-		writeCache := func(name string) {
-			if err := os.WriteFile(filepath.Join(cacheDir, name), b, 0o644); err != nil {
-				tty.WarnCacheWrite("write " + name + ": " + err.Error())
-			}
-		}
-		writeCache("latest_failure.json")
-		writeCache("latest_result.json")
-		if err := os.WriteFile(filepath.Join(cacheDir, "latest_action_report.md"), []byte(action), 0o644); err != nil {
-			tty.WarnCacheWrite("write latest_action_report.md: " + err.Error())
+		if err != nil {
+			payload.Outcome = ir.OutcomeError
+			return Result{Payload: payload, Score: score, SkippedRules: skipped,
+					ActionReport: ActionReportMarkdown(payload, skipped)},
+				fmt.Errorf("persist evaluation cache: %w", err)
 		}
 	}
 
@@ -495,12 +490,23 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	b.WriteString("# Action Report\n\n")
 	b.WriteString("> Curbpack prepares evidence for **human review**. Gate pass is not certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", payload.PackID)
+	if payload.Outcome != "" {
+		fmt.Fprintf(&b, "- **Outcome:** %s\n", payload.Outcome)
+	}
 	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", payload.ReadinessScore)
 	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))
 	if skipped > 0 {
 		fmt.Fprintf(&b, "- **Skipped (diff):** %d rules\n", skipped)
 	}
 	b.WriteString("\n")
+	if payload.Outcome == ir.OutcomeError {
+		b.WriteString("Evaluation artifacts could not be persisted. Correct the operational error and re-run check.\n")
+		return b.String()
+	}
+	if len(payload.Failures) == 0 && (skipped > 0 || payload.Outcome == ir.OutcomeIncomplete) {
+		b.WriteString("Evaluation incomplete: some rules were skipped. Run a full check before preparing release evidence.\n")
+		return b.String()
+	}
 	if len(payload.Failures) == 0 {
 		b.WriteString("All evaluated gates passed. Open buyer one-pager / HPURL after `prepare-release` + `attest`.\n")
 		return b.String()

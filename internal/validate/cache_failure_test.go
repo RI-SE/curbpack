@@ -16,11 +16,18 @@ func TestCacheWriteFailureCannotReportPass(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A directory at a required cache file deterministically forces write failure.
+	if err := os.WriteFile(filepath.Join(cache, "latest_failure.json"), []byte("prior complete record"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Mkdir(filepath.Join(cache, "latest_result.json"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	res, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
-	if err == nil || res.Passed {
+	prior, readErr := os.ReadFile(filepath.Join(cache, "latest_failure.json"))
+	if readErr != nil || string(prior) != "prior complete record" {
+		t.Fatal("failed preflight replaced previous cache")
+	}
+	if err == nil || res.Passed || res.Payload.Outcome != "error" {
 		t.Fatalf("cache failure must fail closed: passed=%v err=%v", res.Passed, err)
 	}
 }
