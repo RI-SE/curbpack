@@ -53,6 +53,14 @@ type Failure struct {
 // SchemaVersion is the GateFailure JSON IR version for agents (stable contract).
 const SchemaVersion = "1"
 
+// Machine outcome values (MUST-52). Consumers must not infer outcome from score.
+const (
+	OutcomePass       = "pass"
+	OutcomeFindings   = "findings"
+	OutcomeIncomplete = "incomplete"
+	OutcomeError      = "error"
+)
+
 // GateFailurePayload is the dual-rep IR: JSON for machines, Markdown for agents.
 type GateFailurePayload struct {
 	SchemaVersion      string             `json:"schema_version"`
@@ -63,6 +71,10 @@ type GateFailurePayload struct {
 	Failures           []Failure          `json:"failures"`
 	PackID             string             `json:"pack_id,omitempty"`
 	ReadinessScore     int                `json:"readiness_score,omitempty"`
+	// Outcome is pass | findings | incomplete | error (MUST-52). Present when set.
+	Outcome string `json:"outcome,omitempty"`
+	// SkippedRules counts rules not evaluated (e.g. --diff). Non-zero ⇒ incomplete (MUST-23).
+	SkippedRules int `json:"skipped_rules,omitempty"`
 }
 
 // PackageManifest is used for deterministic package.json dependency parsing.
