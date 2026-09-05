@@ -108,6 +108,13 @@ func Run(opts Options) (Result, error) {
 	}
 
 	score := tty.ScoreFromFailures(len(failures))
+	outcome := ir.OutcomePass
+	switch {
+	case skipped > 0:
+		outcome = ir.OutcomeIncomplete
+	case len(failures) > 0:
+		outcome = ir.OutcomeFindings
+	}
 	parent, err := gitutil.HeadSHA(root)
 	if err != nil {
 		if !opts.Quiet {
@@ -136,6 +143,8 @@ func Run(opts Options) (Result, error) {
 		Failures:       failures,
 		PackID:         strings.Join(ids, ","),
 		ReadinessScore: score,
+		Outcome:        outcome,
+		SkippedRules:   skipped,
 	}
 
 	action := ActionReportMarkdown(payload, skipped)
@@ -159,7 +168,7 @@ func Run(opts Options) (Result, error) {
 
 	return Result{
 		Payload:      payload,
-		Passed:       len(failures) == 0,
+		Passed:       outcome == ir.OutcomePass,
 		Score:        score,
 		SkippedRules: skipped,
 		ActionReport: action,

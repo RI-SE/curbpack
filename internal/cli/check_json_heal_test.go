@@ -55,6 +55,9 @@ func TestCheckJSONHealMatchesImmediatePlainCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Pin wall clock so heal vs immediate plain JSON byte-parity is not second-flake.
+	t.Setenv("SOURCE_DATE_EPOCH", "1704067200")
+
 	healCmd := exec.Command(bin, "check", "--json", "--heal")
 	healCmd.Dir = dir
 	healOut, healErr := healCmd.CombinedOutput()
