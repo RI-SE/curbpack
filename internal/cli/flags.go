@@ -289,7 +289,23 @@ func parseAskFlags(args []string) (askFlags, error) {
 	fs := newCommandFlagSet("ask")
 	var f askFlags
 	fs.BoolVar(&f.propose, "propose", false, "")
-	if err := fs.Parse(args); err != nil {
+	// Accept the documented path-before-flag order while retaining flag's
+	// validation and the explicit -- delimiter for option-shaped file names.
+	var options, paths []string
+	for i, arg := range args {
+		if arg == "--" {
+			paths = append(paths, args[i+1:]...)
+			break
+		}
+		if strings.HasPrefix(arg, "-") && arg != "-" {
+			options = append(options, arg)
+		} else {
+			paths = append(paths, arg)
+		}
+	}
+	ordered := append(options, "--")
+	ordered = append(ordered, paths...)
+	if err := fs.Parse(ordered); err != nil {
 		return f, flagUsageErr("ask", err.Error())
 	}
 	if fs.NArg() > 1 {

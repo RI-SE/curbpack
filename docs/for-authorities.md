@@ -18,7 +18,7 @@ Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audie
 | Artifact | How produced | Trust level (honest) |
 |----------|--------------|----------------------|
 | **Scan output** (`scan`) | Read-only pack evaluation; no cache, no init | **Structural diagnosis** — defaults to `cra-baseline` on cold repos; not certification |
-| Gate JSON / action report (`check`, `validate`) | Local deterministic pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
+| Gate JSON / action report (`check`, `validate`) | Local rule-pack evaluation | **Structural evidence** — reproducible on the same tree; not a legal finding |
 | SARIF export | `export --sarif` / Action upload | Same findings in IDE/CI format; still pack gates, not certification |
 | Buyer-questions checklist | `export --buyer-questions` | Human Q&A aid; rows carry `assurance_class: structural_draft` |
 | ContextPack | `export --context-pack` (or `share`) | One washed assistant/auditor snapshot — still structural evidence, not certification |
@@ -39,7 +39,7 @@ Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audie
 - **Not** an official NCSC/FRA/agency product or endorsement vehicle.
 - **Not** dependent on any private tutor product to operate.
 
-Gate pass means: deterministic pack rules did not fail on the files present — a human still judges risk, annex drafts, and legal posture.
+Gate pass means: local pack rules did not fail on the files present — a human still judges risk, annex drafts, and legal posture.
 
 ## Institute neutrality
 

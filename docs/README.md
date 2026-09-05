@@ -6,6 +6,7 @@ Start with the shortest path for your role. The [glossary and audience guide](gl
 
 | Goal | Read |
 |------|------|
+| Check released behavior and audit limitations | [Launch status](launch-status.md) |
 | Inspect a repository without writing files | [60-second paths](getting-started/60-second-paths.md) |
 | Install on Windows, macOS, or Linux | [Install](getting-started/install.md) |
 | Resolve PATH, SmartScreen, or environment problems | [Troubleshooting](getting-started/troubleshooting.md) |

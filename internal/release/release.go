@@ -386,9 +386,9 @@ func provenanceDL(payload ir.GateFailurePayload, bind attest.BindInfo, line stri
 	if touch == "" {
 		touch = "not-verified"
 	}
-	signOff := "Pending human review. A reviewer runs curbpack attest; ssh-agent-signed = human-bound on this commit."
+	signOff := "Pending human review. A signature does not establish human review or approval."
 	if !unsignedLoud {
-		signOff = "Human-bound on this commit (ssh-agent-signed). Still not conformity assessment."
+		signOff = "Signature verified against the selected policy. Human review and approval are separate."
 	}
 
 	// Payload / file digests are source of truth for the share; bind values that

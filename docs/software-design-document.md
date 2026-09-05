@@ -8,6 +8,8 @@
 
 **Verification date:** 2026-09-04
 
+**Later status:** [2026-09-05 launch audit](launch-status.md) records subsequent repairs and remaining gates. The measurements and open-path table below remain the pinned historical baseline.
+
 **Implementation:** Go 1.23; no `go.mod` `require` block
 
 **Canonical repository:** `RI-SE/curbpack`

@@ -28,7 +28,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 | Boundary | What you can trust | What you must not assume |
 |----------|--------------------|--------------------------|
-| Local `check` / `validate` | Deterministic gates on the files present | That a green score is a certificate |
+| Local `check` / `validate` | Local rule-pack checks on the files present | That a green score is a certificate |
 | `install.sh` / `install.ps1` / Action download | Binary matches release `checksums.txt` (sha256, fail-closed) | That "downloaded from GitHub" alone is enough without checksum |
 | `npm` wrapper (`npx curbpack`) | **Deferred** — same checksum path when PR5 ships; not the stranger install path today | That npm is required for first contact |
 | `attest` capsule | Reproducible `state_hash` from commit + evidence digests | That unsigned or agent-bind placeholders are cryptographic signatures |
@@ -53,11 +53,24 @@ The composite Action does **not** prefer a consumer `./bin/curbpack` (that path 
 - **Unsigned:** No agent, or sign failed → capsule is still written, but UI says **UNSIGNED — not cryptographically verified**.
 - Fake `agent-bind:…` tokens are **never** treated as verified signatures.
 
+Verification requires an operator-selected OpenSSH policy outside the reviewed
+repository. Set absolute `CURBPACK_ALLOWED_SIGNERS` and `CURBPACK_SIGNER_ID` before
+opening an attested pack. The file uses OpenSSH allowed-signers syntax, for example
+`reviewer@example.org ssh-ed25519 <public-key-base64>`. Establish the trusted key
+through your own verification process. Repository-owned policy files and ambient
+ssh-agent keys are not trusted for verification. Missing policy, missing OpenSSH,
+or failed verification leaves the artifact not cryptographically verified.
+
+A verified signature establishes use of a key for the signed state hash. It does
+not establish human presence, approval, the truth of claims, or independent
+recomputation of all evidence. See the [OpenSSH verification contract](https://man.openbsd.org/ssh-keygen.1#ALLOWED_SIGNERS)
+and [implementation](../internal/attest/verify.go).
+
 Unsigned ≠ verified. A green readiness score and an unsigned capsule are compatible — and must be labeled honestly.
 
 ## Socket (optional integrator IPC)
 
-Optional Unix IPC for MCP integrators lives in [`examples/mcp/`](../../examples/mcp/) — not in the main binary. Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
+Optional Unix IPC for MCP integrators lives in [`examples/mcp/`](../examples/mcp/) — not in the main binary. Default path is **not** a shared `/tmp/curbpack.sock`. Prefer:
 
 1. `CURBPACK_SOCK` if set
 2. `$XDG_RUNTIME_DIR/curbpack/curbpack.sock`

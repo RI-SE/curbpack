@@ -182,7 +182,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
       <div class="meter">Local gate score on this tree: <strong>%d%%</strong> — not certification
         <div class="bar"><span></span></div>
       </div>
-      <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. Human sign-off is <code>curbpack attest</code> — ssh-agent signed means a human bound this tree; unsigned ≠ verified.</p>
+      <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. <code>curbpack attest</code> records a state hash. A valid signature proves key use, not human review or approval; unsigned ≠ verified.</p>
       %s
       %s
     </div>

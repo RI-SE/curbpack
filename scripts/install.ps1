@@ -132,6 +132,14 @@ if (-not $Version) {
   else { $Version = Get-DefaultVersion }
 }
 
+# Fail closed on hostile/traversal version strings before URL construction.
+# Grammar matches scripts/verify-release-ref.sh; "latest" is the only alias.
+if ($Version -ne "latest" -and $Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$') {
+  Write-Host "invalid install version: $Version" -ForegroundColor Red
+  Write-Host "Use a release tag such as v1.2.3, or latest."
+  exit 1
+}
+
 if (-not $Repo) {
   if ($env:CURBPACK_REPO) { $Repo = $env:CURBPACK_REPO }
   else { $Repo = "RI-SE/curbpack" }

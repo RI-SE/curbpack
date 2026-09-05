@@ -1,103 +1,67 @@
 package attest
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
-// AllowedSignersRel is the repo-relative path listing public keys permitted to verify attest signatures.
+// AllowedSignersRel is retained for source compatibility. Repository-supplied
+// keys are not an independent trust policy and are no longer used to verify.
 const AllowedSignersRel = ".github/curbpack/allowed_signers"
 
-// verifyCommand builds *exec.Cmd (overridable in tests).
-var verifyCommand = exec.Command
-
-// VerifySSHSignature returns true only when ssh-keygen -Y verify succeeds for stateHash.
-// Keys are taken from the repo allowed_signers policy when present; otherwise all ssh-add -L keys.
-// Never trusts user_touch or signer string fields alone.
+// VerifySSHSignature verifies the signed state hash, not the truth of its claims.
+// The operator must explicitly select an external OpenSSH allowed_signers file
+// and principal. Missing policy/tool, invalid input, and timeout return false.
+// There is no ambient ssh-agent or repository-key fallback.
 func VerifySSHSignature(repoRoot, stateHash, sig string) bool {
 	sig = strings.TrimSpace(sig)
 	stateHash = strings.TrimSpace(stateHash)
-	if stateHash == "" || sig == "" || strings.HasPrefix(sig, "agent-bind:") {
+	policy := strings.TrimSpace(os.Getenv("CURBPACK_ALLOWED_SIGNERS"))
+	principal := strings.TrimSpace(os.Getenv("CURBPACK_SIGNER_ID"))
+	if stateHash == "" || sig == "" || len(stateHash) > 4096 || len(sig) > 64*1024 || strings.HasPrefix(sig, "agent-bind:") || principal == "" || strings.ContainsAny(principal, "\r\n\x00") || !filepath.IsAbs(policy) {
 		return false
 	}
-	for _, keyLine := range verificationKeys(repoRoot) {
-		if verifyWithPublicKey(keyLine, stateHash, sig) {
-			return true
-		}
+	resolved, err := filepath.EvalSymlinks(policy)
+	if err != nil {
+		return false
 	}
-	return false
-}
-
-func verificationKeys(repoRoot string) []string {
 	if repoRoot != "" {
-		policy := filepath.Join(repoRoot, AllowedSignersRel)
-		if b, err := os.ReadFile(policy); err == nil {
-			var keys []string
-			for _, line := range strings.Split(string(b), "\n") {
-				line = strings.TrimSpace(line)
-				if line == "" || strings.HasPrefix(line, "#") {
-					continue
-				}
-				keys = append(keys, line)
-			}
-			if len(keys) > 0 {
-				return keys
-			}
+		root, err := filepath.Abs(repoRoot)
+		if err != nil {
+			return false
+		}
+		root, err = filepath.EvalSymlinks(root)
+		if err != nil {
+			return false
+		}
+		rel, err := filepath.Rel(root, resolved)
+		if err != nil {
+			return false
+		}
+		if rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return false
 		}
 	}
-	return sshAgentPublicKeys()
-}
-
-func sshAgentPublicKeys() []string {
-	if strings.TrimSpace(os.Getenv("SSH_AUTH_SOCK")) == "" {
-		return nil
+	st, err := os.Stat(resolved)
+	if err != nil || !st.Mode().IsRegular() || st.Size() > 1024*1024 {
+		return false
 	}
-	list := verifyCommand("ssh-add", "-L")
-	out, err := list.Output()
-	if err != nil || len(out) == 0 {
-		return nil
-	}
-	var keys []string
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			keys = append(keys, line)
-		}
-	}
-	return keys
-}
-
-func verifyWithPublicKey(pubKeyLine, stateHash, sig string) bool {
-	tmpPub, err := os.CreateTemp("", "curbpack-verify-*.pub")
+	dir, err := os.MkdirTemp("", "curbpack-verify-*")
 	if err != nil {
 		return false
 	}
-	defer os.Remove(tmpPub.Name())
-	if _, err := tmpPub.WriteString(pubKeyLine + "\n"); err != nil {
-		_ = tmpPub.Close()
+	defer os.RemoveAll(dir)
+	signature := filepath.Join(dir, "signature")
+	if err := os.WriteFile(signature, []byte(sig+"\n"), 0600); err != nil {
 		return false
 	}
-	_ = tmpPub.Close()
-
-	tmpIn, err := os.CreateTemp("", "curbpack-verify-*.txt")
-	if err != nil {
-		return false
-	}
-	defer os.Remove(tmpIn.Name())
-	if _, err := tmpIn.WriteString(stateHash); err != nil {
-		_ = tmpIn.Close()
-		return false
-	}
-	_ = tmpIn.Close()
-
-	tmpSig := tmpIn.Name() + ".sig"
-	defer os.Remove(tmpSig)
-	if err := os.WriteFile(tmpSig, []byte(sig+"\n"), 0o644); err != nil {
-		return false
-	}
-
-	cmd := verifyCommand("ssh-keygen", "-Y", "verify", "-f", tmpPub.Name(), "-n", "curbpack@attest", "-s", tmpSig, tmpIn.Name())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ssh-keygen", "-Y", "verify", "-f", resolved, "-I", principal, "-n", "curbpack@attest", "-s", signature)
+	cmd.Stdin = strings.NewReader(stateHash)
 	return cmd.Run() == nil
 }

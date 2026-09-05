@@ -78,21 +78,30 @@ func containAfterEvalSymlinks(rootAbs, fullAbs string) error {
 	if err != nil {
 		return err
 	}
-	return containUnderRoot(rootEval, targetEval)
+	if err := containUnderRoot(rootEval, targetEval); err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(rootEval, targetEval)
+	if err != nil {
+		return err
+	}
+	if UnderGit(filepath.ToSlash(rel)) {
+		return fmt.Errorf("resolved path under .git refused")
+	}
+	return nil
 }
 
 func evalExisting(path string) (string, error) {
 	path = filepath.Clean(path)
-	st, lerr := os.Lstat(path)
+	_, lerr := os.Lstat(path)
 	if lerr == nil {
-		if st.Mode()&os.ModeSymlink != 0 {
-			resolved, err := filepath.EvalSymlinks(path)
-			if err != nil {
-				return "", fmt.Errorf("symlink resolution refused: %w", err)
-			}
-			return filepath.Abs(resolved)
+		// EvalSymlinks resolves ancestors too; Lstat on the leaf alone cannot
+		// detect a regular file reached through a symlinked directory.
+		resolved, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return "", fmt.Errorf("symlink resolution refused: %w", err)
 		}
-		return filepath.Abs(path)
+		return filepath.Abs(resolved)
 	}
 	if !os.IsNotExist(lerr) {
 		return "", lerr

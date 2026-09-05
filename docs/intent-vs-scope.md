@@ -18,7 +18,7 @@ Authorities / CISO path: [for-authorities](for-authorities.md). Voice: [voice an
 | **IP / chat boundary** | Raw source and secrets never leave the machine for “compliance chat.” Only sanitized GateFailure explain-packets may leave for an optional tutor the operator explicitly chooses. |
 | **Promotion bar** | `./scripts/redteam-pilot.sh` green. |
 
-## Deterministic judge (main flow)
+## Local rule-pack checks (main flow)
 
 ```
 repo → Curbpack (gates, packs, attest)
