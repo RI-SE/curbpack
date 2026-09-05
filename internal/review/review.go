@@ -783,6 +783,10 @@ func extractProvenance(root string, budget *readBudget) map[string]string {
 	return out
 }
 
+// DigestComparePrefixLen is the fixed truncation length for digest agreement (MUST-12).
+// Claimed values shorter than this cannot confirm.
+const DigestComparePrefixLen = 12
+
 func digestPrefixMatch(full, claimed string) bool {
 	claimed = strings.TrimSpace(claimed)
 	claimed = strings.TrimSuffix(claimed, "…")
@@ -791,14 +795,13 @@ func digestPrefixMatch(full, claimed string) bool {
 	if claimed == "" || full == "" {
 		return false
 	}
-	n := len(claimed)
-	if n > len(full) {
-		n = len(full)
+	if len(claimed) < DigestComparePrefixLen || len(full) < DigestComparePrefixLen {
+		return false
 	}
-	if n > 12 {
-		n = 12
+	if len(claimed) == DigestComparePrefixLen {
+		return full[:DigestComparePrefixLen] == claimed
 	}
-	return strings.HasPrefix(full, claimed[:n])
+	return strings.HasPrefix(full, claimed)
 }
 
 func shortID(s string) string {

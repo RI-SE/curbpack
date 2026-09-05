@@ -434,7 +434,11 @@ func fileSHA256Hex(path string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-// digestPrefixAgree mirrors the offline reviewer's truncateSHA / 12-hex prefix contract.
+// digestComparePrefixLen is the fixed truncation length for digest agreement (MUST-12).
+// Claimed values shorter than this cannot confirm. Keep in sync with review.DigestComparePrefixLen.
+const digestComparePrefixLen = 12
+
+// digestPrefixAgree mirrors the offline reviewer's fixed-prefix contract (MUST-12).
 func digestPrefixAgree(full, claimed string) bool {
 	claimed = strings.TrimSpace(claimed)
 	claimed = strings.TrimSuffix(claimed, "…")
@@ -443,14 +447,14 @@ func digestPrefixAgree(full, claimed string) bool {
 	if claimed == "" || full == "" {
 		return false
 	}
-	n := len(claimed)
-	if n > len(full) {
-		n = len(full)
+	n := digestComparePrefixLen
+	if len(claimed) < n || len(full) < n {
+		return false
 	}
-	if n > 12 {
-		n = 12
+	if len(claimed) == n {
+		return full[:n] == claimed
 	}
-	return strings.HasPrefix(full, claimed[:n])
+	return strings.HasPrefix(full, claimed)
 }
 
 // sourcesStrip adds claim-safe allowlisted citation links when a research packet exists

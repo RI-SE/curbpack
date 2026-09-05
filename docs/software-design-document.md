@@ -238,7 +238,8 @@ Current limitations:
 - The payload mixes deterministic findings with wall-clock and agent metadata.
 - Cache writes use direct `os.WriteFile` calls and `latest_*` names.
 - Findings and trust states are re-declared across components.
-- `review` recomputes some digests but accepts variable-length digest prefixes.
+- Digest comparison uses a fixed 12-hex prefix floor (MUST-12 / FG-04 closed);
+  shorter claimed values cannot confirm.
 - `review --verify-chain` recomputes parent and child `record_digest` values and
   requires `child.parent_record_digest` to equal the recomputed parent digest
   (FG-07 closed).
@@ -479,7 +480,7 @@ invariant when its observable crosses boundaries.
 
 | Metric | Release target | Baseline status |
 |---|---:|---|
-| `false_green_paths_open` | 0 | **6 open** |
+| `false_green_paths_open` | 0 | **5 open** |
 | `reference_green_pass_rate` | 100% | Unmeasured; private positive fixture pending |
 | `required_mutation_detection_rate` | 100% | Public gauntlet 10/10; full corpus pending |
 | `incomplete_reported_as_pass` | 0 | Failing: diff-skip path |
@@ -550,15 +551,14 @@ Invariant status:
 The v1.1 reproduction established seven paths. The heal-consistency repair in
 [`99870c5`](https://github.com/RI-SE/curbpack/commit/99870c57fde2d3d4eb2b5a6e60455eafb39a2007)
 closed the original outcome-parity defect. Current-baseline execution then
-identified a separate chain-verification path. FG-07 is closed when verify-chain
-recomputes digests; six false-green paths remain.
+identified a separate chain-verification path. FG-07 and FG-04 are closed;
+five false-green paths remain.
 
 | ID | Reproducible path | Location | Invariants |
 |---|---|---|---|
 | FG-01 | A forged one-pager that copies the current fingerprint marker can suppress rewrite and later present the marker as confirmed | [`release.go`](../internal/release/release.go), [`review.go`](../internal/review/review.go) | INV-02 |
 | FG-02 | Repository-derived JSON is embedded raw in a script element and can alter the offline bundle presentation | [`bundle.go`](../internal/release/templates/bundle.go) | INV-05, INV-06 |
 | FG-03 | `import_reach` ignores the declared path and passes missing or unparsable `src/payment.go` | [`validate.go`](../internal/validate/validate.go) | INV-05, INV-07 |
-| FG-04 | A one-character claimed digest can confirm because comparison length derives from the claim | [`review.go`](../internal/review/review.go) | INV-02 |
 | FG-05 | `--diff` can skip rules while machine cache records a complete-looking score without skip state | [`validate.go`](../internal/validate/validate.go) | INV-07, INV-08 |
 | FG-06 | A present but unreadable required gate JSON layer is first confirmed and its parse/digest findings can disappear | [`review.go`](../internal/review/review.go) | INV-06, INV-07 |
 
@@ -566,6 +566,7 @@ Closed:
 
 | ID | Prior path | Evidence |
 |---|---|---|
+| FG-04 | A one-character claimed digest could confirm because comparison length derived from the claim; fixed 12-hex floor (MUST-12) | [`review.go`](../internal/review/review.go), [`digest_prefix_test.go`](../internal/review/digest_prefix_test.go), [`release.go`](../internal/release/release.go) |
 | FG-07 | `review --verify-chain` accepted fabricated reports when the child copied a parent-supplied digest string without recomputation | [`review.go`](../internal/cli/review.go), [`review_verify_chain_test.go`](../internal/cli/review_verify_chain_test.go) |
 | REG-HEAL-01 | `check --heal` returned 100/0/exit-0 while immediate `check` returned 60/2/exit-1; score, findings, and exit parity are repaired, but byte parity remains open under INV-04 | [`check_json_heal_test.go`](../internal/cli/check_json_heal_test.go), [PR #40](https://github.com/RI-SE/curbpack/pull/40) |
 
