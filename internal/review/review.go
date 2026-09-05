@@ -427,7 +427,22 @@ func checkStructure(rep *Report, root string, budget *readBudget) {
 				ID: "structure:" + name, Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
 				Detail: "Required layer empty: " + name,
 			})
+		case !st.Mode().IsRegular():
+			add(rep, Finding{
+				ID: "structure:" + name, Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
+				Detail: "Required layer is not a regular file: " + name,
+			})
 		default:
+			// FG-06 / INV-06: Lstat presence alone is not confirmation — open must succeed.
+			f, openErr := os.Open(path)
+			if openErr != nil {
+				add(rep, Finding{
+					ID: "structure:" + name, Category: "structure", State: StateContradicted, Cause: CauseSelfDisagree,
+					Detail: "Required layer present but unreadable: " + name + " (" + fence(openErr.Error()) + ")",
+				})
+				continue
+			}
+			_ = f.Close()
 			add(rep, Finding{
 				ID: "structure:" + name, Category: "structure", State: StateConfirmed,
 				Detail: "Required layer present: " + name,
@@ -458,6 +473,12 @@ func checkStructure(rep *Report, root string, budget *readBudget) {
 func loadPayload(rep *Report, root string, budget *readBudget) (ir.GateFailurePayload, bool) {
 	data, truncated, err := readCapped(root, "01-gate-failures.json", budget)
 	if err != nil {
+		// FG-06 / INV-07: unreadable required gate JSON must keep a parse finding
+		// (do not confirm structure then silently drop digest findings).
+		add(rep, Finding{
+			ID: "digest:gate-json-parse", Category: "digest", State: StateContradicted, Cause: CauseSelfDisagree,
+			Detail: "01-gate-failures.json unreadable: " + fence(err.Error()),
+		})
 		return ir.GateFailurePayload{}, false
 	}
 	if truncated {
