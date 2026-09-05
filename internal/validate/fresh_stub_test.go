@@ -12,7 +12,7 @@ import (
 	"github.com/afelin/curbpack/internal/validate"
 )
 
-func TestFreshStubPathsSkipsAntiPlaceholderSameRun(t *testing.T) {
+func TestFreshStubFailsAntiPlaceholderInSameRun(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
 	mustWrite(t, filepath.Join(dir, "README.md"), "# Demo\n")
@@ -25,29 +25,23 @@ func TestFreshStubPathsSkipsAntiPlaceholderSameRun(t *testing.T) {
 		t.Fatalf("expected SECURITY.md stub applied, got %+v", out)
 	}
 
-	fresh := map[string]struct{}{"SECURITY.md": {}}
 	resFresh, err := validate.Run(validate.Options{
-		RepoRoot:       dir,
-		PackIDs:        []string{"house-policy"},
-		Quiet:          true,
-		FreshStubPaths: fresh,
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, f := range resFresh.Payload.Failures {
 		if f.GateID == "HOUSE-ANTI-PLACEHOLDER" && strings.Contains(f.ASTCoordinates.TargetFile, "SECURITY.md") {
-			t.Fatalf("fresh stub must skip anti_placeholder same run, got %#v", f)
+			if !strings.Contains(f.SanitizedDescription, "scaffold body overlap") {
+				t.Fatalf("fresh stub failure must identify scaffold overlap, got %#v", f)
+			}
+			return
 		}
 	}
-
-	resLater, err := validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}, Quiet: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !hasScaffoldOverlap(resLater, "HOUSE-ANTI-PLACEHOLDER", "SECURITY.md") {
-		t.Fatalf("next run must still score scaffold overlap, got %#v", resLater.Payload.Failures)
-	}
+	t.Fatalf("fresh stub must fail anti_placeholder in the same run, got %#v", resFresh.Payload.Failures)
 }
 
 func TestReadOnlyValidateSkipsCacheWrite(t *testing.T) {
@@ -63,7 +57,7 @@ func TestReadOnlyValidateSkipsCacheWrite(t *testing.T) {
 	}
 }
 
-func TestFreshStubAllowsHealGreenWithWarning(t *testing.T) {
+func TestFreshStubCannotProduceGreenResult(t *testing.T) {
 	dir := t.TempDir()
 	initGit(t, dir)
 	mustWrite(t, filepath.Join(dir, ".well-known", "security.txt"), "Contact: mailto:a@b.c\nExpires: 2027-01-01T00:00:00.000Z\nPreferred-Languages: en\n")
@@ -76,16 +70,18 @@ func TestFreshStubAllowsHealGreenWithWarning(t *testing.T) {
 		t.Fatal("expected SECURITY.md stub")
 	}
 	res, err := validate.Run(validate.Options{
-		RepoRoot:       dir,
-		PackIDs:        []string{"house-policy"},
-		Quiet:          true,
-		FreshStubPaths: map[string]struct{}{"SECURITY.md": {}},
+		RepoRoot: dir,
+		PackIDs:  []string{"house-policy"},
+		Quiet:    true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Passed {
-		t.Fatalf("fresh heal stub should pass same run when only anti_placeholder would fail, got %#v", res.Payload.Failures)
+	if res.Passed {
+		t.Fatalf("fresh heal stub must not pass anti_placeholder, got %#v", res.Payload)
+	}
+	if !hasScaffoldOverlap(res, "HOUSE-ANTI-PLACEHOLDER", "SECURITY.md") {
+		t.Fatalf("fresh heal stub must report scaffold overlap, got %#v", res.Payload.Failures)
 	}
 }
 

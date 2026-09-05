@@ -77,11 +77,11 @@ After documentation or dependency edits, an agent must re-run `check`. On red, u
 
 1. Copy [`examples/workflows/curbpack-check.yml`](../../examples/workflows/curbpack-check.yml) → `.github/workflows/curbpack.yml`.
 2. Push / open a PR. Pin stays **`@v0.5.2`**. Action = Linux/macOS only. Minimal permissions: `contents: read`, `pull-requests: write`, `security-events: write`.
-3. On an uninitialized repository, the Action selects **`house-policy`**. `heal` defaults to **false**; set `heal: true` to write missing stubs. Stubs do not establish readiness, and a gate pass is not certification.
+3. On an uninitialized repository, the Action selects **`house-policy`**. `heal` defaults to **false**; set `heal: true` to write missing stubs. Generated scaffold remains red until replaced with product-specific content. Stubs do not establish readiness, and a gate pass is not certification.
 
 Optional local equivalent: `curbpack init --workflow` writes the same drop-in workflow **only if missing** (never overwrites; not enabled by default `init`).
 
-Local Action-equivalent smoke: temp git repo **without** `.curbpack.json` → `curbpack check --heal` → exit 0 (or deterministic red after stubs if content gates remain).
+Local Action-equivalent smoke: temp git repo **without** `.curbpack.json` → `curbpack check --heal` → deterministic exit 1 with anti-placeholder failures after writing stubs.
 
 Maintainer bar: `./scripts/time-to-green.sh` (demo + init→check wall-clock; fail if &gt;10 min).
 

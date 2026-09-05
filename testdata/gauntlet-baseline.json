@@ -5,8 +5,8 @@
     {
       "id": "heal-missing-house-stubs",
       "kind": "heal_missing_stubs",
-      "expect": "heal_scaffold",
-      "note": "Missing SECURITY.md + security.txt → check --heal writes stubs; fresh-stub grace on same run; exit 0 with scaffold disclaimer (not certification)."
+      "expect": "fail",
+      "note": "Missing SECURITY.md + security.txt: check --heal writes stubs, then fails anti-placeholder until product-specific content replaces them."
     },
     {
       "id": "dead-end-non-git",
