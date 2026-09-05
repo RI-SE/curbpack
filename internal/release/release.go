@@ -165,12 +165,13 @@ func jsonString(s string) string {
 	return string(b)
 }
 
-// writeOnePagerIfChanged skips rewrite when the stable gate fingerprint matches
-// (ignores wall-clock "Generated" timestamps so prepare-release is quiet).
+// writeOnePagerIfChanged skips rewrite when the on-disk body matches the new
+// document aside from wall-clock "Generated" lines. Never trust the HTML
+// fingerprint marker alone — a forged page can copy the current marker (FG-01).
 func writeOnePagerIfChanged(path, htmlDoc string) (bool, error) {
-	fp := onePagerFingerprint(htmlDoc)
+	fp := onePagerContentFingerprint(htmlDoc)
 	if prev, err := os.ReadFile(path); err == nil {
-		if onePagerFingerprint(string(prev)) == fp && fp != "" {
+		if onePagerContentFingerprint(string(prev)) == fp && fp != "" {
 			return false, nil
 		}
 	}
@@ -183,15 +184,9 @@ func writeOnePagerIfChanged(path, htmlDoc string) (bool, error) {
 	return true, nil
 }
 
-func onePagerFingerprint(htmlDoc string) string {
-	// Prefer explicit marker; fall back to hashing body without Generated line.
-	const marker = "<!-- curbpack-onepager-fp:"
-	if i := strings.Index(htmlDoc, marker); i >= 0 {
-		rest := htmlDoc[i+len(marker):]
-		if j := strings.Index(rest, " -->"); j >= 0 {
-			return rest[:j]
-		}
-	}
+// onePagerContentFingerprint hashes the HTML body ignoring Generated timestamps.
+// It does not trust <!-- curbpack-onepager-fp:… --> (INV-02 / FG-01).
+func onePagerContentFingerprint(htmlDoc string) string {
 	var b strings.Builder
 	for _, line := range strings.Split(htmlDoc, "\n") {
 		if strings.Contains(line, "Generated ") {
@@ -202,6 +197,19 @@ func onePagerFingerprint(htmlDoc string) string {
 	}
 	sum := sha256.Sum256([]byte(b.String()))
 	return fmt.Sprintf("%x", sum[:16])
+}
+
+// onePagerFingerprint extracts the claimed marker when present; otherwise hashes content.
+// Used for ShareStale claimed-marker extraction — not for rewrite skip decisions.
+func onePagerFingerprint(htmlDoc string) string {
+	const marker = "<!-- curbpack-onepager-fp:"
+	if i := strings.Index(htmlDoc, marker); i >= 0 {
+		rest := htmlDoc[i+len(marker):]
+		if j := strings.Index(rest, " -->"); j >= 0 {
+			return rest[:j]
+		}
+	}
+	return onePagerContentFingerprint(htmlDoc)
 }
 
 func copyFile(src, dst string) error {
