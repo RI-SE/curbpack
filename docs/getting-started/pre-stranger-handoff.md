@@ -4,11 +4,11 @@
 
 Engineering stops here. Agents must not merge, tag, disable Pages, or run stranger outreach.
 
-**v0.5.4 live on `main` (2026-08-25):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.4); advertise + postship merged. Install+scan smoke **agent-verified** at **0.5.4**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human note — kit: [a2-a3-human-runbook.md](a2-a3-human-runbook.md) (first-run feedback / Teams / ADOPTERS — Discussions not enabled) — do not send invites yet.
+**v0.5.5 live on `main` (2026-08-25):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5); advertise + postship merged. Install+scan smoke **agent-verified** at **0.5.5**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human note — kit: [a2-a3-human-runbook.md](a2-a3-human-runbook.md) (first-run feedback / Teams / ADOPTERS — Discussions not enabled) — do not send invites yet.
 
 **Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/RI-SE/curbpack/pull/73)  
-**Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.4**) then `curbpack scan`  
-(Do **not** use `…/v0.5.4/scripts/install.sh` — tag tree baked older `MANIFEST_DEFAULT`.)
+**Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.5**) then `curbpack scan`  
+(Do **not** use `…/v0.5.5/scripts/install.sh` — tag tree baked older `MANIFEST_DEFAULT`.)
 **Action pin:** stays **`@v0.5.2`** until human tabletop approves bump ([AGENTS.md](../../AGENTS.md))
 
 ---
@@ -37,7 +37,7 @@ Clean env — no workspace binary on PATH.
 
 | OS | Install | Command | Pass |
 |----|---------|---------|------|
-| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-25 post-v0.5.4 advertise):** `main` installer downloads **v0.5.4**; `curbpack version` **0.5.4**; Exit 0; Scan complete; porcelain empty. Do **not** use `…/v0.5.4/scripts/install.sh` (tag tree baked older `MANIFEST_DEFAULT`) — strangers stay on `main`. |
+| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-25 post-v0.5.5 advertise):** `main` installer downloads **v0.5.5**; `curbpack version` **0.5.5**; Exit 0; Scan complete; porcelain empty. Do **not** use `…/v0.5.5/scripts/install.sh` (tag tree baked older `MANIFEST_DEFAULT`) — strangers stay on `main`. |
 | Linux | same | same | same |
 | Windows | `irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
 

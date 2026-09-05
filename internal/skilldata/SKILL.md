@@ -7,7 +7,7 @@ description: Run Curbpack local compliance gates and explain GateFailure JSON. U
 
 Local-first evidence CLI. Prepares review packs for **human review**. Does not certify conformity.
 
-**Install pin:** `v0.5.4`. **Action pin:** `@v0.5.2` (Linux/macOS runners). Local CLI includes Windows.
+**Install pin:** `v0.5.5`. **Action pin:** `@v0.5.2` (Linux/macOS runners). Local CLI includes Windows.
 
 **Instrument panel:** after edits, one `curbpack check` yields an honest map for *this* repo — structural evidence, not a certificate. Green is expensive to fake.
 

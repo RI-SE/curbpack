@@ -407,7 +407,12 @@ jobs:
       - name: Install-from-release smoke (fail closed)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/release-smoke-install-scan.sh
+        run: |
+          set -euo pipefail
+          # Pin to this tree's advertised default so advertise PRs (main still older)
+          # and post-merge main-default smoke both assert the correct binary.
+          export CURBPACK_VERSION="$(python3 -c 'import json; print(json.load(open("scripts/install-manifest.json"))["default_version"])')"
+          ./scripts/release-smoke-install-scan.sh
       - name: Dead-end — corrupt pack env
         run: |
           set -euo pipefail

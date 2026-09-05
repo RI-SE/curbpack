@@ -39,7 +39,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 
 ## Install integrity
 
-Release installs (**`install.sh` / `install.ps1`** primary; composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Stranger path pins **`v0.5.4`** for `scan` (via `main` install scripts). Prefer building from a known checkout when dogfooding this repo.
+Release installs (**`install.sh` / `install.ps1`** primary; composite Action) download the binary **and** `checksums.txt`, then compare sha256. Mismatch or missing entry → refuse install. Stranger path pins **`v0.5.5`** for `scan` (via `main` install scripts). Prefer building from a known checkout when dogfooding this repo.
 
 **npm wrapper (deferred):** `npx curbpack` is not on the stranger path until PR5 publishes. When shipped, it will use the same checksum verify path as shell installers — not floating `latest` unless `CURBPACK_VERSION=latest`. No network `postinstall`.
 

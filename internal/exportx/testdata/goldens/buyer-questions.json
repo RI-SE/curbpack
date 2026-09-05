@@ -15,7 +15,7 @@
       "answered": true,
       "settlement": "settles",
       "evidence": "SECURITY.md",
-      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
+      "verified_at": "4d6b11262374023909fcd12c11382d6177edb95d"
     },
     {
       "gate_id": "HOUSE-SECURITY-TXT",
@@ -27,7 +27,7 @@
       "answered": true,
       "settlement": "settles",
       "evidence": ".well-known/security.txt",
-      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
+      "verified_at": "4d6b11262374023909fcd12c11382d6177edb95d"
     },
     {
       "gate_id": "HOUSE-DEP-AXIOS-PIN",
@@ -38,7 +38,7 @@
       "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile.",
       "answered": true,
       "settlement": "settles",
-      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
+      "verified_at": "4d6b11262374023909fcd12c11382d6177edb95d"
     },
     {
       "gate_id": "HOUSE-SECRET-PATHS",
@@ -50,7 +50,7 @@
       "answered": true,
       "settlement": "settles",
       "evidence": "README.md, SECURITY.md, .well-known/security.txt, .env, .env.local, credentials.json, service-account.json, id_rsa",
-      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
+      "verified_at": "4d6b11262374023909fcd12c11382d6177edb95d"
     },
     {
       "gate_id": "HOUSE-ANTI-PLACEHOLDER",
@@ -62,7 +62,7 @@
       "answered": true,
       "settlement": "settles",
       "evidence": "SECURITY.md, .well-known/security.txt",
-      "verified_at": "24b728bf6e270c56fd8aefce827511acf397a1c2"
+      "verified_at": "4d6b11262374023909fcd12c11382d6177edb95d"
     }
   ]
 }

@@ -13,7 +13,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 ## Release status
 
-The installer currently supplies v0.5.4. The repository contains later audit-integrity repairs that are not in that release. See the [launch status and audit limitations](docs/launch-status.md) before using results for an audit decision.
+The installer currently supplies **v0.5.5** (high-trust launch tip). See the [launch status and audit limitations](docs/launch-status.md) before using results for an audit decision. Action pin stays `@v0.5.2`.
 
 ## Start with a read-only scan
 

@@ -2,10 +2,16 @@
 
 ## Unreleased (on `main`, not yet pinned — Action pin stays `@v0.5.2`)
 
-- **Launch hardening (unreleased)** — result digests now bind outcome and skipped-rule count; equal-gate failures sort by all hashed fields. Outcome-bearing packs from before this repair must be regenerated; legacy records without completeness fields retain their historical digest and do not prove completeness.
+## v0.5.5
+
+High-trust launch readiness — containment, FG closures in the advertised binary, installer version-tag validation. Action pin stayed `@v0.5.2`.
+
+- **Launch hardening** — result digests bind outcome and skipped-rule count; equal-gate failures sort by all hashed fields. Outcome-bearing packs from before this repair must be regenerated; legacy records without completeness fields retain their historical digest and do not prove completeness.
 - **Containment and cache errors** — resolve symlink ancestors and reject aliases into `.git`; evaluation cache files use temporary-file replacement and persistence failure returns an operational error. Legacy cache aliases remain separate files, not a transaction.
 - **Signature verification** — real OpenSSH verification uses stdin, an explicit principal, and an operator-selected external allowed-signers file (`CURBPACK_ALLOWED_SIGNERS`, `CURBPACK_SIGNER_ID`). Repository keys and ambient agent keys no longer grant verification. A signature does not establish human approval.
 - **First use and distribution** — accept documented `ask <file> --propose`; release builds resolve the exact tag, refuse existing-release overwrite, and create drafts for human review. CI install smoke no longer substitutes a workspace build after install failure. Repair the social card and expose release/audit limitations.
+- **Installer tag validation** — `CURBPACK_VERSION` must be `latest` or a release tag matching `verify-release-ref` grammar before download URLs are built (`scripts/install-version-test.sh`).
+- **Release** — tag `v0.5.5` on RI-SE at merge `78441d1`; `main` advertises after tag-smoke (`CURBPACK_VERSION=v0.5.5`).
 
 - **W7 edges ingest** — `curbpack review --repo --json --edges <file>` ingests human-approved edges JSON (no synthesis; CTAM still owns export). Schema remains Shared Frame §6 TO (0b DECIDED). Action pin unchanged (`@v0.5.2`). Not certification.
 - **v6 reference integrity (Shared Frame + W1–W6)** — method [`docs/method/review-method-1.3.0.md`](docs/method/review-method-1.3.0.md); classifier **`refclass:2`** via [`internal/claimid`](internal/claimid) (Option A + deny-list; Shared Frame **0a** and **0b** DECIDED — [#34](https://github.com/RI-SE/curbpack/pull/34)). `parent_record_digest` + `review --verify-chain`. Buyer/holding settlement three-state: indicative never renders **Yes**; `export --holding-report` refuses when `answers_suppressed`. Production MCP [`cmd/curbpack-mcp`](cmd/curbpack-mcp) (stdio library; no `net/http`). Shared Frame pin `RI-SE/curbpack@a36aeef` (PR #31 merge). Action pin unchanged (no bump). Not certification.
