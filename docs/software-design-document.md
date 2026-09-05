@@ -582,9 +582,13 @@ Additional open violations are tracked separately from the false-green count:
   records whose wall-clock timestamps can cross a one-second boundary.
 - The real `ssh-keygen -Y verify` invocation fails because it omits `-I` and does
   not provide the signed message on standard input; current tests stub the binary.
+- Confirm policy agent-contract wording aligns with MUST-70: `--i-am-human` or
+  `CURBPACK_ALLOW_CONFIRM=1` required; TTY alone is not enough (whitepaper +
+  agent docs; `TestConfirmPolicyWording_NoTTYAloneAuth`).
 - Public surfaces still say that the gate is deterministic and "cannot be argued
   with," describe green as expensive to fake, and contain a stale static countdown.
-  These claims are contradicted or unsupported by the current verified baseline.
+  These claims are contradicted or unsupported by the current verified baseline
+  (follow-on wording; not MUST-70).
 - The Go module path remains `github.com/afelin/curbpack` while the public source
   of truth is `RI-SE/curbpack`; migration requires a major-version plan.
 
