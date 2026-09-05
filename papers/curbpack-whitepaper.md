@@ -81,7 +81,7 @@ Every path ends in the same local `check`. Optional drafts never replace check.
 | **Bring-docs→Check** | Place existing policies on pack paths (or point a custom pack JSON at your paths), then check. **Skips curb outlines.** No portal PDF ingest. |
 | **CI** | Run `check` alone (Action `@v0.5.2` on Linux/macOS runners, or local). **Skips curb outlines.** |
 
-**Curb outlines** (your pathway sketch) are the first Write-path step: a soft local sketch of *what you are curbing* (product posture, house-first, sector)—not pack gates, not regulation, and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) on a TTY, with `--i-am-human`, or `CURBPACK_ALLOW_CONFIRM=1`. Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
+**Curb outlines** (your pathway sketch) are the first Write-path step: a soft local sketch of *what you are curbing* (product posture, house-first, sector)—not pack gates, not regulation, and not the law. The CLI alone writes `.github/curbpack/cache/pathway-seed.json`. Seed and research packets are **not** check pass/fail inputs. Humans stamp confirms (`confirm-packs` / `confirm-prose` / `confirm-share`) with `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough; MUST-70). Agents may `status` / `suggest` / `note` / `check` / `share` only—never forge ticks or invent pack ids.
 
 ### Local pack→rule map
 
@@ -94,7 +94,7 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | Input | Operation | Output | Human decision |
 |-------|-----------|--------|----------------|
 | Git repo + pack JSON | `init` | Scaffold, hooks, skill, `.curbpack.json` | Choose packs; confirm pathway if Write |
-| Pathway enums | `pathway suggest` | Closed-world pack suggestions in seed | `confirm-packs` (TTY / `--i-am-human`) |
+| Pathway enums | `pathway suggest` | Closed-world pack suggestions in seed | `confirm-packs` (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough) |
 | Confirmed packs | `packs export-graph` | Local pack→rule map JSON (drafting graph) | Use map to steer drafts—not as law or claim-linking |
 | Repo tree | `check` / `validate` | GateFailure IR (JSON + markdown); exit 0/1/2 | Remediate on red; never invent green |
 | GateFailure JSON | `ask --propose` | Propose-only remediation hints | Apply in editor; re-check |
