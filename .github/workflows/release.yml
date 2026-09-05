@@ -18,23 +18,42 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate requested tag
+        id: requested
+        env:
+          REQUESTED_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "A version tag is required" >&2
+            exit 1
+          fi
+          echo "tag=$REQUESTED_TAG" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ steps.requested.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.23.x"
 
-      - name: Resolve version
+      - name: Resolve version from exact tag checkout
         id: ver
+        env:
+          TAG: ${{ steps.requested.outputs.tag }}
         run: |
           set -euo pipefail
-          TAG="${{ github.event.inputs.tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="${GITHUB_REF_NAME}"
-          fi
+          ./scripts/verify-release-ref.sh "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          VER="${TAG#v}"
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Test release source
+        run: |
+          go test ./... -count=1
+          go vet ./...
 
       - name: Cross-compile
         env:
@@ -74,7 +93,7 @@ jobs:
           name: curbpack-binaries
           path: dist/*
 
-      - name: Create GitHub Release
+      - name: Create draft for human release review
         if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,9 +101,10 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/curbpack_* dist/checksums.txt --clobber
+            echo "Release already exists; refusing to replace published assets" >&2
+            exit 1
           else
-            gh release create "$TAG" dist/curbpack_* dist/checksums.txt \
+            gh release create "$TAG" dist/curbpack_* dist/checksums.txt --verify-tag --draft \
               --title "Curbpack ${TAG}" \
               --notes "$(cat <<EOF
           ## Curbpack ${TAG}

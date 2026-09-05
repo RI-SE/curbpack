@@ -42,25 +42,12 @@ if [ ! -x "$BIN" ]; then
   exit 1
 fi
 
-GOT=$("$BIN" version 2>&1 | head -n 1)
+GOT=$("$BIN" version 2>&1)
 echo "curbpack version → ${GOT}"
-case "$GOT" in
-  *"${EXPECT_VERSION}"*) ;;
-  *)
-    echo "FAIL: want version containing ${EXPECT_VERSION}, got: ${GOT}" >&2
-    exit 1
-    ;;
-esac
-
-# Reject stale advertised versions when we expect 0.5.4
-case "$GOT" in
-  *0.5.2*|*0.5.3*)
-    if [ "$EXPECT_VERSION" = "0.5.4" ]; then
-      echo "FAIL: stale version in output: ${GOT}" >&2
-      exit 1
-    fi
-    ;;
-esac
+if [ "$GOT" != "curbpack ${EXPECT_VERSION}" ]; then
+  echo "FAIL: want exact version curbpack ${EXPECT_VERSION}, got: ${GOT}" >&2
+  exit 1
+fi
 
 REPO_DIR="${WORKDIR}/scan-repo"
 mkdir -p "$REPO_DIR"

@@ -360,6 +360,10 @@ jobs:
         run: ./scripts/ci-build.sh
       - name: Claim safety (docs + runtime)
         run: ./scripts/claim-safety.sh
+      - name: Public links and social-card assets
+        run: python3 scripts/check-public-assets.py
+      - name: Release reference integrity
+        run: ./scripts/release-ref-test.sh
       - name: Manifest / release asset parity
         run: |
           set -euo pipefail
@@ -398,69 +402,10 @@ jobs:
           PY
       - name: Heal smoke + baseline ratchet + dead-ends
         run: ./scripts/gauntlet-ratchet.sh
-      - name: Install-from-release smoke
+      - name: Install-from-release smoke (fail closed)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          INST=$(mktemp -d)
-          export CURBPACK_INSTALL_DIR="$INST"
-          export CURBPACK_VERSION="${CURBPACK_VERSION:-latest}"
-          # Prefer branch install.sh (tests cutover checksum path). Until curbpack_*
-          # release assets publish, install fails closed — fall back to workspace build.
-          # Do not curl main's installer here: it still installs the pre-rebrand binary
-          # name and chicken-eggs this job (exit 127).
-          if sh "$GITHUB_WORKSPACE/scripts/install.sh"; then
-            export PATH="$INST:$PATH"
-            curbpack doctor
-            INSTALLED_VER=$(curbpack version 2>/dev/null | awk '{print $2}' | sed 's/^/v/')
-            scan_ge_v053() {
-              python3 - "$1" <<'PY'
-          import sys
-          def parse(v):
-              v = v.lstrip('v')
-              return tuple(int(x) for x in v.split('.'))
-          cur = parse(sys.argv[1])
-          need = parse('0.5.3')
-          sys.exit(0 if cur >= need else 1)
-          PY
-            }
-            if scan_ge_v053 "${INSTALLED_VER:-v0.0.0}"; then
-              SCAN=$(mktemp -d)
-              cd "$SCAN"
-              git init -q
-              git config user.email "ci@curbpack.local"
-              git config user.name "CI"
-              git commit --allow-empty -m init -q
-              # Capture then grep: live `scan | grep -q` + pipefail → SIGPIPE 141 when
-              # grep exits early (Art 14 mid-output). Same pattern as smoke job.
-              OUT=$(curbpack scan 2>&1)
-              printf '%s\n' "$OUT" | grep -q 'Art 14 reporting clock'
-              test -z "$(git status --porcelain)"
-              cd -
-            else
-              echo "release ${INSTALLED_VER:-unknown} < v0.5.3 — scan smoke skipped (expected until tag)"
-            fi
-            DEMO=$(mktemp -d)
-            curbpack demo --out "$DEMO" --keep
-            test -f "$DEMO/review-pack/buyer-onepager.html"
-          else
-            echo "release install unavailable — falling back to workspace binary"
-            "$GITHUB_WORKSPACE/bin/curbpack" doctor
-            SCAN=$(mktemp -d)
-            cd "$SCAN"
-            git init -q
-            git config user.email "ci@curbpack.local"
-            git config user.name "CI"
-            git commit --allow-empty -m init -q
-            OUT=$("$GITHUB_WORKSPACE/bin/curbpack" scan 2>&1)
-            printf '%s\n' "$OUT" | grep -q 'Art 14 reporting clock'
-            test -z "$(git status --porcelain)"
-            cd -
-            DEMO=$(mktemp -d)
-            "$GITHUB_WORKSPACE/bin/curbpack" demo --out "$DEMO" --keep
-            test -f "$DEMO/review-pack/buyer-onepager.html"
-          fi
+        run: ./scripts/release-smoke-install-scan.sh
       - name: Dead-end — corrupt pack env
         run: |
           set -euo pipefail
