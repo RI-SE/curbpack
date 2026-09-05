@@ -110,7 +110,7 @@ sha256 of the canonical JSON `Report` with `record_digest` and `bundle_root` set
 
 When the caller supplies a prior report (`--since`), the engine copies the prior `record_digest` into `parent_record_digest` **before** computing the child `record_digest` (so the parent is inside the hashed JSON). Empty when no prior is supplied.
 
-**Verify chain (CLI):** `curbpack review --verify-chain <parent.json> <child.json>` exits 0 iff `child.parent_record_digest` equals `parent.record_digest` (both non-empty); exit 1 on empty or mismatch.
+**Verify chain (CLI):** `curbpack review --verify-chain <parent.json> <child.json>` exits 0 iff both reports' `record_digest` values match independently recomputed digests and `child.parent_record_digest` equals the recomputed parent digest (all non-empty); exit 1 on empty, claim/recompute mismatch, or chain break.
 
 ## 7. Exit codes
 

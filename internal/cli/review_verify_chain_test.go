@@ -21,21 +21,58 @@ func writeChainReport(t *testing.T, path string, rep review.Report) {
 	}
 }
 
+func consistentChainPair(t *testing.T) (parent, child review.Report) {
+	t.Helper()
+	parent = review.Report{
+		Schema:         review.SchemaVersion,
+		MethodVersion:  review.MethodVersion,
+		ConfirmedCount: 1,
+	}
+	parent.RecordDigest = review.ComputeRecordDigest(parent)
+	child = review.Report{
+		Schema:             review.SchemaVersion,
+		MethodVersion:      review.MethodVersion,
+		ConfirmedCount:     2,
+		ParentRecordDigest: parent.RecordDigest,
+	}
+	child.RecordDigest = review.ComputeRecordDigest(child)
+	return parent, child
+}
+
 func TestReviewVerifyChainHappy(t *testing.T) {
 	dir := t.TempDir()
 	parentPath := filepath.Join(dir, "parent.json")
 	childPath := filepath.Join(dir, "child.json")
+	parent, child := consistentChainPair(t)
+	writeChainReport(t, parentPath, parent)
+	writeChainReport(t, childPath, child)
+	if err := Run([]string{"review", "--verify-chain", parentPath, childPath}); err != nil {
+		t.Fatalf("want exit 0, got %v (code %d)", err, ExitCode(err))
+	}
+}
+
+// FG-07: forged reports that copy a parent-supplied digest string must not pass.
+func TestReviewVerifyChainRejectsFabricatedDigests(t *testing.T) {
+	dir := t.TempDir()
+	parentPath := filepath.Join(dir, "parent.json")
+	childPath := filepath.Join(dir, "child.json")
+	forged := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	writeChainReport(t, parentPath, review.Report{
-		Schema:       review.SchemaVersion,
-		RecordDigest: "aaa111",
+		Schema:         review.SchemaVersion,
+		MethodVersion:  review.MethodVersion,
+		ConfirmedCount: 1,
+		RecordDigest:   forged,
 	})
 	writeChainReport(t, childPath, review.Report{
 		Schema:             review.SchemaVersion,
-		RecordDigest:       "bbb222",
-		ParentRecordDigest: "aaa111",
+		MethodVersion:      review.MethodVersion,
+		ConfirmedCount:     2,
+		RecordDigest:       forged,
+		ParentRecordDigest: forged,
 	})
-	if err := Run([]string{"review", "--verify-chain", parentPath, childPath}); err != nil {
-		t.Fatalf("want exit 0, got %v (code %d)", err, ExitCode(err))
+	err := Run([]string{"review", "--verify-chain", parentPath, childPath})
+	if ExitCode(err) != ExitGates {
+		t.Fatalf("FG-07: fabricated digest chain must exit 1, got %d (%v)", ExitCode(err), err)
 	}
 }
 
@@ -43,15 +80,11 @@ func TestReviewVerifyChainTamper(t *testing.T) {
 	dir := t.TempDir()
 	parentPath := filepath.Join(dir, "parent.json")
 	childPath := filepath.Join(dir, "child.json")
-	writeChainReport(t, parentPath, review.Report{
-		Schema:       review.SchemaVersion,
-		RecordDigest: "aaa111",
-	})
-	writeChainReport(t, childPath, review.Report{
-		Schema:             review.SchemaVersion,
-		RecordDigest:       "bbb222",
-		ParentRecordDigest: "tampered",
-	})
+	parent, child := consistentChainPair(t)
+	child.ParentRecordDigest = "tampered"
+	child.RecordDigest = review.ComputeRecordDigest(child)
+	writeChainReport(t, parentPath, parent)
+	writeChainReport(t, childPath, child)
 	err := Run([]string{"review", "--verify-chain", parentPath, childPath})
 	if ExitCode(err) != ExitGates {
 		t.Fatalf("want exit 1, got %d (%v)", ExitCode(err), err)

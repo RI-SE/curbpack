@@ -296,18 +296,41 @@ func runVerifyChain(parentPath, childPath string) error {
 	if err != nil {
 		return usageErr(err.Error())
 	}
-	want := strings.TrimSpace(parent.RecordDigest)
-	got := strings.TrimSpace(child.ParentRecordDigest)
-	if want == "" {
+	parentRecomputed := review.ComputeRecordDigest(parent)
+	if parentRecomputed == "" {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "parent record_digest could not be recomputed"))
+		return gatesErr()
+	}
+	claimedParent := strings.TrimSpace(parent.RecordDigest)
+	if claimedParent == "" {
 		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "parent record_digest empty"))
 		return gatesErr()
 	}
+	if claimedParent != parentRecomputed {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, fmt.Sprintf("parent record_digest mismatch: claimed=%s recomputed=%s", claimedParent, parentRecomputed)))
+		return gatesErr()
+	}
+	childRecomputed := review.ComputeRecordDigest(child)
+	if childRecomputed == "" {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "child record_digest could not be recomputed"))
+		return gatesErr()
+	}
+	claimedChild := strings.TrimSpace(child.RecordDigest)
+	if claimedChild == "" {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "child record_digest empty"))
+		return gatesErr()
+	}
+	if claimedChild != childRecomputed {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, fmt.Sprintf("child record_digest mismatch: claimed=%s recomputed=%s", claimedChild, childRecomputed)))
+		return gatesErr()
+	}
+	got := strings.TrimSpace(child.ParentRecordDigest)
 	if got == "" {
 		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, "child parent_record_digest empty"))
 		return gatesErr()
 	}
-	if got != want {
-		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, fmt.Sprintf("chain break: child parent_record_digest=%s parent record_digest=%s", got, want)))
+	if got != parentRecomputed {
+		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Yellow, fmt.Sprintf("chain break: child parent_record_digest=%s parent record_digest=%s", got, parentRecomputed)))
 		return gatesErr()
 	}
 	fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "record chain ok"))

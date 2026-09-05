@@ -74,7 +74,10 @@ func hashFileStreaming(path string, maxBytes int64) (hex string, n int64, err er
 	return fmt.Sprintf("%x", h.Sum(nil)), n, nil
 }
 
-func computeRecordDigest(rep Report) string {
+// ComputeRecordDigest returns the SHA-256 hex digest of the report JSON with
+// record_digest and bundle_root cleared. Callers that verify chains MUST use
+// this rather than trusting artifact-supplied digest strings.
+func ComputeRecordDigest(rep Report) string {
 	cp := rep
 	cp.RecordDigest = ""
 	cp.BundleRoot = ""
@@ -84,4 +87,8 @@ func computeRecordDigest(rep Report) string {
 	}
 	sum := sha256.Sum256(b)
 	return fmt.Sprintf("%x", sum[:])
+}
+
+func computeRecordDigest(rep Report) string {
+	return ComputeRecordDigest(rep)
 }

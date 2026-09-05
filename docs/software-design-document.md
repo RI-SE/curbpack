@@ -239,8 +239,9 @@ Current limitations:
 - Cache writes use direct `os.WriteFile` calls and `latest_*` names.
 - Findings and trust states are re-declared across components.
 - `review` recomputes some digests but accepts variable-length digest prefixes.
-- `review --verify-chain` compares artifact-supplied digest strings without
-  recomputing either record digest.
+- `review --verify-chain` recomputes parent and child `record_digest` values and
+  requires `child.parent_record_digest` to equal the recomputed parent digest
+  (FG-07 closed).
 - Attestation can fall back to keys from the current SSH agent.
 - The OpenSSH verifier invocation omits the required signer identity and is
   covered by a fake binary rather than a real-signature integration test.
@@ -478,7 +479,7 @@ invariant when its observable crosses boundaries.
 
 | Metric | Release target | Baseline status |
 |---|---:|---|
-| `false_green_paths_open` | 0 | **7 open** |
+| `false_green_paths_open` | 0 | **6 open** |
 | `reference_green_pass_rate` | 100% | Unmeasured; private positive fixture pending |
 | `required_mutation_detection_rate` | 100% | Public gauntlet 10/10; full corpus pending |
 | `incomplete_reported_as_pass` | 0 | Failing: diff-skip path |
@@ -549,7 +550,8 @@ Invariant status:
 The v1.1 reproduction established seven paths. The heal-consistency repair in
 [`99870c5`](https://github.com/RI-SE/curbpack/commit/99870c57fde2d3d4eb2b5a6e60455eafb39a2007)
 closed the original outcome-parity defect. Current-baseline execution then
-identified a separate chain-verification path, so seven false-green paths remain.
+identified a separate chain-verification path. FG-07 is closed when verify-chain
+recomputes digests; six false-green paths remain.
 
 | ID | Reproducible path | Location | Invariants |
 |---|---|---|---|
@@ -559,12 +561,12 @@ identified a separate chain-verification path, so seven false-green paths remain
 | FG-04 | A one-character claimed digest can confirm because comparison length derives from the claim | [`review.go`](../internal/review/review.go) | INV-02 |
 | FG-05 | `--diff` can skip rules while machine cache records a complete-looking score without skip state | [`validate.go`](../internal/validate/validate.go) | INV-07, INV-08 |
 | FG-06 | A present but unreadable required gate JSON layer is first confirmed and its parse/digest findings can disappear | [`review.go`](../internal/review/review.go) | INV-06, INV-07 |
-| FG-07 | `review --verify-chain` accepts two fabricated reports when the child copies the parent-supplied digest; neither digest is recomputed | [`review.go`](../internal/cli/review.go) | INV-02 |
 
-Closed regression:
+Closed:
 
 | ID | Prior path | Evidence |
 |---|---|---|
+| FG-07 | `review --verify-chain` accepted fabricated reports when the child copied a parent-supplied digest string without recomputation | [`review.go`](../internal/cli/review.go), [`review_verify_chain_test.go`](../internal/cli/review_verify_chain_test.go) |
 | REG-HEAL-01 | `check --heal` returned 100/0/exit-0 while immediate `check` returned 60/2/exit-1; score, findings, and exit parity are repaired, but byte parity remains open under INV-04 | [`check_json_heal_test.go`](../internal/cli/check_json_heal_test.go), [PR #40](https://github.com/RI-SE/curbpack/pull/40) |
 
 Additional open violations are tracked separately from the false-green count:
