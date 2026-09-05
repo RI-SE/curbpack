@@ -480,7 +480,7 @@ invariant when its observable crosses boundaries.
 
 | Metric | Release target | Baseline status |
 |---|---:|---|
-| `false_green_paths_open` | 0 | **3 open** |
+| `false_green_paths_open` | 0 | **2 open** |
 | `reference_green_pass_rate` | 100% | Unmeasured; private positive fixture pending |
 | `required_mutation_detection_rate` | 100% | Public gauntlet 10/10; full corpus pending |
 | `incomplete_reported_as_pass` | 0 | Failing: diff-skip path |
@@ -551,12 +551,11 @@ Invariant status:
 The v1.1 reproduction established seven paths. The heal-consistency repair in
 [`99870c5`](https://github.com/RI-SE/curbpack/commit/99870c57fde2d3d4eb2b5a6e60455eafb39a2007)
 closed the original outcome-parity defect. Current-baseline execution then
-identified a separate chain-verification path. FG-07, FG-04, FG-01, and FG-06 are
-closed; three false-green paths remain.
+identified a separate chain-verification path. FG-07, FG-04, FG-01, FG-06, and
+FG-02 are closed; two false-green paths remain.
 
 | ID | Reproducible path | Location | Invariants |
 |---|---|---|---|
-| FG-02 | Repository-derived JSON is embedded raw in a script element and can alter the offline bundle presentation | [`bundle.go`](../internal/release/templates/bundle.go) | INV-05, INV-06 |
 | FG-03 | `import_reach` ignores the declared path and passes missing or unparsable `src/payment.go` | [`validate.go`](../internal/validate/validate.go) | INV-05, INV-07 |
 | FG-05 | `--diff` can skip rules while machine cache records a complete-looking score without skip state | [`validate.go`](../internal/validate/validate.go) | INV-07, INV-08 |
 
@@ -564,6 +563,7 @@ Closed:
 
 | ID | Prior path | Evidence |
 |---|---|---|
+| FG-02 | Repository-derived JSON was embedded raw in a script element and could alter offline bundle presentation; embed now uses JSON Unicode escapes for `&`, `<`, and `>` (MUST-43) | [`bundle.go`](../internal/release/templates/bundle.go), [`script_embed_test.go`](../internal/release/templates/script_embed_test.go) |
 | FG-01 | A forged one-pager that copied the current fingerprint marker could suppress rewrite and present the marker as confirmed; rewrite now compares content fingerprints, and marker presence is unconfirmed/producer | [`release.go`](../internal/release/release.go), [`review.go`](../internal/review/review.go), [`fingerprint_forge_test.go`](../internal/release/fingerprint_forge_test.go) |
 | FG-04 | A one-character claimed digest could confirm because comparison length derived from the claim; fixed 12-hex floor (MUST-12) | [`review.go`](../internal/review/review.go), [`digest_prefix_test.go`](../internal/review/digest_prefix_test.go), [`release.go`](../internal/release/release.go) |
 | FG-06 | A present but unreadable required gate JSON layer was first confirmed and its parse/digest findings could disappear; structure now requires a successful open, and loadPayload keeps a contradicted parse finding | [`review.go`](../internal/review/review.go), [`unreadable_gate_json_test.go`](../internal/review/unreadable_gate_json_test.go) |
