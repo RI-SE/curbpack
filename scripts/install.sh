@@ -21,6 +21,16 @@ REPO="${CURBPACK_REPO:-${CYBERREADY_REPO:-RI-SE/curbpack}}"
 VERSION="${CURBPACK_VERSION:-${CYBERREADY_VERSION:-$MANIFEST_DEFAULT}}"
 INSTALL_DIR="${CURBPACK_INSTALL_DIR:-${CYBERREADY_INSTALL_DIR:-${HOME}/.local/bin}}"
 
+# Fail closed on hostile/traversal version strings before URL construction.
+# Grammar matches scripts/verify-release-ref.sh; "latest" is the only alias.
+if [ "$VERSION" != "latest" ]; then
+  if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+    echo "invalid install version: ${VERSION}" >&2
+    echo "Use a release tag such as v1.2.3, or latest." >&2
+    exit 1
+  fi
+fi
+
 claim='Prepares evidence for human review — not a conformity assessment.'
 echo "Curbpack installer"
 echo "  ${claim}"

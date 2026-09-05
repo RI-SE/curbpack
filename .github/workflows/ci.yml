@@ -364,6 +364,8 @@ jobs:
         run: python3 scripts/check-public-assets.py
       - name: Release reference integrity
         run: ./scripts/release-ref-test.sh
+      - name: Installer version tag validation
+        run: ./scripts/install-version-test.sh
       - name: Manifest / release asset parity
         run: |
           set -euo pipefail
