@@ -4,7 +4,7 @@
 
 **Parallel recruit:** while logging strangers, offer the one-sentence [RISE Neutral Evidence Profile Pilot](rise-pilot-offer.md) to a named relying party — do not wait for all six scans.
 
-**Install pin:** smoke-verified **`v0.5.4`** ([`scripts/install-manifest.json`](../../scripts/install-manifest.json) + [`scripts/release-gate.json`](../../scripts/release-gate.json)). Action pin stays **`@v0.5.2`**. Send-verbatim uses **`main`** install scripts (do not use `…/v0.5.4/scripts/install.sh` — that tag tree still baked older `MANIFEST_DEFAULT`). Optional pin-in-time: `CURBPACK_VERSION=v0.5.4`.
+**Install pin:** smoke-verified **`v0.5.5`** ([`scripts/install-manifest.json`](../../scripts/install-manifest.json) + [`scripts/release-gate.json`](../../scripts/release-gate.json)). Action pin stays **`@v0.5.2`**. Send-verbatim uses **`main`** install scripts (do not use `…/v0.5.5/scripts/install.sh` — that tag tree still baked older `MANIFEST_DEFAULT`). Optional pin-in-time: `CURBPACK_VERSION=v0.5.5`.
 
 **Install (send verbatim):**
 

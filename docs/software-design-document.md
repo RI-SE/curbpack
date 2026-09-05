@@ -528,7 +528,7 @@ Measurements below were executed at the pinned baseline. Coverage used
 | Red-team pilot | 15 passed, 0 failed |
 | Gauntlet | 10 matched, 0 failed |
 | Time to green | 6 seconds under 60-second gate |
-| Current install release | v0.5.4 in [install-manifest.json](../scripts/install-manifest.json) |
+| Current install release | v0.5.5 in [install-manifest.json](../scripts/install-manifest.json) |
 | Documented Action pin | Current fixed release in [action.yml](../action.yml); deliberate human pin-bump gate |
 
 Invariant status:

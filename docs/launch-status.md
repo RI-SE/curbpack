@@ -9,15 +9,15 @@ regulatory conformity.
 
 | Surface | Verified state | Evidence |
 |---|---|---|
-| Public install | v0.5.4; fresh macOS install, version check, and write-free scan passed | [Release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.4), [manifest](../scripts/install-manifest.json), [install smoke](../scripts/release-smoke-install-scan.sh) |
-| Main at audit start | `b6c471751c97f8a95165344274be858cc9cff33c`; newer audit-integrity fixes than v0.5.4 | [Commit](https://github.com/RI-SE/curbpack/commit/b6c471751c97f8a95165344274be858cc9cff33c), [CI run](https://github.com/RI-SE/curbpack/actions/runs/33985475860) |
-| Seven historical false-green findings | Repair commits for FG-01 through FG-07 merged after the SDD baseline; absent from the published v0.5.4 binaries | [PRs 42–49](https://github.com/RI-SE/curbpack/pulls?q=is%3Apr+is%3Amerged), [SDD baseline register](software-design-document.md#81-open-false-green-paths) |
-| This hardening change | Source changes and tests under review; no release tag, installer pin change, or production deployment | [Changelog](../CHANGELOG.md), [release gate](../scripts/release-gate.json) |
-| Private vulnerability reporting | Enabled during this audit | [Private reporting entry point](https://github.com/RI-SE/curbpack/security/advisories/new), [security policy](../SECURITY.md) |
+| Public install | **Released = v0.5.5**; `main` advertises after tag-smoke | [Release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5), [manifest](../scripts/install-manifest.json), [install smoke](../scripts/release-smoke-install-scan.sh) |
+| Tag / merge tip | Annotated `v0.5.5` on merge SHA `78441d1102b63b7df0fd24b7af3f374cd99ea496` (PR [#50](https://github.com/RI-SE/curbpack/pull/50)) | [Tag](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5), [release run](https://github.com/RI-SE/curbpack/actions/runs/33991663995) |
+| Platforms smoked | **macOS local:** `CURBPACK_VERSION=v0.5.5` install → `curbpack version` = `0.5.5` → write-free `scan` (porcelain empty). **Linux / Windows:** release assets + `checksums.txt` HTTP 200; PR #50 CI `test (ubuntu-latest)`, `smoke`, and `windows-smoke` green on tip — **not** separate `CURBPACK_VERSION=v0.5.5` install-script smokes on those hosts | Local smoke transcript; [CI run](https://github.com/RI-SE/curbpack/actions/runs/33991451572); asset HTTP 200 checks |
+| Seven historical false-green findings | FG-01 through FG-07 closed on tip included in v0.5.5; `false_green_paths_open=0` | [SDD register](software-design-document.md#81-open-false-green-paths), `./scripts/redteam-pilot.sh` 15 passed / 0 failed on tip |
+| Action pin | Remains **`@v0.5.2`** (no pin-bump) | [release gate](../scripts/release-gate.json), examples / Action docs |
+| Private vulnerability reporting | Enabled | [Private reporting](https://github.com/RI-SE/curbpack/security/advisories/new), [security policy](../SECURITY.md) |
 
-The SDD's measurements remain a historical snapshot of its explicitly pinned
-baseline. They are not a live release dashboard. Passing CI on newer source does
-not update the binaries installed by users.
+Passing CI on source does not by itself update stranger installs until `main`
+advertises the smoke-verified tag via the install manifest.
 
 ## Reproduced defects and repairs in this change
 
@@ -29,6 +29,7 @@ not update the binaries installed by users.
 | A regular file beneath a symlinked ancestor can escape the path check | Resolve the whole existing path, including ancestors; refuse resolved `.git` aliases: [regressions](../internal/pathjail/ancestor_symlink_test.go), [containment](../internal/pathjail/pathjail.go) |
 | Real OpenSSH verification fails; repository or ambient agent keys are used as trust policy | Use stdin and explicit principal with an external operator-selected policy; fail closed without that policy: [real-binary test](../internal/attest/verify_real_test.go), [trust setup](security-model.md#attestation-honesty) |
 | Release dispatch can label the current checkout with another tag; reruns can replace published assets | Check out the requested tag, verify its commit, test source, refuse overwrite, and create a draft: [workflow](../.github/workflows/release.yml), [real Git tests](../scripts/release-ref-test.sh) |
+| Hostile `CURBPACK_VERSION` can path-traverse download URLs while keeping binary + checksums self-consistent | Refuse non-`latest` / non-release-tag grammar before URL construction: [install-version-test](../scripts/install-version-test.sh), [install.sh](../scripts/install.sh), [install.ps1](../scripts/install.ps1) |
 | CI can hide failed release installation behind a successful workspace build | Run the [fail-closed release install smoke](../scripts/release-smoke-install-scan.sh) in [CI](../.github/workflows/ci.yml) |
 | Public social PNG contains an XML error page | Correct invalid SVG bytes and regenerate the 1200 × 630 [card](../site/assets/og-campaign.png) from [source](../site/assets/og-campaign.svg) |
 | Public wording overstates determinism and identifies signatures as human approval | Narrow homepage and buyer-facing language to structural checks and signature evidence: [home](../site/index.html), [one-pager template](../internal/release/templates/onepager.go) |
@@ -68,11 +69,11 @@ These are not closed by compiling binaries or by the passing regression tests.
 | Transactional persistence and hostile concurrency | Cache files are individually replaced, but three aliases are not one transaction. Descriptor-based containment and concurrent directory replacement remain outside the path-check guarantee | [cache writer](../internal/validate/cache_write.go), [path jail](../internal/pathjail/pathjail.go) |
 | Resource and command guarantees | Evaluator-wide byte/file/subprocess budgets, interruption recovery, command effects, and consistent typed operational errors across every command | [SDD requirements](software-design-document.md#2-constitutional-invariants), [command implementation](../internal/cli/cli.go) |
 | Independent trust assessment | Typed authenticity/integrity/completeness results, full evidence recomputation, and outside review of trust/digest changes | [SDD W4](software-design-document.md#12-sequential-work-packages), [bind resolution](../internal/attest/bind.go) |
-| Release qualification | Review this change; run required CI on its final commit, qualify all supported OS paths, then authorize a new release and installer advertisement | [release workflow](../.github/workflows/release.yml), [required contexts](../.github/required-checks.json) |
+| **Post-launch: Action `inputs.version` shell interpolation** | `action.yml` still interpolates `inputs.version` in shell context; pin stays **`@v0.5.2`** until a human pin-bump tabletop. Documented only — not fixed in v0.5.5 | [action.yml](../action.yml), [required contexts](../.github/required-checks.json) |
 | Human launch checks | Record fresh-machine use and logged-out social preview checks; confirm the responsible support owner | [human runbook](getting-started/a2-a3-human-runbook.md), [validation log](getting-started/stranger-validation-log.md) |
 
 Use `scan` for structural diagnosis and inspect findings. `scan` exit 0 means the
 diagnosis completed; it does not mean gates passed. A complete `check` is the local
 gate result. A buyer must review scope, missing evidence, provenance and trust
-separately. No agent has completed human confirmations, attestation, release
-approval, or the external-user validation log during this audit.
+separately. No agent has completed human confirmations, attestation, Action
+pin-bump, or the external-user validation log during this launch.

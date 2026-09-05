@@ -10,14 +10,14 @@ doctor → doctor --repair → full reinstall only if binary missing
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-**Pin sentence:** the install script on `main` downloads binary **v0.5.4**; the GitHub Action pin (`@v0.5.2`) moves separately — no retag in doc-only PRs.
+**Pin sentence:** the install script on `main` downloads binary **v0.5.5**; the GitHub Action pin (`@v0.5.2`) moves separately — no retag in doc-only PRs.
 
-**Install pin (binary):** smoke-verified **`v0.5.4`** when [`scripts/install-manifest.json`](../../scripts/install-manifest.json) `default_version` equals [`scripts/release-gate.json`](../../scripts/release-gate.json) `version` with all verification flags true.  
+**Install pin (binary):** smoke-verified **`v0.5.5`** when [`scripts/install-manifest.json`](../../scripts/install-manifest.json) `default_version` equals [`scripts/release-gate.json`](../../scripts/release-gate.json) `version` with all verification flags true.  
 **Action:** GitHub Action runners are **Linux/macOS only** — pin **`@v0.5.2`** until human tabletop approves bump (separate from CLI install pin). Local Windows CLI is supported.  
 **MCP sidecar:** optional Unix IPC example at [`examples/mcp/`](../../examples/mcp/) — golden path never requires it.  
 **Deferred:** npm publish, winget, windows/arm64, pwsh completion.
 
-Installation is provided from the **canonical Curbpack release repository**. Ladder 0 uses the maintained installer on `main`, which downloads the smoke-verified release binary (currently **v0.5.4**).
+Installation is provided from the **canonical Curbpack release repository**. Ladder 0 uses the maintained installer on `main`, which downloads the smoke-verified release binary (currently **v0.5.5**).
 
 **Module / Action note:** public clone, install scripts, releases, and GitHub Action live on [RI-SE/curbpack](https://github.com/RI-SE/curbpack) — pin **`RI-SE/curbpack@v0.5.2`**. The Go module path remains `github.com/afelin/curbpack` until a future semver-major migration (wave 2); with the development repo private, strangers should prefer the binary installers above — `go install github.com/afelin/curbpack/...` is not a reliable public path.
 
@@ -29,7 +29,7 @@ Stuck? [Troubleshooting](troubleshooting.md).
 
 ### Ladder 0 — Read-only scan (install + scan)
 
-Inside any git repository — **no init**, **no files written**. Requires **`v0.5.3`** or newer (scan ships in v0.5.3+; current curl default is **v0.5.4**).
+Inside any git repository — **no init**, **no files written**. Requires **`v0.5.3`** or newer (scan ships in v0.5.3+; current curl default is **v0.5.5**).
 
 **macOS / Linux**
 
@@ -91,7 +91,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 For locked-down or offline assessor laptops: receive the release binary **as a file** (email attachment, USB, or internal file drop) together with `checksums.txt`, verify sha256 fail-closed, then place on PATH — same steps as below. No installer required. See also [buyer evidence](buyer-evidence.md) and [for reviewers](../../site/for-reviewers/).
 
-1. Open the release for pin **`v0.5.4`**: https://github.com/RI-SE/curbpack/releases/tag/v0.5.4  
+1. Open the release for pin **`v0.5.5`**: https://github.com/RI-SE/curbpack/releases/tag/v0.5.5  
 2. Download the asset for your OS from the manifest (`curbpack_darwin_*`, `curbpack_linux_*`, or `curbpack_windows_amd64.exe`) **and** `checksums.txt`.  
 3. Verify sha256 (fail closed if mismatch).  
 4. Place the binary on PATH (`~/.local/bin` or `%LOCALAPPDATA%\Programs\Curbpack`).  

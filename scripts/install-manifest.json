@@ -1,7 +1,7 @@
 {
   "schema": "curbpack-install-manifest:1",
-  "default_version": "v0.5.4",
-  "claim": "Prepares evidence for human review — not a conformity assessment.",
+  "default_version": "v0.5.5",
+  "claim": "Prepares evidence for human review \u2014 not a conformity assessment.",
   "assets": [
     "curbpack_darwin_amd64",
     "curbpack_darwin_arm64",
@@ -14,7 +14,7 @@
     "install.ps1"
   ],
   "notes": {
-    "action": "GitHub Action runners are Linux/macOS only in v0.5.2 — local Windows CLI is supported.",
+    "action": "GitHub Action runners are Linux/macOS only in v0.5.2 \u2014 local Windows CLI is supported.",
     "mcp": "Production MCP: cmd/curbpack-mcp (stdio, library-backed resolve/doctor/digest; no net/http). Legacy shell-out / optional sock remain under examples/mcp only.",
     "deferred": "winget, windows/arm64, and pwsh completion are out of scope for this train."
   }

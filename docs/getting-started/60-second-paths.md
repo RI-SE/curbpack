@@ -6,7 +6,7 @@ Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
 ## Scan-first (fastest)
 
-Install release **`v0.5.4`** once, then scan inside any git repository. `scan` does not initialize Curbpack or write files.
+Install release **`v0.5.5`** once, then scan inside any git repository. `scan` does not initialize Curbpack or write files.
 
 **macOS / Linux**
 

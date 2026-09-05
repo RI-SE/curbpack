@@ -1,7 +1,7 @@
 #!/bin/sh
 # Fail-closed release smoke: isolated PATH install → version assert → scan honesty + porcelain.
 # Usage:
-#   CURBPACK_VERSION=v0.5.4 ./scripts/release-smoke-install-scan.sh   # before main bump
+#   CURBPACK_VERSION=v0.5.5 ./scripts/release-smoke-install-scan.sh   # before main bump
 #   ./scripts/release-smoke-install-scan.sh                            # after main advertises
 # Env:
 #   CURBPACK_VERSION   optional pin (e.g. v0.5.4) while main still defaults older
@@ -16,7 +16,7 @@ if [ -n "${CURBPACK_VERSION:-}" ]; then
   # strip leading v for binary version string
   EXPECT_VERSION="${EXPECT_VERSION:-${CURBPACK_VERSION#v}}"
 fi
-EXPECT_VERSION="${EXPECT_VERSION:-0.5.4}"
+EXPECT_VERSION="${EXPECT_VERSION:-0.5.5}"
 
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
