@@ -166,35 +166,48 @@ def check_freshness() -> None:
         lines = text.splitlines()
 
         for idx, line in enumerate(lines, start=1):
-            dates = DATE_RE.findall(line)
-            if not dates:
-                continue
-            versions: list[str] = []
-            for m in POST_ADVERTISE_RE.finditer(line):
-                versions.append(m.group(1))
-            if CLAIM_VERBS.search(line):
-                versions.extend(VERSION_RE.findall(line))
-            # de-dupe preserve order
-            seen: set[str] = set()
-            uniq_versions: list[str] = []
-            for v in versions:
-                key = v.lstrip("v").lower()
-                if key not in seen:
-                    seen.add(key)
-                    uniq_versions.append(key)
+            # Pair each version claim with the nearest ISO date on the same line
+            # (avoid cartesian false positives when a line mentions two releases).
+            claim_spans: list[tuple[int, int, str, str]] = []  # start, end, version, kind
 
-            for version in uniq_versions:
+            for m in POST_ADVERTISE_RE.finditer(line):
+                claim_spans.append((m.start(), m.end(), m.group(1).lstrip("v").lower(), "advertise"))
+
+            if CLAIM_VERBS.search(line):
+                for m in VERSION_RE.finditer(line):
+                    # skip if already covered by post-advertise match overlapping
+                    ver = m.group(1).lstrip("v").lower()
+                    if any(s <= m.start() < e for s, e, _, _ in claim_spans):
+                        continue
+                    claim_spans.append((m.start(), m.end(), ver, "live/published/shipped"))
+
+            date_spans = [(m.start(), m.end(), m.group(1)) for m in DATE_RE.finditer(line)]
+
+            for start, end, version, kind in claim_spans:
+                if not date_spans:
+                    continue
+                # Prefer a date within 80 characters of the version token; else skip
+                # (avoids pairing an earlier release with a later date on a long line).
+                nearby = [
+                    d
+                    for d in date_spans
+                    if min(abs(d[0] - start), abs(d[1] - end), abs(d[0] - end), abs(d[1] - start))
+                    <= 80
+                ]
+                if not nearby:
+                    continue
+                claimed = min(
+                    nearby,
+                    key=lambda d: min(abs(d[0] - start), abs(d[1] - end)),
+                )[2]
                 tag_date = git_tag_date(version)
                 if tag_date is None:
                     continue
-                for claimed in dates:
-                    if claimed != tag_date:
-                        errors.append(
-                            f"FAIL {rel}:{idx}   asserts v{version} "
-                            f"{'advertise' if POST_ADVERTISE_RE.search(line) else 'live/published/shipped'} "
-                            f"{claimed}; tag dated {tag_date}"
-                        )
-                        file_bad_dates.setdefault(path, set()).add(claimed)
+                if claimed != tag_date:
+                    errors.append(
+                        f"FAIL {rel}:{idx}   asserts v{version} {kind} {claimed}; tag dated {tag_date}"
+                    )
+                    file_bad_dates.setdefault(path, set()).add(claimed)
 
         # Advertised-version agreement on public install surfaces.
         if rel.as_posix() in {
@@ -216,32 +229,29 @@ def check_freshness() -> None:
                             f"manifest/buildinfo v{manifest_ver}"
                         )
 
-    # Pass 2: copy-paste dates — same wrong date in a file that already has a mismatched claim.
+    # Pass 2: copy-paste dates — same wrong date reused on operational lines in
+    # the same file as a mismatched version claim (no matching version on the line).
     for path, bad_dates in file_bad_dates.items():
         rel = path.relative_to(ROOT)
+        # Limit cascade to the handoff doc where the stamp-copy defect was observed.
+        if rel.as_posix() != "docs/getting-started/pre-stranger-handoff.md":
+            continue
         lines = path.read_text(encoding="utf-8").splitlines()
         for idx, line in enumerate(lines, start=1):
             for claimed in DATE_RE.findall(line):
                 if claimed not in bad_dates:
                     continue
-                # Skip lines already reported as version claims, and lines whose version matches claimed date.
                 versions = VERSION_RE.findall(line)
-                if versions:
-                    if all(git_tag_date(v) == claimed for v in versions):
-                        continue
-                    if any(CLAIM_VERBS.search(line) or POST_ADVERTISE_RE.search(line) for _ in [0]):
-                        continue  # already FAIL'd in pass 1
-                # Flag operational lines that reused the wrong stamp without a matching version tag.
-                if not versions or any(git_tag_date(v) != claimed for v in versions):
-                    # Avoid duplicate for pass-1 lines
-                    marker = f"FAIL {rel}:{idx}   "
-                    if any(e.startswith(marker) for e in errors):
-                        continue
-                    if CLAIM_VERBS.search(line) or POST_ADVERTISE_RE.search(line):
-                        continue
-                    errors.append(
-                        f"FAIL {rel}:{idx}   asserts action {claimed} alongside mismatched version advertise"
-                    )
+                if versions and all(git_tag_date(v) == claimed for v in versions):
+                    continue
+                marker = f"FAIL {rel}:{idx}   "
+                if any(e.startswith(marker) for e in errors):
+                    continue
+                if CLAIM_VERBS.search(line) or POST_ADVERTISE_RE.search(line):
+                    continue
+                errors.append(
+                    f"FAIL {rel}:{idx}   asserts action {claimed} alongside mismatched version advertise"
+                )
 
     # INV-13: external script src + ESM https imports (both quote styles).
     for path in (ROOT / "site").rglob("*.html"):

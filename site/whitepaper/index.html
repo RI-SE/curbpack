@@ -9,10 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/curbpack/assets/site.css" />
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
-  </script>
   <style>
     .paper { max-width: 44rem; padding: 2.5rem 0 4rem; }
     .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; font-weight: 600; }
@@ -30,7 +26,6 @@
       background: var(--paper-alt); color: var(--muted);
     }
     .paper ol, .paper ul { padding-left: 1.25rem; }
-    .mermaid { margin: 1.5rem 0; overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -74,25 +69,11 @@
       <p>The engine has <strong>nine frozen check kinds</strong> (<code>annex_file</code>, <code>file_present</code>, <code>anti_placeholder</code>, <code>npm_dep_ban</code>, <code>manifest_dep_ban</code>, <code>text_forbid</code>, <code>import_reach</code>, <code>fresh</code>, <code>owned</code>) — packs are malleable; kinds are not. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
 
       <h3>End-to-end flow</h3>
-      <pre class="mermaid">
-flowchart LR
-  install[Install] --> init[Init]
-  init --> choosePath[ChoosePath]
-  choosePath --> writePath[WritePath]
-  choosePath --> bringPath[BringPath]
-  choosePath --> ciPath[CIPath]
-  writePath --> outlines[CurbOutlines]
-  outlines --> confirmPacks[ConfirmPacks]
-  confirmPacks --> localMap[LocalPackRuleMap]
-  localMap --> drafts[DualDraftsCiteCheck]
-  drafts --> check[LocalCheck]
-  bringPath --> check
-  ciPath --> check
-  check --> reviewPack[ReviewPack]
-  reviewPack --> humanReview[HumanReview]
-  humanReview --> attest[OptionalAttest]
-  attest --> proofVerify[ProofVerify]
-      </pre>
+      <pre class="mono">Install → Init → ChoosePath
+  → WritePath → CurbOutlines → ConfirmPacks → LocalPackRuleMap → DualDraftsCiteCheck → LocalCheck
+  → BringPath → LocalCheck
+  → CIPath → LocalCheck
+→ ReviewPack → HumanReview → OptionalAttest → ProofVerify</pre>
       <p><strong>Write path:</strong> curb outlines → human confirm-packs → local pack→rule map (<code>packs export-graph</code> drafting graph — not claim-to-artifact mapping) → optional dual drafts + cite-check → check.<br/>
       <strong>Bring and CI:</strong> skip outlines; go straight to check.<br/>
       <strong>After green:</strong> review pack → human review → optional attest → local proof verify.</p>

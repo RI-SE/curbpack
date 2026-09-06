@@ -131,4 +131,4 @@ Checklist:
 7. Missing sock → fail-open; never block promote solely because Curbpack is absent.
 8. Default `CURBPACK_EXPLAIN_ALLOW_CLOUD=0`; cloud export only with explicit `=1`.
 9. In-repo fixture: `internal/contract/explain_coreward_consumer_test.go` + `go test ./examples/mcp/internal/sock/`.
-10. Coreward bridge: `vibe-engine-os/src/release-gate/curbpack-bridge.ts` (`consumeExplainPacket` + recheck note). Skill: explain-packet → never claim fixed → `curbpack_validate_delta`.
+10. Coreward bridge: the Coreward bridge module (`consumeExplainPacket` + recheck note). Skill: explain-packet → never claim fixed → `curbpack_validate_delta`.
