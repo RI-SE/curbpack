@@ -49,6 +49,9 @@ func Run(opts Options) (Result, error) {
 	if RunInvocationHook != nil {
 		RunInvocationHook()
 	}
+	if err := clock.CheckSourceDateEpoch(); err != nil {
+		return Result{}, err
+	}
 	root := opts.RepoRoot
 	if root == "" {
 		var err error
@@ -125,9 +128,12 @@ func Run(opts Options) (Result, error) {
 			parentPath = pathway.ParentStatePath(phase)
 		}
 	}
-	payload := ir.GateFailurePayload{
-		SchemaVersion: ir.SchemaVersion,
-		Timestamp:     clock.RFC3339(),
+	ts, err := clock.RFC3339()
+	if err != nil {
+		return Result{}, err
+	}
+	eval := ir.Evaluation{
+		SchemaVersion: ir.EvaluationSchemaVersion,
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
 			StateVersionToken:       "v3.33-OCC",
@@ -136,21 +142,27 @@ func Run(opts Options) (Result, error) {
 			ActiveParentStatePath:   parentPath,
 			FailedOrthogonalRegions: unique(regions),
 		},
-		AgentIdentity:  ir.ResolveAgentIdentity(),
 		Failures:       failures,
 		PackID:         strings.Join(ids, ","),
 		ReadinessScore: score,
 		Outcome:        outcome,
 		SkippedRules:   skipped,
 	}
+	evalDigest, err := ir.ComputeEvaluationDigest(eval)
+	if err != nil {
+		return Result{}, err
+	}
+	receipt := ir.RunReceipt{
+		SchemaVersion:    ir.RunReceiptSchemaVersion,
+		EvaluationDigest: evalDigest,
+		Timestamp:        ts,
+		AgentIdentity:    ir.ResolveAgentIdentity(),
+	}
+	payload := ir.LegacyFromEvaluation(eval, receipt)
 
 	action := ActionReportMarkdown(payload, skipped)
 	if !opts.ReadOnly {
-		b, err := json.MarshalIndent(payload, "", "  ")
-		if err == nil {
-			err = writeEvaluationCache(root, b, action)
-		}
-		if err != nil {
+		if err := writeEvaluationCache(root, eval, receipt, payload, action); err != nil {
 			payload.Outcome = ir.OutcomeError
 			return Result{Payload: payload, Score: score, SkippedRules: skipped,
 					ActionReport: ActionReportMarkdown(payload, skipped)},

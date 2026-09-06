@@ -146,9 +146,13 @@ func Run(opts Options) (Capsule, error) {
 		evidence["pack_ids"] = packIDs
 	}
 
+	ts, err := clock.RFC3339()
+	if err != nil {
+		return Capsule{}, err
+	}
 	cap := Capsule{
 		SchemaVersion:   SchemaVersion,
-		Timestamp:       clock.RFC3339(), // display-only; not in state_hash
+		Timestamp:       ts, // display-only; not in state_hash
 		CommitSHA:       commit,
 		StateHash:       stateHash,
 		ParentStateHash: parentHash,

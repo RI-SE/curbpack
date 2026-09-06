@@ -16,7 +16,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: art14-countdown <file>...")
 		os.Exit(2)
 	}
-	text := clock.FormatArt14Countdown(clock.DaysUntilUTC(clock.Art14ReportingStart))
+	days, err := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "clock: %v\n", err)
+		os.Exit(1)
+	}
+	text := clock.FormatArt14Countdown(days)
 	for _, path := range os.Args[1:] {
 		b, err := os.ReadFile(path)
 		if err != nil {

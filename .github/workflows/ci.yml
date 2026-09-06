@@ -36,6 +36,15 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: "1704067200"
         run: go test ./...
+      - name: W2 unset-epoch eval stability
+        # Must not inherit the pinned SOURCE_DATE_EPOCH from the prior step.
+        # Proves canonical evaluation bytes stay stable when the epoch is unset.
+        if: runner.os != 'Windows'
+        env:
+          SOURCE_DATE_EPOCH: ""
+        run: |
+          unset SOURCE_DATE_EPOCH || true
+          go test ./internal/clock/ ./internal/ir/ ./internal/validate/ -count=1 -run 'TestRejectInvalidSourceDateEpoch|TestCanonicalEvaluationStableWithoutEpoch|TestCanonicalEvaluationStableAcrossHOME|TestValidateRejectsInvalidSourceDateEpoch|TestLegacyEvaluationAdapterRoundTrip|TestMarshalCanonicalStable|TestRFC3339ForEvidenceStableWithoutEpoch'
       - name: Fuzz (short)
         if: runner.os != 'Windows'
         run: |

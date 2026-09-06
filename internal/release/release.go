@@ -142,14 +142,18 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	}
 
 	// Pending OpenVEX from dependency-shaped findings only (gates stay in IR).
-	vexDoc := vex.FromGateFailures(filepath.Base(repoAbs), res.Payload)
-	vexPath, vexWriteErr := vex.Write(repoAbs, vexDoc, filepath.Join(repoAbs, ".github", "curbpack", "evidence", "vex-pending.json"))
-	if vexWriteErr != nil {
-		record(fmt.Errorf("vex: %w", vexWriteErr))
-	} else if data, rerr := os.ReadFile(vexPath); rerr != nil {
-		record(rerr)
+	vexDoc, vexErr := vex.FromGateFailures(filepath.Base(repoAbs), res.Payload)
+	if vexErr != nil {
+		record(fmt.Errorf("vex: %w", vexErr))
 	} else {
-		writeOut("05-vex-draft.json", data)
+		vexPath, vexWriteErr := vex.Write(repoAbs, vexDoc, filepath.Join(repoAbs, ".github", "curbpack", "evidence", "vex-pending.json"))
+		if vexWriteErr != nil {
+			record(fmt.Errorf("vex: %w", vexWriteErr))
+		} else if data, rerr := os.ReadFile(vexPath); rerr != nil {
+			record(rerr)
+		} else {
+			writeOut("05-vex-draft.json", data)
+		}
 	}
 
 	// SARIF layer (same mapper as CLI export --sarif)

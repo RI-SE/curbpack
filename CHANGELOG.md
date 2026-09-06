@@ -2,6 +2,8 @@
 
 ## Unreleased (on `main`, not yet pinned — Action pin stays `@v0.5.2`)
 
+- **W2 eval/receipt (minimal)** — reject invalid `SOURCE_DATE_EPOCH` (no silent wall-clock fallback); split canonical `curbpack-evaluation:1` from `curbpack-run-receipt:1`; write `latest_evaluation.json` / `latest_receipt.json`; keep legacy `latest_failure.json` / `latest_result.json` via adapter; omit synthetic SLSA `buildFinishedOn`; canonical evaluation stable across HOME when epoch unset; CI leg runs unset-epoch stability tests without inheriting the pinned epoch. Explicit `as_of` binding and content-addressed digest store remain open. Pin stays `@v0.5.2`. Not certification.
+
 ## v0.5.5
 
 High-trust launch readiness — containment, FG closures in the advertised binary, installer version-tag validation. Action pin stayed `@v0.5.2`.

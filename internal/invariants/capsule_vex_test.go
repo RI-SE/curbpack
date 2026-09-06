@@ -33,7 +33,10 @@ func TestHealVEXStaysDraft(t *testing.T) {
 			SanitizedDescription: "missing",
 		}},
 	}
-	doc := vex.FromGateFailures("app", payload)
+	doc, err := vex.FromGateFailures("app", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if doc.Status != "draft_pending_attest" {
 		t.Fatalf("status=%q want draft_pending_attest", doc.Status)
 	}

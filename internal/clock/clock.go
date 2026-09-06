@@ -1,25 +1,61 @@
 package clock
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 )
 
-// NowUTC returns UTC time for artifact timestamps.
-// Tests and reproducible builds may pin via SOURCE_DATE_EPOCH (Unix seconds).
-func NowUTC() time.Time {
-	if v := stringsTrim(os.Getenv("SOURCE_DATE_EPOCH")); v != "" {
-		if sec, err := strconv.ParseInt(v, 10, 64); err == nil && sec >= 0 {
-			return time.Unix(sec, 0).UTC()
-		}
+// ErrInvalidSourceDateEpoch is returned when SOURCE_DATE_EPOCH is set but is
+// not a non-negative Unix second. Callers must not fall back to wall clock.
+var ErrInvalidSourceDateEpoch = errors.New("invalid SOURCE_DATE_EPOCH")
+
+// ParseSourceDateEpoch reports the pinned epoch when SOURCE_DATE_EPOCH is set.
+// Unset/empty → (zero, false, nil). Invalid → (_, false, ErrInvalidSourceDateEpoch).
+// A value that is only whitespace is invalid (the variable is set but unusable).
+func ParseSourceDateEpoch() (time.Time, bool, error) {
+	raw, set := os.LookupEnv("SOURCE_DATE_EPOCH")
+	if !set {
+		return time.Time{}, false, nil
 	}
-	return time.Now().UTC()
+	v := stringsTrim(raw)
+	if v == "" {
+		return time.Time{}, false, fmt.Errorf("%w: %q (want non-negative Unix seconds)", ErrInvalidSourceDateEpoch, raw)
+	}
+	sec, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || sec < 0 {
+		return time.Time{}, false, fmt.Errorf("%w: %q (want non-negative Unix seconds)", ErrInvalidSourceDateEpoch, v)
+	}
+	return time.Unix(sec, 0).UTC(), true, nil
+}
+
+// CheckSourceDateEpoch returns nil when unset or valid; otherwise wraps ErrInvalidSourceDateEpoch.
+func CheckSourceDateEpoch() error {
+	_, _, err := ParseSourceDateEpoch()
+	return err
+}
+
+// NowUTC returns UTC time for operational timestamps (receipts, display).
+// Tests and reproducible builds may pin via SOURCE_DATE_EPOCH (Unix seconds).
+// Invalid SOURCE_DATE_EPOCH is rejected — there is no silent wall-clock fallback.
+func NowUTC() (time.Time, error) {
+	if t, set, err := ParseSourceDateEpoch(); err != nil {
+		return time.Time{}, err
+	} else if set {
+		return t, nil
+	}
+	return time.Now().UTC(), nil
 }
 
 // RFC3339 returns a UTC RFC3339 timestamp using NowUTC.
-func RFC3339() string {
-	return NowUTC().Format(time.RFC3339)
+func RFC3339() (string, error) {
+	t, err := NowUTC()
+	if err != nil {
+		return "", err
+	}
+	return t.Format(time.RFC3339), nil
 }
 
 // EvidenceEpoch is the fixed synthetic UTC timestamp used for digest-bound
@@ -30,11 +66,14 @@ const EvidenceEpoch = "1970-01-01T00:00:00Z"
 // evidence (SBOM metadata.timestamp / VEX timestamp). Honors SOURCE_DATE_EPOCH
 // when set; otherwise uses EvidenceEpoch so re-attest on the same inputs is
 // idempotent without encoding hash entropy into the clock field.
-func RFC3339ForEvidence() string {
-	if v := stringsTrim(os.Getenv("SOURCE_DATE_EPOCH")); v != "" {
-		return RFC3339()
+// Invalid SOURCE_DATE_EPOCH is rejected (no silent wall-clock fallback).
+func RFC3339ForEvidence() (string, error) {
+	if _, set, err := ParseSourceDateEpoch(); err != nil {
+		return "", err
+	} else if !set {
+		return EvidenceEpoch, nil
 	}
-	return EvidenceEpoch
+	return RFC3339()
 }
 
 // Art14ReportingStart is the CRA Art 14 reporting clock start (UTC date).
@@ -43,10 +82,14 @@ var Art14ReportingStart = time.Date(2026, 9, 11, 0, 0, 0, 0, time.UTC)
 
 // DaysUntilUTC returns whole calendar days from NowUTC (date-truncated) until deadline.
 // Negative when the deadline has passed.
-func DaysUntilUTC(deadline time.Time) int {
-	now := NowUTC().Truncate(24 * time.Hour)
+func DaysUntilUTC(deadline time.Time) (int, error) {
+	now, err := NowUTC()
+	if err != nil {
+		return 0, err
+	}
+	now = now.Truncate(24 * time.Hour)
 	d := deadline.UTC().Truncate(24 * time.Hour)
-	return int(d.Sub(now).Hours() / 24)
+	return int(d.Sub(now).Hours() / 24), nil
 }
 
 // FormatArt14Countdown formats days until Art14ReportingStart for site HTML.

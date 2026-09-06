@@ -1,16 +1,20 @@
 package validate
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/pathjail"
 )
 
-// writeEvaluationCache replaces each file only after its complete contents have
-// been written and synced. The legacy aliases are not a multi-file transaction.
-func writeEvaluationCache(root string, payload []byte, action string) error {
+// writeEvaluationCache persists canonical evaluation + run receipt, and keeps
+// legacy latest_failure / latest_result aliases via the GateFailurePayload adapter.
+// Each file is replaced only after its complete contents have been written and synced.
+// The alias set is not a multi-file transaction.
+func writeEvaluationCache(root string, eval ir.Evaluation, receipt ir.RunReceipt, legacy ir.GateFailurePayload, action string) error {
 	const rel = ".github/curbpack/cache"
 	dir, _, err := pathjail.Join(root, rel)
 	if err != nil {
@@ -24,12 +28,30 @@ func writeEvaluationCache(root string, payload []byte, action string) error {
 	if err = outwrite.EnsureDir(root, dir); err != nil {
 		return fmt.Errorf("create cache: %w", err)
 	}
+
+	evalBytes, err := ir.MarshalCanonical(eval)
+	if err != nil {
+		return fmt.Errorf("marshal evaluation: %w", err)
+	}
+	receiptBytes, err := json.MarshalIndent(receipt, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal receipt: %w", err)
+	}
+	receiptBytes = append(receiptBytes, '\n')
+	legacyBytes, err := json.MarshalIndent(legacy, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal legacy payload: %w", err)
+	}
+	legacyBytes = append(legacyBytes, '\n')
+
 	files := []struct {
 		name string
 		body []byte
 	}{
-		{"latest_failure.json", payload},
-		{"latest_result.json", payload},
+		{"latest_evaluation.json", evalBytes},
+		{"latest_receipt.json", receiptBytes},
+		{"latest_failure.json", legacyBytes},
+		{"latest_result.json", legacyBytes},
 		{"latest_action_report.md", []byte(action)},
 	}
 	// Preflight all destinations before replacing any alias.
