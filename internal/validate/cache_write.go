@@ -3,8 +3,8 @@ package validate
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/pathjail"
 )
 
@@ -16,7 +16,12 @@ func writeEvaluationCache(root string, payload []byte, action string) error {
 	if err != nil {
 		return fmt.Errorf("cache directory: %w", err)
 	}
-	if err = os.MkdirAll(dir, 0755); err != nil {
+	lock, err := outwrite.Acquire(dir)
+	if err != nil {
+		return fmt.Errorf("cache lock: %w", err)
+	}
+	defer func() { _ = lock.Release() }()
+	if err = outwrite.EnsureDir(root, dir); err != nil {
 		return fmt.Errorf("create cache: %w", err)
 	}
 	files := []struct {
@@ -52,26 +57,5 @@ func writeCacheFile(root, rel string, body []byte) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".evaluation-*.tmp")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
-	if err = tmp.Chmod(0644); err != nil {
-		return err
-	}
-	if _, err = tmp.Write(body); err != nil {
-		return err
-	}
-	if err = tmp.Sync(); err != nil {
-		return err
-	}
-	if err = tmp.Close(); err != nil {
-		return err
-	}
-	if _, _, err = pathjail.Join(root, rel); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	return outwrite.WriteFile(root, path, body, 0644)
 }

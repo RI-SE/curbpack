@@ -26,3 +26,7 @@ id_rsa.*
 *.p12
 *.key
 !.github/**/*.example.key
+
+# Cooperative output writer lock (never commit)
+.curbpack-outwrite.lock
+**/.curbpack-outwrite.lock

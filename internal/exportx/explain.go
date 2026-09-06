@@ -63,12 +63,6 @@ func WriteExplainPacket(root string, packIDs []string, outPath string) (string, 
 	payload.ReadinessScore = res.Score
 	pkt := AssembleExplainPacket(payload, citations, hints, allowCloud, root)
 
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "cache", "explain-packet.json")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", err
-	}
 	var buf strings.Builder
 	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
@@ -76,10 +70,7 @@ func WriteExplainPacket(root string, packIDs []string, outPath string) (string, 
 	if err := enc.Encode(pkt); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(outPath, []byte(buf.String()), 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
+	return writeContained(root, outPath, ".github/curbpack/cache/explain-packet.json", []byte(buf.String()))
 }
 
 // AssembleExplainPacket builds a sanitized teachable packet (airlock applied).

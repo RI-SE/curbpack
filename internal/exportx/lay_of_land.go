@@ -3,7 +3,6 @@ package exportx
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -50,17 +49,14 @@ func WriteLayOfLand(root, outPath string) (string, error) {
 	}
 
 	mdPath, jsonPath := layOfLandPaths(root, outPath)
-	if err := os.MkdirAll(filepath.Dir(mdPath), 0o755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(mdPath, []byte(formatLayOfLandMarkdown(report)), 0o644); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(jsonPath, append(b, '\n'), 0o644); err != nil {
+	if err := writeContainedAt(root, mdPath, []byte(formatLayOfLandMarkdown(report))); err != nil {
+		return "", err
+	}
+	if err := writeContainedAt(root, jsonPath, append(b, '\n')); err != nil {
 		return "", err
 	}
 	// Also refresh informational watchlist join beside the map when possible.
