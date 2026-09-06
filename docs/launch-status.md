@@ -77,3 +77,35 @@ diagnosis completed; it does not mean gates passed. A complete `check` is the lo
 gate result. A buyer must review scope, missing evidence, provenance and trust
 separately. No agent has completed human confirmations, attestation, Action
 pin-bump, or the external-user validation log during this launch.
+
+## Ready-enough checklist (enterprise tranche)
+
+Operational definition for maintainers. **Does not authorize invitations.**
+Stranger invite remains gated on human A2 ∧ A3 (or a written invite block).
+
+| # | Gate | State at CUR-01 |
+|---|---|---|
+| 1 | CUR-01 green; INV-12/13 hold (dates/versions match tag/manifest; zero external scripts/module imports) | **This PR** — `python3 scripts/check-public-assets.py` |
+| 2 | CUR-CLOCK: evidence sites use `RFC3339ForEvidence` | Open — next |
+| 3 | §5.1: one redact impl; no `UserHomeDir` on emit; verify-side home-leak green | Open |
+| 4 | CUR-03 run-twice-diff green with `SOURCE_DATE_EPOCH` unset (+ stated envelope) | Open — do not publish “deterministic” until green |
+| 5 | No `%`/bar grade; trend pair; `conformity_claim: none` on crossing artifacts | Open |
+| 6 | `schema/` goldens + compat page | Open |
+| 7 | CUR-VERIFY: repo-free one-command pack check; `subject_commit` labelled claimed | Open |
+
+Later named items (not this checklist’s seven): CUR-02…05, fruit/insurance, internal A3 run, refusal list + pack `review_by`.
+
+## Six readers (one record, one verify path)
+
+> A new reader earns a new **question**, not a new **artifact**.
+
+| Reader | Question of the record | Holds the repo? | Served at v0.5.5 / `17a18ed` |
+|---|---|---|---|
+| **QA** | Does this evidence correspond to the tree we tested? | yes | partly — `subject_commit` present but *claimed* |
+| **Management** | Are we ready, and is it improving? | no | badly — via score-as-percentage surfaces |
+| **Incident / PSIRT** | Which shipped artifact contained this component? | no | not at all |
+| **Legal / compliance** | What exactly are we claiming, and can we defend it? | no | prose only; no machine `conformity_claim` field yet |
+| **Reviewer** (peer, agent, CTAM) | Does the artifact conform to its own method? | yes | best served of the six |
+| **Buyer / auditor** | Can I trust this without trusting you? | no | not at all — CUR-VERIFY is the intended path |
+
+Differences = queries over the same bytes. Per-reader renderings go to the refusal log.

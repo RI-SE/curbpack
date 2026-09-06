@@ -18,53 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: {
-              DEFAULT: '#0a0a0b',
-              light: '#1c1c1f',
-              muted: '#4a4a52'
-            },
-            paper: {
-              DEFAULT: '#fcfcfc',
-              alt: '#f2f3f5',
-              dark: '#e4e6eb'
-            },
-            rise: {
-              DEFAULT: '#005073',
-              light: '#007A99',
-              bg: '#e6f3f7'
-            },
-            status: {
-              err: '#b91c1c',
-              errBg: '#fef2f2',
-              ok: '#15803d',
-              okBg: '#f0fdf4'
-            }
-          },
-          fontFamily: {
-            sans: ['"IBM Plex Sans"', 'sans-serif'],
-            serif: ['Fraunces', 'serif'],
-            mono: ['"IBM Plex Mono"', 'monospace'],
-          },
-          animation: {
-            'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          },
-          keyframes: {
-            fadeInUp: {
-              '0%': { opacity: '0', transform: 'translateY(16px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="/curbpack/assets/site.css" />
 
   <style>
     .bg-grid {

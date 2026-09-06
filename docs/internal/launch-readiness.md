@@ -5,9 +5,9 @@
 Private-fork launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack) (public SoR remains [RI-SE/curbpack](https://github.com/RI-SE/curbpack)).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
-## Status (2026-08-25)
+## Status (2026-09-05)
 
-**Verdict: GO-WITH-GATES** — mechanical stranger install+scan path works; invite blocked until human **A2 ∧ A3**. Sprint C (wave 2 / pin bump / #75) stays deferred.
+**Verdict: GO-WITH-GATES** — mechanical stranger install+scan path works at **v0.5.5**; invite blocked until human **A2 ∧ A3**. Sprint C (wave 2 / pin bump / #75) stays deferred.
 
 | Item | State |
 |------|--------|
@@ -55,7 +55,9 @@ From the public home alone, under two minutes, a builder / buyer / CISO each ans
 | **A5 mechanical** | **DONE (re-verified)** — local `claim-safety.sh` OK; `redteam-pilot.sh` **13/13**. Tip `0d853c2` required jobs (`test`/`smoke`/`gauntlet`/`redteam-pilot`) green; tip `ci` overall failed **pin-guard** only (docs literal noise on honesty PR — not an Action pin bump). Prior tip `b483434` full `ci` success. |
 | **A3 Tier-3 (v0.5.4 path)** | **HUMAN blocker** — agent surrogate OK (curl `main` install → **0.5.4**; Exit 0 + Scan complete + porcelain clean — 2026-08-25 post-advertise smoke). Human must re-run fresh curl path (assert version **0.5.4**, Exit 0, Scan complete, porcelain empty; ignore `Next (optional):`) and file [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) or tester_report. **Do not** use Discussion #4 (Discussions OFF). Checklist: [a2-a3-human-runbook.md](../getting-started/a2-a3-human-runbook.md). |
 
-**v0.5.3 release (2026-08-25):** [RI-SE/curbpack v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) shipped at tag `f74cc96`. Checksums + five binaries HTTP **200**; `install-manifest.json` `default_version` **v0.5.3**. Install+scan smoke agent-verified. Does **not** close A2 or A3. Live stranger path is now **v0.5.4** (see row above).
+**v0.5.3 release (2026-08-25):** [RI-SE/curbpack v0.5.3](https://github.com/RI-SE/curbpack/releases/tag/v0.5.3) shipped at tag `f74cc96`. Checksums + five binaries HTTP **200**; `install-manifest.json` `default_version` **v0.5.3**. Install+scan smoke agent-verified. Does **not** close A2 or A3.
+
+**Live stranger path (2026-09-05):** **v0.5.5** — see [launch-status.md](../launch-status.md).
 
 **Sprint B (PREP only):** [rise-tryout.md](../getting-started/rise-tryout.md) is the verbatim invite body; [stranger-validation-log.md](../getting-started/stranger-validation-log.md) templates empty (no invented rows). Scorecard aggregates may show early **n=1** friction rows ([first-run-cohort-scorecard.md](../getting-started/first-run-cohort-scorecard.md)) — that is expected prep signal, not cohort completion; do not invent stranger rows. **Do not send invites** until A2 ∧ A3.
 

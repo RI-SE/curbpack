@@ -4,7 +4,7 @@
 
 Engineering stops here. Agents must not merge, tag, disable Pages, or run stranger outreach.
 
-**v0.5.5 live on `main` (2026-08-25):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5); advertise + postship merged. Install+scan smoke **agent-verified** at **0.5.5**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human note — kit: [a2-a3-human-runbook.md](a2-a3-human-runbook.md) (first-run feedback / Teams / ADOPTERS — Discussions not enabled) — do not send invites yet.
+**v0.5.5 live on `main` (2026-09-05):** [RI-SE release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5); advertise + postship merged. Install+scan smoke **agent-verified** at **0.5.5**. Remaining before invites: **A2** (OG/social) + **A3** Tier-3 human note — kit: [a2-a3-human-runbook.md](a2-a3-human-runbook.md) (first-run feedback / Teams / ADOPTERS — Discussions not enabled) — do not send invites yet.
 
 **Branch:** `feat/pr4-funnel` → [PR #73](https://github.com/RI-SE/curbpack/pull/73)  
 **Stranger path:** `curl …/main/scripts/install.sh | sh` (downloads **v0.5.5**) then `curbpack scan`  
@@ -37,7 +37,7 @@ Clean env — no workspace binary on PATH.
 
 | OS | Install | Command | Pass |
 |----|---------|---------|------|
-| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-08-25 post-v0.5.5 advertise):** `main` installer downloads **v0.5.5**; `curbpack version` **0.5.5**; Exit 0; Scan complete; porcelain empty. Do **not** use `…/v0.5.5/scripts/install.sh` (tag tree baked older `MANIFEST_DEFAULT`) — strangers stay on `main`. |
+| macOS | `curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh \| sh` | `curbpack scan` in any git repo | **Done (2026-09-05 post-v0.5.5 advertise):** `main` installer downloads **v0.5.5**; `curbpack version` **0.5.5**; Exit 0; Scan complete; porcelain empty. Do **not** use `…/v0.5.5/scripts/install.sh` (tag tree baked older `MANIFEST_DEFAULT`) — strangers stay on `main`. |
 | Linux | same | same | same |
 | Windows | `irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 \| iex` | `curbpack scan` | same |
 
@@ -47,7 +47,7 @@ Record results: first-run feedback issue, Teams note, ADOPTERS draft PR, or inte
 
 ### 4. Ops housekeeping
 
-- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ (API DELETE 2026-08-25; GET → 404; confirm in browser)
+- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ (API DELETE date not recorded; GET → 404; confirm in browser)
 - [ ] **Card test:** logged-out phone → Slack + LinkedIn; paste https://ri-se.github.io/curbpack/ ; LinkedIn Post Inspector if stale cache
 - [x] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
 - [ ] RI-SE About/mirror wording still correct
