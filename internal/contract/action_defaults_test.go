@@ -2,6 +2,7 @@ package contract_test
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -26,14 +27,22 @@ func TestActionHealDefaultFalse(t *testing.T) {
 }
 
 func TestActionRefusesWindowsRunners(t *testing.T) {
-	b, err := os.ReadFile("../../action.yml")
+	root := repoRoot(t)
+	b, err := os.ReadFile(filepath.Join(root, "scripts/action-resolve-bin.sh"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !regexp.MustCompile(`mingw\*\|msys\*\|cygwin\*\|windows\*`).Match(b) {
-		t.Fatal("action.yml must refuse Windows/MINGW/CYGWIN runners early")
+		t.Fatal("action-resolve-bin.sh must refuse Windows/MINGW/CYGWIN runners early")
 	}
-	if !regexp.MustCompile(`curbpack-REMEDIATION-REVIEW`).Match(b) {
+	action, err := os.ReadFile(filepath.Join(root, "action.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`curbpack-REMEDIATION-REVIEW`).Match(action) {
 		t.Fatal("action.yml must upload REMEDIATION REVIEW artifact on red, not quiet buyer-onepager success")
+	}
+	if !regexp.MustCompile(`scripts/action-resolve-bin\.sh`).Match(action) {
+		t.Fatal("action.yml must invoke scripts/action-resolve-bin.sh")
 	}
 }

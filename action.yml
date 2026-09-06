@@ -7,7 +7,7 @@ branding:
 
 inputs:
   version:
-    description: 'Release tag to download (e.g. v0.5.2). Empty = build from this checkout if go.mod is curbpack, else download v0.5.2 (never floating latest). Action = Linux/macOS only.'
+    description: 'Release tag to download (e.g. v0.5.2). Empty = download v0.5.2 (never floating latest). Source build only when RI-SE dogfood sets CURBPACK_ACTION_ALLOW_SOURCE_BUILD=1. Action = Linux/macOS only.'
     required: false
     default: ''
   packs:
@@ -57,106 +57,50 @@ runs:
     - name: Resolve curbpack binary
       id: bin
       shell: bash
+      env:
+        # Map Action inputs into env only. CURBPACK_ACTION_ALLOW_SOURCE_BUILD is
+        # inherited from the caller workflow when set (dogfood); do not remap it
+        # here or an empty composite env context would wipe the flag.
+        CURBPACK_ACTION_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-        # Action runners = Linux/macOS only. Local Windows CLI is separate (install.ps1).
-        case "$OS" in
-          mingw*|msys*|cygwin*|windows*)
-            echo "::error::Curbpack Action supports Linux/macOS runners only. On Windows use the local CLI (install.ps1), not this Action."
-            echo "Curbpack Action supports Linux/macOS runners only. On Windows use the local CLI (install.ps1), not this Action." >&2
-            exit 1
-            ;;
-        esac
-        ARCH=$(uname -m)
-        case "$ARCH" in
-          x86_64|amd64) ARCH=amd64 ;;
-          aarch64|arm64) ARCH=arm64 ;;
-        esac
-        ASSET="curbpack_${OS}_${ARCH}"
-        DEST="${{ github.action_path }}/curbpack"
-        VER="${{ inputs.version }}"
-        # Never prefer consumer ./bin/curbpack — that skips checksum verification and
-        # lets a PR ship a fake-green binary. Dogfood builds from this module; others
-        # download a pinned release and verify sha256 against checksums.txt (fail-closed).
-        if command -v go >/dev/null 2>&1 && [ -f go.mod ] && grep -q 'module github.com/afelin/curbpack' go.mod 2>/dev/null; then
-          go build -o "$DEST" ./cmd/curbpack
-          echo "source=built" >> "$GITHUB_OUTPUT"
-        else
-          # Empty version → pin v0.5.2 (never silent floating latest).
-          if [ -z "$VER" ] || [ "$VER" = "latest" ]; then
-            if [ "$VER" = "latest" ]; then
-              echo "inputs.version=latest is deprecated; downloading v0.5.2 instead" >&2
-            fi
-            VER="v0.5.2"
-          fi
-          URL="https://github.com/RI-SE/curbpack/releases/download/${VER}/${ASSET}"
-          CHECKSUMS_URL="https://github.com/RI-SE/curbpack/releases/download/${VER}/checksums.txt"
-          if [ -z "${URL:-}" ]; then
-            echo "Could not resolve release binary ${ASSET}. Build curbpack or set inputs.version." >&2
-            exit 1
-          fi
-          if [ -z "${CHECKSUMS_URL:-}" ]; then
-            echo "checksums.txt URL missing — refusing download (fail closed, same as install.sh)" >&2
-            exit 1
-          fi
-          # Network install: retry once (max 2 attempts) — never retry gate logic.
-          set +e
-          curl -fsSL -o "$DEST" "$URL"
-          code=$?
-          if [ "$code" -ne 0 ]; then
-            sleep 2
-            curl -fsSL -o "$DEST" "$URL"
-            code=$?
-          fi
-          set -e
-          if [ "$code" -ne 0 ]; then
-            echo "download failed for ${ASSET}" >&2
-            exit 1
-          fi
-          # Fail-closed sha256 verify (parity with scripts/install.sh)
-          curl -fsSL -o "${DEST}.checksums.txt" "$CHECKSUMS_URL"
-          expected=$(grep -E "[ /]${ASSET}\$" "${DEST}.checksums.txt" | head -n 1 | awk '{print $1}')
-          if [ -z "${expected:-}" ]; then
-            echo "no checksum entry for ${ASSET} in checksums.txt — refusing install" >&2
-            exit 1
-          fi
-          if command -v sha256sum >/dev/null 2>&1; then
-            actual=$(sha256sum "$DEST" | awk '{print $1}')
-          elif command -v shasum >/dev/null 2>&1; then
-            actual=$(shasum -a 256 "$DEST" | awk '{print $1}')
-          else
-            echo "neither sha256sum nor shasum found — refusing install" >&2
-            exit 1
-          fi
-          if [ "$actual" != "$expected" ]; then
-            echo "checksum mismatch for ${ASSET}" >&2
-            echo "  expected: ${expected}" >&2
-            echo "  actual:   ${actual}" >&2
-            exit 1
-          fi
-          echo "Checksum OK (${actual})"
-          chmod +x "$DEST"
-          rm -f "${DEST}.checksums.txt"
-          echo "source=release" >> "$GITHUB_OUTPUT"
-        fi
-        echo "path=$DEST" >> "$GITHUB_OUTPUT"
+        # Inputs arrive only via env (see env: above). Resolver lives in-repo so
+        # scripts/action-resolve-test.sh exercises the same binary path.
+        bash "${GITHUB_ACTION_PATH}/scripts/action-resolve-bin.sh"
 
     - name: Run curbpack check
       id: run
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        CURBPACK_ACTION_BIN: ${{ steps.bin.outputs.path }}
+        CURBPACK_ACTION_PACKS: ${{ inputs.packs }}
+        CURBPACK_ACTION_DIFF: ${{ inputs.diff }}
+        CURBPACK_ACTION_HEAL: ${{ inputs.heal }}
       run: |
         set -euo pipefail
-        BIN="${{ steps.bin.outputs.path }}"
+        BIN="${CURBPACK_ACTION_BIN:?}"
+        PACKS="${CURBPACK_ACTION_PACKS:-}"
+        DIFF="${CURBPACK_ACTION_DIFF:-false}"
+        HEAL="${CURBPACK_ACTION_HEAL:-false}"
+        case "$DIFF" in true|false) ;; *)
+          echo "invalid inputs.diff (want true|false): ${DIFF}" >&2
+          exit 1
+          ;;
+        esac
+        case "$HEAL" in true|false) ;; *)
+          echo "invalid inputs.heal (want true|false): ${HEAL}" >&2
+          exit 1
+          ;;
+        esac
         EXTRA=()
-        if [ -n "${{ inputs.packs }}" ]; then
-          EXTRA+=(--packs "${{ inputs.packs }}")
+        if [ -n "$PACKS" ]; then
+          EXTRA+=(--packs "$PACKS")
         fi
-        if [ "${{ inputs.diff }}" = "true" ]; then
+        if [ "$DIFF" = "true" ]; then
           EXTRA+=(--diff)
         fi
-        if [ "${{ inputs.heal }}" = "true" ]; then
+        if [ "$HEAL" = "true" ]; then
           EXTRA+=(--heal)
         fi
         set +e
@@ -168,7 +112,7 @@ runs:
         else
           echo "passed=false" >> "$GITHUB_OUTPUT"
         fi
-        if [ "${{ inputs.heal }}" = "true" ] && grep -qE 'applied [1-9][0-9]* missing stub|heal wrote missing stubs' /tmp/curbpack-check.txt; then
+        if [ "$HEAL" = "true" ] && grep -qE 'applied [1-9][0-9]* missing stub|heal wrote missing stubs' /tmp/curbpack-check.txt; then
           echo "::warning::Heal wrote missing stubs; generated scaffold remains red until replaced with product-specific content."
           echo "HEAL STUBS WRITTEN — post-heal check result remains authoritative" >&2
         fi
@@ -181,9 +125,11 @@ runs:
       id: sarif
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        CURBPACK_ACTION_BIN: ${{ steps.bin.outputs.path }}
       run: |
         set -euo pipefail
-        BIN="${{ steps.bin.outputs.path }}"
+        BIN="${CURBPACK_ACTION_BIN:?}"
         OUT=".github/curbpack/cache/curbpack.sarif"
         mkdir -p .github/curbpack/cache
         # Prefer CLI SARIF (single Go source of truth); fall back to annotations-only if export missing.
@@ -229,12 +175,16 @@ runs:
       if: inputs.prepare_release == 'true' && steps.run.outputs.passed == 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        CURBPACK_ACTION_BIN: ${{ steps.bin.outputs.path }}
+        CURBPACK_ACTION_PACKS: ${{ inputs.packs }}
       run: |
         set -euo pipefail
-        BIN="${{ steps.bin.outputs.path }}"
+        BIN="${CURBPACK_ACTION_BIN:?}"
+        PACKS="${CURBPACK_ACTION_PACKS:-}"
         EXTRA=()
-        if [ -n "${{ inputs.packs }}" ]; then
-          EXTRA+=(--packs "${{ inputs.packs }}")
+        if [ -n "$PACKS" ]; then
+          EXTRA+=(--packs "$PACKS")
         fi
         "$BIN" prepare-release "${EXTRA[@]}"
 
@@ -242,12 +192,16 @@ runs:
       if: inputs.prepare_release == 'true' && steps.run.outputs.passed != 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        CURBPACK_ACTION_BIN: ${{ steps.bin.outputs.path }}
+        CURBPACK_ACTION_PACKS: ${{ inputs.packs }}
       run: |
         set -euo pipefail
-        BIN="${{ steps.bin.outputs.path }}"
+        BIN="${CURBPACK_ACTION_BIN:?}"
+        PACKS="${CURBPACK_ACTION_PACKS:-}"
         EXTRA=()
-        if [ -n "${{ inputs.packs }}" ]; then
-          EXTRA+=(--packs "${{ inputs.packs }}")
+        if [ -n "$PACKS" ]; then
+          EXTRA+=(--packs "$PACKS")
         fi
         echo "::warning::REMEDIATION REVIEW only — gates red; prepare-release output is not release sign-off"
         echo "REMEDIATION REVIEW only — gates red; not a release pack / not certification" >&2
@@ -297,12 +251,16 @@ runs:
       id: contextpack
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        CURBPACK_ACTION_BIN: ${{ steps.bin.outputs.path }}
+        CURBPACK_ACTION_PACKS: ${{ inputs.packs }}
       run: |
         set -euo pipefail
-        BIN="${{ steps.bin.outputs.path }}"
+        BIN="${CURBPACK_ACTION_BIN:?}"
+        PACKS="${CURBPACK_ACTION_PACKS:-}"
         EXTRA=()
-        if [ -n "${{ inputs.packs }}" ]; then
-          EXTRA+=(--packs "${{ inputs.packs }}")
+        if [ -n "$PACKS" ]; then
+          EXTRA+=(--packs "$PACKS")
         fi
         mkdir -p .github/curbpack/cache
         set +e
@@ -333,13 +291,16 @@ runs:
       uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
       env:
         COMMENT_ON: ${{ inputs.comment_on }}
+        CURBPACK_ACTION_WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        CURBPACK_ACTION_SCORE: ${{ steps.score.outputs.score }}
+        CURBPACK_ACTION_PASSED: ${{ steps.run.outputs.passed }}
       with:
         script: |
           const fs = require('fs');
           const path = require('path');
-          const root = '${{ inputs.working_directory }}';
-          const score = '${{ steps.score.outputs.score }}' || '0';
-          const passed = '${{ steps.run.outputs.passed }}' === 'true';
+          const root = process.env.CURBPACK_ACTION_WORKING_DIRECTORY || '.';
+          const score = process.env.CURBPACK_ACTION_SCORE || '0';
+          const passed = process.env.CURBPACK_ACTION_PASSED === 'true';
           const mode = (process.env.COMMENT_ON || 'red').toLowerCase();
           const claim = 'Prepares evidence for human review — not a conformity assessment or certification.';
 

@@ -31,8 +31,12 @@ jobs:
           fi
       - name: Curbpack check (dogfood Action)
         uses: ./
+        env:
+          # Explicit RI-SE dogfood only — consumer Action path never source-builds
+          # from a matching go.mod; see scripts/action-resolve-bin.sh.
+          CURBPACK_ACTION_ALLOW_SOURCE_BUILD: "1"
         with:
-          # Empty = build from this checkout (never advertise floating latest).
+          # Empty + allow flag → build from this checkout (never floating latest).
           version: ""
           heal: "true"
           prepare_release: "true"
