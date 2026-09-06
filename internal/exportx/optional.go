@@ -18,6 +18,10 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 	if err != nil && !sbom.IsUnavailable(err) {
 		return "", err
 	}
+	created, err := clock.RFC3339()
+	if err != nil {
+		return "", err
+	}
 	docs := map[string]any{
 		"spdxVersion":       "SPDX-2.3",
 		"dataLicense":       "CC0-1.0",
@@ -25,7 +29,7 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 		"name":              filepath.Base(root) + "-sbom",
 		"documentNamespace": "https://curbpack.local/spdx/" + filepath.Base(root),
 		"creationInfo": map[string]any{
-			"created":  clock.RFC3339(),
+			"created":  created,
 			"creators": []string{"Tool: curbpack"},
 			"comment":  "Optional SPDX mirror of component list — not a certification. Source=" + source,
 		},
@@ -80,9 +84,10 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 			{"uri": "sbom.cdx.json", "digest": map[string]string{"sha256": sbomDig}},
 		},
 		"metadata": map[string]any{
-			"buildFinishedOn": clock.RFC3339(),
-			"completeness":    map[string]any{"parameters": false, "environment": false, "materials": false},
-			"comment":         "Optional SLSA-shaped sidecar wrapping local digests — does not replace Git Notes attest honesty. Not a certification.",
+			// Omit buildFinishedOn when no real build-event time is known (W2:
+			// do not synthesize a completion date from wall clock).
+			"completeness": map[string]any{"parameters": false, "environment": false, "materials": false},
+			"comment":      "Optional SLSA-shaped sidecar wrapping local digests — does not replace Git Notes attest honesty. Not a certification.",
 		},
 	}
 	doc := map[string]any{

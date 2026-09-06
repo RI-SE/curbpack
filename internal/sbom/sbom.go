@@ -61,7 +61,10 @@ type Package struct {
 // FromLockfiles scans npm/pnpm lockfiles if present (summary view).
 func FromLockfiles(root string) (Summary, error) {
 	pkgs, source, err := CollectPackages(root)
-	now := clock.RFC3339()
+	now, clockErr := clock.RFC3339()
+	if clockErr != nil {
+		return Summary{}, clockErr
+	}
 	if err != nil {
 		return Summary{}, err
 	}
@@ -96,7 +99,10 @@ func WriteCycloneDX(root, outPath string) (Document, string, error) {
 	if err != nil {
 		return Document{}, "", err
 	}
-	doc := BuildCycloneDX(root, pkgs, source)
+	doc, err := BuildCycloneDX(root, pkgs, source)
+	if err != nil {
+		return Document{}, "", err
+	}
 	if outPath == "" {
 		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json")
 	}
@@ -115,7 +121,8 @@ func WriteCycloneDX(root, outPath string) (Document, string, error) {
 
 // BuildCycloneDX constructs a CycloneDX 1.5 document from packages.
 // Metadata timestamp/serial are derived from package content (not wall clock) so digests are reproducible.
-func BuildCycloneDX(root string, pkgs []Package, source string) Document {
+// Invalid SOURCE_DATE_EPOCH is rejected (no silent wall-clock fallback).
+func BuildCycloneDX(root string, pkgs []Package, source string) (Document, error) {
 	product := filepath.Base(root)
 	comps := make([]Component, 0, len(pkgs))
 	for _, p := range pkgs {
@@ -149,12 +156,16 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 	}
 	sum := sha256.Sum256([]byte(seed.String()))
 	serial := fmt.Sprintf("urn:uuid:%x-%x-%x-%x-%x", sum[0:4], sum[4:6], sum[6:8], sum[8:10], sum[10:16])
+	ts, err := clock.RFC3339ForEvidence()
+	if err != nil {
+		return Document{}, err
+	}
 	var doc Document
 	doc.BomFormat = "CycloneDX"
 	doc.SpecVersion = "1.5"
 	doc.SerialNumber = serial
 	doc.Version = 1
-	doc.Metadata.Timestamp = clock.RFC3339ForEvidence()
+	doc.Metadata.Timestamp = ts
 	doc.Metadata.Tools.Components = []Component{{
 		Type:    "application",
 		Name:    "curbpack",
@@ -166,7 +177,7 @@ func BuildCycloneDX(root string, pkgs []Package, source string) Document {
 		BomRef: "app:" + product,
 	}
 	doc.Components = comps
-	return doc
+	return doc, nil
 }
 
 // CollectPackages returns normalized packages and the source lockfile name.

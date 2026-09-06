@@ -57,11 +57,18 @@ func cmdScan(args []string) error {
 	}
 
 	notStarted, failing := classifyFindings(res.Payload.Failures)
-	days := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	days, err := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	if err != nil {
+		return err
+	}
+	now, err := clock.NowUTC()
+	if err != nil {
+		return err
+	}
 
 	claimLine := "Prepares evidence for human review — not a conformity assessment."
 	if flags.badge || flags.formatMarkdown {
-		fmt.Println(art14BadgeLine(root, clock.NowUTC()))
+		fmt.Println(art14BadgeLine(root, now))
 		fmt.Println(claimLine)
 		return nil
 	}

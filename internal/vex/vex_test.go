@@ -17,7 +17,10 @@ func TestPendingOpenVEX(t *testing.T) {
 			Remediation:          ir.Remediation{ActionRequired: "upgrade"},
 		}},
 	}
-	doc := vex.FromGateFailures("demo", payload)
+	doc, err := vex.FromGateFailures("demo", payload)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if doc.Status != "draft_pending_attest" {
 		t.Fatalf("status=%s", doc.Status)
 	}

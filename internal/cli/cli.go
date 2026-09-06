@@ -786,7 +786,10 @@ func cmdAttest(args []string) error {
 	if verr != nil {
 		return fmt.Errorf("VEX evidence: validate failed while binding digests: %w", verr)
 	}
-	doc := vex.FromGateFailures(filepath.Base(root), res.Payload)
+	doc, werr := vex.FromGateFailures(filepath.Base(root), res.Payload)
+	if werr != nil {
+		return fmt.Errorf("VEX evidence: %w", werr)
+	}
 	if _, werr := vex.Write(root, doc, ""); werr != nil {
 		return fmt.Errorf("VEX write failed while binding digests: %w", werr)
 	}

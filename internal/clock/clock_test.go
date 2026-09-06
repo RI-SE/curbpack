@@ -1,6 +1,7 @@
 package clock_test
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -28,7 +29,10 @@ func TestFormatArt14Countdown(t *testing.T) {
 
 func TestFormatArt14CountdownPastDeadline(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1789171200") // 2026-09-12 UTC (day after Art14ReportingStart)
-	days := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	days, err := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if days != -1 {
 		t.Fatalf("want -1 day after deadline, got %d", days)
 	}
@@ -41,7 +45,10 @@ func TestFormatArt14CountdownPastDeadline(t *testing.T) {
 
 func TestDaysUntilArt14Reporting(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1757548800") // 2025-09-11 UTC
-	days := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	days, err := clock.DaysUntilUTC(clock.Art14ReportingStart)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if days != 365 {
 		t.Fatalf("want 365 days until 2026-09-11 from 2025-09-11, got %d", days)
 	}
@@ -53,8 +60,14 @@ func TestDaysUntilArt14Reporting(t *testing.T) {
 func TestRFC3339ForEvidenceStableWithoutEpoch(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "")
 	_ = os.Unsetenv("SOURCE_DATE_EPOCH")
-	a := clock.RFC3339ForEvidence()
-	b := clock.RFC3339ForEvidence()
+	a, err := clock.RFC3339ForEvidence()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := clock.RFC3339ForEvidence()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if a != b {
 		t.Fatalf("evidence RFC3339 drifted: %q vs %q", a, b)
 	}
@@ -65,9 +78,45 @@ func TestRFC3339ForEvidenceStableWithoutEpoch(t *testing.T) {
 
 func TestRFC3339ForEvidenceHonorsSourceDateEpoch(t *testing.T) {
 	t.Setenv("SOURCE_DATE_EPOCH", "1704067200") // 2024-01-01 UTC
-	got := clock.RFC3339ForEvidence()
+	got, err := clock.RFC3339ForEvidence()
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := "2024-01-01T00:00:00Z"
 	if got != want {
 		t.Fatalf("RFC3339ForEvidence() = %q, want %q", got, want)
+	}
+}
+
+func TestRejectInvalidSourceDateEpoch(t *testing.T) {
+	for _, bad := range []string{"not-a-number", "-1", "1.5", "0x10", " "} {
+		t.Run(bad, func(t *testing.T) {
+			t.Setenv("SOURCE_DATE_EPOCH", bad)
+			if err := clock.CheckSourceDateEpoch(); err == nil {
+				t.Fatal("CheckSourceDateEpoch: want error for invalid epoch")
+			} else if !errors.Is(err, clock.ErrInvalidSourceDateEpoch) {
+				t.Fatalf("CheckSourceDateEpoch: %v, want ErrInvalidSourceDateEpoch", err)
+			}
+			if _, err := clock.NowUTC(); err == nil || !errors.Is(err, clock.ErrInvalidSourceDateEpoch) {
+				t.Fatalf("NowUTC: %v, want ErrInvalidSourceDateEpoch", err)
+			}
+			if _, err := clock.RFC3339(); err == nil || !errors.Is(err, clock.ErrInvalidSourceDateEpoch) {
+				t.Fatalf("RFC3339: %v, want ErrInvalidSourceDateEpoch", err)
+			}
+			if _, err := clock.RFC3339ForEvidence(); err == nil || !errors.Is(err, clock.ErrInvalidSourceDateEpoch) {
+				t.Fatalf("RFC3339ForEvidence: %v, want ErrInvalidSourceDateEpoch", err)
+			}
+		})
+	}
+}
+
+func TestUnsetSourceDateEpochAllowsWallClock(t *testing.T) {
+	t.Setenv("SOURCE_DATE_EPOCH", "")
+	_ = os.Unsetenv("SOURCE_DATE_EPOCH")
+	if err := clock.CheckSourceDateEpoch(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := clock.NowUTC(); err != nil {
+		t.Fatal(err)
 	}
 }

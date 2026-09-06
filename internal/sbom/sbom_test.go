@@ -60,8 +60,14 @@ func TestBuildCycloneDXStableBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	docA := sbom.BuildCycloneDX(dir, pkgs, source)
-	docB := sbom.BuildCycloneDX(dir, pkgs, source)
+	docA, err := sbom.BuildCycloneDX(dir, pkgs, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docB, err := sbom.BuildCycloneDX(dir, pkgs, source)
+	if err != nil {
+		t.Fatal(err)
+	}
 	bA, _ := json.Marshal(docA)
 	bB, _ := json.Marshal(docB)
 	if string(bA) != string(bB) {
@@ -103,8 +109,14 @@ func TestBuildCycloneDXStableWithoutSourceDateEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	docA := sbom.BuildCycloneDX(dir, pkgs, source)
-	docB := sbom.BuildCycloneDX(dir, pkgs, source)
+	docA, err := sbom.BuildCycloneDX(dir, pkgs, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docB, err := sbom.BuildCycloneDX(dir, pkgs, source)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if docA.Metadata.Timestamp != docB.Metadata.Timestamp {
 		t.Fatalf("timestamp drifted without SOURCE_DATE_EPOCH: %q vs %q", docA.Metadata.Timestamp, docB.Metadata.Timestamp)
 	}

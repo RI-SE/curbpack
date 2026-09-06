@@ -2,6 +2,7 @@ package packs
 
 import (
 	"strings"
+	"time"
 
 	"github.com/afelin/curbpack/internal/clock"
 )
@@ -18,7 +19,12 @@ func Art14PathBody(productName string) string {
 	if product == "" {
 		product = "this product"
 	}
-	today := clock.NowUTC().Format("2006-01-02")
+	today, err := clock.NowUTC()
+	if err != nil {
+		// Invalid SOURCE_DATE_EPOCH: keep a fixed draft date rather than inventing wall clock.
+		today = time.Unix(0, 0).UTC()
+	}
+	todayStr := today.Format("2006-01-02")
 	return `# Art 14 reporting path
 
 ## Reporting clock (CRA Art 14)
@@ -37,7 +43,7 @@ Product security on-call for ` + product + ` owns the reporting path. Escalation
 
 Rehearsal status: unrehearsed draft — fill Last tabletop after tabletop
 
-Drafted: ` + today + `
+Drafted: ` + todayStr + `
 Last tabletop:
 Record: this file plus the incident mail template under docs/incident/ (in-repo). Not a live submission.
 `

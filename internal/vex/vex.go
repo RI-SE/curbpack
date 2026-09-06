@@ -58,7 +58,7 @@ type Advisory struct {
 
 // FromAdvisories builds pending OpenVEX from dependency/advisory rows only.
 // Documentation gate failures belong in GateFailure IR — not as fake CVEs.
-func FromAdvisories(product string, advisories []Advisory) Document {
+func FromAdvisories(product string, advisories []Advisory) (Document, error) {
 	stmts := make([]Statement, 0, len(advisories))
 	for _, a := range advisories {
 		id := "https://curbpack.local/advisory/" + a.ID
@@ -83,7 +83,10 @@ func FromAdvisories(product string, advisories []Advisory) Document {
 	if len(seed) > 16 {
 		seed = seed[:16]
 	}
-	ts := clock.RFC3339ForEvidence()
+	ts, err := clock.RFC3339ForEvidence()
+	if err != nil {
+		return Document{}, err
+	}
 	return Document{
 		Context:    "https://openvex.dev/ns/v0.2.0",
 		ID:         "https://curbpack.local/vex/" + seed,
@@ -95,12 +98,12 @@ func FromAdvisories(product string, advisories []Advisory) Document {
 		Note:       "Pending OpenVEX draft for dependency/advisory rows with PURLs only. Documentation gates stay in GateFailure IR — not emitted as CVEs. Bind digest into attest capsule before treating as release evidence. Not a certification.",
 		GateDigest: digest,
 		Digest:     digest,
-	}
+	}, nil
 }
 
 // FromGateFailures retains compatibility but only maps dependency-shaped gate failures
 // (DEP / npm_dep / manifest_dep / SYS_TRACE). Prefer FromAdvisories + watchlist join.
-func FromGateFailures(product string, payload ir.GateFailurePayload) Document {
+func FromGateFailures(product string, payload ir.GateFailurePayload) (Document, error) {
 	var adv []Advisory
 	for _, f := range payload.Failures {
 		if !isDepShaped(f) {
@@ -118,10 +121,13 @@ func FromGateFailures(product string, payload ir.GateFailurePayload) Document {
 			Action:      f.Remediation.ActionRequired,
 		})
 	}
-	doc := FromAdvisories(product, adv)
+	doc, err := FromAdvisories(product, adv)
+	if err != nil {
+		return Document{}, err
+	}
 	gateBytes, _ := json.Marshal(payload.Failures)
 	doc.GateDigest = fmt.Sprintf("%x", sha256.Sum256(gateBytes))
-	return doc
+	return doc, nil
 }
 
 func isDepShaped(f ir.Failure) bool {
