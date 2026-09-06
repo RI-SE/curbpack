@@ -20,11 +20,19 @@ bad() { echo "  FAIL  $*"; FAIL=$((FAIL + 1)); }
 echo "== redteam-pilot (pilot-prod contract) =="
 
 # --- 1) Fake ./bin/curbpack must not be preferred by Action resolve ---
-if grep -q 'Never prefer consumer \./bin/curbpack' action.yml && \
-   ! grep -E '^\s*if \[ -x (\./)?bin/curbpack' action.yml && \
-   grep -q 'source=built\|source=release' action.yml; then
+if grep -q 'Never prefer consumer \./bin/curbpack' scripts/action-resolve-bin.sh && \
+   ! grep -E '^\s*if \[ -x (\./)?bin/curbpack' action.yml scripts/action-resolve-bin.sh && \
+   grep -q 'source=built\|source=release' scripts/action-resolve-bin.sh && \
+   grep -q 'scripts/action-resolve-bin.sh' action.yml; then
   ok "1 Action resolve does not prefer workspace ./bin/curbpack"
 else bad "1 Action resolve must not prefer unverified ./bin/curbpack"; fi
+# Consumer go.mod module match must not select source build (resolver regression).
+if bash "$ROOT/scripts/action-resolve-test.sh" >/tmp/curbpack-action-resolve-test.out 2>&1; then
+  ok "1b Action resolve env-pass + no consumer go.mod source build"
+else
+  bad "1b Action resolve regression failed"
+  sed -n '1,40p' /tmp/curbpack-action-resolve-test.out >&2 || true
+fi
 
 # --- 2) Missing SECURITY.md + dirty README — check --diff fails ---
 TMP2="$(mktemp -d)"
@@ -192,7 +200,7 @@ if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
    grep -q 'curbpack_windows_amd64.exe' scripts/install.ps1 && \
    grep -qi 'Linux/macOS' docs/getting-started/install.md && \
    ! grep -qiE 'runs-on:.*windows' action.yml && \
-   grep -q 'mingw\*|msys\*|cygwin\*|windows\*' action.yml && \
+   grep -q 'mingw\*|msys\*|cygwin\*|windows\*' scripts/action-resolve-bin.sh && \
    grep -A5 "^  heal:" action.yml | grep -q "default: 'false'"; then
   ok "18 windows asset + Action Linux/macOS-only doc lock"
 else bad "18 windows asset / Action honesty regression"; fi

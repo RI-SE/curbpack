@@ -43,7 +43,7 @@ Release installs (**`install.sh` / `install.ps1`** primary; composite Action) do
 
 **npm wrapper (deferred):** `npx curbpack` is not on the stranger path until PR5 publishes. When shipped, it will use the same checksum verify path as shell installers — not floating `latest` unless `CURBPACK_VERSION=latest`. No network `postinstall`.
 
-The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). In this repo it builds from `go.mod`; elsewhere it downloads a release and verifies sha256. Action pin stays **`@v0.5.2`** until human tabletop approves bump.
+The composite Action does **not** prefer a consumer `./bin/curbpack` (that path skipped checksums and enabled PR binary hijack). Consumer Action path always downloads a pinned release and verifies sha256 — a matching `go.mod` module path alone never selects source build. Dogfood source build is allowed only when the caller sets `CURBPACK_ACTION_ALLOW_SOURCE_BUILD=1` **and** `GITHUB_REPOSITORY` is `RI-SE/curbpack` (see [action-resolve-bin.sh](../scripts/action-resolve-bin.sh) and [curbpack-dogfood.yml](../.github/workflows/curbpack-dogfood.yml)). Action inputs reach shell/JavaScript via environment variables and are validated as data. Action pin stays **`@v0.5.2`** until human tabletop approves bump.
 
 **Rejected: Action cache-as-written.** A proposed consumer `hashFiles('**/*.go')` cache key plus skipping checksum verify on cache hit is a trust regression. Keep fail-closed download + `checksums.txt` verify (or dogfood `go build`). Any future cache must key on version + expected sha256 and **re-verify** before exec — not land in this track.
 
