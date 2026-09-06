@@ -1,0 +1,12 @@
+{
+  "schema_version": "curbpack-run-receipt:1",
+  "evaluation_digest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "timestamp": "2026-01-01T00:00:00Z",
+  "agent_identity": {
+    "agent_id": "example",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared"
+  },
+  "conformity_claim": "none"
+}

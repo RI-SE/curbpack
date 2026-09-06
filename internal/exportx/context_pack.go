@@ -72,6 +72,10 @@ type ContextPack struct {
 	PackIDs              []string                 `json:"pack_ids"`
 	PackVersions         string                   `json:"pack_versions,omitempty"`
 	ReadinessScore       int                      `json:"readiness_score"`
+	FailedRules          int                      `json:"failed_rules,omitempty"`
+	EvaluatedRules       int                      `json:"evaluated_rules,omitempty"`
+	SkippedRules         int                      `json:"skipped_rules,omitempty"`
+	ConformityClaim      string                   `json:"conformity_claim"`
 	OK                   bool                     `json:"ok"`
 	Failures             []ContextFailure         `json:"failures"`
 	Instrument           ContextInstrument        `json:"instrument"`
@@ -144,14 +148,25 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		packVersions = strings.TrimSpace(composed.Version)
 	}
 
+	failed := payload.FailedRules
+	if failed == 0 {
+		failed = len(payload.Failures)
+	}
+	evaluated := payload.EvaluatedRules
+	skipped := payload.SkippedRules
+
 	pack := ContextPack{
-		SchemaVersion:  contextPackSchema,
-		Note:           contextPackNote,
-		PackIDs:        ids,
-		PackVersions:   packVersions,
-		ReadinessScore: score,
-		OK:             ok,
-		Failures:       top,
+		SchemaVersion:   contextPackSchema,
+		Note:            contextPackNote,
+		PackIDs:         ids,
+		PackVersions:    packVersions,
+		ReadinessScore:  score,
+		FailedRules:     failed,
+		EvaluatedRules:  evaluated,
+		SkippedRules:    skipped,
+		ConformityClaim: ir.ConformityClaimNone,
+		OK:              ok,
+		Failures:        top,
 		Instrument: ContextInstrument{
 			DepsCount:   len(snap.Deps),
 			DepsFP:      snap.DepsFP,
@@ -329,8 +344,9 @@ func formatContextPackMarkdown(p ContextPack) string {
 	b.WriteString("# Curbpack ContextPack\n\n")
 	b.WriteString("> Structural evidence for human review. Not a conformity assessment, CE mark, or certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", strings.Join(p.PackIDs, ", "))
-	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
+	fmt.Fprintf(&b, "- **Failed / evaluated / skipped:** %d / %d / %d\n", p.FailedRules, p.EvaluatedRules, p.SkippedRules)
 	fmt.Fprintf(&b, "- **OK:** %v\n", p.OK)
+	fmt.Fprintf(&b, "- **Conformity claim:** %s\n", ir.ConformityClaimNone)
 	fmt.Fprintf(&b, "- **Certification claimed:** no\n")
 	if p.AgentIdentity.Source != "" || p.AgentIdentity.AgentID != "" {
 		fmt.Fprintf(&b, "- **Agent identity:** `%s`", mdCell(p.AgentIdentity.Source))

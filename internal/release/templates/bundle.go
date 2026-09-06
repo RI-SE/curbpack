@@ -9,7 +9,10 @@ import (
 // BundleDTO is the input for offline evidence-bundle.html.
 type BundleDTO struct {
 	RepoName       string
-	Score          int
+	Score          int // historical
+	FailedRules    int
+	EvaluatedRules int
+	SkippedRules   int
 	Passed         bool
 	Timestamp      string
 	OnePagerBody   string // inner HTML from buyer one-pager main (optional embed)
@@ -64,7 +67,7 @@ func EvidenceBundleHTML(d BundleDTO) string {
   <main>
     %s
     <h1>Evidence bundle — %s</h1>
-    <p class="meta">%s · score %d%% · Generated %s · Structural evidence for human review — not conformity assessment.</p>
+    <p class="meta">%s · failed=%d evaluated=%d skipped=%d · Generated %s · Structural evidence for human review — not conformity assessment.</p>
     <p class="meta">Keep this folder with the release tag for 10 years or the support period, whichever is longer. Curbpack does not archive it. This is a reminder, not a legal fulfillment claim.</p>
     <section class="embed">
       <h2>Buyer one-pager</h2>
@@ -75,7 +78,7 @@ func EvidenceBundleHTML(d BundleDTO) string {
   </main>
 </body>
 </html>
-`, banner, html.EscapeString(d.RepoName), html.EscapeString(status), d.Score, html.EscapeString(d.Timestamp), onePager, hpurlBlock)
+`, banner, html.EscapeString(d.RepoName), html.EscapeString(status), d.FailedRules, d.EvaluatedRules, d.SkippedRules, html.EscapeString(d.Timestamp), onePager, hpurlBlock)
 }
 
 // escapeJSONForHTMLScript makes JSON safe as text inside an HTML <script> element.

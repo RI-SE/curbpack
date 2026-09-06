@@ -194,7 +194,7 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 		fmt.Printf("%s\n", tty.C(tty.Yellow, "[!] Gates still failing — pack is for remediation review, not release sign-off."))
 	}
 	if tty.IsTerminal {
-		tty.RenderThermometer(res.Score)
+		tty.RenderCounts(res.FailedRules, res.EvaluatedRules, res.SkippedRules, !res.Passed)
 	}
 	if !res.Passed && !opts.AllowFailingGates {
 		prepErrs = append(prepErrs, fmt.Errorf("gates failing — pass --allow-failing-gates to accept a remediation review pack"))
@@ -300,7 +300,7 @@ func executiveSummary(res validate.Result) string {
 	b.WriteString("> Curbpack prepares evidence for **human review**. It does not certify conformity.\n\n")
 	fmt.Fprintf(&b, "- **Generated:** %s\n", res.Payload.Timestamp)
 	fmt.Fprintf(&b, "- **Packs:** %s\n", res.Payload.PackID)
-	fmt.Fprintf(&b, "- **Readiness score:** %d%%\n", res.Score)
+	fmt.Fprintf(&b, "- **Failed / evaluated / skipped:** %d / %d / %d\n", res.FailedRules, res.EvaluatedRules, res.SkippedRules)
 	fmt.Fprintf(&b, "- **Open findings:** %d\n\n", len(res.Payload.Failures))
 	if res.Passed {
 		b.WriteString("All deterministic gates passed. Proceed to human review of Annex VII / medtech drafts, then `curbpack attest`.\n")
@@ -366,6 +366,9 @@ func buyerOnePager(root, outDir string, res validate.Result) string {
 	dto := templates.OnePagerDTO{
 		RepoName:          name,
 		Score:             res.Score,
+		FailedRules:       res.FailedRules,
+		EvaluatedRules:    res.EvaluatedRules,
+		SkippedRules:      res.SkippedRules,
 		Passed:            res.Passed,
 		PackID:            res.Payload.PackID,
 		PackLabels:        exportx.PackPlainNames(res.Payload.PackID),
@@ -633,6 +636,9 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 	doc := templates.EvidenceBundleHTML(templates.BundleDTO{
 		RepoName:       filepath.Base(repoAbs),
 		Score:          res.Score,
+		FailedRules:    res.FailedRules,
+		EvaluatedRules: res.EvaluatedRules,
+		SkippedRules:   res.SkippedRules,
 		Passed:         res.Passed,
 		Timestamp:      res.Payload.Timestamp,
 		OnePagerBody:   onePagerMain,

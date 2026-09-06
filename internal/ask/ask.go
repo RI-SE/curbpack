@@ -35,7 +35,11 @@ func Run(path string, propose bool) error {
 
 	fmt.Println(validate.SemanticMarkdown(payload))
 	fmt.Println("---")
-	fmt.Printf("Readiness score: %d%% · findings: %d\n", payload.ReadinessScore, len(payload.Failures))
+	failed := payload.FailedRules
+	if failed == 0 {
+		failed = len(payload.Failures)
+	}
+	fmt.Printf("failed=%d evaluated=%d skipped=%d · findings: %d\n", failed, payload.EvaluatedRules, payload.SkippedRules, len(payload.Failures))
 
 	if propose {
 		fmt.Println()

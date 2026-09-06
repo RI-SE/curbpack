@@ -25,3 +25,12 @@ func TestPacketLooksAirlockedPEM(t *testing.T) {
 		t.Fatalf("want PEM error, got %v", err)
 	}
 }
+
+func TestPacketLooksAirlockedCustomHomeViaVerify(t *testing.T) {
+	// Default Verify fills Home from UserHomeDir when usable — leak of that path fails.
+	// Pattern homes always fail regardless.
+	err := PacketLooksAirlocked([]byte(`leak /Users/ops-custom/secret`))
+	if err == nil {
+		t.Fatal("pattern home must fail")
+	}
+}

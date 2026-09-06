@@ -24,6 +24,7 @@ import (
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/redact"
 	"github.com/afelin/curbpack/internal/sourceurl"
 )
 
@@ -113,6 +114,8 @@ type Report struct {
 	SubjectStateHash string `json:"subject_state_hash,omitempty"`
 	// ParentRecordDigest is the prior report's record_digest when --since is set (hashed in).
 	ParentRecordDigest string `json:"parent_record_digest,omitempty"`
+	// ConformityClaim is always "none" (not certification).
+	ConformityClaim string `json:"conformity_claim"`
 	// Edges are human-approved gate→finding mappings (ingest only; omitted when absent).
 	Edges []Edge `json:"edges,omitempty"`
 }
@@ -250,6 +253,7 @@ func Run(opts Options) (Report, error) {
 		})
 	}
 
+	rep.ConformityClaim = "none"
 	if redactReportAirlock(&rep) {
 		add(&rep, Finding{
 			ID: "structure:airlock-redacted", Category: "structure",
@@ -864,17 +868,10 @@ func fence(s string) string {
 	return "<untrusted_metadata>" + s + "</untrusted_metadata>"
 }
 
-// Airlock placeholders — fixed tokens so PacketLooksAirlocked accepts triage output
-// while preserving a contradicted finding that the bundle echoed unsafe material.
+// Embedded placeholders — tests and PacketLooksAirlocked accept these tokens.
 const (
 	redactedHome = "<redacted:home-path>"
 	redactedPEM  = "<redacted:pem>"
-)
-
-// Match exportx airlock shapes (homePathRE / pemBlobRE) for redact-then-emit.
-var (
-	reHomePath = regexp.MustCompile(`(?i)(/Users/[^/\s"'<>]+|/home/[^/\s"'<>]+|/mnt/[a-z]/Users/[^/\s"'<>]+|C:\\Users\\[^\\\s"'<>]+)`)
-	rePEMBlob  = regexp.MustCompile(`-----BEGIN [A-Z0-9 ]+-----[\s\S]{20,}?-----END [A-Z0-9 ]+-----`)
 )
 
 // redactReportAirlock mutates finding details/ids and dropped tokens. Returns true if any redaction occurred.
@@ -903,19 +900,10 @@ func redactReportAirlock(rep *Report) bool {
 	return changed
 }
 
+// redactAirlockString uses Embedded tokens; emit does not invent Home from the environment.
 func redactAirlockString(s string) (string, bool) {
 	orig := s
-	s = rePEMBlob.ReplaceAllString(s, redactedPEM)
-	if home, err := os.UserHomeDir(); err == nil {
-		home = strings.TrimSpace(home)
-		if home != "" && home != "/" && home != `\` {
-			s = strings.ReplaceAll(s, home, redactedHome)
-			if slash := filepath.ToSlash(home); slash != home {
-				s = strings.ReplaceAll(s, slash, redactedHome)
-			}
-		}
-	}
-	s = reHomePath.ReplaceAllString(s, redactedHome)
+	s = redact.String(s, redact.Emit(redact.Embedded))
 	return s, s != orig
 }
 

@@ -69,6 +69,7 @@ These are not closed by compiling binaries or by the passing regression tests.
 
 | Gate | Remaining work | Source |
 |---|---|---|
+| Redaction / reader contracts | **Closed structurally (this slice):** Plain/Embedded redact with explicit Context; public surfaces use failed/evaluated/skipped (no % thermometer); `conformity_claim: none`; `schema/` goldens + compatibility page. Historical `readiness_score` / digests preserved | [redact](../internal/redact/), [schema/](../schema/) |
 | Canonical evaluation and receipt | **Partial (this slice):** invalid `SOURCE_DATE_EPOCH` rejected (no silent wall-clock fallback); canonical `latest_evaluation.json` omits timestamp/agent; `latest_receipt.json` holds ops metadata; legacy `latest_failure.json` / `latest_result.json` via adapter; SLSA sidecar omits synthetic `buildFinishedOn`; canonical bytes stable across HOME when epoch unset. **Still open:** explicit pack `as_of` binding, content-addressed digest store beyond `latest_*`, TMPDIR/locale axes, full schema freeze (W5) | [SDD W2](software-design-document.md#12-sequential-work-packages), [evaluation IR](../internal/ir/evaluation.go), [eval receipt tests](../internal/validate/eval_receipt_test.go) |
 | Transactional persistence and hostile concurrency | Cache files are individually replaced, but three aliases are not one transaction. Descriptor-based containment and concurrent directory replacement remain outside the path-check guarantee | [cache writer](../internal/validate/cache_write.go), [path jail](../internal/pathjail/pathjail.go) |
 | Resource and command guarantees | Evaluator-wide byte/file/subprocess budgets, interruption recovery, command effects, and consistent typed operational errors across every command | [SDD requirements](software-design-document.md#2-constitutional-invariants), [command implementation](../internal/cli/cli.go) |
@@ -93,7 +94,7 @@ needs fresh verification and human review; invitations still require A2 and A3.
 | 2 | Action execution: reject consumer-controlled source builds; treat inputs as shell/JavaScript data | In progress on Action P1 — [resolver](../scripts/action-resolve-bin.sh); consumer path = checksum-pinned download only; dogfood source only via explicit RI-SE env |
 | 3 | Contained, staged output writes; exclusive writers and interruption recovery; Windows path cases | Closed structurally on tip after [#55](https://github.com/RI-SE/curbpack/pull/55) (`de116cd`); three-alias cache still not one transaction ([outwrite](../internal/outwrite/outwrite.go)) |
 | 4 | W2 canonical evaluation/receipt split, explicit `as_of`, complete identity, versioned cache; producer and reader determinism | **Partial** — epoch reject + eval/receipt skeleton + legacy adapter + unset-epoch HOME-stable canonical bytes; `as_of` binding and CA-by-digest cache remain open ([SDD](software-design-document.md#12-sequential-work-packages)) |
-| 5 | Explicit redaction context; failed/evaluated/skipped counts; comparable trends; `conformity_claim: none`; schemas and compatibility | Open — preserve custom-home leak detection and historical machine contracts |
+| 5 | Explicit redaction context; failed/evaluated/skipped counts; comparable trends; `conformity_claim: none`; schemas and compatibility | **Closed structurally on tip** — `internal/redact` Plain/Embedded + explicit Context; public tallies replace % thermometer; versioned formats carry `conformity_claim: none`; `schema/` goldens + [COMPATIBILITY.md](../schema/COMPATIBILITY.md). Custom-home verify-side checks retained. |
 | 6 | Extend existing offline bundle review with schema/integrity validation and separate trust results | Open — share the existing review engine rather than introducing an independent verifier |
 
 The public-assets command checks declared HTML/CSS resources and disallows module
@@ -119,9 +120,9 @@ secondary-page overflow with external page resources blocked.
 | Reader | Question of the record | Holds the repo? | Served at v0.5.5 / `17a18ed` |
 |---|---|---|---|
 | **QA** | Does this evidence correspond to the tree we tested? | yes | partly — `subject_commit` present but *claimed* |
-| **Management** | Are we ready, and is it improving? | no | badly — via score-as-percentage surfaces |
+| **Management** | Are we ready, and is it improving? | no | partly — failed/evaluated/skipped tallies + compatible trends; not a certification grade |
 | **Incident / PSIRT** | Which shipped artifact contained this component? | no | not at all |
-| **Legal / compliance** | What exactly are we claiming, and can we defend it? | no | prose only; no machine `conformity_claim` field yet |
+| **Legal / compliance** | What exactly are we claiming, and can we defend it? | no | partly — machine `conformity_claim: none` on versioned crossing formats; prose disclaimer retained |
 | **Reviewer** (peer, agent, CTAM) | Does the artifact conform to its own method? | yes | best served of the six |
 | **Buyer / auditor** | Can I trust this without trusting you? | no | partly — `curbpack review <received-pack> --json` already provides offline structure/digest/reference triage; independent authenticity and complete input identity remain open |
 

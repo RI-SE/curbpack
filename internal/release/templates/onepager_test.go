@@ -53,7 +53,7 @@ func TestOnePagerFingerprintIgnoresCoverAndReviewedBy(t *testing.T) {
 
 func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 	htmlDoc := templates.BuyerOnePagerHTML(templates.OnePagerDTO{
-		RepoName: "sample", Score: 62, Passed: false, PackID: "house-policy",
+		RepoName: "sample", Score: 62, FailedRules: 2, EvaluatedRules: 7, SkippedRules: 0, Passed: false, PackID: "house-policy",
 		PackLabels:     "House Policy Example",
 		AssuranceClass: "structural_draft", MechanicalSummary: "5 of 7 gates mechanically evidenced",
 		AttestLine: "UNSIGNED — not cryptographically verified", UnsignedLoud: true,
@@ -84,11 +84,17 @@ func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 	if !strings.Contains(front, "Assurance class:") || !strings.Contains(front, "mechanically evidenced") {
 		t.Fatal("front must show assurance class and mechanically evidenced summary")
 	}
-	if strings.Contains(front, "Local gate score") {
+	if strings.Contains(front, "Local gate tally") {
 		t.Fatal("score meter must not lead the front")
 	}
-	if !strings.Contains(back, "Local gate score") || !strings.Contains(back, "not certification") {
+	if !strings.Contains(back, "Local gate tally") || !strings.Contains(back, "not certification") {
 		t.Fatal("score meter must sit under Back — provenance with not-certification clause")
+	}
+	if !strings.Contains(back, "failed=2 evaluated=7 skipped=0") {
+		t.Fatal("back must show failed/evaluated/skipped counts")
+	}
+	if strings.Contains(back, "%") {
+		t.Fatal("back must not show percent grade")
 	}
 	if strings.Contains(htmlDoc, "we are CE") || strings.Contains(htmlDoc, "CRA compliant") {
 		t.Fatal("claim-unsafe copy in one-pager")

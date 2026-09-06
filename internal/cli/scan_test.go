@@ -46,8 +46,8 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if strings.Contains(stdout, "ENISA SME maturity mapping") {
 		t.Fatalf("scan must not reference ENISA mapping when file absent: %q", stdout)
 	}
-	if strings.Contains(stdout, "Readiness Score") {
-		t.Fatal("scan must not show readiness thermometer")
+	if strings.Contains(stdout, "LOCAL GATE TALLY") {
+		t.Fatal("scan must not show gate tally")
 	}
 	if !strings.Contains(stdout, "Satisfied:") {
 		t.Fatalf("scan must label Satisfied section: %q", stdout)
@@ -67,8 +67,8 @@ func TestRun_ScanReadOnly(t *testing.T) {
 	if !strings.Contains(stdout, "Prepares evidence for human review — not a conformity assessment.") {
 		t.Fatalf("scan must print claim line: %q", stdout)
 	}
-	if !strings.Contains(stdout, "readiness % is via curbpack check --score (not this command)") {
-		t.Fatalf("scan banner must not push check as the tryout next step: %q", stdout)
+	if !strings.Contains(stdout, "gate tallies are via curbpack check --score (not this command)") {
+		t.Fatalf("scan banner must name tallies via check --score: %q", stdout)
 	}
 	earlyIdx := strings.Index(stdout, "Exit 0 means diagnosis finished")
 	lateIdx := strings.Index(stdout, "Exit 0: diagnosis finished")

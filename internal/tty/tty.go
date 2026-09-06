@@ -50,30 +50,34 @@ func PrintNotStarted(step string, details string) {
 	fmt.Printf("[%s]  %-40s %s\n", C(Yellow, "○"), step, C(Dim, "("+details+")"))
 }
 
-// RenderThermometer prints an ASCII readiness bar. Score is 0–100.
-func RenderThermometer(score int) {
-	if score < 0 {
-		score = 0
-	}
-	if score > 100 {
-		score = 100
-	}
-	color := Red
-	if score >= 80 {
-		color = Green
-	} else if score >= 50 {
+// RenderCounts prints failed/evaluated/skipped tallies (no percent grade).
+func RenderCounts(failed, evaluated, skipped int, gatesOpen bool) {
+	color := Green
+	if gatesOpen {
 		color = Yellow
-	}
-	fmt.Printf("\n%s\nReadiness Score: %d%%  [", C(Bold, "SUPPLIER-READINESS STATUS THERMOMETER"), score)
-	filled := score / 5
-	for i := 0; i < 20; i++ {
-		if i < filled {
-			fmt.Printf("%s", C(color, "█"))
-		} else {
-			fmt.Print(" ")
+		if failed > 0 {
+			color = Red
 		}
 	}
-	fmt.Println("]")
+	state := "gates green"
+	if gatesOpen {
+		state = "gates open"
+	}
+	fmt.Printf("\n%s\n", C(Bold, "LOCAL GATE TALLY"))
+	fmt.Printf("%s  failed=%d evaluated=%d skipped=%d\n", C(color, state), failed, evaluated, skipped)
+}
+
+// RenderThermometer is retained as a deprecated alias that prints counts derived
+// from a legacy score (score ≈ 100 - 20*failed). Prefer RenderCounts.
+func RenderThermometer(score int) {
+	failed := 0
+	if score < 100 {
+		failed = (100 - score) / 20
+		if failed == 0 && score < 100 {
+			failed = 1
+		}
+	}
+	RenderCounts(failed, 0, 0, score < 100)
 }
 
 // ScoreFromFailures maps failure count to a 0–100 readiness score.

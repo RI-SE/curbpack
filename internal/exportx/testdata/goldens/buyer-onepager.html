@@ -20,8 +20,6 @@
     .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
     .status.unsigned { background:#fef2f2; color:var(--unsigned); border:1px solid var(--unsigned); letter-spacing:0.02em; text-transform:uppercase; }
     .meter { margin:1.25rem 0; font-family:ui-monospace,Menlo,monospace; font-size:0.9rem; }
-    .bar { height:10px; background:var(--line); overflow:hidden; margin-top:0.35rem; border:1px solid var(--ink); }
-    .bar > span { display:block; height:100%; background:var(--ink); width:100%; }
     table { width:100%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
     th, td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
     th { color:var(--muted); font-weight:600; }
@@ -64,9 +62,7 @@
 
     <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
     <div class="back">
-      <div class="meter">Local gate score on this tree: <strong>100%</strong> — not certification
-        <div class="bar"><span></span></div>
-      </div>
+      <div class="meter">Local gate tally on this tree: <strong>failed=0 evaluated=5 skipped=0</strong> — not certification</div>
       <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. <code>curbpack attest</code> records a state hash. A valid signature proves key use, not human review or approval; unsigned ≠ verified.</p>
       <dl class="prov"><dt>Rule packs</dt><dd>house-policy</dd>
 <dt>Commit</dt><dd>(no commit)</dd>

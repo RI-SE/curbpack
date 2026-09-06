@@ -17,6 +17,7 @@ import (
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/redact"
 	"github.com/afelin/curbpack/internal/tty"
 )
 
@@ -34,11 +35,13 @@ type Options struct {
 
 // Result is the outcome of a validate run.
 type Result struct {
-	Payload      ir.GateFailurePayload
-	Passed       bool
-	Score        int
-	SkippedRules int
-	ActionReport string
+	Payload        ir.GateFailurePayload
+	Passed         bool
+	Score          int // historical; public surfaces use Counts
+	SkippedRules   int
+	FailedRules    int
+	EvaluatedRules int
+	ActionReport   string
 }
 
 // RunInvocationHook, when non-nil, is invoked at the start of each Run (tests only).
@@ -132,6 +135,7 @@ func Run(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	counts := redact.FromRules(len(failures), skipped, len(composed.Rules))
 	eval := ir.Evaluation{
 		SchemaVersion: ir.EvaluationSchemaVersion,
 		ConcurrencyControl: ir.ConcurrencyControl{
@@ -142,11 +146,14 @@ func Run(opts Options) (Result, error) {
 			ActiveParentStatePath:   parentPath,
 			FailedOrthogonalRegions: unique(regions),
 		},
-		Failures:       failures,
-		PackID:         strings.Join(ids, ","),
-		ReadinessScore: score,
-		Outcome:        outcome,
-		SkippedRules:   skipped,
+		Failures:        failures,
+		PackID:          strings.Join(ids, ","),
+		ReadinessScore:  score,
+		Outcome:         outcome,
+		SkippedRules:    skipped,
+		FailedRules:     counts.Failed,
+		EvaluatedRules:  counts.Evaluated,
+		ConformityClaim: ir.ConformityClaimNone,
 	}
 	evalDigest, err := ir.ComputeEvaluationDigest(eval)
 	if err != nil {
@@ -157,6 +164,7 @@ func Run(opts Options) (Result, error) {
 		EvaluationDigest: evalDigest,
 		Timestamp:        ts,
 		AgentIdentity:    ir.ResolveAgentIdentity(),
+		ConformityClaim:  ir.ConformityClaimNone,
 	}
 	payload := ir.LegacyFromEvaluation(eval, receipt)
 
@@ -165,17 +173,20 @@ func Run(opts Options) (Result, error) {
 		if err := writeEvaluationCache(root, eval, receipt, payload, action); err != nil {
 			payload.Outcome = ir.OutcomeError
 			return Result{Payload: payload, Score: score, SkippedRules: skipped,
+					FailedRules: counts.Failed, EvaluatedRules: counts.Evaluated,
 					ActionReport: ActionReportMarkdown(payload, skipped)},
 				fmt.Errorf("persist evaluation cache: %w", err)
 		}
 	}
 
 	return Result{
-		Payload:      payload,
-		Passed:       outcome == ir.OutcomePass,
-		Score:        score,
-		SkippedRules: skipped,
-		ActionReport: action,
+		Payload:        payload,
+		Passed:         outcome == ir.OutcomePass,
+		Score:          score,
+		SkippedRules:   skipped,
+		FailedRules:    counts.Failed,
+		EvaluatedRules: counts.Evaluated,
+		ActionReport:   action,
 	}, nil
 }
 
@@ -505,11 +516,17 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	if payload.Outcome != "" {
 		fmt.Fprintf(&b, "- **Outcome:** %s\n", payload.Outcome)
 	}
-	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", payload.ReadinessScore)
-	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))
-	if skipped > 0 {
-		fmt.Fprintf(&b, "- **Skipped (diff):** %d rules\n", skipped)
+	failed := payload.FailedRules
+	if failed == 0 {
+		failed = len(payload.Failures)
 	}
+	evaluated := payload.EvaluatedRules
+	if evaluated == 0 && skipped == 0 {
+		evaluated = failed // best-effort for historical payloads
+	}
+	counts := redact.Counts{Failed: failed, Evaluated: evaluated, Skipped: skipped}
+	b.WriteString(counts.SummaryMarkdown())
+	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))
 	b.WriteString("\n")
 	if payload.Outcome == ir.OutcomeError {
 		b.WriteString("Evaluation artifacts could not be persisted. Correct the operational error and re-run check.\n")

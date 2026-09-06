@@ -1,0 +1,14 @@
+{
+  "schema_version": "curbpack-external-evidence:1",
+  "conformity_claim": "none",
+  "artifacts": [
+    {
+      "id": "ext-1",
+      "kind": "sarif",
+      "path": "evidence/example.sarif",
+      "digest": "",
+      "producer": "external-tool",
+      "note": "Attributed external claim — not a Curbpack outcome"
+    }
+  ]
+}

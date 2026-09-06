@@ -1,0 +1,19 @@
+{
+  "schema": "curbpack-review-report:2",
+  "classifier_version": "refclass:2",
+  "bundle_root": "example-review-pack",
+  "findings": [],
+  "confirmed_count": 0,
+  "unconfirmed_count": 0,
+  "contradicted_count": 0,
+  "unconfirmed_producer": 0,
+  "unconfirmed_extractor": 0,
+  "unconfirmed_genuine": 0,
+  "unconfirmed_external": 0,
+  "contradicted_self_disagree": 0,
+  "dropped_count": 0,
+  "disclaimer": "Document triage only — not a product verdict or conformity assessment.",
+  "method_id": "curbpack-review-method",
+  "method_version": "1.3.0",
+  "conformity_claim": "none"
+}

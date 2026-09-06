@@ -10,6 +10,8 @@ import (
 const (
 	EvaluationSchemaVersion = "curbpack-evaluation:1"
 	RunReceiptSchemaVersion = "curbpack-run-receipt:1"
+	// ConformityClaimNone is the only supported machine claim value (not certification).
+	ConformityClaimNone = "none"
 )
 
 // Evaluation is the deterministic gate outcome. It excludes wall-clock, agent
@@ -24,6 +26,9 @@ type Evaluation struct {
 	ReadinessScore     int                `json:"readiness_score,omitempty"`
 	Outcome            string             `json:"outcome,omitempty"`
 	SkippedRules       int                `json:"skipped_rules,omitempty"`
+	FailedRules        int                `json:"failed_rules,omitempty"`
+	EvaluatedRules     int                `json:"evaluated_rules,omitempty"`
+	ConformityClaim    string             `json:"conformity_claim"`
 }
 
 // RunReceipt records operational metadata for one evaluation run and hashes the
@@ -35,11 +40,16 @@ type RunReceipt struct {
 	Timestamp        string        `json:"timestamp"`
 	AsOf             string        `json:"as_of,omitempty"`
 	AgentIdentity    AgentIdentity `json:"agent_identity"`
+	ConformityClaim  string        `json:"conformity_claim"`
 }
 
 // EvaluationFromLegacy projects a GateFailurePayload onto the canonical evaluation
 // surface (drops timestamp and agent identity).
 func EvaluationFromLegacy(p GateFailurePayload) Evaluation {
+	claim := p.ConformityClaim
+	if claim == "" {
+		claim = ConformityClaimNone
+	}
 	return Evaluation{
 		SchemaVersion:      EvaluationSchemaVersion,
 		ConcurrencyControl: p.ConcurrencyControl,
@@ -49,12 +59,19 @@ func EvaluationFromLegacy(p GateFailurePayload) Evaluation {
 		ReadinessScore:     p.ReadinessScore,
 		Outcome:            p.Outcome,
 		SkippedRules:       p.SkippedRules,
+		FailedRules:        p.FailedRules,
+		EvaluatedRules:     p.EvaluatedRules,
+		ConformityClaim:    claim,
 	}
 }
 
 // LegacyFromEvaluation rebuilds GateFailurePayload for readers that still expect
 // the mixed IR (timestamp + agent + findings in one document).
 func LegacyFromEvaluation(e Evaluation, r RunReceipt) GateFailurePayload {
+	claim := e.ConformityClaim
+	if claim == "" {
+		claim = ConformityClaimNone
+	}
 	return GateFailurePayload{
 		SchemaVersion:      SchemaVersion,
 		Timestamp:          r.Timestamp,
@@ -66,6 +83,9 @@ func LegacyFromEvaluation(e Evaluation, r RunReceipt) GateFailurePayload {
 		ReadinessScore:     e.ReadinessScore,
 		Outcome:            e.Outcome,
 		SkippedRules:       e.SkippedRules,
+		FailedRules:        e.FailedRules,
+		EvaluatedRules:     e.EvaluatedRules,
+		ConformityClaim:    claim,
 	}
 }
 
@@ -73,6 +93,9 @@ func LegacyFromEvaluation(e Evaluation, r RunReceipt) GateFailurePayload {
 func MarshalCanonical(e Evaluation) ([]byte, error) {
 	if e.SchemaVersion == "" {
 		e.SchemaVersion = EvaluationSchemaVersion
+	}
+	if e.ConformityClaim == "" {
+		e.ConformityClaim = ConformityClaimNone
 	}
 	if e.Failures == nil {
 		e.Failures = []Failure{}
@@ -98,6 +121,9 @@ func ComputeEvaluationDigest(e Evaluation) (string, error) {
 func MarshalReceipt(r RunReceipt) ([]byte, error) {
 	if r.SchemaVersion == "" {
 		r.SchemaVersion = RunReceiptSchemaVersion
+	}
+	if r.ConformityClaim == "" {
+		r.ConformityClaim = ConformityClaimNone
 	}
 	b, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {

@@ -6,7 +6,7 @@ Method: `curbpack-review-method` **1.3.0** · classifier **`refclass:2`**.
 
 | Field | Value |
 |-------|--------|
-| `record_digest` | `2cebe5aac7c7de92360c9d6e8c9543c7e1529af4ef23c1eba244d826b8c36353` |
+| `record_digest` | `7e7a8de08bef231703953f1457468682d8967ae44448815b3e34e05cb706a2b4` |
 
 Divergence means a different tool version, a modified tool, or altered input — never operator variation.
 
@@ -17,3 +17,6 @@ curbpack review ./testdata/comparison-bundle-2026-1 --json 2>/dev/null | jq -r .
 ```
 
 When `MethodVersion` or `ClassifierVersion` changes, update this file and `TestComparisonBundleDigestPinned` together.
+
+
+Note: tip reports include `conformity_claim: none` (hashed into `record_digest`).

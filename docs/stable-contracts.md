@@ -26,6 +26,10 @@ Invariants consumers and CI enforce:
 - `untrusted_metadata` field contains literal `<untrusted_metadata>…</untrusted_metadata>`
 - Packet **never** greenlights — tutors must re-run `curbpack check` before any “fixed” claim
 - Cloud export only when `CURBPACK_EXPLAIN_ALLOW_CLOUD=1` (default `0`)
+- Emit-side scrubbing uses `internal/redact` Plain Context (never invents Home via `os.UserHomeDir`); verify-side airlock may resolve Home for custom-home leak detection
+- Tip packets include `conformity_claim: "none"`
+
+Goldens: [`schema/`](../schema/) · compatibility: [`schema/COMPATIBILITY.md`](../schema/COMPATIBILITY.md).
 
 ## GateFailure / dual-rep IR
 
@@ -40,7 +44,9 @@ Consumers may rely on (`schema_version` = `"1"`):
 | `agent_identity` | Optional agent/mandate ids. Additive: `source` (`self-declared` \| `bridge`) and fail-open `reason` (`not_installed` \| `unavailable`). Not in `state_hash`. |
 | `failures[]` | `gate_id`, `severity`, `type`, `sanitized_description`, `ast_coordinates`, `remediation` |
 | `pack_id` | Composed pack id(s) |
-| `readiness_score` | Optional numeric readiness |
+| `readiness_score` | Optional numeric readiness (machine/fingerprint; not a human % grade) |
+| `failed_rules` / `evaluated_rules` / `skipped_rules` | Additive public tallies (tip emissions) |
+| `conformity_claim` | Additive tip value `"none"` (absence on historical docs ≡ same) |
 
 ### `statechart_context` semantics (clarified, additive)
 

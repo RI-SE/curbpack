@@ -7,15 +7,21 @@ import (
 	"path/filepath"
 
 	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/redact"
 )
 
-// instrumentPanelCovenant is always printed after the check thermometer (green and red).
+// instrumentPanelCovenant is always printed after the check tally (green and red).
 const instrumentPanelCovenant = "instrument panel · not a security program · not conformity assessment"
 
 // priorCacheSnapshot is the quiet accumulation whisper source (pre-overwrite).
 type priorCacheSnapshot struct {
 	OK             bool
-	ReadinessScore int
+	PackID         string
+	SchemaVersion  string
+	Failed         int
+	Evaluated      int
+	Skipped        int
+	ReadinessScore int // historical only
 	FailureCount   int
 }
 
@@ -23,7 +29,6 @@ func loadPriorCache(root string) priorCacheSnapshot {
 	path := filepath.Join(root, ".github", "curbpack", "cache", "latest_result.json")
 	b, err := os.ReadFile(path)
 	if err != nil {
-		// Fall back to latest_failure.json (same payload shape).
 		path = filepath.Join(root, ".github", "curbpack", "cache", "latest_failure.json")
 		b, err = os.ReadFile(path)
 		if err != nil {
@@ -31,7 +36,12 @@ func loadPriorCache(root string) priorCacheSnapshot {
 		}
 	}
 	var raw struct {
+		SchemaVersion  string            `json:"schema_version"`
+		PackID         string            `json:"pack_id"`
 		ReadinessScore int               `json:"readiness_score"`
+		FailedRules    int               `json:"failed_rules"`
+		EvaluatedRules int               `json:"evaluated_rules"`
+		SkippedRules   int               `json:"skipped_rules"`
 		Failures       []json.RawMessage `json:"failures"`
 	}
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -41,30 +51,32 @@ func loadPriorCache(root string) priorCacheSnapshot {
 	if raw.Failures != nil {
 		n = len(raw.Failures)
 	}
+	failed := raw.FailedRules
+	if failed == 0 {
+		failed = n
+	}
 	return priorCacheSnapshot{
 		OK:             true,
+		PackID:         raw.PackID,
+		SchemaVersion:  raw.SchemaVersion,
+		Failed:         failed,
+		Evaluated:      raw.EvaluatedRules,
+		Skipped:        raw.SkippedRules,
 		ReadinessScore: raw.ReadinessScore,
 		FailureCount:   n,
 	}
 }
 
-// accumulationDeltaLine returns at most one quiet line when prior cache exists.
-// Empty string when there is no prior evidence deposit to whisper about.
-func accumulationDeltaLine(prior priorCacheSnapshot, nowScore int) string {
-	if !prior.OK {
-		return ""
-	}
-	if prior.ReadinessScore != nowScore {
-		return fmt.Sprintf("Δ readiness %d→%d · evidence cache updated", prior.ReadinessScore, nowScore)
-	}
-	return "gates green · evidence cache updated"
+// accumulationDeltaLine returns at most one quiet line when prior cache exists
+// and pack/schema are compatible. Trends use failed counts, not percent grades.
+func accumulationDeltaLine(prior priorCacheSnapshot, nowPack string, nowFailed int) string {
+	return redact.TrendLine(prior.OK, prior.PackID, nowPack, prior.SchemaVersion, "1", prior.Failed, nowFailed)
 }
 
-// instrumentWhisperLines returns at most 3 dim instrument lines (readiness / deps / secrets).
-// First run (no prior instrument): readiness line only when prior IR cache exists; deps/secrets quiet.
-func instrumentWhisperLines(priorCache priorCacheSnapshot, priorInst instrument.Snapshot, priorOK bool, nowScore int, nowInst instrument.Snapshot) []string {
+// instrumentWhisperLines returns at most 3 dim instrument lines.
+func instrumentWhisperLines(priorCache priorCacheSnapshot, priorInst instrument.Snapshot, priorOK bool, nowPack string, nowFailed int, nowInst instrument.Snapshot) []string {
 	var lines []string
-	if line := accumulationDeltaLine(priorCache, nowScore); line != "" {
+	if line := accumulationDeltaLine(priorCache, nowPack, nowFailed); line != "" {
 		lines = append(lines, line)
 	}
 	if !priorOK {

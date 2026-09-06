@@ -5,22 +5,13 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/afelin/curbpack/internal/redact"
 )
 
-func TestUsableHomeGuard(t *testing.T) {
-	if usableHome("") || usableHome("/") || usableHome(`\`) {
-		t.Fatal("empty or filesystem-root home must be unusable for scrub")
-	}
-	if !usableHome("/home/runner") || !usableHome("/Users/alice") {
-		t.Fatal("normal homes should be usable")
-	}
-}
-
-func TestScrubHomePrefixes_RootHomeWouldNotWipe(t *testing.T) {
-	// Contract: even a path full of slashes must keep structure after scrub.
-	// usableHome("/") is false, so a hypothetical HOME=/ cannot ReplaceAll("/", "~").
+func TestUsableHomeGuardViaEmit(t *testing.T) {
 	in := "/corp/shared/apps/myapp/SECURITY.md"
-	out := scrubHomePrefixes(in)
+	out := redact.String(in, redact.Context{Mode: redact.Plain, Home: "/"})
 	if strings.Count(out, "/") < 3 {
 		t.Fatalf("slashes wiped under home scrub: %q -> %q", in, out)
 	}
@@ -38,11 +29,15 @@ func TestRepoRelativePrefer(t *testing.T) {
 		inside = `C:\Users\runner\work\r\r\SECURITY.md`
 		outside = `C:\Windows\System32\drivers\etc\hosts`
 	}
-	rel, ok := repoRelative(inside, root)
-	if !ok || filepath.ToSlash(rel) != "SECURITY.md" {
-		t.Fatalf("got rel=%q ok=%v", rel, ok)
+	ctx := redact.Emit(redact.Plain)
+	ctx.RepoRoot = root
+	got := redact.RelativizePath(inside, ctx)
+	if got != "SECURITY.md" {
+		t.Fatalf("got rel=%q", got)
 	}
-	if _, ok := repoRelative(outside, root); ok {
-		t.Fatal("outside repo must not relativize")
+	out := redact.RelativizePath(outside, ctx)
+	if out == "" {
+		t.Fatal("outside must still return basename-ish")
 	}
+	_ = filepath.Base(outside)
 }

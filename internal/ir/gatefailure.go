@@ -75,6 +75,11 @@ type GateFailurePayload struct {
 	Outcome string `json:"outcome,omitempty"`
 	// SkippedRules counts rules not evaluated (e.g. --diff). Non-zero ⇒ incomplete (MUST-23).
 	SkippedRules int `json:"skipped_rules,omitempty"`
+	// FailedRules / EvaluatedRules are public tallies (not a percent grade). Additive.
+	FailedRules    int `json:"failed_rules,omitempty"`
+	EvaluatedRules int `json:"evaluated_rules,omitempty"`
+	// ConformityClaim is always "none" on tip emissions (historical digests omit it).
+	ConformityClaim string `json:"conformity_claim,omitempty"`
 }
 
 // PackageManifest is used for deterministic package.json dependency parsing.
