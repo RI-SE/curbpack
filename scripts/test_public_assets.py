@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Behavioral mutations of the public-assets command, without Git or network."""
 import json
+import os
+import importlib.util
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 SURFACES = ('docs/launch-status.md', 'docs/getting-started/pre-stranger-handoff.md')
@@ -97,6 +100,7 @@ class PublicAssetsTests(unittest.TestCase):
         self.check(True)
 
     def test_external_executable_and_style_forms_are_refused(self):
+        self.write('site/assets/local.js', 'document.title = "local";')
         cases = [
             '<script src="https://example.invalid/x.js"></script>',
             '<script src="//example.invalid/x.js"></script>',
@@ -115,6 +119,8 @@ class PublicAssetsTests(unittest.TestCase):
             '<link rel=modulepreload href="//example.invalid/x.js">',
             '<link rel=preload as=script href="//example.invalid/x.js">',
             '<style>@import "https://example.invalid/x.css";</style>',
+            '<script src="//example.invalid/x.js" src="/curbpack/assets/local.js"></script>',
+            '<button onclick="import(\'https://example.invalid/x.js\')">Run</button>',
         ]
         for html in cases:
             with self.subTest(html=html):
@@ -150,6 +156,100 @@ class PublicAssetsTests(unittest.TestCase):
         self.write('site/assets/demo.js', 'document.title = "local";')
         self.write('site/assets/demo.css', '@font-face {src:url(https://fonts.gstatic.com/demo.woff2)}')
         self.check(True)
+
+
+class ReleaseAPITests(unittest.TestCase):
+    def setUp(self):
+        sys.dont_write_bytecode = True
+        spec = importlib.util.spec_from_file_location('public_assets', ROOT / 'scripts/check-public-assets.py')
+        self.checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.checker)
+        self.gate = self.checker.load_release_record()
+        self.release = dict(tag_name=self.gate['version'], draft=False,
+                            published_at=self.gate['published_at'], html_url=self.gate['release_url'])
+        self.pr = dict(merged=True, merged_at=self.gate['advertised_at'],
+                       merge_commit_sha=self.gate['advertise_commit'], base={'ref': 'main'})
+
+    def test_matching_original_events(self):
+        with patch.object(self.checker, 'github_json', side_effect=[self.release, self.pr]) as api:
+            self.checker.verify_release_record(self.gate)
+            self.assertEqual(api.call_args_list[0].args, ('releases/tags/' + self.gate['version'],))
+            self.assertEqual(api.call_args_list[1].args, ('pulls/' + self.gate['advertise_pr'].rsplit('/', 1)[1],))
+
+    def test_contradicted_original_events_are_refused(self):
+        for release, pr in ((dict(self.release, draft=True), self.pr),
+                            (dict(self.release, published_at='2020-01-01T00:00:00Z'), self.pr),
+                            (self.release, dict(self.pr, merged=False)),
+                            (self.release, dict(self.pr, merge_commit_sha='0' * 40))):
+            with self.subTest(release=release, pr=pr):
+                with patch.object(self.checker, 'github_json', side_effect=[release, pr]):
+                    with self.assertRaises(ValueError):
+                        self.checker.verify_release_record(self.gate)
+
+    def test_unavailable_original_evidence_is_not_a_pass(self):
+        self.checker.errors.clear()
+        with patch.object(self.checker, 'github_json', side_effect=OSError('offline')):
+            self.checker.check_freshness(verify_remote=True)
+        self.assertIn('freshness: offline', self.checker.errors)
+
+
+@unittest.skipUnless(os.environ.get('CURBPACK_BROWSER_TESTS') == '1',
+                     'set CURBPACK_BROWSER_TESTS=1 with Node + Playwright for browser regression')
+class HomepageBrowserTests(unittest.TestCase):
+    def test_complete_css_in_real_browser(self):
+        # All page bytes are served from disk. External requests are aborted;
+        # the assertions must pass without Google Fonts or a runtime CDN.
+        result = subprocess.run(['node', '-e', r'''
+const {chromium} = require('playwright');
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert/strict');
+(async () => {
+  const root = process.env.CURBPACK_BROWSER_ROOT || process.cwd();
+  const browser = await chromium.launch({headless: true, channel: process.env.CURBPACK_BROWSER_CHANNEL || undefined});
+  try {
+    for (const width of [390, 1440]) {
+      const page = await browser.newPage({viewport: {width, height: 950}});
+      const failures = [];
+      page.on('pageerror', error => failures.push(error.message));
+      await page.route('**/*', async route => {
+        const url = new URL(route.request().url());
+        if (url.origin !== 'http://curbpack.test') return route.abort();
+        let rel = url.pathname.replace(/^\/curbpack\//, '');
+        if (!rel || rel.endsWith('/')) rel += 'index.html';
+        const file = path.join(root, 'site', rel);
+        if (!fs.existsSync(file)) throw new Error('Missing local browser resource: ' + file);
+        const contentType = file.endsWith('.css') ? 'text/css' : 'text/html';
+        await route.fulfill({body: fs.readFileSync(file), contentType});
+      });
+      await page.goto('http://curbpack.test/curbpack/');
+      const styles = await page.evaluate(() => {
+        const button = document.querySelector('.btn-brutal');
+        const style = getComputedStyle(button);
+        return {border: style.borderTopStyle, width: style.borderTopWidth,
+          decoration: style.textDecorationLine,
+          transformDefault: style.getPropertyValue('--tw-translate-x').trim(),
+          overflow: document.documentElement.scrollWidth > innerWidth};
+      });
+      assert.deepEqual(styles, {border: 'solid', width: '1px', decoration: 'none',
+        transformDefault: '0', overflow: false}, JSON.stringify({width, styles}));
+      assert.deepEqual(failures, []);
+      if (process.env.CURBPACK_BROWSER_SCREENSHOTS) {
+        await page.screenshot({path: path.join(process.env.CURBPACK_BROWSER_SCREENSHOTS,
+          'curbpack-cur01-fixed-' + width + '.png'), animations: 'disabled'});
+      }
+      // Shared pages must keep their original stylesheet and readable layout.
+      for (const rel of ['whitepaper/', 'for-builders/', 'samples/onepager.html']) {
+        await page.goto('http://curbpack.test/curbpack/' + rel);
+        assert.equal(await page.locator('link[href="/curbpack/assets/site.css"]').count(), 1);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, JSON.stringify({width, rel}));
+      }
+      await page.close();
+    }
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exit(1); });
+'''], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

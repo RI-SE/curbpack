@@ -349,6 +349,9 @@ jobs:
         run: ./scripts/redteam-pilot.sh
 
   gauntlet:
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
     needs: [test, redteam-pilot]
     steps:
@@ -360,8 +363,22 @@ jobs:
         run: ./scripts/ci-build.sh
       - name: Claim safety (docs + runtime)
         run: ./scripts/claim-safety.sh
-      - name: Public links and social-card assets
-        run: python3 scripts/check-public-assets.py
+      - name: Public asset guard regressions
+        run: python3 scripts/test_public_assets.py
+      - name: Public links, resources and release evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check-public-assets.py --verify-release
+      - name: Reproducible static homepage CSS
+        run: ./scripts/build-homepage-css.sh --check
+      - name: Homepage browser regression (no external page resources)
+        run: |
+          set -euo pipefail
+          TEST_DIR=$(mktemp -d)
+          trap 'rm -rf "$TEST_DIR"' EXIT
+          npm install --prefix "$TEST_DIR" --no-save --no-package-lock --ignore-scripts playwright@1.62.1
+          node "$TEST_DIR/node_modules/playwright/cli.js" install --with-deps chromium
+          NODE_PATH="$TEST_DIR/node_modules" CURBPACK_BROWSER_TESTS=1 python3 scripts/test_public_assets.py HomepageBrowserTests
       - name: Release reference integrity
         run: ./scripts/release-ref-test.sh
       - name: Installer version tag validation

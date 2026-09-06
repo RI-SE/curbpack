@@ -1,25 +1,29 @@
 # Launch status and audit limitations
 
-Assessment date: 2026-09-05. **Production qualification is incomplete.** The
+Assessment date: 2026-09-06. **Production qualification is incomplete.** The
 released CLI can be installed and used for local structural diagnosis. Its
 output must not be treated as a complete security audit, an approval, or proof of
 regulatory conformity.
 
 ## Released, merged, and under review
 
+<!-- curbpack-release:start -->
+CLI release **v0.5.5** published **2026-09-05** ([release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5)); advertised on `main` **2026-09-05** ([advertise PR](https://github.com/RI-SE/curbpack/pull/51)).
+<!-- curbpack-release:end -->
+
 | Surface | Verified state | Evidence |
 |---|---|---|
 | Public install | **Released = v0.5.5**; `main` advertises after tag-smoke | [Release](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5), [manifest](../scripts/install-manifest.json), [install smoke](../scripts/release-smoke-install-scan.sh) |
 | Tag / merge tip | Annotated `v0.5.5` on merge SHA `78441d1102b63b7df0fd24b7af3f374cd99ea496` (PR [#50](https://github.com/RI-SE/curbpack/pull/50)) | [Tag](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5), [release run](https://github.com/RI-SE/curbpack/actions/runs/33991663995) |
 | Platforms smoked | **macOS local:** `CURBPACK_VERSION=v0.5.5` install → `curbpack version` = `0.5.5` → write-free `scan` (porcelain empty). **Linux / Windows:** release assets + `checksums.txt` HTTP 200; PR #50 CI `test (ubuntu-latest)`, `smoke`, and `windows-smoke` green on tip — **not** separate `CURBPACK_VERSION=v0.5.5` install-script smokes on those hosts | Local smoke transcript; [CI run](https://github.com/RI-SE/curbpack/actions/runs/33991451572); asset HTTP 200 checks |
-| Seven historical false-green findings | FG-01 through FG-07 closed on tip included in v0.5.5; `false_green_paths_open=0` | [SDD register](software-design-document.md#81-open-false-green-paths), `./scripts/redteam-pilot.sh` 15 passed / 0 failed on tip |
+| Seven historical false-green findings | FG-01 through FG-07 closed on tip included in v0.5.5; zero open in that seven-item catalog only. Additional Action and output-write defects remain below | [SDD register](software-design-document.md#81-open-false-green-paths), `./scripts/redteam-pilot.sh` 15 passed / 0 failed on tip |
 | Action pin | Remains **`@v0.5.2`** (no pin-bump) | [release gate](../scripts/release-gate.json), examples / Action docs |
 | Private vulnerability reporting | Enabled | [Private reporting](https://github.com/RI-SE/curbpack/security/advisories/new), [security policy](../SECURITY.md) |
 
 Passing CI on source does not by itself update stranger installs until `main`
 advertises the smoke-verified tag via the install manifest.
 
-## Reproduced defects and repairs in this change
+## Repairs included in v0.5.5
 
 | Defect | Repair and reproducible evidence |
 |---|---|
@@ -78,22 +82,35 @@ gate result. A buyer must review scope, missing evidence, provenance and trust
 separately. No agent has completed human confirmations, attestation, Action
 pin-bump, or the external-user validation log during this launch.
 
-## Ready-enough checklist (enterprise tranche)
+## Sequential hardening checklist
 
-Operational definition for maintainers. **Does not authorize invitations.**
-Stranger invite remains gated on human A2 ∧ A3 (or a written invite block).
+The CUR-01 corrections do not close production qualification. Each work package
+needs fresh verification and human review; invitations still require A2 and A3.
 
-| # | Gate | State at CUR-01 |
+| Order | Work package | State |
 |---|---|---|
-| 1 | CUR-01 green; INV-12/13 hold (dates/versions match tag/manifest; zero external scripts/module imports) | **This PR** — `python3 scripts/check-public-assets.py` |
-| 2 | CUR-CLOCK: evidence sites use `RFC3339ForEvidence` | Open — next |
-| 3 | §5.1: one redact impl; no `UserHomeDir` on emit; verify-side home-leak green | Open |
-| 4 | CUR-03 run-twice-diff green with `SOURCE_DATE_EPOCH` unset (+ stated envelope) | Open — do not publish “deterministic” until green |
-| 5 | No `%`/bar grade; trend pair; `conformity_claim: none` on crossing artifacts | Open |
-| 6 | `schema/` goldens + compat page | Open |
-| 7 | CUR-VERIFY: repo-free one-command pack check; `subject_commit` labelled claimed | Open |
+| 1 | CUR-01: explicit release/advertisement evidence; declared resource checks including samples; complete static homepage CSS | Corrections on this branch; run `python3 scripts/test_public_assets.py` and `python3 scripts/check-public-assets.py --verify-release` |
+| 2 | Action execution: reject consumer-controlled source builds; treat inputs as shell/JavaScript data | Open — [resolver](../action.yml), including `go.mod` detection and input interpolation |
+| 3 | Contained, staged output writes; exclusive writers and interruption recovery; Windows path cases | Open — default `review-pack` symlink escape reproduced in [release writer](../internal/release/release.go); pull concurrency/path work forward |
+| 4 | W2 canonical evaluation/receipt split, explicit `as_of`, complete identity, versioned cache; producer and reader determinism | Open — the three-site CUR-CLOCK substitution alone is insufficient; [SDD](software-design-document.md#12-sequential-work-packages) |
+| 5 | Explicit redaction context; failed/evaluated/skipped counts; comparable trends; `conformity_claim: none`; schemas and compatibility | Open — preserve custom-home leak detection and historical machine contracts |
+| 6 | Extend existing offline bundle review with schema/integrity validation and separate trust results | Open — share the existing review engine rather than introducing an independent verifier |
 
-Later named items (not this checklist’s seven): CUR-02…05, fruit/insurance, internal A3 run, refusal list + pack `review_by`.
+The public-assets command checks declared HTML/CSS resources and disallows module
+loading syntax; it does not prove that arbitrary JavaScript cannot make network
+requests. Its release statements use required records and GitHub event checks,
+not local tag availability or nearest-date inference. Publication, advertisement,
+and historical operational actions are separate events.
+
+Homepage CSS is checked in and used only by the homepage. Rebuild it with
+`./scripts/build-homepage-css.sh`; verify reproducibility with `--check`. The
+pinned [Tailwind CLI](https://v3.tailwindcss.com/docs/installation) is a build-time
+tool; the public site and Pages deployment do not download a CSS compiler.
+The browser regression in `scripts/test_public_assets.py` runs in CI with
+Playwright 1.62.1. For local execution, provide Node/Playwright and set
+`CURBPACK_BROWSER_TESTS=1` (optionally `CURBPACK_BROWSER_CHANNEL=chrome` to use
+installed Chrome). It checks desktop/mobile borders, links, transforms and
+secondary-page overflow with external page resources blocked.
 
 ## Six readers (one record, one verify path)
 
@@ -106,6 +123,6 @@ Later named items (not this checklist’s seven): CUR-02…05, fruit/insurance, 
 | **Incident / PSIRT** | Which shipped artifact contained this component? | no | not at all |
 | **Legal / compliance** | What exactly are we claiming, and can we defend it? | no | prose only; no machine `conformity_claim` field yet |
 | **Reviewer** (peer, agent, CTAM) | Does the artifact conform to its own method? | yes | best served of the six |
-| **Buyer / auditor** | Can I trust this without trusting you? | no | not at all — CUR-VERIFY is the intended path |
+| **Buyer / auditor** | Can I trust this without trusting you? | no | partly — `curbpack review <received-pack> --json` already provides offline structure/digest/reference triage; independent authenticity and complete input identity remain open |
 
 Differences = queries over the same bytes. Per-reader renderings go to the refusal log.

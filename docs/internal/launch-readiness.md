@@ -5,9 +5,17 @@
 Private-fork launch checklist for [afelin/curbpack](https://github.com/afelin/curbpack) (public SoR remains [RI-SE/curbpack](https://github.com/RI-SE/curbpack)).
 Coreward is **not** required to build, test, launch, or use Curbpack (optional `sock` only).
 
-## Status (2026-09-05)
+## Current qualification (2026-09-06)
 
-**Verdict: GO-WITH-GATES** — mechanical stranger install+scan path works at **v0.5.5**; invite blocked until human **A2 ∧ A3**. Sprint C (wave 2 / pin bump / #75) stays deferred.
+**Production qualification remains incomplete.** Use the public [launch status](../launch-status.md)
+for current evidence and the sequential hardening checklist. Action execution,
+output containment, canonical evaluation and buyer trust assessment remain open.
+A2/A3 still require human evidence; no invitation or pin promotion is authorized.
+
+## Historical operator checklist
+
+The remaining tables preserve earlier checks and decisions. Their pins, counts,
+settings snapshots and freeze decisions are historical, not current verification.
 
 | Item | State |
 |------|--------|
