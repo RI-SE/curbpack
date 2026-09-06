@@ -40,7 +40,7 @@ Curbpack is a **local-first command-line interface (CLI)**. It evaluates **rule 
                                     └─────────────────────────┘
 ```
 
-- **Engine:** nine frozen check kinds (`annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned`). Packs are malleable; kinds are not.
+- **Engine:** eight check kinds (`annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `fresh`, `owned`). Packs are malleable; kinds are not.
 - **Packs:** data only — CRA-shaped annex drafts, house policy, sector templates.
 - **No remote policy service** required for daily `check`.
 - **Thin MCP example** shells out to CLI; optional Unix sock sidecar (`curbpack-sock` in `examples/mcp/`) for integrators — not in the main binary.
@@ -125,7 +125,7 @@ Mnemonic: *Curb outlines → packs → check → hand off.*
 | **Action / alias** | `RI-SE/curbpack@v0.5.2`; short alias `curb` = `curbpack` |
 | **Optional MCP** | Thin wrapper over CLI (`examples/mcp`); no confirm/attest tools |
 
-Nine check kinds are **frozen** (packs malleable; kinds not): `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `import_reach`, `fresh`, `owned`.
+Eight check kinds are **frozen** (packs malleable; kinds not): `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `fresh`, `owned`.
 
 Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/env.
 

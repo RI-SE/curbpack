@@ -1,51 +1,39 @@
 #!/usr/bin/env python3
-"""Validate public links, SVG syntax, social-card dimensions, and surface freshness (INV-12/13)."""
+"""Check public links, assets and explicit current-release statements.
+
+INV-12 checks recorded release/advertisement events, not dates inferred from prose
+or local tags. --verify-release independently compares that record with GitHub.
+INV-13 checks declared HTML/CSS resources and module-loading syntax. It is a
+static regression guard, not a proof that arbitrary JavaScript cannot network.
+"""
 from __future__ import annotations
 
+import argparse
+from datetime import datetime
 from html.parser import HTMLParser
-from pathlib import Path
-from urllib.parse import unquote, urlparse
 import json
+import os
+from pathlib import Path
 import re
 import struct
-import subprocess
 import sys
+from urllib.parse import unquote, urlparse
+from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 errors: list[str] = []
-
-# INV-13: stylesheet/font hosts allowed with stated why (scripts/module imports never allowlisted).
 FONT_STYLE_ALLOWLIST = {
-    "fonts.googleapis.com": "Google Fonts CSS delivery for Fraunces / IBM Plex (no script execution)",
-    "fonts.gstatic.com": "Google Fonts font-file CDN paired with fonts.googleapis.com CSS",
+    'fonts.googleapis.com': 'Google Fonts stylesheet delivery',
+    'fonts.gstatic.com': 'Google Fonts font files',
 }
-
-EXCLUDE_PREFIXES = (
-    ("site", "samples"),
-    ("testdata",),
-)
-EXCLUDE_NAMES = {"CHANGELOG.md"}
-
-VERSION_RE = re.compile(r"\bv?(\d+\.\d+\.\d+)\b", re.I)
-DATE_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
-# live/published/shipped/advertised (and post-vX.Y.Z advertise) near a version + date
-CLAIM_VERBS = re.compile(
-    r"\b(live|published|shipped|advertised|advertise)\b",
-    re.I,
-)
-POST_ADVERTISE_RE = re.compile(
-    r"post-v?(\d+\.\d+\.\d+)\s+advertise",
-    re.I,
-)
-EXTERNAL_SCRIPT_SRC_RE = re.compile(
-    r"""<script\b[^>]*\bsrc\s*=\s*["'](https?://[^"']+)["']""",
-    re.I,
-)
-ESM_IMPORT_RE = re.compile(
-    r"""(?:import\s+[^;]*?\s+from\s+|import\s*\(\s*)["'](https?://[^"']+)["']""",
-    re.I,
-)
+RELEASE_SURFACES = ('docs/launch-status.md', 'docs/getting-started/pre-stranger-handoff.md')
+RELEASE_START = '<!-- curbpack-release:start -->'
+RELEASE_END = '<!-- curbpack-release:end -->'
+# No module loader is needed by the static site. Refuse module syntax rather
+# than trying to allowlist URLs in an incomplete JavaScript parser.
+MODULE_RE = re.compile(r'\bimport\s*(?:\(|[\w*{\'"])|\bexport\s+[^;]*?\bfrom\s*[\'"]', re.S)
+CSS_URL_RE = re.compile(r'''url\(\s*['"]?([^'"\s)]+)|@import\s+['"]([^'"]+)''', re.I)
 
 
 class Links(HTMLParser):
@@ -54,220 +42,215 @@ class Links(HTMLParser):
         self.urls = []
 
     def handle_starttag(self, tag, attrs):
-        self.urls.extend(value for key, value in attrs if key in {"href", "src"} and value)
+        self.urls.extend(value for key, value in attrs if key in {'href', 'src'} and value)
 
 
-def is_excluded(rel: Path) -> bool:
-    parts = rel.parts
-    for prefix in EXCLUDE_PREFIXES:
-        if parts[: len(prefix)] == prefix:
-            return True
-    if rel.name in EXCLUDE_NAMES:
-        return True
-    return False
+def read_text(path: Path) -> str:
+    return path.read_text(encoding='utf-8')
 
 
-def git_tag_date(version: str) -> str | None:
-    """Return annotated-tagger date (YYYY-MM-DD) for vX.Y.Z, else None."""
-    tag = version if version.startswith("v") else f"v{version}"
+def load_release_record() -> dict:
+    manifest = json.loads(read_text(ROOT / 'scripts/install-manifest.json'))
+    gate = json.loads(read_text(ROOT / 'scripts/release-gate.json'))
+    build = re.search(r'Version\s*=\s*"([^"]+)"', read_text(ROOT / 'internal/buildinfo/version.go'))
+    version = gate.get('version', '')
+    if (gate.get('schema') != 'curbpack-release-gate:1' or
+            not re.fullmatch(r'v\d+\.\d+\.\d+', version) or
+            manifest.get('default_version') != version or not build or
+            build.group(1).lstrip('v') != version.lstrip('v')):
+        raise ValueError('release-gate, manifest and buildinfo versions must agree')
+    dates = []
+    for key in ('published_at', 'advertised_at'):
+        value = gate.get(key, '')
+        if not isinstance(value, str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', value):
+            raise ValueError(f'release-gate missing/invalid {key}')
+        dates.append(datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ'))
+    if dates[1] < dates[0]:
+        raise ValueError('advertisement precedes publication')
+    if gate.get('release_url') != f'https://github.com/RI-SE/curbpack/releases/tag/{version}':
+        raise ValueError('release-gate missing/invalid release_url')
+    if not re.fullmatch(r'https://github.com/RI-SE/curbpack/pull/[1-9]\d*', gate.get('advertise_pr', '')):
+        raise ValueError('release-gate missing/invalid advertise_pr')
+    if not re.fullmatch(r'[0-9a-f]{40}', gate.get('advertise_commit', '')):
+        raise ValueError('release-gate missing/invalid advertise_commit')
+    return gate
+
+
+def release_statement(gate: dict) -> str:
+    return (f"CLI release **{gate['version']}** published **{gate['published_at'][:10]}** "
+            f"([release]({gate['release_url']})); advertised on `main` "
+            f"**{gate['advertised_at'][:10]}** ([advertise PR]({gate['advertise_pr']})).")
+
+
+def github_json(path: str) -> dict:
+    # Paths are built here from validated version/PR values, never record URLs.
+    request = Request('https://api.github.com/repos/RI-SE/curbpack/' + path,
+                      headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'curbpack-public-assets'})
+    token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN')
+    if token:
+        request.add_header('Authorization', 'Bearer ' + token)
+    with urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def verify_release_record(gate: dict) -> None:
+    release = github_json('releases/tags/' + gate['version'])
+    pr = github_json('pulls/' + gate['advertise_pr'].rsplit('/', 1)[1])
+    if (release.get('tag_name') != gate['version'] or release.get('draft') is not False or
+            release.get('published_at') != gate['published_at'] or
+            release.get('html_url') != gate['release_url']):
+        raise ValueError('release-gate differs from GitHub release publication evidence')
+    if (pr.get('merged') is not True or pr.get('merged_at') != gate['advertised_at'] or
+            pr.get('merge_commit_sha') != gate['advertise_commit'] or
+            pr.get('base', {}).get('ref') != 'main'):
+        raise ValueError('release-gate differs from merged advertisement PR evidence')
+
+
+def check_freshness(verify_remote: bool = False) -> None:
     try:
-        out = subprocess.run(
-            [
-                "git",
-                "for-each-ref",
-                f"refs/tags/{tag}",
-                "--format=%(taggerdate:short)%0a%(creatordate:short)",
-            ],
-            cwd=ROOT,
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
+        gate = load_release_record()
+        expected = release_statement(gate)
+        for name in RELEASE_SURFACES:
+            text = read_text(ROOT / name)
+            if text.count(RELEASE_START) != 1 or text.count(RELEASE_END) != 1:
+                raise ValueError(f'{name}: require exactly one current release block')
+            actual = text.split(RELEASE_START, 1)[1].split(RELEASE_END, 1)[0].strip()
+            if actual != expected:
+                errors.append(f'{name}: current release statement differs from release-gate evidence')
+        if verify_remote:
+            verify_release_record(gate)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        errors.append(f'freshness: {error}')
+
+
+def resource(path: Path, raw: str, kind: str) -> Path | None:
+    # HTMLParser already decodes attribute entities. Normalize protocol-relative,
+    # backslash and encoded forms conservatively before checking their origin.
+    normalized = unquote(raw).strip().replace('\\', '/')
+    normalized = ''.join(c for c in normalized if c not in '\r\n\t')
+    url = urlparse(normalized)
+    if url.scheme or url.netloc:
+        hosts = {'stylesheet': {'fonts.googleapis.com'}, 'font': {'fonts.gstatic.com'},
+                 'preconnect': set(FONT_STYLE_ALLOWLIST)}.get(kind, set())
+        if (url.scheme == 'https' and url.hostname in hosts and not url.username and
+                not url.password and url.port in (None, 443)):
+            return None
+        errors.append(f'{path.relative_to(ROOT)}: external {kind} resource refused: {raw}')
         return None
-    for line in out.splitlines():
-        line = line.strip()
-        if re.fullmatch(r"20\d{2}-\d{2}-\d{2}", line):
-            return line
-    return None
+    if not url.path:
+        errors.append(f'{path.relative_to(ROOT)}: empty {kind} resource')
+        return None
+    if url.path.startswith('/curbpack/'):
+        target = ROOT / 'site' / url.path[len('/curbpack/'):]
+    elif url.path.startswith('/'):
+        errors.append(f'{path.relative_to(ROOT)}: {kind} must use /curbpack/ site root: {raw}')
+        return None
+    else:
+        target = path.parent / url.path
+    if not target.resolve().is_relative_to((ROOT / 'site').resolve()) or not target.is_file():
+        errors.append(f'{path.relative_to(ROOT)}: missing/escaping local {kind} resource: {raw}')
+        return None
+    return target
 
 
-def load_manifest_version() -> str:
-    data = json.loads((ROOT / "scripts/install-manifest.json").read_text(encoding="utf-8"))
-    ver = data.get("default_version")
-    if not isinstance(ver, str) or not ver:
-        raise ValueError("install-manifest.json missing default_version")
-    return ver.lstrip("v")
+def check_javascript(path: Path, text: str) -> None:
+    if MODULE_RE.search(text):
+        errors.append(f'{path.relative_to(ROOT)}: module loading is not allowed on the static site')
 
 
-def load_buildinfo_version() -> str:
-    text = (ROOT / "internal/buildinfo/version.go").read_text(encoding="utf-8")
-    match = re.search(r'Version\s*=\s*"([^"]+)"', text)
-    if not match:
-        raise ValueError("internal/buildinfo/version.go: Version string not found")
-    return match.group(1).lstrip("v")
+def check_css(path: Path, text: str) -> None:
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    # Decode CSS escapes before recognizing @import or url().
+    def escape(match):
+        value = match.group(1)
+        stripped = value.strip()
+        if re.fullmatch(r'[0-9a-fA-F]{1,6}', stripped):
+            code = int(stripped, 16)
+            return chr(code) if 0 < code <= 0x10ffff else '\ufffd'
+        return value
+    text = re.sub(r'\\([0-9a-fA-F]{1,6}\s?|.)', escape, text)
+    for match in CSS_URL_RE.finditer(text):
+        raw = match.group(1) or match.group(2)
+        kind = 'stylesheet' if match.group(2) or re.search(r'@import\s*$', text[:match.start()], re.I) else 'font'
+        resource(path, raw, kind)
 
 
-def iter_public_text_files() -> list[Path]:
-    paths: list[Path] = []
-    for base in (ROOT / "docs", ROOT / "site", ROOT / "README.md"):
-        if base.is_file():
-            paths.append(base)
-            continue
-        if not base.is_dir():
-            continue
-        for path in base.rglob("*"):
-            if path.suffix.lower() in {".md", ".html", ".txt"} and path.is_file():
-                paths.append(path)
-    return paths
+class Resources(HTMLParser):
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+        self.body = None
+        self.chunks = []
+
+    def handle_starttag(self, tag, attrs):
+        if len({key for key, _ in attrs}) != len(attrs):
+            errors.append(f'{self.path.relative_to(ROOT)}: duplicate HTML attributes refused')
+        values = dict(attrs)
+        if tag == 'script':
+            kind = (values.get('type') or '').strip().lower()
+            if kind in {'module', 'importmap'}:
+                errors.append(f'{self.path.relative_to(ROOT)}: module/import map script refused')
+            if 'src' in values:
+                target = resource(self.path, values['src'] or '', 'script')
+                if target:
+                    check_javascript(target, read_text(target))
+            self.body, self.chunks = 'script', []
+        elif tag == 'style':
+            self.body, self.chunks = 'style', []
+        elif tag == 'link':
+            rel = set((values.get('rel') or '').lower().split())
+            kind = None
+            if 'stylesheet' in rel:
+                kind = 'stylesheet'
+            elif 'modulepreload' in rel:
+                errors.append(f'{self.path.relative_to(ROOT)}: module preload refused')
+            elif rel & {'preload', 'prefetch'}:
+                kind = (values.get('as') or '').lower()
+                kind = 'stylesheet' if kind == 'style' else kind
+            elif rel & {'preconnect', 'dns-prefetch'}:
+                kind = 'preconnect'
+            if kind is not None:
+                resource(self.path, values.get('href') or '', kind)
+        if values.get('style'):
+            check_css(self.path, values['style'])
+        for key, value in attrs:
+            if key.startswith('on') and value:
+                check_javascript(self.path, value)
+
+    def handle_data(self, data):
+        if self.body:
+            self.chunks.append(data)
+
+    def handle_endtag(self, tag):
+        if tag != self.body:
+            return
+        text = ''.join(self.chunks)
+        if tag == 'script':
+            check_javascript(self.path, text)
+        else:
+            check_css(self.path, text)
+        self.body, self.chunks = None, []
 
 
-def check_freshness() -> None:
-    """INV-12 date/version truth + INV-13 zero external scripts/module imports."""
-    try:
-        manifest_ver = load_manifest_version()
-        build_ver = load_buildinfo_version()
-    except (OSError, ValueError, json.JSONDecodeError) as error:
-        errors.append(f"freshness: cannot load version sources: {error}")
-        return
-
-    if manifest_ver != build_ver:
-        errors.append(
-            f"scripts/install-manifest.json vs internal/buildinfo/version.go: "
-            f"advertised {manifest_ver} != buildinfo {build_ver}"
-        )
-
-    # Current advertised install/live pin (not historical checklist rows; Action @v0.5.2 exempt).
-    current_advertise_re = re.compile(
-        r"(?:"
-        r"live on [`']?main[`']?|"
-        r"installer supplies|"
-        r"(?<![Aa]ction )[Ii]nstall pin|"
-        r"downloads?\s+\*{0,2}v?"
-        r")[^\n]{0,60}?\bv?(\d+\.\d+\.\d+)\b"
-        r"|"
-        r"\bv?(\d+\.\d+\.\d+)\b[^\n]{0,40}\blive on [`']?main[`']?",
-        re.I,
-    )
-
-    # Pass 1: collect version+date claims keyed by file.
-    file_bad_dates: dict[Path, set[str]] = {}
-
-    for path in iter_public_text_files():
-        rel = path.relative_to(ROOT)
-        if is_excluded(rel):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as error:
-            errors.append(f"{rel}: {error}")
-            continue
-        lines = text.splitlines()
-
-        for idx, line in enumerate(lines, start=1):
-            # Pair each version claim with the nearest ISO date on the same line
-            # (avoid cartesian false positives when a line mentions two releases).
-            claim_spans: list[tuple[int, int, str, str]] = []  # start, end, version, kind
-
-            for m in POST_ADVERTISE_RE.finditer(line):
-                claim_spans.append((m.start(), m.end(), m.group(1).lstrip("v").lower(), "advertise"))
-
-            if CLAIM_VERBS.search(line):
-                for m in VERSION_RE.finditer(line):
-                    # skip if already covered by post-advertise match overlapping
-                    ver = m.group(1).lstrip("v").lower()
-                    if any(s <= m.start() < e for s, e, _, _ in claim_spans):
-                        continue
-                    claim_spans.append((m.start(), m.end(), ver, "live/published/shipped"))
-
-            date_spans = [(m.start(), m.end(), m.group(1)) for m in DATE_RE.finditer(line)]
-
-            for start, end, version, kind in claim_spans:
-                if not date_spans:
-                    continue
-                # Prefer a date within 80 characters of the version token; else skip
-                # (avoids pairing an earlier release with a later date on a long line).
-                nearby = [
-                    d
-                    for d in date_spans
-                    if min(abs(d[0] - start), abs(d[1] - end), abs(d[0] - end), abs(d[1] - start))
-                    <= 80
-                ]
-                if not nearby:
-                    continue
-                claimed = min(
-                    nearby,
-                    key=lambda d: min(abs(d[0] - start), abs(d[1] - end)),
-                )[2]
-                tag_date = git_tag_date(version)
-                if tag_date is None:
-                    continue
-                if claimed != tag_date:
-                    errors.append(
-                        f"FAIL {rel}:{idx}   asserts v{version} {kind} {claimed}; tag dated {tag_date}"
-                    )
-                    file_bad_dates.setdefault(path, set()).add(claimed)
-
-        # Advertised-version agreement on public install surfaces.
-        if rel.as_posix() in {
-            "docs/getting-started/pre-stranger-handoff.md",
-            "docs/launch-status.md",
-            "site/index.html",
-            "site/for-builders/index.html",
-            "site/art14/index.html",
-            "README.md",
-        }:
-            for idx, line in enumerate(lines, start=1):
-                if "Action pin" in line or "@v0.5.2" in line:
-                    continue
-                for m in current_advertise_re.finditer(line):
-                    found = (m.group(1) or m.group(2) or "").lstrip("v")
-                    if found and found != manifest_ver:
-                        errors.append(
-                            f"FAIL {rel}:{idx}   advertised version v{found}; "
-                            f"manifest/buildinfo v{manifest_ver}"
-                        )
-
-    # Pass 2: copy-paste dates — same wrong date reused on operational lines in
-    # the same file as a mismatched version claim (no matching version on the line).
-    for path, bad_dates in file_bad_dates.items():
-        rel = path.relative_to(ROOT)
-        # Limit cascade to the handoff doc where the stamp-copy defect was observed.
-        if rel.as_posix() != "docs/getting-started/pre-stranger-handoff.md":
-            continue
-        lines = path.read_text(encoding="utf-8").splitlines()
-        for idx, line in enumerate(lines, start=1):
-            for claimed in DATE_RE.findall(line):
-                if claimed not in bad_dates:
-                    continue
-                versions = VERSION_RE.findall(line)
-                if versions and all(git_tag_date(v) == claimed for v in versions):
-                    continue
-                marker = f"FAIL {rel}:{idx}   "
-                if any(e.startswith(marker) for e in errors):
-                    continue
-                if CLAIM_VERBS.search(line) or POST_ADVERTISE_RE.search(line):
-                    continue
-                errors.append(
-                    f"FAIL {rel}:{idx}   asserts action {claimed} alongside mismatched version advertise"
-                )
-
-    # INV-13: external script src + ESM https imports (both quote styles).
-    for path in (ROOT / "site").rglob("*.html"):
-        rel = path.relative_to(ROOT)
-        if is_excluded(rel):
+def check_resources() -> None:
+    # Samples are served pages and receive exactly the same resource checks.
+    for path in sorted((ROOT / 'site').rglob('*')):
+        if not path.is_file() or path.suffix.lower() not in {'.html', '.css', '.js', '.mjs'}:
             continue
         try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as error:
-            errors.append(f"{rel}: {error}")
-            continue
-        for idx, line in enumerate(text.splitlines(), start=1):
-            for m in EXTERNAL_SCRIPT_SRC_RE.finditer(line):
-                errors.append(f"FAIL {rel}:{idx}   external script {m.group(1)}")
-            for m in ESM_IMPORT_RE.finditer(line):
-                errors.append(f"FAIL {rel}:{idx}   external module import {m.group(1)}")
+            text = read_text(path)
+            if path.suffix.lower() == '.html':
+                parser = Resources(path)
+                parser.feed(text)
+                parser.close()
+                if parser.body:
+                    parser.handle_endtag(parser.body)
+            elif path.suffix.lower() == '.css':
+                check_css(path, text)
+            else:
+                check_javascript(path, text)
+        except (OSError, ValueError) as error:
+            errors.append(f'{path.relative_to(ROOT)}: {error}')
 
 
 def check_links_and_card() -> None:
@@ -309,18 +292,22 @@ def check_links_and_card() -> None:
         errors.append(f"social card: {error}")
 
 
-check_links_and_card()
-check_freshness()
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--verify-release', action='store_true', help='compare recorded release events with GitHub (network required)')
+    args = parser.parse_args()
+    errors.clear()
+    check_links_and_card()
+    check_freshness(args.verify_release)
+    check_resources()
+    if errors:
+        print('\n'.join(dict.fromkeys(errors)), file=sys.stderr)
+        return 1
+    print('Public links, social card, current release statements and declared resources: PASS')
+    print('Release evidence: ' + ('GitHub verified' if args.verify_release else 'record checked locally; use --verify-release for GitHub verification'))
+    print('Allowed external font resources: ' + ', '.join(sorted(FONT_STYLE_ALLOWLIST)))
+    return 0
 
-if errors:
-    # De-dupe while preserving order
-    unique = list(dict.fromkeys(errors))
-    print("\n".join(unique), file=sys.stderr)
-    sys.exit(1)
-print(
-    "public local links, SVG syntax, social-card dimensions, and freshness (INV-12/13): PASS"
-)
-print(
-    "INV-13 note: fonts/stylesheets allowlisted — "
-    + "; ".join(f"{h} ({why})" for h, why in sorted(FONT_STYLE_ALLOWLIST.items()))
-)
+
+if __name__ == '__main__':
+    sys.exit(main())

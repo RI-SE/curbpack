@@ -5,5 +5,10 @@
   "checksums_verified": true,
   "install_smoke_verified": true,
   "scan_write_free_verified": true,
-  "notes": "CLI install pin for public copy. Public pin updates require install-manifest.json default_version == this version and all *_verified flags true. Action pin remains @v0.5.2 until human pin-bump. Tag-smoke CURBPACK_VERSION=v0.5.5 passed 2026-09-05 (macOS local install+scan) before advertise. Linux/Windows: release assets HTTP 200 + PR #50 CI (ubuntu test/smoke, windows-smoke) on tip - not separate CURBPACK_VERSION=v0.5.5 install smoke on those hosts."
+  "notes": "CLI install pin for public copy. Public pin updates require install-manifest.json default_version == this version and all *_verified flags true. Action pin remains @v0.5.2 until human pin-bump. Tag-smoke CURBPACK_VERSION=v0.5.5 passed 2026-09-05 (macOS local install+scan) before advertise. Linux/Windows: release assets HTTP 200 + PR #50 CI (ubuntu test/smoke, windows-smoke) on tip - not separate CURBPACK_VERSION=v0.5.5 install smoke on those hosts.",
+  "published_at": "2026-09-05T21:01:18Z",
+  "release_url": "https://github.com/RI-SE/curbpack/releases/tag/v0.5.5",
+  "advertised_at": "2026-09-05T21:47:35Z",
+  "advertise_pr": "https://github.com/RI-SE/curbpack/pull/51",
+  "advertise_commit": "17a18ed5395d635758424873113c7ef106409e17"
 }

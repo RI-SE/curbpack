@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/curbpack/assets/site.css" />
   <style>
-    .paper { max-width: 44rem; padding: 2.5rem 0 4rem; }
+    .paper { max-width: 44rem; padding: 2.5rem 0 4rem; overflow-wrap: anywhere; }
     .paper h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin: 0 0 0.5rem; font-weight: 600; }
     .paper h2 { font-family: var(--font-display); margin-top: 2rem; font-size: 1.35rem; font-weight: 600; }
     .paper h3 { margin-top: 1.25rem; font-size: 1.05rem; }
@@ -20,6 +20,7 @@
       border: 1px solid var(--ink);
     }
     .paper table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 1rem 0; }
+    @media (max-width: 640px) { .paper table { display: block; overflow-x: auto; } }
     .paper th, .paper td { border-bottom: 1px solid var(--paper-dark); text-align: left; padding: 0.45rem 0.35rem; vertical-align: top; }
     .paper blockquote {
       margin: 1rem 0; padding: 0.75rem 1rem; border-left: 2px solid var(--ink);
@@ -66,7 +67,7 @@
       <pre>Pack JSON → Validate engine → GateFailure IR (JSON + markdown)
                                     ↓
                          Review pack / evidence + optional attest</pre>
-      <p>The engine has <strong>nine frozen check kinds</strong> (<code>annex_file</code>, <code>file_present</code>, <code>anti_placeholder</code>, <code>npm_dep_ban</code>, <code>manifest_dep_ban</code>, <code>text_forbid</code>, <code>import_reach</code>, <code>fresh</code>, <code>owned</code>) — packs are malleable; kinds are not. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
+      <p>The engine has <strong>eight check kinds</strong> (<code>annex_file</code>, <code>file_present</code>, <code>anti_placeholder</code>, <code>npm_dep_ban</code>, <code>manifest_dep_ban</code>, <code>text_forbid</code>, <code>fresh</code>, <code>owned</code>) — packs are malleable; kinds are not. Packs are data. No remote policy service is required for daily check. The MCP example shells out to CLI; optional Unix sock sidecar lives under <code>examples/mcp/cmd/curbpack-sock</code> (not in the main binary).</p>
 
       <h3>End-to-end flow</h3>
       <pre class="mono">Install → Init → ChoosePath
