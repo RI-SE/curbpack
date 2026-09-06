@@ -2,8 +2,6 @@ package exportx
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -77,24 +75,19 @@ func WriteSARIF(root string, packIDs []string, outPath string) (string, int, err
 		return "", 0, err
 	}
 	doc := FromGateFailures(res.Payload, root)
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", 0, err
-	}
 	b, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return "", 0, err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
+	written, err := writeContained(root, outPath, ".github/curbpack/cache/curbpack.sarif", append(b, '\n'))
+	if err != nil {
 		return "", 0, err
 	}
 	n := 0
 	if len(doc.Runs) > 0 {
 		n = len(doc.Runs[0].Results)
 	}
-	return outPath, n, nil
+	return written, n, nil
 }
 
 // WatchlistJoinFinding is an informational SBOM ∩ watchlist hit.
@@ -164,20 +157,11 @@ func WriteWatchlistJoin(root, outPath string) (string, error) {
 			return report.Findings[i].WatchlistID+report.Findings[i].Package < report.Findings[j].WatchlistID+report.Findings[j].Package
 		})
 	}
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "cache", "watchlist-sbom-join.json")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
+	return writeContained(root, outPath, ".github/curbpack/cache/watchlist-sbom-join.json", append(b, '\n'))
 }
 
 func packageMatch(e packs.WatchlistEntry, p sbom.Package) bool {

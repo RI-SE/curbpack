@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/paths"
 )
 
@@ -61,15 +62,21 @@ func Save(repoRoot string, c Cache) error {
 	if c.Entries == nil {
 		c.Entries = map[string]Entry{}
 	}
-	dir := filepath.Dir(Path(repoRoot))
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(Path(repoRoot), append(data, '\n'), 0o644)
+	dest := Path(repoRoot)
+	return writeContainedAtRepo(repoRoot, dest, append(data, '\n'))
+}
+
+func writeContainedAtRepo(repoRoot, dest string, data []byte) error {
+	lock, err := outwrite.Acquire(filepath.Dir(dest))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = lock.Release() }()
+	return outwrite.WriteFile(repoRoot, dest, data, 0o644)
 }
 
 // Upsert merges entries by gate_id.

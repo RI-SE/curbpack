@@ -67,12 +67,6 @@ func WriteHoldingReport(root string, packIDs []string, sincePath, outPath string
 
 	md := FormatHoldingReportMarkdown(buyer, prior, cur)
 	mdPath, jsonPath := HoldingReportPaths(root, outPath)
-	if err := os.MkdirAll(filepath.Dir(mdPath), 0o755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
-		return "", err
-	}
 	payload := map[string]any{
 		"schema_version":       "1",
 		"note":                 "Holding report — what still holds / what changed / what needs a person. Not conformity assessment.",
@@ -87,7 +81,10 @@ func WriteHoldingReport(root string, packIDs []string, sincePath, outPath string
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(jsonPath, append(b, '\n'), 0o644); err != nil {
+	if err := writeContainedAt(root, mdPath, []byte(md)); err != nil {
+		return "", err
+	}
+	if err := writeContainedAt(root, jsonPath, append(b, '\n')); err != nil {
 		return "", err
 	}
 	return mdPath, nil

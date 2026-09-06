@@ -168,9 +168,6 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 	}
 
 	mdPath, jsonPath := contextPackPaths(root, outPath)
-	if err := os.MkdirAll(filepath.Dir(jsonPath), 0o755); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(pack, "", "  ")
 	if err != nil {
 		return "", err
@@ -178,14 +175,14 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 	if err := PacketLooksAirlocked(b); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(jsonPath, append(b, '\n'), 0o644); err != nil {
-		return "", err
-	}
 	md := formatContextPackMarkdown(pack)
 	if err := PacketLooksAirlocked([]byte(md)); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
+	if err := writeContainedAt(root, jsonPath, append(b, '\n')); err != nil {
+		return "", err
+	}
+	if err := writeContainedAt(root, mdPath, []byte(md)); err != nil {
 		return "", err
 	}
 	return jsonPath, nil

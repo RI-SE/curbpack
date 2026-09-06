@@ -14,6 +14,7 @@ import (
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/release/templates"
 	"github.com/afelin/curbpack/internal/research"
@@ -35,21 +36,31 @@ type Options struct {
 // Prepare writes the review pack: Annex VII drafts (if missing), three-layer reports, buyer HTML.
 func Prepare(opts Options) error {
 	root := opts.RepoRoot
-	out := opts.OutDir
-	if out == "" {
-		out = filepath.Join(root, "review-pack")
+	repoAbs, err := filepath.Abs(root)
+	if err != nil {
+		return err
 	}
-	if err := os.MkdirAll(out, 0o755); err != nil {
+	outPermitted, out, err := outwrite.DirDest(root, opts.OutDir, "review-pack")
+	if err != nil {
+		return err
+	}
+
+	lock, err := outwrite.Acquire(outPermitted)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = lock.Release() }()
+
+	if err := outwrite.EnsureDir(outPermitted, out); err != nil {
 		return err
 	}
 
 	// Ensure witness / annex scaffolds exist (edit in any markdown editor).
-	if err := ensureWitnessTemplates(root); err != nil {
+	if err := ensureWitnessTemplates(repoAbs); err != nil {
 		return err
 	}
 
 	var res validate.Result
-	var err error
 	if opts.Result != nil {
 		res = *opts.Result
 	} else {
@@ -59,20 +70,39 @@ func Prepare(opts Options) error {
 		}
 	}
 
-	return prepareWithResult(root, out, opts, res)
+	return prepareWithResult(repoAbs, outPermitted, out, opts, res)
 }
 
-func prepareWithResult(root, out string, opts Options, res validate.Result) error {
+func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res validate.Result) error {
 	var prepErrs []error
 	record := func(err error) {
 		if err != nil {
 			prepErrs = append(prepErrs, err)
 		}
 	}
+	writeOut := func(name string, data []byte) {
+		record(outwrite.WriteFile(outPermitted, filepath.Join(out, name), data, 0o644))
+	}
+	writeRepo := func(rel string, data []byte) {
+		dest, _, err := validate.SafeJoin(repoAbs, rel)
+		if err != nil {
+			record(err)
+			return
+		}
+		record(outwrite.WriteFile(repoAbs, dest, data, 0o644))
+	}
+	mkdirRepo := func(rel string) {
+		dest, _, err := validate.SafeJoin(repoAbs, rel)
+		if err != nil {
+			record(err)
+			return
+		}
+		record(outwrite.EnsureDir(repoAbs, dest))
+	}
 
 	// Layer 1: machine JSON
 	layer1, _ := json.MarshalIndent(res.Payload, "", "  ")
-	record(os.WriteFile(filepath.Join(out, "01-gate-failures.json"), append(layer1, '\n'), 0o644))
+	writeOut("01-gate-failures.json", append(layer1, '\n'))
 
 	// Layer 2: semantic markdown for agents
 	md := validate.SemanticMarkdown(res.Payload)
@@ -80,59 +110,67 @@ func prepareWithResult(root, out string, opts Options, res validate.Result) erro
 		md = "# COMPLIANCE STATUS: ALL GATES PASSED\n\nDeterministic pack evaluation found no violations.\n\n" +
 			"**Note:** This is evidence preparation for human review — not a certification.\n"
 	}
-	record(os.WriteFile(filepath.Join(out, "02-action-report.md"), []byte(md), 0o644))
+	writeOut("02-action-report.md", []byte(md))
 
 	// Layer 3: executive summary markdown
 	execMD := executiveSummary(res)
-	record(os.WriteFile(filepath.Join(out, "03-executive-summary.md"), []byte(execMD), 0o644))
+	writeOut("03-executive-summary.md", []byte(execMD))
 
 	// SBOM summary + CycloneDX 1.5 (best-effort from lockfile)
-	evidenceDir := filepath.Join(root, ".github", "curbpack", "evidence")
-	record(os.MkdirAll(evidenceDir, 0o755))
-	sbomSummary, sbomErr := sbom.FromLockfiles(root)
-	sbomPath := filepath.Join(out, "04-sbom-summary.json")
+	mkdirRepo(".github/curbpack/evidence")
+	sbomSummary, sbomErr := sbom.FromLockfiles(repoAbs)
 	if sbomErr != nil {
-		record(os.WriteFile(sbomPath, []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"), 0o644))
+		writeOut("04-sbom-summary.json", []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"))
 	} else {
-		cdxPath := filepath.Join(evidenceDir, "sbom.cdx.json")
-		if _, written, err := sbom.WriteCycloneDX(root, cdxPath); err == nil {
+		cdxRel := ".github/curbpack/evidence/sbom.cdx.json"
+		cdxPath, _, joinErr := validate.SafeJoin(repoAbs, cdxRel)
+		if joinErr != nil {
+			record(joinErr)
+		} else if _, written, err := sbom.WriteCycloneDX(repoAbs, cdxPath); err == nil {
 			sbomSummary.CycloneDXPath = written
 			sbomSummary.Format = "CycloneDX-1.5"
-			record(copyFile(written, filepath.Join(out, "04-sbom.cdx.json")))
+			if data, rerr := os.ReadFile(written); rerr != nil {
+				record(rerr)
+			} else {
+				writeOut("04-sbom.cdx.json", data)
+			}
 		} else {
 			record(fmt.Errorf("cyclonedx: %w", err))
 		}
 		b, _ := json.MarshalIndent(sbomSummary, "", "  ")
-		record(os.WriteFile(sbomPath, append(b, '\n'), 0o644))
+		writeOut("04-sbom-summary.json", append(b, '\n'))
 	}
 
 	// Pending OpenVEX from dependency-shaped findings only (gates stay in IR).
-	vexDoc := vex.FromGateFailures(filepath.Base(root), res.Payload)
-	vexPath, vexWriteErr := vex.Write(root, vexDoc, filepath.Join(evidenceDir, "vex-pending.json"))
+	vexDoc := vex.FromGateFailures(filepath.Base(repoAbs), res.Payload)
+	vexPath, vexWriteErr := vex.Write(repoAbs, vexDoc, filepath.Join(repoAbs, ".github", "curbpack", "evidence", "vex-pending.json"))
 	if vexWriteErr != nil {
 		record(fmt.Errorf("vex: %w", vexWriteErr))
+	} else if data, rerr := os.ReadFile(vexPath); rerr != nil {
+		record(rerr)
 	} else {
-		record(copyFile(vexPath, filepath.Join(out, "05-vex-draft.json")))
+		writeOut("05-vex-draft.json", data)
 	}
 
 	// SARIF layer (same mapper as CLI export --sarif)
-	sarifDoc := exportx.FromGateFailures(res.Payload, root)
+	sarifDoc := exportx.FromGateFailures(res.Payload, repoAbs)
 	sarifBytes, _ := json.MarshalIndent(sarifDoc, "", "  ")
-	record(os.WriteFile(filepath.Join(out, "06-gate-failures.sarif"), append(sarifBytes, '\n'), 0o644))
-	record(os.MkdirAll(filepath.Join(root, ".github", "curbpack", "cache"), 0o755))
-	record(os.WriteFile(filepath.Join(root, ".github", "curbpack", "cache", "curbpack.sarif"), append(sarifBytes, '\n'), 0o644))
+	writeOut("06-gate-failures.sarif", append(sarifBytes, '\n'))
+	mkdirRepo(".github/curbpack/cache")
+	writeRepo(".github/curbpack/cache/curbpack.sarif", append(sarifBytes, '\n'))
 
 	// Informational watchlist ∩ SBOM join
-	if joinPath, err := exportx.WriteWatchlistJoin(root, ""); err != nil {
+	if joinPath, err := exportx.WriteWatchlistJoin(repoAbs, ""); err != nil {
 		record(fmt.Errorf("watchlist join: %w", err))
+	} else if data, rerr := os.ReadFile(joinPath); rerr != nil {
+		record(rerr)
 	} else {
-		record(copyFile(joinPath, filepath.Join(out, "07-watchlist-sbom-join.json")))
+		writeOut("07-watchlist-sbom-join.json", data)
 	}
 	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
-	// Digests are computed from payload + written layers (not silently preferred from bind).
-	htmlDoc := buyerOnePager(root, out, res)
+	htmlDoc := buyerOnePager(repoAbs, out, res)
 	onepagerPath := filepath.Join(out, "buyer-onepager.html")
-	wrote, err := writeOnePagerIfChanged(onepagerPath, htmlDoc)
+	wrote, err := writeOnePagerIfChanged(outPermitted, onepagerPath, htmlDoc)
 	if err != nil {
 		record(fmt.Errorf("buyer one-pager: %w", err))
 	} else if wrote {
@@ -143,9 +181,9 @@ func prepareWithResult(root, out string, opts Options, res validate.Result) erro
 
 	// Copy / refresh proof page into review-pack and repo proof/
 	proof := templates.ProofPageHTML()
-	record(os.MkdirAll(filepath.Join(root, "proof"), 0o755))
-	record(os.WriteFile(filepath.Join(root, "proof", "index.html"), []byte(proof), 0o644))
-	record(os.WriteFile(filepath.Join(out, "proof-index.html"), []byte(proof), 0o644))
+	mkdirRepo("proof")
+	writeRepo("proof/index.html", []byte(proof))
+	writeOut("proof-index.html", []byte(proof))
 
 	tty.PrintStatus("Review pack", true, out)
 	if !res.Passed {
@@ -168,17 +206,14 @@ func jsonString(s string) string {
 // writeOnePagerIfChanged skips rewrite when the on-disk body matches the new
 // document aside from wall-clock "Generated" lines. Never trust the HTML
 // fingerprint marker alone — a forged page can copy the current marker (FG-01).
-func writeOnePagerIfChanged(path, htmlDoc string) (bool, error) {
+func writeOnePagerIfChanged(permitted, path, htmlDoc string) (bool, error) {
 	fp := onePagerContentFingerprint(htmlDoc)
 	if prev, err := os.ReadFile(path); err == nil {
 		if onePagerContentFingerprint(string(prev)) == fp && fp != "" {
 			return false, nil
 		}
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, err
-	}
-	if err := os.WriteFile(path, []byte(htmlDoc), 0o644); err != nil {
+	if err := outwrite.WriteFile(permitted, path, []byte(htmlDoc), 0o644); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -566,15 +601,22 @@ func ProofPageHTML() string {
 
 // WriteEvidenceBundle writes review-pack/evidence-bundle.html for offline handoff.
 func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
-	out := filepath.Join(root, "review-pack", "evidence-bundle.html")
-	onepagerPath := filepath.Join(root, "review-pack", "buyer-onepager.html")
+	repoAbs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	permitted, out, err := outwrite.FileDest(repoAbs, "", "review-pack/evidence-bundle.html")
+	if err != nil {
+		return "", err
+	}
+	onepagerPath := filepath.Join(filepath.Dir(out), "buyer-onepager.html")
 	var onePagerMain string
 	if b, err := os.ReadFile(onepagerPath); err == nil {
 		onePagerMain = templates.ExtractOnePagerMain(string(b))
 	}
 	hpurlFrag := ""
 	hpurlJSON := ""
-	ptrPath := filepath.Join(root, ".github", "curbpack", "evidence", "hpurl-pointer.json")
+	ptrPath := filepath.Join(repoAbs, ".github", "curbpack", "evidence", "hpurl-pointer.json")
 	if b, err := os.ReadFile(ptrPath); err == nil {
 		hpurlJSON = string(b)
 		var ptr struct {
@@ -585,7 +627,7 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 		}
 	}
 	doc := templates.EvidenceBundleHTML(templates.BundleDTO{
-		RepoName:       filepath.Base(root),
+		RepoName:       filepath.Base(repoAbs),
 		Score:          res.Score,
 		Passed:         res.Passed,
 		Timestamp:      res.Payload.Timestamp,
@@ -594,10 +636,7 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 		HPURLEmbedJSON: hpurlJSON,
 		Remediation:    !res.Passed,
 	})
-	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(out, []byte(doc), 0o644); err != nil {
+	if err := outwrite.WriteFile(permitted, out, []byte(doc), 0o644); err != nil {
 		return "", err
 	}
 	return out, nil

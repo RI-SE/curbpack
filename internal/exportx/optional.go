@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 
@@ -19,9 +18,6 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 	if err != nil && !sbom.IsUnavailable(err) {
 		return "", err
 	}
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "sbom.spdx.json")
-	}
 	docs := map[string]any{
 		"spdxVersion":       "SPDX-2.3",
 		"dataLicense":       "CC0-1.0",
@@ -35,17 +31,11 @@ func WriteSPDXOptional(root, outPath string) (string, error) {
 		},
 		"packages": spdxPackages(pkgs),
 	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(docs, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
+	return writeContained(root, outPath, ".github/curbpack/evidence/sbom.spdx.json", append(b, '\n'))
 }
 
 func spdxPackages(pkgs []sbom.Package) []map[string]any {
@@ -103,18 +93,9 @@ func WriteSLSAOptional(root, outPath string) (string, error) {
 		"predicateType": "https://slsa.dev/provenance/v0.2",
 		"predicate":     predicate,
 	}
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "slsa-sidecar.json")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
+	return writeContained(root, outPath, ".github/curbpack/evidence/slsa-sidecar.json", append(b, '\n'))
 }

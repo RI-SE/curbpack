@@ -3,7 +3,6 @@ package exportx
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -191,7 +190,7 @@ func WriteBuyerQuestionsFromResult(root string, packIDs []string, outPath string
 
 func writeBuyerQuestionsReport(root string, packIDs []string, outPath string, report BuyerQuestionsReport) (string, int, error) {
 	mdPath, jsonPath := buyerQuestionsPaths(root, outPath)
-	if err := writeBuyerQuestionsFiles(report, mdPath, jsonPath); err != nil {
+	if err := writeBuyerQuestionsFiles(root, report, mdPath, jsonPath); err != nil {
 		return "", 0, err
 	}
 	return mdPath, len(report.Questions), nil
@@ -221,25 +220,22 @@ func WriteSupplierChecklist(root string, packIDs []string, outPath string) (stri
 // WriteSupplierChecklistReport writes a pre-built report to review-pack/ (or outPath stem).
 func WriteSupplierChecklistReport(root string, report BuyerQuestionsReport, outPath string) (string, int, error) {
 	mdPath, jsonPath := SupplierQuestionsPaths(root, outPath)
-	if err := writeBuyerQuestionsFiles(report, mdPath, jsonPath); err != nil {
+	if err := writeBuyerQuestionsFiles(root, report, mdPath, jsonPath); err != nil {
 		return "", 0, err
 	}
 	return mdPath, len(report.Questions), nil
 }
 
-func writeBuyerQuestionsFiles(report BuyerQuestionsReport, mdPath, jsonPath string) error {
-	if err := os.MkdirAll(filepath.Dir(mdPath), 0o755); err != nil {
-		return err
-	}
+func writeBuyerQuestionsFiles(root string, report BuyerQuestionsReport, mdPath, jsonPath string) error {
 	md := FormatBuyerQuestionsMarkdown(report)
-	if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
-		return err
-	}
 	b, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(jsonPath, append(b, '\n'), 0o644)
+	if err := writeContainedAt(root, mdPath, []byte(md)); err != nil {
+		return err
+	}
+	return writeContainedAt(root, jsonPath, append(b, '\n'))
 }
 
 func buyerQuestionsPaths(root, outPath string) (mdPath, jsonPath string) {
