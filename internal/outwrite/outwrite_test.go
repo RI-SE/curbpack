@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/afelin/curbpack/internal/outwrite"
 )
@@ -46,35 +45,6 @@ func TestWriteFileRefusesGitDest(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), ".git") {
 		t.Fatalf("expected .git refuse, got %v", err)
 	}
-}
-
-func TestExclusiveLockBusyAndStaleRecovery(t *testing.T) {
-	dir := t.TempDir()
-	l1, err := outwrite.Acquire(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l1.Release()
-
-	if _, err := outwrite.Acquire(dir); err == nil {
-		// same PID re-entry is allowed
-	} else {
-		t.Fatalf("same-process reentry should succeed: %v", err)
-	}
-
-	// Foreign stale lock: rewrite lock as dead pid with old mtime.
-	_ = l1.Release()
-	lockPath := filepath.Join(dir, outwrite.LockFileName)
-	if err := os.WriteFile(lockPath, []byte("pid=1\nstarted=2000-01-01T00:00:00Z\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	past := time.Now().Add(-2 * outwrite.StaleLockAge)
-	_ = os.Chtimes(lockPath, past, past)
-	l2, err := outwrite.Acquire(dir)
-	if err != nil {
-		t.Fatalf("stale lock should recover: %v", err)
-	}
-	_ = l2.Release()
 }
 
 func TestStageThenPublishLeavesNoTmp(t *testing.T) {

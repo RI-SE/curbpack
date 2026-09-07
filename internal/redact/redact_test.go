@@ -44,3 +44,11 @@ func TestLooksCleanVerifyCustomHome(t *testing.T) {
 		t.Fatal("want custom-home leak detected on verify side")
 	}
 }
+
+func TestRepositoryPrefixDoesNotRewriteSibling(t *testing.T) {
+	ctx := redact.Context{RepoRoot: "/opt/audit/repo", Mode: redact.Plain}
+	got := redact.String("/opt/audit/repo-copy/file /opt/audit/repo/file (/opt/audit/repo)", ctx)
+	if got != "/opt/audit/repo-copy/file file (.)" {
+		t.Fatalf("path prefix corrupted: %q", got)
+	}
+}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/gitutil"
+	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/paths"
 	"github.com/afelin/curbpack/internal/tty"
 )
@@ -86,6 +87,17 @@ func Run(opts Options) (Capsule, error) {
 	if !opts.AllowDirty && gitutil.IsDirty(root) {
 		return Capsule{}, fmt.Errorf("OCC conflict: working directory has uncommitted files")
 	}
+
+	// Check the evidence destination before signing or modifying Git Notes.
+	permitted, pointerPath, err := outwrite.FileDest(root, "", paths.EvidenceRel+"/hpurl-pointer.json")
+	if err != nil {
+		return Capsule{}, err
+	}
+	lock, err := outwrite.Acquire(permitted)
+	if err != nil {
+		return Capsule{}, err
+	}
+	defer lock.Release()
 
 	commit, err := gitutil.HeadSHA(root)
 	if err != nil {
@@ -173,8 +185,6 @@ func Run(opts Options) (Capsule, error) {
 	}
 
 	// Local evidence pointer for HPURL verify (write-new curbpack path).
-	evidenceDir := paths.EvidenceDir(root)
-	_ = os.MkdirAll(evidenceDir, 0o755)
 	pointer := map[string]any{
 		"state_hash":    stateHash,
 		"commit_sha":    commit,
@@ -185,7 +195,9 @@ func Run(opts Options) (Capsule, error) {
 		"evidence_root": paths.EvidenceRel + "/",
 	}
 	pb, _ := json.MarshalIndent(pointer, "", "  ")
-	_ = os.WriteFile(filepath.Join(evidenceDir, "hpurl-pointer.json"), append(pb, '\n'), 0o644)
+	if err := outwrite.WriteFile(permitted, pointerPath, append(pb, '\n'), 0o644); err != nil {
+		return Capsule{}, fmt.Errorf("Git Notes capsule written but local evidence pointer failed: %w", err)
+	}
 
 	tty.PrintStatus("Git Notes capsule", true, "refs/notes/curbpack @ "+truncate(commit, 12))
 	tty.PrintStatus("HPURL fragment", true, cap.HPURLFragment)

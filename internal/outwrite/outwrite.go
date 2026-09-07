@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/afelin/curbpack/internal/pathjail"
@@ -24,8 +25,6 @@ import (
 const (
 	// LockFileName is placed under the permitted root for exclusive writers.
 	LockFileName = ".curbpack-outwrite.lock"
-	// StaleLockAge is when a lock without a live owner may be recovered.
-	StaleLockAge = 30 * time.Minute
 )
 
 // DirDest resolves a directory destination.
@@ -203,148 +202,147 @@ func WriteFile(permittedRoot, destAbs string, data []byte, mode os.FileMode) err
 	return os.Rename(tmpName, destAbs)
 }
 
-// ExclusiveLock is a cooperative lock for concurrent friendly writers.
+// ExclusiveLock serializes cooperative writers, including separate goroutines.
+// A caller must retain the handle for the entire operation; PID equality never
+// grants another caller ownership. This is not a hostile filesystem race barrier.
 type ExclusiveLock struct {
-	path   string
-	f      *os.File
-	nested bool // same-process re-entry; Release is a no-op
+	mu   sync.Mutex
+	path string
+	f    *os.File
 }
 
-// Acquire takes an exclusive lock file under permittedRoot.
-// Same-process re-entry (nested writers under one lock) returns a nested handle.
-// Stale locks (dead owner PID or older than StaleLockAge) are removed once.
-// This does not claim protection against a hostile filesystem race.
+// Acquire takes an exclusive lock. Recovery is always an explicit operation;
+// neither the age of a lock nor sharing its PID permits taking it over.
 func Acquire(permittedRoot string) (*ExclusiveLock, error) {
 	rootAbs, err := filepath.Abs(permittedRoot)
 	if err != nil {
 		return nil, err
 	}
-	if st, err := os.Lstat(rootAbs); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(rootAbs, 0o755); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	} else if !st.IsDir() && st.Mode()&os.ModeSymlink == 0 {
-		return nil, fmt.Errorf("lock root is not a directory")
-	}
-	if err := refuseGitOrReservedAbs(rootAbs); err != nil {
+	if err := EnsureDir(rootAbs, rootAbs); err != nil {
 		return nil, err
 	}
 	lockPath := filepath.Join(rootAbs, LockFileName)
 	if err := Contain(rootAbs, lockPath); err != nil {
 		return nil, err
 	}
-	if body, err := os.ReadFile(lockPath); err == nil {
-		for _, line := range strings.Split(string(body), "\n") {
-			if strings.HasPrefix(line, "pid=") {
-				if pid, _ := strconv.Atoi(strings.TrimPrefix(line, "pid=")); pid == os.Getpid() {
-					return &ExclusiveLock{path: lockPath, nested: true}, nil
-				}
-				break
-			}
-		}
-	}
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
-		if !os.IsExist(err) {
-			return nil, err
+		if os.IsExist(err) {
+			return nil, fmt.Errorf("exclusive writer lock busy at %s; after the owner exits, use curbpack recover-lock %q", lockPath, rootAbs)
 		}
-		if !recoverStaleLock(lockPath) {
-			return nil, fmt.Errorf("exclusive writer lock busy at %s (concurrent friendly writers only; not a hostile FS race barrier)", lockPath)
-		}
-		f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-		if err != nil {
-			return nil, fmt.Errorf("exclusive writer lock busy at %s (concurrent friendly writers only; not a hostile FS race barrier)", lockPath)
-		}
+		return nil, err
 	}
-	body := fmt.Sprintf("pid=%d\nstarted=%s\nnote=cooperative-lock-not-hostile-fs-barrier\n",
-		os.Getpid(), time.Now().UTC().Format(time.RFC3339))
-	if _, werr := f.WriteString(body); werr != nil {
-		_ = f.Close()
-		_ = os.Remove(lockPath)
-		return nil, werr
+	lock := &ExclusiveLock{path: lockPath, f: f}
+	body := fmt.Sprintf("pid=%d\nstarted=%s\nnote=cooperative-lock-not-hostile-fs-barrier\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339))
+	if _, err := f.WriteString(body); err != nil {
+		_ = lock.Release()
+		return nil, err
 	}
-	_ = f.Sync()
-	return &ExclusiveLock{path: lockPath, f: f}, nil
+	if err := f.Sync(); err != nil {
+		_ = lock.Release()
+		return nil, err
+	}
+	return lock, nil
 }
 
-// Release drops the exclusive lock.
+// Release is idempotent and refuses to delete a replacement lock.
 func (l *ExclusiveLock) Release() error {
 	if l == nil {
 		return nil
 	}
-	if l.nested {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.f == nil {
 		return nil
 	}
-	var err error
-	if l.f != nil {
-		err = l.f.Close()
-		l.f = nil
+	f := l.f
+	l.f = nil
+	owned, err := f.Stat()
+	current, statErr := os.Lstat(l.path)
+	closeErr := f.Close()
+	if err != nil {
+		return err
 	}
-	if rerr := os.Remove(l.path); rerr != nil && !os.IsNotExist(rerr) && err == nil {
-		err = rerr
+	if os.IsNotExist(statErr) {
+		return closeErr
 	}
-	return err
+	if statErr != nil {
+		return statErr
+	}
+	if !os.SameFile(owned, current) {
+		return fmt.Errorf("writer lock changed; replacement preserved")
+	}
+	if err := os.Remove(l.path); err != nil {
+		return err
+	}
+	return closeErr
 }
 
-func recoverStaleLock(path string) bool {
+// RecoverStale explicitly removes a lock whose recorded process is known dead.
+// Live, unreadable, malformed and symlink locks require operator investigation.
+// A separate exclusive guard serializes cooperative recovery attempts. If a
+// recovery itself is interrupted, its guard must be inspected by the operator.
+func RecoverStale(permittedRoot string) error {
+	root, err := filepath.Abs(permittedRoot)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(root, LockFileName)
+	if err := Contain(root, path); err != nil {
+		return err
+	}
+	guard, err := os.OpenFile(path+".recovery", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("recovery guard: %w", err)
+	}
+	defer func() { _ = guard.Close(); _ = os.Remove(path + ".recovery") }()
 	st, err := os.Lstat(path)
 	if err != nil {
-		return false
+		return err
 	}
-	if st.Mode()&os.ModeSymlink != 0 {
-		return os.Remove(path) == nil
+	if !st.Mode().IsRegular() {
+		return fmt.Errorf("lock must be a regular file; inspect manually")
 	}
 	body, err := os.ReadFile(path)
 	if err != nil {
-		return false
+		return err
 	}
 	pid := 0
 	for _, line := range strings.Split(string(body), "\n") {
 		if strings.HasPrefix(line, "pid=") {
-			pid, _ = strconv.Atoi(strings.TrimPrefix(line, "pid="))
+			pid, err = strconv.Atoi(strings.TrimPrefix(line, "pid="))
 			break
 		}
 	}
-	if pid > 0 && !pidAlive(pid) {
-		return os.Remove(path) == nil
+	if err != nil || pid <= 0 {
+		return fmt.Errorf("lock owner is unknown; inspect manually")
 	}
-	if time.Since(st.ModTime()) > StaleLockAge {
-		return os.Remove(path) == nil
+	if pidAlive(pid) {
+		return fmt.Errorf("lock owner PID %d is alive or cannot be verified dead", pid)
 	}
-	return false
+	current, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	if !os.SameFile(st, current) {
+		return fmt.Errorf("lock changed during recovery; preserved")
+	}
+	return os.Remove(path)
 }
 
 func ensureContainableDir(dirAbs string) error {
 	if err := refuseGitOrReservedAbs(dirAbs); err != nil {
 		return err
 	}
-	if _, err := os.Lstat(dirAbs); err == nil {
-		resolved, err := filepath.EvalSymlinks(dirAbs)
-		if err != nil {
-			return fmt.Errorf("symlink resolution refused: %w", err)
-		}
-		return refuseGitOrReservedAbs(resolved)
-	}
-	parent := filepath.Dir(dirAbs)
-	if parent == dirAbs {
-		return nil
-	}
-	if _, err := os.Lstat(parent); err == nil {
-		resolved, err := filepath.EvalSymlinks(parent)
-		if err != nil {
-			return fmt.Errorf("symlink resolution refused: %w", err)
-		}
-		return refuseGitOrReservedAbs(filepath.Join(resolved, filepath.Base(dirAbs)))
-	}
-	return nil
+	return pathjail.ContainAbs(dirAbs, dirAbs)
 }
 
 func refuseGitOrReservedAbs(abs string) error {
-	slash := filepath.ToSlash(abs)
+	slash := strings.ReplaceAll(filepath.ToSlash(abs), `\`, `/`)
+	slash = strings.TrimPrefix(slash, filepath.ToSlash(filepath.VolumeName(abs)))
+	if strings.Contains(slash, ":") {
+		return fmt.Errorf("Windows drive-relative or alternate stream path refused")
+	}
 	for _, p := range strings.Split(slash, "/") {
 		if pathjail.IsReservedDeviceName(p) {
 			return fmt.Errorf("reserved device name refused")
@@ -352,6 +350,54 @@ func refuseGitOrReservedAbs(abs string) error {
 		if strings.EqualFold(pathjail.NormalizeSegment(p), ".git") {
 			return fmt.Errorf("path under .git refused")
 		}
+	}
+	return nil
+}
+
+// SaveFile resolves an explicitly supplied destination (or repository default),
+// holds the writer lock and publishes complete bytes. Callers already holding
+// a lock use WriteFile with that operation's original permitted root.
+func SaveFile(repoRoot, outPath, defaultRel string, data []byte, mode os.FileMode) (string, error) {
+	permitted, dest, err := FileDest(repoRoot, outPath, defaultRel)
+	if err != nil {
+		return "", err
+	}
+	lock, err := Acquire(permitted)
+	if err != nil {
+		return "", err
+	}
+	defer lock.Release()
+	if err := WriteFile(permitted, dest, data, mode); err != nil {
+		return "", err
+	}
+	return dest, nil
+}
+
+// Holds verifies the explicit lease belongs to this exact permitted root and
+// still owns its lock. It does not infer ownership from the calling process.
+func (l *ExclusiveLock) Holds(root string) error {
+	if l == nil {
+		return fmt.Errorf("writer lease is required")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	if l.f == nil || l.path != filepath.Join(abs, LockFileName) {
+		return fmt.Errorf("writer lease does not own permitted root")
+	}
+	owned, err := l.f.Stat()
+	if err != nil {
+		return err
+	}
+	current, err := os.Lstat(l.path)
+	if err != nil {
+		return err
+	}
+	if !os.SameFile(owned, current) {
+		return fmt.Errorf("writer lease replaced")
 	}
 	return nil
 }

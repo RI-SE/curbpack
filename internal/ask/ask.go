@@ -37,7 +37,7 @@ func Run(path string, propose bool) error {
 	fmt.Println("---")
 	failed := payload.FailedRules
 	if failed == 0 {
-		failed = len(payload.Failures)
+		failed = ir.UniqueFailedGates(payload.Failures)
 	}
 	fmt.Printf("failed=%d evaluated=%d skipped=%d · findings: %d\n", failed, payload.EvaluatedRules, payload.SkippedRules, len(payload.Failures))
 

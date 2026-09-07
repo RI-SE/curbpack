@@ -1,5 +1,12 @@
 # Launch status and audit limitations
 
+**7 September follow-up:** hold the broad readiness claim. The takeover audit
+reproduced additional lock, VEX containment, gate-count and custom-home emission
+defects after the previously green checks. See the [repair and remaining-work
+register](production-hardening-audit.md). The dated evidence below retains its
+original scope.
+
+
 Assessment date: 2026-09-06. **Production qualification is incomplete.** The
 released CLI can be installed and used for local structural diagnosis. Its
 output must not be treated as a complete security audit, an approval, or proof of

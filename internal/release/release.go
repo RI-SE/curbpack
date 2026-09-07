@@ -45,11 +45,20 @@ func Prepare(opts Options) error {
 		return err
 	}
 
-	lock, err := outwrite.Acquire(outPermitted)
+	// Repository artifacts and an explicit outside pack are both written by this
+	// operation. Acquire repository first consistently; nested mappers are pure.
+	lock, err := outwrite.Acquire(repoAbs)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = lock.Release() }()
+	defer lock.Release()
+	if outPermitted != repoAbs {
+		outLock, err := outwrite.Acquire(outPermitted)
+		if err != nil {
+			return err
+		}
+		defer outLock.Release()
+	}
 
 	if err := outwrite.EnsureDir(outPermitted, out); err != nil {
 		return err
@@ -64,7 +73,7 @@ func Prepare(opts Options) error {
 	if opts.Result != nil {
 		res = *opts.Result
 	} else {
-		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: opts.PackIDs, Quiet: true})
+		res, err = validate.Run(validate.Options{RepoRoot: root, PackIDs: opts.PackIDs, Quiet: true, Writer: lock})
 		if err != nil {
 			return err
 		}
@@ -105,10 +114,9 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	writeOut("01-gate-failures.json", append(layer1, '\n'))
 
 	// Layer 2: semantic markdown for agents
-	md := validate.SemanticMarkdown(res.Payload)
-	if len(res.Payload.Failures) == 0 {
-		md = "# COMPLIANCE STATUS: ALL GATES PASSED\n\nDeterministic pack evaluation found no violations.\n\n" +
-			"**Note:** This is evidence preparation for human review — not a certification.\n"
+	md := validate.ActionReportMarkdown(res.Payload, res.SkippedRules)
+	if len(res.Payload.Failures) > 0 {
+		md += "\n" + validate.SemanticMarkdown(res.Payload)
 	}
 	writeOut("02-action-report.md", []byte(md))
 
@@ -122,20 +130,19 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	if sbomErr != nil {
 		writeOut("04-sbom-summary.json", []byte(`{"status":"unavailable","detail":`+jsonString(sbomErr.Error())+"}\n"))
 	} else {
-		cdxRel := ".github/curbpack/evidence/sbom.cdx.json"
-		cdxPath, _, joinErr := validate.SafeJoin(repoAbs, cdxRel)
-		if joinErr != nil {
-			record(joinErr)
-		} else if _, written, err := sbom.WriteCycloneDX(repoAbs, cdxPath); err == nil {
-			sbomSummary.CycloneDXPath = written
-			sbomSummary.Format = "CycloneDX-1.5"
-			if data, rerr := os.ReadFile(written); rerr != nil {
-				record(rerr)
-			} else {
-				writeOut("04-sbom.cdx.json", data)
-			}
+		pkgs, source, err := sbom.CollectPackages(repoAbs)
+		if err != nil {
+			record(err)
+		} else if doc, err := sbom.BuildCycloneDX(repoAbs, pkgs, source); err != nil {
+			record(err)
+		} else if data, err := json.MarshalIndent(doc, "", "  "); err != nil {
+			record(err)
 		} else {
-			record(fmt.Errorf("cyclonedx: %w", err))
+			data = append(data, '\n')
+			writeRepo(".github/curbpack/evidence/sbom.cdx.json", data)
+			writeOut("04-sbom.cdx.json", data)
+			sbomSummary.CycloneDXPath = ".github/curbpack/evidence/sbom.cdx.json"
+			sbomSummary.Format = "CycloneDX-1.5"
 		}
 		b, _ := json.MarshalIndent(sbomSummary, "", "  ")
 		writeOut("04-sbom-summary.json", append(b, '\n'))
@@ -146,12 +153,12 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	if vexErr != nil {
 		record(fmt.Errorf("vex: %w", vexErr))
 	} else {
-		vexPath, vexWriteErr := vex.Write(repoAbs, vexDoc, filepath.Join(repoAbs, ".github", "curbpack", "evidence", "vex-pending.json"))
-		if vexWriteErr != nil {
-			record(fmt.Errorf("vex: %w", vexWriteErr))
-		} else if data, rerr := os.ReadFile(vexPath); rerr != nil {
-			record(rerr)
+		data, err := json.MarshalIndent(vexDoc, "", "  ")
+		if err != nil {
+			record(err)
 		} else {
+			data = append(data, '\n')
+			writeRepo(".github/curbpack/evidence/vex-pending.json", data)
 			writeOut("05-vex-draft.json", data)
 		}
 	}
@@ -164,11 +171,13 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	writeRepo(".github/curbpack/cache/curbpack.sarif", append(sarifBytes, '\n'))
 
 	// Informational watchlist ∩ SBOM join
-	if joinPath, err := exportx.WriteWatchlistJoin(repoAbs, ""); err != nil {
+	if report, err := exportx.BuildWatchlistJoin(repoAbs); err != nil {
 		record(fmt.Errorf("watchlist join: %w", err))
-	} else if data, rerr := os.ReadFile(joinPath); rerr != nil {
-		record(rerr)
+	} else if data, err := json.MarshalIndent(report, "", "  "); err != nil {
+		record(err)
 	} else {
+		data = append(data, '\n')
+		writeRepo(".github/curbpack/cache/watchlist-sbom-join.json", data)
 		writeOut("07-watchlist-sbom-join.json", data)
 	}
 	// Buyer one-pager HTML — skip rewrite when gate snapshot fingerprint unchanged.
@@ -251,17 +260,6 @@ func onePagerFingerprint(htmlDoc string) string {
 	return onePagerContentFingerprint(htmlDoc)
 }
 
-func copyFile(src, dst string) error {
-	if src == "" {
-		return nil
-	}
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, data, 0o644)
-}
-
 func ensureWitnessTemplates(root string) error {
 	ids, err := config.ResolvePackIDs(root, nil)
 	if err != nil {
@@ -284,10 +282,7 @@ func ensureWitnessTemplates(root string) error {
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(path, []byte(packs.DefaultScaffoldBody(clean)), 0o644); err != nil {
+		if err := outwrite.WriteFile(root, path, []byte(packs.DefaultScaffoldBody(clean)), 0o644); err != nil {
 			return err
 		}
 	}
@@ -616,6 +611,12 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	lock, err := outwrite.Acquire(permitted)
+	if err != nil {
+		return "", err
+	}
+	defer lock.Release()
+
 	onepagerPath := filepath.Join(filepath.Dir(out), "buyer-onepager.html")
 	var onePagerMain string
 	if b, err := os.ReadFile(onepagerPath); err == nil {

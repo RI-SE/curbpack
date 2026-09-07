@@ -14,6 +14,7 @@ import (
 	"github.com/afelin/curbpack/internal/config"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/outwrite"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/pathway"
@@ -26,6 +27,7 @@ var placeholderRE = regexp.MustCompile(`(?i)(lorem ipsum|\[insert[^\]]*\]|TODO:|
 
 // Options controls validate / check.
 type Options struct {
+	Writer   *outwrite.ExclusiveLock // explicit caller-held repository lease, when composing writes
 	RepoRoot string
 	PackIDs  []string
 	Quiet    bool
@@ -135,7 +137,7 @@ func Run(opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	counts := redact.FromRules(len(failures), skipped, len(composed.Rules))
+	counts := redact.FromRules(len(unique(regions)), skipped, len(composed.Rules))
 	eval := ir.Evaluation{
 		SchemaVersion: ir.EvaluationSchemaVersion,
 		ConcurrencyControl: ir.ConcurrencyControl{
@@ -170,7 +172,7 @@ func Run(opts Options) (Result, error) {
 
 	action := ActionReportMarkdown(payload, skipped)
 	if !opts.ReadOnly {
-		if err := writeEvaluationCache(root, eval, receipt, payload, action); err != nil {
+		if err := writeEvaluationCache(root, opts.Writer, eval, receipt, payload, action); err != nil {
 			payload.Outcome = ir.OutcomeError
 			return Result{Payload: payload, Score: score, SkippedRules: skipped,
 					FailedRules: counts.Failed, EvaluatedRules: counts.Evaluated,
@@ -518,7 +520,7 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	}
 	failed := payload.FailedRules
 	if failed == 0 {
-		failed = len(payload.Failures)
+		failed = ir.UniqueFailedGates(payload.Failures)
 	}
 	evaluated := payload.EvaluatedRules
 	if evaluated == 0 && skipped == 0 {

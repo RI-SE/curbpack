@@ -4,12 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/ir"
+	"github.com/afelin/curbpack/internal/outwrite"
 )
 
 // Document is a pending OpenVEX draft for dependency/advisory rows only.
@@ -151,18 +150,9 @@ func firstNonEmpty(a, b string) string {
 
 // Write writes the VEX draft JSON to path (default evidence dir).
 func Write(root string, doc Document, outPath string) (string, error) {
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "vex-pending.json")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", err
-	}
 	b, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
-		return "", err
-	}
-	return outPath, nil
+	return outwrite.SaveFile(root, outPath, ".github/curbpack/evidence/vex-pending.json", append(b, '\n'), 0644)
 }

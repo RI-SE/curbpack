@@ -38,6 +38,9 @@ func writeContainedAt(repoRoot, destAbs string, data []byte) error {
 	if rel, rerr := filepath.Rel(repoAbs, destAbs); rerr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		permitted = filepath.Dir(destAbs)
 	}
+	if err := outwrite.Contain(permitted, destAbs); err != nil {
+		return err
+	}
 	lock, err := outwrite.Acquire(permitted)
 	if err != nil {
 		return err

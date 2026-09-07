@@ -150,25 +150,13 @@ func scrubRepoRoot(s, repoRoot string) string {
 	if abs == "" || abs == "/" || abs == `.` {
 		return s
 	}
-	slashRoot := filepath.ToSlash(abs)
-	for _, prefix := range []string{slashRoot + "/", slashRoot + `\`, slashRoot} {
-		if prefix == "/" || prefix == `\` {
-			continue
-		}
-		repl := ""
-		if prefix == slashRoot {
-			repl = "."
-		}
-		s = strings.ReplaceAll(s, prefix, repl)
-	}
-	if abs != slashRoot {
-		for _, prefix := range []string{abs + string(filepath.Separator), abs} {
-			repl := ""
-			if prefix == abs {
-				repl = "."
-			}
-			s = strings.ReplaceAll(s, prefix, repl)
-		}
+	for _, root := range []string{filepath.ToSlash(abs), abs} {
+		s = strings.ReplaceAll(s, root+"/", "")
+		s = strings.ReplaceAll(s, root+`\`, "")
+		// A bare root ends at a text delimiter. Do not rewrite a sibling such as
+		// /repo-copy merely because the configured root is /repo.
+		re := regexp.MustCompile(regexp.QuoteMeta(root) + `($|[\s"'<>),;])`)
+		s = re.ReplaceAllString(s, ".${1}")
 	}
 	return s
 }

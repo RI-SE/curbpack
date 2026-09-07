@@ -150,7 +150,7 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 
 	failed := payload.FailedRules
 	if failed == 0 {
-		failed = len(payload.Failures)
+		failed = ir.UniqueFailedGates(payload.Failures)
 	}
 	evaluated := payload.EvaluatedRules
 	skipped := payload.SkippedRules

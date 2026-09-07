@@ -2,15 +2,20 @@
 
 package outwrite
 
-import "os"
+import "syscall"
 
 func pidAlive(pid int) bool {
 	if pid <= 0 {
+		return true
+	}
+	h, err := syscall.OpenProcess(syscall.SYNCHRONIZE, false, uint32(pid))
+	if err == syscall.Errno(87) {
 		return false
 	}
-	// Windows: FindProcess succeeds for existing PIDs; Signal is unsupported.
-	// Treat any FindProcess success as potentially alive; rely on StaleLockAge
-	// for recovery when the owner has exited without releasing.
-	_, err := os.FindProcess(pid)
-	return err == nil
+	if err != nil {
+		return true
+	} // access denied is not proof of exit
+	defer syscall.CloseHandle(h)
+	status, err := syscall.WaitForSingleObject(h, 0)
+	return err != nil || status != syscall.WAIT_OBJECT_0
 }

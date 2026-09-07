@@ -14,17 +14,22 @@ import (
 // legacy latest_failure / latest_result aliases via the GateFailurePayload adapter.
 // Each file is replaced only after its complete contents have been written and synced.
 // The alias set is not a multi-file transaction.
-func writeEvaluationCache(root string, eval ir.Evaluation, receipt ir.RunReceipt, legacy ir.GateFailurePayload, action string) error {
+func writeEvaluationCache(root string, writer *outwrite.ExclusiveLock, eval ir.Evaluation, receipt ir.RunReceipt, legacy ir.GateFailurePayload, action string) error {
 	const rel = ".github/curbpack/cache"
 	dir, _, err := pathjail.Join(root, rel)
 	if err != nil {
 		return fmt.Errorf("cache directory: %w", err)
 	}
-	lock, err := outwrite.Acquire(dir)
-	if err != nil {
-		return fmt.Errorf("cache lock: %w", err)
+	if writer == nil {
+		writer, err = outwrite.Acquire(root)
+		if err != nil {
+			return fmt.Errorf("cache lock: %w", err)
+		}
+		defer writer.Release()
+	} else if err := writer.Holds(root); err != nil {
+		return err
 	}
-	defer func() { _ = lock.Release() }()
+
 	if err = outwrite.EnsureDir(root, dir); err != nil {
 		return fmt.Errorf("create cache: %w", err)
 	}

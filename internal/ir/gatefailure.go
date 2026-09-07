@@ -87,3 +87,12 @@ type PackageManifest struct {
 	Dependencies    map[string]string `json:"dependencies"`
 	DevDependencies map[string]string `json:"devDependencies"`
 }
+
+// UniqueFailedGates counts failed gate identities, independently of finding rows.
+func UniqueFailedGates(failures []Failure) int {
+	ids := make(map[string]struct{}, len(failures))
+	for _, f := range failures {
+		ids[f.GateID] = struct{}{}
+	}
+	return len(ids)
+}

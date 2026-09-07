@@ -71,7 +71,10 @@ func Save(repoRoot string, c Cache) error {
 }
 
 func writeContainedAtRepo(repoRoot, dest string, data []byte) error {
-	lock, err := outwrite.Acquire(filepath.Dir(dest))
+	if err := outwrite.Contain(repoRoot, dest); err != nil {
+		return err
+	}
+	lock, err := outwrite.Acquire(repoRoot)
 	if err != nil {
 		return err
 	}
