@@ -12,6 +12,7 @@ import (
 
 	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/clock"
+	"github.com/afelin/curbpack/internal/outwrite"
 )
 
 // Summary is a lightweight SBOM digest kept for backward compatibility.
@@ -103,20 +104,15 @@ func WriteCycloneDX(root, outPath string) (Document, string, error) {
 	if err != nil {
 		return Document{}, "", err
 	}
-	if outPath == "" {
-		outPath = filepath.Join(root, ".github", "curbpack", "evidence", "sbom.cdx.json")
-	}
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return Document{}, "", err
-	}
 	b, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		return Document{}, "", err
 	}
-	if err := os.WriteFile(outPath, append(b, '\n'), 0o644); err != nil {
+	dest, err := outwrite.SaveFile(root, outPath, ".github/curbpack/evidence/sbom.cdx.json", append(b, '\n'), 0644)
+	if err != nil {
 		return Document{}, "", err
 	}
-	return doc, outPath, nil
+	return doc, dest, nil
 }
 
 // BuildCycloneDX constructs a CycloneDX 1.5 document from packages.

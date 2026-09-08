@@ -1,0 +1,63 @@
+{
+  "schema_version": "curbpack-pack-manifest:1",
+  "conformity_claim": "none",
+  "evaluation_digest": "4a209162d119a65472e451b8ed180afb8c793c0c99c9aa633568ade8413c39b1",
+  "receipt_digest": "579937584740ea0040b4951905f471e5ff99cf8c430e30fa171f666906c0545d",
+  "artifacts": [
+    {
+      "path": "01-gate-failures.json",
+      "sha256": "19d0d8e7444411d3bc609e09ec521df9ce903ae81d8fe4c8b7574423606140df",
+      "size": 49
+    },
+    {
+      "path": "02-action-report.md",
+      "sha256": "f17d0736ad49a4566e146d96bb5a2712e6d286debeaea29e6a4f0508d7a086e2",
+      "size": 47
+    },
+    {
+      "path": "03-executive-summary.md",
+      "sha256": "c42ea4b56a37f11585f85b55d244138f428fea8953126ed555c65451f2477f71",
+      "size": 51
+    },
+    {
+      "path": "04-sbom-summary.json",
+      "sha256": "59eaaeffdaaa32ef6b9f8496575d71d158682b5efe4912e9da487098b316fc8c",
+      "size": 48
+    },
+    {
+      "path": "05-vex-draft.json",
+      "sha256": "7ee1649e2b55e83af41f130c12561d850ae9ac4043f3dcec96ced7b025138d8f",
+      "size": 45
+    },
+    {
+      "path": "06-gate-failures.sarif",
+      "sha256": "ed1809b13954f90c3a644b37ab9851f73539c4c8fc88c64283b65db360a0ca9e",
+      "size": 50
+    },
+    {
+      "path": "07-watchlist-sbom-join.json",
+      "sha256": "6fe7924f49a779803b9108a7b2858cee4bd13e4e6bab793387db4e19333b3d45",
+      "size": 55
+    },
+    {
+      "path": "buyer-onepager.html",
+      "sha256": "06a50a828dd06aa9712e3623a10c46f137ed85213ffc23d4286541ebe26e9d7a",
+      "size": 47
+    },
+    {
+      "path": "evaluation.json",
+      "sha256": "4a209162d119a65472e451b8ed180afb8c793c0c99c9aa633568ade8413c39b1",
+      "size": 43
+    },
+    {
+      "path": "proof-index.html",
+      "sha256": "012fb64cb1642f1370a1b73dddab2a7101bc1ccd742751b570b8143f20763864",
+      "size": 44
+    },
+    {
+      "path": "run-receipt.json",
+      "sha256": "579937584740ea0040b4951905f471e5ff99cf8c430e30fa171f666906c0545d",
+      "size": 44
+    }
+  ]
+}

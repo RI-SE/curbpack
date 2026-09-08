@@ -156,13 +156,13 @@ func Run(opts Options) error {
 		return err
 	}
 	if tty.IsTerminal {
-		tty.RenderThermometer(res.Score)
+		tty.RenderCounts(res.FailedRules, res.EvaluatedRules, res.SkippedRules, !res.Passed)
 	}
 	fmt.Println(res.ActionReport)
 	if !res.Passed {
 		return fmt.Errorf("demo check failed — sandbox at %s (fixture may be stale)", dir)
 	}
-	tty.PrintStatus("check", true, fmt.Sprintf("score=%d%%", res.Score))
+	tty.PrintStatus("check", true, fmt.Sprintf("failed=%d evaluated=%d skipped=%d", res.FailedRules, res.EvaluatedRules, res.SkippedRules))
 
 	if err := release.Prepare(release.Options{RepoRoot: dir, PackIDs: []string{"house-policy"}}); err != nil {
 		return err

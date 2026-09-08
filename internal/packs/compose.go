@@ -1,6 +1,7 @@
 package packs
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -17,6 +18,49 @@ type ComposeResult struct {
 // Compose loads requested pack IDs, expands extends/overlays, and unions rules by id
 // (later wins). Detects extends cycles. Dedupes when an overlay and its base are both requested.
 func Compose(ids []string) (Pack, []string, error) {
+	p, order, _, err := ComposeSnapshot(ids)
+	return p, order, err
+}
+
+// SourceIdentity binds every base/overlay to the exact loaded bytes.
+type SourceIdentity struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256"`
+}
+
+// ComposeSnapshot reads each source once, then composes that captured graph.
+func ComposeSnapshot(ids []string) (Pack, []string, []SourceIdentity, error) {
+	captured := map[string]Pack{}
+	sources := map[string]SourceIdentity{}
+	load := func(id string) (Pack, error) {
+		if p, ok := captured[id]; ok {
+			return p, nil
+		}
+		data, err := LoadPackBytes(id)
+		if err != nil {
+			return Pack{}, err
+		}
+		p, err := parseAndValidate(id, data)
+		if err != nil {
+			return Pack{}, err
+		}
+		captured[id] = p
+		sources[id] = SourceIdentity{ID: id, Version: p.Version, SHA256: fmt.Sprintf("%x", sha256.Sum256(data))}
+		return p, nil
+	}
+	p, order, err := composeWithLoader(ids, load)
+	if err != nil {
+		return Pack{}, nil, nil, err
+	}
+	identities := make([]SourceIdentity, 0, len(order))
+	for _, id := range order {
+		identities = append(identities, sources[id])
+	}
+	return p, order, identities, nil
+}
+
+func composeWithLoader(ids []string, load func(string) (Pack, error)) (Pack, []string, error) {
 	if len(ids) == 0 {
 		return Pack{}, nil, fmt.Errorf("compose: empty pack id list")
 	}
@@ -37,7 +81,7 @@ func Compose(ids []string) (Pack, []string, error) {
 			return fmt.Errorf("compose: extends cycle involving %q", id)
 		}
 		visiting[id] = struct{}{}
-		p, err := LoadPack(id)
+		p, err := load(id)
 		if err != nil {
 			return err
 		}
@@ -74,7 +118,7 @@ func Compose(ids []string) (Pack, []string, error) {
 
 	assuranceClass := ""
 	for _, id := range order {
-		p, err := LoadPack(id)
+		p, err := load(id)
 		if err != nil {
 			return Pack{}, nil, err
 		}

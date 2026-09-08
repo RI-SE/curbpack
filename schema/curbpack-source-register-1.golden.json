@@ -1,0 +1,16 @@
+{
+  "schema_version": "curbpack-source-register:1",
+  "conformity_claim": "none",
+  "entries": [
+    {
+      "id": "src-1",
+      "class": "standard",
+      "title": "Example source",
+      "publisher": "Example",
+      "locator": "https://example.invalid/doc",
+      "version": "1",
+      "digest": "",
+      "scope": "illustration"
+    }
+  ]
+}

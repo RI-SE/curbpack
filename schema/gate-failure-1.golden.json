@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "timestamp": "2026-01-01T00:00:00Z",
+  "concurrency_control": {
+    "expected_parent_commit_sha": "abc123",
+    "state_version_token": "v3.33-OCC"
+  },
+  "statechart_context": {
+    "active_parent_state_path": ["Root", "ActiveVerification", "PackEval"],
+    "failed_orthogonal_regions": []
+  },
+  "agent_identity": {
+    "agent_id": "",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared",
+    "reason": "not_installed"
+  },
+  "failures": [],
+  "pack_id": "house-policy",
+  "readiness_score": 100,
+  "outcome": "pass",
+  "skipped_rules": 0,
+  "failed_rules": 0,
+  "evaluated_rules": 7,
+  "conformity_claim": "none"
+}

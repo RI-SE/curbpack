@@ -1,4 +1,6 @@
 {
+  "evaluation_digest": "0410a0f0deb21ed39f5702bb3ca2b02f90eff654f090d08446d62341a89ba88e",
+  "as_of": "2024-01-01T00:00:00Z",
   "schema_version": "1",
   "note": "ContextPack for assistants — structural evidence for human review. Not a conformity assessment, CE mark, or certification. Re-run curbpack check before claiming fixed. Pathway confirms/attest are human-only.",
   "pack_ids": [
@@ -6,6 +8,8 @@
   ],
   "pack_versions": "house-policy@0.1.0",
   "readiness_score": 100,
+  "evaluated_rules": 5,
+  "conformity_claim": "none",
   "ok": true,
   "failures": [],
   "instrument": {

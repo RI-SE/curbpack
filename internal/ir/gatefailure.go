@@ -63,6 +63,9 @@ const (
 
 // GateFailurePayload is the dual-rep IR: JSON for machines, Markdown for agents.
 type GateFailurePayload struct {
+	EvaluationDigest   string             `json:"evaluation_digest,omitempty"`
+	ComparisonKey      string             `json:"comparison_key,omitempty"`
+	AsOf               string             `json:"as_of,omitempty"`
 	SchemaVersion      string             `json:"schema_version"`
 	Timestamp          string             `json:"timestamp"`
 	ConcurrencyControl ConcurrencyControl `json:"concurrency_control"`
@@ -75,10 +78,24 @@ type GateFailurePayload struct {
 	Outcome string `json:"outcome,omitempty"`
 	// SkippedRules counts rules not evaluated (e.g. --diff). Non-zero ⇒ incomplete (MUST-23).
 	SkippedRules int `json:"skipped_rules,omitempty"`
+	// FailedRules / EvaluatedRules are public tallies (not a percent grade). Additive.
+	FailedRules    int `json:"failed_rules,omitempty"`
+	EvaluatedRules int `json:"evaluated_rules,omitempty"`
+	// ConformityClaim is always "none" on tip emissions (historical digests omit it).
+	ConformityClaim string `json:"conformity_claim,omitempty"`
 }
 
 // PackageManifest is used for deterministic package.json dependency parsing.
 type PackageManifest struct {
 	Dependencies    map[string]string `json:"dependencies"`
 	DevDependencies map[string]string `json:"devDependencies"`
+}
+
+// UniqueFailedGates counts failed gate identities, independently of finding rows.
+func UniqueFailedGates(failures []Failure) int {
+	ids := make(map[string]struct{}, len(failures))
+	for _, f := range failures {
+		ids[f.GateID] = struct{}{}
+	}
+	return len(ids)
 }

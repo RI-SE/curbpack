@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curbpack-run-receipt-2",
+  "description": "Structural contract. Digest, count, outcome and receipt binding invariants are additionally checked by internal/ir. No conformity or signer-trust determination.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "curbpack-run-receipt:2"
+    },
+    "evaluation_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "agent_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "model_hash": {
+          "type": "string"
+        },
+        "active_mandate_id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent_id",
+        "model_hash",
+        "active_mandate_id"
+      ]
+    },
+    "conformity_claim": {
+      "const": "none"
+    },
+    "as_of_source": {
+      "enum": [
+        "explicit",
+        "SOURCE_DATE_EPOCH",
+        "utc-date-default"
+      ]
+    },
+    "platform": {
+      "type": "string"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "evaluation_duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "concurrency_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expected_parent_commit_sha": {
+          "type": "string"
+        },
+        "state_version_token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "expected_parent_commit_sha",
+        "state_version_token"
+      ]
+    },
+    "statechart_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "active_parent_state_path": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failed_orthogonal_regions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "active_parent_state_path",
+        "failed_orthogonal_regions"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "evaluation_digest",
+    "timestamp",
+    "as_of",
+    "agent_identity",
+    "conformity_claim",
+    "as_of_source",
+    "platform",
+    "tool_version",
+    "evaluation_duration_ms",
+    "concurrency_control",
+    "statechart_context"
+  ]
+}

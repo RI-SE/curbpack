@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curbpack-evaluation-2",
+  "description": "Structural contract. Digest, count, outcome and receipt binding invariants are additionally checked by internal/ir. No conformity or signer-trust determination.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "curbpack-evaluation:2"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "input_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "const": "curbpack-gates:2"
+        },
+        "tool_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject_commit": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "subject_commit_status": {
+          "enum": [
+            "claimed",
+            "unavailable"
+          ]
+        },
+        "pack_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "id",
+              "version",
+              "sha256"
+            ]
+          },
+          "minItems": 1
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "file",
+                  "directory",
+                  "missing",
+                  "refused"
+                ]
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "path",
+              "state"
+            ]
+          }
+        },
+        "git_inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "state": {
+                "enum": [
+                  "available",
+                  "unavailable"
+                ]
+              },
+              "metadata_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "since_ref": {
+                "type": "string"
+              },
+              "since_commit": {
+                "type": "string"
+              },
+              "touched_since": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "path",
+              "state",
+              "touched_since"
+            ]
+          }
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "full",
+                "diff"
+              ]
+            },
+            "rule_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "skipped_rule_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "changed_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "mode",
+            "rule_ids",
+            "skipped_rule_ids",
+            "changed_paths"
+          ]
+        },
+        "repo_token": {
+          "type": "string"
+        },
+        "trust_policy": {
+          "const": "none"
+        }
+      },
+      "required": [
+        "method",
+        "tool_version",
+        "subject_commit_status",
+        "pack_sources",
+        "files",
+        "git_inputs",
+        "scope",
+        "trust_policy"
+      ]
+    },
+    "comparison_key": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gate_id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "sanitized_description": {
+            "type": "string"
+          },
+          "ast_coordinates": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "target_file": {
+                "type": "string"
+              },
+              "node_path": {
+                "type": "string"
+              },
+              "target_symbol": {
+                "type": "string"
+              },
+              "fallback_lines": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_file",
+              "node_path",
+              "target_symbol",
+              "fallback_lines"
+            ]
+          },
+          "remediation": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action_required": {
+                "type": "string"
+              },
+              "expected_state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "action_required",
+              "expected_state"
+            ]
+          }
+        },
+        "required": [
+          "gate_id",
+          "severity",
+          "type",
+          "sanitized_description",
+          "ast_coordinates",
+          "remediation"
+        ]
+      }
+    },
+    "pack_id": {
+      "type": "string"
+    },
+    "readiness_score": {
+      "type": "integer"
+    },
+    "outcome": {
+      "enum": [
+        "pass",
+        "findings",
+        "incomplete",
+        "error"
+      ]
+    },
+    "skipped_rules": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failed_rules": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "evaluated_rules": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "conformity_claim": {
+      "const": "none"
+    }
+  },
+  "required": [
+    "schema_version",
+    "as_of",
+    "input_identity",
+    "comparison_key",
+    "failures",
+    "pack_id",
+    "readiness_score",
+    "outcome",
+    "skipped_rules",
+    "failed_rules",
+    "evaluated_rules",
+    "conformity_claim"
+  ]
+}

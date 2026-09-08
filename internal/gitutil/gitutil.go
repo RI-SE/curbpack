@@ -358,3 +358,11 @@ func FileTouchedSinceRef(repoRoot, sinceRef, rel string) (bool, error) {
 	}
 	return strings.TrimSpace(out) != "", nil
 }
+
+// ResolveCommit resolves a validated revision to its full commit identity.
+func ResolveCommit(repoRoot, ref string) (string, error) {
+	if err := validateGitRev(ref); err != nil {
+		return "", err
+	}
+	return runGit(repoRoot, "rev-parse", "--verify", "--end-of-options", ref+"^{commit}")
+}

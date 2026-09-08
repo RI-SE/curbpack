@@ -24,6 +24,7 @@ import (
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/pathjail"
 	"github.com/afelin/curbpack/internal/paths"
+	"github.com/afelin/curbpack/internal/redact"
 	"github.com/afelin/curbpack/internal/sourceurl"
 )
 
@@ -113,8 +114,12 @@ type Report struct {
 	SubjectStateHash string `json:"subject_state_hash,omitempty"`
 	// ParentRecordDigest is the prior report's record_digest when --since is set (hashed in).
 	ParentRecordDigest string `json:"parent_record_digest,omitempty"`
+	// ConformityClaim is always "none" (not certification).
+	ConformityClaim string `json:"conformity_claim"`
 	// Edges are human-approved gate→finding mappings (ingest only; omitted when absent).
 	Edges []Edge `json:"edges,omitempty"`
+	// Audit is a versioned optional extension; omission preserves historical report digest bytes.
+	Audit *PackAudit `json:"pack_audit,omitempty"`
 }
 
 // Digest scope values recorded on every report.
@@ -186,6 +191,17 @@ func ResolveTriageSurfaces(opts Options) []string {
 
 // Run triages a received review-pack directory. Does not call git or network.
 func Run(opts Options) (Report, error) {
+	// Verify the baseline before deriving a trend or binding its digest into a
+	// new report. This checks record integrity, not signer authenticity.
+	if opts.Prior != nil {
+		if opts.Prior.Schema != SchemaVersion {
+			return Report{}, fmt.Errorf("review prior report schema mismatch: prior %q current %q", opts.Prior.Schema, SchemaVersion)
+		}
+		claimed := strings.TrimSpace(opts.Prior.RecordDigest)
+		if claimed == "" || claimed != ComputeRecordDigest(*opts.Prior) {
+			return Report{}, fmt.Errorf("review prior report record_digest missing or mismatched; use an intact prior review JSON")
+		}
+	}
 	root := filepath.Clean(strings.TrimSpace(opts.BundleRoot))
 	if root == "" || root == "." {
 		return Report{}, fmt.Errorf("review requires a path to a received review-pack directory")
@@ -242,6 +258,7 @@ func Run(opts Options) (Report, error) {
 		checkStructure(&rep, tallyRoot, budget)
 		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
 		applySubjectFields(&rep, tallyRoot, budget, payload, payloadOK)
+		auditPack(&rep, tallyRoot, budget, payload, payloadOK, relPaths)
 		prov := extractProvenance(tallyRoot, budget)
 		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
 		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
@@ -250,7 +267,10 @@ func Run(opts Options) (Report, error) {
 		})
 	}
 
-	if redactReportAirlock(&rep) {
+	rep.ConformityClaim = "none"
+	if changed, err := redactReportWithContext(&rep, redact.Verify(redact.Embedded)); err != nil {
+		return rep, err
+	} else if changed {
 		add(&rep, Finding{
 			ID: "structure:airlock-redacted", Category: "structure",
 			State: StateContradicted, Cause: CauseSelfDisagree,
@@ -498,8 +518,8 @@ func loadPayload(rep *Report, root string, budget *readBudget) (ir.GateFailurePa
 	}
 	add(rep, Finding{
 		ID: "digest:gate-json-parse", Category: "digest", State: StateConfirmed,
-		Detail: fmt.Sprintf("01-gate-failures.json parses (pack_id=%s score=%d failures=%d)",
-			fence(strings.TrimSpace(p.PackID)), p.ReadinessScore, len(p.Failures)),
+		Detail: fmt.Sprintf("01-gate-failures.json parses (pack_id=%s failed_gates=%d findings=%d)",
+			fence(strings.TrimSpace(p.PackID)), ir.UniqueFailedGates(p.Failures), len(p.Failures)),
 	})
 	return p, true
 }
@@ -864,17 +884,10 @@ func fence(s string) string {
 	return "<untrusted_metadata>" + s + "</untrusted_metadata>"
 }
 
-// Airlock placeholders — fixed tokens so PacketLooksAirlocked accepts triage output
-// while preserving a contradicted finding that the bundle echoed unsafe material.
+// Embedded placeholders — tests and PacketLooksAirlocked accept these tokens.
 const (
 	redactedHome = "<redacted:home-path>"
 	redactedPEM  = "<redacted:pem>"
-)
-
-// Match exportx airlock shapes (homePathRE / pemBlobRE) for redact-then-emit.
-var (
-	reHomePath = regexp.MustCompile(`(?i)(/Users/[^/\s"'<>]+|/home/[^/\s"'<>]+|/mnt/[a-z]/Users/[^/\s"'<>]+|C:\\Users\\[^\\\s"'<>]+)`)
-	rePEMBlob  = regexp.MustCompile(`-----BEGIN [A-Z0-9 ]+-----[\s\S]{20,}?-----END [A-Z0-9 ]+-----`)
 )
 
 // redactReportAirlock mutates finding details/ids and dropped tokens. Returns true if any redaction occurred.
@@ -903,19 +916,33 @@ func redactReportAirlock(rep *Report) bool {
 	return changed
 }
 
+// Capture HOME at the IO boundary; the JSON scrubber takes it explicitly.
+func redactReportWithContext(rep *Report, ctx redact.Context) (bool, error) {
+	raw, err := json.Marshal(rep)
+	if err != nil {
+		return false, err
+	}
+	clean, err := redact.JSON(raw, ctx)
+	if err != nil {
+		return false, err
+	}
+	var updated Report
+	if err := json.Unmarshal(clean, &updated); err != nil {
+		return false, err
+	}
+	normalized, err := json.Marshal(updated)
+	if err != nil {
+		return false, err
+	}
+	changed := string(raw) != string(normalized)
+	*rep = updated
+	return changed, nil
+}
+
+// redactAirlockString uses Embedded tokens; emit does not invent Home from the environment.
 func redactAirlockString(s string) (string, bool) {
 	orig := s
-	s = rePEMBlob.ReplaceAllString(s, redactedPEM)
-	if home, err := os.UserHomeDir(); err == nil {
-		home = strings.TrimSpace(home)
-		if home != "" && home != "/" && home != `\` {
-			s = strings.ReplaceAll(s, home, redactedHome)
-			if slash := filepath.ToSlash(home); slash != home {
-				s = strings.ReplaceAll(s, slash, redactedHome)
-			}
-		}
-	}
-	s = reHomePath.ReplaceAllString(s, redactedHome)
+	s = redact.String(s, redact.Emit(redact.Embedded))
 	return s, s != orig
 }
 
@@ -1125,6 +1152,7 @@ func TriageMarkdown(rep Report, full bool) string {
 	b.WriteString(rep.Disclaimer)
 	b.WriteString("\n\n")
 
+	writeAuditMarkdown(&b, rep.Audit)
 	if !full {
 		fmt.Fprintf(&b, "%s — %d genuine unresolved · %d contradicted",
 			base, rep.UnconfirmedGenuine, rep.ContradictedCount)

@@ -2,7 +2,7 @@
 
 **Human-only.** Agents cannot close these gates. **No invites** until **A2 ∧ A3** both pass.
 
-Live stranger install SoR: **v0.5.4** via `main` scripts (Action pin stays **`@v0.5.2`**).
+Live stranger install SoR: **v0.5.5** via `main` scripts (Action pin stays **`@v0.5.2`**).
 
 Canonical site: https://ri-se.github.io/curbpack/  
 Feedback: [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml) · [tester_report](https://github.com/RI-SE/curbpack/issues/new?template=tester_report.yml)
@@ -32,7 +32,7 @@ Feedback: [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?temp
 
 ## A3 — Tier-3 stranger path (~5–10 min)
 
-**Goal:** fresh human curl → doctor → demo → `scan` on a **permitted** git repo; prove **v0.5.4** honesty strings. Agent smoke ≠ A3.
+**Goal:** fresh human curl → doctor → demo → `scan` on a **permitted** git repo; prove **v0.5.5** honesty strings. Agent smoke ≠ A3.
 
 ### Copy-paste checklist
 
@@ -41,7 +41,7 @@ Feedback: [first_run_feedback](https://github.com/RI-SE/curbpack/issues/new?temp
 curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 # If needed: new terminal, or: export PATH="$HOME/.local/bin:$PATH"
 
-curbpack version          # MUST print 0.5.4 (not 0.5.3)
+curbpack version          # MUST print 0.5.5 (not a workspace build)
 curbpack doctor
 curbpack demo
 
@@ -54,13 +54,13 @@ test "$before" = "$after" && echo porcelain_ok
 
 **Assert (all required):**
 
-- [ ] `curbpack version` → **0.5.4**
+- [ ] `curbpack version` → **0.5.5**
 - [ ] Scan shows **Exit 0**
 - [ ] Scan shows **Scan complete** (repository unchanged)
 - [ ] `git status --porcelain` empty / unchanged (`porcelain_ok`)
 - [ ] Ignore any `Next (optional):` line — tryout stops after scan
 
-Do **not** use `…/v0.5.4/scripts/install.sh` (tag tree baked older manifest default).
+Use the `main` installer above; set `CURBPACK_VERSION=v0.5.5` to pin the released CLI explicitly. PR #58 source testing uses the separate [pre-beta handoff](../production-hardening-audit.md#friendly-user-pre-beta-review). The release installer does not contain that PR.
 
 ### Record
 

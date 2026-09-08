@@ -75,7 +75,7 @@ func cmdScan(args []string) error {
 
 	tty.PrintHeader("CURBPACK SCAN")
 	fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "Read-only — no files written, no hooks, no init. Not conformity assessment."))
-	fmt.Printf("%s\n", tty.C(tty.Dim, "Diagnosis only — readiness % is via curbpack check --score (not this command)."))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Diagnosis only — gate tallies are via curbpack check --score (not this command)."))
 	fmt.Printf("%s\n\n", tty.C(tty.Dim, "Exit 0 means diagnosis finished — not a pass or certification."))
 
 	product, source := productHint(root)

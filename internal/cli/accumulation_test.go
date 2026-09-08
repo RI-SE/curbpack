@@ -13,15 +13,17 @@ import (
 )
 
 func TestAccumulationDeltaLineNoPrior(t *testing.T) {
-	if got := accumulationDeltaLine(priorCacheSnapshot{}, 100); got != "" {
+	if got := accumulationDeltaLine(priorCacheSnapshot{}, "house-policy", 0, strings.Repeat("a", 64)); got != "" {
 		t.Fatalf("want empty without prior, got %q", got)
 	}
 }
 
-func TestAccumulationDeltaLineScoreChange(t *testing.T) {
-	got := accumulationDeltaLine(priorCacheSnapshot{OK: true, ReadinessScore: 72, FailureCount: 2}, 100)
-	if !strings.Contains(got, "Δ readiness 72→100") {
-		t.Fatalf("want score delta, got %q", got)
+func TestAccumulationDeltaLineFailedChange(t *testing.T) {
+	got := accumulationDeltaLine(priorCacheSnapshot{
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 2, FailureCount: 2,
+	}, "house-policy", 0, strings.Repeat("a", 64))
+	if !strings.Contains(got, "Δ failed 2→0") {
+		t.Fatalf("want failed delta, got %q", got)
 	}
 	if strings.Count(got, "\n") != 0 {
 		t.Fatalf("must be exactly one line, got %q", got)
@@ -29,15 +31,17 @@ func TestAccumulationDeltaLineScoreChange(t *testing.T) {
 }
 
 func TestInstrumentWhisperLinesCapsAndFirstRunQuiet(t *testing.T) {
-	priorCache := priorCacheSnapshot{OK: true, ReadinessScore: 80, FailureCount: 1}
+	priorCache := priorCacheSnapshot{
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 1, FailureCount: 1,
+	}
 	now := instrument.Snapshot{DepsFP: "bbb", SecretHits: 2, Deps: []instrument.Dep{{Name: "a", Eco: "npm"}}}
-	// First run: no prior instrument → readiness only.
-	lines := instrumentWhisperLines(priorCache, instrument.Snapshot{}, false, 100, now)
-	if len(lines) != 1 || !strings.Contains(lines[0], "Δ readiness") {
-		t.Fatalf("first run want readiness only, got %#v", lines)
+	// First run: no prior instrument → failed tally only.
+	lines := instrumentWhisperLines(priorCache, instrument.Snapshot{}, false, "house-policy", 0, now, strings.Repeat("a", 64))
+	if len(lines) != 1 || !strings.Contains(lines[0], "Δ failed") {
+		t.Fatalf("first run want failed tally only, got %#v", lines)
 	}
 	prior := instrument.Snapshot{DepsFP: "aaa", SecretHits: 0, Deps: nil}
-	lines = instrumentWhisperLines(priorCache, prior, true, 100, now)
+	lines = instrumentWhisperLines(priorCache, prior, true, "house-policy", 0, now, strings.Repeat("a", 64))
 	if len(lines) < 2 || len(lines) > 3 {
 		t.Fatalf("want 2–3 lines, got %#v", lines)
 	}
@@ -48,8 +52,10 @@ func TestInstrumentWhisperLinesCapsAndFirstRunQuiet(t *testing.T) {
 }
 
 func TestAccumulationDeltaLineRepeatGreen(t *testing.T) {
-	got := accumulationDeltaLine(priorCacheSnapshot{OK: true, ReadinessScore: 100, FailureCount: 0}, 100)
-	if got != "gates green · evidence cache updated" {
+	got := accumulationDeltaLine(priorCacheSnapshot{
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 0, FailureCount: 0,
+	}, "house-policy", 0, strings.Repeat("a", 64))
+	if got != "gates tally unchanged · evidence cache updated" {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -67,14 +73,15 @@ func TestLoadPriorCacheAndGreenCheckWhisper(t *testing.T) {
   "schema_version": "1",
   "failures": [{"gate_id":"HOUSE-SECURITY-MD"},{"gate_id":"HOUSE-SECURITY-TXT"}],
   "pack_id": "house-policy",
-  "readiness_score": 60
+  "readiness_score": 60,
+  "failed_rules": 2
 }`
 	if err := os.WriteFile(filepath.Join(cache, "latest_result.json"), []byte(prior), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	snap := loadPriorCache(dir)
-	if !snap.OK || snap.ReadinessScore != 60 || snap.FailureCount != 2 {
+	if snap.OK || snap.Failed != 2 || snap.FailureCount != 2 {
 		t.Fatalf("prior snapshot=%+v", snap)
 	}
 
@@ -95,15 +102,15 @@ func TestLoadPriorCacheAndGreenCheckWhisper(t *testing.T) {
 	deltaLines := 0
 	for _, line := range strings.Split(out, "\n") {
 		trim := strings.TrimSpace(line)
-		if strings.Contains(trim, "Δ ") || strings.HasPrefix(trim, "gates green ·") {
+		if strings.Contains(trim, "Δ ") || strings.Contains(trim, "evidence cache updated") {
 			deltaLines++
 		}
 	}
-	if deltaLines != 1 {
-		t.Fatalf("want exactly one delta/accumulation line, got %d\n%s", deltaLines, out)
+	if deltaLines != 0 {
+		t.Fatalf("unbound historical cache must not produce a trend, got %d\n%s", deltaLines, out)
 	}
-	if !strings.Contains(out, "Δ readiness 60→100") {
-		t.Fatalf("missing score delta whisper:\n%s", out)
+	if strings.Contains(out, "Δ failed") {
+		t.Fatalf("unverified alias produced a trend:\n%s", out)
 	}
 }
 

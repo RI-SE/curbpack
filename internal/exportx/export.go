@@ -109,11 +109,11 @@ type WatchlistJoinReport struct {
 	Note          string                 `json:"note"`
 }
 
-// WriteWatchlistJoin joins CycloneDX components with watchlist (informational).
-func WriteWatchlistJoin(root, outPath string) (string, error) {
+// BuildWatchlistJoin joins components with the watchlist without writing files.
+func BuildWatchlistJoin(root string) (WatchlistJoinReport, error) {
 	wl, err := packs.LoadWatchlist()
 	if err != nil {
-		return "", err
+		return WatchlistJoinReport{}, err
 	}
 	pkgs, source, err := sbom.CollectPackages(root)
 	report := WatchlistJoinReport{
@@ -126,7 +126,7 @@ func WriteWatchlistJoin(root, outPath string) (string, error) {
 			report.Status = "unavailable"
 			report.Note = "No supported lockfile/manifest for join (" + err.Error() + ")"
 		} else {
-			return "", err
+			return WatchlistJoinReport{}, err
 		}
 	} else {
 		_ = source
@@ -156,6 +156,15 @@ func WriteWatchlistJoin(root, outPath string) (string, error) {
 		sort.Slice(report.Findings, func(i, j int) bool {
 			return report.Findings[i].WatchlistID+report.Findings[i].Package < report.Findings[j].WatchlistID+report.Findings[j].Package
 		})
+	}
+	return report, nil
+}
+
+// WriteWatchlistJoin publishes the same informational report used in release packs.
+func WriteWatchlistJoin(root, outPath string) (string, error) {
+	report, err := BuildWatchlistJoin(root)
+	if err != nil {
+		return "", err
 	}
 	b, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {

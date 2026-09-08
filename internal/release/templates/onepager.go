@@ -15,7 +15,10 @@ const onePagerCoverMax = 12
 // OnePagerDTO is the stable input for buyer one-pager HTML generation.
 type OnePagerDTO struct {
 	RepoName          string
-	Score             int
+	Score             int // historical fingerprint input; public HTML uses counts
+	FailedRules       int
+	EvaluatedRules    int
+	SkippedRules      int
 	Passed            bool
 	PackID            string
 	PackLabels        string // plain-words pack names for the cover; not in fingerprint
@@ -141,8 +144,6 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
     .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
     .status.unsigned { background:#fef2f2; color:var(--unsigned); border:1px solid var(--unsigned); letter-spacing:0.02em; text-transform:uppercase; }
     .meter { margin:1.25rem 0; font-family:ui-monospace,Menlo,monospace; font-size:0.9rem; }
-    .bar { height:10px; background:var(--line); overflow:hidden; margin-top:0.35rem; border:1px solid var(--ink); }
-    .bar > span { display:block; height:100%%; background:var(--ink); width:%d%%; }
     table { width:100%%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
     th, td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
     th { color:var(--muted); font-weight:600; }
@@ -179,9 +180,7 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
 
     <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
     <div class="back">
-      <div class="meter">Local gate score on this tree: <strong>%d%%</strong> — not certification
-        <div class="bar"><span></span></div>
-      </div>
+      <div class="meter">Local gate tally on this tree: <strong>failed=%d evaluated=%d skipped=%d</strong> — not certification</div>
       <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. <code>curbpack attest</code> records a state hash. A valid signature proves key use, not human review or approval; unsigned ≠ verified.</p>
       %s
       %s
@@ -194,13 +193,13 @@ func BuyerOnePagerHTML(d OnePagerDTO) string {
   </main>
 </body>
 </html>
-`, fp, d.Score, html.EscapeString(d.RepoName), html.EscapeString(lede),
+`, fp, html.EscapeString(d.RepoName), html.EscapeString(lede),
 		html.EscapeString(labels),
 		assuranceLine,
 		statusClass, html.EscapeString(status),
 		d.AttestClass, html.EscapeString(d.AttestLine),
 		cover.String(), rows.String(),
-		d.Score,
+		d.FailedRules, d.EvaluatedRules, d.SkippedRules,
 		d.ProvenanceHTML, d.SourcesHTML,
 		d.FooterPrefix, html.EscapeString(d.Timestamp))
 }

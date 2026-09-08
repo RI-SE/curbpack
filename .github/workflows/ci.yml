@@ -35,7 +35,7 @@ jobs:
       - name: Go test
         env:
           SOURCE_DATE_EPOCH: "1704067200"
-        run: go test ./...
+        run: go test ./... -count=1
       - name: W2 unset-epoch eval stability
         # Must not inherit the pinned SOURCE_DATE_EPOCH from the prior step.
         # Proves canonical evaluation bytes stay stable when the epoch is unset.
@@ -60,6 +60,8 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.23.x"
+      - name: Windows output boundary regressions
+        run: go test ./internal/outwrite ./internal/pathjail -count=1
       - name: Build windows exe
         run: |
           New-Item -ItemType Directory -Force -Path bin | Out-Null

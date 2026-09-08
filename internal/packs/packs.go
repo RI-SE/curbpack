@@ -162,17 +162,34 @@ func LoadEmbedded() ([]Pack, error) {
 
 // LoadPack loads one pack by id from embed, or from CURBPACK_PACKS_DIR / legacy CYBERREADY_PACKS_DIR override.
 func LoadPack(id string) (Pack, error) {
+	data, err := LoadPackBytes(id)
+	if err != nil {
+		return Pack{}, err
+	}
+	return parseAndValidate(strings.TrimSpace(id), data)
+}
+
+// LoadPackBytes returns the exact source bytes used for an evaluation identity.
+// Pack coordinates are single directory names, never filesystem paths.
+func LoadPackBytes(id string) ([]byte, error) {
 	id = strings.TrimSpace(id)
-	if id == "" {
-		return Pack{}, fmt.Errorf("empty pack id")
+	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, `/\:`) {
+		return nil, fmt.Errorf("invalid pack id %q", id)
 	}
 	if dir := envPacksDir(); dir != "" {
-		packPath := filepath.Join(dir, id, "pack.json")
-		if _, statErr := os.Stat(packPath); statErr == nil {
-			return loadPackFromDir(dir, id) // prefer override; surface validation errors
+		data, err := os.ReadFile(filepath.Join(dir, id, "pack.json"))
+		if err == nil {
+			return data, nil
+		}
+		if !os.IsNotExist(err) {
+			return nil, err
 		}
 	}
-	return loadPackEmbeddedOnly(id)
+	data, err := embedded.ReadFile("data/" + id + "/pack.json")
+	if err != nil {
+		return nil, fmt.Errorf("pack %q not found: %w", id, err)
+	}
+	return data, nil
 }
 
 func envPacksDir() string {

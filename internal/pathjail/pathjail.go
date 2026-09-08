@@ -52,6 +52,9 @@ func Join(root, rel string) (full, slash string, err error) {
 // ContainAbs refuses fullAbs when it escapes rootAbs after symlink evaluation
 // or resolves under .git.
 func ContainAbs(rootAbs, fullAbs string) error {
+	if UnderGit(rootAbs) || UnderGit(fullAbs) {
+		return fmt.Errorf("path under .git refused")
+	}
 	if err := containUnderRoot(rootAbs, fullAbs); err != nil {
 		return err
 	}
@@ -104,6 +107,9 @@ func IsReservedDeviceName(seg string) bool {
 }
 
 func refuseWindowsHazardSegments(slash string) error {
+	if strings.Contains(slash, ":") {
+		return fmt.Errorf("Windows drive-relative or alternate stream path refused")
+	}
 	for _, seg := range strings.Split(slash, "/") {
 		if seg == "" || seg == "." || seg == ".." {
 			continue
@@ -128,7 +134,7 @@ func ValidateRel(rel string) error {
 // UnderGit reports whether slash path is under .git (case-insensitive; Windows
 // trailing-dot/space aliases and backslash separators included).
 func UnderGit(slash string) bool {
-	slash = filepath.ToSlash(slash)
+	slash = strings.ReplaceAll(filepath.ToSlash(slash), `\`, `/`)
 	for _, p := range strings.Split(slash, "/") {
 		if strings.EqualFold(NormalizeSegment(p), ".git") {
 			return true
@@ -153,6 +159,9 @@ func containAfterEvalSymlinks(rootAbs, fullAbs string) error {
 	targetEval, err := evalExisting(fullAbs)
 	if err != nil {
 		return err
+	}
+	if UnderGit(rootEval) || UnderGit(targetEval) {
+		return fmt.Errorf("resolved path under .git refused")
 	}
 	if err := containUnderRoot(rootEval, targetEval); err != nil {
 		return err

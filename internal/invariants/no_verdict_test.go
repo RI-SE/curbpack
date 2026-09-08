@@ -61,8 +61,11 @@ func TestNoVerdictSurface(t *testing.T) {
 		AttestLine: "ssh-agent signed", AttestClass: "ok",
 		Timestamp: "2026-08-18T00:00:00Z",
 	})
-	if !strings.Contains(onePager, "Local gate score") || !strings.Contains(onePager, "62%") {
-		t.Fatal("one-pager must keep the back-of-page gate score (fingerprint seed)")
+	if !strings.Contains(onePager, "Local gate tally") || !strings.Contains(onePager, "failed=") {
+		t.Fatal("one-pager must show failed/evaluated/skipped tallies (not a percent grade)")
+	}
+	if strings.Contains(onePager, "62%") || strings.Contains(onePager, "Local gate score") {
+		t.Fatal("one-pager must not present readiness as a percent grade")
 	}
 
 	bundle := templates.EvidenceBundleHTML(templates.BundleDTO{
@@ -135,11 +138,14 @@ func TestNoVerdictSurface(t *testing.T) {
 	}
 
 	action := validate.ActionReportMarkdown(ir.GateFailurePayload{
-		PackID: "house-policy", ReadinessScore: 60,
+		PackID: "house-policy", ReadinessScore: 60, FailedRules: 2, EvaluatedRules: 5,
 		Failures: []ir.Failure{{GateID: "X", Severity: "low", Type: "T", SanitizedDescription: "d"}},
 	}, 0)
-	if !strings.Contains(action, "60%") {
-		t.Fatal("action report must still show readiness_score")
+	if !strings.Contains(action, "Failed / evaluated / skipped") {
+		t.Fatal("action report must show failed/evaluated/skipped tallies")
+	}
+	if strings.Contains(action, "60%") || strings.Contains(action, "Readiness:") {
+		t.Fatal("action report must not present readiness as a percent grade")
 	}
 
 	surfaces := []struct {

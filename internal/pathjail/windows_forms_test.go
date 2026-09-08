@@ -14,6 +14,9 @@ func TestWindowsPathFormsRefused(t *testing.T) {
 	}{
 		{`C:\Windows\system32`, "absolute"},
 		{`D:/escape`, "absolute"},
+		{`C:escape`, "drive-relative"},
+		{`docs/file.md:stream`, "alternate stream"},
+		{`.git::$INDEX_ALLOCATION`, "alternate stream"},
 		{`\\server\share\file`, "absolute"},
 		{`//server/share/file`, "absolute"},
 		{`docs\.git\config`, ".git"},

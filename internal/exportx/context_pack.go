@@ -1,9 +1,9 @@
 package exportx
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -14,6 +14,7 @@ import (
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/pathway"
+	"github.com/afelin/curbpack/internal/redact"
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/research"
 	"github.com/afelin/curbpack/internal/validate"
@@ -67,11 +68,17 @@ type ContextPathway struct {
 
 // ContextPack is one assistant-facing artifact (JSON + Markdown summary).
 type ContextPack struct {
+	EvaluationDigest     string                   `json:"evaluation_digest,omitempty"`
+	AsOf                 string                   `json:"as_of,omitempty"`
 	SchemaVersion        string                   `json:"schema_version"`
 	Note                 string                   `json:"note"`
 	PackIDs              []string                 `json:"pack_ids"`
 	PackVersions         string                   `json:"pack_versions,omitempty"`
 	ReadinessScore       int                      `json:"readiness_score"`
+	FailedRules          int                      `json:"failed_rules,omitempty"`
+	EvaluatedRules       int                      `json:"evaluated_rules,omitempty"`
+	SkippedRules         int                      `json:"skipped_rules,omitempty"`
+	ConformityClaim      string                   `json:"conformity_claim"`
 	OK                   bool                     `json:"ok"`
 	Failures             []ContextFailure         `json:"failures"`
 	Instrument           ContextInstrument        `json:"instrument"`
@@ -90,7 +97,24 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		return "", err
 	}
 	_ = usedCache
+	return writeContextPack(root, packIDs, outPath, payload, score, ok)
+}
 
+// WriteContextPackFromResult preserves one evaluation across a share operation.
+func WriteContextPackFromResult(root string, packIDs []string, outPath string, res validate.Result) (string, error) {
+	receiptBytes, err := ir.MarshalReceipt(res.Receipt)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(receiptBytes)
+	e, r, err := validate.LoadByDigest(root, res.Receipt.EvaluationDigest, fmt.Sprintf("%x", sum))
+	if err != nil {
+		return "", err
+	}
+	return writeContextPack(root, packIDs, outPath, ir.LegacyFromEvaluation(e, r), res.Score, res.Passed)
+}
+
+func writeContextPack(root string, packIDs []string, outPath string, payload ir.GateFailurePayload, score int, ok bool) (string, error) {
 	ids := packIDs
 	if len(ids) == 0 {
 		ids = nonzeroPacks(strings.Split(payload.PackID, ","))
@@ -144,14 +168,27 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 		packVersions = strings.TrimSpace(composed.Version)
 	}
 
+	failed := payload.FailedRules
+	if failed == 0 {
+		failed = ir.UniqueFailedGates(payload.Failures)
+	}
+	evaluated := payload.EvaluatedRules
+	skipped := payload.SkippedRules
+
 	pack := ContextPack{
-		SchemaVersion:  contextPackSchema,
-		Note:           contextPackNote,
-		PackIDs:        ids,
-		PackVersions:   packVersions,
-		ReadinessScore: score,
-		OK:             ok,
-		Failures:       top,
+		SchemaVersion:    contextPackSchema,
+		EvaluationDigest: payload.EvaluationDigest,
+		AsOf:             payload.AsOf,
+		Note:             contextPackNote,
+		PackIDs:          ids,
+		PackVersions:     packVersions,
+		ReadinessScore:   score,
+		FailedRules:      failed,
+		EvaluatedRules:   evaluated,
+		SkippedRules:     skipped,
+		ConformityClaim:  ir.ConformityClaimNone,
+		OK:               ok,
+		Failures:         top,
 		Instrument: ContextInstrument{
 			DepsCount:   len(snap.Deps),
 			DepsFP:      snap.DepsFP,
@@ -172,6 +209,17 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 	if err != nil {
 		return "", err
 	}
+	b, err = redact.JSON(b, redact.Verify(redact.Embedded))
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(b, &pack); err != nil {
+		return "", err
+	}
+	b, err = json.MarshalIndent(pack, "", "  ")
+	if err != nil {
+		return "", err
+	}
 	if err := PacketLooksAirlocked(b); err != nil {
 		return "", err
 	}
@@ -179,34 +227,34 @@ func WriteContextPack(root string, packIDs []string, outPath string) (string, er
 	if err := PacketLooksAirlocked([]byte(md)); err != nil {
 		return "", err
 	}
-	if err := writeContainedAt(root, jsonPath, append(b, '\n')); err != nil {
+	if err := writeContainedSetAt(root, map[string][]byte{jsonPath: append(b, '\n'), mdPath: []byte(md)}); err != nil {
 		return "", err
 	}
-	if err := writeContainedAt(root, mdPath, []byte(md)); err != nil {
-		return "", err
-	}
+
 	return jsonPath, nil
 }
 
 func loadOrValidatePayload(root string, packIDs []string) (payload ir.GateFailurePayload, score int, ok bool, usedCache bool, err error) {
-	cachePath := filepath.Join(root, ".github", "curbpack", "cache", "latest_failure.json")
-	if b, rerr := os.ReadFile(cachePath); rerr == nil {
-		var p ir.GateFailurePayload
-		if json.Unmarshal(b, &p) == nil && (p.SchemaVersion != "" || len(p.Failures) > 0 || p.PackID != "") {
-			if cacheValidForRequest(root, p, packIDs) {
-				ok = len(p.Failures) == 0
-				score = p.ReadinessScore
-				return p, score, ok, true, nil
-			}
-		}
+	if e, r, err := validate.LoadCurrent(root, packIDs); err == nil {
+		payload := ir.LegacyFromEvaluation(e, r)
+		return payload, e.ReadinessScore, e.Outcome == ir.OutcomePass, true, nil
 	}
+	// Re-evaluate the current request; aliases do not establish input identity.
+	// Verify the just-written immutable objects before a crossing renderer uses them.
 	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: true})
 	if verr != nil {
 		return ir.GateFailurePayload{}, 0, false, false, verr
 	}
-	p := res.Payload
-	p.ReadinessScore = res.Score
-	return p, res.Score, res.Passed, false, nil
+	receiptBytes, err := ir.MarshalReceipt(res.Receipt)
+	if err != nil {
+		return ir.GateFailurePayload{}, 0, false, false, err
+	}
+	sum := sha256.Sum256(receiptBytes)
+	evaluation, receipt, err := validate.LoadByDigest(root, res.Receipt.EvaluationDigest, fmt.Sprintf("%x", sum))
+	if err != nil {
+		return ir.GateFailurePayload{}, 0, false, false, err
+	}
+	return ir.LegacyFromEvaluation(evaluation, receipt), res.Score, res.Passed, false, nil
 }
 
 // cacheValidForRequest rejects stale cache when pack set or HEAD commit drifted.
@@ -329,8 +377,12 @@ func formatContextPackMarkdown(p ContextPack) string {
 	b.WriteString("# Curbpack ContextPack\n\n")
 	b.WriteString("> Structural evidence for human review. Not a conformity assessment, CE mark, or certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", strings.Join(p.PackIDs, ", "))
-	fmt.Fprintf(&b, "- **Readiness:** %d%%\n", p.ReadinessScore)
+	fmt.Fprintf(&b, "- **Failed / evaluated / skipped:** %d / %d / %d\n", p.FailedRules, p.EvaluatedRules, p.SkippedRules)
 	fmt.Fprintf(&b, "- **OK:** %v\n", p.OK)
+	fmt.Fprintf(&b, "- **Conformity claim:** %s\n", ir.ConformityClaimNone)
+	if p.EvaluationDigest != "" {
+		fmt.Fprintf(&b, "- **Evaluation:** `%s`\n- **As of:** %s\n", p.EvaluationDigest, p.AsOf)
+	}
 	fmt.Fprintf(&b, "- **Certification claimed:** no\n")
 	if p.AgentIdentity.Source != "" || p.AgentIdentity.AgentID != "" {
 		fmt.Fprintf(&b, "- **Agent identity:** `%s`", mdCell(p.AgentIdentity.Source))

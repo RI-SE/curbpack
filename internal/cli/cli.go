@@ -23,6 +23,7 @@ import (
 	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/packs"
 	"github.com/afelin/curbpack/internal/packscmd"
+	"github.com/afelin/curbpack/internal/redact"
 	"github.com/afelin/curbpack/internal/release"
 	"github.com/afelin/curbpack/internal/remediation"
 	"github.com/afelin/curbpack/internal/sbom"
@@ -136,7 +137,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  fix --art14      Write Art 14 rehearsal file (one file; diff preview)\n")
 	fmt.Fprintf(os.Stderr, "  init [--profile house|cra|medtech] [--packs a,b] [--workflow] [--dry-run] [--yes]\n")
 	fmt.Fprintf(os.Stderr, "                   Default: house-policy + hooks + skill + ide\n")
-	fmt.Fprintf(os.Stderr, "  check [--heal] [--score]  Daily loop (--score shows readiness %%)\n")
+	fmt.Fprintf(os.Stderr, "  check [--heal] [--score]  Daily loop (--score shows failed/evaluated/skipped tallies)\n")
 	fmt.Fprintf(os.Stderr, "  ask-my-suppliers [--stdout-only] [--out path]\n")
 	fmt.Fprintf(os.Stderr, "                   Supplier checklist → stdout + review-pack/ (writes files)\n")
 	fmt.Fprintf(os.Stderr, "  share [--bundle] [--reveal] check → context-pack → buyer-questions → prepare-release\n")
@@ -380,7 +381,8 @@ func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, for
 const healMaxRounds = 3
 
 func cmdCheck(args []string) error {
-	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore, err := parseCheckFlags(args)
+	flags, err := parseCheckValidateFlags("check", args)
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore := flags.packIDs, flags.jsonOut, flags.diffOnly, flags.formHints, flags.applyStub, flags.heal, flags.showScore
 	if helpRequested(err) {
 		return nil
 	}
@@ -406,6 +408,7 @@ func cmdCheck(args []string) error {
 	stubsWritten := 0
 	for round := 0; round <= healMaxRounds; round++ {
 		res, err = validate.Run(validate.Options{
+			AsOf:     flags.asOf,
 			RepoRoot: root,
 			PackIDs:  packIDs,
 			DiffOnly: checkDiff,
@@ -456,12 +459,13 @@ func cmdCheck(args []string) error {
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(res.Payload)
 	} else if res.Passed {
-		// Green: optional thermometer + claim + optional accumulation / instrument whispers.
+		// Green: optional tally + claim + optional accumulation / instrument whispers.
 		if showScore {
+			counts := redact.Counts{Failed: res.FailedRules, Evaluated: res.EvaluatedRules, Skipped: res.SkippedRules}
 			if tty.IsTerminal {
-				tty.RenderThermometer(res.Score)
+				tty.RenderCounts(counts.Failed, counts.Evaluated, counts.Skipped, false)
 			} else {
-				fmt.Printf("readiness=%d%% gates=green\n", res.Score)
+				fmt.Println(counts.Line(false))
 			}
 		}
 		if heal && stubsWritten > 0 {
@@ -469,7 +473,7 @@ func cmdCheck(args []string) error {
 		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
-		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Score, nowInst) {
+		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Payload.PackID, res.FailedRules, nowInst, res.Payload.ComparisonKey) {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}
 		if line := drift.BindDriftLine(root); line != "" {
@@ -483,10 +487,13 @@ func cmdCheck(args []string) error {
 				for _, f := range notStarted {
 					fmt.Printf("○ [%s] %s — %s (%s)\n", f.Severity, f.GateID, shortFinding(f), notStartedParen(f))
 				}
-			} else if tty.IsTerminal {
-				tty.RenderThermometer(res.Score)
 			} else {
-				fmt.Printf("readiness=%d%% gates=open\n", res.Score)
+				counts := redact.Counts{Failed: res.FailedRules, Evaluated: res.EvaluatedRules, Skipped: res.SkippedRules}
+				if tty.IsTerminal {
+					tty.RenderCounts(counts.Failed, counts.Evaluated, counts.Skipped, true)
+				} else {
+					fmt.Println(counts.Line(true))
+				}
 			}
 		}
 		if heal && stubsWritten > 0 {
@@ -545,14 +552,15 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, _, _, _, err := parseValidateFlags(args)
+	flags, err := parseCheckValidateFlags("validate", args)
+	packIDs, jsonOut, diffOnly := flags.packIDs, flags.jsonOut, flags.diffOnly
 	if err != nil {
 		return err
 	}
 	if !jsonOut {
 		tty.PrintHeader("EXECUTING COMPLIANCE GATES")
 	}
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut})
+	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut, AsOf: flags.asOf})
 	if err != nil {
 		if jsonOut && res.Payload.SchemaVersion != "" {
 			_ = json.NewEncoder(os.Stdout).Encode(res.Payload)
@@ -565,7 +573,7 @@ func cmdValidate(args []string) error {
 		_ = enc.Encode(res.Payload)
 	} else {
 		if tty.IsTerminal {
-			tty.RenderThermometer(res.Score)
+			tty.RenderCounts(res.FailedRules, res.EvaluatedRules, res.SkippedRules, !res.Passed)
 		}
 		if !res.Passed {
 			fmt.Printf("\n%s\n", tty.C(tty.Bold+tty.Magenta, "--- DUAL-REPRESENTATION OUTPUT ---"))
@@ -595,6 +603,7 @@ func cmdPrepareRelease(args []string) error {
 		PackIDs:           f.packIDs,
 		OutDir:            f.out,
 		AllowFailingGates: f.allowFailing,
+		AsOf:              f.asOf,
 	})
 }
 

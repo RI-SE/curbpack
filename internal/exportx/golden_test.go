@@ -22,6 +22,8 @@ const goldenSourceDateEpoch = "1704067200"
 func goldenEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("SOURCE_DATE_EPOCH", goldenSourceDateEpoch)
+	t.Setenv("GIT_AUTHOR_DATE", "2024-01-01T00:00:00Z")
+	t.Setenv("GIT_COMMITTER_DATE", "2024-01-01T00:00:00Z")
 	t.Setenv("CURBPACK_SOCK", "")
 	t.Setenv("CYBERREADY_SOCK", "")
 }

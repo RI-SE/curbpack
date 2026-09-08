@@ -6,12 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/afelin/curbpack/internal/validate"
 )
 
 func TestFreshAndOwnedFixturePack(t *testing.T) {
+	// The evaluation date and commit dates are fixture inputs, independent of
+	// ambient wall time and CI's pinned SOURCE_DATE_EPOCH.
+	const asOf = "2024-01-02T00:00:00Z"
+	t.Setenv("GIT_AUTHOR_DATE", "2024-01-01T00:00:00Z")
+	t.Setenv("GIT_COMMITTER_DATE", "2024-01-01T00:00:00Z")
 	dir := t.TempDir()
 	fixtureRoot, err := filepath.Abs(filepath.Join("..", "..", "testdata", "packs-fixtures"))
 	if err != nil {
@@ -29,6 +33,7 @@ func TestFreshAndOwnedFixturePack(t *testing.T) {
 
 	res, err := validate.Run(validate.Options{
 		RepoRoot: dir,
+		AsOf:     asOf,
 		PackIDs:  []string{"fresh-owned-test"},
 		Quiet:    true,
 	})
@@ -40,14 +45,14 @@ func TestFreshAndOwnedFixturePack(t *testing.T) {
 	}
 
 	// Stale review log beyond max_age_days
-	old := time.Now().AddDate(-2, 0, 0).Format(time.RFC3339)
+	old := "2022-01-01T00:00:00Z"
 	cmd := exec.Command("git", "commit", "--amend", "--no-edit", "--date", old)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "GIT_AUTHOR_DATE="+old, "GIT_COMMITTER_DATE="+old)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("amend old date: %v %s", err, out)
 	}
-	res, err = validate.Run(validate.Options{RepoRoot: dir, PackIDs: []string{"fresh-owned-test"}, Quiet: true})
+	res, err = validate.Run(validate.Options{RepoRoot: dir, AsOf: asOf, PackIDs: []string{"fresh-owned-test"}, Quiet: true})
 	if err != nil {
 		t.Fatal(err)
 	}

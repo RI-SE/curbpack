@@ -23,6 +23,7 @@ func flagUsageErr(cmd, detail string) error {
 }
 
 type checkValidateFlags struct {
+	asOf      string
 	packIDs   []string
 	jsonOut   bool
 	diffOnly  bool
@@ -35,6 +36,7 @@ type checkValidateFlags struct {
 func parseCheckValidateFlags(cmd string, args []string) (checkValidateFlags, error) {
 	fs := newCommandFlagSet(cmd)
 	var f checkValidateFlags
+	fs.StringVar(&f.asOf, "as-of", "", "")
 	var packsFlag, packSingle string
 	fs.BoolVar(&f.jsonOut, "json", false, "")
 	fs.BoolVar(&f.diffOnly, "diff", false, "")
@@ -184,6 +186,7 @@ func parseInitFlags(args []string) (initFlags, error) {
 }
 
 type prepareReleaseFlags struct {
+	asOf         string
 	packIDs      []string
 	out          string
 	allowFailing bool
@@ -192,6 +195,7 @@ type prepareReleaseFlags struct {
 func parsePrepareReleaseFlags(args []string) (prepareReleaseFlags, error) {
 	fs := newCommandFlagSet("prepare-release")
 	var f prepareReleaseFlags
+	fs.StringVar(&f.asOf, "as-of", "", "")
 	var packSingle, packsFlag string
 	fs.StringVar(&f.out, "out", "", "")
 	fs.BoolVar(&f.allowFailing, "allow-failing-gates", false, "")
@@ -347,6 +351,7 @@ func parseAttestFlags(args []string) (attestFlags, error) {
 }
 
 type shareFlags struct {
+	asOf                                string
 	packIDs                             []string
 	skipPrepare, wantBundle, wantReveal bool
 }
@@ -354,6 +359,7 @@ type shareFlags struct {
 func parseShareFlags(args []string) (shareFlags, error) {
 	fs := newCommandFlagSet("share")
 	var f shareFlags
+	fs.StringVar(&f.asOf, "as-of", "", "")
 	var packsFlag string
 	fs.StringVar(&packsFlag, "packs", "", "")
 	fs.BoolVar(&f.skipPrepare, "skip-prepare-release", false, "")
