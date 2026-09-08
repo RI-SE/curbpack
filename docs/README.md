@@ -4,8 +4,12 @@ Start with the shortest path for your role. The [glossary and audience guide](gl
 
 ## Start
 
+**Friendly pre-beta testers:** use [Start testing here](getting-started/prebeta.md).
+It identifies the source build, sandbox exercise, results and feedback path.
+
 | Goal | Read |
 |------|------|
+| Test the current friendly pre-beta | [Pre-beta testing guide](getting-started/prebeta.md) |
 | Check released behavior and audit limitations | [Launch status](launch-status.md) |
 | Inspect a repository without writing files | [60-second paths](getting-started/60-second-paths.md) |
 | Install on Windows, macOS, or Linux | [Install](getting-started/install.md) |

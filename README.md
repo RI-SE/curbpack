@@ -11,11 +11,18 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 [Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
+## Friendly pre-beta: start testing here
+
+**Testing the latest hardening work? Use the [pre-beta guide](docs/getting-started/prebeta.md).**
+Run `./scripts/test-prebeta.sh` from this checkout. It builds a labelled source
+version, prepares a sandbox, and records the exact build and results. Start
+with that one guide; the released installer below supplies an older build.
+
 ## Release status
 
-The installer currently supplies **v0.5.5** (high-trust launch tip). See the [launch status and audit limitations](docs/launch-status.md) before using results for an audit decision. Action pin stays `@v0.5.2`.
+The installer currently supplies **v0.5.5** (released CLI, without the later PR #58 repairs). See the [launch status and audit limitations](docs/launch-status.md) before using results for an audit decision. Action pin stays `@v0.5.2`.
 
-## Start with a read-only scan
+## Released v0.5.5: start with a read-only scan
 
 [Article 14 incident-reporting obligations](https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng) apply from **11 September 2026**. Install Curbpack, change to any git repository, and run `scan`. This first step writes no files.
 
