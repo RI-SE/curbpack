@@ -198,3 +198,90 @@ claim-safety checks passed, as did the focused behavioral script including the
 actual Action resolver. Windows CLI cross-compilation passed; it is not a native
 Windows installation test. See the remaining acceptance list above before any
 broad production-readiness claim.
+
+## Friendly-user pre-beta review
+
+**8 September 2026: recommend merge for a small, explicitly selected source-build
+pre-beta after the PR's final checks pass.** This is an engineering review by an
+agent, not a recorded independent human trial, product certification or a broad
+production-readiness declaration. The bundle completion defect found during
+this review is fixed in this PR: `share --bundle` now stages the HTML with the
+current one-pager and includes it in the completion manifest. The
+[CLI regression](../internal/cli/share_bundle_audit_test.go) fails before the fix,
+verifies fresh coverage, and detects changed bundle bytes afterward.
+
+### Feasible checks conducted
+
+| Check | Evidence and result |
+|---|---|
+| Actual local producer and recipient journey | Built CLI: `doctor`, write-free `scan`, `check --as-of 2026-09-08`, `demo`, `share --bundle`, copy pack to a folder outside Git, `review --json`. Run under custom HOME/TMPDIR and a path containing spaces; offline review also uses an invalid epoch. Fresh integrity and declared manifest coverage verify; authenticity remains unverified, applicability not assessed and subject commit claimed. |
+| Changed or missing handoff bytes | Changed/deleted `evidence-bundle.html` fails the integrity verdict and returns nonzero. [Regression](../internal/cli/share_bundle_audit_test.go), [broader artifact tests](../internal/release/publication_test.go). |
+| Cooperative interruption | Actual CLI paused while holding its writer lock: a second producer is refused and live-owner recovery is refused. After killing that process, explicit `recover-lock` succeeds; a fresh `share --bundle` and review verify again. This is one controlled process-interruption case, not arbitrary interrupted-renames or power-loss coverage. |
+| Privacy of this handoff | No actual custom HOME/TMPDIR strings in any generated pack file. [Explicit-context tests](../internal/exportx/explain_boundary_test.go) and publication privacy refusal remain in force; this is not exhaustive secret detection. |
+| Signature mechanism | [Real OpenSSH regression](../internal/attest/verify_real_test.go) passed with a disposable key and separate trust policy. No product/user attestation was created. |
+| Website and social assets | 17 public-asset/browser tests passed. Live Pages OG title, description, canonical URL and 1200 × 630 PNG verified over HTTP. Slack/LinkedIn unfurls and a logged-out phone were not tested. |
+| Release versus candidate | Published v0.5.5 installation and write-free scan are tested separately on this macOS host. The source candidate is identified by its Git SHA, even though its CLI version text still says 0.5.5. Native Linux/Windows release-installer testing remains separate from source CI. |
+
+These checks exercise producer behavior and recipient evidence. They do not
+substitute for observing whether a new person understands the output unaided.
+
+### Pragmatic scope
+
+Start with a few friendly users on permitted, disposable clones, using the
+source candidate and the default `house-policy` pack. Use local diagnosis and
+unsigned evidence handoff. Record the Git SHA, OS/architecture, command, exit
+code and where the user got stuck. Report friction through the existing
+[first-run feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml)
+or [tester report](https://github.com/RI-SE/curbpack/issues/new?template=tester_report.yml).
+The repository owner coordinates support; no response-time promise is made.
+
+For this trial, use the complete `share --bundle` recipe. Advanced partial
+exports (`--skip-prepare-release`), signing/trust administration, CI Action
+adoption and regulated decision-making are outside the trial scope. Keep the
+recipient's intended commit, pack selection and evaluation date alongside the
+pack; the tool does not infer that recipient policy.
+
+Do not wait for enterprise-scale qualification to observe this limited local
+journey. Keep the remaining native installation, arbitrary interruption,
+redaction and applicability-policy work in the acceptance register. Before a
+public install campaign, publish and smoke-test a new release containing the
+repairs, then make any separately approved install/Action pin updates. The
+[human runbook](getting-started/a2-a3-human-runbook.md) still records the actual
+human and social checks; no A2/A3 pass is fabricated by this review.
+
+### Copyable candidate trial
+
+Go 1.23 or later and Git are required. Until merge, use the PR branch:
+
+```bash
+git clone --single-branch --branch codex/production-hardening-repairs https://github.com/RI-SE/curbpack.git curbpack-prebeta
+cd curbpack-prebeta
+git rev-parse HEAD                    # include this SHA in feedback
+go build -o ./bin/curbpack ./cmd/curbpack
+./bin/curbpack doctor
+./bin/curbpack scan                   # read-only diagnosis, not a gate pass
+./bin/curbpack demo                   # disposable built-in example
+```
+
+Then run the built binary by absolute path in a permitted disposable clone:
+
+```bash
+/path/to/curbpack-prebeta/bin/curbpack scan
+/path/to/curbpack-prebeta/bin/curbpack check --json --as-of 2026-09-08
+/path/to/curbpack-prebeta/bin/curbpack share --bundle --as-of 2026-09-08
+```
+
+The date above reproduces this review; select the intended date for later
+freshness checks. `check` and `share` write local artifacts. A failing gate
+returns nonzero; `share` can still produce a clearly labelled remediation pack.
+Read the diagnostic rather than treating every nonzero result as a crash.
+Copy the entire `review-pack` directory to a separate folder, open
+`evidence-bundle.html`, and run:
+
+```bash
+/path/to/curbpack-prebeta/bin/curbpack review /path/to/received/review-pack --json
+```
+
+Expected distinctions: verified artifact integrity/manifest coverage does not
+mean trusted authorship, complete product evidence or applicability to the
+recipient. A review exit of zero alone is not a launch approval.

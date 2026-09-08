@@ -29,6 +29,7 @@ import (
 
 // Options for prepare-release.
 type Options struct {
+	IncludeBundle     bool // include offline HTML in the same manifest and publication
 	AsOf              string
 	RepoRoot          string
 	PackIDs           []string
@@ -190,6 +191,13 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	// Hash the staged artifacts, never a previous emission's files.
 	htmlDoc := buyerOnePagerWithDigests(repoAbs, res, digestIfPresent(output["04-sbom.cdx.json"]), digestIfPresent(output["05-vex-draft.json"]))
 	writeOut("buyer-onepager.html", []byte(htmlDoc))
+	if opts.IncludeBundle {
+		bundle, err := evidenceBundleHTML(repoAbs, res, htmlDoc)
+		if err != nil {
+			return err
+		}
+		writeOut("evidence-bundle.html", []byte(bundle))
+	}
 
 	// Copy / refresh proof page into review-pack and repo proof/
 	proof := templates.ProofPageHTML()
@@ -701,13 +709,35 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 	defer lock.Release()
 
 	onepagerPath := filepath.Join(filepath.Dir(out), "buyer-onepager.html")
-	var onePagerMain string
-	if b, err := os.ReadFile(onepagerPath); err == nil {
-		onePagerMain = templates.ExtractOnePagerMain(string(b))
+	if err := outwrite.Contain(repoAbs, onepagerPath); err != nil {
+		return "", err
 	}
+	onepager, err := os.ReadFile(onepagerPath)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	doc, err := evidenceBundleHTML(repoAbs, res, string(onepager))
+	if err != nil {
+		return "", err
+	}
+	if err := redact.LooksClean([]byte(doc), redact.Verify(redact.Embedded)); err != nil {
+		return "", err
+	}
+	if err := outwrite.WriteFile(permitted, out, []byte(doc), 0o644); err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+// The staged one-pager is supplied explicitly so bundles cannot embed a prior
+// emission while the completion manifest describes a new one.
+func evidenceBundleHTML(repoAbs string, res validate.Result, onepager string) (string, error) {
 	hpurlFrag := ""
 	hpurlJSON := ""
 	ptrPath := filepath.Join(repoAbs, ".github", "curbpack", "evidence", "hpurl-pointer.json")
+	if err := outwrite.Contain(repoAbs, ptrPath); err != nil {
+		return "", err
+	}
 	if b, err := os.ReadFile(ptrPath); err == nil {
 		hpurlJSON = string(b)
 		var ptr struct {
@@ -716,6 +746,8 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 		if json.Unmarshal(b, &ptr) == nil {
 			hpurlFrag = ptr.HPURL
 		}
+	} else if !os.IsNotExist(err) {
+		return "", err
 	}
 	doc := templates.EvidenceBundleHTML(templates.BundleDTO{
 		RepoName:       filepath.Base(repoAbs),
@@ -725,15 +757,12 @@ func WriteEvidenceBundle(root string, res validate.Result) (string, error) {
 		SkippedRules:   res.SkippedRules,
 		Passed:         res.Passed,
 		Timestamp:      res.Payload.Timestamp,
-		OnePagerBody:   onePagerMain,
+		OnePagerBody:   templates.ExtractOnePagerMain(onepager),
 		HPURLFragment:  hpurlFrag,
 		HPURLEmbedJSON: hpurlJSON,
 		Remediation:    !res.Passed,
 	})
-	if err := outwrite.WriteFile(permitted, out, []byte(doc), 0o644); err != nil {
-		return "", err
-	}
-	return out, nil
+	return doc, nil
 }
 
 // PrepareScaffolds creates draft inputs before share's single evaluation. A

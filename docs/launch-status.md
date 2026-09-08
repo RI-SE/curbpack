@@ -1,5 +1,7 @@
 # Launch status and audit limitations
 
+**8 September pre-beta review:** recommend merging the reviewed source candidate for a small friendly-user trial once final PR checks pass; use the [candidate handoff and scope](production-hardening-audit.md#friendly-user-pre-beta-review). This does not promote a release or close the human trial record.
+
 **7 September follow-up:** hold the broad readiness claim. The takeover audit
 reproduced additional lock, VEX containment, gate-count and custom-home emission
 defects after the previously green checks. See the [repair and remaining-work

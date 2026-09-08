@@ -75,6 +75,7 @@ func cmdShare(args []string) error {
 	if !skipPrepare {
 		if err := release.Prepare(release.Options{
 			RepoRoot:          root,
+			IncludeBundle:     wantBundle,
 			PackIDs:           packIDs,
 			AllowFailingGates: true,
 			Result:            &res,
@@ -102,7 +103,11 @@ func cmdShare(args []string) error {
 	}
 
 	if wantBundle {
-		bundlePath, err := release.WriteEvidenceBundle(root, res)
+		bundlePath := filepath.Join(root, "review-pack", "evidence-bundle.html")
+		var err error
+		if !prepared {
+			bundlePath, err = release.WriteEvidenceBundle(root, res)
+		}
 		if err != nil {
 			return fmt.Errorf("evidence-bundle: %w", err)
 		} else {
