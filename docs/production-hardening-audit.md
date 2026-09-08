@@ -251,37 +251,8 @@ human and social checks; no A2/A3 pass is fabricated by this review.
 
 ### Copyable candidate trial
 
-Go 1.23 or later and Git are required. Until merge, use the PR branch:
-
-```bash
-git clone --single-branch --branch codex/production-hardening-repairs https://github.com/RI-SE/curbpack.git curbpack-prebeta
-cd curbpack-prebeta
-git rev-parse HEAD                    # include this SHA in feedback
-go build -o ./bin/curbpack ./cmd/curbpack
-./bin/curbpack doctor
-./bin/curbpack scan                   # read-only diagnosis, not a gate pass
-./bin/curbpack demo                   # disposable built-in example
-```
-
-Then run the built binary by absolute path in a permitted disposable clone:
-
-```bash
-/path/to/curbpack-prebeta/bin/curbpack scan
-/path/to/curbpack-prebeta/bin/curbpack check --json --as-of 2026-09-08
-/path/to/curbpack-prebeta/bin/curbpack share --bundle --as-of 2026-09-08
-```
-
-The date above reproduces this review; select the intended date for later
-freshness checks. `check` and `share` write local artifacts. A failing gate
-returns nonzero; `share` can still produce a clearly labelled remediation pack.
-Read the diagnostic rather than treating every nonzero result as a crash.
-Copy the entire `review-pack` directory to a separate folder, open
-`evidence-bundle.html`, and run:
-
-```bash
-/path/to/curbpack-prebeta/bin/curbpack review /path/to/received/review-pack --json
-```
-
-Expected distinctions: verified artifact integrity/manifest coverage does not
-mean trusted authorship, complete product evidence or applicability to the
-recipient. A review exit of zero alone is not a launch approval.
+PR #58 is merged as `40d80909db6b19fa3309351e8d9998b0e305c468`.
+Use the [friendly pre-beta testing guide](getting-started/prebeta.md) for the
+current committed-source build, isolated example and expected results. It is
+the testing entry point; the dates and branch names above describe this audit's
+historical evidence, not commands to copy for a new trial.
