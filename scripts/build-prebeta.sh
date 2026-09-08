@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Build committed source only, with an unmistakable pre-beta identity.
 set -euo pipefail
+# Tester files are private by default. Git settings/identity cannot bleed into
+# the fixture or select an unrelated repository through inherited GIT_* vars.
+umask 077
+while IFS= read -r variable; do
+  case "$variable" in GIT_*) unset "$variable" ;; esac
+done < <(compgen -e)
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_GLOBAL=/dev/null
 root=$(cd "$(dirname "$0")/.." && pwd)
 minimum=40d80909db6b19fa3309351e8d9998b0e305c468
 command -v go >/dev/null || { echo 'Go 1.23+ is required.' >&2; exit 2; }

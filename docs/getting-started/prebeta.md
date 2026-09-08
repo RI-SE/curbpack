@@ -34,7 +34,7 @@ and reviews a copy outside Git. It does not initialize your current repository,
 install hooks, sign evidence, or send feedback. Existing run folders are retained.
 An operational error stops the exercise and prints the log location.
 
-## 2. Open the results
+## 2. Open the results and trigger one gate
 
 The script prints the full folder path. Open its **START-HERE.txt** first.
 
@@ -49,6 +49,33 @@ The script prints the full folder path. Open its **START-HERE.txt** first.
 On macOS, copy the `open ".../evidence-bundle.html"` command printed by the script,
 or open that file in Finder. Record any broken layout or unclear wording; the
 script does not count a human visual check as passed.
+
+### Remove one file, observe one gate, restore it
+
+Use only the generated `example/` directory, not your product checkout. Run a
+baseline check, move **one** file to a temporary backup, check again, then restore
+it and recheck. Do not run `share` or `--heal` while the file is absent: those
+commands can recreate draft inputs.
+
+| Remove from the prepared example | Expected new failed gate |
+|---|---|
+| `SECURITY.md` | `HOUSE-SECURITY-MD` |
+| `.well-known/security.txt` | `HOUSE-SECURITY-TXT` |
+
+For example, from the run folder (substitute its printed path):
+
+```bash
+cd /path/to/run/example
+../curbpack-prebeta check --packs house-policy --json
+mv SECURITY.md ../SECURITY.md.saved
+../curbpack-prebeta check --packs house-policy --json   # expected exit 1
+mv ../SECURITY.md.saved SECURITY.md
+../curbpack-prebeta check --packs house-policy --json   # expected exit 0
+```
+
+Restore the file even if the observed result differs. The house-policy pack
+checks these document rules; deleting an arbitrary application test does not
+create a test-coverage gate.
 
 ## 3. Try a permitted repository
 
@@ -82,13 +109,36 @@ September 2026 date by accident.
 
 Use [first-run feedback](https://github.com/RI-SE/curbpack/issues/new?template=first_run_feedback.yml)
 or [tester report](https://github.com/RI-SE/curbpack/issues/new?template=tester_report.yml).
-Include the build SHA/version, OS/architecture, command, exit code, expected
-behavior, and where you got stuck. Review logs for private information before
-sharing; do not upload an entire product repository.
+Start with the generated `feedback.txt`: it contains the tool build SHA/version,
+OS/architecture and completed command names, without home paths or Git identity.
+Add the expected behavior and where you got stuck. Review your own added text
+before sharing. Do not upload the run folder, raw logs or a product repository.
 
 Stop the first exercise here. Signing, attestations, Action setup, regulatory
 claims and the full governance pathway are later work. Gate results prepare
 evidence for human review; they are not conformity assessment.
+
+## Privacy boundaries
+
+The runner does not submit feedback, upload artifacts or publish anything. New
+run folders and log files are private to the creating account by default. The
+prepared example ignores inherited `GIT_*` settings and personal/global Git
+configuration, uses an empty Git template, and keeps the demo's generic author
+identity. These controls do not alter the tester's actual Git configuration.
+
+Private logs intentionally retain local paths and diagnostics to make failures
+debuggable. Product checks can contain product-derived content. Do not treat
+those logs as automatically safe to share. `feedback.txt` and `START-HERE.txt`
+avoid absolute home/source paths; they retain useful, non-secret tool metadata.
+Public source attribution, module names, evaluation hashes and dates are not
+removed or relabelled as anonymous evidence.
+
+The first Go build may contact the configured dependency/toolchain services.
+This is not a claim of zero network traffic from installed development tools,
+or a guarantee that arbitrary product content can never contain a secret.
+The privacy regression can be run with Python 3:
+`python3 scripts/test_prebeta_privacy.py`. It supplies a synthetic personal Git
+identity and hook, then checks that neither reaches the example or share text.
 
 ## Update or rebuild
 
