@@ -191,6 +191,17 @@ func ResolveTriageSurfaces(opts Options) []string {
 
 // Run triages a received review-pack directory. Does not call git or network.
 func Run(opts Options) (Report, error) {
+	// Verify the baseline before deriving a trend or binding its digest into a
+	// new report. This checks record integrity, not signer authenticity.
+	if opts.Prior != nil {
+		if opts.Prior.Schema != SchemaVersion {
+			return Report{}, fmt.Errorf("review prior report schema mismatch: prior %q current %q", opts.Prior.Schema, SchemaVersion)
+		}
+		claimed := strings.TrimSpace(opts.Prior.RecordDigest)
+		if claimed == "" || claimed != ComputeRecordDigest(*opts.Prior) {
+			return Report{}, fmt.Errorf("review prior report record_digest missing or mismatched; use an intact prior review JSON")
+		}
+	}
 	root := filepath.Clean(strings.TrimSpace(opts.BundleRoot))
 	if root == "" || root == "." {
 		return Report{}, fmt.Errorf("review requires a path to a received review-pack directory")

@@ -75,7 +75,8 @@ func TestDeltaIdenticalRecordsAllPersistingNoneNewNoneCleared(t *testing.T) {
 func TestDeltaExitCodeUnchanged(t *testing.T) {
 	// NEW findings must not drive exit; only current contradictions do.
 	dir := writeMinimalConsistent(t)
-	prior := review.Report{Schema: review.SchemaVersion, RecordDigest: "deadbeef"}
+	prior := review.Report{Schema: review.SchemaVersion}
+	prior.RecordDigest = review.ComputeRecordDigest(prior)
 	var buf bytes.Buffer
 	rep, err := review.Run(review.Options{BundleRoot: dir, Writer: &buf, Prior: &prior})
 	if err != nil {

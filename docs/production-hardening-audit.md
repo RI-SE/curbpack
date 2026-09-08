@@ -33,6 +33,15 @@ checks. Tests ran against disposable archived trees before product repairs.
 | Two findings from one gate became `failed=2 evaluated=1` | Count distinct failed gate identities while retaining all finding rows | [gate-count test](../internal/validate/gate_count_test.go) |
 | A custom HOME reached the published explain packet, followed by a CLI error | Capture explicit redaction context, sanitize typed findings/citations/hints before JSON encoding, and verify before publication | [explain test](../internal/exportx/explain_boundary_test.go) |
 
+`review --since` now verifies the prior report's schema and recomputes its record
+digest before emitting a trend or linking a new report. The shared engine also
+applies this check to holding-report exports. Altered contents and missing or
+fabricated digests previously returned success in both CLI review modes; the
+[behavioral regressions](../internal/cli/review_since_test.go) now require exit 2
+without report output. [Historical report tests](../internal/review/historical_audit_test.go)
+preserve the original digest and accept it as a baseline. This is an integrity
+check, not proof of who supplied a report or whether its claims are true.
+
 Release and cache writers now coordinate through a repository lease. Release
 mappers do not acquire nested locks by assuming process identity. Explicit
 outside pack directories also receive their own lock. `O_EXCL` provides

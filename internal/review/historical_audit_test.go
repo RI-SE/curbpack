@@ -25,4 +25,14 @@ func TestHistoricalReportDigestSurvivesAuditExtension(t *testing.T) {
 	if rep.RecordDigest != historical || review.ComputeRecordDigest(rep) != historical {
 		t.Fatal("historical digest bytes changed")
 	}
+	child, err := review.Run(review.Options{
+		BundleRoot: filepath.Join(repoRoot(t), "testdata", "comparison-bundle-2026-1"),
+		JSONOut:    true, Prior: &rep,
+	})
+	if err != nil {
+		t.Fatalf("valid historical baseline rejected: %v", err)
+	}
+	if child.ParentRecordDigest != historical {
+		t.Fatal("historical parent digest not preserved")
+	}
 }

@@ -106,9 +106,9 @@ func TestRepoModeComposesWithSince(t *testing.T) {
 	prior := review.Report{
 		Schema:        review.SchemaVersion,
 		MethodVersion: "1.0.0",
-		RecordDigest:  "aabbccdd11223344",
 		Findings:      []review.Finding{{ID: "reference:path:SECURITY.md", State: review.StateUnconfirmed, Cause: review.CauseGenuine, Source: "x"}},
 	}
+	prior.RecordDigest = review.ComputeRecordDigest(prior)
 	b, _ := json.Marshal(prior)
 	if err := os.WriteFile(priorPath, b, 0o644); err != nil {
 		t.Fatal(err)
