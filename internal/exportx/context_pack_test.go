@@ -82,7 +82,7 @@ func TestWriteContextPack_FromValidateWash(t *testing.T) {
 	}
 }
 
-func TestWriteContextPack_PrefersCache(t *testing.T) {
+func TestWriteContextPack_RejectsUnverifiedAlias(t *testing.T) {
 	dir := t.TempDir()
 	mustRealGit(t, dir)
 	writeGoodHouse(t, dir)
@@ -126,11 +126,11 @@ func TestWriteContextPack_PrefersCache(t *testing.T) {
 	if err := json.Unmarshal(data, &pack); err != nil {
 		t.Fatal(err)
 	}
-	if pack.ReadinessScore != 88 {
-		t.Fatalf("want cached readiness 88, got %d", pack.ReadinessScore)
+	if pack.ReadinessScore != 100 {
+		t.Fatalf("unverified alias must not override fresh evaluation, got %d", pack.ReadinessScore)
 	}
-	if pack.OK {
-		t.Fatal("seeded failures should be ok=false")
+	if !pack.OK {
+		t.Fatal("unverified alias must not manufacture failures in the current passing fixture")
 	}
 	s := string(data)
 	if strings.Contains(s, "/Users/alice") {

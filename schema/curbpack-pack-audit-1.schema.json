@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curbpack-pack-audit-1",
+  "description": "Structural contract; hash bindings, required artifact names and trust-dimension semantics are additionally checked by the Go engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "curbpack-pack-audit:1"
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "failed",
+            "unverified",
+            "not_assessed"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "detail"
+      ]
+    },
+    "authenticity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "failed",
+            "unverified",
+            "not_assessed"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "detail"
+      ]
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "failed",
+            "unverified",
+            "not_assessed"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "detail"
+      ]
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "failed",
+            "unverified",
+            "not_assessed"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "detail"
+      ]
+    },
+    "subject_commit_status": {
+      "enum": [
+        "claimed",
+        "unavailable",
+        "independently_established"
+      ]
+    },
+    "evaluation_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "conformity_claim": {
+      "const": "none"
+    }
+  },
+  "required": [
+    "schema_version",
+    "integrity",
+    "authenticity",
+    "completeness",
+    "applicability",
+    "subject_commit_status",
+    "conformity_claim"
+  ]
+}

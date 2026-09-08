@@ -13,7 +13,7 @@ import (
 var ErrInvalidSourceDateEpoch = errors.New("invalid SOURCE_DATE_EPOCH")
 
 // ParseSourceDateEpoch reports the pinned epoch when SOURCE_DATE_EPOCH is set.
-// Unset/empty → (zero, false, nil). Invalid → (_, false, ErrInvalidSourceDateEpoch).
+// Unset → (zero, false, nil). Empty/invalid → (_, false, ErrInvalidSourceDateEpoch).
 // A value that is only whitespace is invalid (the variable is set but unusable).
 func ParseSourceDateEpoch() (time.Time, bool, error) {
 	raw, set := os.LookupEnv("SOURCE_DATE_EPOCH")
@@ -25,7 +25,7 @@ func ParseSourceDateEpoch() (time.Time, bool, error) {
 		return time.Time{}, false, fmt.Errorf("%w: %q (want non-negative Unix seconds)", ErrInvalidSourceDateEpoch, raw)
 	}
 	sec, err := strconv.ParseInt(v, 10, 64)
-	if err != nil || sec < 0 {
+	if err != nil || sec < 0 || sec > 253402300799 {
 		return time.Time{}, false, fmt.Errorf("%w: %q (want non-negative Unix seconds)", ErrInvalidSourceDateEpoch, v)
 	}
 	return time.Unix(sec, 0).UTC(), true, nil
@@ -118,4 +118,28 @@ func stringsTrim(s string) string {
 		j--
 	}
 	return s[i:j]
+}
+
+// EvaluationAsOf resolves the outer command's explicit time input. An omitted
+// value uses the supplied epoch, or today's UTC date. The resolved literal is
+// always recorded in the evaluation; gate code never consults the wall clock.
+func EvaluationAsOf(value string) (time.Time, string, error) {
+	epoch, set, err := ParseSourceDateEpoch()
+	if err != nil {
+		return time.Time{}, "", err
+	}
+	if value != "" {
+		t, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			t, err = time.Parse("2006-01-02", value)
+		}
+		if err != nil {
+			return time.Time{}, "", fmt.Errorf("invalid as_of %q: want YYYY-MM-DD or RFC3339", value)
+		}
+		return t.UTC(), "explicit", nil
+	}
+	if set {
+		return epoch, "SOURCE_DATE_EPOCH", nil
+	}
+	return time.Now().UTC().Truncate(24 * time.Hour), "utc-date-default", nil
 }

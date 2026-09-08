@@ -36,6 +36,16 @@ func TestDeltaThreeBuckets(t *testing.T) {
 	if len(d.Persisting) != 1 || d.Persisting[0] != "b" {
 		t.Fatalf("PERSISTING=%v", d.Persisting)
 	}
+	prior.MethodID = review.MethodID
+	current.MethodID = review.MethodID
+	prior.MethodVersion = review.MethodVersion
+	current.MethodVersion = review.MethodVersion
+	prior.ClassifierVersion = review.ClassifierVersion
+	current.ClassifierVersion = review.ClassifierVersion
+	prior.DigestScope = review.DigestScopeBundle
+	current.DigestScope = review.DigestScopeBundle
+	prior.SurfacesDigest = strings.Repeat("a", 64)
+	current.SurfacesDigest = prior.SurfacesDigest
 	block := review.FormatDelta(prior, current)
 	if !strings.Contains(block, "delta since record aabbccdd…") {
 		t.Fatalf("block=%q", block)
@@ -153,6 +163,18 @@ func TestDeltaGroupsBySource(t *testing.T) {
 	if groups[0].Source != "docs/risk.md" || groups[0].Current != 6 || groups[0].Prior != 2 {
 		t.Fatalf("risk group=%+v", groups[0])
 	}
+	prior.Schema = review.SchemaVersion
+	current.Schema = review.SchemaVersion
+	prior.MethodID = review.MethodID
+	current.MethodID = review.MethodID
+	prior.MethodVersion = review.MethodVersion
+	current.MethodVersion = review.MethodVersion
+	prior.ClassifierVersion = review.ClassifierVersion
+	current.ClassifierVersion = review.ClassifierVersion
+	prior.DigestScope = review.DigestScopeBundle
+	current.DigestScope = review.DigestScopeBundle
+	prior.SurfacesDigest = strings.Repeat("a", 64)
+	current.SurfacesDigest = prior.SurfacesDigest
 	block := review.FormatDelta(prior, current)
 	if !strings.Contains(block, "docs/risk.md") || !strings.Contains(block, "↑") {
 		t.Fatalf("delta missing per-doc decay: %q", block)
@@ -177,6 +199,18 @@ func TestDeltaGroupOrderDeterministic(t *testing.T) {
 	for i := range g1 {
 		if g1[i] != g2[i] {
 			t.Fatalf("nondeterministic: %+v vs %+v", g1, g2)
+		}
+	}
+}
+
+func TestTrendSuppressedWhenReviewScopeIsMissingOrDifferent(t *testing.T) {
+	a := review.Report{Schema: review.SchemaVersion, MethodID: review.MethodID, MethodVersion: review.MethodVersion, ClassifierVersion: review.ClassifierVersion, DigestScope: review.DigestScopeBundle, SurfacesDigest: strings.Repeat("a", 64)}
+	b := a
+	b.DigestScope = review.DigestScopeClosure
+	for _, prior := range []review.Report{{}, b} {
+		text := review.FormatDelta(prior, a)
+		if !strings.Contains(text, "Comparison suppressed") || strings.Contains(text, "CLEARED") {
+			t.Fatalf("incompatible trend rendered: %s", text)
 		}
 	}
 }

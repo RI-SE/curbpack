@@ -1,0 +1,43 @@
+{
+  "schema_version": "curbpack-evaluation:2",
+  "as_of": "2024-01-02T00:00:00Z",
+  "input_identity": {
+    "method": "curbpack-gates:2",
+    "tool_version": "0.5.5",
+    "subject_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "subject_commit_status": "claimed",
+    "pack_sources": [
+      {
+        "id": "example",
+        "version": "1.0.0",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ],
+    "files": [
+      {
+        "path": "policy.md",
+        "state": "file",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "git_inputs": [],
+    "scope": {
+      "mode": "full",
+      "rule_ids": [
+        "EXAMPLE"
+      ],
+      "skipped_rule_ids": [],
+      "changed_paths": []
+    },
+    "trust_policy": "none"
+  },
+  "comparison_key": "ecf2630c8147679e9f2c2b13a3dd858faf0d511d0c26269fc7565fe4f39b6a52",
+  "failures": [],
+  "pack_id": "example",
+  "readiness_score": 100,
+  "outcome": "pass",
+  "skipped_rules": 0,
+  "failed_rules": 0,
+  "evaluated_rules": 1,
+  "conformity_claim": "none"
+}

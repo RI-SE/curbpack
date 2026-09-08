@@ -13,6 +13,10 @@ import (
 // Excludes wall-clock timestamp and agent identity — binds attest to evaluated result.
 func ComputeResultDigest(p GateFailurePayload) string {
 	h := sha256.New()
+	if p.EvaluationDigest != "" {
+		WriteLenPrefixed(h, "curbpack-result-evaluation-bind:2")
+		WriteLenPrefixed(h, p.EvaluationDigest)
+	}
 	WriteLenPrefixed(h, strings.TrimSpace(p.PackID))
 	WriteLenPrefixed(h, fmt.Sprintf("%d", p.ReadinessScore))
 	// Legacy records without completeness fields retain their historical digest.

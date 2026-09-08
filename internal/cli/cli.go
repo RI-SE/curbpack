@@ -381,7 +381,8 @@ func parseValidateFlags(args []string) (packIDs []string, jsonOut, diffOnly, for
 const healMaxRounds = 3
 
 func cmdCheck(args []string) error {
-	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore, err := parseCheckFlags(args)
+	flags, err := parseCheckValidateFlags("check", args)
+	packIDs, jsonOut, diffOnly, wantHints, applyStub, heal, showScore := flags.packIDs, flags.jsonOut, flags.diffOnly, flags.formHints, flags.applyStub, flags.heal, flags.showScore
 	if helpRequested(err) {
 		return nil
 	}
@@ -407,6 +408,7 @@ func cmdCheck(args []string) error {
 	stubsWritten := 0
 	for round := 0; round <= healMaxRounds; round++ {
 		res, err = validate.Run(validate.Options{
+			AsOf:     flags.asOf,
 			RepoRoot: root,
 			PackIDs:  packIDs,
 			DiffOnly: checkDiff,
@@ -471,7 +473,7 @@ func cmdCheck(args []string) error {
 		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
 		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
-		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Payload.PackID, res.FailedRules, nowInst) {
+		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Payload.PackID, res.FailedRules, nowInst, res.Payload.ComparisonKey) {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}
 		if line := drift.BindDriftLine(root); line != "" {
@@ -550,14 +552,15 @@ func cmdValidate(args []string) error {
 	if err != nil {
 		return usageErr("must run inside a git repository")
 	}
-	packIDs, jsonOut, diffOnly, _, _, _, err := parseValidateFlags(args)
+	flags, err := parseCheckValidateFlags("validate", args)
+	packIDs, jsonOut, diffOnly := flags.packIDs, flags.jsonOut, flags.diffOnly
 	if err != nil {
 		return err
 	}
 	if !jsonOut {
 		tty.PrintHeader("EXECUTING COMPLIANCE GATES")
 	}
-	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut})
+	res, err := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, DiffOnly: diffOnly, Quiet: jsonOut, AsOf: flags.asOf})
 	if err != nil {
 		if jsonOut && res.Payload.SchemaVersion != "" {
 			_ = json.NewEncoder(os.Stdout).Encode(res.Payload)
@@ -600,6 +603,7 @@ func cmdPrepareRelease(args []string) error {
 		PackIDs:           f.packIDs,
 		OutDir:            f.out,
 		AllowFailingGates: f.allowFailing,
+		AsOf:              f.asOf,
 	})
 }
 

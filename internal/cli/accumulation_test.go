@@ -13,15 +13,15 @@ import (
 )
 
 func TestAccumulationDeltaLineNoPrior(t *testing.T) {
-	if got := accumulationDeltaLine(priorCacheSnapshot{}, "house-policy", 0); got != "" {
+	if got := accumulationDeltaLine(priorCacheSnapshot{}, "house-policy", 0, strings.Repeat("a", 64)); got != "" {
 		t.Fatalf("want empty without prior, got %q", got)
 	}
 }
 
 func TestAccumulationDeltaLineFailedChange(t *testing.T) {
 	got := accumulationDeltaLine(priorCacheSnapshot{
-		OK: true, PackID: "house-policy", SchemaVersion: "1", Failed: 2, FailureCount: 2,
-	}, "house-policy", 0)
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 2, FailureCount: 2,
+	}, "house-policy", 0, strings.Repeat("a", 64))
 	if !strings.Contains(got, "Δ failed 2→0") {
 		t.Fatalf("want failed delta, got %q", got)
 	}
@@ -32,16 +32,16 @@ func TestAccumulationDeltaLineFailedChange(t *testing.T) {
 
 func TestInstrumentWhisperLinesCapsAndFirstRunQuiet(t *testing.T) {
 	priorCache := priorCacheSnapshot{
-		OK: true, PackID: "house-policy", SchemaVersion: "1", Failed: 1, FailureCount: 1,
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 1, FailureCount: 1,
 	}
 	now := instrument.Snapshot{DepsFP: "bbb", SecretHits: 2, Deps: []instrument.Dep{{Name: "a", Eco: "npm"}}}
 	// First run: no prior instrument → failed tally only.
-	lines := instrumentWhisperLines(priorCache, instrument.Snapshot{}, false, "house-policy", 0, now)
+	lines := instrumentWhisperLines(priorCache, instrument.Snapshot{}, false, "house-policy", 0, now, strings.Repeat("a", 64))
 	if len(lines) != 1 || !strings.Contains(lines[0], "Δ failed") {
 		t.Fatalf("first run want failed tally only, got %#v", lines)
 	}
 	prior := instrument.Snapshot{DepsFP: "aaa", SecretHits: 0, Deps: nil}
-	lines = instrumentWhisperLines(priorCache, prior, true, "house-policy", 0, now)
+	lines = instrumentWhisperLines(priorCache, prior, true, "house-policy", 0, now, strings.Repeat("a", 64))
 	if len(lines) < 2 || len(lines) > 3 {
 		t.Fatalf("want 2–3 lines, got %#v", lines)
 	}
@@ -53,8 +53,8 @@ func TestInstrumentWhisperLinesCapsAndFirstRunQuiet(t *testing.T) {
 
 func TestAccumulationDeltaLineRepeatGreen(t *testing.T) {
 	got := accumulationDeltaLine(priorCacheSnapshot{
-		OK: true, PackID: "house-policy", SchemaVersion: "1", Failed: 0, FailureCount: 0,
-	}, "house-policy", 0)
+		OK: true, PackID: "house-policy", SchemaVersion: "curbpack-evaluation:2", ComparisonKey: strings.Repeat("a", 64), Failed: 0, FailureCount: 0,
+	}, "house-policy", 0, strings.Repeat("a", 64))
 	if got != "gates tally unchanged · evidence cache updated" {
 		t.Fatalf("got %q", got)
 	}
@@ -81,7 +81,7 @@ func TestLoadPriorCacheAndGreenCheckWhisper(t *testing.T) {
 	}
 
 	snap := loadPriorCache(dir)
-	if !snap.OK || snap.Failed != 2 || snap.FailureCount != 2 {
+	if snap.OK || snap.Failed != 2 || snap.FailureCount != 2 {
 		t.Fatalf("prior snapshot=%+v", snap)
 	}
 
@@ -106,11 +106,11 @@ func TestLoadPriorCacheAndGreenCheckWhisper(t *testing.T) {
 			deltaLines++
 		}
 	}
-	if deltaLines != 1 {
-		t.Fatalf("want exactly one delta/accumulation line, got %d\n%s", deltaLines, out)
+	if deltaLines != 0 {
+		t.Fatalf("unbound historical cache must not produce a trend, got %d\n%s", deltaLines, out)
 	}
-	if !strings.Contains(out, "Δ failed 2→0") {
-		t.Fatalf("missing failed delta whisper:\n%s", out)
+	if strings.Contains(out, "Δ failed") {
+		t.Fatalf("unverified alias produced a trend:\n%s", out)
 	}
 }
 

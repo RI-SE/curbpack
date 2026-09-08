@@ -79,6 +79,10 @@ func FormatDelta(prior, current Report) string {
 		fmt.Fprintf(&b, "method_version differs: prior %s · current %s — findings may not be comparable\n",
 			prior.MethodVersion, current.MethodVersion)
 	}
+	if !ComparableReports(prior, current) {
+		b.WriteString("Comparison suppressed: complete matching method, classifier and surface scope identities are required.\n")
+		return b.String()
+	}
 	fmt.Fprintf(&b, "\n")
 	fmt.Fprintf(&b, "  NEW          %3d   confirmed before, not now\n", len(d.New))
 	fmt.Fprintf(&b, "  CLEARED      %3d   present before, absent now\n", len(d.Cleared))
@@ -150,4 +154,19 @@ func GroupUnresolvedBySource(prior, current Report) []SourceDecay {
 		return out[i].Source < out[j].Source
 	})
 	return out
+}
+
+// ComparableReports gates human trend output. A low-level finding diff alone
+// cannot establish that two reports evaluated the same method and surfaces.
+func ComparableReports(a, b Report) bool {
+	if a.Schema == "" || a.Schema != b.Schema || a.MethodID == "" || a.MethodID != b.MethodID || a.MethodVersion == "" || a.MethodVersion != b.MethodVersion || a.ClassifierVersion == "" || a.ClassifierVersion != b.ClassifierVersion || a.DigestScope == "" || a.DigestScope != b.DigestScope || len(a.SurfacesDigest) != 64 || a.SurfacesDigest != b.SurfacesDigest {
+		return false
+	}
+	if (a.Audit == nil) != (b.Audit == nil) {
+		return false
+	}
+	if a.Audit != nil && a.Audit.SchemaVersion != b.Audit.SchemaVersion {
+		return false
+	}
+	return true
 }

@@ -39,7 +39,11 @@ func Run(path string, propose bool) error {
 	if failed == 0 {
 		failed = ir.UniqueFailedGates(payload.Failures)
 	}
-	fmt.Printf("failed=%d evaluated=%d skipped=%d · findings: %d\n", failed, payload.EvaluatedRules, payload.SkippedRules, len(payload.Failures))
+	evaluated := fmt.Sprint(payload.EvaluatedRules)
+	if payload.EvaluatedRules == 0 && payload.EvaluationDigest == "" {
+		evaluated = "unknown"
+	}
+	fmt.Printf("failed=%d evaluated=%s skipped=%d · findings: %d\n", failed, evaluated, payload.SkippedRules, len(payload.Failures))
 
 	if propose {
 		fmt.Println()

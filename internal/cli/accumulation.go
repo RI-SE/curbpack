@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/afelin/curbpack/internal/instrument"
+	"github.com/afelin/curbpack/internal/ir"
 	"github.com/afelin/curbpack/internal/redact"
+	"github.com/afelin/curbpack/internal/validate"
 )
 
 // instrumentPanelCovenant is always printed after the check tally (green and red).
@@ -15,6 +17,7 @@ const instrumentPanelCovenant = "instrument panel · not a security program · n
 
 // priorCacheSnapshot is the quiet accumulation whisper source (pre-overwrite).
 type priorCacheSnapshot struct {
+	ComparisonKey  string
 	OK             bool
 	PackID         string
 	SchemaVersion  string
@@ -26,6 +29,9 @@ type priorCacheSnapshot struct {
 }
 
 func loadPriorCache(root string) priorCacheSnapshot {
+	if e, _, err := validate.LoadLatest(root); err == nil && e.SchemaVersion == ir.EvaluationSchemaVersion {
+		return priorCacheSnapshot{OK: true, ComparisonKey: e.ComparisonKey, PackID: e.PackID, SchemaVersion: e.SchemaVersion, Failed: e.FailedRules, Evaluated: e.EvaluatedRules, Skipped: e.SkippedRules, FailureCount: len(e.Failures), ReadinessScore: e.ReadinessScore}
+	}
 	path := filepath.Join(root, ".github", "curbpack", "cache", "latest_result.json")
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -56,7 +62,7 @@ func loadPriorCache(root string) priorCacheSnapshot {
 		failed = n
 	}
 	return priorCacheSnapshot{
-		OK:             true,
+		OK:             false, // historical aliases lack bound method/input identity
 		PackID:         raw.PackID,
 		SchemaVersion:  raw.SchemaVersion,
 		Failed:         failed,
@@ -69,14 +75,17 @@ func loadPriorCache(root string) priorCacheSnapshot {
 
 // accumulationDeltaLine returns at most one quiet line when prior cache exists
 // and pack/schema are compatible. Trends use failed counts, not percent grades.
-func accumulationDeltaLine(prior priorCacheSnapshot, nowPack string, nowFailed int) string {
-	return redact.TrendLine(prior.OK, prior.PackID, nowPack, prior.SchemaVersion, "1", prior.Failed, nowFailed)
+func accumulationDeltaLine(prior priorCacheSnapshot, nowPack string, nowFailed int, keys ...string) string {
+	if len(keys) != 1 {
+		return ""
+	}
+	return redact.TrendLine(prior.OK, prior.PackID, nowPack, prior.SchemaVersion, ir.EvaluationSchemaVersion, prior.Failed, nowFailed, prior.ComparisonKey, keys[0])
 }
 
 // instrumentWhisperLines returns at most 3 dim instrument lines.
-func instrumentWhisperLines(priorCache priorCacheSnapshot, priorInst instrument.Snapshot, priorOK bool, nowPack string, nowFailed int, nowInst instrument.Snapshot) []string {
+func instrumentWhisperLines(priorCache priorCacheSnapshot, priorInst instrument.Snapshot, priorOK bool, nowPack string, nowFailed int, nowInst instrument.Snapshot, keys ...string) []string {
 	var lines []string
-	if line := accumulationDeltaLine(priorCache, nowPack, nowFailed); line != "" {
+	if line := accumulationDeltaLine(priorCache, nowPack, nowFailed, keys...); line != "" {
 		lines = append(lines, line)
 	}
 	if !priorOK {

@@ -42,7 +42,10 @@ func (c Counts) SummaryMarkdown() string {
 }
 
 // Compatible reports whether two eval snapshots may be compared for a trend.
-func Compatible(packA, packB, schemaA, schemaB string) bool {
+func Compatible(packA, packB, schemaA, schemaB string, keys ...string) bool {
+	if len(keys) != 2 || len(keys[0]) != 64 || keys[0] != keys[1] {
+		return false
+	}
 	packA = strings.TrimSpace(packA)
 	packB = strings.TrimSpace(packB)
 	if packA == "" || packB == "" {
@@ -53,15 +56,15 @@ func Compatible(packA, packB, schemaA, schemaB string) bool {
 	}
 	schemaA = strings.TrimSpace(schemaA)
 	schemaB = strings.TrimSpace(schemaB)
-	if schemaA != "" && schemaB != "" && schemaA != schemaB {
+	if schemaA == "" || schemaB == "" || schemaA != schemaB {
 		return false
 	}
 	return true
 }
 
 // TrendLine returns at most one quiet delta when priors are compatible.
-func TrendLine(priorOK bool, priorPack, nowPack, priorSchema, nowSchema string, priorFailed, nowFailed int) string {
-	if !priorOK || !Compatible(priorPack, nowPack, priorSchema, nowSchema) {
+func TrendLine(priorOK bool, priorPack, nowPack, priorSchema, nowSchema string, priorFailed, nowFailed int, keys ...string) string {
+	if !priorOK || !Compatible(priorPack, nowPack, priorSchema, nowSchema, keys...) {
 		return ""
 	}
 	if priorFailed != nowFailed {

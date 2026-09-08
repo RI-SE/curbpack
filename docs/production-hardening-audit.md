@@ -1,4 +1,4 @@
-# Production hardening audit — 7 September 2026
+# Production hardening audit — 8 September 2026
 
 **Decision: hold the broad production-readiness claim.** Cursor's committed work
 is preserved, and Codex is repairing it following the operator's explicit handoff.
@@ -37,8 +37,10 @@ Release and cache writers now coordinate through a repository lease. Release
 mappers do not acquire nested locks by assuming process identity. Explicit
 outside pack directories also receive their own lock. `O_EXCL` provides
 cooperative writer exclusion; it is **not** protection against hostile concurrent
-filesystem mutation. Files are individually staged and renamed; complete pack
-and alias-set transactions remain unfinished.
+filesystem mutation. Release files are staged as a set, verified, and published with a completion
+manifest last. Readers recheck every declared artifact. Interrupted renames may
+leave a mixed directory that fails verification; this is not a filesystem
+transaction or a guarantee against power loss. See the [batch writer](../internal/outwrite/batch.go).
 
 After an interrupted command, use `curbpack recover-lock <permitted-output-root>`.
 Recovery refuses live or unverifiable owners, malformed locks and symlink locks.
@@ -48,26 +50,19 @@ and verify the resulting artifacts.
 
 ## Remaining acceptance work, in order
 
-1. Complete output-set staging and interruption semantics. Add an authoritative
-   completion record so readers cannot treat a partial pack as complete. Cover
-   unwritable destinations, concurrent producer processes and interruption.
-2. Complete W2 using the [SDD contract](software-design-document.md#32-target-architecture):
-   explicit `as_of`, exact pack/method/input identity, immutable evaluations by
-   full digest, a verified pointer, and operational state exclusively in receipts.
-   In the inspected baseline, changing evaluated file bytes or rule patterns
-   while preserving the same findings did **not** change evaluation bytes. This
-   is missing identity, not proof of determinism. Freshness still uses ambient
-   time. Historical readers and result digests need adapters and regression tests.
-3. Complete reader/redaction coverage across every crossing surface. The #57
-   trend predicate compares pack ID and schema only; changed pack bytes and
-   evaluation scope are not yet bound. Do not claim those trends are comparable.
-   Missing historical evaluated totals must be shown as unknown, not invented.
-4. Extend the existing offline [review engine](../internal/review/review.go) with
-   versioned schema and artifact-integrity checks. Separate integrity,
-   authenticity, completeness and applicability. Subject commit remains a claim
-   unless independently established; embedded signing material is not a trust
-   anchor.
-5. Run final uncached tests, build, vet, race, gauntlet, browser checks and the
+1. Finish the interruption and native platform matrix on the final revision:
+   concurrent producer processes, interrupted staging/publication, unwritable
+   destinations and Windows runtime behavior. A blocked late destination now
+   preserves earlier artifacts in the [publication regressions](../internal/release/publication_test.go).
+2. Complete crossing-surface redaction review. Explain, ContextPack and review
+   capture explicit custom-home context. Canonical or signed evidence must not
+   be silently rewritten by a derived-output sanitizer. Test all remaining
+   release/export formats before declaring this acceptance gate complete.
+3. Review applicability policy separately from hash consistency. `as_of` drives
+   freshness and is bound in canonical identity; an offline recipient still
+   needs to select its intended subject, pack policy and time requirements.
+   Auxiliary SBOM/VEX bytes are bound by the manifest, not by the gate verdict.
+4. Run final uncached tests, build, vet, race, gauntlet, browser checks and the
    platform installation matrix on the final revision. Cross-compilation is not
    a Windows installation test. Preserve the distinctions in the
    [release evidence record](../scripts/release-gate.json).
@@ -99,3 +94,98 @@ and actual Action resolver tests passed. Public asset mutations passed 17 test
 groups with one opt-in live API group skipped. The Windows CLI cross-compiled;
 Windows runtime output-boundary tests have been added to the existing CI job.
 These results cover the repair checkpoint, not the unfinished acceptance work.
+
+## W2 continuation after the repair checkpoint
+
+The continuation adds `curbpack-evaluation:2` and `curbpack-run-receipt:2`, keeping
+historical v1 adapters. Evaluated file mutations and rule mutations now change
+canonical identity even when findings are unchanged. Packs are captured once
+per composition. `as_of` is explicit in the evaluation and accepted by producer
+commands; Git freshness uses that instant. Operational state remains in receipts.
+
+The [time/cache tests](../internal/validate/time_cache_contract_test.go) separately
+exercise fresh emission and later reads, altered immutable objects, failed
+pointer publication, explicit freshness instants, and relocation with custom
+HOME, temporary directories and locale changes. The [input mutation test](../internal/validate/input_identity_test.go)
+failed on the repair checkpoint before this continuation. [Versioned schemas and
+compatibility rules](../schema/COMPATIBILITY.md) describe the new contract.
+
+Exports verify immutable cache objects and compare current input identity before
+reuse. Historical mutable aliases cannot supply a trend or override a fresh
+evaluation. New result digests bind the evaluation digest; historical records
+without that field retain their algorithm. Pack validity/applicability and
+auxiliary artifact meaning must not be inferred from gate outcome alone.
+
+## Completed-set publication and offline audit extension
+
+The [release writer](../internal/release/release.go) builds artifacts in memory,
+preflights all destinations, stages all bytes and publishes
+`pack-manifest.json` last. `evaluation.json` and `run-receipt.json` travel with
+new packs. The one-pager hashes the current staged SBOM/VEX bytes, and its
+mechanical tally excludes skipped gates. `share` includes its companion files
+in that same set and propagates preparation/bundle failures. Its legacy copy
+helper also uses repository containment; see the [share boundary test](../internal/cli/share_boundary_test.go).
+
+The existing [offline review engine](../internal/review/pack_audit.go) now validates
+manifest schema, exact sizes/full SHA-256 hashes, canonical evaluation/receipt
+contracts, and the historical payload adapter binding. No second verifier engine
+or network/Git dependency was added. Its optional `curbpack-pack-audit:1` report
+extension separates integrity, authenticity, completeness and applicability.
+A verified manifest establishes internal consistency only. Authenticity remains
+unverified without an independently selected signer policy; an offline subject
+commit remains claimed. Extra unlisted files make completeness unverified.
+Legacy packs remain reviewable with unknown manifest coverage.
+
+[Publication and offline tests](../internal/release/publication_test.go) cover
+altered/missing artifacts, removed manifests, unbound evaluation/receipt fields,
+unlisted files and symlinked artifact leaves. Fresh pack generation and subsequent
+review run separately; review succeeds outside Git under a different HOME/TMPDIR,
+locale and invalid epoch. [Historical report fixtures](../internal/review/historical_audit_test.go)
+retain their original digest, while current comparison reports deliberately bind
+the new optional audit extension. Historical golden files were retained.
+
+## Distribution and browser checks — 8 September 2026
+
+The published [v0.5.5 assets](https://github.com/RI-SE/curbpack/releases/tag/v0.5.5)
+were downloaded and all five binary SHA-256 values matched the release checksum
+file. The [shell installer](../scripts/install.sh), pinned explicitly to v0.5.5,
+installed into a disposable directory on macOS amd64. Its installed `version`
+and read-only `scan` both exited zero. These checks concern the published binary,
+which does not include this repair branch. No Linux or Windows installation is
+claimed from downloads or cross-compilation; the local Docker daemon was not
+available for a Linux container smoke.
+
+The [public asset suite](../scripts/test_public_assets.py) passed all 17 tests,
+including its real Chrome homepage checks at the defined viewport sizes and its
+no-external-resource assertions. New schemas/goldens and an actual offline audit
+report also passed Draft 2020-12 JSON Schema validation using a temporary test
+dependency outside the repository.
+
+## Tester handoff for this run
+
+Use `codex/production-hardening-repairs` until a human merges the successor PR.
+The default installer and public Action pin still select published versions;
+they do not install this branch. The CLI's preserved version string is not a
+substitute for recording the tested Git commit.
+
+```bash
+git clone --single-branch --branch codex/production-hardening-repairs https://github.com/RI-SE/curbpack.git curbpack-test
+cd curbpack-test
+git rev-parse HEAD
+go build -o ./bin/curbpack ./cmd/curbpack
+./bin/curbpack scan
+./bin/curbpack check --json --as-of 2026-09-08
+```
+
+For a received completed pack, run `curbpack review <received-pack> --json` and
+inspect `pack_audit`'s four dimensions. Integrity verified does not mean signer
+trust, recipient applicability or conformity. Missing/unlisted artifacts and
+historical coverage remain explicit. Do not use a deliberately altered pack as
+release evidence. Human review/merge, release and pin promotion remain separate.
+
+The final uncached Go suite passed. Affected packages passed race checks, with
+review/CLI rerun after their final fixture/help updates. Vet, the gauntlet and
+claim-safety checks passed, as did the focused behavioral script including the
+actual Action resolver. Windows CLI cross-compilation passed; it is not a native
+Windows installation test. See the remaining acceptance list above before any
+broad production-readiness claim.

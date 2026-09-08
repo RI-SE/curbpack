@@ -2,11 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"github.com/afelin/curbpack/internal/outwrite"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/afelin/curbpack/internal/attest"
+	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/exportx"
 	"github.com/afelin/curbpack/internal/gitutil"
 	"github.com/afelin/curbpack/internal/platform"
@@ -34,39 +37,36 @@ func cmdShare(args []string) error {
 	wantBundle := f.wantBundle
 	wantReveal := f.wantReveal
 
+	if _, _, err := clock.EvaluationAsOf(f.asOf); err != nil {
+		return err
+	}
 	tty.PrintHeader("curbpack share")
-	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: false})
+	if !skipPrepare {
+		if err := release.PrepareScaffolds(root, packIDs); err != nil {
+			return err
+		}
+	}
+	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: false, AsOf: f.asOf})
 	checkFailed := verr != nil || !res.Passed
 	if verr != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "check error: "+verr.Error()+" — still writing context-pack"))
+		return verr
 	}
 
-	cp, err := exportx.WriteContextPack(root, packIDs, "")
+	cp, err := exportx.WriteContextPackFromResult(root, packIDs, "", res)
 	if err != nil {
 		return err
 	}
 	tty.PrintStatus("context-pack", true, cp)
-	reviewCP, err := copyShareArtifactToReviewPack(root, cp)
-	if err != nil {
-		return err
-	}
-	printAttach(reviewCP)
 
 	bq, n, err := exportx.WriteBuyerQuestionsFromResult(root, packIDs, "", res)
 	if err != nil {
 		return err
 	}
 	tty.PrintStatus("buyer-questions", true, fmt.Sprintf("%s questions=%d", bq, n))
-	reviewBQ, err := copyShareArtifactToReviewPack(root, bq)
+
+	extras, err := collectShareArtifacts(root, cp, bq)
 	if err != nil {
 		return err
-	}
-	printAttach(reviewBQ)
-
-	if reviewHPURL, err := copyEvidenceHPURLPointerToReviewPack(root); err != nil {
-		return err
-	} else if reviewHPURL != "" {
-		printAttach(reviewHPURL)
 	}
 
 	var revealTarget string
@@ -78,11 +78,17 @@ func cmdShare(args []string) error {
 			PackIDs:           packIDs,
 			AllowFailingGates: true,
 			Result:            &res,
+			ExtraArtifacts:    extras,
 		}); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "prepare-release: "+err.Error()))
+			return fmt.Errorf("prepare-release: %w", err)
 		} else {
 			prepared = true
 		}
+	} else if err := publishShareExtras(root, extras); err != nil {
+		return err
+	}
+	for _, name := range sortedArtifactNames(extras) {
+		printAttach(filepath.Join(root, "review-pack", name))
 	}
 
 	for _, line := range shareLadderLines(root, res.Score, res.Passed) {
@@ -98,7 +104,7 @@ func cmdShare(args []string) error {
 	if wantBundle {
 		bundlePath, err := release.WriteEvidenceBundle(root, res)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", tty.C(tty.Dim, "evidence-bundle: "+err.Error()))
+			return fmt.Errorf("evidence-bundle: %w", err)
 		} else {
 			tty.PrintStatus("evidence-bundle", true, bundlePath)
 			printAttach(bundlePath)
@@ -185,16 +191,25 @@ func copyShareArtifactToReviewPack(root, src string) (string, error) {
 
 func copyFileIntoReviewPack(root, src string) (string, error) {
 	dest := filepath.Join(root, "review-pack", filepath.Base(src))
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+
+	if err := outwrite.Contain(root, src); err != nil {
 		return "", err
+	}
+	st, err := os.Lstat(src)
+	if err != nil {
+		return "", err
+	}
+	if !st.Mode().IsRegular() {
+		return "", fmt.Errorf("share source must be a regular file")
 	}
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(dest, data, 0o644); err != nil {
+	if _, err := outwrite.SaveFile(root, filepath.Join("review-pack", filepath.Base(src)), "", data, 0644); err != nil {
 		return "", err
 	}
+
 	return dest, nil
 }
 
@@ -209,4 +224,65 @@ func shareArtifactCompanion(src string) string {
 	default:
 		return ""
 	}
+}
+
+func sortedArtifactNames(files map[string][]byte) []string {
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func collectShareArtifacts(root string, sources ...string) (map[string][]byte, error) {
+	files := map[string][]byte{}
+	read := func(src string, optional bool) error {
+		if err := outwrite.Contain(root, src); err != nil {
+			return err
+		}
+		st, err := os.Lstat(src)
+		if optional && os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !st.Mode().IsRegular() {
+			return fmt.Errorf("share source must be a regular file")
+		}
+		raw, err := os.ReadFile(src)
+		if err != nil {
+			return err
+		}
+		files[filepath.Base(src)] = raw
+		return nil
+	}
+	for _, src := range sources {
+		if err := read(src, false); err != nil {
+			return nil, err
+		}
+		if companion := shareArtifactCompanion(src); companion != "" {
+			if err := read(companion, true); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if err := read(filepath.Join(root, ".github", "curbpack", "evidence", "hpurl-pointer.json"), true); err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
+func publishShareExtras(root string, files map[string][]byte) error {
+	lock, err := outwrite.Acquire(root)
+	if err != nil {
+		return err
+	}
+	defer lock.Release()
+	var artifacts []outwrite.Artifact
+	for _, name := range sortedArtifactNames(files) {
+		artifacts = append(artifacts, outwrite.Artifact{PermittedRoot: root, Path: filepath.Join(root, "review-pack", name), Data: files[name]})
+	}
+	return outwrite.Publish(artifacts)
 }

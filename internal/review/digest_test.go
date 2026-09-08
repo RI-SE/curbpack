@@ -145,15 +145,15 @@ func TestBundleDigestRefusesOversizeBundle(t *testing.T) {
 	}
 }
 
-func TestMarkdownGoldenUnchangedExceptRecordLines(t *testing.T) {
+func TestMarkdownGoldenWithVersionedAudit(t *testing.T) {
 	root := repoRoot(t)
 	pack := filepath.Join(root, "testdata", "sample-review-pack")
 	for _, full := range []bool{false, true} {
 		name := "terse"
-		goldenRel := "testdata/markdown_terse_pre_w3.txt"
+		goldenRel := "testdata/markdown_terse_pack_audit_1.txt"
 		if full {
 			name = "full"
-			goldenRel = "testdata/markdown_full_pre_w3.txt"
+			goldenRel = "testdata/markdown_full_pack_audit_1.txt"
 		}
 		t.Run(name, func(t *testing.T) {
 			var buf bytes.Buffer

@@ -63,6 +63,9 @@ const (
 
 // GateFailurePayload is the dual-rep IR: JSON for machines, Markdown for agents.
 type GateFailurePayload struct {
+	EvaluationDigest   string             `json:"evaluation_digest,omitempty"`
+	ComparisonKey      string             `json:"comparison_key,omitempty"`
+	AsOf               string             `json:"as_of,omitempty"`
 	SchemaVersion      string             `json:"schema_version"`
 	Timestamp          string             `json:"timestamp"`
 	ConcurrencyControl ConcurrencyControl `json:"concurrency_control"`

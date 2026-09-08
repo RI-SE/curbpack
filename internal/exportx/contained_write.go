@@ -1,7 +1,9 @@
 package exportx
 
 import (
+	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/afelin/curbpack/internal/outwrite"
@@ -47,4 +49,46 @@ func writeContainedAt(repoRoot, destAbs string, data []byte) error {
 	}
 	defer func() { _ = lock.Release() }()
 	return outwrite.WriteFile(permitted, destAbs, data, 0o644)
+}
+
+// writeContainedSetAt retains one lease while staging a related file set.
+func writeContainedSetAt(repoRoot string, files map[string][]byte) error {
+	repoAbs, err := filepath.Abs(repoRoot)
+	if err != nil {
+		return err
+	}
+	var names []string
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var artifacts []outwrite.Artifact
+	permitted := ""
+	for _, name := range names {
+		dest, err := filepath.Abs(name)
+		if err != nil {
+			return err
+		}
+		root := repoAbs
+		if rel, err := filepath.Rel(repoAbs, dest); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			root = filepath.Dir(dest)
+		}
+		if permitted != "" && permitted != root {
+			return fmt.Errorf("related output files require one permitted root")
+		}
+		permitted = root
+		if err := outwrite.Contain(root, dest); err != nil {
+			return err
+		}
+		artifacts = append(artifacts, outwrite.Artifact{PermittedRoot: root, Path: dest, Data: files[name]})
+	}
+	if len(artifacts) == 0 {
+		return nil
+	}
+	lock, err := outwrite.Acquire(permitted)
+	if err != nil {
+		return err
+	}
+	defer lock.Release()
+	return outwrite.Publish(artifacts)
 }

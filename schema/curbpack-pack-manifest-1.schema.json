@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "curbpack-pack-manifest-1",
+  "description": "Structural contract; hash bindings, required artifact names and trust-dimension semantics are additionally checked by the Go engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "curbpack-pack-manifest:1"
+    },
+    "conformity_claim": {
+      "const": "none"
+    },
+    "evaluation_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "receipt_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "size"
+        ]
+      },
+      "minItems": 11
+    }
+  },
+  "required": [
+    "schema_version",
+    "conformity_claim",
+    "evaluation_digest",
+    "receipt_digest",
+    "artifacts"
+  ]
+}

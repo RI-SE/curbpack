@@ -19,16 +19,21 @@ import (
 // ExplainPacket is a sanitized teaching surface for Coreward / local chat.
 // Never includes raw source. Wrap body for agents as untrusted_metadata.
 type ExplainPacket struct {
-	SchemaVersion   string           `json:"schema_version"`
-	Note            string           `json:"note"`
-	AllowCloud      bool             `json:"allow_cloud"`
-	Untrusted       string           `json:"untrusted_metadata"`
-	Failures        []ir.Failure     `json:"failures"`
-	Citations       []packs.Citation `json:"citations,omitempty"`
-	FormHints       []formhints.Hint `json:"form_hints,omitempty"`
-	PackID          string           `json:"pack_id,omitempty"`
-	Readiness       int              `json:"readiness_score,omitempty"`
-	ConformityClaim string           `json:"conformity_claim"`
+	EvaluationDigest string           `json:"evaluation_digest,omitempty"`
+	AsOf             string           `json:"as_of,omitempty"`
+	FailedRules      int              `json:"failed_rules,omitempty"`
+	EvaluatedRules   int              `json:"evaluated_rules,omitempty"`
+	SkippedRules     int              `json:"skipped_rules,omitempty"`
+	SchemaVersion    string           `json:"schema_version"`
+	Note             string           `json:"note"`
+	AllowCloud       bool             `json:"allow_cloud"`
+	Untrusted        string           `json:"untrusted_metadata"`
+	Failures         []ir.Failure     `json:"failures"`
+	Citations        []packs.Citation `json:"citations,omitempty"`
+	FormHints        []formhints.Hint `json:"form_hints,omitempty"`
+	PackID           string           `json:"pack_id,omitempty"`
+	Readiness        int              `json:"readiness_score,omitempty"`
+	ConformityClaim  string           `json:"conformity_claim"`
 }
 
 // WriteExplainPacket builds an airlocked packet from latest validate run.
@@ -103,15 +108,20 @@ func AssembleExplainPacketWithContext(payload ir.GateFailurePayload, citations [
 		}
 	}
 	pkt := ExplainPacket{
-		SchemaVersion:   "1",
-		Note:            "Sanitized explain-packet for tutors only. Chat must re-run curbpack check/validate_delta before claiming fixed. Not legal advice or conformity.",
-		AllowCloud:      allowCloud,
-		Failures:        failures,
-		Citations:       citations,
-		FormHints:       hints,
-		PackID:          payload.PackID,
-		Readiness:       payload.ReadinessScore,
-		ConformityClaim: ir.ConformityClaimNone,
+		SchemaVersion:    "1",
+		EvaluationDigest: payload.EvaluationDigest,
+		AsOf:             payload.AsOf,
+		FailedRules:      payload.FailedRules,
+		EvaluatedRules:   payload.EvaluatedRules,
+		SkippedRules:     payload.SkippedRules,
+		Note:             "Sanitized explain-packet for tutors only. Chat must re-run curbpack check/validate_delta before claiming fixed. Not legal advice or conformity.",
+		AllowCloud:       allowCloud,
+		Failures:         failures,
+		Citations:        citations,
+		FormHints:        hints,
+		PackID:           payload.PackID,
+		Readiness:        payload.ReadinessScore,
+		ConformityClaim:  ir.ConformityClaimNone,
 	}
 	inner, _ := json.Marshal(map[string]any{
 		"failures":        failures,

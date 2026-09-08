@@ -1,0 +1,29 @@
+{
+  "schema_version": "curbpack-run-receipt:2",
+  "evaluation_digest": "45f430c6ff80c991f259a79dd09c307a68680a03efd58322b8c4e6666020bc49",
+  "timestamp": "2024-01-02T12:00:00Z",
+  "as_of": "2024-01-02T00:00:00Z",
+  "agent_identity": {
+    "agent_id": "example",
+    "model_hash": "",
+    "active_mandate_id": "",
+    "source": "self-declared"
+  },
+  "conformity_claim": "none",
+  "as_of_source": "explicit",
+  "platform": "example/amd64",
+  "tool_version": "0.5.5",
+  "evaluation_duration_ms": 12,
+  "concurrency_control": {
+    "expected_parent_commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "state_version_token": "v3.33-OCC"
+  },
+  "statechart_context": {
+    "active_parent_state_path": [
+      "Root",
+      "ActiveVerification",
+      "PackEval"
+    ],
+    "failed_orthogonal_regions": []
+  }
+}

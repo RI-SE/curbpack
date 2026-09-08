@@ -31,7 +31,7 @@ func TestLegacyEvaluationAdapterRoundTrip(t *testing.T) {
 		SkippedRules:   0,
 	}
 	eval := ir.EvaluationFromLegacy(legacy)
-	if eval.SchemaVersion != ir.EvaluationSchemaVersion {
+	if eval.SchemaVersion != ir.LegacyEvaluationSchemaVersion {
 		t.Fatalf("schema = %q", eval.SchemaVersion)
 	}
 	digest, err := ir.ComputeEvaluationDigest(eval)

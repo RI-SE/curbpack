@@ -118,6 +118,8 @@ type Report struct {
 	ConformityClaim string `json:"conformity_claim"`
 	// Edges are human-approved gate→finding mappings (ingest only; omitted when absent).
 	Edges []Edge `json:"edges,omitempty"`
+	// Audit is a versioned optional extension; omission preserves historical report digest bytes.
+	Audit *PackAudit `json:"pack_audit,omitempty"`
 }
 
 // Digest scope values recorded on every report.
@@ -245,6 +247,7 @@ func Run(opts Options) (Report, error) {
 		checkStructure(&rep, tallyRoot, budget)
 		payload, payloadOK := loadPayload(&rep, tallyRoot, budget)
 		applySubjectFields(&rep, tallyRoot, budget, payload, payloadOK)
+		auditPack(&rep, tallyRoot, budget, payload, payloadOK, relPaths)
 		prov := extractProvenance(tallyRoot, budget)
 		checkDigests(&rep, tallyRoot, payload, payloadOK, prov, budget)
 		checkReferences(&rep, tallyRoot, budget, surfaces, refWalkOpts{
@@ -254,7 +257,9 @@ func Run(opts Options) (Report, error) {
 	}
 
 	rep.ConformityClaim = "none"
-	if redactReportAirlock(&rep) {
+	if changed, err := redactReportWithContext(&rep, redact.Verify(redact.Embedded)); err != nil {
+		return rep, err
+	} else if changed {
 		add(&rep, Finding{
 			ID: "structure:airlock-redacted", Category: "structure",
 			State: StateContradicted, Cause: CauseSelfDisagree,
@@ -502,8 +507,8 @@ func loadPayload(rep *Report, root string, budget *readBudget) (ir.GateFailurePa
 	}
 	add(rep, Finding{
 		ID: "digest:gate-json-parse", Category: "digest", State: StateConfirmed,
-		Detail: fmt.Sprintf("01-gate-failures.json parses (pack_id=%s score=%d failures=%d)",
-			fence(strings.TrimSpace(p.PackID)), p.ReadinessScore, len(p.Failures)),
+		Detail: fmt.Sprintf("01-gate-failures.json parses (pack_id=%s failed_gates=%d findings=%d)",
+			fence(strings.TrimSpace(p.PackID)), ir.UniqueFailedGates(p.Failures), len(p.Failures)),
 	})
 	return p, true
 }
@@ -900,6 +905,29 @@ func redactReportAirlock(rep *Report) bool {
 	return changed
 }
 
+// Capture HOME at the IO boundary; the JSON scrubber takes it explicitly.
+func redactReportWithContext(rep *Report, ctx redact.Context) (bool, error) {
+	raw, err := json.Marshal(rep)
+	if err != nil {
+		return false, err
+	}
+	clean, err := redact.JSON(raw, ctx)
+	if err != nil {
+		return false, err
+	}
+	var updated Report
+	if err := json.Unmarshal(clean, &updated); err != nil {
+		return false, err
+	}
+	normalized, err := json.Marshal(updated)
+	if err != nil {
+		return false, err
+	}
+	changed := string(raw) != string(normalized)
+	*rep = updated
+	return changed, nil
+}
+
 // redactAirlockString uses Embedded tokens; emit does not invent Home from the environment.
 func redactAirlockString(s string) (string, bool) {
 	orig := s
@@ -1113,6 +1141,7 @@ func TriageMarkdown(rep Report, full bool) string {
 	b.WriteString(rep.Disclaimer)
 	b.WriteString("\n\n")
 
+	writeAuditMarkdown(&b, rep.Audit)
 	if !full {
 		fmt.Fprintf(&b, "%s — %d genuine unresolved · %d contradicted",
 			base, rep.UnconfirmedGenuine, rep.ContradictedCount)

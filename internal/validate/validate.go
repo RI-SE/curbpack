@@ -3,9 +3,11 @@ package validate
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/afelin/curbpack/internal/buildinfo"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -27,6 +29,7 @@ var placeholderRE = regexp.MustCompile(`(?i)(lorem ipsum|\[insert[^\]]*\]|TODO:|
 
 // Options controls validate / check.
 type Options struct {
+	AsOf     string                  // explicit evaluation instant; date or RFC3339
 	Writer   *outwrite.ExclusiveLock // explicit caller-held repository lease, when composing writes
 	RepoRoot string
 	PackIDs  []string
@@ -44,6 +47,8 @@ type Result struct {
 	FailedRules    int
 	EvaluatedRules int
 	ActionReport   string
+	Evaluation     ir.Evaluation
+	Receipt        ir.RunReceipt
 }
 
 // RunInvocationHook, when non-nil, is invoked at the start of each Run (tests only).
@@ -51,6 +56,7 @@ var RunInvocationHook func()
 
 // Run evaluates embedded pack rules against the repo tree.
 func Run(opts Options) (Result, error) {
+	started := time.Now()
 	if RunInvocationHook != nil {
 		RunInvocationHook()
 	}
@@ -84,7 +90,15 @@ func Run(opts Options) (Result, error) {
 	var failures []ir.Failure
 	var regions []string
 	skipped := 0
-	composed, _, err := packs.Compose(ids)
+	composed, _, sourceIDs, err := packs.ComposeSnapshot(ids)
+	if err != nil {
+		return Result{}, err
+	}
+	asOf, asOfSource, err := clock.EvaluationAsOf(opts.AsOf)
+	if err != nil {
+		return Result{}, err
+	}
+	inputs, err := captureInputs(root, composed, sourceIDs, opts.DiffOnly, changed)
 	if err != nil {
 		return Result{}, err
 	}
@@ -96,7 +110,7 @@ func Run(opts Options) (Result, error) {
 			}
 			continue
 		}
-		fs := evalRule(root, rule)
+		fs := evalRuleAt(root, rule, asOf)
 		if len(fs) > 0 {
 			regions = append(regions, rule.ID)
 			failures = append(failures, fs...)
@@ -112,6 +126,20 @@ func Run(opts Options) (Result, error) {
 		}
 	}
 
+	// Re-resolve sources and input identity before any cache write. A changed
+	// tree/pack is an operational failure, never a mixed evaluation.
+	afterPack, _, afterSources, err := packs.ComposeSnapshot(ids)
+	if err != nil {
+		return Result{}, err
+	}
+	after, err := captureInputs(root, afterPack, afterSources, opts.DiffOnly, changed)
+	if err != nil {
+		return Result{}, err
+	}
+	if !equivalentInputs(inputs, after) {
+		return Result{}, fmt.Errorf("evaluation inputs changed during run; rerun on a stable snapshot")
+	}
+	failures = canonicalFailures(failures, root)
 	score := tty.ScoreFromFailures(len(failures))
 	outcome := ir.OutcomePass
 	switch {
@@ -140,6 +168,9 @@ func Run(opts Options) (Result, error) {
 	counts := redact.FromRules(len(unique(regions)), skipped, len(composed.Rules))
 	eval := ir.Evaluation{
 		SchemaVersion: ir.EvaluationSchemaVersion,
+		AsOf:          asOf.Format(time.RFC3339),
+		Identity:      inputs,
+		ComparisonKey: comparisonKey(inputs, asOf.Format(time.RFC3339)),
 		ConcurrencyControl: ir.ConcurrencyControl{
 			ExpectedParentCommitSHA: parent,
 			StateVersionToken:       "v3.33-OCC",
@@ -148,7 +179,7 @@ func Run(opts Options) (Result, error) {
 			ActiveParentStatePath:   parentPath,
 			FailedOrthogonalRegions: unique(regions),
 		},
-		Failures:        failures,
+		Failures:        append([]ir.Failure{}, failures...),
 		PackID:          strings.Join(ids, ","),
 		ReadinessScore:  score,
 		Outcome:         outcome,
@@ -157,16 +188,26 @@ func Run(opts Options) (Result, error) {
 		EvaluatedRules:  counts.Evaluated,
 		ConformityClaim: ir.ConformityClaimNone,
 	}
+	if err := ir.ValidateEvaluation(eval); err != nil {
+		return Result{}, fmt.Errorf("evaluation contract: %w", err)
+	}
 	evalDigest, err := ir.ComputeEvaluationDigest(eval)
 	if err != nil {
 		return Result{}, err
 	}
 	receipt := ir.RunReceipt{
-		SchemaVersion:    ir.RunReceiptSchemaVersion,
-		EvaluationDigest: evalDigest,
-		Timestamp:        ts,
-		AgentIdentity:    ir.ResolveAgentIdentity(),
-		ConformityClaim:  ir.ConformityClaimNone,
+		SchemaVersion:            ir.RunReceiptSchemaVersion,
+		EvaluationDigest:         evalDigest,
+		Timestamp:                ts,
+		AgentIdentity:            ir.ResolveAgentIdentity(),
+		ConformityClaim:          ir.ConformityClaimNone,
+		AsOf:                     asOf.Format(time.RFC3339),
+		AsOfSource:               asOfSource,
+		Platform:                 runtime.GOOS + "/" + runtime.GOARCH,
+		ToolVersion:              buildinfo.Version,
+		EvaluationDurationMillis: time.Since(started).Milliseconds(),
+		ConcurrencyControl:       eval.ConcurrencyControl,
+		StatechartContext:        eval.StatechartContext,
 	}
 	payload := ir.LegacyFromEvaluation(eval, receipt)
 
@@ -189,6 +230,8 @@ func Run(opts Options) (Result, error) {
 		FailedRules:    counts.Failed,
 		EvaluatedRules: counts.Evaluated,
 		ActionReport:   action,
+		Evaluation:     eval,
+		Receipt:        receipt,
 	}, nil
 }
 
@@ -201,6 +244,17 @@ func pathChanged(changed map[string]struct{}, rel string) bool {
 }
 
 func evalRule(root string, rule packs.Rule) []ir.Failure {
+	asOf, _, err := clock.EvaluationAsOf("")
+	if err != nil {
+		return []ir.Failure{failFromRule(rule, rule.Path, err.Error())}
+	}
+	return evalRuleAt(root, rule, asOf)
+}
+
+func evalRuleAt(root string, rule packs.Rule, asOf time.Time) []ir.Failure {
+	if rule.Check == "fresh" {
+		return checkFreshAt(root, rule, asOf)
+	}
 	fn, ok := checkRegistry[CheckKind(rule.Check)]
 	if !ok {
 		return []ir.Failure{{
@@ -270,6 +324,14 @@ func checkFilePresent(root string, rule packs.Rule) []ir.Failure {
 }
 
 func checkFresh(root string, rule packs.Rule) []ir.Failure {
+	asOf, _, err := clock.EvaluationAsOf("")
+	if err != nil {
+		return []ir.Failure{failFromRule(rule, rule.Path, err.Error())}
+	}
+	return checkFreshAt(root, rule, asOf)
+}
+
+func checkFreshAt(root string, rule packs.Rule, asOf time.Time) []ir.Failure {
 	if fs := checkFilePresent(root, rule); len(fs) > 0 {
 		return fs
 	}
@@ -279,7 +341,7 @@ func checkFresh(root string, rule packs.Rule) []ir.Failure {
 		if err != nil {
 			return []ir.Failure{failFromRule(rule, rel, "fresh: "+err.Error())}
 		}
-		age := time.Since(meta.Time)
+		age := asOf.Sub(meta.Time)
 		if age > time.Duration(rule.MaxAgeDays)*24*time.Hour {
 			return []ir.Failure{failFromRule(rule, rel, fmt.Sprintf("fresh: last commit %s older than %d days", meta.Time.Format(time.RFC3339), rule.MaxAgeDays))}
 		}
@@ -515,6 +577,9 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	b.WriteString("# Action Report\n\n")
 	b.WriteString("> Curbpack prepares evidence for **human review**. Gate pass is not certification.\n\n")
 	fmt.Fprintf(&b, "- **Packs:** %s\n", payload.PackID)
+	if payload.EvaluationDigest != "" {
+		fmt.Fprintf(&b, "- **Evaluation:** `%s`\n- **As of:** %s\n", payload.EvaluationDigest, payload.AsOf)
+	}
 	if payload.Outcome != "" {
 		fmt.Fprintf(&b, "- **Outcome:** %s\n", payload.Outcome)
 	}
@@ -523,11 +588,12 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 		failed = ir.UniqueFailedGates(payload.Failures)
 	}
 	evaluated := payload.EvaluatedRules
-	if evaluated == 0 && skipped == 0 {
-		evaluated = failed // best-effort for historical payloads
+	if evaluated == 0 && payload.EvaluationDigest == "" && skipped == 0 {
+		fmt.Fprintf(&b, "- **Failed / evaluated / skipped:** %d / unknown / %d\n", failed, skipped)
+	} else {
+		counts := redact.Counts{Failed: failed, Evaluated: evaluated, Skipped: skipped}
+		b.WriteString(counts.SummaryMarkdown())
 	}
-	counts := redact.Counts{Failed: failed, Evaluated: evaluated, Skipped: skipped}
-	b.WriteString(counts.SummaryMarkdown())
 	fmt.Fprintf(&b, "- **Findings:** %d\n", len(payload.Failures))
 	b.WriteString("\n")
 	if payload.Outcome == ir.OutcomeError {
@@ -536,6 +602,10 @@ func ActionReportMarkdown(payload ir.GateFailurePayload, skipped int) string {
 	}
 	if len(payload.Failures) == 0 && (skipped > 0 || payload.Outcome == ir.OutcomeIncomplete) {
 		b.WriteString("Evaluation incomplete: some rules were skipped. Run a full check before preparing release evidence.\n")
+		return b.String()
+	}
+	if len(payload.Failures) == 0 && evaluated == 0 && payload.EvaluationDigest == "" {
+		b.WriteString("Historical payload has no evaluated total; run a fresh check to establish scope.\n")
 		return b.String()
 	}
 	if len(payload.Failures) == 0 {

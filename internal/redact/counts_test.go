@@ -22,8 +22,16 @@ func TestTrendRequiresCompatiblePack(t *testing.T) {
 	if got := redact.TrendLine(true, "house-policy", "cra-baseline", "1", "1", 2, 0); got != "" {
 		t.Fatalf("incompatible packs must not trend: %q", got)
 	}
-	got := redact.TrendLine(true, "house-policy", "house-policy", "1", "1", 2, 0)
+	got := redact.TrendLine(true, "house-policy", "house-policy", "1", "1", 2, 0, strings.Repeat("a", 64), strings.Repeat("a", 64))
 	if !strings.Contains(got, "Δ failed 2→0") {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTrendRefusesMissingOrChangedIdentity(t *testing.T) {
+	for _, keys := range [][]string{nil, {strings.Repeat("a", 64), strings.Repeat("b", 64)}} {
+		if got := redact.TrendLine(true, "same", "same", "2", "2", 2, 0, keys...); got != "" {
+			t.Fatalf("unbound trend: %s", got)
+		}
 	}
 }

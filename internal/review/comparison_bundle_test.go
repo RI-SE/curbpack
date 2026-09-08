@@ -14,7 +14,7 @@ import (
 // Update this pin whenever MethodVersion (or classifier / digest algorithm /
 // bundle bytes) changes — method_version is inside the digested record, so a
 // bump is an expected deliberate failure, not a mystery breakage.
-const pinnedComparisonRecordDigest = "7e7a8de08bef231703953f1457468682d8967ae44448815b3e34e05cb706a2b4"
+const pinnedComparisonRecordDigest = "173ca211b359ad3402bcae2dc04bee15a13a4e103d7079b29882cbb5388589ab"
 
 func TestComparisonBundleDigestPinned(t *testing.T) {
 	root := repoRoot(t)
