@@ -13,6 +13,7 @@ import (
 	"github.com/afelin/curbpack/internal/buildinfo"
 	"github.com/afelin/curbpack/internal/clock"
 	"github.com/afelin/curbpack/internal/outwrite"
+	"github.com/afelin/curbpack/internal/packs"
 )
 
 // Summary is a lightweight SBOM digest kept for backward compatibility.
@@ -119,7 +120,7 @@ func WriteCycloneDX(root, outPath string) (Document, string, error) {
 // Metadata timestamp/serial are derived from package content (not wall clock) so digests are reproducible.
 // Invalid SOURCE_DATE_EPOCH is rejected (no silent wall-clock fallback).
 func BuildCycloneDX(root string, pkgs []Package, source string) (Document, error) {
-	product := filepath.Base(root)
+	product := packs.ShareSubject(root)
 	comps := make([]Component, 0, len(pkgs))
 	for _, p := range pkgs {
 		eco := p.Ecosystem

@@ -27,10 +27,6 @@ func EvidenceBundleHTML(d BundleDTO) string {
 	if d.Remediation {
 		banner = `<div class="remediation" role="note">REMEDIATION — gates failing on this tree. Fix findings and re-run curbpack check before buyer handoff. Not a conformity assessment.</div>`
 	}
-	status := "Gates passed — pending human review"
-	if !d.Passed {
-		status = "Needs remediation — human review required"
-	}
 	hpurlBlock := ""
 	if d.HPURLFragment != "" {
 		hpurlBlock = fmt.Sprintf(`<section><h2>Evidence stamp (offline)</h2><code>%s</code></section>`, html.EscapeString(d.HPURLFragment))
@@ -44,41 +40,7 @@ func EvidenceBundleHTML(d BundleDTO) string {
 	if onePager == "" {
 		onePager = `<p>No buyer one-pager embedded — run curbpack share first.</p>`
 	}
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Curbpack — Evidence Bundle</title>
-  <!-- curbpack-bundle-schema:1 -->
-  <style>
-    :root { --ink:#0a0a0b; --muted:#4a4a52; --warn:#92400e; --rem:#b91c1c; --paper:#fcfcfc; }
-    body { margin:0; font-family: "IBM Plex Sans", sans-serif; color:var(--ink); background:var(--paper); }
-    main { max-width: 820px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
-    .remediation { background:#fef2f2; color:var(--rem); border:2px solid var(--rem); padding:1rem; margin-bottom:1.5rem; font-weight:600; }
-    .meta { color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem; }
-    h1 { font-size:1.75rem; margin:0 0 0.5rem; }
-    h2 { font-size:1.1rem; margin:1.5rem 0 0.5rem; border-top:1px solid var(--ink); padding-top:1rem; }
-    .embed { border:1px solid #ccc; padding:1rem; margin-top:1rem; }
-    footer { margin-top:2rem; font-size:0.85rem; color:var(--muted); }
-  </style>
-</head>
-<body>
-  <main>
-    %s
-    <h1>Evidence bundle — %s</h1>
-    <p class="meta">%s · failed=%d evaluated=%d skipped=%d · Generated %s · Structural evidence for human review — not conformity assessment.</p>
-    <p class="meta">Keep this folder with the release tag for 10 years or the support period, whichever is longer. Curbpack does not archive it. This is a reminder, not a legal fulfillment claim.</p>
-    <section class="embed">
-      <h2>Buyer one-pager</h2>
-      %s
-    </section>
-    %s
-    <footer>Open proof/index.html locally to compare the stamp to the embedded pointer. Unsigned ≠ verified.</footer>
-  </main>
-</body>
-</html>
-`, banner, html.EscapeString(d.RepoName), html.EscapeString(status), d.FailedRules, d.EvaluatedRules, d.SkippedRules, html.EscapeString(d.Timestamp), onePager, hpurlBlock)
+	return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Curbpack — Evidence bundle</title><!-- curbpack-bundle-schema:1 --><style>` + reportCSS + `</style></head><body><main>` + banner + onePager + hpurlBlock + `<details><summary>Keeping the evidence</summary><p>Keep this folder with the release tag for 10 years or the support period, whichever is longer where that retention policy applies. Confirm your own retention requirements. Curbpack does not archive it. This is a reminder, not a legal fulfillment claim.</p></details></main></body></html>`
 }
 
 // escapeJSONForHTMLScript makes JSON safe as text inside an HTML <script> element.

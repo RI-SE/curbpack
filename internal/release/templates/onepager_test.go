@@ -66,23 +66,23 @@ func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 		},
 		ProvenanceHTML: "<dl></dl>", Timestamp: "2026-08-13T00:00:00Z",
 	})
-	idx := strings.Index(htmlDoc, "Back — provenance")
+	idx := strings.Index(htmlDoc, "<h2>Verification details</h2>")
 	if idx < 0 {
-		t.Fatal("missing Back — provenance")
+		t.Fatal("missing verification details")
 	}
 	front := htmlDoc[:idx]
 	back := htmlDoc[idx:]
 	if strings.Contains(strings.ToLower(front), "hpurl") {
 		t.Fatal("front must not use HPURL jargon")
 	}
-	if !strings.Contains(front, "Files to open") || !strings.Contains(front, "SECURITY.md") {
-		t.Fatal("front must lead with files to open")
+	if !strings.Contains(front, "Evidence checklist") || !strings.Contains(front, "SECURITY.md") {
+		t.Fatal("front must identify evidence tasks")
 	}
 	if !strings.Contains(front, "House Policy Example") {
 		t.Fatal("front must show pack names in plain words")
 	}
-	if !strings.Contains(front, "Assurance class:") || !strings.Contains(front, "mechanically evidenced") {
-		t.Fatal("front must show assurance class and mechanically evidenced summary")
+	if !strings.Contains(front, "What to do next") || !strings.Contains(front, "Not included") {
+		t.Fatal("front must give next actions and evidence inclusion boundaries")
 	}
 	if strings.Contains(front, "Local gate tally") {
 		t.Fatal("score meter must not lead the front")
@@ -101,5 +101,19 @@ func TestBuyerOnePagerCoverBeforeScore(t *testing.T) {
 	}
 	if !strings.Contains(htmlDoc, "not a certificate of conformity") {
 		t.Fatal("must keep certificate disclaimer")
+	}
+}
+
+func TestPrebetaOverviewShowsAllTasksAndPartialState(t *testing.T) {
+	rows := make([]templates.OnePagerCoverRow, 17)
+	for i := range rows {
+		rows[i] = templates.OnePagerCoverRow{Path: "docs/evidence.md", Question: "Review requirement", Result: "Not evaluated"}
+	}
+	page := templates.BuyerOnePagerHTML(templates.OnePagerDTO{Passed: true, SkippedRules: 1, CoverRows: rows, UnsignedLoud: true})
+	if strings.Count(page, `data-label="Review task"`) != 17 {
+		t.Fatal("review tasks silently omitted")
+	}
+	if !strings.Contains(page, "Incomplete check — run a full evaluation") {
+		t.Fatal("partial run appears passed")
 	}
 }

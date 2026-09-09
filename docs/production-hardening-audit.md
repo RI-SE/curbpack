@@ -256,3 +256,31 @@ Use the [friendly pre-beta testing guide](getting-started/prebeta.md) for the
 current committed-source build, isolated example and expected results. It is
 the testing entry point; the dates and branch names above describe this audit's
 historical evidence, not commands to copy for a new trial.
+
+### Pre-beta usability follow-up
+
+The recipient overview now starts with a check result and a next action for an
+internal team, buyer/insurer, reviewer/auditor or agent. It displays every review
+task, uses neutral mechanical result labels, identifies referenced evidence as
+not included, and directs recipients to the existing offline review command.
+Declared package metadata supplies the subject label, with a neutral fallback;
+local checkout names are not exported as the product identity. The subject
+commit remains explicitly claimed, separate from attestation.
+
+Preparation creates only designated document drafts and lists those creations;
+secret-scan targets are not inferred as files to create. Plain `check` includes
+counts, `ask` handles a report with no findings without a failure alert, and
+repository/pack review explains that confirmations concern structural or
+reference checks. Historical digest computation and machine verdict fields
+remain compatible.
+
+Behavioral coverage: [producer and recipient regression](../internal/cli/prebeta_ux_test.go),
+[buyer result states](../internal/exportx/buyer_ux_test.go),
+[complete checklist](../internal/release/templates/onepager_test.go), and existing
+[historical audit compatibility](../internal/review/historical_audit_test.go).
+Browser inspection of synthetic reports covered desktop, a 390-pixel viewport,
+section links, keyboard disclosure controls, failing results and print-media
+visibility. No private product content was used in the browser preview.
+These are engineering checks, not a completed cold-reader study, accessibility
+certification or evidence of an insurer's/auditor's acceptance. Actual friendly
+users still need to record whether they can make the intended next decision.

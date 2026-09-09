@@ -472,7 +472,7 @@ func ScaffoldPaths(packIDs []string) ([]string, error) {
 			if err := add(r.Path); err != nil {
 				return nil, fmt.Errorf("composed rule %q: %w", r.ID, err)
 			}
-		case "anti_placeholder", "text_forbid":
+		case "anti_placeholder":
 			for _, path := range r.Paths {
 				if err := add(path); err != nil {
 					return nil, fmt.Errorf("composed rule %q: %w", r.ID, err)

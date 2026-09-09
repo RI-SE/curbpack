@@ -158,7 +158,7 @@ func prepareWithResult(repoAbs, outPermitted, out string, opts Options, res vali
 	}
 
 	// Pending OpenVEX from dependency-shaped findings only (gates stay in IR).
-	vexDoc, vexErr := vex.FromGateFailures(filepath.Base(repoAbs), res.Payload)
+	vexDoc, vexErr := vex.FromGateFailures(packs.ShareSubject(repoAbs), res.Payload)
 	if vexErr != nil {
 		record(fmt.Errorf("vex: %w", vexErr))
 	} else {
@@ -340,16 +340,11 @@ func onePagerFingerprint(htmlDoc string) string {
 func ensureWitnessTemplates(root string, requested []string) error {
 	ids, err := config.ResolvePackIDs(root, requested)
 	if err != nil {
-		ids = []string{"cra-baseline"}
+		return err
 	}
 	paths, err := packs.ScaffoldPaths(ids)
-	if err != nil || len(paths) == 0 {
-		paths = []string{
-			"docs/annex-vii/risk_assessment.md",
-			"docs/annex-vii/support_period.md",
-			"docs/annex-vii/user_manual_security.md",
-			"docs/incident/art14-path.md",
-		}
+	if err != nil {
+		return err
 	}
 	var pending []outwrite.Artifact
 	for _, rel := range paths {
@@ -364,7 +359,14 @@ func ensureWitnessTemplates(root string, requested []string) error {
 		}
 		pending = append(pending, outwrite.Artifact{PermittedRoot: root, Path: path, Data: []byte(packs.DefaultScaffoldBody(clean))})
 	}
-	return outwrite.Publish(pending)
+	if err := outwrite.Publish(pending); err != nil {
+		return err
+	}
+	for _, item := range pending {
+		rel, _ := filepath.Rel(root, item.Path)
+		fmt.Printf("Created draft input: %s — review before use\n", filepath.ToSlash(rel))
+	}
+	return nil
 }
 
 func executiveSummary(res validate.Result) string {
@@ -380,7 +382,7 @@ func executiveSummary(res validate.Result) string {
 	fmt.Fprintf(&b, "- **Failed / evaluated / skipped:** %d / %d / %d\n", res.FailedRules, res.EvaluatedRules, res.SkippedRules)
 	fmt.Fprintf(&b, "- **Open findings:** %d\n\n", len(res.Payload.Failures))
 	if res.Passed {
-		b.WriteString("All deterministic gates passed. Proceed to human review of Annex VII / medtech drafts, then `curbpack attest`.\n")
+		b.WriteString("Selected checks passed. Review the evidence and unresolved questions before making a product decision. Run `curbpack review review-pack` to check the received folder; signing is a separate optional step.\n")
 		return b.String()
 	}
 	b.WriteString("## Top actions\n\n")
@@ -406,7 +408,7 @@ func digestIfPresent(raw []byte) string {
 }
 
 func buyerOnePagerWithDigests(root string, res validate.Result, sbomDigest, vexDigest string) string {
-	name := filepath.Base(root)
+	name := packs.ShareSubject(root)
 	bind, _ := attest.LatestBind(root)
 	line, class, unsignedLoud := attest.AttestDisplay(bind)
 	var failures []templates.OnePagerFailure
@@ -438,13 +440,11 @@ func buyerOnePagerWithDigests(root string, res validate.Result, sbomDigest, vexD
 	}
 	var cover []templates.OnePagerCoverRow
 	if qs, err := exportx.CollectBuyerQuestions(root, nil, res); err == nil {
-		for i, q := range qs {
-			if i >= 12 {
-				break
-			}
+		for _, q := range qs {
 			cover = append(cover, templates.OnePagerCoverRow{
 				Path:     q.ArtifactPath,
 				Question: q.HumanQuestion,
+				Result:   exportx.BuyerResultLabel(q, res.SkippedRules > 0),
 			})
 		}
 	}
@@ -500,11 +500,14 @@ func footerHTML(line string, unsignedLoud bool) string {
 func provenanceDL(payload ir.GateFailurePayload, bind attest.BindInfo, line string, unsignedLoud bool, payloadDigest, sbomDigest, vexDigest string) string {
 	commit := bind.CommitSHA
 	if commit == "" || commit == "unknown" {
-		commit = "(no commit)"
+		commit = payload.ConcurrencyControl.ExpectedParentCommitSHA
+		if commit == "" {
+			commit = "unknown"
+		}
 	}
 	state := bind.StateHash
 	if state == "" {
-		state = "(none — run curbpack attest after human review)"
+		state = "not recorded (signing is optional)"
 	}
 	signer := bind.Signer
 	if signer == "" {
@@ -527,6 +530,7 @@ func provenanceDL(payload ir.GateFailurePayload, bind attest.BindInfo, line stri
 	b.WriteString(`<dl class="prov">`)
 	fmt.Fprintf(&b, "<dt>Rule packs</dt><dd>%s</dd>\n", html.EscapeString(payload.PackID))
 	fmt.Fprintf(&b, "<dt>Commit</dt><dd>%s</dd>\n", html.EscapeString(truncateSHA(commit)))
+	fmt.Fprintf(&b, `<dt>Subject commit</dt><dd>%s (claimed; not independently established)</dd>`, html.EscapeString(payload.ConcurrencyControl.ExpectedParentCommitSHA))
 	fmt.Fprintf(&b, "<dt>Attest</dt><dd>%s</dd>\n", html.EscapeString(line))
 	fmt.Fprintf(&b, "<dt>Signer</dt><dd>%s</dd>\n", html.EscapeString(signer))
 	fmt.Fprintf(&b, "<dt>User touch</dt><dd>%s</dd>\n", html.EscapeString(touch))
@@ -556,7 +560,7 @@ func provenanceDL(payload ir.GateFailurePayload, bind attest.BindInfo, line stri
 		fmt.Fprintf(&b, "<dt>Reviewed by</dt><dd>%s — recorded review, not assessment.</dd>\n", html.EscapeString(name))
 	}
 	fmt.Fprintf(&b, "<dt>Human sign-off</dt><dd>%s</dd>\n", html.EscapeString(signOff))
-	b.WriteString(`<dt>Verify</dt><dd>proof/index.html + local evidence pointer (client-side hash compare)</dd>`)
+	b.WriteString(`<dt>Verify</dt><dd>Run curbpack review on the received folder. Integrity, authenticity and applicability are separate.</dd>`)
 	b.WriteString(`</dl>`)
 	return b.String()
 }
@@ -750,7 +754,7 @@ func evidenceBundleHTML(repoAbs string, res validate.Result, onepager string) (s
 		return "", err
 	}
 	doc := templates.EvidenceBundleHTML(templates.BundleDTO{
-		RepoName:       filepath.Base(repoAbs),
+		RepoName:       packs.ShareSubject(repoAbs),
 		Score:          res.Score,
 		FailedRules:    res.FailedRules,
 		EvaluatedRules: res.EvaluatedRules,

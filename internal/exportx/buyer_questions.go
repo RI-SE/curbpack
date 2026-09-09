@@ -70,6 +70,9 @@ func CollectBuyerQuestions(root string, packIDs []string, res validate.Result) (
 	questions := make([]BuyerQuestion, 0, len(composed.Rules))
 	for _, r := range composed.Rules {
 		path := strings.TrimSpace(r.Path)
+		if path == "" && r.Check == "manifest_dep_ban" {
+			path = "package.json"
+		}
 		if path == "" && len(r.Paths) > 0 {
 			path = strings.Join(r.Paths, ", ")
 		}
@@ -260,17 +263,25 @@ func buyerQuestionsStemPaths(outPath string) (mdPath, jsonPath string) {
 }
 
 func humanQuestionForRule(r packs.Rule) string {
-	body := strings.TrimSpace(r.Description)
+	body := strings.TrimSpace(r.Expected)
 	if body == "" {
-		body = strings.TrimSpace(r.Expected)
+		body = "Evidence for " + r.ID
 	}
-	if body == "" {
-		body = "Is evidence for gate " + r.ID + " ready for human review?"
+	return "For human review: " + strings.TrimRight(body, ".?") + "."
+}
+
+// BuyerResultLabel describes the mechanical result, never a human answer.
+func BuyerResultLabel(q BuyerQuestion, suppressed bool) string {
+	if suppressed {
+		return "Not evaluated — run a full check"
 	}
-	if !strings.HasSuffix(body, "?") {
-		body = strings.TrimRight(body, ".") + "?"
+	if !q.Answered {
+		return "Finding — action needed"
 	}
-	return "For human review: " + body
+	if q.Settlement == packs.SettlementIndicative {
+		return "Passed — content needs human review"
+	}
+	return "Passed"
 }
 
 // FormatBuyerQuestionsMarkdown renders the human-review checklist as Markdown.
@@ -284,13 +295,14 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 	fmt.Fprintf(&b, "- **Attestation status:** `%s`\n\n", report.AttestationStatus)
 
 	if report.AnswersSuppressed {
+		b.WriteString("Not evaluated — this partial run cannot supply complete results.\n\n")
 		writeChecklistTable(&b, report.Questions)
 		fmt.Fprintf(&b, "\nAnswers not emitted: %d rules skipped (diff mode). Run a full check to produce answers.\n\n", report.SkippedRules)
 		return b.String()
 	}
 
-	b.WriteString("> Answer: Yes means the structural check passed at Verified at — not conformity, CE, or notified-body approval.\n")
-	b.WriteString("> Present, not settled means the file/structure is present; framework-cited positive content is not settled by this tool.\n\n")
+	b.WriteString("> Result describes a mechanical check, not a human answer or product approval.\n")
+	b.WriteString("> Passed — content needs human review means the structure passed; the substance remains for the reviewer.\n\n")
 
 	var answered, unanswered []BuyerQuestion
 	for _, q := range report.Questions {
@@ -302,13 +314,13 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 	}
 
 	if len(answered) > 0 {
-		b.WriteString("## Answered (structural check passed)\n\n")
-		b.WriteString("| Question | Answer | Evidence | Verified at |\n")
+		b.WriteString("## Checks passed — review the evidence\n\n")
+		b.WriteString("| Review task | Check result | Referenced evidence | Claimed commit |\n")
 		b.WriteString("|---|---|---|---|\n")
 		for _, q := range answered {
 			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
 				mdCell(q.HumanQuestion),
-				mdCell(buyerAnswerLabel(q)),
+				mdCell(BuyerResultLabel(q, false)),
 				mdCell(q.Evidence),
 				mdCell(q.VerifiedAt),
 			)
@@ -317,16 +329,16 @@ func FormatBuyerQuestionsMarkdown(report BuyerQuestionsReport) string {
 	}
 
 	if len(unanswered) > 0 {
-		b.WriteString("## Not yet evidenced (needs a person or a missing artifact)\n\n")
+		b.WriteString("## Findings — action needed\n\n")
 		writeChecklistTable(&b, unanswered)
 		b.WriteString("\n")
 	}
-
+	b.WriteString("Referenced product files are not included automatically. Request them from the producer through an approved channel. Keep private content out of public reports.\n")
 	return b.String()
 }
 
 func writeChecklistTable(b *strings.Builder, questions []BuyerQuestion) {
-	b.WriteString("| gate_id | severity | human_question | artifact_path | assurance_class | remediation_hint |\n")
+	b.WriteString("| Check | Priority | Review task | Referenced evidence | Scope | Next action |\n")
 	b.WriteString("|---|---|---|---|---|---|\n")
 	for _, q := range questions {
 		fmt.Fprintf(b, "| %s | %s | %s | %s | %s | %s |\n",
@@ -361,17 +373,6 @@ func mdCell(s string) string {
 	s = strings.ReplaceAll(s, "|", "\\|")
 	s = strings.ReplaceAll(s, "\n", " ")
 	return s
-}
-
-// buyerAnswerLabel is the three-state render: Yes | Present, not settled | (unanswered rows use the checklist table).
-func buyerAnswerLabel(q BuyerQuestion) string {
-	if !q.Answered {
-		return ""
-	}
-	if q.Settlement == packs.SettlementIndicative {
-		return "Present, not settled"
-	}
-	return "Yes"
 }
 
 // attestationStatus returns none | ssh-agent via LatestBind (not HEAD-only).

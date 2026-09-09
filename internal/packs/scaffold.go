@@ -88,3 +88,12 @@ func stripFirst(s, token string) string {
 	}
 	return s[:i] + s[i+len(token):]
 }
+
+// ShareSubject uses declared product metadata, never a local folder or module path.
+// A neutral fallback prevents checkout names from becoming exported identity.
+func ShareSubject(root string) string {
+	if name, ok := readPackageJSONName(root); ok && len(name) <= 160 && !filepath.IsAbs(name) && !strings.ContainsAny(name, "\\\r\n") {
+		return name
+	}
+	return "Repository under review"
+}
