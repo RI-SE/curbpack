@@ -66,11 +66,11 @@ For example, from the run folder (substitute its printed path):
 
 ```bash
 cd /path/to/run/example
-../curbpack-prebeta check --packs house-policy --json
+../curbpack-prebeta check --packs house-policy
 mv SECURITY.md ../SECURITY.md.saved
-../curbpack-prebeta check --packs house-policy --json   # expected exit 1
+../curbpack-prebeta check --packs house-policy   # expected exit 1
 mv ../SECURITY.md.saved SECURITY.md
-../curbpack-prebeta check --packs house-policy --json   # expected exit 0
+../curbpack-prebeta check --packs house-policy   # expected exit 0
 ```
 
 Restore the file even if the observed result differs. The house-policy pack
@@ -85,12 +85,13 @@ Use a disposable clone. Keep the exact binary path printed by the script:
 /path/printed/by/the/script/curbpack-prebeta version
 cd /path/to/disposable/product-clone
 /path/printed/by/the/script/curbpack-prebeta scan --packs house-policy
-/path/printed/by/the/script/curbpack-prebeta check --packs house-policy --json
+/path/printed/by/the/script/curbpack-prebeta check --packs house-policy
 /path/printed/by/the/script/curbpack-prebeta share --packs house-policy --bundle
 ```
 
 `scan` writes nothing. `check` writes cache/evidence files. `share` can create
-missing draft inputs and writes the review pack. Use `share --bundle` for the
+missing document drafts, lists every created input, and writes the review pack.
+It does not create files merely because a secret-detection rule scans those paths. Use `share --bundle` for the
 complete trial; partial-export options are outside this exercise.
 
 | Result | Meaning |
@@ -104,6 +105,26 @@ complete trial; partial-export options are outside this exercise.
 For a repeatable evaluation date, add `--as-of YYYY-MM-DD` to `check` and `share`.
 Otherwise they select the current UTC date. Do not reuse the historical audit's
 September 2026 date by accident.
+
+### Review the handoff for your role
+
+Open **review-pack/evidence-bundle.html** and start at **What to do next**. Keep
+the whole folder together: HTML alone is a reading copy, not the verifiable pack.
+The overview shows all review tasks, their mechanical results, and which source
+evidence is not included. Request needed documents through an approved channel;
+do not send credentials, private keys or an entire repository.
+
+| Your task | Next action | Decision to record |
+|---|---|---|
+| Internal producer | Address findings, run `check`, then `review --repo .` for document references. | Is the evidence ready for someone else to review? |
+| Buyer or insurer | Confirm product, version and intended use; request missing evidence. | Is more evidence needed for the purchase or coverage decision? |
+| Reviewer or auditor | Run `review review-pack`, inspect evidence and record questions. | What is supported, unresolved or outside this review? |
+| Agent or automation | Use `check --json` and `review review-pack --json`; retain exit codes and separate trust results. | Escalate unresolved findings; do not approve or sign. |
+
+Use plain command output for the walkthrough. JSON is optional machine output;
+legacy fields such as `readiness_score` are not the human readiness verdict.
+A gate pass does not run your application tests or establish product safety.
+Signing is separate; an unsigned friendly test can finish with a useful observation.
 
 ## 4. Report one useful observation
 
@@ -130,6 +151,8 @@ Private logs intentionally retain local paths and diagnostics to make failures
 debuggable. Product checks can contain product-derived content. Do not treat
 those logs as automatically safe to share. `feedback.txt` and `START-HERE.txt`
 avoid absolute home/source paths; they retain useful, non-secret tool metadata.
+Exports use declared package metadata or a neutral subject label, not the local
+checkout folder name. Review declared metadata before sharing.
 Public source attribution, module names, evaluation hashes and dates are not
 removed or relabelled as anonymous evidence.
 

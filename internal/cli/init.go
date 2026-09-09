@@ -33,15 +33,6 @@ func initProfileWhy(f initFlags) string {
 	return "house-policy default; --profile cra to match scan"
 }
 
-func secretPathDecoyNote(rel string) string {
-	switch filepath.Base(filepath.ToSlash(rel)) {
-	case ".env", ".env.local", "credentials.json", "service-account.json", "id_rsa":
-		return "secret-path decoy"
-	default:
-		return ""
-	}
-}
-
 func initWritePlan(f initFlags, scaffold []string) []initWriteItem {
 	var items []initWriteItem
 	add := func(rel, note string) {
@@ -53,7 +44,7 @@ func initWritePlan(f initFlags, scaffold []string) []initWriteItem {
 	add(paths.EvidenceRel+"/", "")
 	add(paths.ConfigFile, "")
 	for _, rel := range scaffold {
-		add(rel, secretPathDecoyNote(rel))
+		add(rel, "document draft")
 	}
 	add("proof/index.html", "")
 	if f.hooks {

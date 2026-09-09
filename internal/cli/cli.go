@@ -459,8 +459,8 @@ func cmdCheck(args []string) error {
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(res.Payload)
 	} else if res.Passed {
-		// Green: optional tally + claim + optional accumulation / instrument whispers.
-		if showScore {
+		// Human output always shows the result tally. --score remains a compatible alias.
+		{
 			counts := redact.Counts{Failed: res.FailedRules, Evaluated: res.EvaluatedRules, Skipped: res.SkippedRules}
 			if tty.IsTerminal {
 				tty.RenderCounts(counts.Failed, counts.Evaluated, counts.Skipped, false)
@@ -472,7 +472,8 @@ func cmdCheck(args []string) error {
 			fmt.Printf("%s\n", tty.C(tty.Bold+tty.Yellow, "[!] heal wrote missing stubs; result reflects the post-heal tree — review generated files"))
 		}
 		fmt.Printf("%s\n", tty.C(tty.Dim, "Prepares evidence for human review — not a conformity assessment."))
-		fmt.Printf("%s\n", tty.C(tty.Dim, instrumentPanelCovenant))
+		fmt.Printf("Packs: %s · As of: %s\n", res.Payload.PackID, res.Payload.AsOf)
+		fmt.Println("Next: review the evidence, or run curbpack share --bundle to prepare a handoff.")
 		for _, line := range instrumentWhisperLines(prior, priorInst, priorInstOK, res.Payload.PackID, res.FailedRules, nowInst, res.Payload.ComparisonKey) {
 			fmt.Printf("%s\n", tty.C(tty.Dim, line))
 		}

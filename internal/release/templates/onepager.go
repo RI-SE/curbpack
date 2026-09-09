@@ -9,9 +9,6 @@ import (
 	"github.com/afelin/curbpack/internal/attest"
 )
 
-// onePagerCoverMax is the front-of-page file checklist cap (cognitive load).
-const onePagerCoverMax = 12
-
 // OnePagerDTO is the stable input for buyer one-pager HTML generation.
 type OnePagerDTO struct {
 	RepoName          string
@@ -52,6 +49,7 @@ type OnePagerFailure struct {
 type OnePagerCoverRow struct {
 	Path     string
 	Question string
+	Result   string
 }
 
 // OnePagerFingerprint computes the stable fingerprint marker for a DTO.
@@ -73,133 +71,76 @@ func OnePagerFingerprint(d OnePagerDTO) string {
 	return fmt.Sprintf("%x", sum[:16])
 }
 
-// BuyerOnePagerHTML renders the buyer one-pager from a DTO.
+// reportCSS is shared by standalone and embedded reports. No network resources.
+const reportCSS = `
+:root{color-scheme:light;--ink:#182b38;--muted:#48606d;--line:#cbd8df;--accent:#075c70;--paper:#fff;--wash:#f3f7f9}
+*{box-sizing:border-box}body{margin:0;background:var(--wash);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:auto;padding:32px 24px 64px}h1{font-size:2rem;line-height:1.2;margin:12px 0}h2{font-size:1.25rem;margin:30px 0 12px}h3{font-size:1rem}
+p{margin:10px 0}a{color:var(--accent);text-underline-offset:3px}a:hover{color:#003945}a:focus-visible,summary:focus-visible{outline:3px solid #b45309;outline-offset:4px}
+.brand{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;font-weight:750;color:var(--accent)}.lede,.meta,footer{color:var(--muted)}
+.status{padding:18px 20px;border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:8px;background:var(--paper);margin:20px 0}.status strong{display:block;font-size:1.15rem}.status.warn{border-left-color:#b45309}.counts{display:block;margin-top:6px;font-variant-numeric:tabular-nums}
+nav{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}nav a{padding:7px 12px;border:1px solid var(--line);border-radius:5px;background:white}
+.card,details{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 20px;margin:12px 0}summary{cursor:pointer;font-weight:650}.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cards .card{margin:0}
+ul,ol{padding-left:24px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:white;font-size:.9rem}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}th{background:#eaf1f5}#evidence th:nth-child(1){width:45%}#evidence th:nth-child(2){width:20%}#evidence th:nth-child(3){width:35%}#evidence td:nth-child(2){overflow-wrap:normal}caption{text-align:left;color:var(--muted);padding:10px 0}td small{display:block;color:var(--muted);margin-top:6px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.85em;overflow-wrap:anywhere}.command{display:block;padding:12px;background:#eaf1f5;border-radius:5px}dl.prov{display:grid;grid-template-columns:170px 1fr;gap:10px}dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}footer{margin-top:32px;border-top:1px solid var(--line);padding-top:16px;font-size:.85rem}.remediation{border-left:5px solid #b45309;padding:14px;background:#fff4e5}
+@media(max-width:640px){#evidence thead{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}#evidence tbody,#evidence tr,#evidence td{display:block;width:100%}#evidence tr{border:1px solid var(--line);margin-bottom:12px;border-radius:6px}#evidence td{border:0}#evidence td::before{content:attr(data-label);display:block;font-weight:650;color:var(--muted);margin-bottom:4px}main{padding:20px 16px 40px}h1{font-size:1.6rem}.cards{grid-template-columns:1fr}dl.prov{grid-template-columns:1fr;gap:4px}dd{margin-bottom:12px}th,td{padding:8px}.card,details{padding:14px}}
+@media print{body{background:white;font-size:11pt}main{max-width:none;padding:0}nav{display:none}details{break-inside:avoid}details>*{display:block!important}details::details-content{display:block!important;content-visibility:visible!important}.card{break-inside:avoid}a{color:inherit}.table-wrap{overflow:visible}}
+`
+
+// BuyerOnePagerHTML renders an actionable recipient overview. The historical
+// fingerprint computation above is unchanged for existing readers.
 func BuyerOnePagerHTML(d OnePagerDTO) string {
-	fp := OnePagerFingerprint(d)
-	status := "Needs remediation"
-	statusClass := "warn"
-	if d.Passed {
-		status = "Gates passed — pending human review & attest"
-		statusClass = "ok"
+	status, class := "Selected checks passed — review still needed", "ok"
+	if !d.Passed {
+		status, class = "Findings need attention", "warn"
 	}
-	if d.UnsignedLoud {
-		status = "UNSIGNED — not cryptographically verified · " + status
-		statusClass = "unsigned"
-	}
-	var rows strings.Builder
-	for _, f := range d.Failures {
-		fmt.Fprintf(&rows, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n",
-			html.EscapeString(f.GateID), html.EscapeString(f.Severity), html.EscapeString(f.Description))
-	}
-	if len(d.Failures) == 0 {
-		rows.WriteString(`<tr><td colspan="3">No open gate findings.</td></tr>`)
-	}
-	var cover strings.Builder
-	n := len(d.CoverRows)
-	if n > onePagerCoverMax {
-		n = onePagerCoverMax
-	}
-	for _, r := range d.CoverRows[:n] {
-		fmt.Fprintf(&cover, "<tr><td>%s</td><td>%s</td></tr>\n",
-			html.EscapeString(r.Path), html.EscapeString(r.Question))
-	}
-	if n == 0 {
-		cover.WriteString(`<tr><td colspan="2">No file checklist rows.</td></tr>`)
+	if d.SkippedRules > 0 {
+		status, class = "Incomplete check — run a full evaluation", "warn"
 	}
 	labels := strings.TrimSpace(d.PackLabels)
 	if labels == "" {
 		labels = d.PackID
 	}
-	assuranceLine := ""
-	if ac := strings.TrimSpace(d.AssuranceClass); ac != "" {
-		assuranceLine = fmt.Sprintf(`<p class="assurance"><strong>Assurance class:</strong> %s`, html.EscapeString(ac))
-		if ms := strings.TrimSpace(d.MechanicalSummary); ms != "" {
-			assuranceLine += fmt.Sprintf(` · <strong>%s</strong>`, html.EscapeString(ms))
+	var cover, findings strings.Builder
+	for _, r := range d.CoverRows {
+		result := r.Result
+		if result == "" {
+			result = "Not evaluated"
 		}
-		assuranceLine += "</p>\n    "
+		path := r.Path
+		if path == "" {
+			path = "No document path supplied"
+		}
+		fmt.Fprintf(&cover, `<tr><td data-label="Review task">%s</td><td data-label="Check result">%s</td><td data-label="Referenced evidence"><code>%s</code><small>Not included — request supporting evidence. For sensitive checks, request a redacted summary.</small></td></tr>`, html.EscapeString(r.Question), html.EscapeString(result), html.EscapeString(path))
 	}
-	lede := "Structural evidence for human review — not conformity assessment. Hand this one-pager (and the review pack) to a buyer or auditor. Evidence is prepared locally — this page is not a certificate of conformity."
-	if d.UnsignedLoud {
-		lede = "UNSIGNED — not cryptographically verified. " + lede
+	if len(d.CoverRows) == 0 {
+		cover.WriteString(`<tr><td colspan="3">No review tasks supplied. Ask the producer which checks apply.</td></tr>`)
 	}
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Curbpack — Buyer One-Pager</title>
-  <!-- curbpack-onepager-fp:%s -->
-  <style>
-    :root { --ink:#0a0a0b; --muted:#4a4a52; --line:#e4e6eb; --ok:#15803d; --warn:#92400e; --paper:#fcfcfc; --unsigned:#b91c1c; }
-    body { margin:0; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color:var(--ink); background:var(--paper); min-height:100vh; }
-    main { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
-    .brand { letter-spacing:0.06em; font-weight:700; font-size:0.8rem; text-transform:uppercase; font-family:ui-monospace,Menlo,monospace; color:#005073; }
-    h1 { font-family: Fraunces, Georgia, serif; font-size:2rem; line-height:1.2; margin:0.4rem 0 0.5rem; font-weight:600; }
-    h2 { font-family: Fraunces, Georgia, serif; font-size:1.2rem; margin:2rem 0 0.75rem; font-weight:600; border-top:1px solid var(--ink); padding-top:1.25rem; }
-    .lede { color:var(--muted); font-size:1.05rem; margin-bottom:1.5rem; }
-    .packs { font-size:1rem; margin:0 0 0.85rem; }
-    .assurance { font-size:0.95rem; margin:0 0 0.85rem; color:var(--muted); }
-    .status { display:inline-block; padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:600; font-family:ui-monospace,Menlo,monospace; }
-    .status.ok { background:#f0fdf4; color:var(--ok); border:1px solid var(--ok); }
-    .status.warn { background:#fff4e5; color:var(--warn); border:1px solid #f0d2a8; }
-    .status.unsigned { background:#fef2f2; color:var(--unsigned); border:1px solid var(--unsigned); letter-spacing:0.02em; text-transform:uppercase; }
-    .meter { margin:1.25rem 0; font-family:ui-monospace,Menlo,monospace; font-size:0.9rem; }
-    table { width:100%%; border-collapse:collapse; margin-top:1.25rem; font-size:0.9rem; }
-    th, td { text-align:left; padding:0.55rem 0.4rem; border-bottom:1px solid var(--line); vertical-align:top; }
-    th { color:var(--muted); font-weight:600; }
-    .back { margin-top:0.5rem; padding:1.1rem 1.15rem; border:1px solid var(--ink); background:#f2f3f5; }
-    .back p { margin:0 0 0.75rem; font-size:0.9rem; color:var(--muted); }
-    dl.prov { display:grid; grid-template-columns:9.5rem 1fr; gap:0.45rem 1rem; margin:0; font-size:0.88rem; }
-    dl.prov dt { color:var(--muted); font-family:ui-monospace,Menlo,monospace; font-size:0.78rem; }
-    dl.prov dd { margin:0; word-break:break-all; font-family:ui-monospace,Menlo,monospace; font-size:0.82rem; }
-    footer { margin-top:2rem; font-size:0.85rem; color:var(--muted); }
-    footer .unsigned-foot { color:var(--unsigned); font-weight:700; font-size:1rem; display:block; margin-bottom:0.5rem; }
-  </style>
-</head>
-<body>
-  <main>
-    <div class="brand">Curbpack · Front</div>
-    <h1>%s</h1>
-    <p class="lede">%s</p>
-    <p class="packs"><strong>Packs:</strong> %s</p>
-    %s<div class="status %s">%s</div>
-    <div class="status %s" style="margin-left:0.5rem">%s</div>
-    <h2>Files to open</h2>
-    <table>
-      <thead><tr><th>Path</th><th>Question</th></tr></thead>
-      <tbody>
-%s
-      </tbody>
-    </table>
-    <table>
-      <thead><tr><th>Gate</th><th>Severity</th><th>Finding</th></tr></thead>
-      <tbody>
-%s
-      </tbody>
-    </table>
-
-    <h2 id="provenance">Back — provenance &amp; human sign-off</h2>
-    <div class="back">
-      <div class="meter">Local gate tally on this tree: <strong>failed=%d evaluated=%d skipped=%d</strong> — not certification</div>
-      <p>Chosen rule packs are structural checklists (house policy or regulation-shaped drafts). Gate green is not legal conformity. <code>curbpack attest</code> records a state hash. A valid signature proves key use, not human review or approval; unsigned ≠ verified.</p>
-      %s
-      %s
-    </div>
-
-    <footer>
-      %s
-      Structural evidence for human review — not conformity assessment. Generated %s · Open <code>proof/index.html</code> to compare the stamp to the local evidence pointer.
-    </footer>
-  </main>
-</body>
-</html>
-`, fp, html.EscapeString(d.RepoName), html.EscapeString(lede),
-		html.EscapeString(labels),
-		assuranceLine,
-		statusClass, html.EscapeString(status),
-		d.AttestClass, html.EscapeString(d.AttestLine),
-		cover.String(), rows.String(),
-		d.FailedRules, d.EvaluatedRules, d.SkippedRules,
-		d.ProvenanceHTML, d.SourcesHTML,
-		d.FooterPrefix, html.EscapeString(d.Timestamp))
+	for _, f := range d.Failures {
+		fmt.Fprintf(&findings, `<tr><td><code>%s</code></td><td>%s</td><td>%s</td></tr>`, html.EscapeString(f.GateID), html.EscapeString(f.Severity), html.EscapeString(f.Description))
+	}
+	if len(d.Failures) == 0 {
+		findings.WriteString(`<tr><td colspan="3">No open findings in the selected checks.</td></tr>`)
+	}
+	signature := "No verified signer. This unsigned report does not establish who produced it."
+	if !d.UnsignedLoud {
+		signature = d.AttestLine + ". Key use does not establish human approval."
+	}
+	body := fmt.Sprintf(`<div class="brand">Curbpack · Review overview</div>
+<h1>%s</h1><p class="lede">A record of selected repository checks. Use it to identify evidence to inspect and questions to resolve; it is not a certificate of conformity.</p>
+<div class="status %s"><strong>%s</strong><span class="counts">%d failed · %d evaluated · %d skipped</span></div>
+<p><strong>Checks selected:</strong> %s</p>
+<nav aria-label="Report sections"><a href="#next">Next steps</a><a href="#evidence">Evidence checklist</a><a href="#findings">Findings</a><a href="#provenance">Verification details</a></nav>
+<section id="next"><h2>What to do next</h2>
+<div class="cards"><div class="card"><h3>Internal team or producer</h3><p>Address findings, run <code>curbpack check</code>, then review the source changes before sharing. Use <code>curbpack review --repo .</code> to check document references.</p></div>
+<div class="card"><h3>Buyer or insurer</h3><p>Confirm the intended product, version and use. Request the referenced evidence, support commitments and unresolved risks. Decide whether more evidence is needed before a purchase or coverage decision.</p></div>
+<div class="card"><h3>Reviewer or auditor</h3><p>Check the received folder, inspect the supporting evidence, and record your findings. Matching hashes do not establish producer identity, complete product evidence or applicability.</p></div>
+<div class="card"><h3>Agent or automation</h3><p>Use <code>curbpack check --json</code> for gates and <code>curbpack review review-pack --json</code> for separate trust results. Preserve exit codes. Leave approval and signing to a person.</p></div></div>
+<p>Keep the whole received folder together. From its parent directory, run:</p><code class="command">curbpack review review-pack</code><p>If the folder has another name, substitute that name. A single HTML file is a reading copy, not a complete verifiable pack. If Curbpack is not installed, ask your technical reviewer to run this check.</p>
+<details><summary>How to interpret verification</summary><ul><li><strong>Integrity:</strong> run review to check whether included files match their manifest.</li><li><strong>Authenticity:</strong> %s</li><li><strong>Completeness:</strong> review checks declared files only, not all product evidence.</li><li><strong>Applicability:</strong> you must establish whether this product, policy and date match your intended use.</li></ul><p>This page cannot verify its own contents. Use the CLI on the received folder.</p></details></section>
+<section id="evidence"><h2>Evidence checklist</h2><p>These are review tasks, not answers from a person. Product source files are not included automatically. Request only the evidence needed through an approved channel; do not request raw credentials or private keys.</p><div class="table-wrap"><table><caption>All %d review tasks · a passed structure check does not settle the content</caption><thead><tr><th scope="col">Review task</th><th scope="col">Check result</th><th scope="col">Referenced evidence</th></tr></thead><tbody>%s</tbody></table></div></section>
+<section id="findings"><h2>Findings</h2><div class="table-wrap"><table><thead><tr><th scope="col">Check</th><th scope="col">Priority</th><th scope="col">Finding</th></tr></thead><tbody>%s</tbody></table></div></section>
+<section id="provenance"><h2>Verification details</h2><p>Local gate tally: <strong>failed=%d evaluated=%d skipped=%d</strong> — not certification. Signing is optional and separate from this review.</p><details><summary>Recorded inputs and digests</summary>%s</details><details><summary>Sources and method scope</summary><p>Method scope: %s. The selected checks prepare evidence for human review; they do not assess conformity.</p>%s</details></section>
+<footer>Generated %s. Record your decision and any missing evidence in your own review process. No feedback is sent by this page.</footer>`, html.EscapeString(d.RepoName), class, html.EscapeString(status), d.FailedRules, d.EvaluatedRules, d.SkippedRules, html.EscapeString(labels), html.EscapeString(signature), len(d.CoverRows), cover.String(), findings.String(), d.FailedRules, d.EvaluatedRules, d.SkippedRules, d.ProvenanceHTML, html.EscapeString(d.AssuranceClass), d.SourcesHTML, html.EscapeString(d.Timestamp))
+	return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Curbpack — Review overview</title><!-- curbpack-onepager-fp:` + OnePagerFingerprint(d) + ` --><style>` + reportCSS + `</style></head><body><main>` + body + `</main></body></html>`
 }

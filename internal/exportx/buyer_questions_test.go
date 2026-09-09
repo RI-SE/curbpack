@@ -43,7 +43,7 @@ func TestWriteBuyerQuestions_HousePolicy(t *testing.T) {
 	if !strings.Contains(text, "For human review:") {
 		t.Fatal("questions must be prefixed For human review:")
 	}
-	if !strings.Contains(text, "Answer: Yes means the structural check passed") {
+	if !strings.Contains(text, "Result describes a mechanical check") {
 		t.Fatal("markdown must include claim-safe answer header")
 	}
 	deny := []string{"we are CE certified", "CE marking issued", "notified-body approved", "EU CRA Baseline"}
@@ -168,7 +168,7 @@ func TestSkippedRulesSuppressAnswers(t *testing.T) {
 	if strings.Contains(md, "| Yes |") {
 		t.Fatal("must not emit Yes answers when suppressed")
 	}
-	if strings.Contains(md, "Present, not settled") {
+	if strings.Contains(md, "Passed — content needs human review") {
 		t.Fatal("must not emit Present answers when suppressed")
 	}
 }
@@ -217,12 +217,12 @@ func TestIndicativeNeverRendersYes(t *testing.T) {
 			}
 		}
 	}
-	if !strings.Contains(md, "Present, not settled") {
-		t.Fatal("CRA annex green must render Present, not settled")
+	if !strings.Contains(md, "Passed — content needs human review") {
+		t.Fatal("CRA annex green must render Passed — content needs human review")
 	}
 }
 
-func TestHousePolicyYesStillWorks(t *testing.T) {
+func TestHousePolicyPassedLabel(t *testing.T) {
 	dir := t.TempDir()
 	res := validate.Result{
 		Payload: ir.GateFailurePayload{
@@ -237,11 +237,11 @@ func TestHousePolicyYesStillWorks(t *testing.T) {
 		t.Fatal(err)
 	}
 	md := exportx.FormatBuyerQuestionsMarkdown(report)
-	if !strings.Contains(md, "| Yes |") {
-		t.Fatal("house-policy answered rows must still render Yes")
+	if !strings.Contains(md, "| Passed |") {
+		t.Fatal("house-policy must render a neutral check result")
 	}
-	if strings.Contains(md, "| Present, not settled |") {
-		t.Fatal("house-policy must not render Present, not settled")
+	if strings.Contains(md, "| Passed — content needs human review |") {
+		t.Fatal("house-policy must not render Passed — content needs human review")
 	}
 }
 

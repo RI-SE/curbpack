@@ -97,7 +97,7 @@ func cmdShare(args []string) error {
 	}
 
 	if prepared {
-		tty.PrintStatus("prepare-release", true, "review-pack (human attest next)")
+		tty.PrintStatus("prepare-release", true, "review-pack (ready for review)")
 		printAttach(onepager)
 		revealTarget = onepager
 	}
@@ -125,7 +125,7 @@ func cmdShare(args []string) error {
 		}
 	}
 
-	fmt.Printf("%s\n", tty.C(tty.Dim, "Recipe done. Human attest when ready — never auto-attest. Not a conformity assessment."))
+	fmt.Printf("%s\n", tty.C(tty.Dim, "Next: open review-pack/evidence-bundle.html after --bundle, or buyer-onepager.html. Keep the whole folder together.\nRecipient check: curbpack review review-pack\nRecord questions or request missing evidence. Signing is optional and separate; this is not a product approval."))
 	if checkFailed {
 		return gatesErr()
 	}

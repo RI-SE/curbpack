@@ -30,7 +30,7 @@ func TestRun_InitDryRun(t *testing.T) {
 	if !strings.Contains(stdout, "Will write:") {
 		t.Fatalf("init must print write list: %q", stdout)
 	}
-	for _, want := range []string{".env", "secret-path decoy", ".git/hooks/pre-commit", "(hook)", "SKILL.md", "(skill)", ".vscode/tasks.json"} {
+	for _, want := range []string{"SECURITY.md", ".git/hooks/pre-commit", "(hook)", "SKILL.md", "(skill)", ".vscode/tasks.json"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("dry-run write list missing %q: %q", want, stdout)
 		}
@@ -88,8 +88,8 @@ func TestRun_InitBareDryRunOmitsHookSkillIDE(t *testing.T) {
 			t.Fatalf("--bare dry-run must omit %q: %q", bad, stdout)
 		}
 	}
-	if !strings.Contains(stdout, "secret-path decoy") {
-		t.Fatalf("--bare still scaffolds secret-path decoys: %q", stdout)
+	if strings.Contains(stdout, "secret-path decoy") || strings.Contains(stdout, "  .env") {
+		t.Fatalf("--bare must not create secret scan targets: %q", stdout)
 	}
 }
 
