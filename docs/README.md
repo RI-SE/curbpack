@@ -30,6 +30,7 @@ It identifies the source build, sandbox exercise, results and feedback path.
 | Configure assistants and integrations | [Assistant loop](assistant-loop.md) |
 | Prepare a design-partner engagement | [Design partners](design-partners.md) |
 | Harden repository operations | [Repository operations](getting-started/repo-ops-hardening.md) |
+| Independent Curbpack verification | Start a run: [test suites README](testing/test_suites/README.md). Folder: [testing](testing/README.md). Approach: [strategy](testing/strategy.md). |
 
 ## Understand the design
 
