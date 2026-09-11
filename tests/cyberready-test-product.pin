@@ -1,0 +1,19 @@
+# Starting cyberready-test-product commit for product-fixture tests.
+#
+# This is a pin file, not a product. The product is
+# RI-SE/cyberready-test-product (Glucose Log). A verification run clones it
+# into tmp/cyberready-test-product. Do not introduce a second product tree.
+#
+# Curbpack procedures define what each R-state means. This pinned product
+# commit holds the scripts that create those states. Bump this in the same
+# Curbpack change that adopts a new product commit. Do not bump it while
+# intended product changes still sit uncommitted in that checkout.
+#
+# Locate the repository at $CURBPACK_TEST_PRODUCT, else
+# ../cyberready-test-product. No absolute path belongs in this file.
+# This SHA freezes the reference-product version used by the verification
+# run. R-state setup scripts come from this pinned revision. The
+# verification-run restore returns the disposable checkout to this
+# revision before each independent case.
+
+commit 6d35788a78c745c40e80780c51331fdab827d4ff

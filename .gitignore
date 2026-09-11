@@ -9,6 +9,8 @@
 .github/cyberready/cache/
 .github/cyberready/evidence/
 /review-pack/
+/tmp/
+.cache/
 .tools/
 *.sock
 
