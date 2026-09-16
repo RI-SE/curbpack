@@ -5,10 +5,12 @@ store) for each execution instance. Name copies `{run-id}_{case-id}.md`. Do
 not check filled records into the public Curbpack tree. Do not add record
 columns to the suite tables.
 
-Campaign baseline and scope are in the
-[Verification Plan](verification_plan.md). Controlled test setup is in
-[procedures/README.md](procedures/README.md). Fill one copy per case
-execution.
+Run baseline is recorded in `tmp/verification-run.sh` and in this record.
+Default suite and class scope are in the
+[Verification Strategy](strategy.md). Requirement-to-evidence mapping is in
+[Requirement traceability](requirements_traceability.md). Controlled test
+setup is in [procedures/README.md](procedures/README.md). Fill one copy per
+case execution.
 
 Word Test Records, if the assignment archives in Word, are filled from these
 copies.

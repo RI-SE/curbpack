@@ -4,10 +4,12 @@ Copy this file **outside this repository** for each CR-id in
 [procedures/2_code_review_procedures.md](procedures/2_code_review_procedures.md).
 Do not check filled protocols into the public Curbpack tree.
 
-Campaign baseline and scope are in the
-[Verification Plan](verification_plan.md). Controlled test setup is in
-[procedures/README.md](procedures/README.md). This protocol is for CR, not
-a suite case.
+Run baseline is recorded in `tmp/verification-run.sh` and in this protocol.
+Default suite and class scope are in the
+[Verification Strategy](strategy.md). Requirement-to-evidence mapping is in
+[Requirement traceability](requirements_traceability.md). Controlled test
+setup is in [procedures/README.md](procedures/README.md). This protocol is
+for CR, not a suite case.
 
 Word review records, if the assignment archives in Word, are filled from
 these copies.

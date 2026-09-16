@@ -1,8 +1,8 @@
 # Test suites
 
-A verification run applies the suites and test classes selected by the
-[Verification Plan](../verification_plan.md) to one frozen baseline. Each
-suite contains:
+A verification run applies the suites and test classes from the
+[Verification Strategy](../strategy.md) default scope to one frozen baseline.
+Each suite contains:
 
 - one suite-level **Objective**;
 - its requirements and other legitimate **Test basis**;
@@ -12,29 +12,45 @@ suite contains:
 
 The suite objective is owned by the suite. It has no separate identifier.
 **Test class** A/B/C/D on each case is a selection property from the
-Verification Plan; it is not the suite objective or an execution result.
+Verification Strategy default scope; it is not the suite objective or an
+execution result.
 
-A test case retains its own objective or purpose, requirements or test basis,
-prerequisites/setup, steps and expected results, teardown, and Pass/Fail
-criteria when those parts have been specified. The intended written form is
-ID/title, objective, test basis, prerequisites/setup, numbered steps with
-action and expected result, teardown, and Pass/Fail criteria. Existing written
-cases keep their current layout until they are executed. A catalogue row
-marked **To be specified** is not an executable procedure and must not be
-expanded by inference.
+The intended written form for an executable case is:
+
+- **Requirements** — every specified requirement the case verifies, or an
+  explicit statement that it does not verify a specified requirement plus
+  the other test basis;
+- **SETUP** — the named `R-*` / `PF-*` / `EC-*` identifiers, the `setup.sh`
+  invocation, and checks that the prepared state is the intended one; and
+- **TEST STEPS** — stimulus and observations only.
+
+SETUP verifies prepared state. It does not reproduce the internal operations
+of the R-state script, and it does not use `git init`, `git add`, or
+`git commit` to construct that state. A one-off stimulus stays in TEST STEPS
+and does not require a new R-id.
+
+Do not add a TEARDOWN section. After a case, leave the repository and
+evidence for inspection. The next independent case starts by sourcing
+`tmp/verification-run.sh`, which deletes and recreates the disposable
+reference-product checkout. Older written cases may still show other
+headings; the shared procedure already defines this behaviour.
+
+A catalogue row marked **To be specified** is not an executable procedure
+and must not be expanded by inference.
 
 Fill the Run section of the
 [test record template](../generated_test_record_template.md) once, then use
 one copy per case execution.
 
 Before executing a case, read the
-[controlled test prerequisites](../procedures/README.md). Every Executable
-case starts by confirming the Curbpack checkout is still the recorded
-baseline (see Start of every independent case in that file). Execute only
-rows whose Procedure status is **Executable**. Each such case states its
-repository state (`R-*`), pack input (`PF-*`), execution configuration
-(`EC-*`), exact setup, stimulus, expected response, and teardown. A row
-marked **To be specified** is catalogue scope, not an executable procedure.
+[controlled test prerequisites](../procedures/README.md). Start the
+verification run once, then start every independent case from the Curbpack
+root with `source tmp/verification-run.sh` (see Start of every independent
+case in that file). Execute only rows whose Procedure status is
+**Executable**. Each such case states its repository state (`R-*`), pack
+input (`PF-*`), execution configuration (`EC-*`), exact setup, stimulus, and
+expected response. A row marked **To be specified** is catalogue scope, not
+an executable procedure.
 
 | Suite | File | What it asks |
 |---|---|---|

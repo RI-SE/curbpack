@@ -12,8 +12,8 @@
 # Locate the repository at $CURBPACK_TEST_PRODUCT, else
 # ../cyberready-test-product. No absolute path belongs in this file.
 # This SHA freezes the reference-product version used by the verification
-# run. R-state setup scripts come from this pinned revision. The
-# verification-run restore returns the disposable checkout to this
-# revision before each independent case.
+# run. R-state setup scripts, mutate_pack.sh, and PF fixtures come from
+# this pinned revision. The verification-run restore returns the
+# disposable checkout to this revision before each independent case.
 
-commit 6d35788a78c745c40e80780c51331fdab827d4ff
+commit 2b0c3f30bda411917ca0cd5b5f545e04de11cd25
