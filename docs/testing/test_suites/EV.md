@@ -19,7 +19,7 @@ A test execution is always part of a test run that starts with [Prepare a verifi
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
-Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state through product `setup.sh` on that already-restored baseline. Then apply EC as the case states. 
+Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state through product `setup.sh` on that already-restored baseline. Then apply EC as the case states.
 
 ## Test suite overview
 
@@ -991,4 +991,3 @@ passed when it is missing, unreadable, unsupported, or skipped is a failure.
 - **INCONCLUSIVE** — evidence needed for the required suite coverage is
 unavailable, blocked, or not yet executable.
 - **NOT ASSESSED** — the suite was not selected for this verification run.
-

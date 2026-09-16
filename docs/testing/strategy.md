@@ -4,8 +4,8 @@ This document defines the reusable verification approach for Curbpack. It
 describes what is verified, how test inputs are controlled, how test cases are
 grouped, and how results are classified.
 
-To **start a verification run**, follow this order: this Verification  
-Strategy, [test procedures](procedures/README.md), [test-suites](test_suites/README.md), then  
+To **start a verification run**, follow this order: this Verification
+Strategy, [test procedures](procedures/README.md), [test-suites](test_suites/README.md), then
 [generated-test-record-template](generated_test_record_template.md). Create the run
 with `make start-verification-run`. Do not start in a suite file.
 
@@ -134,7 +134,7 @@ repository. Those records are not the executable test interface.
 All 55 normative `MUST-*` requirements in SDD §§1.1 and 2.1–2.9 remain in
 scope. Mapping to existing test and review evidence is in
 [Requirement traceability](requirements_traceability.md). Coverage state
-there is test design, not an execution result.  
+there is test design, not an execution result.
 
 ## 6. Test suites
 

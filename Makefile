@@ -34,4 +34,3 @@ uninstall:
 # Not rm -rf tmp: the reference-product clone is there.
 clean:
 	rm -f tmp/curbpack
-	
