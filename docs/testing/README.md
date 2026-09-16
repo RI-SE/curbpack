@@ -2,12 +2,14 @@
 
 Use the verification documents in this order:
 
-1. [Verification Strategy](strategy.md) — how Curbpack is verified in general.
-2. [Verification Plan](verification_plan.md) — this campaign: frozen
-   baseline, selected coverage, completion evidence, and the requirement
-   coverage matrix.
+1. [Verification Strategy](strategy.md) — how Curbpack is verified in general,
+   including default suite and test-class scope.
+2. [Requirement traceability](requirements_traceability.md) — maps normative
+   requirements to existing test and review evidence. Coverage state is test
+   design, not an execution result.
 3. [Test Setup](procedures/README.md) — controlled repository state (`R-*`),
    pack input (`PF-*`), and execution configuration (`EC-*`) prerequisites.
+   Create a verification run with `make start-verification-run`.
 4. [Test Suites and Test Cases](test_suites/README.md) — suite objectives, test
    basis, case selection, and executable procedures.
 5. [Test Records](generated_test_record_template.md) — one record per case
@@ -25,11 +27,17 @@ verification document layer.
   non-use boundaries, release and platform claims, and human-authority limits,
   but only where a suite names them.
 
-The **Verification Strategy** is the reusable method. The **Verification Plan**
-is this campaign: what is frozen, which suites and test classes are required,
-and what evidence closes the work. **Test class** A/B/C/D is a selection
-property. It is not a requirement, a suite objective, a suite verdict, or an
-execution result. Class meanings remain those in Verification Strategy §7.
+The **Verification Strategy** is the reusable method, including the default
+suites and test classes. This repository does not maintain a static
+verification plan. A verification run is created with
+`make start-verification-run`; the resolved Curbpack revision,
+reference-product revision, and `AS_OF_DATE` are recorded in
+`tmp/verification-run.sh` and in the test records. A generated verification
+plan may be added later if an assignment requires one.
+
+**Test class** A/B/C/D is a selection property. It is not a requirement, a
+suite objective, a suite verdict, or an execution result. Class meanings and
+the default required classes remain those in Verification Strategy §§6–7.
 
 **R / PF / EC** are test-setup dimensions (repository content, pack input,
 execution configuration). They are not requirements.
@@ -45,10 +53,11 @@ is not executable.
 
 A **test record** is evidence from one execution. Pass/Fail belongs there.
 
-Requirement coverage for this campaign is only in the Verification Plan
-matrix. Unmapped requirements are valid findings.
+Requirement-to-evidence mapping is only in
+[Requirement traceability](requirements_traceability.md). Unmapped
+requirements are valid findings. Coverage state is not Pass/Fail.
 
-Freeze the Verification Plan before execution. Execute only cases whose
+Create the verification run before execution. Execute only cases whose
 Procedure status is **Executable**, and keep completed records outside this
 repository.
 

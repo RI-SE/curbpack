@@ -570,6 +570,12 @@ Closed:
 | FG-07 | `review --verify-chain` accepted fabricated reports when the child copied a parent-supplied digest string without recomputation | [`review.go`](../internal/cli/review.go), [`review_verify_chain_test.go`](../internal/cli/review_verify_chain_test.go) |
 | REG-HEAL-01 | `check --heal` returned 100/0/exit-0 while immediate `check` returned 60/2/exit-1; score, findings, and exit parity are repaired, but byte parity remains open under INV-04 | [`check_json_heal_test.go`](../internal/cli/check_json_heal_test.go), [PR #40](https://github.com/RI-SE/curbpack/pull/40) |
 
+Open escaped defects (not counted in `false_green_paths_open`):
+
+| ID | Path | Evidence |
+|---|---|---|
+| <a id="reg-skip-01"></a>REG-SKIP-01 | MUST-23: a skipped rule identifier is not present in every output channel. On EV-005, `HOUSE-SECRET-PATHS` appears in `latest_evaluation.json` (`skipped_rule_ids`) and in human-readable terminal output (`skipped (diff)`). It does not appear in `check --json` stdout, `latest_result.json`, or `latest_action_report.md`. | [EV-005](testing/test_suites/EV.md) |
+
 Additional open violations are tracked separately from the false-green count:
 
 - Evaluator Git subprocesses neutralize repository-local executable configuration

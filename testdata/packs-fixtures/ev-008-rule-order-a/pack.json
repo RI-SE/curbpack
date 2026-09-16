@@ -1,0 +1,31 @@
+{
+  "id": "ev-008-rule-order-a",
+  "name": "EV-008 rule-order A (test only)",
+  "version": "0.0.1",
+  "assurance_class": "structural_draft",
+  "description": "Two failing file_present rules in order ALPHA then BETA. Test-only; not for production.",
+  "rules": [
+    {
+      "id": "EV008-ALPHA",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "file_present",
+      "path": "docs/ev008-alpha.md",
+      "min_bytes": 20,
+      "description": "EV-008 alpha target missing.",
+      "remediation": "Add docs/ev008-alpha.md.",
+      "expected": "docs/ev008-alpha.md present."
+    },
+    {
+      "id": "EV008-BETA",
+      "severity": "high",
+      "type": "POLICY_VIOLATION",
+      "check": "file_present",
+      "path": "docs/ev008-beta.md",
+      "min_bytes": 20,
+      "description": "EV-008 beta target missing.",
+      "remediation": "Add docs/ev008-beta.md.",
+      "expected": "docs/ev008-beta.md present."
+    }
+  ]
+}

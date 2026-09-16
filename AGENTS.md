@@ -4,6 +4,8 @@
 
 Design intent: [docs/software-design-document.md](docs/software-design-document.md). Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
 
+When creating, completing, or reviewing EV suite cases, follow [`.cursor/skills/ev-test-case/SKILL.md`](.cursor/skills/ev-test-case/SKILL.md).
+
 ## Loop (opens read-only)
 
 An agent's first action never mutates the repository.

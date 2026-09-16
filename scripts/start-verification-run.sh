@@ -6,6 +6,9 @@
 # If repo tmp/ already exists, ask to delete that directory entirely and
 # stop if not. Never touches /tmp or a sibling product checkout.
 # Origin fetch cannot see unpushed commits in another checkout (note 1).
+#
+# Non-interactive wipe: CONFIRM_TMP_WIPE=1 or --yes. Values still default
+# to this HEAD, tests/cyberready-test-product.pin, and today's date.
 set -eu
 
 root=$(git rev-parse --show-toplevel)
@@ -15,6 +18,20 @@ template=$root/docs/testing/verification_run_template.sh
 out=$tmp/verification-run.sh
 product=$tmp/cyberready-test-product
 pin=$root/tests/cyberready-test-product.pin
+confirm_wipe=0
+for arg in "$@"; do
+	case "$arg" in
+		--yes | -y) confirm_wipe=1 ;;
+		*)
+			echo "error: unknown argument: $arg" >&2
+			echo "usage: scripts/start-verification-run.sh [--yes]" >&2
+			exit 2
+			;;
+	esac
+done
+if [ "${CONFIRM_TMP_WIPE:-}" = "1" ]; then
+	confirm_wipe=1
+fi
 
 if [ ! -f "$template" ]; then
 	echo "error: missing $template" >&2
@@ -22,12 +39,10 @@ if [ ! -f "$template" ]; then
 fi
 
 pin_commit=$(awk '/^commit / { print $2; exit }' "$pin")
-
-if [ -d "$product/.git" ]; then
-	def_product=$(git -C "$product" rev-parse HEAD)
-else
-	def_product=$pin_commit
-fi
+# Always default from the recorded reference-product revision. An existing
+# disposable clone may sit on a generated test_* branch after a prior case;
+# that HEAD is not a valid baseline selection.
+def_product=$pin_commit
 def_curbpack=$(git rev-parse HEAD)
 def_date=$(date +%F)
 
@@ -69,12 +84,15 @@ if [ -n "$dirty" ]; then
 fi
 
 if [ -e "$tmp" ]; then
-	if [ ! -t 0 ]; then
-		echo "error: $tmp exists; confirm a full wipe on a TTY" >&2
-		exit 2
-	fi
-	if ! ask_yes "Delete $tmp completely (reference product, binary, run file)?"; then
-		echo "error: tmp exists and was not cleared; stop" >&2
+	if [ "$confirm_wipe" -eq 1 ]; then
+		echo "deleting $tmp (CONFIRM_TMP_WIPE=1 / --yes)"
+	elif [ -t 0 ]; then
+		if ! ask_yes "Delete $tmp completely (reference product, binary, run file)?"; then
+			echo "error: tmp exists and was not cleared; stop" >&2
+			exit 2
+		fi
+	else
+		echo "error: $tmp exists; confirm a full wipe on a TTY, or CONFIRM_TMP_WIPE=1" >&2
 		exit 2
 	fi
 	rm -rf "$tmp"

@@ -1,135 +1,12 @@
-# Curbpack Verification Plan
+# Requirement traceability
 
-## Purpose and verification target
+This file maps the normative requirements in
+[`docs/software-design-document.md`](../software-design-document.md) to
+existing test and review evidence.
 
-This plan defines the current verification campaign for Curbpack. It selects
-the frozen product and requirement baseline, the controlled setup, the suites
-and test classes to be assessed, and the evidence required to close the
-campaign. The reusable verification method remains in the
-[Verification Strategy](strategy.md). For this campaign, references in suite
-or procedure files to the verification assignment mean this plan.
-
-The verification target is the Curbpack source at
-`c7dadeb5e8f1027e69c12a250fa2f4f5a20926ba`. No release tag or shipped
-artefact is part of the freeze unless the separate verification assignment
-names one before entry.
-
-## Frozen baseline
-
-- Product source: `RI-SE/curbpack@c7dadeb5e8f1027e69c12a250fa2f4f5a20926ba`.
-- Normative requirement source:
-  [Software Design Document v1.2](../software-design-document.md), in which
-  `MUST / MUST NOT` statements are defined as constitutional behavior.
-- Requirement set: the 55 requirements listed in the traceability view below;
-  requirement wording is not restated by this plan.
-- Reference product:
-  `RI-SE/cyberready-test-product@32cf9128a66b1fdea6025161f8eeab9a18caecc2`.
-- Pack input: PF-01 from the frozen reference-product commit, plus only the
-  named PF-03 fixtures required by selected cases.
-- Test method baseline: the committed revision containing this plan, the
-  Verification Strategy, controlled prerequisites, selected suite files, and
-  record templates. Record that revision before execution.
-- Frozen `as_of`: record one date in the run record and use it for every case
-  in the run.
-
-The SDD's own `Verified baseline` field is its historical current-state
-register; it does not replace the product source selected for this campaign.
-A changed product, requirement, setup, procedure, or expected result requires
-a separately frozen plan revision.
-
-## Applicable requirements and claims
-
-All 55 normative `MUST-*` requirements in SDD §§1.1 and 2.1–2.9 are in scope.
-The traceability view records where current test design provides evidence and
-where it does not.
-
-The following documented product claims and boundaries are also test basis:
-
-- Curbpack evaluates declared structural conditions and prepares evidence for
-  human review; it does not establish claim truth or conformity.
-- Evaluation and review are local and offline within their documented command
-  boundaries.
-- Human, machine, cache, export, and Review Pack outputs must retain their
-  stated scope.
-- Publicly supported release artefacts and platforms are supported only to the
-  degree demonstrated by release evidence and representative execution.
-- Human-authority decisions remain human.
-
-These statements are used only where a suite identifies them as test basis;
-ordinary explanatory prose is not promoted into a requirement.
-
-## Selected setup
-
-Use the existing controlled prerequisites in
-[Test Setup](procedures/README.md):
-
-- `R-*` identifies repository content state;
-- `PF-*` identifies pack input; and
-- `EC-*` identifies execution configuration.
-
-No new setup identifier is created by this plan. A case marked **To be
-specified** is not executable merely because its intended setup is selected.
-
-## Selected suites, classes, and review
-
-All existing functional and validation suites are selected: PK, EV, FS, DT,
-PV, RP, OP, NB, RB, RL, CL, and UV.
-
-Test class meanings remain those in Verification Strategy §7. This plan
-selects which classes are required:
-
-- Class A cases are required.
-- Class B cases are required where the suite contains them.
-- Class C cases are required only when the named capability applies to the
-  frozen target.
-- Class D cases are not selected unless a recorded finding requires them.
-
-CR-01 through CR-11 remain independent code and release review activities,
-not a functional test suite. The separate verification assignment controls
-review effort; this plan does not reproduce that work assignment.
-
-## Entry criteria
-
-- The product source, requirement source, reference-product pin, pack input,
-  procedure revision, and `as_of` date are recorded and unchanged.
-- The selected Curbpack source can be built or the assignment records the
-  exact shipped artefact.
-- Each case chosen for execution has an **Executable** procedure and
-  repeatable prerequisites.
-- A record store exists outside the public repository.
-- Independent reviewers and any applicable release platforms are identified.
-
-## Exit criteria
-
-- Every selected Executable case has a test record with Pass, Fail, Blocked,
-  Not applicable, or Inconclusive disposition.
-- Every selected non-executable case is explicitly retained as unavailable
-  evidence; it is not reported as passed.
-- Every selected suite has a PASS, FAIL, INCONCLUSIVE, or NOT ASSESSED verdict
-  derived from the required case evidence.
-- Selected CR activities have completed review protocols or are recorded as
-  unavailable.
-- Findings identify the affected baseline and evidence.
-- Each requirement is assessed as satisfied, not satisfied, or not verified
-  from accumulated evidence. Static mapping status is not used as an
-  execution verdict.
-- The required records and deliverables below are stored and reviewable.
-
-## Required records and deliverables
-
-- this frozen Verification Plan;
-- one completed test record per case execution;
-- retained raw outputs and evidence references;
-- one review protocol per selected CR activity;
-- suite verdicts with the required case set identified;
-- findings and retest records, where applicable; and
-- a final requirement assessment based on the recorded evidence.
-
-## Requirement traceability
-
-This is the only maintained requirement-to-evidence matrix for this campaign.
 Coverage state describes the current test design, not an execution result.
-Pass/Fail belongs in test records.
+Actual Pass/Fail and final requirement assessments belong to records from a
+verification run.
 
 | Coverage state | Meaning |
 |---|---|
@@ -156,12 +33,12 @@ combination. It does not change coverage state.
 | MUST-14 | SDD §2.1 | — | — | Unmapped | Inspection + Analysis | No existing case keeps every listed trust and disposition dimension separate. |
 | MUST-20 | SDD §2.2 | — | — | Unmapped | Test | No existing case compares a write-producing run with a read-only evaluation of the resulting unchanged tree. |
 | MUST-21 | SDD §2.2 | — | — | Unmapped | Test | No existing case verifies that a rule examining zero required targets cannot pass. |
-| MUST-22 | SDD §2.2 | PK, EV, OP | PK-004, PK-005; EV-004; OP-001–OP-006; CR-08 | Partial | Test + Review | Some parse and unsupported-input paths are executable; read, write, subprocess, walk, and other failure paths remain incomplete. |
-| MUST-23 | SDD §2.2 | EV | EV-005 | Specified but not executable | Test | Skipped-target behavior has catalogue scope but no executable procedure. |
-| MUST-24 | SDD §2.2 | EV | EV-004 | Specified but not executable | Test | Unreadable required-target behavior has catalogue scope but no executable procedure. |
+| MUST-22 | SDD §2.2 | PK, EV, OP | PK-002, PK-004, PK-005; EV-004; OP-001–OP-006; CR-08 | Partial | Test + Review | Some parse and unsupported-input paths are executable; read, write, subprocess, walk, and other failure paths remain incomplete. |
+| MUST-23 | SDD §2.2 | EV | EV-005; REG-SKIP-01 | Partial | Test | EV-005 is executable for `--diff` skip (`outcome=incomplete`, `skipped_rules`). The skipped-rule identifier is not present in every output channel; see REG-SKIP-01. |
+| MUST-24 | SDD §2.2 | EV | EV-004 | Partial | Test | The check path for an unreadable required `SECURITY.md` is executable and stops as an operational error, not a pass. Other unreadable-artifact paths are not this case. |
 | MUST-25 | SDD §2.2 | — | — | Unmapped | Test | No existing case varies external evidence or source metadata while holding gate inputs fixed. |
-| MUST-30 | SDD §2.3 | DT | DT-001 | Partial | Test | The executable case compares semantic fields and stable digests, not byte-identical canonical evaluation bytes. |
-| MUST-31 | SDD §2.3 | DT, PV | DT-002; PV-001–PV-007 | Partial | Test | Repository, pack, tool, platform, locale, and time inputs are partly covered; the complete explicit-input boundary is not. |
+| MUST-30 | SDD §2.3 | DT | DT-001 | Partial | Test | DT-001 compares semantic result fields and exit status across repeated runs, not byte-identical canonical evaluation bytes (INV-04); a pass does not close MUST-30. |
+| MUST-31 | SDD §2.3 | DT, PV | PV-001–PV-007 | Partial | Test | Executable PV cases cover only repository-snapshot, pack-byte, evaluator-version, and explicit-as_of slices; a pass does not close MUST-31. Locale, timezone, and the remaining exclude boundary are deferred. |
 | MUST-32 | SDD §2.3 | — | — | Unmapped | Analysis | EV-008 concerns outcome order-independence, not total ordering of every field that feeds a digest. |
 | MUST-33 | SDD §2.3 | — | — | Unmapped | Analysis | No existing case tests injectivity of the canonical digest encoding. |
 | MUST-34 | SDD §2.3 | — | — | Unmapped | Test | No existing case proves cache non-authority or rejection of an unverified `latest` record. |
