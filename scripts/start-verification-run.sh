@@ -14,7 +14,7 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 tmp=$root/tmp
-template=$root/docs/testing/verification_run_template.sh
+template=$root/testing/verification_run_template.sh
 out=$tmp/verification-run.sh
 product=$tmp/cyberready-test-product
 pin=$root/tests/cyberready-test-product.pin
