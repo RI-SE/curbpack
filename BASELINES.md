@@ -4,7 +4,7 @@ Three-repository tags `baseline/<YYYY-MM-DD>-<NAME>` on Curbpack, CTAM, and cybe
 
 The tagged commits do not include later updates to this registry.
 
-Each create requires `OVERRIDE_TESTS=1`. Tests are not run by the baseline command.
+Each create requires ` CONFIRM_TESTS_PASSED=TRUE`. Tests are not run by the baseline command.
 
 Checkout: `make checkout-baseline NAME=<name>` then `make start-verification-run`.
 
@@ -16,4 +16,4 @@ Checkout: `make checkout-baseline NAME=<name>` then `make start-verification-run
 - curbpack: 7c7ed74e8344fe0c688a0e91f0f9d49dccb88d60
 - ctam: ed2c2ed959c50e8e4168deca44494e19aa44a0a7
 - reference-product: dee885ffb421e4646fea07fbb4a629616c09efc6
-- verification: tests were externally verified; OVERRIDE_TESTS=1
+- verification: tests were externally verified;  CONFIRM_TESTS_PASSED=TRUE

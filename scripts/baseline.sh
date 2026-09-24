@@ -7,7 +7,7 @@
 #   CTAM:                      make test && make demo
 #   cyberready-test-product:   make test
 #
-# Create:   make baseline NAME=<name> OVERRIDE_TESTS=1
+# Create:   make baseline NAME=<name> CONFIRM_TESTS_PASSED=TRUE
 # Check:    make baseline-check NAME=<name>
 # Checkout: make checkout-baseline NAME=<name>
 set -eu
@@ -18,8 +18,8 @@ PRODUCT=$(CDPATH= cd -- "$ROOT/../cyberready-test-product" && pwd)
 REGISTRY=$ROOT/BASELINES.md
 
 die() {
-	printf '%s\n' "$*" >&2
-	exit 1
+    printf '%s\n' "$*" >&2
+    exit 1
 }
 
 mode=create
@@ -28,134 +28,137 @@ check) mode=check ;;
 checkout) mode=checkout ;;
 esac
 
-[ -n "${NAME:-}" ] || die "usage: make baseline NAME=<name> OVERRIDE_TESTS=1
+[ -n "${NAME:-}" ] || die "usage: make baseline NAME=<name> CONFIRM_TESTS_PASSED=TRUE
        make baseline-check NAME=<name>
        make checkout-baseline NAME=<name>"
 
 case $NAME in
 *[!A-Za-z0-9._-]* | "" | .* | -*)
-	die "NAME must be a simple token (letters, digits, '.', '_', '-')"
-	;;
+    die "NAME must be a simple token (letters, digits, '.', '_', '-')"
+    ;;
 esac
 
 [ -d "$CTAM/.git" ] || die "CTAM not found at $CTAM"
 [ -d "$PRODUCT/.git" ] || die "reference product not found at $PRODUCT"
 
 entry_for_name() {
-	[ -f "$REGISTRY" ] || return 1
-	awk -v name="$NAME" '
-		/^## / {
-			if (keep) out = block
-			block = $0 "\n"
-			keep = 0
-			next
-		}
-		{
-			block = block $0 "\n"
-			if ($0 == "- name: " name) keep = 1
-		}
-		END {
-			if (keep) out = block
-			if (out != "") printf "%s", out
-		}
-	' "$REGISTRY"
+    [ -f "$REGISTRY" ] || return 1
+    awk -v name="$NAME" '
+        /^## / {
+            if (keep) out = block
+            block = $0 "\n"
+            keep = 0
+            next
+        }
+        {
+            block = block $0 "\n"
+            if ($0 == "- name: " name) keep = 1
+        }
+        END {
+            if (keep) out = block
+            if (out != "") printf "%s", out
+        }
+    ' "$REGISTRY"
 }
 
 field() {
-	printf '%s\n' "$1" | awk -v key="$2" '
-		index($0, "- " key ": ") == 1 {
-			print substr($0, length("- " key ": ") + 1)
-			exit
-		}
-	'
+    printf '%s\n' "$1" | awk -v key="$2" '
+        index($0, "- " key ": ") == 1 {
+            print substr($0, length("- " key ": ") + 1)
+            exit
+        }
+    '
 }
 
 require_clean() {
-	repo=$1
-	label=$2
-	if [ -n "$(git -C "$repo" status --porcelain)" ]; then
-		die "$label is not clean: $repo"
-	fi
+    repo=$1
+    label=$2
+    if [ -n "$(git -C "$repo" status --porcelain)" ]; then
+        die "$label is not clean: $repo"
+    fi
 }
 
 check_tag() {
-	repo=$1
-	label=$2
-	want=$3
-	if ! git -C "$repo" show-ref --verify --quiet "refs/tags/$tag"; then
-		printf 'FAIL  %s: missing tag %s\n' "$label" "$tag" >&2
-		fail=1
-		return
-	fi
-	kind=$(git -C "$repo" cat-file -t "refs/tags/$tag")
-	if [ "$kind" != "tag" ]; then
-		printf 'FAIL  %s: %s is not an annotated tag\n' "$label" "$tag" >&2
-		fail=1
-		return
-	fi
-	got=$(git -C "$repo" rev-parse "$tag^{commit}")
-	if [ "$got" != "$want" ]; then
-		printf 'FAIL  %s: %s is %s, BASELINES.md has %s\n' "$label" "$tag" "$got" "$want" >&2
-		fail=1
-		return
-	fi
-	printf 'OK    %s  %s\n' "$label" "$got"
+    repo=$1
+    label=$2
+    want=$3
+    if ! git -C "$repo" show-ref --verify --quiet "refs/tags/$tag"; then
+        printf 'FAIL  %s: missing tag %s\n' "$label" "$tag" >&2
+        fail=1
+        return
+    fi
+    kind=$(git -C "$repo" cat-file -t "refs/tags/$tag")
+    if [ "$kind" != "tag" ]; then
+        printf 'FAIL  %s: %s is not an annotated tag\n' "$label" "$tag" >&2
+        fail=1
+        return
+    fi
+    got=$(git -C "$repo" rev-parse "$tag^{commit}")
+    if [ "$got" != "$want" ]; then
+        printf 'FAIL  %s: %s is %s, BASELINES.md has %s\n' "$label" "$tag" "$got" "$want" >&2
+        fail=1
+        return
+    fi
+    printf 'OK    %s  %s\n' "$label" "$got"
 }
 
 load_entry() {
-	entry=$(entry_for_name) || true
-	[ -n "$entry" ] || die "no BASELINES.md entry for NAME=$NAME"
+    entry=$(entry_for_name) || true
+    [ -n "$entry" ] || die "no BASELINES.md entry for NAME=$NAME"
 
-	tag=$(field "$entry" tag)
-	want_curb=$(field "$entry" curbpack)
-	want_ctam=$(field "$entry" ctam)
-	want_product=$(field "$entry" reference-product)
-	[ -n "$tag" ] && [ -n "$want_curb" ] && [ -n "$want_ctam" ] && [ -n "$want_product" ] ||
-		die "BASELINES.md entry for NAME=$NAME is incomplete"
+    tag=$(field "$entry" tag)
+    want_curb=$(field "$entry" curbpack)
+    want_ctam=$(field "$entry" ctam)
+    want_product=$(field "$entry" reference-product)
+
+    [ -n "$tag" ] && [ -n "$want_curb" ] && [ -n "$want_ctam" ] && [ -n "$want_product" ] ||
+        die "BASELINES.md entry for NAME=$NAME is incomplete"
 }
 
 if [ "$mode" = "check" ]; then
-	load_entry
-	fail=0
-	printf 'tag   %s\n' "$tag"
-	check_tag "$ROOT" "Curbpack" "$want_curb"
-	check_tag "$CTAM" "CTAM" "$want_ctam"
-	check_tag "$PRODUCT" "reference-product" "$want_product"
-	[ "$fail" -eq 0 ] || exit 1
-	exit 0
+    load_entry
+    fail=0
+    printf 'tag   %s\n' "$tag"
+    check_tag "$ROOT" "Curbpack" "$want_curb"
+    check_tag "$CTAM" "CTAM" "$want_ctam"
+    check_tag "$PRODUCT" "reference-product" "$want_product"
+    [ "$fail" -eq 0 ] || exit 1
+    exit 0
 fi
 
 if [ "$mode" = "checkout" ]; then
-	load_entry
+    load_entry
+    fail=0
+    printf 'baseline %s\n' "$NAME"
+    printf 'tag      %s\n' "$tag"
 
-	fail=0
-	printf 'baseline %s\n' "$NAME"
-	printf 'tag      %s\n' "$tag"
-	check_tag "$ROOT" "Curbpack" "$want_curb"
-	check_tag "$CTAM" "CTAM" "$want_ctam"
-	check_tag "$PRODUCT" "reference-product" "$want_product"
-	[ "$fail" -eq 0 ] || exit 1
+    check_tag "$ROOT" "Curbpack" "$want_curb"
+    check_tag "$CTAM" "CTAM" "$want_ctam"
+    check_tag "$PRODUCT" "reference-product" "$want_product"
+    [ "$fail" -eq 0 ] || exit 1
 
-	require_clean "$ROOT" "Curbpack"
-	require_clean "$CTAM" "CTAM"
-	require_clean "$PRODUCT" "reference-product"
+    require_clean "$ROOT" "Curbpack"
+    require_clean "$CTAM" "CTAM"
+    require_clean "$PRODUCT" "reference-product"
 
-	git -C "$ROOT" checkout --detach "$want_curb"
-	git -C "$CTAM" checkout --detach "$want_ctam"
-	git -C "$PRODUCT" checkout --detach "$want_product"
+    git -C "$ROOT" checkout --detach "$want_curb"
+    git -C "$CTAM" checkout --detach "$want_ctam"
+    git -C "$PRODUCT" checkout --detach "$want_product"
 
-	printf 'checked out %s (detached HEAD; nothing pushed)\n' "$tag"
-	printf 'Curbpack             %s\n' "$(git -C "$ROOT" rev-parse HEAD)"
-	printf 'CTAM                 %s\n' "$(git -C "$CTAM" rev-parse HEAD)"
-	printf 'reference-product    %s\n' "$(git -C "$PRODUCT" rev-parse HEAD)"
-	exit 0
+    printf 'checked out %s (detached HEAD; nothing pushed)\n' "$tag"
+    printf 'Curbpack             %s\n' "$(git -C "$ROOT" rev-parse HEAD)"
+    printf 'CTAM                 %s\n' "$(git -C "$CTAM" rev-parse HEAD)"
+    printf 'reference-product    %s\n' "$(git -C "$PRODUCT" rev-parse HEAD)"
+    exit 0
 fi
 
-[ "${OVERRIDE_TESTS:-}" = "1" ] || die "refusing to create a baseline: tests are not run here.
-Set OVERRIDE_TESTS=1 only if Curbpack, CTAM, and cyberready-test-product have already been verified.
-Example: make baseline NAME=$NAME OVERRIDE_TESTS=1"
+[ "${CONFIRM_TESTS_PASSED:-}" = "TRUE" ] || die "refusing to create a baseline: tests are not run here.
 
-printf 'WARNING: OVERRIDE_TESTS=1. Tests are not run.\n'
+Set CONFIRM_TESTS_PASSED=TRUE only if Curbpack, CTAM, and cyberready-test-product have already been verified.
+
+Example: make baseline NAME=$NAME CONFIRM_TESTS_PASSED=TRUE"
+
+printf 'WARNING: CONFIRM_TESTS_PASSED=TRUE. Tests are not run.\n'
 printf 'You are asserting that Curbpack, CTAM, and cyberready-test-product have already been verified.\n'
 
 require_clean "$ROOT" "Curbpack"
@@ -174,13 +177,13 @@ printf 'reference-product    %s\n' "$product_sha"
 printf 'tag                  %s\n' "$tag"
 
 if [ -f "$REGISTRY" ] && grep -q "^## $tag\$" "$REGISTRY"; then
-	die "BASELINES.md already has $tag"
+    die "BASELINES.md already has $tag"
 fi
 
 for repo in "$ROOT" "$CTAM" "$PRODUCT"; do
-	if git -C "$repo" show-ref --verify --quiet "refs/tags/$tag"; then
-		die "tag $tag already exists in $repo"
-	fi
+    if git -C "$repo" show-ref --verify --quiet "refs/tags/$tag"; then
+        die "tag $tag already exists in $repo"
+    fi
 done
 
 msg=$(cat <<EOF
@@ -189,7 +192,7 @@ date: $date
 Curbpack: $curb_sha
 CTAM: $ctam_sha
 reference-product: $product_sha
-verification: tests were externally verified; OVERRIDE_TESTS=1
+verification: tests were externally verified; CONFIRM_TESTS_PASSED=TRUE
 EOF
 )
 
@@ -198,28 +201,28 @@ git -C "$CTAM" tag -a "$tag" -m "$msg"
 git -C "$PRODUCT" tag -a "$tag" -m "$msg"
 
 if [ ! -f "$REGISTRY" ]; then
-	cat >"$REGISTRY" <<'EOF'
+    cat >"$REGISTRY" <<'EOF'
 # Baselines
 
 Three-repository tags `baseline/<YYYY-MM-DD>-<NAME>` on Curbpack, CTAM, and cyberready-test-product.
 
 The tagged commits do not include later updates to this registry.
 
-Each create requires `OVERRIDE_TESTS=1`. Tests are not run by the baseline command.
+Each create requires `CONFIRM_TESTS_PASSED=TRUE`. Tests are not run by the baseline command.
 
 Checkout: `make checkout-baseline NAME=<name>` then `make start-verification-run`.
 EOF
 fi
 
 {
-	printf '\n## %s\n\n' "$tag"
-	printf -- '- tag: %s\n' "$tag"
-	printf -- '- date: %s\n' "$date"
-	printf -- '- name: %s\n' "$NAME"
-	printf -- '- curbpack: %s\n' "$curb_sha"
-	printf -- '- ctam: %s\n' "$ctam_sha"
-	printf -- '- reference-product: %s\n' "$product_sha"
-	printf -- '- verification: tests were externally verified; OVERRIDE_TESTS=1\n'
+    printf '\n## %s\n\n' "$tag"
+    printf -- '- tag: %s\n' "$tag"
+    printf -- '- date: %s\n' "$date"
+    printf -- '- name: %s\n' "$NAME"
+    printf -- '- curbpack: %s\n' "$curb_sha"
+    printf -- '- ctam: %s\n' "$ctam_sha"
+    printf -- '- reference-product: %s\n' "$product_sha"
+    printf -- '- verification: tests were externally verified; CONFIRM_TESTS_PASSED=TRUE\n'
 } >>"$REGISTRY"
 
 git -C "$ROOT" add -- BASELINES.md
