@@ -50,6 +50,11 @@ third repository and not a pack-template product.
 `.curbpack.json` on Glucose Log still lists `house-policy` and
 `medtech-iec62304` (CRA via `extends`).
 
+Used by: Curbpack, CTAM
+
+CTAM-owned pack inputs live in the product `external_test/ctam/` tree and
+are defined in CTAM `docs/testing/procedures.md`. Do not add those ids here.
+
 ## Pack input registry
 
 `PF ID | prepared input | source files → destination | testcase(s)`

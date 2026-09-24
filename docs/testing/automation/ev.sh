@@ -386,8 +386,8 @@ ev_005() {
 	# TEST STEPS 4
 	ev_005_report=$(cat .github/curbpack/cache/latest_action_report.md)
 	printf '%s\n' "$ev_005_report"
-	if ! printf '%s\n' "$ev_005_report" | grep -Fq 'Outcome: incomplete' ||
-		! printf '%s\n' "$ev_005_report" | grep -Fq 'Failed / evaluated / skipped: 0 / 14 / 1' ||
+	if ! printf '%s\n' "$ev_005_report" | grep -Fq '**Outcome:** incomplete' ||
+		! printf '%s\n' "$ev_005_report" | grep -Fq '**Failed / evaluated / skipped:** 0 / 14 / 1' ||
 		! printf '%s\n' "$ev_005_report" | grep -Fq 'Evaluation incomplete: some rules were skipped'; then
 		echo "EV-005 TEST STEPS 4"
 		return 1

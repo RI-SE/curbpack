@@ -303,7 +303,7 @@ A pass on this case does not close MUST-23.
 | 1    | `curbpack check --diff --json --as-of "$AS_OF_DATE"`                      | JSON is printed. Ignore `digest`, `timestamp`, and `agent`. Verify the final result fields against the example below. `outcome` is `incomplete`. `skipped_rules` is `1`. If `skipped_rules` is `0`, stop. |
 | 2    | `echo $?`                                                                 | The exit status is `1`.                                                                                                                                                                                   |
 | 3    | `grep -A2 skipped_rule_ids .github/curbpack/cache/latest_evaluation.json` | The printed list contains `HOUSE-SECRET-PATHS`.                                                                                                                                                           |
-| 4    | `cat .github/curbpack/cache/latest_action_report.md`                      | The report contains `Outcome: incomplete` and `Failed / evaluated / skipped: 0 / 14 / 1`. It also contains `Evaluation incomplete: some rules were skipped`.                                              |
+| 4    | `cat .github/curbpack/cache/latest_action_report.md`                      | The report contains `**Outcome:** incomplete` and `**Failed / evaluated / skipped:** 0 / 14 / 1`. It also contains `Evaluation incomplete: some rules were skipped`.                                              |
 
 
 ```json

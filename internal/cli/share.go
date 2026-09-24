@@ -41,11 +41,6 @@ func cmdShare(args []string) error {
 		return err
 	}
 	tty.PrintHeader("curbpack share")
-	if !skipPrepare {
-		if err := release.PrepareScaffolds(root, packIDs); err != nil {
-			return err
-		}
-	}
 	res, verr := validate.Run(validate.Options{RepoRoot: root, PackIDs: packIDs, Quiet: false, AsOf: f.asOf})
 	checkFailed := verr != nil || !res.Passed
 	if verr != nil {

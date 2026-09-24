@@ -38,18 +38,20 @@ The scripts that create those states are stored in the test product under
 
 The files in that directory have distinct purposes:
 
-- `states.list` lists the valid R-state identifiers;
 - `states/<ID>.sh` prepares or verifies one state on
   `"$REFERENCE_PRODUCT_ROOT"`;
 - `setup.sh` applies the selected R-state to that already-checked-out
   frozen revision; it does not select a commit, branch, tag, pin, or other
-  revision;
+  revision. `SUT` defaults to `curbpack`. A missing script file is an error;
 - `mutate_pack.sh` installs one named PF from `pf-fixtures/` onto this
   checkout; it does not prepare an R-state;
 - `reset.sh` is present in the product directory and is not part of the
   normal case sequence; and
 - `states.md` is the product-side script registry. It must not redefine
   what an R-id means; this document remains normative.
+
+CTAM-owned states live in the product `external_test/ctam/` tree and are
+defined in CTAM `docs/testing/procedures.md`. Do not add those ids here.
 
 This document and those files must be updated together. A test case refers to
 an R-id instead of repeating the repository mutation. The case consumes and
@@ -122,21 +124,25 @@ R4 and R5 use this same path and the same `setup.sh` invocation. See
 
 ## Which states exist now
 
-| ID | State |
-|---|---|
-| **R1** | Starting Glucose Log product content — no extra mutation |
-| **R2** | R1 with `SECURITY.md` removed (absent, not empty) |
-| **R3** | R1 with heading `## Classification Rationale` removed |
-| **R4** | demo-app content; token-only honesty-eval `SECURITY.md`; `package.json` identifying `acme-widget` |
-| **R5** | demo-app content; thin rule-satisfying honesty-eval `SECURITY.md`; original demo-app `package.json` |
-| **R6** | R1 plus stale `docs/review-log.md` / `docs/owned-policy.md` committed as Owner dated 2022-01-01 |
-| **R7** | R1 plus `docs/review-log.md` / `docs/owned-policy.md` committed as Wrong Author dated 2026-09-13 |
+| ID | State | Used by |
+|---|---|---|
+| **R1** | Starting Glucose Log product content — no extra mutation | Curbpack, CTAM |
+| **R2** | R1 with `SECURITY.md` removed (absent, not empty) | Curbpack |
+| **R3** | R1 with heading `## Classification Rationale` removed | Curbpack |
+| **R4** | demo-app content; token-only honesty-eval `SECURITY.md`; `package.json` identifying `acme-widget` | Curbpack |
+| **R5** | demo-app content; thin rule-satisfying honesty-eval `SECURITY.md`; original demo-app `package.json` | Curbpack |
+| **R6** | R1 plus stale `docs/review-log.md` / `docs/owned-policy.md` committed as Owner dated 2022-01-01 | Curbpack |
+| **R7** | R1 plus `docs/review-log.md` / `docs/owned-policy.md` committed as Wrong Author dated 2026-09-13 | Curbpack |
 
-`./external_test/curbpack/setup.sh --list` prints R1–R7 from `states.list`.
-Do not reuse an R-id for a different condition. To add a product R-state:
-this document, `states.md`, `states.list`, `states/<ID>.sh`, then the test
-case — together. `setup.sh` rejects unknown or duplicate R-ids. Do not
-create unrecorded mutations during a test run.
+`./external_test/curbpack/setup.sh --list` prints R1–R7 from
+`states/*.sh` in the selected tree. Do not reuse an R-id for a different
+condition. To add a Curbpack R-state: this document, `states.md`,
+`states/<ID>.sh`, then the test case — together. `setup.sh` fails if the
+script file is missing. Do not create unrecorded mutations during a test
+run.
+
+The `Used by` marker names the product that consumes the state. It does
+not list individual stories or testcases.
 
 <a id="r1"></a>
 
@@ -169,6 +175,8 @@ starting ref. Keep that printed text in sync with this section. The
 testcase verifies that this prepared state is present. It does not repeat
 those script checks as a way of constructing R1.
 
+Used by: Curbpack, CTAM
+
 <a id="r2"></a>
 
 ## R2 — missing required file
@@ -182,6 +190,8 @@ remain unchanged.
 section. The testcase verifies that `SECURITY.md` is absent. It does not
 remove the file itself.
 
+Used by: Curbpack
+
 <a id="r3"></a>
 
 ## R3 — missing required section
@@ -194,6 +204,8 @@ content remains unchanged.
 heading is gone, the file remains, `SECURITY.md` remains, and no other path
 changed. Keep that printed text in sync with this section. The testcase
 verifies that the heading is gone. It does not edit the file itself.
+
+Used by: Curbpack
 
 <a id="r4"></a>
 
@@ -220,6 +232,8 @@ demo-app files. Keep that printed text in sync with this section. The
 testcase verifies that this prepared state is present. It does not run
 `git init`, `git add`, or `git commit`.
 
+Used by: Curbpack
+
 <a id="r5"></a>
 
 ## R5 — thin rule-satisfying house-policy tree
@@ -243,6 +257,8 @@ retained demo-app files. Keep that printed text in sync with this section.
 The testcase verifies that this prepared state is present. It does not run
 `git init`, `git add`, or `git commit`.
 
+Used by: Curbpack
+
 <a id="r6"></a>
 
 ## R6 — stale fresh/owned fixture docs
@@ -264,6 +280,8 @@ date. Keep the printed text in sync with this section. The testcase
 verifies the prepared files and clean tree. It does not run `git add` or
 `git commit`.
 
+Used by: Curbpack
+
 <a id="r7"></a>
 
 ## R7 — wrong-author fresh/owned fixture docs
@@ -284,6 +302,8 @@ cd "$REFERENCE_PRODUCT_ROOT"
 date. Keep the printed text in sync with this section. The testcase
 verifies the prepared files and clean tree. It does not run `git add` or
 `git commit`.
+
+Used by: Curbpack
 
 <a id="ec-01"></a>
 

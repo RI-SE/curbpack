@@ -195,15 +195,18 @@ All R-states operate on the same disposable checkout:
 No R-state may create or use a separate repository such as `tmp/R4` or
 `tmp/R5`.
 
-| ID | Condition | Preparation status | Implementation |
-|---|---|---|---|
-| R1 | Starting Glucose Log product content, including `SECURITY.md` and the heading `## Classification Rationale` in `docs/medtech/software_safety_class.md` | SCRIPTED | `./external_test/curbpack/setup.sh R1 --commit`; `states/R1.sh` |
-| R2 | R1 with `SECURITY.md` removed | SCRIPTED | `./external_test/curbpack/setup.sh R2 --commit`; `states/R2.sh` |
-| R3 | R1 with the heading `## Classification Rationale` removed from `docs/medtech/software_safety_class.md` | SCRIPTED | `./external_test/curbpack/setup.sh R3 --commit`; `states/R3.sh` |
-| R4 | demo-app content with token-only honesty-eval `SECURITY.md` and `package.json` identifying `acme-widget` | SCRIPTED | `./external_test/curbpack/setup.sh R4 --commit`; `states/R4.sh` |
-| R5 | demo-app content with thin rule-satisfying honesty-eval `SECURITY.md` and original demo-app `package.json` | SCRIPTED | `./external_test/curbpack/setup.sh R5 --commit`; `states/R5.sh` |
-| R6 | R1 plus stale `docs/review-log.md` and `docs/owned-policy.md` committed as `Owner <owner@example.com>` dated `2022-01-01T00:00:00Z` | SCRIPTED | `./external_test/curbpack/setup.sh R6 --commit`; `states/R6.sh` |
-| R7 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Wrong Author <wrong@example.com>` dated `2026-09-13T12:00:00Z` | SCRIPTED | `./external_test/curbpack/setup.sh R7 --commit`; `states/R7.sh` |
+| ID | Condition | Preparation status | Implementation | Used by |
+|---|---|---|---|---|
+| R1 | Starting Glucose Log product content, including `SECURITY.md` and the heading `## Classification Rationale` in `docs/medtech/software_safety_class.md` | SCRIPTED | `./external_test/curbpack/setup.sh R1 --commit`; `states/R1.sh` | Curbpack, CTAM |
+| R2 | R1 with `SECURITY.md` removed | SCRIPTED | `./external_test/curbpack/setup.sh R2 --commit`; `states/R2.sh` | Curbpack |
+| R3 | R1 with the heading `## Classification Rationale` removed from `docs/medtech/software_safety_class.md` | SCRIPTED | `./external_test/curbpack/setup.sh R3 --commit`; `states/R3.sh` | Curbpack |
+| R4 | demo-app content with token-only honesty-eval `SECURITY.md` and `package.json` identifying `acme-widget` | SCRIPTED | `./external_test/curbpack/setup.sh R4 --commit`; `states/R4.sh` | Curbpack |
+| R5 | demo-app content with thin rule-satisfying honesty-eval `SECURITY.md` and original demo-app `package.json` | SCRIPTED | `./external_test/curbpack/setup.sh R5 --commit`; `states/R5.sh` | Curbpack |
+| R6 | R1 plus stale `docs/review-log.md` and `docs/owned-policy.md` committed as `Owner <owner@example.com>` dated `2022-01-01T00:00:00Z` | SCRIPTED | `./external_test/curbpack/setup.sh R6 --commit`; `states/R6.sh` | Curbpack |
+| R7 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Wrong Author <wrong@example.com>` dated `2026-09-13T12:00:00Z` | SCRIPTED | `./external_test/curbpack/setup.sh R7 --commit`; `states/R7.sh` | Curbpack |
+
+CTAM-owned states live in the product `external_test/ctam/` tree and are
+defined in CTAM `docs/testing/procedures.md`. Do not add those ids here.
 
 After the sourced environment has recreated the frozen checkout,
 `setup.sh R1 --commit` applies R1 to that checkout. `states/R1.sh` prints
@@ -221,11 +224,11 @@ operations.
 
 Details are in [1. Pack inputs](1_pack_template_instantiation.md).
 
-| ID | Condition | Preparation status | Implementation |
-|---|---|---|---|
-| PF-01 | Reference-product pack set (`house-policy`, `cra-baseline`, `medtech-iec62304`) | SCRIPTED | Committed under `external_test/curbpack/packs/`; `CURBPACK_PACKS_DIR` from `verification-run.sh`; restore with `mutate_pack.sh PF-01` |
-| PF-02 | A second representative instantiated product pack | NOT YET SPECIFIED | Reserved. `mutate_pack.sh PF-02` is refused. |
-| PF-03–PF-17 | One exact prepared input each (evaluator packs or Review Pack files) | SCRIPTED | `./external_test/curbpack/mutate_pack.sh PF-xx`. Registry: [1. Pack inputs](1_pack_template_instantiation.md) |
+| ID | Condition | Preparation status | Implementation | Used by |
+|---|---|---|---|---|
+| PF-01 | Reference-product pack set (`house-policy`, `cra-baseline`, `medtech-iec62304`) | SCRIPTED | Committed under `external_test/curbpack/packs/`; `CURBPACK_PACKS_DIR` from `verification-run.sh`; restore with `mutate_pack.sh PF-01` | Curbpack, CTAM |
+| PF-02 | A second representative instantiated product pack | NOT YET SPECIFIED | Reserved. `mutate_pack.sh PF-02` is refused. | Curbpack |
+| PF-03–PF-17 | One exact prepared input each (evaluator packs or Review Pack files) | SCRIPTED | `./external_test/curbpack/mutate_pack.sh PF-xx`. Registry: [1. Pack inputs](1_pack_template_instantiation.md) | Curbpack |
 
 ## Execution configurations
 

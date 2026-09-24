@@ -25,7 +25,7 @@ func commandUsage(cmd string) {
 		fmt.Fprintf(os.Stderr, "  Daily gate pass/fail on this tree — exit code authoritative.\n")
 	case "share":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack share [--bundle] [--reveal] [--packs a,b] [--skip-prepare-release] [--as-of RFC3339|YYYY-MM-DD]\n")
-		fmt.Fprintf(os.Stderr, "  Recipe: prepare draft inputs → check once → context-pack → buyer-questions → publish review-pack.\n")
+		fmt.Fprintf(os.Stderr, "  Recipe: check → context-pack → buyer-questions → prepare-release.\n")
 	case "review":
 		fmt.Fprintf(os.Stderr, "Usage: curbpack review <received-pack> [--json] [--full] [--since <prior-report.json>]\n")
 		fmt.Fprintf(os.Stderr, "       curbpack review --repo [path] [--packs a,b] [--json] [--edges <edges.json>] [--full] [--since <prior-report.json>]\n")
