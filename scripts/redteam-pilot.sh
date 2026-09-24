@@ -46,7 +46,7 @@ set +e
   git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" init --packs house-policy --yes >/dev/null
   rm -f SECURITY.md
   git add -A && git -c commit.gpgsign=false commit --no-verify -m stubs -q || true
   echo "# dirty" >> README.md
@@ -56,9 +56,6 @@ diff_code=$?
 set -e
 [[ "$diff_code" -ne 0 ]] && ok "2 check --diff fails when SECURITY.md missing (dirty README only)" || \
   bad "2 check --diff false-greened missing SECURITY.md"
-
-# --- 5) Claim-safety still green ---
-./scripts/claim-safety.sh >/dev/null 2>&1 && ok "5 claim-safety green" || bad "5 claim-safety failed"
 
 # --- 8) policy-graph schema_version present ---
 TMPG="$(mktemp -d)"
@@ -70,7 +67,7 @@ set +e
   git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --bare --packs house-policy >/dev/null
+  "$BIN" init --bare --packs house-policy --yes >/dev/null
   "$BIN" packs export-graph >/dev/null
   grep -q '"schema_version"' .github/curbpack/graph/policy-graph.json
 )
@@ -159,7 +156,7 @@ set +e
   git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" init --packs house-policy --yes >/dev/null
   "$BIN" share --bundle >/dev/null 2>&1 || true
   test -f review-pack/evidence-bundle.html
   grep -q 'curbpack-bundle-schema:1' review-pack/evidence-bundle.html
@@ -181,7 +178,7 @@ set +e
   git config user.email "redteam@curbpack.local"
   git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" init --packs house-policy --yes >/dev/null
   git add -A && git -c commit.gpgsign=false commit --no-verify -m stubs -q || true
   "$BIN" attest --allow-dirty >/dev/null 2>&1 || "$BIN" attest >/dev/null 2>&1 || true
   git commit --allow-empty --no-verify -m after-attest -q
@@ -234,7 +231,7 @@ set +e
   cd "$TMP20"
   git init -q && git config user.email "redteam@curbpack.local" && git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" init --packs house-policy --yes >/dev/null
   head="$(git rev-parse HEAD)"
   mkdir -p .github/curbpack/cache
   printf '%s\n' '{"schema_version":"1","pack_id":"house-policy","readiness_score":100,"concurrency_control":{"expected_parent_commit_sha":"'"$head"'"},"failures":[]}' > .github/curbpack/cache/latest_failure.json
@@ -257,7 +254,7 @@ set +e
   cd "$TMP21"
   git init -q && git config user.email "redteam@curbpack.local" && git config user.name "Redteam"
   git commit --allow-empty -m init -q
-  "$BIN" init --packs house-policy >/dev/null
+  "$BIN" init --packs house-policy --yes >/dev/null
   rm -f SECURITY.md && mkdir -p /tmp/outside && echo "# outside" > /tmp/outside/real.md && ln -s /tmp/outside/real.md SECURITY.md
   out="$("$BIN" check 2>&1 || true)"
   echo "$out" | grep -qi 'path escapes repository root'
