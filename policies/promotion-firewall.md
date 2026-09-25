@@ -41,4 +41,4 @@ RISE funding acknowledgment lives in [`NOTICE`](../NOTICE). Copyright remains wi
 6. Any co-branded materials must pass `scripts/claim-safety.sh` wording.
 7. Do **not** publish via `docs/gtm-oss/` on product Pages.
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Security model](security-model.md) · [Design partners](design-partners.md) · [CONTRIBUTING](../CONTRIBUTING.md)
+See also: [Intent vs Scope](../vision/docs/intent-vs-scope.md) · [Security model](../vision/docs/security-model.md) · [Design partners](../vision/docs/design-partners.md) · [CONTRIBUTING](../CONTRIBUTING.md)

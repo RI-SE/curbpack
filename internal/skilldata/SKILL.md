@@ -41,7 +41,7 @@ Pathway and research are **Write→Check depth** sidecars — never gate inputs.
 - **`research [--fetch] [--gate-id=…]`** — allowlisted citation packet; **`research --cite-check`** before `confirm-prose`
 - Dual-draft HITL: Option A + Option B + **Recommended: A|B** → human pick → cite-check → `pathway note --set last_draft_pick=…`
 
-See `docs/assistant-loop.md` and `docs/getting-started/pathway.md`.
+See `agents/assistant-loop.md` and `docs/getting-started/pathway.md`.
 
 ## Human-only acts
 
@@ -58,7 +58,7 @@ Gate: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough). **
 - Explaining a `GateFailure` JSON payload from `.github/curbpack/cache/`
 - Safe try without touching product: `curbpack demo`
 - Exporting SARIF / RKG / explain-packet / lay-of-land / **ContextPack** for IDEs, tutors, or humans
-- Canonical assistant contract: `docs/assistant-loop.md` (AGENTS.md / CLAUDE.md / Copilot instructions in this repo)
+- Canonical assistant contract: `agents/assistant-loop.md` (AGENTS.md / CLAUDE.md / Copilot instructions in this repo)
 
 ## Commands
 

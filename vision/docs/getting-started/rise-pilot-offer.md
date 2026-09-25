@@ -13,7 +13,7 @@
 | Review workshop | Human disposition + [decision log](pilot-decision-log.md) |
 | Continuation | Willingness-to-pay or clear stop — recorded on [pilot-scorecard](pilot-scorecard.md) |
 
-Not conformity assessment. Not CE marking. Not a notified-body opinion. RISE is funder / liaison context — not product certifier ([promotion firewall](../promotion-firewall.md)).
+Not conformity assessment. Not CE marking. Not a notified-body opinion. RISE is funder / liaison context — not product certifier ([promotion firewall](../../../policies/promotion-firewall.md)).
 
 Recruit in parallel with stranger validation ([stranger-validation-log](stranger-validation-log.md)); do not wait for six scan runs.
 

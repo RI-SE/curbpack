@@ -1,6 +1,6 @@
 # Voice and terms
 
-**Canonical public language for Curbpack.** Site pages, README, white paper, and stakeholder docs cite this file. Abbreviations: [glossary and audience](glossary-and-audience.md). MoU / deny list: [promotion firewall](promotion-firewall.md). Wording is enforced by [`scripts/claim-safety.sh`](../scripts/claim-safety.sh).
+**Canonical public language for Curbpack.** Site pages, README, white paper, and stakeholder docs cite this file. Abbreviations: [glossary and audience](../vision/docs/glossary-and-audience.md). MoU / deny list: [promotion firewall](promotion-firewall.md). Wording is enforced by [`scripts/claim-safety.sh`](../scripts/claim-safety.sh).
 
 ## Primary sentence
 
@@ -61,11 +61,11 @@ Short verbs: install, init, check, prepare-release, attest, share, pathway statu
 
 ## Writing rules
 
-1. One fence block per page; link to this file or [for-authorities](for-authorities.md) for depth.
+1. One fence block per page; link to this file or [for-authorities](../vision/docs/for-authorities.md) for depth.
 2. Expand abbreviations on first use on every public page (CE, CRA, SBOM, SARIF, …).
 3. No superlatives (“best”, “enterprise-grade”, “revolutionary”).
 4. No unexplained insider tokens on home/builders: TTFV, HPURL, RKG, IR, airlock, covenant, Δ.
-5. Coreward is a one-line optional footer pointer only ([coreward-pointer](coreward-pointer.md)).
+5. Coreward is a one-line optional footer pointer only ([coreward-pointer](../vision/docs/coreward-pointer.md)).
 6. Do not publish `docs/gtm-oss/` on Pages.
 7. Product mark is **Curbpack** (no “+”). Avoid CurbPack camelCase.
 
@@ -98,4 +98,4 @@ A stranger should answer from the public home alone, in under two minutes:
 3. What do I get?
 4. What must I not claim?
 
-See also: [glossary](glossary-and-audience.md) · [intent vs scope](intent-vs-scope.md) · [for-authorities](for-authorities.md) · [migration from Cyberready](migration-cyberready-to-curbpack.md) · [internal launch readiness](internal/launch-readiness.md)
+See also: [glossary](../vision/docs/glossary-and-audience.md) · [intent vs scope](../vision/docs/intent-vs-scope.md) · [for-authorities](../vision/docs/for-authorities.md) · [migration from Cyberready](../vision/docs/migration-cyberready-to-curbpack.md) · [internal launch readiness](../vision/docs/internal/launch-readiness.md)

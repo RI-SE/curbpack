@@ -82,7 +82,7 @@ go build -o curbpack-sock ./examples/mcp/cmd/curbpack-sock
 
 Lay-of-land and explain-packet exports are teaching/share surfaces only — after any proposed fix, still re-run `validate_delta` / `curbpack check`. Neither export greenlights gates.
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Strategy boundary](strategy-boundary.md) · [Stable contracts](stable-contracts.md) (airlock freeze).
+See also: [Intent vs Scope](intent-vs-scope.md) · [Strategy boundary](../../policies/strategy-boundary.md) · [Stable contracts](../../docs/reference/stable-contracts.md) (airlock freeze).
 
 **Marketing unblock:** live Coreward sock dogfood recorded 2026-08-09 (see Last dogfood). Public contracts remain frozen; do not claim Coreward as part of this OSS product face.
 

@@ -219,5 +219,5 @@ Agents print the next `pathway status` line and wait. MCP has **no** confirm/att
 
 ## Related
 
-- [Assistant loop](../assistant-loop.md) · [Cold start](house-policy-cold-start.md) · [60-second paths](60-second-paths.md) · [Buyer evidence](buyer-evidence.md)
-- [Write your own pack](../write-your-own-pack.md) · [Voice and terms](../voice-and-terms.md) · [Stable contracts](../stable-contracts.md)
+- [Assistant loop](../../../agents/assistant-loop.md) · [Cold start](house-policy-cold-start.md) · [60-second paths](60-second-paths.md) · [Buyer evidence](buyer-evidence.md)
+- [Write your own pack](../write-your-own-pack.md) · [Voice and terms](../../../policies/voice-and-terms.md) · [Stable contracts](../../../docs/reference/stable-contracts.md)

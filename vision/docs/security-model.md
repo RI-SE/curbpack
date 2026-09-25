@@ -22,7 +22,7 @@ Pilot-prod (CLI + Action on other git repos) means exactly these three invariant
 - Pin: Action/consumers use `@v0.5.2` (prefer tag + commit SHA).
 - **30-day trust-surface freeze continues from `v0.4.0` through `v0.5.0`** (`v0.5.0` = instrument-panel honesty only; no trust-surface rewrite): Action binary resolve, `SafeJoin` / pack path jail, attest OCC / `--allow-dirty` honesty, claim-safety, and explain-packet airlock — bugfixes only; no new trust-surface features.
 - Stakeholder gap matrix: [github-readiness-gaps.md](internal/github-readiness-gaps.md).
-- **Day-30 freeze review due 2026-09-07** (from `v0.4.0` on 2026-08-08). Until then: **renew freeze**, no `v0.4.4`, no pack unlock. Checklist + outcome log: [launch readiness](internal/launch-readiness.md#freeze-review-day-30-from-v040). Stable nave: [stable contracts](stable-contracts.md).
+- **Day-30 freeze review due 2026-09-07** (from `v0.4.0` on 2026-08-08). Until then: **renew freeze**, no `v0.4.4`, no pack unlock. Checklist + outcome log: [launch readiness](internal/launch-readiness.md#freeze-review-day-30-from-v040). Stable nave: [stable contracts](../../docs/reference/stable-contracts.md).
 
 ## Trust boundaries
 
@@ -97,4 +97,4 @@ Prefer **annotations and SARIF** for full gate detail. Sticky PR comments are tr
 - That gate pass equals legal conformity
 - That unsigned attest is "verified install" or "signed proof"
 
-See also: [For authorities](for-authorities.md) · [Promotion firewall](promotion-firewall.md) · [SECURITY.md](../SECURITY.md) for vulnerability reporting · [Coreward pointer](coreward-pointer.md)
+See also: [For authorities](for-authorities.md) · [Promotion firewall](../../policies/promotion-firewall.md) · [SECURITY.md](../SECURITY.md) for vulnerability reporting · [Coreward pointer](coreward-pointer.md)

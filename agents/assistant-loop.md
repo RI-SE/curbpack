@@ -4,7 +4,7 @@
 
 One contract for Cursor, Copilot, Claude, Codex, Windsurf, Cline, Aider, Continue, and CI-only paths. Assistants **run `curbpack`**, then read ContextPack / IR — they never invent gate results or certification claims. There is **no** chat knowledge base over regulation text (by design).
 
-Pin stays **`@v0.5.2`**. No pack unlock. Optional tutor product: [Coreward pointer](coreward-pointer.md) — not part of activation.
+Pin stays **`@v0.5.2`**. No pack unlock. Optional tutor product: [Coreward pointer](../vision/docs/coreward-pointer.md) — not part of activation.
 
 ## Canonical loop
 
@@ -18,7 +18,7 @@ doc/dep edits → curbpack check (exit code authoritative)
 optional → curbpack drift (multi-signal checklist; exit 0 always)
 ```
 
-Warm-start: `curbpack pathway status` — optional interview that suggests checklists (see [pathway](getting-started/pathway.md)). Agents may `status` / `suggest` / `note` / `check` / `share` only. Human confirms and attest: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough) — never invent pack ids. Dual-draft when writing prose: Option A + Option B + **Recommended: A|B** → human pick → `research --cite-check` (refuses ungrounded Claims) → human `confirm-prose` (also refuses stub-only). Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail). Three ways in (Write / Bring / CI) all end in the same local `check`.
+Warm-start: `curbpack pathway status` — optional interview that suggests checklists (see [pathway](../vision/docs/getting-started/pathway.md)). Agents may `status` / `suggest` / `note` / `check` / `share` only. Human confirms and attest: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough) — never invent pack ids. Dual-draft when writing prose: Option A + Option B + **Recommended: A|B** → human pick → `research --cite-check` (refuses ungrounded Claims) → human `confirm-prose` (also refuses stub-only). Prefer ContextPack `pathway` section over spelunking seed JSON. Illegal confirm order → usage exit 2. Seed is not a gate input. Research packet is informational only (never check pass/fail). Three ways in (Write / Bring / CI) all end in the same local `check`.
 
 ## Memory map (on-disk IR — not embeddings)
 
@@ -35,7 +35,7 @@ Warm-start: `curbpack pathway status` — optional interview that suggests check
 | buyer-questions / lay-of-land | export outputs | Human share |
 | HPURL pointer | `.github/curbpack/evidence/hpurl-pointer.json` | Post-attest client-side verify via `proof/index.html` |
 | hooks + Action | `init` / `@v0.5.2` | Force re-check loop |
-| drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](getting-started/evidence-drift.md)) |
+| drift report | `curbpack drift [--json]` | Evidence checklist (exit 0; see [evidence-drift](../vision/docs/getting-started/evidence-drift.md)) |
 | evidence bundle | `share --bundle` | `review-pack/evidence-bundle.html` offline handoff |
 | review (received pack) | `curbpack review <pack-dir>` | Offline document triage — not a product verdict |
 | review (in-repo) | `curbpack review --repo [path] [--packs a,b] [--json] [--full] [--since] [--edges]` | Governed-doc triage via ProsePaths; cold default `house-policy`; write-free; `--edges` ingest-only with `--json` |
@@ -50,7 +50,7 @@ Reviewers: `curbpack review <received-pack>` on a share. Maintainers screening t
 
 ## Pack chooser (cold start)
 
-Prefer `curbpack pathway status` / `pathway suggest` for enum-driven warm start — see [pathway](getting-started/pathway.md). Manual override:
+Prefer `curbpack pathway status` / `pathway suggest` for enum-driven warm start — see [pathway](../vision/docs/getting-started/pathway.md). Manual override:
 
 | Situation | Pack |
 |-----------|------|
@@ -58,7 +58,7 @@ Prefer `curbpack pathway status` / `pathway suggest` for enum-driven warm start 
 | CRA-style annex drafts (opt-in) | `cra-baseline` via `--packs` |
 | Medtech IEC 62304-style (opt-in) | `medtech-iec62304` via `--packs` |
 
-Catalog is frozen to those three ids until freeze review. See [Intent vs Scope](intent-vs-scope.md). Auditors: [for-authorities](for-authorities.md).
+Catalog is frozen to those three ids until freeze review. See [Intent vs Scope](../vision/docs/intent-vs-scope.md). Auditors: [for-authorities](../vision/docs/for-authorities.md).
 
 ## Use with Cursor / Copilot / Claude / others
 
@@ -86,6 +86,6 @@ Regulation prose and raw source stay off the default tutor path. Dual-rep IR + C
 
 ## Related
 
-- [60-second paths](getting-started/60-second-paths.md) · [Buyer evidence](getting-started/buyer-evidence.md) · [Pathway](getting-started/pathway.md) · [Daily loop](getting-started/daily-loop.md)
-- [Stable contracts](stable-contracts.md) · [For authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md)
-- [Shared Frame](shared-frame.md) · [Shared Frame annexes](shared-frame-annexes.md) — curbpack ⇄ Mapper seam (pin `a36aeef`)
+- [60-second paths](../vision/docs/getting-started/60-second-paths.md) · [Buyer evidence](../vision/docs/getting-started/buyer-evidence.md) · [Pathway](../vision/docs/getting-started/pathway.md) · [Daily loop](../vision/docs/getting-started/daily-loop.md)
+- [Stable contracts](../docs/reference/stable-contracts.md) · [For authorities](../vision/docs/for-authorities.md) · [Intent vs Scope](../vision/docs/intent-vs-scope.md)
+- [Shared Frame](../vision/docs/shared-frame.md) · [Shared Frame annexes](../vision/docs/shared-frame-annexes.md) — curbpack ⇄ Mapper seam (pin `a36aeef`)

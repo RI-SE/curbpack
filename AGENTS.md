@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Design intent: [docs/software-design-document.md](docs/software-design-document.md). Canonical loop: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
+Design intent: [docs/software-design-document.md](docs/software-design-document.md). Canonical loop: [agents/assistant-loop.md](agents/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
 
 When creating, completing, or reviewing EV suite cases, follow [`.cursor/skills/ev-test-case/SKILL.md`](.cursor/skills/ev-test-case/SKILL.md).
 
@@ -27,7 +27,7 @@ curbpack pathway status    # human next ask by default (--technical for phase pa
 # optional research sidecar (never gates check): curbpack research [--fetch] [--gate-id=…]
 ```
 
-Pathway/research/dual-draft flows remain valid for warm-start users — see [assistant-loop.md](docs/assistant-loop.md). When both apply, **scan before init/check**.
+Pathway/research/dual-draft flows remain valid for warm-start users — see [assistant-loop.md](agents/assistant-loop.md). When both apply, **scan before init/check**.
 
 ## Human-only acts
 
@@ -54,7 +54,7 @@ trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
 6. **Pathway:** call `curbpack pathway status|suggest|note` only — never forge `pathway-seed.json` or invent pack ids. Stop for human `confirm-*` and `attest`. Prefer ContextPack pathway next + RKG after confirm-packs; post-attest next is local proof verify (human). MCP never confirms/attests. Seed is not a gate input.
 7. **Research (optional sidecar):** `curbpack research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every factual assertion needs a repo artifact (path, config, test name, commit, metric, claim id) or an allowlisted cite (`[^src-N]` / `<!-- cite:src-N -->` / allowlisted URL). Heal stubs are not grounding. `confirm-prose` is AND: every displayed prose path must be independent (mixed stub+real still refuses). Run `curbpack research --cite-check <draft.md>` before asking a human for `confirm-prose` (confirm-prose also refuse-ungrounded). On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
-9. **Claim discipline:** an artifact must never assert something the tool caused — see [docs/claim-discipline.md](docs/claim-discipline.md).
+9. **Claim discipline:** an artifact must never assert something the tool caused — see [policies/claim-discipline.md](policies/claim-discipline.md).
 10. **Repository policy:** **RI-SE/curbpack** is the sole public source of truth. Never open full-tree parity/mirror/sync PRs. Never copy private-fork maintainer docs onto RI-SE. **afelin/curbpack** is downstream catch-up only (`git fetch corp-origin && git merge corp-origin/main`). See [docs/internal/fork-policy.md](docs/internal/fork-policy.md).
 11. **Concurrent agents:** use one independent clone per writer, one `<agent>/<story>` branch, and WIP=1 per agent. Reserve non-overlapping repository-relative paths in the operator registry, run its advisory preflight before editing, and stage named paths only (`git add -- <paths>`; never `git add .` or `git add -A`). Preflight catches honest mistakes; clone isolation and GitHub rules are the enforced boundaries.
 

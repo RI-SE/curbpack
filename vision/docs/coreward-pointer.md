@@ -27,4 +27,4 @@ Public architecture brief on sibling-repo GitHub Pages. Do **not** link a privat
 3. Do not co-brand Coreward into Curbpack hero or activation paths.
 4. Integrator protocol detail stays in [coreward-bridge.md](coreward-bridge.md) (integrators only).
 
-See also: [glossary and audience](glossary-and-audience.md) · [for authorities](for-authorities.md) · [strategy boundary](strategy-boundary.md)
+See also: [glossary and audience](glossary-and-audience.md) · [for authorities](for-authorities.md) · [strategy boundary](../../policies/strategy-boundary.md)

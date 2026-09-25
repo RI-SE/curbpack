@@ -143,7 +143,7 @@ Demoted from the v8 review. **Aslak's side unless marked otherwise. None of it b
 
 | # | Item | Severity | Cost |
 |---|---|---|---|
-| C1 | **Contract gaps in `docs/stable-contracts.md`.** `reference:claim:<rule-id>` is emitted at `review.go:675` but missing from the `Finding.ID` shapes row (`:105`) — and it is exactly the shape the join needs. `subject_commit` / `subject_state_hash` are emitted on every record and appear nowhere in the table, while `subject_commit` *is* the export's `repository.commit` | **High** — an uncontracted field an external consumer depends on can be renamed by someone acting in good faith | minutes |
+| C1 | **Contract gaps in `../../docs/reference/stable-contracts.md`.** `reference:claim:<rule-id>` is emitted at `review.go:675` but missing from the `Finding.ID` shapes row (`:105`) — and it is exactly the shape the join needs. `subject_commit` / `subject_state_hash` are emitted on every record and appear nowhere in the table, while `subject_commit` *is* the export's `repository.commit` | **High** — an uncontracted field an external consumer depends on can be renamed by someone acting in good faith | minutes |
 | C2 | **Stale method cross-links.** The Method row (`:100`) and the See-also line (`:112`) point at `review-method-1.1.1.md` while code is 1.2.0. `TestMethodVersionMatchesClassifier` guards the method document's existence and content, not the cross-links — a small blind spot in an otherwise well-defended file | Low | minutes |
 | C3 | **Claim-id namespace ceiling** (`review.go:141`). See Shared Frame §8 decision 0a. **Highest severity because it is silent**, and a `refclass` bump gets more expensive with every accepted mapping in the field | **High** | ~1 day after 0a |
 | C4 | **Silent rule override in `Compose`.** Later packs win on rule id (`byRule[r.ID] = r`) with nothing recording that an override happened. Half-addressed — `context-pack.json` carries `pack_versions`, so the *set* of packs is visible; **per-rule provenance (`rule_id → delivering pack@version`) is still missing.** Raised by Daniel in an earlier round and correct then | Medium — the third thing the freshness axis would like and does not have | ~1 day |
@@ -162,7 +162,7 @@ Demoted from the v8 review. **Aslak's side unless marked otherwise. None of it b
 | `Answered`/`Evidence`/`VerifiedAt` shipped; `AnswersSuppressed` forced when `SkippedRules > 0` | **VERIFIED** — `buyer_questions.go:25–27, 63, 89–95, 166` |
 | `SubjectCommit` / `SubjectStateHash` shipped | **VERIFIED** — `review.go:109–112`; method 1.2.0 §2 |
 | `reClaimID` hard-codes `HOUSE\|CRA\|MEDTECH`; non-matching prefixes yield no finding and no dropped entry | **VERIFIED** — `review.go:141, 670`; `references.go:36` |
-| `reference:claim` absent from the shapes row; `subject_*` absent from the table; Method links stale at 1.1.1 | **VERIFIED** — `docs/stable-contracts.md:100, 105, 112` |
+| `reference:claim` absent from the shapes row; `subject_*` absent from the table; Method links stale at 1.1.1 | **VERIFIED** — `stable-contracts.md:100, 105, 112` |
 | `reference:claim` findings carry `StateConfirmed` | **VERIFIED** — `review.go:679–683` |
 | `edges` reserved, expires at product release v0.6.0 | **VERIFIED** — `docs/internal/edges-reservation-expiry.md` |
 | Nine check kinds, no domain branches | **VERIFIED** — `internal/packs/packs.go:22` |

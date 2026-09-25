@@ -39,4 +39,4 @@ Use the full [artifact trust table](../../site/for-reviewers/) before equating a
 
 Pair supplier evidence with your own SCA, secret scanning, and risk review. Curbpack prepares structural evidence for human judgment — not a GRC program or CVE product.
 
-See also: [Voice and terms](../voice-and-terms.md) · [For authorities](../for-authorities.md) · [Glossary](../glossary-and-audience.md) · [Supplier share handoff](share-handoff.md) (what builders run)
+See also: [Voice and terms](../../../policies/voice-and-terms.md) · [For authorities](../for-authorities.md) · [Glossary](../glossary-and-audience.md) · [Supplier share handoff](share-handoff.md) (what builders run)

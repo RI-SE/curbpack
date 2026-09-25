@@ -30,7 +30,7 @@ settings snapshots and freeze decisions are historical, not current verification
 | Historical Discussion #4 | **Stale path** — 2026-08-10 pin/body/Tier-3 notes remain historical only while Discussions stay OFF. |
 | Tier-3 human pass (v0.5.4) | **HUMAN pending** — fresh curl install → doctor → demo → `scan` on a permitted git repo; assert `curbpack version` **0.5.4**, Exit 0, Scan complete, porcelain empty; ignore `Next (optional):`. Record via first_run_feedback / tester_report (not Discussion #4). Runbook: [a2-a3-human-runbook.md](../getting-started/a2-a3-human-runbook.md). Prior passes on older pins are not A3 closure. |
 | Invite wave | **BLOCKED** — wait for A2 ∧ A3. Kit ready: [rise-tryout.md](../getting-started/rise-tryout.md) + empty [stranger-validation-log.md](../getting-started/stranger-validation-log.md) (do not invent rows). Human kit: [a2-a3-human-runbook.md](../getting-started/a2-a3-human-runbook.md). |
-| Understandability (cold-reader four-question bar) | **Done** (2026-08-10) — public rewrite shipped; `scripts/claim-safety.sh` OK; home/builders free of TTFV/HPURL/RKG/IR/airlock/covenant/Δ; sample one-pager shows before/after findings; voice: [voice and terms](voice-and-terms.md) |
+| Understandability (cold-reader four-question bar) | **Done** (2026-08-10) — public rewrite shipped; `scripts/claim-safety.sh` OK; home/builders free of TTFV/HPURL/RKG/IR/airlock/covenant/Δ; sample one-pager shows before/after findings; voice: [voice and terms](../../../policies/voice-and-terms.md) |
 
 Gap matrix: [github-readiness-gaps.md](github-readiness-gaps.md).
 

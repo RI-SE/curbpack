@@ -28,4 +28,4 @@ Full policy: [fork policy](../internal/fork-policy.md).
 
 `./scripts/curb-sync.sh` and `mirror-drift` removed when RI-SE became canonical. Do not maintain a parallel afelin fork for public releases.
 
-RISE is a **funder / applied-research supporter**, not a product certifier — [promotion firewall](../promotion-firewall.md).
+RISE is a **funder / applied-research supporter**, not a product certifier — [promotion firewall](../../../policies/promotion-firewall.md).

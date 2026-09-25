@@ -55,7 +55,7 @@ The Go module path remains `github.com/afelin/curbpack` until wave-2 migration. 
 
 **Curb outlines** are the pathway warm-start entry (Write → Check). Bring / CI skip outlines. Then packs → `curb check` → review pack for a human.
 
-Primary sentence: see [voice and terms](voice-and-terms.md).
+Primary sentence: see [voice and terms](../../policies/voice-and-terms.md).
 
 ## Claim fence
 

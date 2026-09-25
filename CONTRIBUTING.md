@@ -27,7 +27,7 @@ Prefer the **First move stuck** issue template: path A/B/C + the step that faile
 
 ## Claim safety
 
-Do not introduce certification / CE / notified-body language. Run `scripts/claim-safety.sh` before opening a PR that touches docs or CLI strings. Public co-promotion rules: [`docs/promotion-firewall.md`](docs/promotion-firewall.md) (RISE = funder, not certifier).
+Do not introduce certification / CE / notified-body language. Run `scripts/claim-safety.sh` before opening a PR that touches docs or CLI strings. Public co-promotion rules: [`policies/promotion-firewall.md`](policies/promotion-firewall.md) (RISE = funder, not certifier).
 
 ## Trust surface
 
@@ -35,10 +35,10 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 ## Strategy boundary (contributors)
 
-- Do **not** port v3.33 EE / R&D surfaces into OSS PRs — v3.33 is internal north star only ([strategy boundary](docs/strategy-boundary.md)).
+- Do **not** port v3.33 EE / R&D surfaces into OSS PRs — v3.33 is internal north star only ([strategy boundary](policies/strategy-boundary.md)).
 - **Curbpack never generates the documentation it then checks.**
 - PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or **new pack ids** without freeze unlock will be **rejected**. Pack allowlist is enforced by `scripts/redteam-pilot.sh`.
-- Sock ops + GateFailure / explain-packet shapes are frozen in [stable contracts](docs/stable-contracts.md); breaking them requires a major pin bump.
+- Sock ops + GateFailure / explain-packet shapes are frozen in [stable contracts](docs/reference/stable-contracts.md); breaking them requires a major pin bump.
 
 ### Packs vs check kinds (governance)
 

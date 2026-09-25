@@ -111,7 +111,7 @@ Honesty + SME utility (trust-surface freeze **continues** from v0.4.0 — no Act
 - **Version integrity** — single `internal/buildinfo.Version`; SBOM tool component matches pin
 - **Pack display honesty** — CRA/medtech informational names + `assurance_class: structural_draft` (ids unchanged)
 - **Buyer questions** — `export --buyer-questions` Markdown/JSON checklist for human review
-- **RISE-neutral publish** — NOTICE funder/non-certify line + `docs/promotion-firewall.md`
+- **RISE-neutral publish** — NOTICE funder/non-certify line + `policies/promotion-firewall.md`
 - **Pack catalog freeze** — redteam allowlist (three pack ids only)
 
 ## v0.4.1

@@ -4,7 +4,7 @@
 
 ## Reservation
 
-[`docs/stable-contracts.md`](../stable-contracts.md) reserves an optional Report `edges` array. Schema is **frozen** in Shared Frame §6 TO (0b **DECIDED**). Curbpack **ingest** is implemented: `review --repo --json --edges <file>` (no synthesis). CTAM owns export. Do not invent §6 TO fields.
+[`../../../docs/reference/stable-contracts.md`](../../../docs/reference/stable-contracts.md) reserves an optional Report `edges` array. Schema is **frozen** in Shared Frame §6 TO (0b **DECIDED**). Curbpack **ingest** is implemented: `review --repo --json --edges <file>` (no synthesis). CTAM owns export. Do not invent §6 TO fields.
 
 ## Expiry
 

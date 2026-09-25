@@ -9,7 +9,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](docs/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
+[Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](policies/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
 
 ## Friendly pre-beta: start testing here
 
@@ -123,9 +123,9 @@ Pin **`@v0.5.2`**. Drop-in example: [`examples/workflows/curbpack-check.yml`](ex
 
 Binary size (~10 MB, Go CGO=0 `-s -w`), doctor soft-exit tips, and Zig non-goals live here—not on the first screen.
 
-Curbpack prepares structural evidence for product repositories. It does not replace software composition analysis or secret scanning; use dedicated tools such as Trivy, OSV, or Gitleaks for those checks. See the [strategy boundary](docs/strategy-boundary.md).
+Curbpack prepares structural evidence for product repositories. It does not replace software composition analysis or secret scanning; use dedicated tools such as Trivy, OSV, or Gitleaks for those checks. See the [strategy boundary](policies/strategy-boundary.md).
 
-Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Research briefs never gate pass/fail. Assistants: [docs/assistant-loop.md](docs/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
+Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Research briefs never gate pass/fail. Assistants: [agents/assistant-loop.md](agents/assistant-loop.md) · thin MCP [examples/mcp/](examples/mcp/).
 
 | Command | Purpose |
 |---------|---------|
@@ -147,6 +147,6 @@ Confirms are human-only (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone
 | `init --packs a,b` | Override default house-policy packs |
 | `init --workflow` | Opt-in: write `.github/workflows/curbpack.yml` if missing |
 
-Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Security model](docs/security-model.md) · [Write your own pack](docs/write-your-own-pack.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [Adopters](ADOPTERS.md) · [Shared Frame](docs/shared-frame.md) (CTAM Mapper seam; residual claim-linking is Mapper-owned) · [Claim discipline](docs/claim-discipline.md)
+Deep docs: [Intent vs Scope](docs/intent-vs-scope.md) · [Security model](docs/security-model.md) · [Write your own pack](docs/write-your-own-pack.md) · [Migration](docs/migration-cyberready-to-curbpack.md) · [Adopters](ADOPTERS.md) · [Shared Frame](docs/shared-frame.md) (CTAM Mapper seam; residual claim-linking is Mapper-owned) · [Claim discipline](policies/claim-discipline.md)
 
-Claim-safe wording enforced by `scripts/claim-safety.sh`. Preferred public language: [docs/voice-and-terms.md](docs/voice-and-terms.md).
+Claim-safe wording enforced by `scripts/claim-safety.sh`. Preferred public language: [policies/voice-and-terms.md](policies/voice-and-terms.md).

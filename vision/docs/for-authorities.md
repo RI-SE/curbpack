@@ -4,7 +4,7 @@ Curbpack prepares **structural evidence** for **human review**; it does not perf
 
 Sign-off oriented brief for NCSC/EU-style authorities, internal auditors, and CISOs who need to know what Curbpack is — without reading integrator notes or any optional sibling product.
 
-Voice: [voice and terms](voice-and-terms.md). Abbreviations: [glossary and audience](glossary-and-audience.md) (CE, CRA, SBOM, SARIF, GRC, notified body, conformity assessment, RISE, NCSC).
+Voice: [voice and terms](../../policies/voice-and-terms.md). Abbreviations: [glossary and audience](glossary-and-audience.md) (CE, CRA, SBOM, SARIF, GRC, notified body, conformity assessment, RISE, NCSC).
 
 ## What Curbpack is
 
@@ -45,7 +45,7 @@ Gate pass means: local pack rules did not fail on the files present — a human 
 
 Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims.
 
-Full MoU / co-promotion boundary: [promotion firewall](promotion-firewall.md).
+Full MoU / co-promotion boundary: [promotion firewall](../../policies/promotion-firewall.md).
 
 ## Offline
 
@@ -73,7 +73,7 @@ CI enforces wording via `scripts/claim-safety.sh`. This page is **not** certific
 ## Pack chooser (what suppliers should run)
 
 **Scan** on a cold repo defaults to **`cra-baseline`** (Art 14 clock + CRA-shaped gates, read-only).  
-**Init / check** cold start defaults to **`house-policy`**. CRA-style (`cra-baseline`) and medtech (`medtech-iec62304`) for init are also available via `--packs` — catalog frozen until freeze review. Assistants and auditors should ask which pack ids were composed (see ContextPack `pack_ids` / GateFailure `pack_id`). Details: [assistant-loop pack chooser](assistant-loop.md#pack-chooser-cold-start).
+**Init / check** cold start defaults to **`house-policy`**. CRA-style (`cra-baseline`) and medtech (`medtech-iec62304`) for init are also available via `--packs` — catalog frozen until freeze review. Assistants and auditors should ask which pack ids were composed (see ContextPack `pack_ids` / GateFailure `pack_id`). Details: [assistant-loop pack chooser](../../agents/assistant-loop.md#pack-chooser-cold-start).
 
 CRA Art 14 reporting (11 September 2026) is not the same clock as vulnerability-handling / public SPOC. Opt-in `cra-baseline` may require an in-repo dated rehearsal file — not a live SRP or EU Login check. AI Act Art 50 marking grace is **not** blanket (only systems already on the market before 2 August 2026). Counsel note: [Art 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md).
 

@@ -12,4 +12,4 @@ Two offline records of the same repository produce NEW / CLEARED / PERSISTING bu
 
 **Do not** re-add “substantial-modification screening” to deferred / non-goal lists.
 
-See also: [`docs/stable-contracts.md`](../stable-contracts.md) review report contract; method docs under `docs/method/`.
+See also: [`../../../docs/reference/stable-contracts.md`](../../../docs/reference/stable-contracts.md) review report contract; method docs under `docs/method/`.

@@ -6,7 +6,7 @@ Curbpack checks a software repository against local rule packs and produces file
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Canonical wording: `docs/voice-and-terms.md`.
+Canonical wording: `../../policies/voice-and-terms.md`.
 Public site: https://ri-se.github.io/curbpack/
 Pin Action/examples at `@v0.5.2`.
 
@@ -363,8 +363,8 @@ Repository scripts currently check some documentation wording automatically.
 * Information for authorities: `docs/for-authorities.md`
 * Security model: `docs/security-model.md`
 * Installation and commands: repository README
-* Wording rules: `docs/voice-and-terms.md`
-* CLI workflow: `docs/assistant-loop.md`
+* Wording rules: `../../policies/voice-and-terms.md`
+* CLI workflow: `agents/assistant-loop.md`
 
 ---
 

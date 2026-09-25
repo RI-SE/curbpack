@@ -14,7 +14,7 @@ Curbpack is a **standalone** public OSS product. Strangers must be able to adopt
 - Evidence habit for product repos — not CVE management, not a security program.
 - Pin stays `@v0.5.2` unless a contract-breaking change forces a later patch.
 - Pack catalog frozen to three ids until freeze review + partner habit proof unlock.
-- Authorities / CISO brief: [for-authorities](for-authorities.md). Glossary: [glossary-and-audience](glossary-and-audience.md).
+- Authorities / CISO brief: [for-authorities](../vision/docs/for-authorities.md). Glossary: [glossary-and-audience](../vision/docs/glossary-and-audience.md).
 
 ## Explicit non-goals for OSS PRs
 
@@ -26,6 +26,6 @@ PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or new pack ids with
 
 Pair Curbpack with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth. Watchlist∩SBOM is look-here only — not a vulnerability product.
 
-Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](internal/github-readiness-gaps.md).
+Stakeholder demand vs stack evidence (Done / Polish / Ops / Reject): [GitHub-readiness gap matrix](../vision/docs/internal/github-readiness-gaps.md).
 
-See also: [Intent vs Scope](intent-vs-scope.md) · [Stable contracts](stable-contracts.md) · [Security model](security-model.md) · [Launch readiness](internal/launch-readiness.md) · [Coreward pointer](coreward-pointer.md) (integrators only)
+See also: [Intent vs Scope](../vision/docs/intent-vs-scope.md) · [Stable contracts](../docs/reference/stable-contracts.md) · [Security model](../vision/docs/security-model.md) · [Launch readiness](../vision/docs/internal/launch-readiness.md) · [Coreward pointer](../vision/docs/coreward-pointer.md) (integrators only)

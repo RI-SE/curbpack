@@ -1,14 +1,14 @@
 # GitHub-readiness gap matrix
 
-Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are real; Reject rows match [strategy boundary](strategy-boundary.md). This is not a second strategy narrative.
+Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are real; Reject rows match [strategy boundary](../../../policies/strategy-boundary.md). This is not a second strategy narrative.
 
 **Stack reuse:** `claim-safety.sh`, `redteam-pilot.sh`, `exportx` airlock, packs RKG + `RuleTouchesDiff`, `attest.ComputeStateHash` tests, install/doctor/demo — not parallel systems.
 
 | Stakeholder demand | Status | Evidence |
 |--------------------|--------|----------|
-| Claim-safe public language (no CE / notified-body theater) | Done | [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) · [promotion firewall](promotion-firewall.md) · [voice and terms](voice-and-terms.md) |
-| Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](../voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
-| Institute / agency endorsement refuse (never claim `RISE-approved` / `FRA-approved` / `NCSC-approved` / `agency-endorsed`) | Done | DENY list in `claim-safety.sh` · [promotion firewall](promotion-firewall.md) |
+| Claim-safe public language (no CE / notified-body theater) | Done | [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) · [promotion firewall](../../../policies/promotion-firewall.md) · [voice and terms](../../../policies/voice-and-terms.md) |
+| Understandability (cold-reader four-question bar) | Done | Home alone answers: what is it / what do I run / what do I get / what must I not claim — [voice and terms](../../../policies/voice-and-terms.md) · [launch readiness](launch-readiness.md); claim-safety green; home/builders jargon spot-check clean |
+| Institute / agency endorsement refuse (never claim `RISE-approved` / `FRA-approved` / `NCSC-approved` / `agency-endorsed`) | Done | DENY list in `claim-safety.sh` · [promotion firewall](../../../policies/promotion-firewall.md) |
 | Adversarial false-green scoreboard | Done | [`scripts/redteam-pilot.sh`](../scripts/redteam-pilot.sh) cases 1, 2, 5, 8, 10–12, 16–21 · [security model](security-model.md) |
 | Forged attest note not verified | Done | `internal/attest` · redteam case 19 |
 | Tampered cache fake green | Done | `internal/exportx` context-pack re-validate · redteam case 20 |
@@ -23,17 +23,17 @@ Stakeholder asks mapped to the **current** Curbpack stack. Evidence paths are re
 | SARIF `ruleId` = `gate_id` | Done | `internal/contract` · redteam case 7 |
 | CycloneDX / watchlist∩SBOM informational join | Done | `export --watchlist-join` · `internal/exportx` |
 | Optional SLSA sidecar / provenance theater | Ops | Launch checklist only — [launch readiness](launch-readiness.md); no L3/4 claim |
-| Sock ops (`validate_delta`, …) frozen nave | Done | [stable contracts](stable-contracts.md) · redteam case 12 |
-| CapBAC / C2PA / SLSA L3–4 product claims | Reject | Out of public Curbpack · [strategy boundary](strategy-boundary.md) |
+| Sock ops (`validate_delta`, …) frozen nave | Done | [stable contracts](../../../docs/reference/stable-contracts.md) · redteam case 12 |
+| CapBAC / C2PA / SLSA L3–4 product claims | Reject | Out of public Curbpack · [strategy boundary](../../../policies/strategy-boundary.md) |
 | `check --diff` as release gate | Reject (honesty) | Porcelain rule-skip only — see [Δ honesty](#diff-vs-validate_delta); use `validate` / sock `validate_delta` |
-| Sock `validate_delta` = full quiet validate | Done | [stable contracts](stable-contracts.md) · [Coreward bridge](coreward-bridge.md) |
+| Sock `validate_delta` = full quiet validate | Done | [stable contracts](../../../docs/reference/stable-contracts.md) · [Coreward bridge](coreward-bridge.md) |
 | RKG export + digest | Done | `packs export-graph` · `internal/packs/graph.go` |
 | Capsule `state_hash` twin-run / no wall-clock | Done | `TestReproducibleStateHash` · `TestCapsuleHashReproducibleNoWallClock` |
 | Sub-MB Zig binary | Reject | Go stdlib CGO=0 `-s -w` ~10 MB accepted |
-| OPA / Rego evaluator | Reject | [strategy boundary](strategy-boundary.md) · CONTRIBUTING |
+| OPA / Rego evaluator | Reject | [strategy boundary](../../../policies/strategy-boundary.md) · CONTRIBUTING |
 | `events.ndjson` BLAKE3 event SoR | Reject | Not in public stack |
 | Full local AST / SQLite regulation graph | Reject | RKG JSON export only |
-| Legal-metrology / CE / never claim RISE-certified product | Reject | [promotion firewall](promotion-firewall.md) |
+| Legal-metrology / CE / never claim RISE-certified product | Reject | [promotion firewall](../../../policies/promotion-firewall.md) |
 | Enforce-before-execute | Reject | Private Coreward only |
 | Doctor soft-exit (non-blocking tips) | Done (accepted) | `curbpack doctor` — soft diagnostics; not a hard gate redesign |
 | First green &lt;10 min (TTFV) | Polish | `install.sh` → `doctor` → `demo` · [60-second paths](getting-started/60-second-paths.md) · pin `@v0.5.2` |
@@ -53,4 +53,4 @@ Do **not** retarget sock `validate_delta` to `--diff`. Changing `RuleTouchesDiff
 
 Sub-MB Zig binary · OPA evaluator · `events.ndjson` SoR · full local AST/SQLite graph · legal-metrology / CE / never claim RISE-certified product · enforce-before-execute · Action cache that skips sha256 verify (consumer `hashFiles` key).
 
-See also: [strategy boundary](../strategy-boundary.md) · [launch readiness](launch-readiness.md) · [security model](../security-model.md)
+See also: [strategy boundary](../../../policies/strategy-boundary.md) · [launch readiness](launch-readiness.md) · [security model](../security-model.md)

@@ -54,4 +54,4 @@ CRA legal text: [EUR-Lex CELEX:32024R2847](https://eur-lex.europa.eu/legal-conte
 2. Use this table to see which ENISA criteria have **structural_draft** file gates vs explicit **gap** rows.
 3. For gaps, add human evidence outside Curbpack — do not invent ENISA endorsement or CRA conformity claims.
 
-See also: [for-authorities.md](../for-authorities.md) · [promotion-firewall.md](../promotion-firewall.md) · [voice-and-terms.md](../voice-and-terms.md).
+See also: [for-authorities.md](../for-authorities.md) · [promotion-firewall.md](../../../policies/promotion-firewall.md) · [voice-and-terms.md](../../../policies/voice-and-terms.md).

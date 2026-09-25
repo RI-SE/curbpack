@@ -27,7 +27,7 @@ It identifies the source build, sandbox exercise, results and feedback path.
 | Establish the daily operating loop | [Daily loop](getting-started/daily-loop.md) |
 | Write or update a rule pack | [Write your own pack](write-your-own-pack.md) and [packs update](packs-update.md) |
 | Distinguish Article 14 reporting from later handling | [Article 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md) |
-| Configure assistants and integrations | [Assistant loop](assistant-loop.md) |
+| Configure assistants and integrations | [Assistant loop](../../agents/assistant-loop.md) |
 | Prepare a design-partner engagement | [Design partners](design-partners.md) |
 | Harden repository operations | [Repository operations](getting-started/repo-ops-hardening.md) |
 | Independent Curbpack verification | Start a run: [test suites README](testing/test_suites/README.md). Folder: [testing](testing/README.md). Approach: [strategy](testing/strategy.md). |
@@ -36,15 +36,15 @@ It identifies the source build, sandbox exercise, results and feedback path.
 
 | Subject | Source |
 |---------|--------|
-| Product purpose and limits | [Intent vs Scope](intent-vs-scope.md) and [strategy boundary](strategy-boundary.md) |
+| Product purpose and limits | [Intent vs Scope](intent-vs-scope.md) and [strategy boundary](../../policies/strategy-boundary.md) |
 | Trust model and required checks | [Security model](security-model.md) |
-| Public terminology and claims | [Voice and terms](voice-and-terms.md), [claim discipline](claim-discipline.md), and [promotion firewall](promotion-firewall.md) |
+| Public terminology and claims | [Voice and terms](../../policies/voice-and-terms.md), [claim discipline](../../policies/claim-discipline.md), and [promotion firewall](../../policies/promotion-firewall.md) |
 | Architecture | [Software design document](software-design-document.md) |
-| Stable interfaces | [Stable contracts](stable-contracts.md) and [review method 1.3.0](method/review-method-1.3.0.md) |
+| Stable interfaces | [Stable contracts](../../docs/reference/stable-contracts.md) and [review method 1.3.0](method/review-method-1.3.0.md) |
 | CTAM Mapper integration | [Shared Frame](shared-frame.md), pinned to `a36aeef` |
 | Optional Coreward integration | [Coreward pointer](coreward-pointer.md) and [Coreward bridge](coreward-bridge.md) |
 
-RISE is a funder, not a certifier. Use the [promotion firewall](promotion-firewall.md) and [NOTICE](../NOTICE) for liaison or co-promotion work.
+RISE is a funder, not a certifier. Use the [promotion firewall](../../policies/promotion-firewall.md) and [NOTICE](../NOTICE) for liaison or co-promotion work.
 
 ## Consult reference material
 

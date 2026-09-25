@@ -38,8 +38,8 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 - Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
 - White paper: https://ri-se.github.io/curbpack/whitepaper/
-- Voice: https://github.com/RI-SE/curbpack/blob/main/docs/voice-and-terms.md
-- Assistant contract: https://github.com/RI-SE/curbpack/blob/main/docs/assistant-loop.md
+- Voice: https://github.com/RI-SE/curbpack/blob/main/policies/voice-and-terms.md
+- Assistant contract: https://github.com/RI-SE/curbpack/blob/main/agents/assistant-loop.md
 - Red: `curbpack check --heal` then `curbpack ask … --propose`, then re-check — never invent green
 - Green handoff: `curbpack share` (check → context-pack → buyer-questions → prepare-release)
 - `curb` = short alias for `curbpack` (same binary) — only after install

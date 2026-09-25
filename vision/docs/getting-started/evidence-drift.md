@@ -75,4 +75,4 @@ Emitted only when `.well-known/security.txt` exists. Never a check pass/fail.
 
 After `curbpack check`, when a bind exists behind HEAD, one dim line may appear (same cap as accumulation whispers).
 
-See also: [Stable contracts](../stable-contracts.md) · [Daily loop](daily-loop.md) · [Buyer evidence](buyer-evidence.md)
+See also: [Stable contracts](../../../docs/reference/stable-contracts.md) · [Daily loop](daily-loop.md) · [Buyer evidence](buyer-evidence.md)

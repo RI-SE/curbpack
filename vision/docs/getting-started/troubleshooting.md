@@ -108,7 +108,7 @@ Pass criteria after fix: `curbpack scan` in any git repo exits 0, prints Art 14 
 
 ## `sock` on Windows
 
-Expected failure: optional MCP sidecar Unix IPC lives under [`examples/mcp/`](../../examples/mcp/) — not in the main binary. Golden path does not use it. See [stable-contracts](../stable-contracts.md).
+Expected failure: optional MCP sidecar Unix IPC lives under [`examples/mcp/`](../../examples/mcp/) — not in the main binary. Golden path does not use it. See [stable-contracts](../../../docs/reference/stable-contracts.md).
 
 ---
 

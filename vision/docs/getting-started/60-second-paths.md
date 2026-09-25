@@ -69,7 +69,7 @@ curbpack check --form-hints            # propose-only snippets
 # optional: curbpack check --form-hints --apply-stub   # write missing stubs only
 ```
 
-After documentation or dependency edits, an agent must re-run `check`. On red, use heal and propose-only guidance, then re-check. On green, use `share` or `export --context-pack`. The [assistant loop](../assistant-loop.md) defines the complete contract for Cursor, Copilot, Claude, and other assistants.
+After documentation or dependency edits, an agent must re-run `check`. On red, use heal and propose-only guidance, then re-check. On green, use `share` or `export --context-pack`. The [assistant loop](../../../agents/assistant-loop.md) defines the complete contract for Cursor, Copilot, Claude, and other assistants.
 
 ## CI-only
 

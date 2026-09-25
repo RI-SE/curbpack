@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Canonical abbreviations and “who reads what.” Expand each term on first use in new prose; this page is the shared dictionary. Public sentence voice and preferred terms: [voice and terms](voice-and-terms.md).
+Canonical abbreviations and “who reads what.” Expand each term on first use in new prose; this page is the shared dictionary. Public sentence voice and preferred terms: [voice and terms](../../policies/voice-and-terms.md).
 
 ## Glossary
 
@@ -46,7 +46,7 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 | **Assurance class** | Pack metadata (e.g. `structural_draft`) stating how strong a claim the pack may imply. Import refuses claim-adjacent theater. |
 | **Air-gap** | Offline operation: embedded packs + `packs import`; no network policy brain required. |
 | **Fail-open (sock)** | If the optional socket client is absent, Curbpack continues; tutors must not block promote solely on missing sock. |
-| **RISE** | Research Institutes of Sweden — development supporter / funder acknowledgment in [`NOTICE`](../NOTICE). **Funder, not certifier** — see [promotion firewall](promotion-firewall.md). |
+| **RISE** | Research Institutes of Sweden — development supporter / funder acknowledgment in [`NOTICE`](../NOTICE). **Funder, not certifier** — see [promotion firewall](../../policies/promotion-firewall.md). |
 | **NCSC / FRA** | National cybersecurity authorities (examples: UK NCSC; Sweden FRA in awareness contexts). Awareness links only — never “agency-approved” product claims. |
 | **Coreward** | Optional separate private product. Adopters do not need it. Wording: [coreward-pointer.md](coreward-pointer.md). |
 
@@ -56,10 +56,10 @@ Canonical abbreviations and “who reads what.” Expand each term on first use 
 |----------|----------------|------------|------|-----------------|
 | **Supplier & builder** | Install, init, and check—green gates in your repo in under ten minutes. | [60-second paths](getting-started/60-second-paths.md) · [share handoff](getting-started/share-handoff.md) · [site builders](../site/for-builders/) | [Daily loop](getting-started/daily-loop.md) · README commands | Integrator sock protocol |
 | **Buyer / reviewer** | Ask the supplier for a buyer one-pager and, if needed, the review pack—then use the trust table. | [Buyer evidence](getting-started/buyer-evidence.md) · [for-reviewers](../site/for-reviewers/) | Sample [one-pager](../site/samples/onepager.html) | Pack authoring, sock bridge |
-| **CISO** | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
-| **Authority / auditor** (NCSC/EU-style, internal audit) | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](promotion-firewall.md) · white paper | Coreward bridge, GTM folders |
-| **Integrator / tutor author** | Optional socket and explain-packets for integrators—Curbpack stays self-sustaining without them. | [Stable contracts](stable-contracts.md) · [coreward-bridge](coreward-bridge.md) | [coreward-pointer](coreward-pointer.md) (aside wording) | Buyer one-pager as “certificate” |
+| **CISO** | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [Intent vs Scope](intent-vs-scope.md) | [Security model](security-model.md) · [strategy boundary](../../policies/strategy-boundary.md) | [coreward-bridge](coreward-bridge.md) |
+| **Authority / auditor** (NCSC/EU-style, internal audit) | Curbpack prepares structural evidence for human review; it does not perform conformity assessment. | [for-authorities](for-authorities.md) · [site Authorities](../site/for-authorities/) | [Promotion firewall](../../policies/promotion-firewall.md) · white paper | Coreward bridge, GTM folders |
+| **Integrator / tutor author** | Optional socket and explain-packets for integrators—Curbpack stays self-sustaining without them. | [Stable contracts](../../docs/reference/stable-contracts.md) · [coreward-bridge](coreward-bridge.md) | [coreward-pointer](coreward-pointer.md) (aside wording) | Buyer one-pager as “certificate” |
 
 Non-technical readers: stay on [for-authorities](for-authorities.md) and the [site home](../site/) — those pages expand terms and avoid integrator jargon.
 
-See also: [Voice and terms](voice-and-terms.md) · [Docs index](README.md) · [Intent vs Scope](intent-vs-scope.md) · [for-authorities](for-authorities.md)
+See also: [Voice and terms](../../policies/voice-and-terms.md) · [Docs index](README.md) · [Intent vs Scope](intent-vs-scope.md) · [for-authorities](for-authorities.md)

@@ -18,7 +18,7 @@
 | `scripts/time-to-green-windows.ps1` | Yes, unreferenced | **Deleted** |
 | `scripts/dogfood-explain-recheck.sh` | Yes, prose-only ref | **Deleted** |
 
-**Residual sock prose:** site pages and whitepaper may still mention historical `curbpack sock`; canonical path is CLI + `examples/mcp/cmd/curbpack-sock`. `coreward-bridge.md` and `stable-contracts.md` updated in Wave A follow-up.
+**Residual sock prose:** site pages and whitepaper may still mention historical `curbpack sock`; canonical path is CLI + `examples/mcp/cmd/curbpack-sock`. `coreward-bridge.md` and `../../../docs/reference/stable-contracts.md` updated in Wave A follow-up.
 
 ---
 

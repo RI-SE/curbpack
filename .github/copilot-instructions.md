@@ -7,4 +7,4 @@ Local pack gates. Humans review. Not conformity assessment.
 - On green: optional `curbpack export --context-pack` (one washed artifact for PR/review).
 - Prefer ContextPack / GateFailure IR over inventing findings. Pin Action `@v0.5.2`.
 - Repository policy: product PRs target RI-SE/curbpack only — see `docs/internal/fork-policy.md`.
-- Full contract: docs/assistant-loop.md
+- Full contract: agents/assistant-loop.md

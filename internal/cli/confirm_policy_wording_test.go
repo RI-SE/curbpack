@@ -30,7 +30,7 @@ func TestConfirmPolicyWording_NoTTYAloneAuth(t *testing.T) {
 		"AGENTS.md",
 		"CLAUDE.md",
 		"README.md",
-		"docs/assistant-loop.md",
+		"agents/assistant-loop.md",
 		"docs/getting-started/pathway.md",
 		"internal/skilldata/SKILL.md",
 	}
