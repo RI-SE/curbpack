@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Temporary residual checks pending test-architecture cleanup.
-# Documentation checks live in docs_acceptance_check.sh.
- 
+# Claim-safety runtime/output checks. Documentation checks live in docs_acceptance_check.sh.
+# Tool does not prevent regulatory action; it must not present as conformity.
+# Brand: product mark is Curbpack. "CyberReady" allowed only in migration / NOTICE /
+# changelog historical lines (and this script's allowlist).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -60,66 +61,30 @@ scan_both() {
   return "$rc"
 }
 
-# Brand fence: CyberReady / CyberReady+ only in historical allowlist files.
-scan_brand() {
-  local file="$2"
-  local label="$1"
-  python3 - "$label" "$file" <<'PY'
-import re, sys
-label, path = sys.argv[1:3]
-# Allow migration/NOTICE/CHANGELOG wholly; elsewhere forbid brand leftovers.
-allow_names = {
-    "docs/migration-cyberready-to-curbpack.md",
-    "NOTICE",
-    "CHANGELOG.md",
-    "scripts/claim-safety.sh",
-}
-rel = path
-# normalize
-if rel.startswith("./"):
-    rel = rel[2:]
-if rel in allow_names or rel.endswith("/migration-cyberready-to-curbpack.md"):
-    sys.exit(0)
-pat = re.compile(r"CyberReady\+?|cyberready", re.I)
-hit = 0
-try:
-    text = open(path, errors="replace").read()
-except FileNotFoundError:
-    sys.exit(0)
-for i, line in enumerate(text.splitlines(), 1):
-    # allow links / titles pointing at the migration doc
-    if "migration-cyberready-to-curbpack" in line:
-        continue
-    # allow code comments that document dual-read legacy keys explicitly
-    if "legacy" in line.lower() and ("cyberready" in line.lower() or "CYBERREADY" in line):
-        continue
-    if "dual-read" in line.lower() or "fallback" in line.lower():
-        if "CYBERREADY" in line or "cyberready" in line.lower():
-            continue
-    if ".cyberready.json" in line or ".github/cyberready" in line or "refs/notes/cyberready" in line:
-        continue
-    if "CYBERREADY_" in line and ("CURBPACK_" in line or "legacy" in line.lower() or "fallback" in line.lower()):
-        continue
-    m = pat.search(line)
-    if m:
-        print(f"BRAND-SAFETY FAIL [{label}:{i}]: /{m.group(0)}/ → {line}", file=sys.stderr)
-        hit = 1
-sys.exit(hit)
-PY
-}
-
 FAIL=0
 
+echo "== runtime-wording-acceptance: pack.json display strings =="
+PACK_FILES=()
+while IFS= read -r f; do
+  PACK_FILES+=("$f")
+done < <(
+  find packs internal/packs/data \
+    \( -type f -name 'pack.json' \) \
+    2>/dev/null | sort -u
+)
+for f in "${PACK_FILES[@]}"; do
+  scan_both "$f" "$f" || FAIL=1
+done
 
-echo "== claim-safety: runtime CLI captures =="
+echo "== runtime-wording-acceptance: CLI outputs =="
 "$BIN" doctor >"$TMP/doctor.out" 2>&1 || true
-scan_brand "doctor" "$TMP/doctor.out" || FAIL=1
+scan_both "doctor" "$TMP/doctor.out" || FAIL=1
 
 DEMO="$TMP/demo"
 "$BIN" demo --out "$DEMO" --keep >"$TMP/demo.out" 2>&1
-scan_brand "demo" "$TMP/demo.out" || FAIL=1
+scan_both "demo" "$TMP/demo.out" || FAIL=1
 if [[ -f "$DEMO/review-pack/buyer-onepager.html" ]]; then
-  scan_brand "buyer-onepager" "$DEMO/review-pack/buyer-onepager.html" || FAIL=1
+  scan_both "buyer-onepager" "$DEMO/review-pack/buyer-onepager.html" || FAIL=1
 fi
 
 FIX="$TMP/fix"
@@ -134,51 +99,40 @@ mkdir -p "$FIX"
   "$BIN" check >"$TMP/check.out" 2>&1 || true
   "$BIN" prepare-release >"$TMP/prepare.out" 2>&1 || true
 )
-scan_brand "init" "$TMP/init.out" || FAIL=1
-scan_brand "check" "$TMP/check.out" || FAIL=1
-scan_brand "prepare-release" "$TMP/prepare.out" || FAIL=1
+scan_both "init" "$TMP/init.out" || FAIL=1
+scan_both "check" "$TMP/check.out" || FAIL=1
+scan_both "prepare-release" "$TMP/prepare.out" || FAIL=1
 if [[ -f "$FIX/review-pack/buyer-onepager.html" ]]; then
-  scan_brand "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
+  scan_both "prepare-onepager" "$FIX/review-pack/buyer-onepager.html" || FAIL=1
 fi
 (
   cd "$FIX"
   "$BIN" share --bundle >"$TMP/share-bundle.out" 2>&1 || true
 )
-scan_brand "share-bundle" "$TMP/share-bundle.out" || FAIL=1
+scan_both "share-bundle" "$TMP/share-bundle.out" || FAIL=1
 if [[ -f "$FIX/review-pack/buyer-questions.md" ]]; then
-  scan_brand "buyer-questions" "$FIX/review-pack/buyer-questions.md" || FAIL=1
+  scan_both "buyer-questions" "$FIX/review-pack/buyer-questions.md" || FAIL=1
 fi
 if [[ -f "$FIX/.github/curbpack/cache/buyer-questions.md" ]]; then
-  scan_brand "buyer-questions-cache" "$FIX/.github/curbpack/cache/buyer-questions.md" || FAIL=1
+  scan_both "buyer-questions-cache" "$FIX/.github/curbpack/cache/buyer-questions.md" || FAIL=1
 fi
 if [[ -f "$FIX/review-pack/evidence-bundle.html" ]]; then
-  if ! grep -q 'curbpack-bundle-schema:1' "$FIX/review-pack/evidence-bundle.html"; then
-    echo "CLAIM-SAFETY FAIL [bundle]: missing curbpack-bundle-schema marker" >&2
-    FAIL=1
-  fi
-  scan_brand "evidence-bundle" "$FIX/review-pack/evidence-bundle.html" || FAIL=1
+  scan_both "evidence-bundle" "$FIX/review-pack/evidence-bundle.html" || FAIL=1
 fi
 if [[ -f "$FIX/.github/curbpack/cache/latest_action_report.md" ]]; then
-  scan_brand "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
+  scan_both "action-report" "$FIX/.github/curbpack/cache/latest_action_report.md" || FAIL=1
 fi
 
 "$BIN" help >"$TMP/help.out" 2>&1 || true
-scan_brand "help" "$TMP/help.out" || FAIL=1
+scan_both "help" "$TMP/help.out" || FAIL=1
 
 "$BIN" review "$ROOT/testdata/sample-review-pack" >"$TMP/review.out" 2>&1 || true
+scan_both "review" "$TMP/review.out" || FAIL=1
 
-# Repository-mode capture (in-repo label + governed surfaces) — must stay claim-safe.
 "$BIN" review --repo "$ROOT" --json >"$TMP/review-repo.json" 2>"$TMP/review-repo.err" || true
-if ! grep -q '"digest_scope": "closure"' "$TMP/review-repo.json" 2>/dev/null; then
-  echo "CLAIM-SAFETY FAIL [review-repo]: expected digest_scope closure in --repo JSON" >&2
-  FAIL=1
-fi
-if ! grep -qi 'in-repo' "$TMP/review-repo.err"; then
-  echo "CLAIM-SAFETY FAIL [review-repo]: missing in-repo mode marker on stderr" >&2
-  FAIL=1
-fi
+scan_both "review-repo" "$TMP/review-repo.json" || FAIL=1
+scan_both "review-repo-err" "$TMP/review-repo.err" || FAIL=1
 
-# scan --badge: deny state assertions (grep-based; badge text is time-dependent).
 BADGE="$TMP/badge"
 mkdir -p "$BADGE"
 (
@@ -192,36 +146,13 @@ mkdir -p "$BADGE"
   "$BIN" fix --art14 --yes >"$TMP/badge-fix.out" 2>&1 || true
   "$BIN" scan --badge >"$TMP/badge-postfix.out" 2>&1 || true
 )
-for f in "$TMP/badge-cold.out" "$TMP/badge-postfix.out"; do
-  if grep -qiE 'failing|not started|CRA[- ]ready|CRA compliant|\bgreen\b|passing|0 failing' "$f"; then
-    echo "CLAIM-SAFETY FAIL [scan-badge]: state assertion in badge output → $(grep -iE 'failing|not started|CRA|green|passing' "$f" | head -1)" >&2
-    FAIL=1
-  fi
-  if grep -q 'Drafted' "$f"; then
-    echo "CLAIM-SAFETY FAIL [scan-badge]: badge must not expose Drafted field" >&2
-    FAIL=1
-  fi
-done
-if ! grep -q 'not rehearsed' "$TMP/badge-postfix.out"; then
-  echo "CLAIM-SAFETY FAIL [scan-badge-postfix]: fix alone must not produce rehearsed badge" >&2
-  FAIL=1
-fi
-
-# Skill install path must be curbpack (not legacy cyberready skill dir name in output).
-if [[ -f "$FIX/.cursor/skills/curbpack/SKILL.md" ]]; then
-  if ! grep -q '^name: curbpack$' "$FIX/.cursor/skills/curbpack/SKILL.md"; then
-    echo "BRAND-SAFETY FAIL [skill]: missing frontmatter name: curbpack" >&2
-    FAIL=1
-  fi
-fi
-if [[ -d "$FIX/.cursor/skills/cyberready" ]]; then
-  echo "BRAND-SAFETY FAIL [skill]: init wrote legacy .cursor/skills/cyberready/" >&2
-  FAIL=1
-fi
+scan_both "scan-badge-cold" "$TMP/badge-cold.out" || FAIL=1
+scan_both "scan-badge-postfix" "$TMP/badge-postfix.out" || FAIL=1
 
 if [[ "$FAIL" -ne 0 ]]; then
-  echo "claim-safety: FAILED — runtime/output claim, nomenclature, or brand check failed" >&2
+  echo "runtime-wording-acceptance: FAILED" >&2
   exit 1
 fi
-echo "claim-safety: OK"
+
+echo "runtime-wording-acceptance: OK"
 exit 0

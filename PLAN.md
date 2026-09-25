@@ -1,271 +1,810 @@
-# Test-case automation
+# PLAN.md — docs2 canonical documentation rebuild
 
-Encode RP, PV, FS, CL, DT, OP, NB, RL, RB, and UV as shell functions that a human can also run. EV and PK are finished written references, not work items. Archived prior plan: `.superpowers/sdd/plans/2026-09-14-remaining-test-suite-work.md`.
+## Goal
 
-Resume after context loss: open this file, take the first heading that is not `FINISHED`, in the order below. Update this file as soon as a block’s state changes.
+Build a new `docs2/` beside the existing documentation without changing `docs/` or `site/`.
 
-## How to execute a block
+The work is deliberately split into two phases:
 
-Read `.cursor/skills/ev-test-case/SKILL.md` and the named suite file. Style reference: EV-001–EV-005 (written procedure). Automation SoR is still the suite markdown: transcribe SETUP then TEST STEPS. Do not improve, generalise, or reinterpret.
+1. **ASSEMBLE** — collect the right existing material into the right `docs2/` files. Preserve substance; do not polish.
+2. **REWRITE** — rewrite each `docs2/` document for its audience, verify facts, review it as a cold reader, update it, then integrate the module.
 
-Do not invent requirements, expected results, procedures, R-states, JSON, mappings, grep deny-lists, or builder/reviewer behaviour. A catalogue row marked **To be specified** becomes a SKIP stub that prints that case’s “Not specified yet. Do not run.” text. Never write SETUP/TEST STEPS for it.
+`docs2/` is a candidate canonical documentation set. Existing `docs/` and `site/` are source material, not templates.
 
-Do not change Curbpack implementation. Do not add TEARDOWN. Do not construct R-state in TEST STEPS. Do not create `tmp/R*`. Do not parse suite markdown at runtime. Do not push, open PRs, or touch remotes.
+---
 
-**Preserve manual semantics 1:1.** Same setup, stimulus, observations, and expected results as the written case. A function that omits a written step, adds a step, merges steps, reorders steps, or PASSes after skipping a human observation is wrong.
+## Execution contract
 
-For every automated testcase, a maintainer must be able to open the suite markdown and the function side by side and see a direct correspondence:
+Run this plan autonomously.
 
-- manual SETUP step N → one automated command (or the case’s own stop/SKIP at that step)
-- manual TEST STEP N → one automated command
-- manual expected/observed result for that step → one automated assertion for that step
+For every task/module:
 
-Label the function with the same section and step numbers as the markdown (`# SETUP 1`, `# SETUP 2`, `# TEST STEPS 1`, …). Do not merge, reorder, hide, or generalise steps in ways that break this traceability. One written step may use several shell lines only when the written Action is already several commands; they stay under that step’s label. Do not collapse SETUP 1–4 into a helper, and do not assert several steps’ expected results in one check.
+- Use a **fresh sub-agent / fresh context**.
+- Give the sub-agent only this task plus the explicitly listed source files. Do not preload the whole repository.
+- The agent may read, edit, test, and commit locally without asking.
+- Do **not** modify `docs/`, `site/`, implementation code, remotes, releases, tags, or branches.
+- Do **not** push, create PRs, release, or perform destructive Git operations.
+- If a fact is unclear, inspect only the exact code/CLI files listed for that document. Do not infer behavior from old prose.
+- Stop only when a required fact is contradictory or cannot be resolved from the repository.
 
-**No hidden test-case abstractions.** Shared code is only dispatch + PASS/FAIL/SKIP recording + summary. Duplicate SETUP lines across functions when the written cases duplicate them. Forbidden: `prepare_r1`, `run_check_json`, `assert_fig1`, markdown parsers, and any helper that wraps `curbpack check` / `setup.sh` / `mutate_pack.sh` / Fig. JSON. Named strings already in a case (for example RP-001’s CE marking / certification / notified-body) may be checked as written; do not extend the list.
+### Per-document loop in Phase 2
 
-Human / assignment / builder steps: do not invent an oracle. If the case’s own stop condition is missing input, SKIP with that stop text. If a remaining step is human interpretation or builder handoff, SKIP the whole case (do not PASS the mechanical prefix). Unspecified = SKIP. Operator typo / unknown ID = runner error, not SKIP.
+Each document uses exactly this loop, with an **independent reviewer context**:
 
-POSIX `sh`. Use another language only if a written step cannot be expressed in shell; state the reason in the block. `jq` is allowed only to read JSON fields the case already names.
+1. **GENERATE** — writer sub-agent rewrites the target document from its assembled `docs2/` draft and listed sources.
+2. **REVIEW** — a different fresh reviewer sub-agent receives the generated document plus the listed authoritative sources. It must not see the writer's reasoning. It reports only actionable defects.
+3. **UPDATE** — writer/updater sub-agent fixes only the review findings.
+4. **VERIFY** — fresh lightweight verification of links, commands, terminology, and scope.
 
-Implementation (lower-cost model): `TODO` → `IMPL-START` → do the block → local checks → `IMPL-END`. Stop.
+Do not let the writer self-approve its own document. Do not merge generate and review into one pass.
 
-Review (one pass, stronger model): `IMPL-END` → `REVIEW-START` → check 1:1 step mapping (markdown step N ↔ labelled command + assertion), transcription fidelity, SKIP vs invent, helper creep, skill reject-list, runner continue/summary → write findings in the same block → `REVIEW-END`.
+### Commit rule
 
-Fix (at most one pass, lower-cost model): if findings exist, `REVIEW-END` → `FIX-START` → fix only those findings → verify → `FINISHED`. If none, `REVIEW-END` → `FINISHED`.
+- Phase 1: one local commit per module after all module files are assembled.
+- Phase 2: one local commit per module after all module documents have completed generate → review → update → verify.
+- Final integration: one final local commit.
 
-Local checks: `sh -n` on touched shell files; skill reject-list; every catalogue ID has exactly one function; unspecified functions return SKIP; executable functions label SETUP/TEST STEPS with the markdown step numbers; if `tmp/verification-run.sh` exists, run the block’s selector; after doc edits, `curbpack check` (exit code authoritative). Do not invent a verification baseline.
+Use deterministic commit messages with the module id:
 
-Write set for a block: that block’s named files, this `PLAN.md`. Stage named paths only. Suite blocks do not edit `run.sh`.
+- Phase 1: `docs2: assemble A1`, `docs2: assemble A2`, ...
+- Phase 2: `docs2: rewrite R1`, `docs2: rewrite R2`, ...
+- Final integration: `docs2: final integration`
 
-Call shape (copy per function; do not source a hidden library of case steps):
+After a successful module commit, update that module in this plan to `Status: DONE` and `Review: PASS`. While work is active use `IN PROGRESS`. Never mark `DONE` before the module integration review passes and the local commit succeeds.
 
-```sh
-# return 0 PASS, 1 FAIL, 2 SKIP
-fs_001() {
-	# SETUP 1  — same Action as FS.md SETUP step 1
-	# assert    — same Expected result as that step; else echo FS-001 SETUP 1; return 1
-	# SETUP 2  — …
-	# TEST STEPS 1 — same Action as FS.md TEST STEPS step 1
-	# assert       — same Expected result as that step; else echo FS-001 TEST STEPS 1; return 1
-}
+---
 
-fs_002() {
-	echo "FS-002: Not specified yet. Do not run this case."
-	return 2
-}
+## Module integration review contract
+
+Every module-level integration review must be a **fresh reviewer context** and produce exactly one of these outcomes:
+
+- `PASS` — all module acceptance criteria are satisfied; or
+- `FINDINGS` — a short numbered list of actionable defects, each naming the affected target file.
+
+Do not create separate review documents. Apply `FINDINGS`, rerun the module integration review, and continue only when it returns `PASS`. Record only the resulting `Review: PASS` in this plan. This keeps review state deterministic without adding review-artifact clutter to `docs2/`.
+
+---
+
+## Target structure
+
+```text
+docs2/
+  README.md
+
+  getting-started/
+    install.md
+    first-check.md
+
+  guides/
+    developers.md
+    ci-cd.md
+    reviewers.md
+    receiving.md
+    authorities.md
+
+  concepts/
+    how-it-works.md
+    packs.md
+    evidence.md
+    scan-and-check.md
+
+  reference/
+    cli.md
+    configuration.md
+    outputs.md
+
+  development/
+    architecture.md
+    testing.md
+    contributing.md
 ```
 
-Runner selectors from the Curbpack root, after a verification run exists:
+---
 
-```sh
-sh docs/testing/automation/run.sh FS-001   # one case
-sh docs/testing/automation/run.sh FS       # one suite
-sh docs/testing/automation/run.sh all      # RP PV FS CL DT OP NB RL RB UV
-```
+# PHASE 1 — ASSEMBLE
 
-A human equivalent: `make start-verification-run` once, then `sh docs/testing/automation/run.sh FS-001`, or `source` the suite file and call `fs_001`. Manual markdown steps and the function must remain the same procedure.
+Purpose: create a complete but deliberately rough `docs2/` skeleton by moving/copying the useful substance from existing material into the correct target files.
 
-Continue after FAIL/SKIP. Print a final count of PASS / FAIL / SKIP. Non-zero runner exit if any FAIL or if the selector is unknown / suite file missing. SKIP-only is exit 0.
+Rules for this phase:
+
+- Use one fresh sub-agent per **target document**, even when commit grouping is per module. Do not give one assembly agent all sources for a large module.
+- Each assembled target starts with a temporary HTML comment `<!-- ASSEMBLY SOURCES: ... -->` listing only the source files actually used. Remove this comment in Phase 2 after verification.
+- Prefer extraction/reorganisation over rewriting.
+- Do not optimise prose.
+- Do not invent explanations or terminology.
+- Remove obvious project history, pilot notes, release-process chatter, marketing copy, duplicated disclaimers, and obsolete structure.
+- If content is uncertain, add a short HTML comment such as `<!-- VERIFY: ... -->`; do not guess.
+- The goal is **right material in right place**, not readability.
+
+## Module A1 — Entry + getting started
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/README.md`
+- `docs2/getting-started/install.md`
+- `docs2/getting-started/first-check.md`
+
+Sources:
+
+- `README.md`
+- `docs/README.md`
+- `docs/intent-vs-scope.md`
+- `docs/getting-started/install.md`
+- `docs/getting-started/troubleshooting.md`
+- `docs/getting-started/60-second-paths.md`
+- `docs/getting-started/daily-loop.md`
+- `docs/assistant-loop.md`
+- `site/index.html`
+- `site/for-builders/index.html`
+
+Assembly constraints:
+
+- Do not preserve the existing "ladder" structure as an information architecture.
+- Do not mix GitHub Actions into CLI installation.
+- Do not carry over `Pin sentence`, `install pin`, internal release-gate prose, pilot history, or repeated legal disclaimers.
+- Primary install flow should have material for: install CLI → `doctor` → `demo` → next step.
+- First-check material should distinguish read-only observation from gate evaluation without polishing the explanation yet.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A2 — Developer use + CI/CD
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/guides/developers.md`
+- `docs2/guides/ci-cd.md`
+
+Sources:
+
+- `README.md`
+- `docs/getting-started/60-second-paths.md`
+- `docs/getting-started/daily-loop.md`
+- `docs/assistant-loop.md`
+- `docs/strategy-boundary.md`
+- `examples/workflows/curbpack-check.yml`
+- `action.yml`
+
+Assembly constraints:
+
+- `developers.md` means a software engineer **using Curbpack on a product/repository**, not a Curbpack maintainer.
+- `ci-cd.md` is a separate use case from local installation.
+- Generic CLI-in-pipeline is the base model.
+- GitHub Actions is one concrete integration example, not the definition of CI/CD.
+- Do not invent GitLab/Jenkins/Azure-specific integrations. Generic CLI examples may mention them as environments only if no product-specific behavior is claimed.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A3 — Reviewer + receiving
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/guides/reviewers.md`
+- `docs2/guides/receiving.md`
+
+Sources:
+
+- `site/for-reviewers/index.html`
+- `site/receiving-submissions/index.html`
+- `docs/getting-started/buyer-evidence.md`
+- `docs/for-authorities.md`
+- `docs/stable-contracts.md`
+
+Assembly constraints:
+
+- Separate "how to interpret evidence" from "how to receive/triage a supplier submission".
+- Keep trust-boundary substance.
+- Remove marketing CTA text and duplicated artifact descriptions.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A4 — Authorities / auditors / CISOs
+
+Status: `DONE`  
+Review: `PASS`
+
+Target:
+
+- `docs2/guides/authorities.md`
+
+Sources:
+
+- `docs/for-authorities.md`
+- `site/for-authorities/index.html`
+- `docs/intent-vs-scope.md`
+- `docs/security-model.md`
+
+Assembly constraints:
+
+- This is the one audience where a concise "what this does not establish" section is relevant.
+- Preserve evidence-status and human-decision boundaries.
+- Remove artifact-name dumping unless needed to support an authority/auditor task.
+- Remove pilot/commercial/internal strategy material.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A5 — Concepts
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/concepts/how-it-works.md`
+- `docs2/concepts/packs.md`
+- `docs2/concepts/evidence.md`
+- `docs2/concepts/scan-and-check.md`
+
+Per-target sources (do not load all of them into one context):
+
+- `how-it-works.md`: `site/how-it-works/index.html`, `README.md`, `docs/assistant-loop.md`, `docs/intent-vs-scope.md`
+- `packs.md`: `docs/write-your-own-pack.md`, `docs/packs-update.md`, `docs/stable-contracts.md`, `docs/intent-vs-scope.md`
+- `evidence.md`: `docs/for-authorities.md`, `docs/security-model.md`, `docs/stable-contracts.md`, `docs/getting-started/buyer-evidence.md`
+- `scan-and-check.md`: `README.md`, `docs/getting-started/60-second-paths.md`, `docs/assistant-loop.md`
+
+Assembly constraints:
+
+- Concepts must be product concepts, not project-history concepts.
+- `scan-and-check.md` must collect the material needed to explain observation/reporting versus gate decision.
+- `evidence.md` may collect artifact/trust information, but do not preserve old artifact lists merely because they exist.
+- Do not promote deferred features to current behavior.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A6 — Reference
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/reference/cli.md`
+- `docs2/reference/configuration.md`
+- `docs2/reference/outputs.md`
+
+Sources:
+
+- `docs/stable-contracts.md`
+- `docs/getting-started/install.md`
+- `README.md`
+
+Do not perform open-ended repository discovery in Phase 1; code/runtime help belongs to Phase 2 verification.
+
+Assembly constraints:
+
+- Reference is factual, compact, and non-narrative.
+- Do not copy tutorials or policy essays into reference pages.
+- Add `<!-- VERIFY: ... -->` for command names, flags, exit codes, paths, defaults, or aliases that must be checked against code/runtime help in Phase 2.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Module A7 — Development
+
+Status: `DONE`  
+Review: `PASS`
+
+Targets:
+
+- `docs2/development/architecture.md`
+- `docs2/development/testing.md`
+- `docs2/development/contributing.md`
+
+Per-target sources (separate fresh context per target):
+
+- `architecture.md`: `docs/software-design-document.md`, `docs/security-model.md`, `docs/assistant-loop.md`
+- `testing.md`: `docs/testing/README.md`, `docs/testing/strategy.md`, `docs/testing/test_suites/README.md`, `docs/testing/test_suites/EV.md`, `CONTRIBUTING.md`
+- `contributing.md`: `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`, `SECURITY.md`, `docs/claim-discipline.md`, `docs/strategy-boundary.md`
+
+Assembly constraints:
+
+- This section is for Curbpack maintainers/contributors.
+- Keep product-use guidance out of this section unless needed for contribution workflow.
+- Architecture material must be treated as potentially stale until verified against package layout in Phase 2.
+- Testing page should collect the verification model and taxonomy, not every testcase.
+
+Run the module integration review. Resolve all findings until `PASS`, then commit with the module id and update status.
+
+## Phase 1 integration check
+
+Status: `DONE`  
+Review: `PASS`
+
+Use a fresh sub-agent.
+
+Check only:
+
+- every target file exists;
+- every target has content from the intended sources;
+- no target is obviously empty or a dump of an entire old file;
+- no source document was modified;
+- no `site/` file was modified;
+- obvious duplicate sections are flagged for Phase 2 rather than polished now.
+
+Do not rewrite prose in this integration check.
 
 ---
 
-## [FINISHED] Matching verification run — executable cases through assertions
+# PHASE 2 — REWRITE + VERIFY
 
-**Objective.** Encoding exists, but a matching verification run has not yet taken those cases through their assertions. Start a run at the committed HEAD with the published reference-product pin. Run every executable automated case. Report SETUP failures separately from TEST STEPS / product failures. Preserve evidence. One review plus one remedy round.
+Purpose: make each assembled document concise, readable, audience-specific, and factually grounded.
 
-**Files.** This `PLAN.md`. Do not hand-edit `tmp/verification-run.sh`. Do not bypass `make start-verification-run` checks. Do not change Curbpack implementation.
+Run **one fresh sub-agent per document**. After all documents in a module are complete, run a fresh module-level integration sub-agent and commit the module.
 
-**Procedure.**
+Global writing rules:
 
-1. Commit the intended automation and suite-markdown gap fixes on a clean tree (preserve unrelated work).
-2. `make start-verification-run` with defaults: this HEAD, `tests/cyberready-test-product.pin`, today's as-of date.
-3. `sh docs/testing/automation/run.sh all` from the Curbpack root. Continue after FAIL/SKIP.
-4. Classify each FAIL as SETUP (stopped before stimulus) or TEST STEPS (oracle). Keep SKIP as coverage gaps, not completed coverage.
-5. Review once. One remedy round with targeted reruns. Record remaining findings here.
+- Plain technical English.
+- Assume competent software engineers where appropriate; do not explain basics such as what PATH is unless needed for an actual failure mode.
+- Introduce Curbpack-specific terms before using them.
+- Prefer familiar terms (`version`, `release`, `GitHub Actions`) over invented/internal jargon (`install pin`, `pin sentence`, `three ladders`).
+- Do not repeat legal disclaimers on every page.
+- Describe what the product does before cataloguing what it does not do.
+- Do not expose release-process internals in user documentation.
+- Do not preserve existing structure merely because it exists.
+- No marketing filler.
+- No AI-style throat-clearing or redundant summary sections.
 
-**Verify.** Executable cases reach TEST STEPS unless a written SETUP stop applies. Human-facilitated cases remain SKIP. Unspecified cases remain SKIP.
+## Module R1 — Entry + getting started
 
-**Revisions (not one freeze).** Product under test: Curbpack `c64ec44e9f102717f529ef5426ee6d6a4199aa71` (binary from `tmp/verification-run.sh`). Reference product: `2b0c3f30bda411917ca0cd5b5f545e04de11cd25`. As-of: `2026-09-16`. Test scripts actually executed in the final `all` run: `c64ec44` suite files plus uncommitted `run.sh` / `rp.sh` later committed as `4c0eed6`. Do not treat `CURBPACK_COMMIT` and those scripts as the same frozen revision.
+Status: `DONE`  
+Review: `PASS`
 
-Logs: `tmp/automation-evidence/all-round1.log`, `all-round2.log`. RP-002 underlag: `tmp/automation-evidence/rp-002/`.
+### `docs2/README.md`
 
-Round 1 (`all`): SETUP failures 0 for cases that started. Runner aborted after PV-007 (`fs.sh` cwd-relative).
+Read:
 
-Remedy: `automation_dir` from `$0`; RP-001 “selected checks passed” case-insensitive. One remedy round; stop.
+- assembled `docs2/README.md`
+- `README.md`
+- `docs/intent-vs-scope.md`
 
-Round 2 (`all`): runner printed `PASS 13 / FAIL 2 / SKIP 39`. SETUP failures: 0.
+Verify from:
 
-**Classification (not the runner labels)**
+- `internal/cli/cli.go`
+- `internal/cli/registry.go`
+- runtime `curbpack --help` if available
 
-- 13 reported PASS, with coverage limits (DT-001 does not close MUST-30; DT-004 R1 `failures` is `null` so empty finding lists are not proven by digest identity).
-- RP-001: **test assessment error**, not product-FAIL. `grep` on `certification` matches the disclaimer “not certification”. Claim check stays manual until it works.
-- RP-002: **product observation to investigate**. `share` wrote `SECURITY.md` then exported a different result than the preceding check. Exact requirement violation not established; share contract is split (README/comment: check-first; `help.go`/implementation: draft inputs then check). Evidence from the log; working-tree after-files were not retained after later restores.
-- 39 SKIP: not completed coverage. Human-facilitated: CL-001, CL-002, UV-001–UV-003. Assignment stop: RL-004. Unspecified: RP-006/007, PV-004, FS-002–007, CL-003/004, DT-002, OP-001–006, NB-001/002, RL-001–003, RL-005, RB-001–004, UV-004–008.
+Required structure:
 
-Automation pass ended after the agreed remedy round. Full verification is not complete.
+1. What Curbpack is — 2–4 sentences
+2. Start here — role/task links
+3. Minimal product flow
+4. Deeper/reference links
+
+Acceptance:
+
+- reader can choose the right next page in <30 seconds;
+- no release history or CI detail;
+- no unexplained Curbpack jargon.
+
+### `docs2/getting-started/install.md`
+
+Read:
+
+- assembled target
+- `docs/getting-started/install.md`
+- `docs/getting-started/troubleshooting.md`
+
+Verify from:
+
+- `scripts/install.sh`
+- `scripts/install.ps1`
+- `internal/platform/install_marker.go`
+- doctor implementation / flags actually used by the repo
+
+Required structure:
+
+1. Install on macOS/Linux
+2. Install on Windows
+3. Verify: `curbpack doctor`
+4. Try it: `curbpack demo`
+5. Problems → troubleshooting link
+6. Next → first check
+
+Acceptance:
+
+- no GitHub Actions;
+- no ladders;
+- no release-gate/manifest explanation;
+- primary path visible without scrolling through edge cases.
+
+### `docs2/getting-started/first-check.md`
+
+Read:
+
+- assembled target
+- `docs/getting-started/60-second-paths.md`
+- `docs/getting-started/daily-loop.md`
+
+Verify from:
+
+- `internal/cli/scan.go`
+- `internal/cli/init.go`
+- check command implementation/help
+- `internal/config/config.go`
+
+Required structure:
+
+1. Go to product repository
+2. Observe/read-only scan
+3. Initialise if needed
+4. Check
+5. Understand red/green result
+6. Next actions
+
+Acceptance:
+
+- difference between scan and check is understandable;
+- no deep pathway/research/release discussion;
+- all commands verified.
+
+Run module integration review; update findings; commit.
+
+## Module R2 — Developer use + CI/CD
+
+Status: `DONE`  
+Review: `PASS`
+
+### `docs2/guides/developers.md`
+
+Read assembled target plus only the user-facing source material listed in A2.
+
+Verify from CLI help/registry for commands actually mentioned.
+
+Required structure:
+
+1. Normal local loop
+2. Existing docs vs starting from scratch
+3. Handling findings
+4. Handoff/review output
+5. Links to CI/CD and concepts
+
+Acceptance:
+
+- audience is a developer using Curbpack, not contributing to it;
+- no Curbpack maintainer process;
+- no duplicated install guide.
+
+### `docs2/guides/ci-cd.md`
+
+Read assembled target, `examples/workflows/curbpack-check.yml`, `action.yml`.
+
+Verify from:
+
+- `action.yml`
+- CLI commands used in generic pipeline examples
+
+Required structure:
+
+1. CI/CD model: run the same check non-interactively
+2. Generic CLI pipeline example
+3. GitHub Actions example
+4. Outputs / exit behavior relevant to pipelines
+5. Other CI systems: use the generic CLI path
+
+Acceptance:
+
+- GitHub Actions clearly separate from CLI installation;
+- GitHub-specific `uses: ...@...` appears only in the GitHub subsection;
+- no invented GitLab/Jenkins/Azure integration.
+
+Run module integration review; update findings; commit.
+
+## Module R3 — Reviewer + receiving
+
+Status: `DONE`  
+Review: `PASS`
+
+### `docs2/guides/reviewers.md`
+
+Verify command/state claims against review CLI help and schemas used by the repo.
+
+Required structure:
+
+1. What you received
+2. What the evidence can show
+3. How to inspect/reproduce it
+4. Signed/unsigned meaning if applicable
+5. What requires human judgment
+
+### `docs2/guides/receiving.md`
+
+Verify `review` modes/flags against current CLI implementation/help.
+
+Required structure:
+
+1. Receive submission
+2. Keep original intact
+3. Review/triage
+4. Optional chain/repo modes if actually supported
+5. Escalate findings / handoff
+
+Run module integration review; update findings; commit.
+
+## Module R4 — Authorities / auditors / CISOs
+
+Status: `DONE`  
+Review: `PASS`
+
+### `docs2/guides/authorities.md`
+
+Verify claims against current pack defaults, CLI help, and actual evidence outputs.
+
+Required structure:
+
+1. What Curbpack does
+2. What evidence it produces / what that evidence demonstrates
+3. Reproducibility and offline use
+4. What cannot be concluded from a green result
+5. Human/organisational responsibility
+6. Links to technical reference
+
+Acceptance:
+
+- legal/regulatory boundaries are concise and relevant;
+- no `Trust level (honest)` wording;
+- no unexplained SARIF/ContextPack/OpenVEX/Git Notes dumping;
+- no claim of certification, authority approval, or market access.
+
+Commit after review/update.
+
+## Module R5 — Concepts
+
+Status: `DONE`  
+Review: `PASS`
+
+### `docs2/concepts/how-it-works.md`
+
+Verify primary command flow against CLI registry/implementation.
+
+Required structure:
+
+1. Inputs
+2. Observe repository/evidence
+3. Scan/report
+4. Check against selected rules/configuration
+5. Build review material
+6. Human decision
+
+Do not force current implementation package names into the conceptual model.
+
+### `docs2/concepts/packs.md`
+
+Verify against pack loader/composition/check-kind implementation.
+
+Required structure:
+
+1. What a pack is
+2. Rules/checks
+3. Composition
+4. Selecting/updating packs
+5. Writing your own pack → dedicated link
+
+### `docs2/concepts/evidence.md`
+
+Verify emitted artifact names/paths against current implementation.
+
+Required structure:
+
+1. Evidence model
+2. Structural evidence vs claims
+3. Reproducibility/identity
+4. Human review material
+5. Optional/specialised formats in a compact reference link
+
+### `docs2/concepts/scan-and-check.md`
+
+Verify from scan/check implementations and CLI help.
+
+Required structure:
+
+1. `scan`: observe and report
+2. `check`: evaluate against selected rules/configuration
+3. Inputs/outputs of each
+4. Exit/result semantics
+5. When to use each
+
+Acceptance for module:
+
+- concepts form one coherent mental model;
+- terminology is consistent across all four pages;
+- no feature-name inventory disguised as architecture.
+
+Run module integration review; update findings; commit.
+
+## Module R6 — Reference
+
+Status: `NOT STARTED`  
+Review: `NOT RUN`
+
+### `docs2/reference/cli.md`
+
+Authoritative sources:
+
+- `internal/cli/registry.go`
+- `internal/cli/cli.go`
+- `internal/cli/help.go`
+- runtime help where available
+
+Structure:
+
+- command table
+- aliases
+- key flags by command
+- exit codes
+- advanced commands clearly marked
+
+### `docs2/reference/configuration.md`
+
+Authoritative sources:
+
+- `internal/config/config.go`
+- `internal/paths/paths.go`
+- targeted grep for `CURBPACK_` environment variables
+
+Structure:
+
+- config file
+- pack/config selection precedence
+- environment variables
+- paths/cache locations where configuration-relevant
+
+### `docs2/reference/outputs.md`
+
+Authoritative sources:
+
+- `internal/paths/paths.go`
+- actual output-producing packages/commands referenced by the assembled draft
+
+Structure:
+
+- command → output table
+- output path
+- format
+- when created
+- intended consumer
+
+Acceptance:
+
+- reference pages contain facts, not tutorials;
+- every listed flag/path/output exists in current code;
+- no historical names unless explicitly labelled compatibility/legacy.
+
+Run module integration review; update findings; commit.
+
+## Module R7 — Development
+
+Status: `NOT STARTED`  
+Review: `NOT RUN`
+
+### `docs2/development/architecture.md`
+
+Read assembled target and current package layout.
+
+Required structure:
+
+1. Product responsibilities
+2. Main runtime flow
+3. Major implementation areas
+4. Trust/write boundaries
+5. Pointers to detailed code/reference
+
+Acceptance:
+
+- describes current code, not an old target SDD;
+- distinguishes architectural responsibility from every small Go package;
+- does not present every package as a top-level subsystem.
+
+### `docs2/development/testing.md`
+
+Read assembled target plus current testing docs and actual test/run entry points.
+
+Required structure:
+
+1. Test strategy / levels
+2. Go package tests
+3. Broader verification suites
+4. How to run each level
+5. Traceability / records
+
+Acceptance:
+
+- explicitly distinguishes `go test ./...` from broader verification suites;
+- does not imply every `*_test.go` is necessarily a unit test;
+- current executable vs planned suites are accurately described.
+
+### `docs2/development/contributing.md`
+
+Read assembled target plus current contributor policy sources.
+
+Required structure:
+
+1. Set up development checkout
+2. Change workflow
+3. Required local verification
+4. Documentation/claim discipline
+5. Security reporting
+6. PR handoff
+
+Acceptance:
+
+- only contributor/maintainer material lives here;
+- no duplicated product-user tutorial.
+
+Run module integration review; update findings; commit.
+
+### Anti-slop gate
+
+Before committing any module, the module reviewer must reject it if any of these are true:
+
+- a page introduces a new product concept not present in authoritative sources;
+- a page inherits an old heading/term only because the source had it;
+- a page explains internal release/process mechanics to a user who does not need them;
+- a page duplicates more than one paragraph of another `docs2/` page instead of linking;
+- a page contains generic filler that can be removed without losing information;
+- a command, flag, path, default, artifact, or exit code is stated without verification where verification is required;
+- a page uses Curbpack-specific terminology before defining it;
+- a reviewer only says “looks good” without checking the acceptance criteria.
 
 ---
 
-## [FINISHED] Harness — dispatch, status, summary
+# PHASE 3 — FINAL INTEGRATION
 
-**Objective.** Add a POSIX runner with no test-case bodies. Later suite files plug in by filename.
+Status: `NOT STARTED`  
+Review: `NOT RUN`
 
-**Files.** Create: `docs/testing/automation/run.sh`. Do not create suite files here. Do not edit suite markdown.
+Use one fresh sub-agent with only `docs2/` plus exact code files needed to resolve factual conflicts.
 
-**Behaviour.**
+Perform a cold-reader walkthrough from `docs2/README.md` for these paths:
 
-- Map `RP-001` → `rp_001`, `RP` → all `rp_[0-9][0-9][0-9]` in `rp.sh`, `all` → suite files in this order: `rp.sh pv.sh fs.sh cl.sh dt.sh op.sh nb.sh rl.sh rb.sh uv.sh`.
-- `source` the suite file (not execute) so functions share the runner shell; each function still `source tmp/verification-run.sh` itself when the written SETUP says so. The runner must not restore the product or `cd` for the case.
-- Wrap each call: capture 0/1/2; record `PASS id` / `FAIL id` / `SKIP id`; continue. Do not unwrap, merge, or run case steps in the runner.
-- Unknown selector or missing selected suite file: error, no SKIP.
-- `all` with missing suite files: error (incremental work uses a suite selector until those files exist).
-- Header comment: how to run one case / one suite / all; requires an already-filled `tmp/verification-run.sh`; EV/PK not in this runner.
+1. New developer installing and checking a repo.
+2. Developer adding Curbpack to CI/CD.
+3. Reviewer receiving evidence.
+4. Authority/auditor trying to understand what a result means.
+5. Curbpack contributor trying to understand architecture/testing.
 
-**Verify.** `sh -n docs/testing/automation/run.sh`; `sh docs/testing/automation/run.sh` with no args and with `NO-SUCH` both error; `sh docs/testing/automation/run.sh RP` errors on missing `rp.sh`.
+Check:
 
----
+- navigation and relative links;
+- broken links;
+- duplicated material;
+- terminology introduced before use;
+- same concept named differently across pages;
+- commands in the wrong guide;
+- CI/CD leaking into installation;
+- maintainer/release internals leaking into user docs;
+- disclaimers repeated without audience need;
+- unexplained artifact names;
+- contradictions with current CLI/code;
+- pages that are still substantially longer than their task requires.
 
-## [FINISHED] RP — Review Pack cases
+Then:
 
-**Objective.** One function per RP catalogue row. Transcribe RP-001–RP-005. SKIP RP-006 and RP-007.
+1. Write `docs2/REVIEW.md` with only actionable findings.
+2. Fix all findings that do not require product decisions.
+3. Re-run the walkthrough.
+4. Leave unresolved product decisions clearly listed in `docs2/REVIEW.md`.
+5. Commit final integration locally.
 
-**Files.** Create: `docs/testing/automation/rp.sh`. Read: `docs/testing/test_suites/RP.md`. Do not rewrite RP.md.
-
-**Functions.** `rp_001` … `rp_007`.
-
-**Traps.** RP-003–RP-005 do not verify a specified requirement; keep that. For human-read steps, check only results the case already names (files present, named JSON fields, named forbidden phrases). If a remaining sentence is un-named “unsupported assurance”, SKIP the case rather than inventing a deny-list. Do not invent a digest fixture for RP-004.
-
-**Verify.** `sh -n`; `sh docs/testing/automation/run.sh RP` (SKIP-only is OK if no verification run); with a verification run, `RP-006` SKIP and `RP-001` PASS/FAIL against the written oracle.
-
----
-
-## [FINISHED] PV — provenance cases
-
-**Objective.** Transcribe PV-001–PV-003 and PV-005–PV-007. SKIP PV-004 (EC-04/EC-05 not specified).
-
-**Files.** Create: `docs/testing/automation/pv.sh`. Read: `docs/testing/test_suites/PV.md`. Do not invent PF-02.
-
-**Functions.** `pv_001` … `pv_007`.
-
-**Traps.** Each executable case already says it does not close MUST-31. Observe stdout/cache omissions as the case writes them; do not “fix” them in the function. PV-006 SETUP 5 runs a PF-01 control and records `comparison_key`; TEST STEPS 3 must differ from that control.
-
-**Verify.** `sh -n`; `run.sh PV-004` SKIP; with a matching verification run, `run.sh PV-001` and `run.sh PV-006` reach TEST STEPS.
-
-**Findings**
-
-- Important (fixed in files, pending matching run): PV-006 now records a PF-01 `comparison_key` before PF-06 mutation and compares the mutated key to that control.
-- Minor: `pv_005` SETUP 5 does not assert that `SOURCE.txt` lacks pack IDs/versions.
+Do not modify or delete `docs/` or `site/` in this plan.
 
 ---
 
-## [FINISHED] FS — path-boundary cases
+# Done criteria
 
-**Objective.** Transcribe FS-001. SKIP FS-002–FS-007.
+The plan is complete when:
 
-**Files.** Create: `docs/testing/automation/fs.sh`. Read: `docs/testing/test_suites/FS.md`.
-
-**Functions.** `fs_001` … `fs_007`.
-
-**Traps.** FS-001 pass criteria are non-zero exit and actual traversal rejection (`ADV-TRAVERSAL` and `path traversal refused`). The exact stderr line on the verification baseline is also required. An exact stderr line alone is not sufficient.
-
-**Verify.** `sh -n`; `run.sh FS-002` SKIP; with a matching verification run, `run.sh FS-001` reaches TEST STEPS.
-
----
-
-## [FINISHED] CL — claim-review cases
-
-**Objective.** Encode CL-001–CL-004 without inventing claim oracles. SKIP CL-003 and CL-004 as unspecified.
-
-**Files.** Create: `docs/testing/automation/cl.sh`. Read: `docs/testing/test_suites/CL.md`.
-
-**Functions.** `cl_001` … `cl_004`.
-
-**Traps.** CL-001 TEST STEPS are human search for implied overclaim language — SKIP citing that; do not invent grep patterns. CL-002 steps 1–4 are mechanical; step 5 (“no derivative weakens the structural-only boundary”) is human — SKIP the case, do not PASS after step 4, do not invent a third R-id (R1 or R2 as written; if the function must pick one, use R1 and record it).
-
-**Verify.** `sh -n`; `run.sh CL` shows SKIP for 001/003/004; CL-002 SKIP until step 5 has a written machine oracle (it does not).
-
----
-
-## [FINISHED] DT — determinism cases
-
-**Objective.** Transcribe DT-001, DT-003, DT-004. SKIP DT-002 (EC-07 not specified).
-
-**Files.** Create: `docs/testing/automation/dt.sh`. Read: `docs/testing/test_suites/DT.md`.
-
-**Functions.** `dt_001` … `dt_004`.
-
-**Traps.** DT-001 is 20 runs into `$CURBPACK_ROOT/tmp/dt-001` (evidence dir, not an R-id). Compare only the named semantic fields. Capture receipt `evaluation_digest` (stdout evaluation JSON has no `digest` field). A missing digest fails; a digest-only difference does not. Finding identity is `failures[].gate_id`. Do not invent locale/timezone commands.
-
-**Verify.** `sh -n`; `run.sh DT-002` SKIP; with a matching verification run, `run.sh DT-001` (long; must still continue the suite afterward).
-
-**Findings**
-
-- Important (fixed): DT-004 must always run SETUP 6–10; copy-and-skip on file existence was removed.
-- Important (fixed in files, pending matching run): DT-001 records `evaluation_digest` from the receipt. An empty/`null` digest fails. Difference in `evaluation_digest` alone still does not fail.
-
----
-
-## [FINISHED] OP — operational-failure cases
-
-**Objective.** SKIP OP-001–OP-006. Do not write executable OP procedures.
-
-**Files.** Create: `docs/testing/automation/op.sh`. Read: `docs/testing/test_suites/OP.md`.
-
-**Functions.** `op_001` … `op_006`. Each prints that case’s “Not specified yet. Do not run this case.” and returns 2.
-
-**Traps.** Do not invent EC-09, unwritable-destination, storage-exhaustion, kill-window, or cache-failure injection.
-
-**Verify.** `sh -n`; `run.sh OP` → six SKIP, exit 0.
-
----
-
-## [FINISHED] NB — network/data-boundary cases
-
-**Objective.** SKIP NB-001 and NB-002. Do not invent EC-06 or observation methods.
-
-**Files.** Create: `docs/testing/automation/nb.sh`. Read: `docs/testing/test_suites/NB.md`.
-
-**Functions.** `nb_001` `nb_002`. SKIP stubs only.
-
-**Verify.** `sh -n`; `run.sh NB` → two SKIP, exit 0.
-
----
-
-## [FINISHED] RL — release-artefact cases
-
-**Objective.** SKIP RL-001–RL-003 and RL-005. Encode RL-004’s stop/skip without inventing tag, commit, artefact, or checksum.
-
-**Files.** Create: `docs/testing/automation/rl.sh`. Read: `docs/testing/test_suites/RL.md`.
-
-**Functions.** `rl_001` … `rl_005`.
-
-**Traps.** RL-004 SETUP step 3: if the assignment does not name tag, source commit, and shipped artefact, SKIP with that stop text. Do not read GitHub or compute a checksum to fill gaps. Do not auto-PASS an observed gap.
-
-**Verify.** `sh -n`; `run.sh RL` → SKIP all five when assignment values are absent.
-
----
-
-## [FINISHED] RB — resource/concurrency cases
-
-**Objective.** SKIP RB-001–RB-004. Do not invent large-tree R-states, numeric limits, or EC-08.
-
-**Files.** Create: `docs/testing/automation/rb.sh`. Read: `docs/testing/test_suites/RB.md`.
-
-**Functions.** `rb_001` … `rb_004`. SKIP stubs only.
-
-**Verify.** `sh -n`; `run.sh RB` → four SKIP, exit 0.
-
----
-
-## [FINISHED] UV — user-handoff cases
-
-**Objective.** SKIP UV-004–UV-008 as unspecified. SKIP UV-001–UV-003 as builder-facilitated; do not simulate a builder.
-
-**Files.** Create: `docs/testing/automation/uv.sh`. Read: `docs/testing/test_suites/UV.md`. After this file exists, `run.sh all` must run.
-
-**Functions.** `uv_001` … `uv_008`.
-
-**Traps.** UV-001–UV-003 are Executable for a human builder. Automation must not PASS them. SKIP citing builder handoff / interpretation. Do not run `setup.sh` for UV-001. Do not map UV-002 to MUST-60. Do not invent UV-004–UV-008 procedures.
-
-**Verify.** `sh -n`; `run.sh UV` → eight SKIP; `run.sh all` sources all ten suite files, continues after FAIL, prints PASS/FAIL/SKIP counts.
+- every target file exists under `docs2/`;
+- every file has passed generate → review → update → verify;
+- every module has its own local commit;
+- `docs2/README.md` routes each audience cleanly;
+- install, local use, CI/CD, reviewing, authority interpretation, concepts, reference, and Curbpack development are visibly separated;
+- current code/CLI is authoritative for behavioral facts;
+- existing `docs/` and `site/` remain unchanged;
+- final cold-reader review has no unresolved usability or factual defects except explicitly recorded product decisions.
