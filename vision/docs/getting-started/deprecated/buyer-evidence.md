@@ -1,6 +1,6 @@
 # Buyer evidence
 
-Ask the supplier for a **buyer one-pager** (supplier evidence summary). If you need more depth, ask for the **review pack** (JSON + markdown layers). Then use the [trust table on for-reviewers](../../site/for-reviewers/) — not a certification score.
+Ask the supplier for a **buyer one-pager** (supplier evidence summary). If you need more depth, ask for the **review pack** (JSON + markdown layers). Then use the [trust table on for-reviewers](../../../site/for-reviewers/) — not a certification score.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
@@ -29,7 +29,7 @@ curbpack review <received-pack-dir>
 # terse default; --full for all findings + dropped tokens; --json for schema v2
 ```
 
-Use the full [artifact trust table](../../site/for-reviewers/) before equating any artifact with legal conformity or CE readiness.
+Use the full [artifact trust table](../../../site/for-reviewers/) before equating any artifact with legal conformity or CE readiness.
 
 ## What you must not assume
 

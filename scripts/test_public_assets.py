@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
-SURFACES = ('docs/launch-status.md', 'docs/getting-started/pre-stranger-handoff.md')
+SURFACES = ('vision/docs/launch-status.md', 'vision/docs/getting-started/pre-stranger-handoff.md')
 
 
 class PublicAssetsTests(unittest.TestCase):
@@ -21,8 +21,8 @@ class PublicAssetsTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         for name in ('scripts/check-public-assets.py', 'scripts/install-manifest.json',
-                     'internal/buildinfo/version.go', 'site/assets/og-campaign.svg',
-                     'site/assets/og-campaign.png'):
+                     'internal/buildinfo/version.go', 'vision/site/assets/og-campaign.svg',
+                     'vision/site/assets/og-campaign.png'):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
@@ -35,7 +35,7 @@ class PublicAssetsTests(unittest.TestCase):
             'advertise_commit': '17a18ed5395d635758424873113c7ef106409e17',
         }
         self.write('README.md', '')
-        self.write('site/index.html', '<!doctype html><title>Fixture</title>')
+        self.write('vision/site/index.html', '<!doctype html><title>Fixture</title>')
         self.save_record()
 
     def write(self, name, text):
@@ -100,7 +100,7 @@ class PublicAssetsTests(unittest.TestCase):
         self.check(True)
 
     def test_external_executable_and_style_forms_are_refused(self):
-        self.write('site/assets/local.js', 'document.title = "local";')
+        self.write('vision/site/assets/local.js', 'document.title = "local";')
         cases = [
             '<script src="https://example.invalid/x.js"></script>',
             '<script src="//example.invalid/x.js"></script>',
@@ -124,20 +124,20 @@ class PublicAssetsTests(unittest.TestCase):
         ]
         for html in cases:
             with self.subTest(html=html):
-                self.write('site/index.html', html)
+                self.write('vision/site/index.html', html)
                 self.check(False)
 
     def test_served_samples_are_included(self):
-        self.write('site/samples/demo.html', '<script src="//example.invalid/x.js"></script>')
+        self.write('vision/site/samples/demo.html', '<script src="//example.invalid/x.js"></script>')
         self.check(False)
 
     def test_local_module_source_is_checked(self):
-        self.write('site/assets/demo.js', 'export {x} from "https://example.invalid/x.js";')
+        self.write('vision/site/assets/demo.js', 'export {x} from "https://example.invalid/x.js";')
         self.check(False)
 
     def test_local_script_with_non_js_extension_is_checked(self):
-        self.write('site/index.html', '<script src="/curbpack/assets/demo.txt"></script>')
-        self.write('site/assets/demo.txt', 'import("https://example.invalid/x.js");')
+        self.write('vision/site/index.html', '<script src="/curbpack/assets/demo.txt"></script>')
+        self.write('vision/site/assets/demo.txt', 'import("https://example.invalid/x.js");')
         self.check(False)
 
     def test_local_css_imports_and_urls_are_checked(self):
@@ -146,15 +146,15 @@ class PublicAssetsTests(unittest.TestCase):
                     '@font-face {src:url(https://example.invalid/x.woff2)}',
                     r'@\69mport "https://example.invalid/x.css";'):
             with self.subTest(css=css):
-                self.write('site/assets/demo.css', css)
+                self.write('vision/site/assets/demo.css', css)
                 self.check(False)
 
     def test_allowed_font_hosts_and_local_classic_scripts(self):
-        self.write('site/index.html', '''<link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Fraunces">
+        self.write('vision/site/index.html', '''<link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Fraunces">
             <link rel=preconnect href="https://fonts.gstatic.com" crossorigin>
             <script src="/curbpack/assets/demo.js"></script>''')
-        self.write('site/assets/demo.js', 'document.title = "local";')
-        self.write('site/assets/demo.css', '@font-face {src:url(https://fonts.gstatic.com/demo.woff2)}')
+        self.write('vision/site/assets/demo.js', 'document.title = "local";')
+        self.write('vision/site/assets/demo.css', '@font-face {src:url(https://fonts.gstatic.com/demo.woff2)}')
         self.check(True)
 
 
@@ -217,7 +217,7 @@ const assert = require('assert/strict');
         if (url.origin !== 'http://curbpack.test') return route.abort();
         let rel = url.pathname.replace(/^\/curbpack\//, '');
         if (!rel || rel.endsWith('/')) rel += 'index.html';
-        const file = path.join(root, 'site', rel);
+        const file = path.join(root, 'vision', 'site', rel);
         if (!fs.existsSync(file)) throw new Error('Missing local browser resource: ' + file);
         const contentType = file.endsWith('.css') ? 'text/css' : 'text/html';
         await route.fulfill({body: fs.readFileSync(file), contentType});

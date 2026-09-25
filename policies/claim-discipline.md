@@ -17,7 +17,7 @@ Curbpack prepares structural evidence for human review. Every user-visible strin
 ## Process rules
 
 1. **Literal third-party-readable output before implementation** — paste the exact CLI line, badge string, gate message, or HTML snippet a stranger would see; implement only after the wording is claim-safe.
-2. **Never day count in title / OG / meta description** — social cards and search snippets are cached and do not run JS; see [site README metadata rule](../site/README.md).
+2. **Never day count in title / OG / meta description** — social cards and search snippets are cached and do not run JS; see [site README metadata rule](../vision/site/README.md).
 3. **Re-check after every copy change** — run [`scripts/claim-safety.sh`](../scripts/claim-safety.sh) (docs + runtime CLI captures).
 4. **Public language** — align with [voice and terms](voice-and-terms.md); deny-list blocks certification theater.
 

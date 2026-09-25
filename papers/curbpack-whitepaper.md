@@ -138,7 +138,7 @@ Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/
 5. **Review pack** — `curbpack share` (or `prepare-release`) writes layered reports and a buyer one-pager (supplier evidence summary). Human `confirm-share` when reviewing handoff.
 6. **Optional attest** — a human runs `attest` when ready. Until ssh-agent signed: **UNSIGNED — not cryptographically verified**. Then open `proof/index.html` vs the evidence pointer.
 
-Bring and CI skip step 1 and go straight to check. A committed teaching sample (before/after): [`site/samples/onepager.html`](../site/samples/onepager.html).
+Bring and CI skip step 1 and go straight to check. A committed teaching sample (before/after): [`vision/site/samples/onepager.html`](../vision/site/samples/onepager.html).
 
 ## 8. Evidence catalog and trust levels
 

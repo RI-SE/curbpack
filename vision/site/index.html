@@ -79,7 +79,7 @@
             <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1] mb-4">
               Article 14 reporting starts 11 September 2026
             </h1>
-            <p id="art14-countdown" class="font-mono text-base sm:text-lg text-rise font-medium mb-6" aria-live="polite">Article 14 reporting applies from 11 September 2026</p>
+            <p id="art14-countdown" class="font-mono text-base sm:text-lg text-rise font-medium mb-6" aria-live="polite">Article 14 reporting has applied since 11 September 2026</p>
             <p class="text-lg sm:text-xl text-ink-muted mb-6 max-w-2xl leading-relaxed font-sans">
               One command, writes nothing — not certification. Curbpack scans your repo read-only on your machine; we never see your code.
             </p>
@@ -91,7 +91,7 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 mb-3">
-              <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md#ladder-0--read-only-scan-install--scan" class="btn-brutal inline-flex justify-center items-center px-6 py-3 border border-ink text-base font-semibold text-paper bg-ink">
+              <a href="https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md" class="btn-brutal inline-flex justify-center items-center px-6 py-3 border border-ink text-base font-semibold text-paper bg-ink">
                 Install + scan
               </a>
               <a href="/curbpack/art14/" class="btn-brutal inline-flex justify-center items-center px-6 py-3 border border-ink text-base font-semibold text-ink bg-paper hover:bg-paper-alt">
@@ -101,7 +101,7 @@
                 Open full sample
               </a>
             </div>
-            <p class="font-mono text-xs text-ink-muted mb-10">Read-only first — <code class="text-ink">curl …/main/scripts/install.sh | sh</code> then <code class="text-ink">curbpack scan</code> · Windows · macOS · Linux · <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" class="underline decoration-paper-dark hover:text-rise">install doc</a></p>
+            <p class="font-mono text-xs text-ink-muted mb-10">Read-only first — <code class="text-ink">curl …/main/scripts/install.sh | sh</code> then <code class="text-ink">curbpack scan</code> · Windows · macOS · Linux · <a href="https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md" class="underline decoration-paper-dark hover:text-rise">install doc</a></p>
 
             <div class="inline-flex items-start p-3 bg-status-errBg border border-status-err/20 text-sm text-status-err">
               <svg class="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -176,7 +176,7 @@
           <h2 class="font-serif text-3xl font-semibold text-ink mb-3">How it works</h2>
           <p class="text-ink-muted text-lg">Scan read-only → optional init → local check → review pack → human review.</p>
           <p class="text-ink-muted text-base mt-3 max-w-xl mx-auto">Curbpack runs local rule-pack checks offline. Findings are structural evidence for human review. We do not use a language model to decide whether you passed.</p>
-          <p class="text-ink-muted text-sm mt-3">Three ways in (Write, Bring, CI): <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/60-second-paths.md" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">60-second paths</a> · <a href="/curbpack/how-it-works/" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">how it works</a></p>
+          <p class="text-ink-muted text-sm mt-3">Three ways in (Write, Bring, CI): <a href="https://github.com/RI-SE/curbpack/blob/main/vision/docs/getting-started/deprecated/60-second-paths.md" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">60-second paths</a> · <a href="/curbpack/how-it-works/" class="font-mono text-ink underline decoration-paper-dark hover:text-rise">how it works</a></p>
           <p class="text-ink text-sm mt-4 font-medium">Receiving a pack? <a href="/curbpack/for-reviewers/#artifact-trust-table" class="font-mono underline decoration-paper-dark hover:text-rise">Artifact trust table</a> · <a href="/curbpack/receiving-submissions/" class="font-mono underline decoration-paper-dark hover:text-rise">Receiving submissions</a> · <a href="/curbpack/samples/review-pack/" class="font-mono underline decoration-paper-dark hover:text-rise">Sample review-pack</a> · In-repo: <code class="font-mono">curbpack review --repo</code> (<a href="/curbpack/for-reviewers/" class="font-mono underline decoration-paper-dark hover:text-rise">for reviewers</a>)</p>
         </div>
 
@@ -245,7 +245,7 @@
               Full ladder <span class="ml-1 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
             </a>
             <p class="mt-3 font-mono text-xs text-ink-muted">
-              Install: <a href="https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" class="underline decoration-paper-dark hover:text-rise">docs/getting-started/install.md</a>
+              Install: <a href="https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md" class="underline decoration-paper-dark hover:text-rise">docs/user-guides/install.md</a>
             </p>
           </div>
 
@@ -265,7 +265,7 @@
 
   </main>
 
-  <p class="text-center px-6 py-4"><a href="https://github.com/RI-SE/curbpack/blob/main/docs/launch-status.md">Release status and audit limitations</a>: the installer supplies <strong>v0.5.5</strong>; Action pin stays <code>@v0.5.2</code>. Production qualification remains incomplete.</p>
+  <p class="text-center px-6 py-4"><a href="https://github.com/RI-SE/curbpack/blob/main/vision/vision/docs/launch-status.md">Release status and audit limitations</a>: the installer supplies <strong>v0.5.5</strong>; Action pin stays <code>@v0.5.2</code>. Production qualification remains incomplete.</p>
 
   <footer class="bg-ink text-paper py-16 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

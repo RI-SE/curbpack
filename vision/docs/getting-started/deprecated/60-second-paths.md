@@ -36,7 +36,7 @@ Write, Bring, and CI use the same local `check` result.
 | **Bring docs → Check** | Place existing policies at the configured pack paths, or point a custom pack at those paths, then run `check`. Portal PDF ingestion is not supported. |
 | **CI** | Run the Action or a local `check`. Pin the Action to **`@v0.5.2`**; Action runners are Linux and macOS. |
 
-Builders site: [Three ways in](../../site/for-builders/). Install hub: [install](install.md) · [troubleshooting](troubleshooting.md). Write depth: [pathway](pathway.md).
+Builders site: [Three ways in](../../../site/for-builders/). Install hub: [install](install.md) · [troubleshooting](troubleshooting.md). Write depth: [pathway](pathway.md).
 
 ## Try the demo
 
@@ -87,7 +87,7 @@ Maintainer bar: `./scripts/time-to-green.sh` (demo + init→check wall-clock; fa
 
 ## Decision-maker
 
-1. Open the supplier’s `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact), or the committed sample at `site/samples/onepager.html`.
+1. Open the supplier’s `review-pack/buyer-onepager.html` (from `prepare-release` or the Action artifact), or the committed sample at `vision/site/samples/onepager.html`.
 2. Or open the proof page (`proof/index.html`) with a hash fragment.
 3. Review the local gate score, highest-priority gaps, and disclaimer on one screen. No account is required, and the page is not a certificate.
 

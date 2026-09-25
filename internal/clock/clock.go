@@ -93,7 +93,7 @@ func DaysUntilUTC(deadline time.Time) (int, error) {
 }
 
 // FormatArt14Countdown formats days until Art14ReportingStart for site HTML.
-// Matches site/index.html client-side formatCountdown (progressive enhancement).
+// Matches vision/site/index.html client-side formatCountdown (progressive enhancement).
 func FormatArt14Countdown(days int) string {
 	if days > 0 {
 		s := "s"

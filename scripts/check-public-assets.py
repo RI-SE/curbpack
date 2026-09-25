@@ -22,12 +22,13 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
+SITE_ROOT = ROOT / 'vision' / 'site'
 errors: list[str] = []
 FONT_STYLE_ALLOWLIST = {
     'fonts.googleapis.com': 'Google Fonts stylesheet delivery',
     'fonts.gstatic.com': 'Google Fonts font files',
 }
-RELEASE_SURFACES = ('docs/launch-status.md', 'docs/getting-started/pre-stranger-handoff.md')
+RELEASE_SURFACES = ('vision/docs/launch-status.md', 'vision/docs/getting-started/pre-stranger-handoff.md')
 RELEASE_START = '<!-- curbpack-release:start -->'
 RELEASE_END = '<!-- curbpack-release:end -->'
 # No module loader is needed by the static site. Refuse module syntax rather
@@ -141,13 +142,13 @@ def resource(path: Path, raw: str, kind: str) -> Path | None:
         errors.append(f'{path.relative_to(ROOT)}: empty {kind} resource')
         return None
     if url.path.startswith('/curbpack/'):
-        target = ROOT / 'site' / url.path[len('/curbpack/'):]
+        target = SITE_ROOT / url.path[len('/curbpack/'):]
     elif url.path.startswith('/'):
         errors.append(f'{path.relative_to(ROOT)}: {kind} must use /curbpack/ site root: {raw}')
         return None
     else:
         target = path.parent / url.path
-    if not target.resolve().is_relative_to((ROOT / 'site').resolve()) or not target.is_file():
+    if not target.resolve().is_relative_to(SITE_ROOT.resolve()) or not target.is_file():
         errors.append(f'{path.relative_to(ROOT)}: missing/escaping local {kind} resource: {raw}')
         return None
     return target
@@ -234,7 +235,7 @@ class Resources(HTMLParser):
 
 def check_resources() -> None:
     # Samples are served pages and receive exactly the same resource checks.
-    for path in sorted((ROOT / 'site').rglob('*')):
+    for path in sorted(SITE_ROOT.rglob('*')):
         if not path.is_file() or path.suffix.lower() not in {'.html', '.css', '.js', '.mjs'}:
             continue
         try:
@@ -254,7 +255,7 @@ def check_resources() -> None:
 
 
 def check_links_and_card() -> None:
-    for path in [ROOT / "README.md", *(ROOT / "docs").rglob("*.md"), *(ROOT / "site").rglob("*.html")]:
+    for path in [ROOT / "README.md", *(ROOT / "docs").rglob("*.md"), *SITE_ROOT.rglob("*.html")]:
         rel = path.relative_to(ROOT)
         if rel.parts[:2] in {("docs", "internal"), ("docs", "gtm-oss")}:
             continue  # Historical/operator documents have a separate scope.
@@ -271,7 +272,7 @@ def check_links_and_card() -> None:
                 if url.scheme or url.netloc or not url.path:
                     continue
                 if url.path.startswith("/curbpack/"):
-                    target = ROOT / "site" / unquote(url.path[len("/curbpack/") :])
+                    target = SITE_ROOT / unquote(url.path[len("/curbpack/") :])
                 elif url.path.startswith("/"):
                     continue
                 else:
@@ -282,9 +283,9 @@ def check_links_and_card() -> None:
             errors.append(f"{rel}: {error}")
 
     try:
-        svg = ET.parse(ROOT / "site/assets/og-campaign.svg").getroot()
+        svg = ET.parse(SITE_ROOT / "assets/og-campaign.svg").getroot()
         assert svg.attrib["viewBox"] == "0 0 1200 630", "unexpected SVG viewBox"
-        png = (ROOT / "site/assets/og-campaign.png").read_bytes()
+        png = (SITE_ROOT / "assets/og-campaign.png").read_bytes()
         assert png[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
         assert png[12:16] == b"IHDR", "missing PNG dimensions"
         assert struct.unpack(">II", png[16:24]) == (1200, 630), "social card must be 1200 x 630"

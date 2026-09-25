@@ -1,6 +1,6 @@
 # Supplier share handoff
 
-After green gates, suppliers hand buyers a **buyer one-pager** and optionally a **review pack**. Buyers judge evidence using the [trust table on for-reviewers](../../site/for-reviewers/) — not a certification score.
+After green gates, suppliers hand buyers a **buyer one-pager** and optionally a **review pack**. Buyers judge evidence using the [trust table on for-reviewers](../../../site/for-reviewers/) — not a certification score.
 
 Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
@@ -24,7 +24,7 @@ curbpack share
 
 Artifacts land under `.github/curbpack/cache/` (`context-pack.json` + `.md`, `buyer-questions.md` + `.json`) and `review-pack/`.
 
-Point buyers at the site trust table: [for-reviewers](../../site/for-reviewers/) · [sample one-pager](../../site/samples/onepager.html).
+Point buyers at the site trust table: [for-reviewers](../../../site/for-reviewers/) · [sample one-pager](../../../site/samples/onepager.html).
 
 ## Individual exports
 
@@ -49,4 +49,4 @@ Warm-start before share: [pathway](pathway.md) (`pathway status` → confirms �
 
 Curbpack prepares structural evidence for product repos — pair with SCA (e.g. Trivy/OSV) and secret scanners (e.g. Gitleaks) for depth; not a security program or CVE product.
 
-See also: [Buyer evidence](buyer-evidence.md) · [Voice and terms](../../../policies/voice-and-terms.md) · [Assistant loop](../../../agents/assistant-loop.md) · [Daily loop](daily-loop.md) · [For builders](../../site/for-builders/)
+See also: [Buyer evidence](buyer-evidence.md) · [Voice and terms](../../../policies/voice-and-terms.md) · [Assistant loop](../../../agents/assistant-loop.md) · [Daily loop](daily-loop.md) · [For builders](../../../site/for-builders/)

@@ -9,7 +9,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-[Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](policies/voice-and-terms.md) · [For builders](site/for-builders/) · [Art 14 scan](site/art14/) · [Docs index](docs/README.md)
+[Site](https://ri-se.github.io/curbpack/) · [RI-SE/curbpack](https://github.com/RI-SE/curbpack) · [White paper](papers/curbpack-whitepaper.md) · [Voice and terms](policies/voice-and-terms.md) · [For builders](vision/site/for-builders/) · [Art 14 scan](vision/site/art14/) · [Docs index](docs/README.md)
 
 ## Friendly pre-beta: start testing here
 
@@ -20,7 +20,7 @@ with that one guide; the released installer below supplies an older build.
 
 ## Release status
 
-The installer currently supplies **v0.5.5** (released CLI, without the later PR #58 repairs). See the [launch status and audit limitations](docs/launch-status.md) before using results for an audit decision. Action pin stays `@v0.5.2`.
+The installer currently supplies **v0.5.5** (released CLI, without the later PR #58 repairs). See the [launch status and audit limitations](vision/docs/launch-status.md) before using results for an audit decision. Action pin stays `@v0.5.2`.
 
 ## Released v0.5.5: start with a read-only scan
 
@@ -48,11 +48,11 @@ curbpack scan
 
 | You are | Start here |
 |---------|------------|
-| **Supplier / builder** | [For builders](site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
-| **Buyer / reviewer** | [For reviewers](site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](site/samples/onepager.html) |
-| **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site for authorities](site/for-authorities/) |
+| **Supplier / builder** | [For builders](vision/site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
+| **Buyer / reviewer** | [For reviewers](vision/site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](vision/site/samples/onepager.html) |
+| **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site for authorities](vision/site/for-authorities/) |
 
-For the complete system, read the [white paper](papers/curbpack-whitepaper.md) and [how it works](site/how-it-works/). Definitions are in the [glossary and audience guide](docs/glossary-and-audience.md).
+For the complete system, read the [white paper](papers/curbpack-whitepaper.md) and [how it works](vision/site/how-it-works/). Definitions are in the [glossary and audience guide](docs/glossary-and-audience.md).
 
 ## Continue to the full workflow
 
@@ -89,7 +89,7 @@ Write, Bring, and CI all end in the same local `check`. Write can add optional p
 | **Attest capsule** | Human `attest` when ready | Git Notes hash bind—**unsigned ≠ verified** |
 | **Proof page** | After attest | Local `proof/index.html` vs evidence pointer—still human judgment |
 
-Optional exports: SARIF, ContextPack, buyer-questions, lay-of-land. Teaching sample: [site/samples/onepager.html](site/samples/onepager.html).
+Optional exports: SARIF, ContextPack, buyer-questions, lay-of-land. Teaching sample: [vision/site/samples/onepager.html](vision/site/samples/onepager.html).
 
 ## How to interpret results
 

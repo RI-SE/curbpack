@@ -1,10 +1,12 @@
 # Site (static Pages)
 
+Source tree: **`vision/site/`** (deployed as the GitHub Pages root).
+
 Static explainer for **https://ri-se.github.io/curbpack/** (GitHub Pages under RI-SE org).
 
 ## Deploy
 
-Source: **GitHub Actions** via `.github/workflows/pages.yml` on `RI-SE/curbpack`.
+Source: **GitHub Actions** via `.github/workflows/pages.yml` on `RI-SE/curbpack` (artifact path `vision/site`).
 
 ## Nav / footer
 

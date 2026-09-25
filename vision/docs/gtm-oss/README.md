@@ -1,7 +1,7 @@
 # GTM OSS — NON-PRODUCT / INTERNAL GTM
 
 > **NON-PRODUCT / INTERNAL GTM — not for Pages, not for adopters.**
-> Do not link this tree from the product README. GitHub Pages quarantine refuses `*gtm*` under `site/`.
+> Do not link this tree from the product README. GitHub Pages quarantine refuses `*gtm*` under `vision/site/`.
 > Claim-safety still applies to copy here; this is ops amplify kit only.
 
 # GTM OSS — claim-safe templates

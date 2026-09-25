@@ -26,16 +26,16 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 
 ## Start
 
-- **Read-only first contact:** install from docs/getting-started/install.md then `curbpack scan` — no init, no files written; scan defaults to cra-baseline + Art 14 clock
+- **Read-only first contact:** install from docs/user-guides/install.md then `curbpack scan` — no init, no files written; scan defaults to cra-baseline + Art 14 clock
 - Canonical repo: https://github.com/RI-SE/curbpack
 - Site: https://ri-se.github.io/curbpack/
-- Install (dual fence — PowerShell | macOS/Linux): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md
-- Troubleshooting: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/troubleshooting.md
+- Install (dual fence — PowerShell | macOS/Linux): https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md
+- Troubleshooting: https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/troubleshooting.md
 - Three ways in / builders: https://ri-se.github.io/curbpack/for-builders/
 - Reviewers / trust table: https://ri-se.github.io/curbpack/for-reviewers/
 - Receiving submissions (`curbpack review`): https://ri-se.github.io/curbpack/receiving-submissions/
 - In-repo triage also exists: `curbpack review --repo [.]` (same method; not a product verdict)
-- Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md
+- Pathway (Write depth): https://github.com/RI-SE/curbpack/blob/main/vision/docs/getting-started/pathway.md
 - Authorities: https://ri-se.github.io/curbpack/for-authorities/
 - White paper: https://ri-se.github.io/curbpack/whitepaper/
 - Voice: https://github.com/RI-SE/curbpack/blob/main/policies/voice-and-terms.md
@@ -49,4 +49,4 @@ Write starts with **curb outlines (your pathway sketch)**. After pack confirm, a
 
 ## Optional depth
 
-- Pathway / research / dual-draft / cite-check: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/pathway.md (research never gates check; cite-check before confirm-prose)
+- Pathway / research / dual-draft / cite-check: https://github.com/RI-SE/curbpack/blob/main/vision/docs/getting-started/pathway.md (research never gates check; cite-check before confirm-prose)

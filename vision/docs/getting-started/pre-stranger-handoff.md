@@ -55,7 +55,7 @@ Record results: first-run feedback issue, Teams note, ADOPTERS draft PR, or inte
 
 ### 4. Ops housekeeping
 
-- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ ([historical checklist](https://github.com/RI-SE/curbpack/blob/17a18ed5395d635758424873113c7ef106409e17/docs/getting-started/pre-stranger-handoff.md#L50) recorded API DELETE 2026-08-25 and GET → 404; not re-verified here; this operational date is independent of release publication)
+- [x] **Disable afelin GitHub Pages** — single canonical site: https://ri-se.github.io/curbpack/ ([historical checklist](https://github.com/RI-SE/curbpack/blob/17a18ed5395d635758424873113c7ef106409e17/vision/docs/getting-started/pre-stranger-handoff.md#L50) recorded API DELETE 2026-08-25 and GET → 404; not re-verified here; this operational date is independent of release publication)
 - [ ] **Card test:** logged-out phone → Slack + LinkedIn; paste https://ri-se.github.io/curbpack/ ; LinkedIn Post Inspector if stale cache
 - [x] Confirm [`.github/workflows/pages.yml`](../../.github/workflows/pages.yml) daily countdown cron (`0 6 * * *` UTC)
 - [ ] RI-SE About/mirror wording still correct
