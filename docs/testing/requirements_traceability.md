@@ -1,7 +1,7 @@
 # Requirement Traceability
 
 This file maps the normative requirements in
-[`docs/software-design-document.md`](../../docs/software-design-document.md) to
+[`docs/software-design-document.md`](../../vision/docs/software-design-document.md) to
 existing test and review evidence.
 
 Coverage state describes the current test design, not an execution result.

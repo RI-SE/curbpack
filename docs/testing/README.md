@@ -21,7 +21,7 @@ Product requirements and documented claims are **test basis**. They are not a
 verification document layer.
 
 - **Product requirements** are the normative `MUST / MUST NOT` statements
-  (`MUST-*`) in [Software Design Document v1.2](../../docs/software-design-document.md)
+  (`MUST-*`) in [Software Design Document v1.2](../../vision/docs/software-design-document.md)
   §§1.1 and 2.1–2.9.
 - **Other test basis** includes documented product claims, intended-use and
   non-use boundaries, release and platform claims, and human-authority limits,
