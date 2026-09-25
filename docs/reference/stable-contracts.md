@@ -15,7 +15,7 @@ Code cites: [`internal/exportx/explain.go`](../../internal/exportx/explain.go) Â
 | `install.ps1 -Repair` | Same semantics as `doctor --repair` on Windows |
 | Auto-update | **Forbidden** â€” repair never downloads; reinstall uses pinned install script |
 
-Install SoR: [getting-started/install.md](../../vision/docs/getting-started/install.md). Manifest: [`scripts/install-manifest.json`](../../scripts/install-manifest.json).
+Install SoR: [getting-started/install.md](../../docs/user-guides/install.md). Manifest: [`scripts/install-manifest.json`](../../scripts/install-manifest.json).
 
 ## Explain-packet airlock
 

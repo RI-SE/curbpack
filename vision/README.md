@@ -48,7 +48,7 @@ curbpack scan
 
 | You are | Start here |
 |---------|------------|
-| **Supplier / builder** | [For builders](vision/site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](docs/getting-started/install.md) |
+| **Supplier / builder** | [For builders](vision/site/for-builders/) · [Share handoff](docs/getting-started/share-handoff.md) · [Install](../docs/user-guides/install.md) |
 | **Buyer / reviewer** | [For reviewers](vision/site/for-reviewers/) · [Buyer evidence](docs/getting-started/buyer-evidence.md) · [Sample one-pager](vision/site/samples/onepager.html) |
 | **Authority / auditor** | [For authorities](docs/for-authorities.md) · [Site for authorities](vision/site/for-authorities/) |
 
