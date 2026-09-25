@@ -1,4 +1,4 @@
-# Curbpack reference
+# Curbpack Technical Reference Documentation
 
 Use the reference documentation when you need exact commands, configuration fields, pack formats, or generated outputs.
 

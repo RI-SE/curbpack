@@ -210,8 +210,39 @@ reproduced later.
 
 For details about generated artifacts, see [`../reference/outputs.md`](../reference/outputs.md).
 
+## 7. Human Attestation and Review
 
-## 7. Next: CI/CD
+After the review material has been prepared, a human can record an attestation for
+the reviewed repository state:
+
+```bash
+curbpack attest
+```
+
+The attestation records a human action for that repository state. It does not mean
+that Curbpack has certified the product or performed conformity assessment.
+
+The review material can then be handed to the reviewer.
+
+For the reviewer's workflow, see [`reviewers.md`](reviewers.md).
+
+## 8. Re-check after Later Changes
+
+A previous check, review pack, or attestation describes a particular repository
+state.
+
+If the repository changes later, run:
+
+```bash
+curbpack check
+```
+
+again to evaluate the current state.
+
+Where useful, `curbpack drift` can be used to inspect changes relative to an earlier
+state.
+
+## 9. Next: CI/CD
 
 Once the local workflow works in your repository, the next step is to run the same
 Curbpack checks automatically in CI.

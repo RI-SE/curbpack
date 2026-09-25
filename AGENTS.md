@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Design intent: [docs/software-design-document.md](docs/software-design-document.md). Canonical loop: [agents/assistant-loop.md](agents/assistant-loop.md). Warm-start pathway: [docs/getting-started/pathway.md](docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
+Design intent: [vision/docs/software-design-document.md](vision/docs/software-design-document.md). Canonical loop: [agents/assistant-loop.md](agents/assistant-loop.md). Warm-start pathway: [vision/docs/getting-started/pathway.md](vision/docs/getting-started/pathway.md). Cursor skill source: `internal/skilldata/SKILL.md` (installed by `curbpack init`).
 
 When creating, completing, or reviewing EV suite cases, follow [`.cursor/skills/ev-test-case/SKILL.md`](.cursor/skills/ev-test-case/SKILL.md).
 
@@ -55,7 +55,7 @@ trust-import · review-sign · Last tabletop: · confirm-* · attest · pin-bump
 7. **Research (optional sidecar):** `curbpack research` builds allowlisted citation packet + human brief — **never** inputs to check pass/fail. After confirm-packs / before prose: draft from packet; every factual assertion needs a repo artifact (path, config, test name, commit, metric, claim id) or an allowlisted cite (`[^src-N]` / `<!-- cite:src-N -->` / allowlisted URL). Heal stubs are not grounding. `confirm-prose` is AND: every displayed prose path must be independent (mixed stub+real still refuses). Run `curbpack research --cite-check <draft.md>` before asking a human for `confirm-prose` (confirm-prose also refuse-ungrounded). On red, optional `research --gate-id=<id>`. Link-only if no `--fetch`.
 8. **Dual-draft HITL:** always propose Option A and Option B, state **Recommended: A|B** with ≤3 reasons (from seed notes / last_pick / requirements), stop for human pick; then cite-check; record via `curbpack pathway note --set last_draft_pick=A|B|edited`.
 9. **Claim discipline:** an artifact must never assert something the tool caused — see [policies/claim-discipline.md](policies/claim-discipline.md).
-10. **Repository policy:** **RI-SE/curbpack** is the sole public source of truth. Never open full-tree parity/mirror/sync PRs. Never copy private-fork maintainer docs onto RI-SE. **afelin/curbpack** is downstream catch-up only (`git fetch corp-origin && git merge corp-origin/main`). See [docs/internal/fork-policy.md](docs/internal/fork-policy.md).
+10. **Repository policy:** **RI-SE/curbpack** is the sole public source of truth. Never open full-tree parity/mirror/sync PRs. Never copy private-fork maintainer docs onto RI-SE. **afelin/curbpack** is downstream catch-up only (`git fetch corp-origin && git merge corp-origin/main`). See [vision/docs/internal/fork-policy.md](vision/docs/internal/fork-policy.md).
 11. **Concurrent agents:** use one independent clone per writer, one `<agent>/<story>` branch, and WIP=1 per agent. Reserve non-overlapping repository-relative paths in the operator registry, run its advisory preflight before editing, and stage named paths only (`git add -- <paths>`; never `git add .` or `git add -A`). Preflight catches honest mistakes; clone isolation and GitHub rules are the enforced boundaries.
 
 Do **not** treat chat tutors as a gate greenlight. Re-check locally.
