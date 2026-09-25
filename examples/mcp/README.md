@@ -98,4 +98,4 @@ Cursor MCP settings (`.cursor/mcp.json` or UI):
 4. Prefer ContextPack over guessing which cache files to open.
 5. **No** pathway confirm / attest MCP tools — humans run `curbpack pathway confirm-*` and `curbpack attest` in a terminal. Agents may call CLI `pathway status|suggest` only. Optional CLI `curbpack research` / `--cite-check` is read/propose-only — never a confirm stamp.
 
-See [docs/assistant-loop.md](../../docs/assistant-loop.md) and [pathway](../../docs/getting-started/pathway.md).
+See [agents/assistant-loop.md](../../agents/assistant-loop.md) and [pathway](../../docs/getting-started/pathway.md).

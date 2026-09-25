@@ -63,7 +63,7 @@ DOC_FILES=()
 while IFS= read -r f; do
   DOC_FILES+=("$f")
 done < <(
-  find README.md SECURITY.md NOTICE LICENSE AGENTS.md CLAUDE.md docs papers site .cursor/skills internal/skilldata action.yml examples \
+  find README.md SECURITY.md NOTICE LICENSE AGENTS.md CLAUDE.md docs papers vision/site .cursor/skills internal/skilldata action.yml examples \
     .github/ISSUE_TEMPLATE .github/workflows .github/copilot-instructions.md scripts \
     \( -type f \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.sh' -o -name '*.ps1' -o -name '*.html' -o -name '*.txt' -o -name 'LICENSE' -o -name 'NOTICE' -o -name 'copilot-instructions.md' \) \) \
     2>/dev/null | grep -v 'scripts/claim-safety\.sh$' | grep -v 'scripts/docs_acceptance_check\.sh$' | grep -v '/gtm-oss/' | grep -v 'workflows/pages\.yml$' | sort -u
@@ -94,7 +94,7 @@ skip_verb_files = {
     "docs/internal/sdd-gap-analysis.md",
     "docs/internal/historical-verify-target.md",  # fences phantom verify; not a ship verb
 }
-doc_globs = ["README.md", "docs", "site", "papers", "AGENTS.md", "CLAUDE.md"]
+doc_globs = ["README.md", "docs", "vision/site", "papers", "AGENTS.md", "CLAUDE.md"]
 paths = []
 for g in doc_globs:
     p = os.path.join(root, g)

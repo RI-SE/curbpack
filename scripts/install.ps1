@@ -171,7 +171,7 @@ function Write-Install404Guidance {
   Write-Host "$Context (often HTTP 404):" -ForegroundColor Red
   if ($FailedUrl) { Write-Host "  $FailedUrl" }
   Write-Host "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" -ForegroundColor Yellow
-  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md"
+  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md"
   Write-Host "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)."
 }
 
@@ -195,7 +195,7 @@ if (-not $url) {
   Write-Host "could not resolve download URL for $asset (tag=$tag)" -ForegroundColor Red
   Write-Host "Prefer the binary installer from RI-SE releases:" -ForegroundColor Yellow
   Write-Host "  https://github.com/RI-SE/curbpack/releases"
-  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md"
+  Write-Host "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md"
   Write-Host "Go module path remains github.com/afelin/curbpack until wave-2 migration;"
   Write-Host "with that development repo private, strangers should use binary installers only."
   Write-Host "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)"

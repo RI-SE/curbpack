@@ -22,7 +22,7 @@ Other test basis:
 - SDD §1 file-based publisher–producer–reviewer exchange model.
 - SDD §3.3 independent verification boundary.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -57,9 +57,9 @@ MUST-04: signatures and every scoped score or status are not covered.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -113,9 +113,9 @@ MUST-04: signatures and every scoped score or status are not covered.
 
 ### SETUP
 
-- Repository state: [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -191,7 +191,7 @@ mismatch.
 ### SETUP
 
 - Repository state: no R-id. Disposable reference-product checkout after `verification-run.sh`.
-- Pack input: [PF-10](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
+- Pack input: [PF-10](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
 - Execution configuration: no EC-id.
 
 
@@ -246,7 +246,7 @@ product enforced the omission.
 ### SETUP
 
 - Repository state: no R-id. Disposable reference-product checkout after `verification-run.sh`.
-- Pack input: [PF-11](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
+- Pack input: [PF-11](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
 - Execution configuration: no EC-id.
 
 
@@ -293,7 +293,7 @@ Other test basis:
 ### SETUP
 
 - Repository state: no R-id. Disposable reference-product checkout after `verification-run.sh`.
-- Pack input: [PF-12](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
+- Pack input: [PF-12](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 2.
 - Execution configuration: no EC-id.
 
 

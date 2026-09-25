@@ -6,7 +6,7 @@ Curbpack checks your repository against local rule packs and writes a review pac
 
 > Not conformity assessment. Not CE marking. Not a notified-body opinion.
 
-Canonical voice: [`docs/voice-and-terms.md`](../docs/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/). Pin Action / examples at **`@v0.5.2`**.
+Canonical voice: [`../policies/voice-and-terms.md`](../policies/voice-and-terms.md). Public site: [https://ri-se.github.io/curbpack/](https://ri-se.github.io/curbpack/). Pin Action / examples at **`@v0.5.2`**.
 
 ---
 
@@ -138,7 +138,7 @@ Exit codes remain authoritative: **0** pass · **1** gates/error · **2** usage/
 5. **Review pack** — `curbpack share` (or `prepare-release`) writes layered reports and a buyer one-pager (supplier evidence summary). Human `confirm-share` when reviewing handoff.
 6. **Optional attest** — a human runs `attest` when ready. Until ssh-agent signed: **UNSIGNED — not cryptographically verified**. Then open `proof/index.html` vs the evidence pointer.
 
-Bring and CI skip step 1 and go straight to check. A committed teaching sample (before/after): [`site/samples/onepager.html`](../site/samples/onepager.html).
+Bring and CI skip step 1 and go straight to check. A committed teaching sample (before/after): [`vision/site/samples/onepager.html`](../vision/site/samples/onepager.html).
 
 ## 8. Evidence catalog and trust levels
 
@@ -179,7 +179,7 @@ Curbpack does not:
 
 Development supported by RISE Research Institutes of Sweden as an applied research / competence object. RISE does not certify products that use Curbpack gate results. Public Pages under RI-SE are a credibility home—not an endorsement of adopter products.
 
-Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims. Public wording: [promotion firewall](../docs/promotion-firewall.md) · [voice and terms](../docs/voice-and-terms.md). CI enforces via `scripts/claim-safety.sh`.
+Never claim “RISE-approved,” “NCSC-approved,” or agency-endorsed product claims. Public wording: [promotion firewall](../policies/promotion-firewall.md) · [voice and terms](../policies/voice-and-terms.md). CI enforces via `scripts/claim-safety.sh`.
 
 ## 11. Limitations
 
@@ -226,8 +226,8 @@ Full audience map: [`docs/glossary-and-audience.md`](../docs/glossary-and-audien
 - Authorities / CISO: `docs/for-authorities.md`
 - Security plain language: `docs/security-model.md`
 - Install and commands: repository README
-- Voice canon: `docs/voice-and-terms.md`
-- Assistant contract: `docs/assistant-loop.md`
+- Voice canon: `../policies/voice-and-terms.md`
+- Assistant contract: `agents/assistant-loop.md`
 
 ---
 

@@ -10,13 +10,13 @@ trap 'rm -rf "$TMP"' EXIT
 export npm_config_cache="${CURBPACK_CSS_NPM_CACHE:-$TMP/npm-cache}"
 cd "$ROOT"
 npx --yes --package=tailwindcss@3.4.17 tailwindcss \
-  --config site/tailwind.config.cjs --input site/assets/homepage.input.css \
+  --config vision/site/tailwind.config.cjs --input vision/site/assets/homepage.input.css \
   --output "$TMP/homepage.css" --minify
 if [ "$MODE" = '--check' ]; then
-  cmp "$TMP/homepage.css" site/assets/homepage.css || {
+  cmp "$TMP/homepage.css" vision/site/assets/homepage.css || {
     echo 'Homepage CSS is stale; run scripts/build-homepage-css.sh and review the result.' >&2
     exit 1
   }
 else
-  cp "$TMP/homepage.css" site/assets/homepage.css
+  cp "$TMP/homepage.css" vision/site/assets/homepage.css
 fi

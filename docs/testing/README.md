@@ -1,4 +1,4 @@
-# Independent verification
+# Independent Verification
 
 Use the verification documents in this order:
 
@@ -10,18 +10,18 @@ Use the verification documents in this order:
 3. [Test Setup](procedures/README.md) — controlled repository state (`R-*`),
    pack input (`PF-*`), and execution configuration (`EC-*`) prerequisites.
    Create a verification run with `make start-verification-run`.
-4. [Test Suites and Test Cases](test_suites/README.md) — suite objectives, test
+4. [Test Suites and Test Cases](../../testing/test_suites/README.md) — suite objectives, test
    basis, case selection, and executable procedures.
 5. [Test Records](generated_test_record_template.md) — one record per case
    execution.
 
-## Reading model
+## Reading Model
 
 Product requirements and documented claims are **test basis**. They are not a
 verification document layer.
 
 - **Product requirements** are the normative `MUST / MUST NOT` statements
-  (`MUST-*`) in [Software Design Document v1.2](../software-design-document.md)
+  (`MUST-*`) in [Software Design Document v1.2](../../vision/docs/software-design-document.md)
   §§1.1 and 2.1–2.9.
 - **Other test basis** includes documented product claims, intended-use and
   non-use boundaries, release and platform claims, and human-authority limits,

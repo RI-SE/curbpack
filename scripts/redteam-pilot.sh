@@ -141,10 +141,10 @@ rm -rf "$THEATER" "$IMPORT_DEST"
   bad "12 fork-policy guard — parity/mirror branch or forbidden doc swap"
 
 # --- 13) Stable contracts nave — internal/contract/ + go test ./... (CI) ---
-[[ -f docs/stable-contracts.md && \
+[[ -f docs/reference/stable-contracts.md && \
     -f internal/contract/explain_coreward_consumer_test.go ]] && \
   ok "13 stable contracts (explain consumer + docs sync)" || \
-  bad "13 stable contracts nave — missing contract tests or docs/stable-contracts.md"
+  bad "13 stable contracts nave — missing contract tests or docs/reference/stable-contracts.md"
 
 # --- 16) share --bundle offline schema marker ---
 TMPB="$(mktemp -d)"
@@ -195,7 +195,7 @@ rm -rf "$TMPD"
 if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
    grep -Eq 'windows/amd64|windows_amd64' .github/workflows/release.yml && \
    grep -q 'curbpack_windows_amd64.exe' scripts/install.ps1 && \
-   grep -qi 'Linux/macOS' docs/getting-started/install.md && \
+   grep -qi 'macOS or Linux' docs/user-guides/install.md && \
    ! grep -qiE 'runs-on:.*windows' action.yml && \
    grep -q 'mingw\*|msys\*|cygwin\*|windows\*' scripts/action-resolve-bin.sh && \
    grep -A5 "^  heal:" action.yml | grep -q "default: 'false'"; then

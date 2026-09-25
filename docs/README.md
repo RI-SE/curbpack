@@ -1,72 +1,136 @@
-# Documentation
+# Curbpack Documentation
+# Curbpack
 
-Start with the shortest path for your role. The [glossary and audience guide](glossary-and-audience.md) defines abbreviations and provides the full audience map.
+## Vision
 
-## Start
+Software teams increasingly need to show that a product follows technical requirements, company policies, security rules, standards, and other obligations. The relevant evidence already exists in many projects — in source code, configuration, tests, documentation, build results, and engineering records — but connecting a requirement to the right evidence, checking it consistently, and preparing it for review is still largely manual.
 
-**Friendly pre-beta testers:** use [Start testing here](getting-started/prebeta.md).
-It identifies the source build, sandbox exercise, results and feedback path.
+The long-term goal is a traceable path from **a requirement or policy**, through **explicit checks of engineering evidence**, to **a reviewable result**. Automation should do the repetitive checking and preserve where each result came from. Humans remain responsible for interpreting policies, approving rules, reviewing the evidence, and making decisions such as whether a product is ready to release or whether an external requirement has been satisfied.
 
-| Goal | Read |
-|------|------|
-| Test the current friendly pre-beta | [Pre-beta testing guide](getting-started/prebeta.md) |
-| Check released behavior and audit limitations | [Launch status](launch-status.md) |
-| Inspect a repository without writing files | [60-second paths](getting-started/60-second-paths.md) |
-| Install on Windows, macOS, or Linux | [Install](getting-started/install.md) |
-| Resolve PATH, SmartScreen, or environment problems | [Troubleshooting](getting-started/troubleshooting.md) |
-| Run the RISE first-use exercise | [RISE tryout](getting-started/rise-tryout.md) |
-| Review supplier evidence | [Buyer evidence](getting-started/buyer-evidence.md) and [for reviewers](../site/for-reviewers/) |
-| Review scope as an authority, auditor, or CISO | [For authorities](for-authorities.md) |
+```mermaid
+flowchart LR
+    A["Policies, standards<br/>and engineering requirements"]
+    B["Human interpretation<br/>and approved rules"]
+    C["Engineering evidence<br/>code · tests · docs · configuration"]
+    D["Repeatable checks"]
+    E["Traceable results<br/>and review material"]
+    F["Human review<br/>and decision"]
 
-## Perform a task
+    A --> B
+    B --> D
+    C --> D
+    D --> E
+    E --> F
+```
 
-| Task | Guide |
-|------|-------|
-| Share a review pack | [Share handoff](getting-started/share-handoff.md) |
-| Use the guided drafting path | [Pathway](getting-started/pathway.md) |
-| Establish the daily operating loop | [Daily loop](getting-started/daily-loop.md) |
-| Write or update a rule pack | [Write your own pack](write-your-own-pack.md) and [packs update](packs-update.md) |
-| Distinguish Article 14 reporting from later handling | [Article 14 reporting vs handling](getting-started/art14-reporting-vs-handling.md) |
-| Configure assistants and integrations | [Assistant loop](assistant-loop.md) |
-| Prepare a design-partner engagement | [Design partners](design-partners.md) |
-| Harden repository operations | [Repository operations](getting-started/repo-ops-hardening.md) |
-| Independent Curbpack verification | Start a run: [test suites README](testing/test_suites/README.md). Folder: [testing](testing/README.md). Approach: [strategy](testing/strategy.md). |
+Curbpack is intended to provide the **repeatable checking and evidence-handling part** of this flow. It should not decide what a law means, invent organizational policy, or make a compliance or release decision on behalf of a person.
 
-## Understand the design
+## Current State
 
-| Subject | Source |
-|---------|--------|
-| Product purpose and limits | [Intent vs Scope](intent-vs-scope.md) and [strategy boundary](strategy-boundary.md) |
-| Trust model and required checks | [Security model](security-model.md) |
-| Public terminology and claims | [Voice and terms](voice-and-terms.md), [claim discipline](claim-discipline.md), and [promotion firewall](promotion-firewall.md) |
-| Architecture | [Software design document](software-design-document.md) |
-| Stable interfaces | [Stable contracts](stable-contracts.md) and [review method 1.3.0](method/review-method-1.3.0.md) |
-| CTAM Mapper integration | [Shared Frame](shared-frame.md), pinned to `a36aeef` |
-| Optional Coreward integration | [Coreward pointer](coreward-pointer.md) and [Coreward bridge](coreward-bridge.md) |
+Curbpack does **not yet implement the full vision**. The current implementation focuses on a useful subset: select versioned rules, inspect a software repository, run repeatable checks against repository evidence, report findings, and prepare the results for human review.
 
-RISE is a funder, not a certifier. Use the [promotion firewall](promotion-firewall.md) and [NOTICE](../NOTICE) for liaison or co-promotion work.
+This is also the part that can be demonstrated today. A demo can start with a normal Git repository and a selected rule pack, show what Curbpack finds, run the checks, show which rules pass or produce findings, and follow the resulting material into human review. Capabilities outside this path are either only partly implemented or still planned.
 
-## Consult reference material
+```mermaid
+flowchart LR
+    A["Policies, standards<br/>and engineering requirements"]
+    B["Human interpretation<br/>and approved rules"]
 
-| Reference | Purpose |
-|-----------|---------|
-| [Migration guide](migration-cyberready-to-curbpack.md) | Prior-name cutover and legacy paths |
-| [ENISA CRA mapping (preliminary)](mappings/enisa-cra-mapping.md) | Informational SME maturity mapping; not domain-verified and not ENISA endorsement |
-| [First-run cohort scorecard](getting-started/first-run-cohort-scorecard.md) | Aggregate first-run observations without PII |
-| [RISE pilot offer](getting-started/rise-pilot-offer.md) | Neutral Evidence Profile pilot description |
-| [Pilot scorecard](getting-started/pilot-scorecard.md) | Manual adoption and transaction measures |
-| [Minimum receipt fixture](getting-started/minimum-receipt-fixture.md) | Receipt v0 structural validation |
-| [Pilot decision log](getting-started/pilot-decision-log.md) | Equivalence and disposition decisions |
-| [Sync both remotes (historical)](getting-started/sync-both-remotes.md) | Deprecated dual-remote procedure; RI-SE/curbpack is canonical |
+    subgraph NOW["CURRENT IMPLEMENTATION / DEMO"]
+        C["Selected<br/>rule pack"]
+        D["Git repository<br/>with engineering evidence"]
+        E["scan / check"]
+        F["Results<br/>and findings"]
+        G["Review material"]
+        C --> E
+        D --> E
+        E --> F
+        F --> G
+    end
 
-## Maintainers
+    H["Human review<br/>and decision"]
 
-| Document | Purpose |
-|----------|---------|
-| [Fork policy](internal/fork-policy.md) | RI-SE-first repository policy |
-| [Launch readiness](internal/launch-readiness.md) | Internal launch checklist |
-| [GitHub-readiness gaps](internal/github-readiness-gaps.md) | Evidence-backed readiness gaps |
-| [SDD gap analysis](internal/sdd-gap-analysis.md) | Repository baseline against the design document |
-| [v0.6 hardening checklist](internal/v0.6-hardening-checklist.md) | Pre-pin-bump verification |
+    A -. future / broader flow .-> B
+    B --> C
+    G --> H
+```
 
-The [`gtm-oss/`](gtm-oss/) directory contains internal operating templates, not product documentation. The Pages workflow prevents GTM, invite, and exploit paths from entering the public site.
+The diagrams above show the distinction between the **intended system** and the **subset implemented today**. This is intentional in the documentation: future capabilities should remain visible without being presented as shipped functionality.
+
+For a more detailed view, see **[Capability status](curbpack-capability-implementation-audit.md)**, which maps the intended capabilities to what is implemented, partially implemented, and still missing.
+
+---
+
+Start with the shortest path for what you need to do.
+
+## Start Here
+
+| Goal                                                      | Read                                            |
+| --------------------------------------------------------- | ----------------------------------------------- |
+| Install Curbpack                                          | [Install Curbpack](user-guides/install.md)           |
+| Try Curbpack on the reference product                     | [Getting started](user-guides/getting-started.md)    |
+| Use Curbpack in a product repository                      | [Developer guide](user-guides/developers.md)         |
+| Run Curbpack in CI/CD                                     | [CI/CD guide](user-guides/ci-cd.md)                  |
+| Review Curbpack results, evidence, and review material | [Reviewer guide](user-guides/reviewers.md)           |
+| Write or maintain a rule pack                          | [Pack development](user-guides/pack-developers.md)   |
+
+## Common Tasks
+
+| Task                                                            | Read                                                  |
+| --------------------------------------------------------------- | ----------------------------------------------------- |
+| Select and configure packs                                      | [Configuration reference](reference/configuration.md) |
+| Understand how packs work                                       | [Packs](concepts/packs.md)                            |
+| Understand repository evidence and results                      | [Evidence](concepts/evidence.md)                      |
+| Understand the main Curbpack flow, including `scan` and `check` | [Concepts overview](concepts/README.md)               |
+| Prepare material for another person to review                   | [Developer guide](user-guides/developers.md)               |
+| Review received material                                        | [Reviewer guide](user-guides/reviewers.md)                 |
+| Create or maintain a custom pack                                | [Pack development](user-guides/pack-developers.md)         |
+| Run the verification test suites                                | [Testing](testing/README.md)                          |
+
+## Understand Curbpack
+
+| Subject                                                | Read                                         |
+| ------------------------------------------------------ | -------------------------------------------- |
+| What Curbpack does and how the main parts fit together | [Concepts overview](concepts/README.md)      |
+| Packs and rules                                        | [Packs](concepts/packs.md)                   |
+| Evidence and review material                           | [Evidence](concepts/evidence.md)             |
+| Current implementation architecture                    | [Architecture](development/architecture.md) |
+
+## Reference
+
+Use the reference documentation when you need exact commands, fields, paths, or output formats.
+
+| Reference                                   | Purpose                                                     |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| [CLI](reference/cli.md)                     | Commands, flags, aliases, and exit codes                    |
+| [Configuration](reference/configuration.md) | `.curbpack.json`, pack selection, and environment variables |
+| [Packs](reference/packs.md)                 | Pack schema, rule fields, check types, and composition      |
+| [Outputs](reference/outputs.md)             | Generated files, formats, and locations                     |
+
+## Testing
+
+The verification documentation is separate from normal product documentation.
+
+Start with:
+
+* [Testing overview](testing/README.md)
+* [Test strategy](testing/strategy.md)
+* [Requirements traceability](testing/requirements_traceability.md)
+
+Executable test material is under the repository-level `testing/` directory.
+
+## Working on Curbpack Itself
+
+For contributors working on the Curbpack implementation:
+
+* [Contributing](development/README.md)
+* [Architecture](development/architecture.md)
+* [Testing](testing/README.md)
+
+## Papers and Background Material
+
+Longer background and research material is kept under:
+
+* [Papers](papers/)
+
+These documents provide context and discussion. They are not the primary source for command or configuration behavior.

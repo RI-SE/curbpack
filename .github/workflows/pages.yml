@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "site/**"
+      - "vision/site/**"
       - ".github/workflows/pages.yml"
   schedule:
     - cron: '0 6 * * *'  # daily UTC — refresh baked Art14 countdown
@@ -51,9 +51,9 @@ jobs:
       - name: Quarantine — refuse ops/gtm paths in site tree
         run: |
           set -euo pipefail
-          if find site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) | grep -q .; then
-            echo "ops/gtm/exploit paths must not ship under site/" >&2
-            find site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) >&2
+          if find vision/site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) | grep -q .; then
+            echo "ops/gtm/exploit paths must not ship under vision/site/" >&2
+            find vision/site -type f \( -path '*gtm*' -o -name '*invite*' -o -name '*exploit*' \) >&2
             exit 1
           fi
           # Same claim-safety deny/safe framing as scripts/claim-safety.sh (site HTML only)
@@ -64,7 +64,7 @@ jobs:
           deny = re.compile(sys.argv[1], re.I)
           safe = re.compile(sys.argv[2], re.I)
           fail = 0
-          for p in pathlib.Path("site").rglob("*"):
+          for p in pathlib.Path("vision/site").rglob("*"):
               if p.suffix.lower() not in {".html", ".md", ".txt"}:
                   continue
               for i, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
@@ -85,13 +85,13 @@ jobs:
               echo "site HTML must use /curbpack/ root-relative hrefs (found in $f)" >&2
               bad=1
             fi
-          done < <(find site -type f -name '*.html')
+          done < <(find vision/site -type f -name '*.html')
           exit "$bad"
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Render server-side Art 14 countdown
         run: ./scripts/render-site-countdown.sh
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: site
+          path: vision/site
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

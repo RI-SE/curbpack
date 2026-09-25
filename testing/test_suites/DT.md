@@ -17,7 +17,7 @@ Other test basis:
 
 - SDD §7.3 deterministic-behavior and exact-evidence expectations.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -49,9 +49,9 @@ evaluation bytes. See INV-04 in [SDD §8](../../docs/software-design-document.md
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -96,7 +96,7 @@ Empty lists in this JSON are encoded as `null`, not `[]`. This applies to both `
 - MUST-31
 
 This case is the locale and timezone slice of MUST-31’s exclude clause.
-[EC-07](../../docs2/testing/procedures/README.md#execution-configurations) is not yet specified.
+[EC-07](../../docs/testing/procedures/README.md#execution-configurations) is not yet specified.
 Do not invent that procedure here. A pass cannot close MUST-31 because the
 case is not executable.
 
@@ -126,9 +126,9 @@ steps.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) then [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — R1 prepared by `setup.sh` in step 3; R2 prepared by `setup.sh` in step 7 after the R1 JSON is retained. TEST STEPS consume R2.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4 for R1 and by steps 7–8 for R2.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) then [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — R1 prepared by `setup.sh` in step 3; R2 prepared by `setup.sh` in step 7 after the R1 JSON is retained. TEST STEPS consume R2.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4 for R1 and by steps 7–8 for R2.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -205,9 +205,9 @@ separate finding-id field.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) then [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — R1 prepared by `setup.sh` in step 3; R2 prepared by `setup.sh` in step 7 after the 20 R1 JSON files are retained. TEST STEPS compare retained files.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4 for R1 and by steps 7–8 for R2.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) then [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — R1 prepared by `setup.sh` in step 3; R2 prepared by `setup.sh` in step 7 after the 20 R1 JSON files are retained. TEST STEPS compare retained files.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4 for R1 and by steps 7–8 for R2.
 
 If `$CURBPACK_ROOT/tmp/dt-001/run-1.json` through `run-20.json` and
 `$CURBPACK_ROOT/tmp/dt-003/r2.json` already exist from this same frozen

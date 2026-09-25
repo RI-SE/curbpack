@@ -1,4 +1,4 @@
-# Generated test record template
+# Generated Test Record Template
 
 Copy this file **outside this repository** (or into the assignment’s record
 store) for each execution instance. Name copies `{run-id}_{case-id}.md`. Do

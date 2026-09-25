@@ -6,5 +6,5 @@ Local pack gates. Humans review. Not conformity assessment.
 - On red: `curbpack check --heal`, then `curbpack ask .github/curbpack/cache/latest_failure.json --propose`. Propose-only; never attest; never claim CE/certification.
 - On green: optional `curbpack export --context-pack` (one washed artifact for PR/review).
 - Prefer ContextPack / GateFailure IR over inventing findings. Pin Action `@v0.5.2`.
-- Repository policy: product PRs target RI-SE/curbpack only — see `docs/internal/fork-policy.md`.
-- Full contract: docs/assistant-loop.md
+- Repository policy: product PRs target RI-SE/curbpack only — see `vision/docs/internal/fork-policy.md`.
+- Full contract: agents/assistant-loop.md

@@ -5,13 +5,13 @@ describes what is verified, how test inputs are controlled, how test cases are
 grouped, and how results are classified.
 
 To **start a verification run**, follow this order: this Verification
-Strategy, [test procedures](procedures/README.md), [test-suites](test_suites/README.md), then
+Strategy, [test procedures](procedures/README.md), [test-suites](../../testing/test_suites/README.md), then
 [generated-test-record-template](generated_test_record_template.md). Create the run
 with `make start-verification-run`. Do not start in a suite file.
 
-## 2. System under test and boundary
+## 2. System Under Test and Boundary
 
-### 2.1 System under test
+### 2.1 System Under Test
 
 The system under test (SUT) is Curbpack: the released command-line software,
 rule-pack evaluation logic, machine-readable result, and Review Pack workflow
@@ -23,7 +23,7 @@ independent code and release review.
 Repositories, files, rule packs, pack instances, and seeded defects used
 during testing are test inputs. They are not additional systems under test.
 
-### 2.2 Intended use
+### 2.2 Intended Use
 
 Curbpack evaluates declared structural conditions in a Git repository against
 a selected rule pack. It records findings against the examined repository
@@ -32,14 +32,14 @@ state and prepares selected material for human review.
 Typical checks include the presence of required files, sections, owners, and
 references when the selected pack defines those checks.
 
-### 2.3 Explicit non-use
+### 2.3 Explicit Non-Use
 
 Curbpack does not determine whether repository documentation is true,
 sufficient, or technically correct. A structural pass does not by itself
 establish security, compliance, certification, legal sufficiency, clinical
 adequacy, CE marking, or product acceptance.
 
-### 2.4 Failure boundary
+### 2.4 Failure Boundary
 
 Verification includes malformed or misleading inputs, path and output
 handling, operational failures, provenance, and Review Pack consistency.
@@ -47,7 +47,7 @@ handling, operational failures, provenance, and Review Pack consistency.
 It does not treat Curbpack as a vulnerability scanner for the product
 represented by the repository under examination.
 
-## 3. Verification setups
+## 3. Verification Setups
 
 Curbpack inspects other product repositories. Verification therefore uses one
 reference product (see 3.1) that holds the files, pack copies, and claims
@@ -64,7 +64,7 @@ prepared are in [test procedures](procedures/README.md). Other case
 prerequisites are pack input (`PF-*`) and execution configuration (`EC-*`)
 as defined there.
 
-### 3.1 Reference test product
+### 3.1 Reference Test Product
 
 Use the **reference product** (Glucose Log, repository
 `cyberready-test-product`) with the files, pack copies, and claims that
@@ -80,11 +80,11 @@ separate prerequisite dimensions. An execution configuration may add a
 testcase-specific condition after that base R-state, such as a deliberate
 dirty-tree edit. It does not replace the R-state.
 
-### 3.2 Other target repositories
+### 3.2 Other Target Repositories
 
 Future verification may include using real product repositories, but that requires adapting  pack templates and state scripts (`R-*.sh`) to the other repository. This  is not yet specified.
 
-## 4. Frozen test baseline
+## 4. Frozen Test Baseline
 
 A verification run is executed against one frozen baseline. It comprises:
 
@@ -109,7 +109,7 @@ register; it does not replace the product source selected for a verification
 run. A changed product, requirement, setup, procedure, or expected result
 requires a separately frozen run.
 
-## 5. Verification activities
+## 5. Verification Activities
 
 Verification consists of:
 
@@ -124,7 +124,7 @@ Controlled prerequisites, execution, and recording rules are in
 [test procedures](procedures/README.md). Repository state implementation details are
 [controlled-repo-setup](procedures/0_controlled_repo_setup.md); pack input details are [pack-instantiation](procedures/1_pack_template_instantiation.md).
 Independent code and release review is [code-review](procedures/2_code_review_procedures.md). The suite index is
-[test-suites](test_suites/README.md).
+[test-suites](../../testing/test_suites/README.md).
 
 The results of each execution is written on a test record copied from
 [generated-test-record-template](generated_test_record_template.md), kept with the
@@ -136,10 +136,10 @@ scope. Mapping to existing test and review evidence is in
 [Requirement traceability](requirements_traceability.md). Coverage state
 there is test design, not an execution result.
 
-## 6. Test suites
+## 6. Test Suites
 
 How to start a verification run, and the suite files themselves, are in
-[test-suites](test_suites/README.md).
+[test-suites](../../testing/test_suites/README.md).
 
 A **test suite** is a related group of cases with a common verification
 objective. The suite prefix forms part of each test-case identifier.
@@ -167,7 +167,7 @@ All existing functional and validation suites are available for selection.
 The procedure is [code-review](procedures/2_code_review_procedures.md). A
 separate verification assignment controls review effort.
 
-## 7. Test classes
+## 7. Test Classes
 
 Each formal case has a **test class**. The class expresses priority and
 applicability; it does not change the expected technical behaviour.
@@ -194,7 +194,7 @@ default scope, unless a separate assignment records a different selection.
 
 ## 8. Results
 
-### 8.1 Case disposition
+### 8.1 Case Disposition
 
 Test executions use these dispositions:
 
@@ -208,7 +208,7 @@ Test executions use these dispositions:
 | **Inconclusive**   | Observations are conflicting or insufficient.                  |
 
 
-### 8.2 Suite verdict
+### 8.2 Suite Verdict
 
 Each functional or validation suite records one of these verdicts for the
 verification run:
@@ -224,7 +224,7 @@ unavailable, blocked, or not yet executable.
 The required case set for a suite follows the default scope in §7 unless a
 separate assignment records a different selection.
 
-## 9. Findings and retest
+## 9. Findings and Retest
 
 A failed test or review may create a finding. A finding records the affected
 baseline, condition, expected and observed behaviour, the test record,
@@ -233,7 +233,7 @@ impact, and disposition.
 Corrections are verified against a separately frozen corrected baseline using
 the original test case and relevant regression cases.
 
-## 10. Entry, exit, and records
+## 10. Entry, Exit, and Records
 
 These rules apply to every verification run unless a separate assignment
 records a different selection.

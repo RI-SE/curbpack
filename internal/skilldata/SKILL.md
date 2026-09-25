@@ -25,9 +25,9 @@ irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | 
 curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
 ```
 
-Then: `curbpack doctor` → `demo` → `scan` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/getting-started/install.md`.
+Then: `curbpack doctor` → `demo` → `scan` → `init` → `check` → `share [--bundle] [--reveal]`. After PATH loss: `curbpack doctor --repair` (local only — not auto-update; Windows also `install.ps1 -Repair`). Hub: `docs/user-guides/install.md`.
 
-Design intent: `docs/software-design-document.md`.
+Design intent: `vision/docs/software-design-document.md`.
 
 ## Loop (opens read-only)
 
@@ -41,7 +41,7 @@ Pathway and research are **Write→Check depth** sidecars — never gate inputs.
 - **`research [--fetch] [--gate-id=…]`** — allowlisted citation packet; **`research --cite-check`** before `confirm-prose`
 - Dual-draft HITL: Option A + Option B + **Recommended: A|B** → human pick → cite-check → `pathway note --set last_draft_pick=…`
 
-See `docs/assistant-loop.md` and `docs/getting-started/pathway.md`.
+See `agents/assistant-loop.md` and `vision/docs/getting-started/pathway.md`.
 
 ## Human-only acts
 
@@ -58,7 +58,7 @@ Gate: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` (TTY alone is not enough). **
 - Explaining a `GateFailure` JSON payload from `.github/curbpack/cache/`
 - Safe try without touching product: `curbpack demo`
 - Exporting SARIF / RKG / explain-packet / lay-of-land / **ContextPack** for IDEs, tutors, or humans
-- Canonical assistant contract: `docs/assistant-loop.md` (AGENTS.md / CLAUDE.md / Copilot instructions in this repo)
+- Canonical assistant contract: `agents/assistant-loop.md` (AGENTS.md / CLAUDE.md / Copilot instructions in this repo)
 
 ## Commands
 
@@ -117,7 +117,7 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 2. Prefer dual-rep markdown + JSON IR — do not invent legal prose as source of truth.
 3. `ask --propose` and `check --form-hints` suggest edits only; apply in the editor (or `--apply-stub` / `--heal` for missing stubs), then re-check.
 4. Never claim the product is certified, CE-marked, or notified-body approved.
-5. Coreward is optional integrator-only — see `docs/coreward-pointer.md`; not part of activation. Chat tutors must re-check; they never greenlight.
+5. Coreward is optional integrator-only — see `vision/docs/coreward-pointer.md`; not part of activation. Chat tutors must re-check; they never greenlight.
 6. Cold start: prefer `curbpack init` (house-policy) unless the user asks for CRA/medtech.
 7. **After edits** (human or agent) in an initialized repo, run `curbpack check` (or bare `curbpack`).
 8. **On red:** run `curbpack check --heal` then `curbpack ask … --propose` (explain-packet optional for tutors); never invent certification; `--heal` never auto-attests; **never attest**.
@@ -131,7 +131,7 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 15. Keep git hooks from `init` for agent PRs — they force the check loop.
 16. Agent lineage env (optional): `CURBPACK_AGENT_ID`, `CURBPACK_MODEL_HASH`, `CURBPACK_MANDATE_ID`.
 17. Authoring packs: set `assurance_class` (e.g. `structural_draft`); `packs import` refuses missing class / claim-adjacent theater copy.
-18. **Pathway:** orchestrate via `curbpack pathway status|suggest|note` only — never hand-write `pathway-seed.json`. Stop and ask a human to run `confirm-packs` / `confirm-prose` / `confirm-share` / `attest` (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Never invent pack ids (closed world: suggest ∩ `packs list`). After `confirm-packs`, prefer RKG (`.github/curbpack/graph/policy-graph.json`) + `curbpack research` + form-hints / remediations for L4 drafts — never invent regulation text. Every factual assertion needs a repo artifact or allowlisted cite; ungrounded Claims → refuse (`research --cite-check` and `confirm-prose`). Heal stubs / agent cache are not independent grounding — confirm-prose requires every displayed path independent. Prefer ContextPack `pathway` next over seed spelunking. After attest, status next is local proof verify (`proof/index.html` + evidence pointer) — human only. MCP never confirms or attests. Seed and research packet do not affect check pass/fail. See `docs/getting-started/pathway.md`.
+18. **Pathway:** orchestrate via `curbpack pathway status|suggest|note` only — never hand-write `pathway-seed.json`. Stop and ask a human to run `confirm-packs` / `confirm-prose` / `confirm-share` / `attest` (`--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1`; TTY alone is not enough). Never invent pack ids (closed world: suggest ∩ `packs list`). After `confirm-packs`, prefer RKG (`.github/curbpack/graph/policy-graph.json`) + `curbpack research` + form-hints / remediations for L4 drafts — never invent regulation text. Every factual assertion needs a repo artifact or allowlisted cite; ungrounded Claims → refuse (`research --cite-check` and `confirm-prose`). Heal stubs / agent cache are not independent grounding — confirm-prose requires every displayed path independent. Prefer ContextPack `pathway` next over seed spelunking. After attest, status next is local proof verify (`proof/index.html` + evidence pointer) — human only. MCP never confirms or attests. Seed and research packet do not affect check pass/fail. See `vision/docs/getting-started/pathway.md`.
 19. **Three ways in:** Write→Check (optional pathway), Bring-docs→Check (files on pack paths; no portal PDF ingest), or CI alone — same local `check`. On red, optional `curbpack research --gate-id=<failed_id>`.
 20. **Dual-draft HITL (always):** When drafting house prose or remediating with external claims: (1) read seed notes/corrections/last_draft_pick + research packet + ContextPack failures; (2) propose **Option A** and **Option B** with cite ids; (3) state **Recommended: A|B** with ≤3 reasons; (4) stop for human pick/edit; (5) run `research --cite-check`; (6) record via `curbpack pathway note --set last_draft_pick=A|B|edited`. Never auto-apply or auto-attest.
 21. **Dual remotes:** phrases “sync both” / “sync curbpack remotes” → run `./scripts/curb-sync.sh` only (never force-push).
@@ -143,4 +143,4 @@ JSON payloads include `schema_version` for agents. SARIF `ruleId` equals `gate_i
 - **RI-SE/curbpack** is the public source of truth. Product PRs target RI-SE only.
 - Never open full-tree parity/mirror/sync PRs; never copy private-fork maintainer docs to RI-SE.
 - afelin catch-up (optional, one-way): `git fetch corp-origin && git merge corp-origin/main`.
-- Full policy: [docs/internal/fork-policy.md](../../docs/internal/fork-policy.md).
+- Full policy: [vision/docs/internal/fork-policy.md](../../vision/docs/internal/fork-policy.md).

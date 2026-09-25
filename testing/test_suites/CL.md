@@ -19,7 +19,7 @@ Other test basis:
 - SDD opening product claim and SDD §1.1 claim boundary.
 - SDD §11 prohibition on model-decided compliance or trust.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -88,9 +88,9 @@ third R-id.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) or [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3. Record which R-id was used.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) or [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3. Record which R-id was used.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |

@@ -27,7 +27,7 @@ Prefer the **First move stuck** issue template: path A/B/C + the step that faile
 
 ## Claim safety
 
-Do not introduce certification / CE / notified-body language. Run `scripts/claim-safety.sh` before opening a PR that touches docs or CLI strings. Public co-promotion rules: [`docs/promotion-firewall.md`](docs/promotion-firewall.md) (RISE = funder, not certifier).
+Do not introduce certification / CE / notified-body language. Run `scripts/claim-safety.sh` before opening a PR that touches docs or CLI strings. Public co-promotion rules: [`policies/promotion-firewall.md`](policies/promotion-firewall.md) (RISE = funder, not certifier).
 
 ## Trust surface
 
@@ -35,10 +35,10 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 ## Strategy boundary (contributors)
 
-- Do **not** port v3.33 EE / R&D surfaces into OSS PRs — v3.33 is internal north star only ([strategy boundary](docs/strategy-boundary.md)).
+- Do **not** port v3.33 EE / R&D surfaces into OSS PRs — v3.33 is internal north star only ([strategy boundary](policies/strategy-boundary.md)).
 - **Curbpack never generates the documentation it then checks.**
 - PRs that add OPA/Rego, LSP, syscall tracers, FIDO defaults, or **new pack ids** without freeze unlock will be **rejected**. Pack allowlist is enforced by `scripts/redteam-pilot.sh`.
-- Sock ops + GateFailure / explain-packet shapes are frozen in [stable contracts](docs/stable-contracts.md); breaking them requires a major pin bump.
+- Sock ops + GateFailure / explain-packet shapes are frozen in [stable contracts](docs/reference/stable-contracts.md); breaking them requires a major pin bump.
 
 ### Packs vs check kinds (governance)
 
@@ -46,7 +46,7 @@ Action binary resolve, `SafeJoin` / pack path jail, attest honesty, claim-safety
 
 National variations, guidance changes, and new standards are **pack version bumps** authored by domain owners — no Go change, no binary release. The pack format already carries jurisdiction, validity windows, citations, extends/overlays, supersession, and private pack dirs.
 
-A ninth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the eight — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [docs/method/review-method-1.3.0.md](docs/method/review-method-1.3.0.md).
+A ninth check kind breaks comparison-scheme digests: two participants on different binary versions could no longer produce the same digest on the same bundle. A requirement that cannot be expressed with the eight — `annex_file`, `file_present`, `anti_placeholder`, `npm_dep_ban`, `manifest_dep_ban`, `text_forbid`, `fresh`, `owned` — is a signal to say *this does not fit the tool*, not to grow the tool. See [vision/docs/method/review-method-1.3.0.md](vision/docs/method/review-method-1.3.0.md).
 
 
 ### Review digest (one algorithm)

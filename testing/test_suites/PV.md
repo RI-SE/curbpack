@@ -17,7 +17,7 @@ Other test basis:
 - SDD §1 portable-evidence and independent-inspection product claim.
 - SDD §7.3 frozen, independently authored evidence expectations.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -55,9 +55,9 @@ close MUST-31.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -112,9 +112,9 @@ clause.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 6 appends to `SECURITY.md`. That edit is EC-02 stimulus, not a new R-id.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-02](../../docs2/testing/procedures/README.md#execution-configurations) — established and verified by steps 6–7. After step 6 the working tree is no longer EC-01.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 6 appends to `SECURITY.md`. That edit is EC-02 stimulus, not a new R-id.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-02](../../docs/testing/procedures/README.md#execution-configurations) — established and verified by steps 6–7. After step 6 the working tree is no longer EC-01.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -171,9 +171,9 @@ on this case does not address MUST-31.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 detaches HEAD. That is EC-03 stimulus, not a new R-id.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-03](../../docs2/testing/procedures/README.md#execution-configurations) — established and verified by steps 5–7.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 detaches HEAD. That is EC-03 stimulus, not a new R-id.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-03](../../docs/testing/procedures/README.md#execution-configurations) — established and verified by steps 5–7.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -248,9 +248,9 @@ A pass does not close MUST-31.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -331,9 +331,9 @@ This case does not invent a new R-id.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack inputs: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) selected by `verification-run.sh`, then [PF-06](../../docs2/testing/procedures/1_pack_template_instantiation.md) selected by SETUP step 6. This is not an R-id and not a `tmp/R*` repository.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack inputs: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) selected by `verification-run.sh`, then [PF-06](../../docs/testing/procedures/1_pack_template_instantiation.md) selected by SETUP step 6. This is not an R-id and not a `tmp/R*` repository.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -389,9 +389,9 @@ MUST-31.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |

@@ -18,11 +18,11 @@ Other test basis:
 
 - SDD §7.3 interruption-recovery and complete-record expectations.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
-Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state via product `setup.sh` on that already-restored baseline. Then apply EC as the case states. No OP case is currently executable. Do not invent an R-id or a `tmp/R*` repository. [EC-09](../../docs2/testing/procedures/README.md#execution-configurations) is not yet specified; do not improvise unwritable-destination, storage-exhaustion, or controlled-termination preparation in a case.
+Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state via product `setup.sh` on that already-restored baseline. Then apply EC as the case states. No OP case is currently executable. Do not invent an R-id or a `tmp/R*` repository. [EC-09](../../docs/testing/procedures/README.md#execution-configurations) is not yet specified; do not improvise unwritable-destination, storage-exhaustion, or controlled-termination preparation in a case.
 
 ## Test suite overview
 

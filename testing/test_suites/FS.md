@@ -13,11 +13,11 @@ Requirements addressed by this suite:
 - MUST-40
 - MUST-42
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
-Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state through product `setup.sh` on that already-restored baseline. Then apply EC and pack input as the case states. FS-001 keeps that R1 checkout and selects [PF-05](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-05) with `mutate_pack.sh`. It does not create an R-id or a `tmp/R*` repository.
+Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state through product `setup.sh` on that already-restored baseline. Then apply EC and pack input as the case states. FS-001 keeps that R1 checkout and selects [PF-05](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-05) with `mutate_pack.sh`. It does not create an R-id or a `tmp/R*` repository.
 
 ## Test suite overview
 
@@ -51,9 +51,9 @@ This case does not invent a new R-id.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-05](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-05) (`path-traversal`) — selected by SETUP step 5.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-05](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-05) (`path-traversal`) — selected by SETUP step 5.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |

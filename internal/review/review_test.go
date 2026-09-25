@@ -543,8 +543,8 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 		t.Fatalf("MethodVersion=%q", review.MethodVersion)
 	}
 	root := repoRoot(t)
-	doc := filepath.Join(root, "docs", "method", "review-method-"+review.MethodVersion+".md")
-	raw, err := os.ReadFile(doc)
+	path := filepath.Join(root, "vision", "docs", "method", "review-method-1.3.0.md")
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("method doc missing for MethodVersion %s: %v", review.MethodVersion, err)
 	}
@@ -567,7 +567,7 @@ func TestMethodVersionMatchesClassifier(t *testing.T) {
 		t.Fatal("ClassifierVersion empty")
 	}
 	// Prior method doc retained.
-	if _, err := os.Stat(filepath.Join(root, "docs", "method", "review-method-1.0.0.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "vision", "docs", "method", "review-method-1.0.0.md")); err != nil {
 		t.Fatalf("1.0.0 method doc must be retained: %v", err)
 	}
 }

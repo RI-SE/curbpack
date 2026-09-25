@@ -2,7 +2,7 @@
 
 **Local pack gates. Humans review. Not conformity assessment.**
 
-Same contract as [AGENTS.md](AGENTS.md). Design intent: [docs/software-design-document.md](docs/software-design-document.md). Full platform matrix + memory map: [docs/assistant-loop.md](docs/assistant-loop.md). Warm-start: [docs/getting-started/pathway.md](docs/getting-started/pathway.md).
+Same contract as [AGENTS.md](AGENTS.md). Design intent: [vision/docs/software-design-document.md](vision/docs/software-design-document.md). Full platform matrix + memory map: [agents/assistant-loop.md](agents/assistant-loop.md). Warm-start: [vision/docs/getting-started/pathway.md](vision/docs/getting-started/pathway.md).
 
 ## Loop (opens read-only)
 
@@ -34,8 +34,8 @@ Gate: `--i-am-human` or `CURBPACK_ALLOW_CONFIRM=1` for confirms; TTY alone is no
 
 Exit code is authoritative. Never claim certification. Pin **`@v0.5.2`**. Cite-or-refuse: do not invent regulation text; link allowlisted sources only.
 
-Claim discipline: [docs/claim-discipline.md](docs/claim-discipline.md) — never assert what the tool caused.
+Claim discipline: [policies/claim-discipline.md](policies/claim-discipline.md) — never assert what the tool caused.
 
-**Repository policy:** RI-SE/curbpack is the public SoR. Never parity/mirror PRs; never copy private-fork docs to RI-SE; afelin is downstream catch-up only. [docs/internal/fork-policy.md](docs/internal/fork-policy.md).
+**Repository policy:** RI-SE/curbpack is the public SoR. Never parity/mirror PRs; never copy private-fork docs to RI-SE; afelin is downstream catch-up only. [vision/docs/internal/fork-policy.md](vision/docs/internal/fork-policy.md).
 
 Thin MCP (optional): [examples/mcp/](examples/mcp/) — propose-only; no confirm/attest tools.
