@@ -18,7 +18,7 @@ Other test basis:
 
 - SDD §13 required release evidence and supporting-platform boundary.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -45,7 +45,7 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 - MUST-84
 
 Passing this case does not close MUST-84: representative workflow execution
-and Windows promotion are not this case. [EC-10](../../docs2/testing/procedures/README.md#execution-configurations)
+and Windows promotion are not this case. [EC-10](../../docs/testing/procedures/README.md#execution-configurations)
 is not yet specified. Do not invent a platform-execution procedure here.
 A pass cannot close MUST-84 because the case is not executable.
 
@@ -66,7 +66,7 @@ Not specified yet.
 - MUST-84
 
 Passing this case does not close MUST-84: installation and cross-platform
-identity are not this case. [EC-10](../../docs2/testing/procedures/README.md#execution-configurations)
+identity are not this case. [EC-10](../../docs/testing/procedures/README.md#execution-configurations)
 is not yet specified. Do not invent a platform-execution procedure here.
 A pass cannot close MUST-84 because the case is not executable.
 
@@ -87,7 +87,7 @@ Not specified yet.
 - MUST-84
 
 Passing this case does not close MUST-84: installation and representative
-workflow execution are not this case. [EC-10](../../docs2/testing/procedures/README.md#execution-configurations)
+workflow execution are not this case. [EC-10](../../docs/testing/procedures/README.md#execution-configurations)
 is not yet specified. Do not invent a platform-execution procedure here.
 A pass cannot close MUST-84 because the case is not executable.
 

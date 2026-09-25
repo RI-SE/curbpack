@@ -16,7 +16,7 @@ Other test basis:
 
 - SDD §5.1 closed evaluator check algebra and unsupported-check boundary.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -79,16 +79,16 @@ valid control. The operator does not edit JSON.
 
 | Variant | Prepared input | Difference from PF-01 `house-policy/pack.json` |
 | ------- | -------------- | ---------------------------------------------- |
-| A | [PF-13](../../docs2/testing/procedures/1_pack_template_instantiation.md) | Same bytes except the comma after `"version": "0.1.0"` is removed (malformed JSON, not a prefix) |
-| B | [PF-14](../../docs2/testing/procedures/1_pack_template_instantiation.md) | First 120 bytes of that same valid file (truncated JSON) |
+| A | [PF-13](../../docs/testing/procedures/1_pack_template_instantiation.md) | Same bytes except the comma after `"version": "0.1.0"` is removed (malformed JSON, not a prefix) |
+| B | [PF-14](../../docs/testing/procedures/1_pack_template_instantiation.md) | First 120 bytes of that same valid file (truncated JSON) |
 
 ### PK-002-A — malformed JSON
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-13](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-13](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -114,9 +114,9 @@ valid control. The operator does not edit JSON.
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-14](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-14](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -159,9 +159,9 @@ Do not keep the previous variant’s working tree. Valid control: PF-01
 
 | Variant | Prepared input | Difference from PF-01 `house-policy/pack.json` | Status |
 | ------- | -------------- | ---------------------------------------------- | ------ |
-| A | [PF-15](../../docs2/testing/procedures/1_pack_template_instantiation.md) | Identical duplicated `HOUSE-SECURITY-MD` rule object | Executable; oracle: not a silent PF-01 pass |
-| B | [PF-16](../../docs2/testing/procedures/1_pack_template_instantiation.md) | Conflicting `HOUSE-SECURITY-MD` definitions, original then `docs/pk003-absent.md` | Executable; oracle: not a silent PF-01 pass |
-| C | [PF-17](../../docs2/testing/procedures/1_pack_template_instantiation.md) | Same conflicting definitions as PF-16, reverse order | Executable; oracle: not a silent PF-01 pass |
+| A | [PF-15](../../docs/testing/procedures/1_pack_template_instantiation.md) | Identical duplicated `HOUSE-SECURITY-MD` rule object | Executable; oracle: not a silent PF-01 pass |
+| B | [PF-16](../../docs/testing/procedures/1_pack_template_instantiation.md) | Conflicting `HOUSE-SECURITY-MD` definitions, original then `docs/pk003-absent.md` | Executable; oracle: not a silent PF-01 pass |
+| C | [PF-17](../../docs/testing/procedures/1_pack_template_instantiation.md) | Same conflicting definitions as PF-16, reverse order | Executable; oracle: not a silent PF-01 pass |
 | D | Conflicting versions of the same pack identity | — | Not specified. No version-selection syntax exists. Do not invent one. Observed `extends` later-wins behaviour is not a PASS criterion. |
 
 A specified duplicate-resolution or version-selection rule is absent.
@@ -173,9 +173,9 @@ the command does not silently produce the PF-01 pass.
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-15](../../docs2/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-15](../../docs/testing/procedures/1_pack_template_instantiation.md) — selected by SETUP step 5.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -263,9 +263,9 @@ This case does not invent a new R-id.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-03](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`unknown-check`). Selected by SETUP step 5. This is not an R-id and not a `tmp/R*` repository.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-03](../../docs/testing/procedures/1_pack_template_instantiation.md) (`unknown-check`). Selected by SETUP step 5. This is not an R-id and not a `tmp/R*` repository.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -311,9 +311,9 @@ This case does not invent a new R-id.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-04](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`bad-regex`). Selected by SETUP step 5. This is not an R-id and not a `tmp/R*` repository.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-04](../../docs/testing/procedures/1_pack_template_instantiation.md) (`bad-regex`). Selected by SETUP step 5. This is not an R-id and not a `tmp/R*` repository.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |

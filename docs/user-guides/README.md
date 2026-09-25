@@ -1,6 +1,6 @@
-# Curbpack guides
+# Curbpack user-guides
 
-These guides show how to use Curbpack from installation through development, CI, and review.
+These user-guides show how to use Curbpack from installation through development, CI, and review.
 
 | Guide                                 | What it shows                                                                           |
 | ------------------------------------- | --------------------------------------------------------------------------------------- |

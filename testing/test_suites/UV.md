@@ -19,11 +19,11 @@ Other test basis:
 - SDD §1 publisher, producer, reviewer, and agent responsibilities.
 - SDD §10 no-code operation and human-review interpretation boundary.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
-Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. UV-001 records the verification envelope on the test record and runs the builder task from the restored reference product without `setup.sh`. UV-002 and UV-003 prepare [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) via product `setup.sh` on that already-restored baseline. These are facilitated builder cases: a representative builder performs the handoff; the facilitator prepares state and records observations. They are not unattended CLI oracles with fixed JSON outcomes.
+Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. UV-001 records the verification envelope on the test record and runs the builder task from the restored reference product without `setup.sh`. UV-002 and UV-003 prepare [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) via product `setup.sh` on that already-restored baseline. These are facilitated builder cases: a representative builder performs the handoff; the facilitator prepares state and records observations. They are not unattended CLI oracles with fixed JSON outcomes.
 
 ## Test suite overview
 
@@ -97,9 +97,9 @@ This case is builder interpretation of check results; it is not MUST-60
 
 ### SETUP
 
-- Repository state: [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 - Other prerequisite: the builder has completed UV-001 or already has the
   frozen binary available. Do not tell the builder the expected gate ID or
   interpretation.
@@ -140,9 +140,9 @@ printed operator- or agent-facing command.
 
 ### SETUP
 
-- Repository state: [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–5. After the builder restores `SECURITY.md`, the working tree is dirty ([EC-02](../../docs2/testing/procedures/README.md#execution-configurations)).
+- Repository state: [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–5. After the builder restores `SECURITY.md`, the working tree is dirty ([EC-02](../../docs/testing/procedures/README.md#execution-configurations)).
 - Other prerequisite: the builder has the frozen binary available. Tell the
   builder only that the reported missing-file finding should be corrected
   using the product baseline. If the builder asks for the exact Git operation,

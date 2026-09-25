@@ -5,7 +5,7 @@ describes what is verified, how test inputs are controlled, how test cases are
 grouped, and how results are classified.
 
 To **start a verification run**, follow this order: this Verification
-Strategy, [test procedures](procedures/README.md), [test-suites](../../testing/test_suites/README.md), then
+Strategy, [test procedures](procedures/README.md), [test-suites](test_suites/README.md), then
 [generated-test-record-template](generated_test_record_template.md). Create the run
 with `make start-verification-run`. Do not start in a suite file.
 
@@ -124,7 +124,7 @@ Controlled prerequisites, execution, and recording rules are in
 [test procedures](procedures/README.md). Repository state implementation details are
 [controlled-repo-setup](procedures/0_controlled_repo_setup.md); pack input details are [pack-instantiation](procedures/1_pack_template_instantiation.md).
 Independent code and release review is [code-review](procedures/2_code_review_procedures.md). The suite index is
-[test-suites](../../testing/test_suites/README.md).
+[test-suites](test_suites/README.md).
 
 The results of each execution is written on a test record copied from
 [generated-test-record-template](generated_test_record_template.md), kept with the
@@ -139,7 +139,7 @@ there is test design, not an execution result.
 ## 6. Test suites
 
 How to start a verification run, and the suite files themselves, are in
-[test-suites](../../testing/test_suites/README.md).
+[test-suites](test_suites/README.md).
 
 A **test suite** is a related group of cases with a common verification
 objective. The suite prefix forms part of each test-case identifier.

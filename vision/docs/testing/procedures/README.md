@@ -45,7 +45,7 @@ reference-product commit, one `AS_OF_DATE`, and the applicable test-method
 revision. Those values stay frozen for the whole run. A later testcase does
 not select a different reference-product revision.
 
-`testing/verification_run_template.sh` is version-controlled.
+`docs/testing/verification_run_template.sh` is version-controlled.
 `make start-verification-run` (`scripts/start-verification-run.sh`) prompts
 for the run values (empty keeps the default). If `tmp/` already exists it
 asks to delete that directory completely and stops if not. It never
@@ -87,7 +87,7 @@ rely on these environment variables being available.
    `$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs` (PF-01).
 
 Record the procedure revision: the Curbpack commit containing
-`docs2/testing/strategy.md`, this procedures directory, and the selected
+`docs/testing/strategy.md`, this procedures directory, and the selected
 suite file.
 
 With those values frozen, prepare the selected case’s R/PF/EC prerequisites,
@@ -270,7 +270,7 @@ EC-01 for R4 and R5 is `setup.sh R4 --commit` or `setup.sh R5 --commit` on
 1. Complete [Prepare a verification run](#prepare-a-verification-run) and copy
    the [test record](../generated_test_record_template.md) outside this
    repository.
-2. Open the selected [suite](../../../testing/test_suites/README.md). Do not execute a row
+2. Open the selected [suite](../test_suites/README.md). Do not execute a row
    marked To be specified. Do not execute a case whose R-state is BLOCKED.
 3. Do [Start of every independent case](#start-of-every-independent-case),
    then prepare the case’s stated `R-*`, `PF-*`, and `EC-*` prerequisites.

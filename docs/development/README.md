@@ -2,7 +2,7 @@
 
 This page describes the current contribution process for the Curbpack repository.
 
-For instructions on using Curbpack in a product repository, see [Getting started](../guides/getting-started.md) and the [Developer guide](../guides/developers.md).
+For instructions on using Curbpack in a product repository, see [Getting started](../user-guides/getting-started.md) and the [Developer guide](../user-guides/developers.md).
 
 ## Workflow
 

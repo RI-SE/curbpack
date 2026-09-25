@@ -19,7 +19,7 @@ Other test basis:
 - SDD §1 portable offline-evidence product claim.
 - SDD §11 no-server and no-telemetry scope boundaries.
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -69,7 +69,7 @@ Not specified yet.
 - MUST-48
 
 Intended later: observe a representative local `check` and inspect the
-corresponding [CR-10](../../docs2/testing/procedures/2_code_review_procedures.md) evidence for
+corresponding [CR-10](../../docs/testing/procedures/2_code_review_procedures.md) evidence for
 data leaving the documented boundary.
 
 A repeatable observation mechanism and exact controlled data markers have

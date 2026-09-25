@@ -1,7 +1,7 @@
 # Test suites
 
 A verification run applies the suites and test classes from the
-[Verification Strategy](../../docs2/testing/strategy.md) default scope to one frozen baseline.
+[Verification Strategy](../../docs/testing/strategy.md) default scope to one frozen baseline.
 Each suite contains:
 
 - one suite-level **Objective**;
@@ -39,11 +39,11 @@ A catalogue row marked **To be specified** is not an executable procedure
 and must not be expanded by inference.
 
 Fill the Run section of the
-[test record template](../../docs2/testing/generated_test_record_template.md) once, then use
+[test record template](../../docs/testing/generated_test_record_template.md) once, then use
 one copy per case execution.
 
 Before executing a case, read the
-[controlled test prerequisites](../../docs2/testing/procedures/README.md). Start the
+[controlled test prerequisites](../../docs/testing/procedures/README.md). Start the
 verification run once, then start every independent case from the Curbpack
 root with `source tmp/verification-run.sh` (see Start of every independent
 case in that file). Execute only rows whose Procedure status is
@@ -68,5 +68,5 @@ an executable procedure.
 | **UV** | [UV.md](UV.md) | User handoff and interpretation |
 
 `CR` is independent code and release review, not a functional suite. Procedure:
-[2. Code and release review](../../docs2/testing/procedures/2_code_review_procedures.md).
-Protocol: [code review protocol template](../../docs2/testing/generated_code_review_protocol_template.md).
+[2. Code and release review](../../docs/testing/procedures/2_code_review_procedures.md).
+Protocol: [code review protocol template](../../docs/testing/generated_code_review_protocol_template.md).

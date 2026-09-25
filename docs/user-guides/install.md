@@ -79,4 +79,4 @@ If the Curbpack binary itself is missing, reinstall instead.
 
 ## 5. Next
 
-Continue with [Getting started](../guides/getting-started.md) to try Curbpack on the reference product.
+Continue with [Getting started](getting-started.md) to try Curbpack on the reference product.

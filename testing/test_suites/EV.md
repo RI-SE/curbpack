@@ -15,7 +15,7 @@ Requirements addressed by this suite::
 - MUST-24
 - MUST-53
 
-A test execution is always part of a test run that starts with [Prepare a verification run](../../docs2/testing/procedures/README.md).
+A test execution is always part of a test run that starts with [Prepare a verification run](../../docs/testing/procedures/README.md).
 In short it encompasses cloning the reference product into `<curbpack>/tmp/cyberready-test-product`,
 using the recorded `<commit hash>` and `<date>`, and building the CLI. This is done once for a test run.
 
@@ -47,9 +47,9 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -94,9 +94,9 @@ Empty lists in this JSON are encoded as `null`, not `[]`. This applies to both `
 
 ### SETUP
 
-- Repository state: [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -162,9 +162,9 @@ Other test basis:
 
 ### SETUP
 
-- Repository state: [R3](../../docs2/testing/procedures/0_controlled_repo_setup.md#r3) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R3](../../docs/testing/procedures/0_controlled_repo_setup.md#r3) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -232,9 +232,9 @@ stderr.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. The later `chmod` does not create a new R-id. The text of `SECURITY.md` is still R1. Only the permission bits change.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4. After step 6 the working tree is no longer EC-01. That is expected. Git cannot hash an unreadable `SECURITY.md`.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. The later `chmod` does not create a new R-id. The text of `SECURITY.md` is still R1. Only the permission bits change.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4. After step 6 the working tree is no longer EC-01. That is expected. Git cannot hash an unreadable `SECURITY.md`.
 
 
 | Step | Action                                                                                                                                          | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -280,9 +280,9 @@ A pass on this case does not close MUST-23.
 
 ### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 6 adds `docs/ev005-skip.md`. That file is stimulus, not a new R-id.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4. After step 6 the working tree is dirty.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 6 adds `docs/ev005-skip.md`. That file is stimulus, not a new R-id.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by steps 3–4. After step 6 the working tree is dirty.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -334,9 +334,9 @@ Other test basis:
 
 ### SETUP
 
-- Repository state: [R4](../../docs2/testing/procedures/0_controlled_repo_setup.md#r4) — prepared by `setup.sh` in step 3.
+- Repository state: [R4](../../docs/testing/procedures/0_controlled_repo_setup.md#r4) — prepared by `setup.sh` in step 3.
 - Pack input: `house-policy` only (`--packs house-policy`). No PF-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |
@@ -406,22 +406,22 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 | Variant | Check kind | Fail gate | Repository preparation |
 | ------- | ---------- | --------- | ---------------------- |
-| A | `file_present` | `HOUSE-SECURITY-MD` | [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) |
-| B | `annex_file` | `MD-SW-CLASS` | [R3](../../docs2/testing/procedures/0_controlled_repo_setup.md#r3) |
-| C | `anti_placeholder` | `HOUSE-ANTI-PLACEHOLDER` | [R4](../../docs2/testing/procedures/0_controlled_repo_setup.md#r4) |
+| A | `file_present` | `HOUSE-SECURITY-MD` | [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) |
+| B | `annex_file` | `MD-SW-CLASS` | [R3](../../docs/testing/procedures/0_controlled_repo_setup.md#r3) |
+| C | `anti_placeholder` | `HOUSE-ANTI-PLACEHOLDER` | [R4](../../docs/testing/procedures/0_controlled_repo_setup.md#r4) |
 | D | `manifest_dep_ban` | `HOUSE-DEP-AXIOS-PIN` | R1 + axios@1.6.0 in `package.json` |
 | E | `npm_dep_ban` | `CRA-DEP-AXIOS-PIN` | R1 + axios@1.6.0 in `package.json` |
 | F | `text_forbid` | `HOUSE-SECRET-PATHS` | R1 + PEM marker lines in `SECURITY.md` |
-| G | `fresh` | `FIX-FRESH-REVIEW` | [R6](../../docs2/testing/procedures/0_controlled_repo_setup.md#r6) |
-| H | `owned` | `FIX-OWNED-POLICY` | [R7](../../docs2/testing/procedures/0_controlled_repo_setup.md#r7) |
+| G | `fresh` | `FIX-FRESH-REVIEW` | [R6](../../docs/testing/procedures/0_controlled_repo_setup.md#r6) |
+| H | `owned` | `FIX-OWNED-POLICY` | [R7](../../docs/testing/procedures/0_controlled_repo_setup.md#r7) |
 
 ### EV-007-A — `file_present`
 
 #### SETUP
 
-- Repository state: [R2](../../docs2/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R2](../../docs/testing/procedures/0_controlled_repo_setup.md#r2) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -473,9 +473,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R3](../../docs2/testing/procedures/0_controlled_repo_setup.md#r3) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-01](../../docs2/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R3](../../docs/testing/procedures/0_controlled_repo_setup.md#r3) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-01](../../docs/testing/procedures/1_pack_template_instantiation.md#pf-01) — selected by `verification-run.sh` through `CURBPACK_PACKS_DIR`.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -527,9 +527,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R4](../../docs2/testing/procedures/0_controlled_repo_setup.md#r4) — prepared by `setup.sh` in step 3.
+- Repository state: [R4](../../docs/testing/procedures/0_controlled_repo_setup.md#r4) — prepared by `setup.sh` in step 3.
 - Pack input: `house-policy` only (`--packs house-policy`). No PF-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -580,9 +580,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 adds a banned axios pin. That edit is stimulus, not a new R-id.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 adds a banned axios pin. That edit is stimulus, not a new R-id.
 - Pack input: `house-policy` only (`--packs house-policy`). No PF-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs2/testing/procedures/README.md#execution-configurations)).
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs/testing/procedures/README.md#execution-configurations)).
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -634,9 +634,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 adds a banned axios pin. That edit is stimulus, not a new R-id.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 adds a banned axios pin. That edit is stimulus, not a new R-id.
 - Pack input: `cra-baseline` only (`--packs cra-baseline`). Uses PF-01 pack files through `CURBPACK_PACKS_DIR`.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs2/testing/procedures/README.md#execution-configurations)).
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs/testing/procedures/README.md#execution-configurations)).
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -688,9 +688,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 appends PEM marker lines to `SECURITY.md`. That edit is stimulus, not a new R-id. The marker is fixture text only.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3. Step 5 appends PEM marker lines to `SECURITY.md`. That edit is stimulus, not a new R-id. The marker is fixture text only.
 - Pack input: `house-policy` only (`--packs house-policy`). No PF-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs2/testing/procedures/README.md#execution-configurations)).
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) for steps 3–4. After step 5 the working tree is dirty ([EC-02](../../docs/testing/procedures/README.md#execution-configurations)).
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -742,9 +742,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R6](../../docs2/testing/procedures/0_controlled_repo_setup.md#r6) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-07](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`fresh-owned-test`). Selected by SETUP step 7. Not an R-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R6](../../docs/testing/procedures/0_controlled_repo_setup.md#r6) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-07](../../docs/testing/procedures/1_pack_template_instantiation.md) (`fresh-owned-test`). Selected by SETUP step 7. Not an R-id.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -798,9 +798,9 @@ EV-007 has eight independently executable variants, one per registered check kin
 
 #### SETUP
 
-- Repository state: [R7](../../docs2/testing/procedures/0_controlled_repo_setup.md#r7) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-07](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`fresh-owned-test`). Selected by SETUP step 7. Not an R-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R7](../../docs/testing/procedures/0_controlled_repo_setup.md#r7) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-07](../../docs/testing/procedures/1_pack_template_instantiation.md) (`fresh-owned-test`). Selected by SETUP step 7. Not an R-id.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -874,16 +874,16 @@ EV-008 has two variants. Each starts with `source tmp/verification-run.sh`. Do n
 
 Two logically equivalent packs declare the same two `file_present` rules with opposite rule-array order:
 
-- [PF-08](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`EV008-ALPHA` then `EV008-BETA`)
-- [PF-09](../../docs2/testing/procedures/1_pack_template_instantiation.md) (`EV008-BETA` then `EV008-ALPHA`)
+- [PF-08](../../docs/testing/procedures/1_pack_template_instantiation.md) (`EV008-ALPHA` then `EV008-BETA`)
+- [PF-09](../../docs/testing/procedures/1_pack_template_instantiation.md) (`EV008-BETA` then `EV008-ALPHA`)
 
 Run each pack against an independently restored R1 checkout. Compare exit status, `outcome`, `conformity_claim`, and the normalized set of finding identities `(gate_id, sanitized_description, target_file)`. Do not require raw JSON byte identity, identical `failures` array order, or identical digests.
 
 #### SETUP (pack A)
 
-- Repository state: [R1](../../docs2/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
-- Pack input: [PF-08](../../docs2/testing/procedures/1_pack_template_instantiation.md). Selected by SETUP step 5. Not an R-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Repository state: [R1](../../docs/testing/procedures/0_controlled_repo_setup.md#r1) — prepared by `setup.sh` in step 3.
+- Pack input: [PF-08](../../docs/testing/procedures/1_pack_template_instantiation.md). Selected by SETUP step 5. Not an R-id.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
@@ -903,7 +903,7 @@ Run each pack against an independently restored R1 checkout. Compare exit status
 
 #### SETUP (pack B)
 
-Repeat SETUP steps 1–4 on a newly sourced restore. Then `./external_test/curbpack/mutate_pack.sh PF-09` and repeat SETUP step 6. Do not reuse the pack-A checkout. Pack input is [PF-09](../../docs2/testing/procedures/1_pack_template_instantiation.md).
+Repeat SETUP steps 1–4 on a newly sourced restore. Then `./external_test/curbpack/mutate_pack.sh PF-09` and repeat SETUP step 6. Do not reuse the pack-A checkout. Pack input is [PF-09](../../docs/testing/procedures/1_pack_template_instantiation.md).
 
 #### TEST STEPS (pack B)
 
@@ -941,9 +941,9 @@ Other test basis:
 
 ### SETUP
 
-- Repository state: [R5](../../docs2/testing/procedures/0_controlled_repo_setup.md#r5) — prepared by `setup.sh` in step 3.
+- Repository state: [R5](../../docs/testing/procedures/0_controlled_repo_setup.md#r5) — prepared by `setup.sh` in step 3.
 - Pack input: `house-policy` only (`--packs house-policy`). No PF-id.
-- Execution configuration: [EC-01](../../docs2/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
+- Execution configuration: [EC-01](../../docs/testing/procedures/0_controlled_repo_setup.md#ec-01) — established and verified by the setup steps below.
 
 
 | Step | Action                                                                                                                                           | Expected result                                                                                                                                                                                                                                                                                                                                                 |

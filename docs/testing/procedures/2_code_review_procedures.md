@@ -2,7 +2,7 @@
 
 Independent review of the frozen Curbpack source and the shipped release.
 This is not a functional test suite. Functional cases are in
-[../test_suites/](../test_suites/README.md).
+[test suites](../../../testing/test_suites/README.md).
 
 A separate verification assignment (for example a 160-hour engagement)
 selects how much of this procedure to run. The assignment is not part of
