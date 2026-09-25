@@ -131,7 +131,7 @@ jobs:
           curbpack doctor; curbpack demo
           \`\`\`
 
-          Full ladders: [docs/getting-started/install.md](https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md)
+          Full ladders: [docs/user-guides/install.md](https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md)
 
           ### Claim safety
 

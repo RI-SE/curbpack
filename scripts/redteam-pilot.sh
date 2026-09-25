@@ -195,7 +195,7 @@ rm -rf "$TMPD"
 if grep -q 'curbpack_windows_amd64.exe' scripts/install-manifest.json && \
    grep -Eq 'windows/amd64|windows_amd64' .github/workflows/release.yml && \
    grep -q 'curbpack_windows_amd64.exe' scripts/install.ps1 && \
-   grep -qi 'Linux/macOS' docs/getting-started/install.md && \
+   grep -qi 'macOS or Linux' docs/user-guides/install.md && \
    ! grep -qiE 'runs-on:.*windows' action.yml && \
    grep -q 'mingw\*|msys\*|cygwin\*|windows\*' scripts/action-resolve-bin.sh && \
    grep -A5 "^  heal:" action.yml | grep -q "default: 'false'"; then

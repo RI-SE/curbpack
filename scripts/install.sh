@@ -101,7 +101,7 @@ if [ -z "${url:-}" ]; then
   echo "could not resolve download URL for ${asset} (tag=${tag:-unknown})" >&2
   echo "Prefer the binary installer from RI-SE releases:" >&2
   echo "  https://github.com/RI-SE/curbpack/releases" >&2
-  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" >&2
+  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md" >&2
   echo "Go module path remains github.com/afelin/curbpack until wave-2 migration;" >&2
   echo "with that development repo private, strangers should use binary installers only." >&2
   echo "(Do not treat go install …/RI-SE/curbpack as a working fallback — module path differs.)" >&2
@@ -134,7 +134,7 @@ if ! curl -fsSL -o "${tmpdir}/curbpack" "$url"; then
   echo "Download failed (often HTTP 404) for:" >&2
   echo "  ${url}" >&2
   echo "Prefer RI-SE releases: https://github.com/RI-SE/curbpack/releases" >&2
-  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/getting-started/install.md" >&2
+  echo "  docs: https://github.com/RI-SE/curbpack/blob/main/docs/user-guides/install.md" >&2
   echo "Do not use afelin/curbpack for stranger installs (private fork; assets may 404)." >&2
   exit 1
 fi

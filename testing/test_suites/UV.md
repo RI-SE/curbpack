@@ -75,7 +75,7 @@ printed operator- or agent-facing command.
 
 | Step | Action                                                                                                                                              | Expected result                                                                                    |
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 1    | Give the builder only the documented install path ([install](../../docs/getting-started/install.md) or the freeze’s release notes). No live author coaching. | The builder has only the documented path.                                                          |
+| 1    | Give the builder only the documented install path ([install](../../docs/user-guides/install.md) or the freeze’s release notes). No live author coaching. | The builder has only the documented path.                                                          |
 | 2    | Builder installs or runs the frozen `curbpack` from `$REFERENCE_PRODUCT_ROOT` on the clean platform.                                                | The task completes without live product-author support.                                            |
 | 3    | Any assistance given                                                                                                                                  | Written on the test record.                                                                        |
 
