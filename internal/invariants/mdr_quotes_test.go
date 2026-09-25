@@ -16,7 +16,7 @@ func TestMDRQuoteFragmentsVerbatim(t *testing.T) {
 		t.Fatal("runtime.Caller failed")
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
-	path := filepath.Join(root, "docs", "shared-frame-annexes.md")
+	path := filepath.Join(root, "vision", "docs", "shared-frame-annexes.md")
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
