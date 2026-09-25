@@ -1,4 +1,4 @@
-# Curbpack user-guides
+# Curbpack User Guides
 
 These user-guides show how to use Curbpack from installation through development, CI, and review.
 
@@ -10,9 +10,9 @@ These user-guides show how to use Curbpack from installation through development
 | [CI/CD](ci-cd.md)                     | Run `curbpack check` automatically in CI                                                |
 | [Reviewers](reviewers.md)             | Receive and review Curbpack material, inspect findings and supporting evidence, and understand what the results do and do not show.    |
 
-## Suggested paths
+## Suggested Paths
 
-### New to Curbpack as a developer
+### New to Curbpack as a Developer
 
 1. [Install Curbpack](install.md)
 2. [Getting started](getting-started.md)
@@ -29,7 +29,7 @@ use Curbpack in your own repository
 run curbpack check in CI
 ```
 
-### New to Curbpack as a reviewer
+### New to Curbpack as a Reviewer
 
 This path applies to QA, security, compliance, buyers, auditors, authorities, and others reviewing Curbpack results.
 
@@ -42,6 +42,6 @@ understand the Curbpack model
 review results and evidence
 ```
 
-## Reference documentation
+## Reference Documentation
 
 For exact commands, configuration, output formats, and pack structure, use the reference documentation under `../reference/`.

@@ -1,4 +1,4 @@
-# 2. Code and release review
+# 2. Code and Release Review
 
 Independent review of the frozen Curbpack source and the shipped release.
 This is not a functional test suite. Functional cases are in
@@ -14,7 +14,7 @@ Independently review implementation and release paths relevant to the required
 test results and verify the available CI and release evidence for the frozen
 source or release.
 
-## What this is
+## What This Is
 
 Read the source that corresponds to the tested release. Look for
 implementation paths that can cause:
@@ -31,7 +31,7 @@ Then look at the CI and release evidence that claims to belong to that
 same source. If it is missing, stale, or not reproducible, reproduce the
 item or record that you could not.
 
-## Who may do it
+## Who May Do It
 
 The reviewer is independent of the line that built the freeze under
 review: not the author of the change, and not reporting through that
@@ -48,7 +48,7 @@ Secure-development evidence (tests, code review records, SAST) is in
 scope as *inputs* to this review, in the sense of Annex point 6.2. Using
 those artefacts is not a 6.2 audit of RISE or of the supplier.
 
-## How to do it
+## How to Do It
 
 1. Freeze the Curbpack commit (and release tag/assets if a shipped
    artefact is in scope). Do not review a moving `main`.
@@ -67,7 +67,7 @@ those artefacts is not a 6.2 audit of RISE or of the supplier.
    leak, bogus approval, or an unverifiable release. Record it; do not
    silently “note for later” if it is Critical or High.
 
-## What to look for
+## What to Look For
 
 | ID | Area | Required question |
 |---|---|---|
@@ -83,7 +83,7 @@ those artefacts is not a 6.2 audit of RISE or of the supplier.
 | CR-10 | Data exposure | Can repository content, local paths, secrets or credentials leave the intended boundary? |
 | CR-11 | Resource handling | Can malformed or large input cause unsafe termination, unbounded resource use or silent truncation that yields a valid result? |
 
-## Engineering and release evidence
+## Engineering and Release Evidence
 
 Use only evidence that demonstrably belongs to the frozen source.
 
@@ -99,7 +99,7 @@ Use only evidence that demonstrably belongs to the frozen source.
 | Release controls | Permissions, pinned third-party actions, immutable tag handling, checksums and source-to-binary traceability. |
 | Shipped artefact installation | Clean install and basic execution on each publicly claimed platform. Detailed functional platform checks remain in the RL suite. |
 
-## What this is not
+## What This Is Not
 
 Do not write that Curbpack, RISE, or the assignment is NIS 2-compliant,
 CRA-compliant, certified, or CE-marked. A CR conclusion is about this

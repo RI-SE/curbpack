@@ -1,4 +1,4 @@
-# Code review protocol `{run-id}_{CR-id}`
+# Code Review Protocol `{run-id}_{CR-id}`
 
 Copy this file **outside this repository** for each CR-id in
 [procedures/2_code_review_procedures.md](procedures/2_code_review_procedures.md).

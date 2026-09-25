@@ -1,4 +1,4 @@
-# Controlled test prerequisites
+# Controlled Test Prerequisites
 
 A test case is Executable only when its prerequisites can be prepared
 repeatably and the case states an exact stimulus and expected response.
@@ -36,7 +36,7 @@ The mechanical sequence is:
 The next testcase starts again at step 2. That source deletes and recreates
 the disposable reference-product checkout.
 
-## Prepare a verification run
+## Prepare a Verification Run
 
 Do this once before preparing any case prerequisites.
 
@@ -93,7 +93,7 @@ suite file.
 With those values frozen, prepare the selected case’s R/PF/EC prerequisites,
 execute its stated stimulus, and record the observed result and evidence.
 
-## Start of every independent case
+## Start of Every Independent Case
 
 Each Executable case is independent of the previous case. Start every
 independent testcase from the Curbpack repository root:
@@ -173,7 +173,7 @@ R-state.
 Do not run product `reset.sh` between normal test cases. Do not assume the
 previous case’s working directory or product tree is still valid.
 
-## Repository content states
+## Repository Content States
 
 The detailed state definitions and commands are in
 [0. Controlled repository content setup](0_controlled_repo_setup.md).
@@ -220,7 +220,7 @@ operations.
 `--commit` when the case needs a recorded commit and a clean working tree
 (EC-01). EC-01 is separate from the R-id and is stated by the case.
 
-## Pack inputs
+## Pack Inputs
 
 Details are in [1. Pack inputs](1_pack_template_instantiation.md).
 
@@ -230,7 +230,7 @@ Details are in [1. Pack inputs](1_pack_template_instantiation.md).
 | PF-02 | A second representative instantiated product pack | NOT YET SPECIFIED | Reserved. `mutate_pack.sh PF-02` is refused. | Curbpack |
 | PF-03–PF-17 | One exact prepared input each (evaluator packs or Review Pack files) | SCRIPTED | `./external_test/curbpack/mutate_pack.sh PF-xx`. Registry: [1. Pack inputs](1_pack_template_instantiation.md) | Curbpack |
 
-## Execution configurations
+## Execution Configurations
 
 These conditions do not redefine repository content or pack input. R
 preparation establishes the complete reusable starting repository state.
@@ -255,7 +255,7 @@ testcase and does not require a new R-id.
 EC-01 for R4 and R5 is `setup.sh R4 --commit` or `setup.sh R5 --commit` on
 `"$REFERENCE_PRODUCT_ROOT"`.
 
-## Names and directories
+## Names and Directories
 
 | Name | Meaning |
 |---|---|
@@ -265,7 +265,7 @@ EC-01 for R4 and R5 is `setup.sh R4 --commit` or `setup.sh R5 --commit` on
 | **Throwaway repo** | A temporary Git repository created exactly as a case specifies when the case does not use an R-id. This is not `tmp/R4` or `tmp/R5`. |
 | **Curbpack test data** | Existing fixtures under `<curbpack>/testdata/`. |
 
-## Execute and record a case
+## Execute and Record a Case
 
 1. Complete [Prepare a verification run](#prepare-a-verification-run) and copy
    the [test record](../generated_test_record_template.md) outside this

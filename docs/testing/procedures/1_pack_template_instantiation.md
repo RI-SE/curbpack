@@ -1,4 +1,4 @@
-# 1. Pack inputs
+# 1. Pack Inputs
 
 This file defines the `PF-*` dimension of the
 [controlled test prerequisites](README.md).
@@ -55,7 +55,7 @@ Used by: Curbpack, CTAM
 CTAM-owned pack inputs live in the product `external_test/ctam/` tree and
 are defined in CTAM `docs/testing/procedures.md`. Do not add those ids here.
 
-## Pack input registry
+## Pack Input Registry
 
 `PF ID | prepared input | source files → destination | testcase(s)`
 
@@ -91,7 +91,7 @@ later-wins behaviour is not a PASS criterion.
 RP-004's catalogue title mentions a stale digest. The prepared input is
 only the removed-finding summary (PF-11). Do not invent a digest fixture.
 
-## When templates land
+## When Templates Land
 
 Replace the not-yet-specified third-repository procedure with documented
 instantiate-and-adapt steps only after that mechanism exists. Do not copy

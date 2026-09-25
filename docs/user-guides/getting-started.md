@@ -1,8 +1,8 @@
-# Getting Started: Try Curbpack on the reference product
+# Getting Started: Try Curbpack on the Reference Product
 
 Never used Curbpack and want to understand what it does before touching your own repository?
 
-## Start here
+## Start Here
 
 Curbpack checks a repository for evidence against a selected set of rules. The idea is simple: a pack defines claims that should be satisfied, the product repository contains evidence, and Curbpack reports whether the current repository state satisfies those claims. This kind of repository-level evidence is increasingly useful as software teams need to demonstrate security and regulatory work in a repeatable way, including for requirements arising from the EU Cyber Resilience Act (CRA).
 
@@ -14,7 +14,7 @@ The goal is not to learn every Curbpack command. The goal is to understand how t
 
 This walkthrough works on Windows with WSL2, macOS, and Linux. Some prepared demo states use shell scripts, but the same changes can also be made manually.
 
-## 1. Create a disposable workspace
+## 1. Create a Disposable Workspace
 
 In the example below, we use the arbitrary name `curbpack-playground` and create it in your home directory. You can place the workspace anywhere you like.
 
@@ -28,7 +28,7 @@ git clone git@github.com:RI-SE/cyberready-test-product.git
 cd cyberready-test-product
 ```
 
-## 2. Install the Curbpack executable
+## 2. Install the Curbpack Executable
 
 Install Curbpack using the supported installer:
 
@@ -45,7 +45,7 @@ curbpack doctor
 curbpack --help
 ```
 
-## 3. Inspect the reference product
+## 3. Inspect the Reference Product
 
 ```bash
 cd ~/curbpack-playground/cyberready-test-product
@@ -102,7 +102,7 @@ package.json
 
 The idea is to see the relationship between a rule in a pack, the claim made for this product, and the repository evidence used to support that claim.
 
-## 4. Run Curbpack on the unchanged reference product
+## 4. Run Curbpack on the Unchanged Reference Product
 
 The repository is currently in its known-good reference state. Before changing anything, run Curbpack once so that you have a baseline to compare with.
 
@@ -142,7 +142,7 @@ check result
 
 Now you know how it looks when everything is fine. Next, change the repository to break one of the rules and run exactly the same check again to see how Curbpack reports missing evidence.
 
-## 5. Remove evidence and run the check again
+## 5. Remove Evidence and Run the Check Again
 
 Start with a very simple change: remove one piece of evidence.
 
@@ -181,7 +181,7 @@ The corresponding result should return to its original state.
 
 This is the basic idea behind continuously checking repository evidence: if required evidence is accidentally removed in a later change, Curbpack can detect that the repository no longer satisfies the corresponding rule.
 
-## 6. Change evidence without removing the file
+## 6. Change Evidence without Removing the File
 
 A file can still exist while no longer containing the evidence expected by a rule.
 
@@ -222,7 +222,7 @@ Then check again:
 curbpack check
 ```
 
-## 7. Inspect the rule behind the result
+## 7. Inspect the Rule Behind the Result
 
 Now go back to the pack definitions under:
 
@@ -240,7 +240,7 @@ Compare what the rule asks for with:
 
 The purpose of the reference product is to make these relationships small enough to inspect manually.
 
-## 8. What you have tested
+## 8. What You Have Tested
 
 You have now changed the repository in two simple ways:
 
@@ -263,7 +263,7 @@ Curbpack
 results showing whether the current evidence satisfies the selected rules
 ```
 
-## 9. Restore the reference product
+## 9. Restore the Reference Product
 
 If you have made other changes during the walkthrough, restore the repository to its checked-in state:
 
@@ -277,7 +277,7 @@ Then verify the baseline again:
 curbpack check
 ```
 
-## 10. Next: try Curbpack on your own repository
+## 10. Next: Try Curbpack on Your Own Repository
 
 The reference product already contains example packs, claims, and evidence so that their relationships can be inspected safely.
 

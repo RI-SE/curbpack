@@ -4,7 +4,7 @@ This guide is for anyone reviewing Curbpack results and supporting evidence, for
 
 A reviewer will normally receive a `review-pack/`. Curbpack prepares the result and supporting material for review. The reviewer decides what that material means for the decision being made.
 
-## 1. What is in the review pack?
+## 1. What Is in the Review Pack?
 
 The current review pack contains several layers of information:
 
@@ -27,7 +27,7 @@ Additional evidence or supporting files may also be included depending on how th
 
 Keep the received review pack unchanged if you need to preserve the original handoff.
 
-## 2. Start with the human-readable result
+## 2. Start with the Human-Readable Result
 
 Start with:
 
@@ -59,7 +59,7 @@ when you need the machine-readable findings or more detail about the evaluated r
 
 For the complete description of generated artifacts, see [`../reference/outputs.md`](../reference/outputs.md).
 
-## 3. Understand what Curbpack checked
+## 3. Understand What Curbpack Checked
 
 Curbpack evaluates rules from the selected packs against evidence in the repository.
 
@@ -79,7 +79,7 @@ For example, a rule may require a security document to exist and contain specifi
 
 This is evidence that the **check** passed. It is not by itself proof that every statement in the document is correct, complete, current, or legally sufficient.
 
-## 4. Review the received material with Curbpack
+## 4. Review the Received Material with Curbpack
 
 A received review pack can also be inspected with:
 
@@ -99,7 +99,7 @@ The triage states are:
 
 For additional review modes and flags, see [`../reference/cli.md`](../reference/cli.md).
 
-## 5. Inspect the evidence
+## 5. Inspect the Evidence
 
 For important findings, inspect the referenced evidence and ask:
 
@@ -119,7 +119,7 @@ Reviewer:
 Is that evidence substantively adequate for the decision being made?
 ```
 
-## 6. What a green result means
+## 6. What a Green Result Means
 
 A green result means that the selected Curbpack rules passed for the evaluated repository state.
 
@@ -133,7 +133,7 @@ It does not by itself establish:
 
 Curbpack prepares review material. The reviewer decides what the evidence means.
 
-## Technical reference
+## Technical Reference
 
 * [`../reference/outputs.md`](../reference/outputs.md)
 * [`../reference/cli.md`](../reference/cli.md)

@@ -1,4 +1,4 @@
-# Using Curbpack as a developer in a product repository
+# Using Curbpack as a Developer in a Product Repository
 
 This guide is for developers using Curbpack in a real product repository.
 
@@ -8,7 +8,7 @@ without first adding Curbpack artifacts to your own repository.
 
 For installation, see [`install.md`](install.md).
 
-## 1. Inspect your repository with `scan`
+## 1. Inspect Your Repository with `scan`
 
 Go to the Git root of the product repository:
 
@@ -76,7 +76,7 @@ For more detail about packs and configuration, see:
 - [`../concepts/packs.md`](../concepts/packs.md)
 - [`../reference/configuration.md`](../reference/configuration.md)
 
-## 3. Run the first check
+## 3. Run the First Check
 
 Now evaluate the repository against the selected packs:
 
@@ -111,7 +111,7 @@ You do not need to reconstruct the complete pack/claim/evidence model at this po
 The practical question is simply: **what does this finding refer to, and what needs
 to change in the product repository?**
 
-## 4. Investigate and fix a finding
+## 4. Investigate and Fix a Finding
 
 When `curbpack check` reports a finding, start by asking Curbpack for a suggested
 fix (proposal only):
@@ -168,7 +168,7 @@ curbpack check again
 
 Repeat this after each relevant change until the current findings have been handled.
 
-## 5. Use Curbpack during normal development
+## 5. Use Curbpack during Normal Development
 
 After initialization, you normally only need:
 
@@ -185,7 +185,7 @@ again.
 A previous passing result only describes the repository state that was checked at
 that time.
 
-## 6. Create review material
+## 6. Create Review Material
 
 When you want to hand the current result over for review, run:
 

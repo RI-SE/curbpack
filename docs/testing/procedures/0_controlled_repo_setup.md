@@ -1,9 +1,9 @@
-# 0. Repository content states
+# 0. Repository Content States
 
 This file defines the `R-*` dimension of the
 [controlled test prerequisites](README.md).
 
-## What this is
+## What This Is
 
 Many test suites run Curbpack against a Git repository and check whether the
 selected pack rules produce the expected result. Positive and negative tests
@@ -58,7 +58,7 @@ an R-id instead of repeating the repository mutation. The case consumes and
 verifies the prepared state. It does not reproduce the internal operations of
 the R script.
 
-## How they are used
+## How They Are Used
 
 Each independent case follows the same sequence:
 
@@ -122,7 +122,7 @@ deletes and recreates that same path.
 R4 and R5 use this same path and the same `setup.sh` invocation. See
 [R4](#r4) and [R5](#r5).
 
-## Which states exist now
+## Which States Exist Now
 
 | ID | State | Used by |
 |---|---|---|
@@ -146,7 +146,7 @@ not list individual stories or testcases.
 
 <a id="r1"></a>
 
-## R1 — starting Glucose Log product content
+## R1 — Starting Glucose Log Product Content
 
 The frozen Glucose Log commit (`$REFERENCE_PRODUCT_COMMIT`) without
 additional content mutations.
@@ -179,7 +179,7 @@ Used by: Curbpack, CTAM
 
 <a id="r2"></a>
 
-## R2 — missing required file
+## R2 — Missing Required File
 
 R1 with `SECURITY.md` removed. The file is absent, not empty. Other R1 files
 remain unchanged.
@@ -194,7 +194,7 @@ Used by: Curbpack
 
 <a id="r3"></a>
 
-## R3 — missing required section
+## R3 — Missing Required Section
 
 R1 with the heading `## Classification Rationale` removed from
 `docs/medtech/software_safety_class.md`. The file remains present and its other
@@ -209,7 +209,7 @@ Used by: Curbpack
 
 <a id="r4"></a>
 
-## R4 — token-only house-policy tree
+## R4 — Token-Only House-Policy Tree
 
 demo-app content with the token-only honesty-eval `SECURITY.md` and
 `package.json` identifying `acme-widget`. Other retained demo-app content
@@ -236,7 +236,7 @@ Used by: Curbpack
 
 <a id="r5"></a>
 
-## R5 — thin rule-satisfying house-policy tree
+## R5 — Thin Rule-Satisfying House-Policy Tree
 
 demo-app content with the thin rule-satisfying honesty-eval `SECURITY.md`
 and the original demo-app `package.json`. Other retained demo-app content
@@ -261,7 +261,7 @@ Used by: Curbpack
 
 <a id="r6"></a>
 
-## R6 — stale fresh/owned fixture docs
+## R6 — Stale Fresh/Owned Fixture Docs
 
 R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as
 `Owner <owner@example.com>` with author/committer date
@@ -284,7 +284,7 @@ Used by: Curbpack
 
 <a id="r7"></a>
 
-## R7 — wrong-author fresh/owned fixture docs
+## R7 — Wrong-Author Fresh/Owned Fixture Docs
 
 R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as
 `Wrong Author <wrong@example.com>` with author/committer date

@@ -1,4 +1,4 @@
-# Requirement traceability
+# Requirement Traceability
 
 This file maps the normative requirements in
 [`docs/software-design-document.md`](../../docs/software-design-document.md) to

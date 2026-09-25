@@ -1,4 +1,4 @@
-# Independent verification
+# Independent Verification
 
 Use the verification documents in this order:
 
@@ -15,7 +15,7 @@ Use the verification documents in this order:
 5. [Test Records](generated_test_record_template.md) — one record per case
    execution.
 
-## Reading model
+## Reading Model
 
 Product requirements and documented claims are **test basis**. They are not a
 verification document layer.

@@ -1,4 +1,4 @@
-# Curbpack documentation
+# Curbpack Documentation
 # Curbpack
 
 ## Vision
@@ -25,7 +25,7 @@ flowchart LR
 
 Curbpack is intended to provide the **repeatable checking and evidence-handling part** of this flow. It should not decide what a law means, invent organizational policy, or make a compliance or release decision on behalf of a person.
 
-## Current state
+## Current State
 
 Curbpack does **not yet implement the full vision**. The current implementation focuses on a useful subset: select versioned rules, inspect a software repository, run repeatable checks against repository evidence, report findings, and prepare the results for human review.
 
@@ -63,7 +63,7 @@ For a more detailed view, see **[Capability status](curbpack-capability-implemen
 
 Start with the shortest path for what you need to do.
 
-## Start here
+## Start Here
 
 | Goal                                                      | Read                                            |
 | --------------------------------------------------------- | ----------------------------------------------- |
@@ -74,7 +74,7 @@ Start with the shortest path for what you need to do.
 | Review Curbpack results, evidence, and review material | [Reviewer guide](user-guides/reviewers.md)           |
 | Write or maintain a rule pack                          | [Pack development](user-guides/pack-developers.md)   |
 
-## Common tasks
+## Common Tasks
 
 | Task                                                            | Read                                                  |
 | --------------------------------------------------------------- | ----------------------------------------------------- |
@@ -119,7 +119,7 @@ Start with:
 
 Executable test material is under the repository-level `testing/` directory.
 
-## Working on Curbpack itself
+## Working on Curbpack Itself
 
 For contributors working on the Curbpack implementation:
 
@@ -127,7 +127,7 @@ For contributors working on the Curbpack implementation:
 * [Architecture](development/architecture.md)
 * [Testing](testing/README.md)
 
-## Papers and background material
+## Papers and Background Material
 
 Longer background and research material is kept under:
 

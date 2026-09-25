@@ -8,7 +8,7 @@ curbpack check
 
 Use its exit status to determine whether the CI job passes or fails.
 
-## 1) CI/CD model
+## 1) CI/CD Model
 * Run `curbpack check` in the CI pipeline.
 * If `curbpack check` passes, the pipeline continues.
 * If `curbpack check` fails, the pipeline fails. The developer investigates the finding locally, makes any required changes, and pushes a new revision for CI to check.
@@ -16,7 +16,7 @@ Use its exit status to determine whether the CI job passes or fails.
 * Human approval steps (for example attestation) stay outside CI.
 
 
-## 2) Generic pipeline
+## 2) Generic Pipeline
 
 A Curbpack CI job needs to:
 
@@ -64,7 +64,7 @@ Current defaults from [`action.yml`](../../action.yml) are:
 
 The Action supports Linux and macOS runners.
 
-## 4) CI result and outputs
+## 4) CI Result and Outputs
 
 `curbpack check` provides the pass/fail signal for the CI job.
 
@@ -72,7 +72,7 @@ The GitHub Action also exposes the check result and can produce additional repor
 
 For the generated files and their meaning, see [`../reference/outputs.md`](../reference/outputs.md).
 
-## 5) Other CI systems
+## 5) Other CI Systems
 
 For GitLab CI, Jenkins, Azure Pipelines, CircleCI, or other systems, use the same basic flow:
 

@@ -18,7 +18,7 @@ A normal contribution follows this process:
 
 Keep pull requests focused. Avoid mixing unrelated refactoring, cleanup, documentation changes, and behavior changes.
 
-## Git hooks
+## Git Hooks
 
 The repository currently uses Git hooks as part of the development process.
 
@@ -26,7 +26,7 @@ Use the hooks provided by the repository and do not normally bypass them.
 
 If a hook fails, fix the reported problem or determine whether the check itself needs to be changed.
 
-## Local validation
+## Local Validation
 
 Before opening a pull request, run:
 
@@ -48,7 +48,7 @@ Run `curbpack check` after changes that affect repository documentation, depende
 
 Run any additional tests relevant to the code being changed.
 
-## Pull requests
+## Pull Requests
 
 A pull request should:
 
@@ -60,7 +60,7 @@ A pull request should:
 
 Changes to public behavior should update the corresponding documentation in the same pull request.
 
-## Actions requiring human approval
+## Actions Requiring Human Approval
 
 Some operations represent explicit human decisions and must not be performed automatically on behalf of a maintainer.
 
@@ -78,7 +78,7 @@ Options such as `--i-am-human` are explicit acknowledgements in the current impl
 
 A successful Curbpack check does not by itself authorize a merge, release, confirmation, attestation, or approval.
 
-## Maintainer rules
+## Maintainer Rules
 
 Contributions must preserve the current product scope:
 
@@ -90,7 +90,7 @@ Contributions must preserve the current product scope:
 
 Changes to pinned versions, pack identifiers, signing, signer and attestation configuration, or similar protected configuration require explicit maintainer review.
 
-## Security-sensitive changes
+## Security-Sensitive Changes
 
 Take extra care with changes involving:
 

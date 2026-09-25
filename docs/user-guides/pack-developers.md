@@ -1,4 +1,4 @@
-# Write your own pack
+# Write Your Own Pack
 
 A Curbpack pack is a versioned JSON file containing rules that Curbpack evaluates against a repository.
 
@@ -6,7 +6,7 @@ Create your own pack when you need project- or organization-specific checks that
 
 This guide shows the normal authoring workflow. For the complete field definitions, see [`../reference/packs.md`](../reference/packs.md).
 
-## 1. Create the pack
+## 1. Create the Pack
 
 Create a directory named after the pack and add a `pack.json` file:
 
@@ -50,7 +50,7 @@ The pack contains metadata followed by a non-empty `rules` array.
 
 The example rule checks that `SECURITY.md` exists and satisfies the configured structural requirements.
 
-## 2. Add rules
+## 2. Add Rules
 
 Each rule selects one supported `check`.
 
@@ -121,7 +121,7 @@ require_git_author_name
 
 For all fields supported by each check, see [`../reference/packs.md`](../reference/packs.md).
 
-## 3. Add pack metadata when needed
+## 3. Add Pack Metadata When Needed
 
 A pack can contain additional metadata such as:
 
@@ -151,7 +151,7 @@ Both dates are optional. Curbpack accepts `YYYY-MM-DD` and RFC3339 values and re
 
 `assurance_class` is optional during normal pack validation but is required when a pack is added with `curbpack packs import`.
 
-## 4. Add citations when useful
+## 4. Add Citations When Useful
 
 Citations can be attached to the whole pack or to an individual rule.
 
@@ -191,7 +191,7 @@ Citation date ranges are validated.
 
 Citations record the source associated with a pack or rule. They do not turn a passing Curbpack check into a legal or regulatory conclusion.
 
-## 5. Decide what a passing rule means
+## 5. Decide What a Passing Rule Means
 
 Rules can use the `settlement` field:
 
@@ -228,11 +228,11 @@ Use `indicative` when the repository contains the expected structural evidence b
 
 This distinction is important for checks that can determine whether evidence exists or has the expected structure, but cannot determine whether every statement in that evidence is substantively correct.
 
-## 6. Build on another pack
+## 6. Build on Another Pack
 
 A pack can reuse rules from other packs.
 
-### Extend one pack
+### Extend One Pack
 
 Use `extends` to load a base pack first:
 
@@ -250,7 +250,7 @@ Use `extends` to load a base pack first:
 
 The current `medtech-iec62304` pack uses this mechanism to extend `cra-baseline`.
 
-### Add several packs
+### Add Several Packs
 
 Use `overlays` for an ordered list of additional packs:
 
@@ -263,7 +263,7 @@ Use `overlays` for an ordered list of additional packs:
 }
 ```
 
-### Modify the composed pack
+### Modify the Composed Pack
 
 The `overlay` field contains an RFC 7386 merge patch applied to the pack object:
 
@@ -275,7 +275,7 @@ The `overlay` field contains an RFC 7386 merge patch applied to the pack object:
 }
 ```
 
-### Composition order
+### Composition Order
 
 Curbpack composes a pack in this order:
 
@@ -292,7 +292,7 @@ Repeated pack sources are deduplicated, and `extends` cycles are rejected.
 
 Be deliberate when choosing rule IDs, especially when composing packs.
 
-## 7. Make the pack available to Curbpack
+## 7. Make the Pack Available to Curbpack
 
 For local development, point `CURBPACK_PACKS_DIR` at the parent directory containing your packs:
 
@@ -328,7 +328,7 @@ curbpack packs export-graph
 
 Curbpack also includes built-in embedded packs.
 
-## 8. Import a pack
+## 8. Import a Pack
 
 A local pack bundle can be imported with:
 
@@ -342,7 +342,7 @@ An imported pack must specify `assurance_class`.
 
 For pack development, using `CURBPACK_PACKS_DIR` is often simpler because you can edit the local `pack.json` and immediately run the checks again.
 
-## 9. Select the pack
+## 9. Select the Pack
 
 Select the pack when initializing a product repository:
 
@@ -362,7 +362,7 @@ or record the selected pack in `.curbpack.json`:
 
 If the pack extends or overlays other packs, those are included when Curbpack composes the selected pack.
 
-## 10. Run the checks
+## 10. Run the Checks
 
 Run:
 
@@ -390,7 +390,7 @@ A passing rule means that the implemented check passed against the repository st
 
 It does not by itself establish certification, regulatory conformity, or the truth of a broader substantive claim.
 
-## 11. Fix invalid packs
+## 11. Fix Invalid Packs
 
 Packs are validated when loaded.
 
@@ -414,7 +414,7 @@ Invalid packs fail loading rather than being silently skipped.
 
 Correct the pack definition and run the command again.
 
-## 12. Use `--diff` only for local incremental checks
+## 12. Use `--diff` Only for Local Incremental Checks
 
 During development you can use:
 
@@ -436,7 +436,7 @@ curbpack check
 
 for the complete repository check.
 
-## Minimal workflow
+## Minimal Workflow
 
 A complete local authoring workflow can be as small as:
 
@@ -456,7 +456,7 @@ curbpack check
 
 Then edit the pack or product evidence and run `curbpack check` again.
 
-## Related reference
+## Related Reference
 
 For exact syntax and supported fields, see:
 

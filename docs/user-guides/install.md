@@ -42,7 +42,7 @@ If `curbpack` is not available immediately afterwards, open a new PowerShell win
 curbpack --help
 ```
 
-## 3. Verify the installation
+## 3. Verify the Installation
 
 Run:
 
@@ -59,7 +59,7 @@ curbpack --help
 ```
  
 
-## 4. Repair an existing installation
+## 4. Repair an Existing Installation
 
 If Curbpack is already installed and the command itself is available, local installation settings can be repaired with:
 
