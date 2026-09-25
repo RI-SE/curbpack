@@ -10,7 +10,7 @@ list help:
 	@echo "start-verification-run   tmp/verification-run.sh  [CONFIRM_TMP_WIPE=1]"
 	@echo "test                     testing/automation/suit-runner.sh"
 	@echo "unittest                 go test ./..."
-	@echo "baseline                 Create a three-repo baseline (NAME=… OVERRIDE_TESTS=1)"
+	@echo "baseline                 Create a three-repo baseline (NAME=…  CONFIRM_TESTS_PASSED=TRUE)"
 	@echo "baseline-check           Verify a named baseline (NAME=…)"
 	@echo "checkout-baseline        Detach all three repos at a named baseline (NAME=…)"
 	@echo "install                  $(INSTALL_DIR)/curbpack"
