@@ -6,12 +6,12 @@ Start with the shortest path for what you need to do.
 The first table lets you navigate based on your current role and the second table maps a concrete goal to some nifty dockument
 | You are | Start here |
 | --- | --- |
-| **New user** | [Install](docs/user-guides/install.md) · [Getting Started](docs/user-guides/getting-started.md) |
-| **Builder / product team** | [Builder Guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md) |
-| **Buyer / reviewer** | [Reviewer Guide](docs/user-guides/reviewers.md) |
-| **Authority / auditor** | [Reviewer Guide](docs/user-guides/reviewers.md) |
-| **Pack author** | [Pack Author Guide](docs/user-guides/pack-developers.md) |
-| **Curbpack contributor** | [Contributor Guide](docs/development/README.md) · [Testing](docs/testing/README.md) |
+| **New user** | [Install](user-guides/install.md) · [Getting Started](user-guides/getting-started.md) |
+| **Builder / product team** | [Builder Guide](user-guides/developers.md) · [CI/CD](user-guides/ci-cd.md) |
+| **Buyer / reviewer** | [Reviewer Guide](user-guides/reviewers.md) |
+| **Authority / auditor** | [Reviewer Guide](user-guides/reviewers.md) |
+| **Pack author** | [Pack Author Guide](user-guides/pack-developers.md) |
+| **Curbpack contributor** | [Contributor Guide](development/README.md) · [Testing](testing/README.md) |
 
 | Goal                                                      | Read                                            |
 | --------------------------------------------------------- | ----------------------------------------------- |
