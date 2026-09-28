@@ -1,7 +1,7 @@
 INSTALL_DIR ?= $(HOME)/.local/bin
 SUITE ?= all
 
-.PHONY: list help build start-verification-run install uninstall clean test unittest baseline baseline-check checkout-baseline
+.PHONY: list help build start-verification-run install uninstall clean test unittest ci-tests baseline baseline-check checkout-baseline
 .DEFAULT_GOAL := list
 
 list help:
@@ -10,6 +10,7 @@ list help:
 	@echo "start-verification-run   tmp/verification-run.sh  [CONFIRM_TMP_WIPE=1]"
 	@echo "test                     testing/automation/suit-runner.sh"
 	@echo "unittest                 go test ./..."
+	@echo "ci-tests                 silent local CI mirror (cmd....[PASS]/[FAIL])"
 	@echo "baseline                 Create a three-repo baseline (NAME=…  CONFIRM_TESTS_PASSED=TRUE)"
 	@echo "baseline-check           Verify a named baseline (NAME=…)"
 	@echo "checkout-baseline        Detach all three repos at a named baseline (NAME=…)"
@@ -38,6 +39,9 @@ test:
 
 unittest:
 	go test ./...
+
+ci-tests:
+	./scripts/ci-tests.sh
 
 install: build
 	mkdir -p "$(INSTALL_DIR)"

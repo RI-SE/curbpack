@@ -1,238 +1,140 @@
 # Curbpack
 
-> **Source:** [RI-SE/curbpack](https://github.com/RI-SE/curbpack) contains the code, releases, and documentation. Development is supported by RISE as an applied research / competence object; see [NOTICE](NOTICE). RISE does not certify products that use Curbpack gate results. The GitHub Action remains pinned to `RI-SE/curbpack@v0.5.2` until the next human tabletop permits a version bump.
+![ci](https://github.com/RI-SE/curbpack/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
-Curbpack checks your repository against local rule packs and writes a review pack you can hand to a buyer or auditor — on your machine, without claiming certification.
+Curbpack checks a software repository against selected rule packs and prepares results and supporting material for human review. Checks run locally, and the product team can hand the review material to QA, a buyer, or an auditor.
 
-> Not conformity assessment. Not CE marking. Not a notified-body opinion.
+[Documentation](docs/README.md) · [Getting Started](docs/user-guides/getting-started.md) · [White Paper](docs/papers/curbpack-whitepaper.md)
 
-[Documentation](docs/README.md) · [White paper](papers/curbpack-whitepaper.md) · [Site](https://ri-se.github.io/curbpack/) · [Voice and terms](policies/voice-and-terms.md) · [Repository](https://github.com/RI-SE/curbpack)
+## Vision
 
-## Friendly Pre-Beta: Start Testing Here
+Software teams increasingly need to show that a product follows technical requirements, company policies, security rules, standards, and other obligations. The relevant evidence already exists in many projects — in source code, configuration, tests, documentation, build results, and engineering records — but connecting a requirement to the right evidence, checking it consistently, and preparing it for review is still largely manual.
 
-**Testing the latest hardening work? Use the [pre-beta guide](vision/docs/getting-started/prebeta.md).**
+The long-term goal is a traceable path from **a requirement or policy**, through **explicit checks of engineering evidence**, to **a reviewable result**. Automation should do the repetitive checking and preserve where each result came from. Humans remain responsible for interpreting policies, approving rules, reviewing the evidence, and making decisions such as whether a product is ready to release or whether an external requirement has been satisfied.
 
-From this checkout:
+```mermaid
+flowchart LR
+    A["Policies, standards<br/>and engineering requirements"]
+    B["Human interpretation<br/>and approved rules"]
+    C["Engineering evidence<br/>code · tests · docs · configuration"]
+    D["Repeatable checks"]
+    E["Traceable results<br/>and review material"]
+    F["Human review<br/>and decision"]
+
+    A --> B
+    B --> D
+    C --> D
+    D --> E
+    E --> F
+```
+
+Curbpack is intended to provide the **repeatable checking and evidence-handling part** of this flow. It should not decide what a law means, invent organizational policy, or make a compliance or release decision on behalf of a person.
+
+## Current State
+
+Curbpack does **not yet implement the full vision**. The current implementation focuses on a useful subset: select versioned rules, inspect a software repository, run repeatable checks against repository evidence, report findings, and prepare the results for human review.
+
+This is also the part that can be demonstrated today. A demo can start with a normal Git repository and a selected rule pack, show what Curbpack finds, run the checks, show which rules pass or produce findings, and follow the resulting material into human review. Capabilities outside this path are either only partly implemented or still planned.
+
+```mermaid
+flowchart LR
+    A["Policies, standards<br/>and engineering requirements"]
+    B["Human interpretation<br/>and approved rules"]
+
+    subgraph NOW["CURRENT IMPLEMENTATION / DEMO"]
+        C["Selected<br/>rule pack"]
+        D["Git repository<br/>with engineering evidence"]
+        E["scan / check"]
+        F["Results<br/>and findings"]
+        G["Review material"]
+        C --> E
+        D --> E
+        E --> F
+        F --> G
+    end
+
+    H["Human review<br/>and decision"]
+
+    A -. future / broader flow .-> B
+    B --> C
+    G --> H
+```
+
+
+
+The broader vision includes more complete support for connecting requirements to evidence and review results. Human interpretation and rule selection are already needed in the current workflow.
+
+For a more detailed view, see **[Capability status](docs/curbpack-capability-implementation-audit.md)**, which maps the intended capabilities to what is implemented, partially implemented, and still missing.
+
+## A Simple Example
+
+A pack rule may require `SECURITY.md` to exist and contain vulnerability-reporting information. Curbpack checks the file against the conditions in that rule. If a later commit removes the file or a required heading, running the same check can reveal the change.
+
+The team investigates the finding, updates the product evidence, and runs the check again. A reviewer still needs to decide whether the documented process is suitable and actually followed.
+
+A passing check means that the selected rules passed for the evaluated repository state. It is not certification, CE marking, or a conformity assessment.
+
+## Start Here
+
+Choose a guide for your role. **Builders** use Curbpack in their own product repositories. **Curbpack contributors** develop and maintain Curbpack itself.
+
+
+| You are                    | Start here                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| **New user**               | [Install](docs/user-guides/install.md) · [Getting Started](docs/user-guides/getting-started.md) |
+| **Builder / product team** | [Builder Guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md)            |
+| **Buyer / reviewer**       | [Reviewer Guide](docs/user-guides/reviewers.md)                                                 |
+| **Authority / auditor**    | [Reviewer Guide](docs/user-guides/reviewers.md)                                                 |
+| **Pack author**            | [Pack Author Guide](docs/user-guides/pack-developers.md)                                        |
+| **Curbpack contributor**   | [Contributor Guide](docs/development/README.md) · [Testing](docs/testing/README.md)             |
+
+
+The CI/CD guide describes checks in a builder's product pipeline. Curbpack's own development and test procedures are covered by the contributor documentation.
+
+For specific tasks, concepts, command details, configuration, and generated files, use the [Documentation Index](docs/README.md).
+
+## Try Curbpack
+
+The [Getting Started walkthrough](docs/user-guides/getting-started.md) uses a disposable reference product. You can inspect a rule, remove or change its evidence, and run the checks again to see how the result changes.
+
+After [installation](docs/user-guides/install.md), you can also inspect your own Git repository:
+
+```bash
+cd /path/to/your/product
+curbpack scan
+```
+
+`scan` is read-only: it does not initialize Curbpack or install repository hooks. Exit `0` means the scan completed; findings may remain.
+
+When you are ready to configure checks for your product, follow the [Builder Guide](docs/user-guides/developers.md). The normal workflow is to select packs, run `curbpack check`, investigate findings, make the necessary changes, and run the check again. Initialization may create starter files or integrations; inspect those changes and replace templates with real product information.
+
+Builders and their coding assistants use the same checks in the product repository. In CI, run `curbpack check` and fail the job on a non-zero exit code. Fix findings in the product work, then let CI check the new revision. Human confirmation and attestation remain human actions.
+
+When preparing a handoff, `curbpack share` assembles review material. A recipient can start with the HTML summary or executive summary and inspect the detailed findings and evidence. See the [Reviewer Guide](docs/user-guides/reviewers.md) for what these results mean and how to review them.
+
+## Release and Pre-Beta Status
+
+The released installer supplies **v0.5.5**. The public GitHub Action remains pinned to `RI-SE/curbpack@v0.5.2`; see the [CI/CD Guide](docs/user-guides/ci-cd.md).
+
+
+
+To test the newer source changes, use the [Pre-Beta Guide](vision/docs/getting-started/prebeta.md). From a Curbpack source checkout:
 
 ```bash
 ./scripts/test-prebeta.sh
 ```
 
-It builds a labelled source version, prepares a sandbox, and records the exact build and results.
+It builds a labelled source version, prepares a sandbox, and records the exact build and results. The released installer supplies an older build.
 
-Use this path when testing the current source tree. The released installer below supplies an older released build.
+The existing [Launch Status and Audit Limitations](vision/docs/launch-status.md) records qualification information and known limitations. These status documents remain under `vision/docs/` pending migration.
+-->
 
-## Release Status
+## Project Background
 
-The installer currently supplies **v0.5.5**. The GitHub Action remains pinned to `RI-SE/curbpack@v0.5.2`.
+[RI-SE/curbpack](https://github.com/RI-SE/curbpack) contains the source code, releases, and documentation. Development is supported by RISE as an applied research and competence project; see [NOTICE](NOTICE). RISE does not certify products that use Curbpack results.
 
-See [launch status and audit limitations](vision/docs/launch-status.md) for the current qualification status and known limitations.
+The [White Paper](docs/papers/curbpack-whitepaper.md) provides the longer technical background. Earlier documentation and design material are retained under [vision/](vision/); some of that material describes historical decisions or planned capabilities. Use [docs/](docs/README.md) for the current user guides and technical reference.
 
-## Released v0.5.5: Start With a Read-Only Scan
-
-Install Curbpack, change to any Git repository, and run `scan`.
-
-### macOS / Linux
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.sh | sh
-cd /path/to/your/git/repo
-curbpack scan
-```
-
-
-
-### Windows PowerShell
-
-```powershell
-irm https://raw.githubusercontent.com/RI-SE/curbpack/main/scripts/install.ps1 | iex
-cd C:\path\to\your\git\repo
-curbpack scan
-```
-
-`scan` is read-only. It does not initialize Curbpack or install hooks in the repository.
-
-Exit `0` from `scan` means the scan completed; findings may still remain. Use `curbpack check` when you need repository gate pass/fail.
-
-Installation problems: [Troubleshooting](docs/user-guides/troubleshooting.md).
-
-## Choose the Relevant Guide
-
-
-| You are                      | Start here                                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **New user**                 | [Install](docs/user-guides/install.md) · [Getting Started](docs/user-guides/getting-started.md)                     |
-| **Developer / product team** | [Developer Guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md)                              |
-| **Buyer / reviewer**         | [Reviewer Guide](docs/user-guides/reviewers.md) · [For Reviewers](https://ri-se.github.io/curbpack/for-reviewers/)  |
-| **Authority / auditor**      | [For Authorities](https://ri-se.github.io/curbpack/for-authorities/) · [Background](vision/docs/for-authorities.md) |
-| **Pack developer**           | [Pack Development](docs/user-guides/pack-developers.md)                                                             |
-| **Curbpack contributor**     | [Development](docs/development/README.md) · [Testing](docs/testing/README.md)                                       |
-
-
-For an overview of the product model, see [Concepts](docs/concepts/README.md).
-
-For exact command, configuration, pack, and output details, see the [Technical Reference](docs/reference/README.md).
-
-For the longer technical background, read the [white paper](papers/curbpack-whitepaper.md).
-
-## Continue to the Full Workflow
-
-After installation, the normal flow is:
-
-```bash
-curbpack doctor
-curbpack demo
-
-cd /path/to/your/product
-
-curbpack scan
-curbpack init
-curbpack check
-```
-
-`scan` lets you inspect the repository before initialization.
-
-`init` creates the Curbpack configuration for the product repository.
-
-`check` evaluates the selected packs against the repository and produces the gate result.
-
-If findings remain, inspect them, change the repository or configuration as appropriate, and run `curbpack check` again.
-
-When the result is ready to hand to another person:
-
-```bash
-curbpack share
-```
-
-Human attestation is separate:
-
-```bash
-curbpack attest
-```
-
-For the step-by-step product workflow, see the [Developer Guide](docs/user-guides/developers.md).
-
-An older, more detailed description of the optional pathway flow remains available at [vision/docs/getting-started/pathway.md](vision/docs/getting-started/pathway.md) while that material is being reviewed for migration.
-
-## What You Get
-
-
-| Artifact            | When                         | What it is                                                     |
-| ------------------- | ---------------------------- | -------------------------------------------------------------- |
-| **Gate report**     | `curbpack check`             | Findings and result from the selected rules                    |
-| **Review pack**     | `prepare-release` or `share` | Material prepared for human review                             |
-| **Buyer one-pager** | `share`                      | Supplier evidence summary                                      |
-| **Evidence bundle** | `share --bundle`             | Offline review material                                        |
-| **ContextPack**     | export/share flow            | Structured context for other tools                             |
-| **Buyer questions** | export/share flow            | Questions for supplier/reviewer handoff                        |
-| **Attest capsule**  | Human `attest`               | Record bound to the reviewed repository state                  |
-| **Proof page**      | After attest                 | Local page for inspecting the attestation and evidence pointer |
-
-
-For exact generated files and locations, see [Outputs](docs/reference/outputs.md).
-
-These artifacts are review material. They are not certification or conformity decisions.
-
-## How to Interpret Results
-
-
-| Signal                | Meaning                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| Exit **0** on `check` | Selected gates passed on this repository state               |
-| Exit **1** on `check` | Findings remain or the check could not complete successfully |
-| Exit **2**            | Usage or environment error                                   |
-| Exit **0** on `scan`  | Scan completed; findings may still remain                    |
-| **Unsigned** attest   | Attestation exists but is not cryptographically signed       |
-| **ssh-agent-signed**  | An SSH signature was produced                                |
-
-
-Only `check` provides repository gate pass/fail.
-
-Gate pass is **not** certification, CE marking, or notified-body approval. Humans decide what claims to make from the evidence.
-
-## GitHub Action
-
-The public Action remains pinned to:
-
-```yaml
-- uses: RI-SE/curbpack@v0.5.2
-  with:
-    heal: "true"
-    comment_on: red
-    upload_sarif: "true"
-```
-
-Drop-in example:
-
-`[examples/workflows/curbpack-check.yml](examples/workflows/curbpack-check.yml)`
-
-For the normal CI model, see the [CI/CD Guide](docs/user-guides/ci-cd.md).
-
-## Main Commands
-
-
-| Command    | Purpose                                              |
-| ---------- | ---------------------------------------------------- |
-| `doctor`   | Inspect the local Curbpack environment               |
-| `demo`     | Run the bundled demonstration                        |
-| `scan`     | Inspect a repository without initializing Curbpack   |
-| `init`     | Initialize Curbpack in a product repository          |
-| `check`    | Evaluate the selected packs and produce gate results |
-| `share`    | Prepare review material for handoff                  |
-| `review`   | Review a received pack or repository evidence        |
-| `attest`   | Human attestation of the reviewed state              |
-| `export`   | Produce additional outputs                           |
-| `packs`    | Inspect and manage packs                             |
-| `pathway`  | Optional pathway workflow                            |
-| `research` | Optional research and citation support               |
-
-
-For the complete CLI reference, see [CLI Reference](docs/reference/cli.md) or run:
-
-```bash
-curbpack --help
-curbpack <command> --help
-```
-
-
-
-## Documentation
-
-
-
-### Current Documentation
-
-- [Documentation Index](docs/README.md)
-- [User Guides](docs/user-guides/README.md)
-- [Concepts](docs/concepts/README.md)
-- [Technical Reference](docs/reference/README.md)
-- [Development](docs/development/README.md)
-- [Testing](docs/testing/README.md)
-- [White Paper](papers/curbpack-whitepaper.md)
-
-
-
-### Policies and Agent Guidance
-
-- [Claim Discipline](policies/claim-discipline.md)
-- [Voice and Terms](policies/voice-and-terms.md)
-- [Strategy Boundary](policies/strategy-boundary.md)
-- [Agent Guidance](AGENTS.md)
-- [Assistant Loop](agents/assistant-loop.md)
-
-
-
-### Detailed Material Still Under `vision/docs`
-
-Some useful material from the previous documentation structure has not yet been migrated. It remains available while the current documentation is filled out.
-
-- [Pre-Beta Testing](vision/docs/getting-started/prebeta.md)
-- [Launch Status](vision/docs/launch-status.md)
-- [Pathway](vision/docs/getting-started/pathway.md)
-- [Security Model](vision/docs/security-model.md)
-- [Intent vs Scope](vision/docs/intent-vs-scope.md)
-- [Write Your Own Pack](vision/docs/write-your-own-pack.md)
-- [Shared Frame](vision/docs/shared-frame.md)
-- [Review Method 1.3.0](vision/docs/method/review-method-1.3.0.md)
-
-Curbpack prepares structural evidence for human review. It does not replace legal interpretation, software composition analysis, secret scanning, or other specialist assurance activities.
+Curbpack prepares repository evidence for human review. It does not replace legal interpretation, software composition analysis, secret scanning, or other specialist assurance activities.
+    
