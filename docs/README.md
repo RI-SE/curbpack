@@ -1,69 +1,17 @@
 # Curbpack Documentation
-# Curbpack
-
-## Vision
-
-Software teams increasingly need to show that a product follows technical requirements, company policies, security rules, standards, and other obligations. The relevant evidence already exists in many projects — in source code, configuration, tests, documentation, build results, and engineering records — but connecting a requirement to the right evidence, checking it consistently, and preparing it for review is still largely manual.
-
-The long-term goal is a traceable path from **a requirement or policy**, through **explicit checks of engineering evidence**, to **a reviewable result**. Automation should do the repetitive checking and preserve where each result came from. Humans remain responsible for interpreting policies, approving rules, reviewing the evidence, and making decisions such as whether a product is ready to release or whether an external requirement has been satisfied.
-
-```mermaid
-flowchart LR
-    A["Policies, standards<br/>and engineering requirements"]
-    B["Human interpretation<br/>and approved rules"]
-    C["Engineering evidence<br/>code · tests · docs · configuration"]
-    D["Repeatable checks"]
-    E["Traceable results<br/>and review material"]
-    F["Human review<br/>and decision"]
-
-    A --> B
-    B --> D
-    C --> D
-    D --> E
-    E --> F
-```
-
-Curbpack is intended to provide the **repeatable checking and evidence-handling part** of this flow. It should not decide what a law means, invent organizational policy, or make a compliance or release decision on behalf of a person.
-
-## Current State
-
-Curbpack does **not yet implement the full vision**. The current implementation focuses on a useful subset: select versioned rules, inspect a software repository, run repeatable checks against repository evidence, report findings, and prepare the results for human review.
-
-This is also the part that can be demonstrated today. A demo can start with a normal Git repository and a selected rule pack, show what Curbpack finds, run the checks, show which rules pass or produce findings, and follow the resulting material into human review. Capabilities outside this path are either only partly implemented or still planned.
-
-```mermaid
-flowchart LR
-    A["Policies, standards<br/>and engineering requirements"]
-    B["Human interpretation<br/>and approved rules"]
-
-    subgraph NOW["CURRENT IMPLEMENTATION / DEMO"]
-        C["Selected<br/>rule pack"]
-        D["Git repository<br/>with engineering evidence"]
-        E["scan / check"]
-        F["Results<br/>and findings"]
-        G["Review material"]
-        C --> E
-        D --> E
-        E --> F
-        F --> G
-    end
-
-    H["Human review<br/>and decision"]
-
-    A -. future / broader flow .-> B
-    B --> C
-    G --> H
-```
-
-The diagrams above show the distinction between the **intended system** and the **subset implemented today**. This is intentional in the documentation: future capabilities should remain visible without being presented as shipped functionality.
-
-For a more detailed view, see **[Capability status](curbpack-capability-implementation-audit.md)**, which maps the intended capabilities to what is implemented, partially implemented, and still missing.
-
----
-
+ 
 Start with the shortest path for what you need to do.
 
 ## Start Here
+The first table lets you navigate based on your current role and the second table maps a concrete goal to some nifty dockument
+| You are | Start here |
+| --- | --- |
+| **New user** | [Install](docs/user-guides/install.md) · [Getting Started](docs/user-guides/getting-started.md) |
+| **Builder / product team** | [Builder Guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md) |
+| **Buyer / reviewer** | [Reviewer Guide](docs/user-guides/reviewers.md) |
+| **Authority / auditor** | [Reviewer Guide](docs/user-guides/reviewers.md) |
+| **Pack author** | [Pack Author Guide](docs/user-guides/pack-developers.md) |
+| **Curbpack contributor** | [Contributor Guide](docs/development/README.md) · [Testing](docs/testing/README.md) |
 
 | Goal                                                      | Read                                            |
 | --------------------------------------------------------- | ----------------------------------------------- |
@@ -87,7 +35,7 @@ Start with the shortest path for what you need to do.
 | Create or maintain a custom pack                                | [Pack development](user-guides/pack-developers.md)         |
 | Run the verification test suites                                | [Testing](testing/README.md)                          |
 
-## Understand Curbpack
+## Understanding the Curbpack Concepts
 
 | Subject                                                | Read                                         |
 | ------------------------------------------------------ | -------------------------------------------- |
@@ -96,7 +44,7 @@ Start with the shortest path for what you need to do.
 | Evidence and review material                           | [Evidence](concepts/evidence.md)             |
 | Current implementation architecture                    | [Architecture](development/architecture.md) |
 
-## Reference
+## Technical Reference
 
 Use the reference documentation when you need exact commands, fields, paths, or output formats.
 
@@ -107,26 +55,7 @@ Use the reference documentation when you need exact commands, fields, paths, or 
 | [Packs](reference/packs.md)                 | Pack schema, rule fields, check types, and composition      |
 | [Outputs](reference/outputs.md)             | Generated files, formats, and locations                     |
 
-## Testing
-
-The verification documentation is separate from normal product documentation.
-
-Start with:
-
-* [Testing overview](testing/README.md)
-* [Test strategy](testing/strategy.md)
-* [Requirements traceability](testing/requirements_traceability.md)
-
-Executable test material is under the repository-level `testing/` directory.
-
-## Working on Curbpack Itself
-
-For contributors working on the Curbpack implementation:
-
-* [Contributing](development/README.md)
-* [Architecture](development/architecture.md)
-* [Testing](testing/README.md)
-
+ 
 ## Papers and Background Material
 
 Longer background and research material is kept under:
