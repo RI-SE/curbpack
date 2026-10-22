@@ -1,0 +1,45 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "production process",
+      "manufacturing process",
+      "process validation",
+      "monitoring process",
+      "release process"
+    ],
+    "expected_evidence": [
+      "process description",
+      "test result"
+    ],
+    "path_hints": [
+      "*production*",
+      "*release*",
+      "*CI*",
+      "*pipeline*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "test_management"
+      }
+    ]
+  },
+  "id": "POC1-REF-VII-2C",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including: (c)\nnecessary information and specifications of the production and monitoring\nprocesses of the product with digital elements and the validation of those\nprocesses;",
+      "locator": "VII.2(c)",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

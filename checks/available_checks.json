@@ -1,0 +1,144 @@
+{
+  "checks": [
+    {
+      "id": "exist",
+      "command": "curbcheck-exist",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["paths"],
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    {
+      "id": "contents",
+      "command": "curbcheck-contents",
+      "args_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "probes"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "probes": {"type": "array", "minItems": 1}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["paths", "probes"],
+            "properties": {
+              "paths": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "probes": {"type": "array", "minItems": 1}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "fresh",
+      "command": "curbcheck-fresh",
+      "args_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "max_age_days"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "max_age_days": {"type": "integer"}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "since_ref"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "since_ref": {"type": "string", "minLength": 1}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "owned",
+      "command": "curbcheck-owned",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bind_repo_token"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "bind_repo_token": {"const": true},
+          "name": {"type": "string", "minLength": 1},
+          "email": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    {
+      "id": "dep_ban",
+      "command": "curbcheck-dep-ban",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "banned_versions"],
+        "properties": {
+          "package": {"type": "string", "minLength": 1},
+          "banned_versions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    {
+      "id": "npm_dep_ban",
+      "command": "curbcheck-dep-ban",
+      "alias_of": "dep_ban",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "banned_versions"],
+        "properties": {
+          "package": {"type": "string", "minLength": 1},
+          "banned_versions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    {
+      "id": "manifest_dep_ban",
+      "command": "curbcheck-dep-ban",
+      "alias_of": "dep_ban",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "banned_versions"],
+        "properties": {
+          "package": {"type": "string", "minLength": 1},
+          "banned_versions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  ]
+}

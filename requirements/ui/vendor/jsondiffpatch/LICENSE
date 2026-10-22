@@ -1,0 +1,8 @@
+jsondiffpatch 0.5.0
+https://github.com/benjamine/jsondiffpatch
+Copyright Benjamin Eidelman <beneidel@gmail.com>
+Licensed under the MIT License.
+
+This browser bundle also includes diff-match-patch,
+Copyright 2018 The diff-match-patch Authors,
+licensed under the Apache License, Version 2.0.

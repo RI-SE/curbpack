@@ -1,0 +1,23 @@
+Propose discovery_hints a person can use to look for product documentation that may evidence each provision. A hint is a search suggestion. It is not evidence, and it does not add a legal duty.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: exactly the input locus
+- discovery_hints:
+  - concepts: 4 to 8 short English phrases for the distinct obligations in that law_text. Prefer words a product repository would contain. Do not echo every verb in the sentence.
+  - path_hints: 2 to 6 filename globs such as "*SECURITY*" or "*sbom*". Prefer names a repository actually uses.
+  - sources: where those files usually live. Each entry is {"source":"..."} and may include "args" only when that source needs them. Use "documents" for written documentation. Add "git" when the artifact is typically a tracked file, such as an SBOM, changelog, or architecture description. Add "requirements" for a tracked requirement or risk record. Add "test_management" for test reports. Do not invent other source ids.
+  - expected_evidence: 1 to 3 of exactly "process description", "requirement", "implementation reference", "test result".
+
+Rules:
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- When one passage names several obligations, hint each of them. A vulnerability-handling passage that names a bill of materials, a disclosure policy, a contact address, and update distribution needs hints for each, not one generic label.
+- Do not assert that the law requires a named standard, method, file format, or tool. Naming a common artifact to look for, such as a threat-model note or an SBOM file, is allowed.
+- Do not leave concepts, path_hints, or expected_evidence empty.
+- Do not include id, locator, claim, search, or law_text.
+- Do not return a bare array. Reply with only one JSON object, with one result for every input locus. The row below shows the shape, not the whole reply:
+  {"provisions":[{"locus":"1(a)","discovery_hints":{"concepts":["intended purpose","intended use","product purpose","what the product does"],"path_hints":["*README*","*overview*","*product*"],"sources":[{"source":"documents"}],"expected_evidence":["process description","requirement"]}}]}

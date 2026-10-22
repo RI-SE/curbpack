@@ -1,0 +1,310 @@
+{
+  "id": "nis",
+  "status": "partial",
+  "pack_id": "nis2-baseline",
+  "source_format": "formex",
+  "formex_package": "../../data/official_xml/nis2",
+  "source": {
+    "framework": "EU",
+    "instrument": "NIS2",
+    "identifier": "CELEX:32022L2555",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "sections": [
+    {
+      "id": "Art.1",
+      "title": "Article 1: Subject matter",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.2",
+      "title": "Article 2: Scope",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.3",
+      "title": "Article 3: Essential and important entities",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.4",
+      "title": "Article 4: Sector-specific Union legal acts",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.5",
+      "title": "Article 5: Minimum harmonisation",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.6",
+      "title": "Article 6: Definitions",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.7",
+      "title": "Article 7: National cybersecurity strategy",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.8",
+      "title": "Article 8: Competent authorities and single points of contact",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.9",
+      "title": "Article 9: National cyber crisis management frameworks",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.10",
+      "title": "Article 10: Computer security incident response teams (CSIRTs)",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.11",
+      "title": "Article 11: Requirements, technical capabilities and tasks of CSIRTs",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.12",
+      "title": "Article 12: Coordinated vulnerability disclosure and a European vulnerability database",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.13",
+      "title": "Article 13: Cooperation at national level",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.14",
+      "title": "Article 14: Cooperation Group",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.15",
+      "title": "Article 15: CSIRTs network",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.16",
+      "title": "Article 16: European cyber crisis liaison organisation network (EU-CyCLONe)",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.17",
+      "title": "Article 17: International cooperation",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.18",
+      "title": "Article 18: Report on the state of cybersecurity in the Union",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.19",
+      "title": "Article 19: Peer reviews",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.20",
+      "title": "Article 20: Governance",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.21",
+      "title": "Article 21: Cybersecurity risk-management measures",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.22",
+      "title": "Article 22: Union level coordinated security risk assessments of critical supply chains",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.23",
+      "title": "Article 23: Reporting obligations",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.24",
+      "title": "Article 24: Use of European cybersecurity certification schemes",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.25",
+      "title": "Article 25: Standardisation",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.26",
+      "title": "Article 26: Jurisdiction and territoriality",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.27",
+      "title": "Article 27: Registry of entities",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.28",
+      "title": "Article 28: Database of domain name registration data",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.29",
+      "title": "Article 29: Cybersecurity information-sharing arrangements",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.30",
+      "title": "Article 30: Voluntary notification of relevant information",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.31",
+      "title": "Article 31: General aspects concerning supervision and enforcement",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.32",
+      "title": "Article 32: Supervisory and enforcement measures in relation to essential entities",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.33",
+      "title": "Article 33: Supervisory and enforcement measures in relation to important entities",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.34",
+      "title": "Article 34: General conditions for imposing administrative fines on essential and important entities",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.35",
+      "title": "Article 35: Infringements entailing a personal data breach",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.36",
+      "title": "Article 36: Penalties",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.37",
+      "title": "Article 37: Mutual assistance",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.38",
+      "title": "Article 38: Exercise of the delegation",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.39",
+      "title": "Article 39: Committee procedure",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.40",
+      "title": "Article 40: Review",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.41",
+      "title": "Article 41: Transposition",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.42",
+      "title": "Article 42: Amendment of Regulation (EU) No 910/2014",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.43",
+      "title": "Article 43: Amendment of Directive (EU) 2018/1972",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.44",
+      "title": "Article 44: Repeal",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.45",
+      "title": "Article 45: Entry into force",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "Art.46",
+      "title": "Article 46: Addressees",
+      "in_scope": true,
+      "ready": true
+    },
+    {
+      "id": "I",
+      "title": "Annex I — Highly critical sectors (tables unsupported for provision extract)",
+      "in_scope": true,
+      "ready": false
+    },
+    {
+      "id": "II",
+      "title": "Annex II — Other critical sectors (tables unsupported for provision extract)",
+      "in_scope": true,
+      "ready": false
+    },
+    {
+      "id": "III",
+      "title": "Annex III — Correlation table (tables unsupported)",
+      "in_scope": false,
+      "ready": false
+    }
+  ]
+}

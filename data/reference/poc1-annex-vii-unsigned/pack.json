@@ -1,0 +1,6 @@
+{
+  "description": "Agent-converted comparison reference from the PoC1 Annex VII maps and cra-xml Formex provisions. Not an independently certified legal gold standard. Unsigned. Ids are reference labels, not the product naming convention.",
+  "id": "poc1-annex-vii-reference",
+  "name": "PoC1 Annex VII reference",
+  "version": "0.0.0-reference"
+}

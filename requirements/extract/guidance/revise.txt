@@ -1,0 +1,12 @@
+Revise the candidate using the source passage and the critique. Keep the same locus. Do not invent an id or a locator, and do not edit the source passage.
+
+Source provision:
+{provisions}
+
+Current candidate:
+{candidate}
+
+Critique:
+{critique}
+
+Return one JSON object of the form {"provisions":[...]} and no other text. Include exactly one object, for this provision, using only fields the stage already allows.

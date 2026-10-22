@@ -1,0 +1,42 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "Commission implementing act",
+      "sectoral requirements",
+      "essential and important entities"
+    ],
+    "expected_evidence": [
+      "Commission implementing act for other essential or important entities, if adopted"
+    ],
+    "path_hints": [
+      "*implementing*act*",
+      "*sectoral*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-5-ACTS-OTHER-ENTITIES",
+  "note": "'May' is the modal verb. 'As necessary' and 'other than those referred to in the first subparagraph' limit this power. Sectoral requirements are named as well as technical and methodological requirements. Absence of an act is consistent with this sentence.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The Commission may adopt implementing acts laying down the technical and the\nmethodological requirements, as well as sectoral requirements, as necessary,\nof the measures referred to in paragraph 2 with regard to essential and\nimportant entities other than those referred to in the first subparagraph of\nthis paragraph.",
+      "locator": "21(5)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for a Commission implementing act for other essential or important entities only if one was adopted. 'May' is not a duty to adopt an act for every such entity.",
+  "responsible": "The Commission",
+  "scope": "the technical and the methodological requirements, as well as sectoral requirements",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MAY"
+}

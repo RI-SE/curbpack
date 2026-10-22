@@ -1,0 +1,36 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "harmonised standard",
+      "common specification",
+      "certification scheme",
+      "alternative solution",
+      "technical specification applied"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ],
+    "path_hints": [
+      "*standard*",
+      "*compliance*",
+      "*CRA*"
+    ]
+  },
+  "id": "POC1-REF-VII-5",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a list of the harmonised standards applied in full or in part the references\nof which have been published in the Official Journal of the European Union,\ncommon specifications as set out in Article 27 of this Regulation or European\ncybersecurity certification schemes adopted pursuant to Regulation (EU)\n2019/881 pursuant to Article 27(8) of this Regulation, and, where those\nharmonised standards, common specifications or European cybersecurity\ncertification schemes have not been applied, descriptions of the solutions\nadopted to meet the essential cybersecurity requirements set out in Parts I\nand II of Annex I, including a list of other relevant technical specifications\napplied. In the event of partly applied harmonised standards, common\nspecifications or European cybersecurity certification schemes, the technical\ndocumentation shall specify the parts which have been applied;",
+      "locator": "VII.5",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "business continuity",
+      "backup management",
+      "disaster recovery",
+      "crisis management"
+    ],
+    "expected_evidence": [
+      "business continuity description",
+      "backup or disaster-recovery procedure",
+      "crisis management procedure"
+    ],
+    "path_hints": [
+      "*continuity*",
+      "*backup*",
+      "*disaster*recovery*",
+      "*crisis*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-2C-CONTINUITY",
+  "note": "The paragraph 2 chapeau is kept in this passage so that 'shall' stays pointable. The all-hazards approach, and the aim of protecting network and information systems and their physical environment, are that shared parent qualification. They are not ten separate duties. 'At least' means the list is a minimum. This passage does not itself name essential and important entities; the chapeau refers to the measures in paragraph 1. Reading: backup management and disaster recovery are examples of business continuity; crisis management is a further limb of the same point. The examples are not a closed list. Whether crisis management could instead be read as another example is recorded in the review and does not remove it from the passage. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The measures referred to in paragraph 1 shall be based on an all-hazards\napproach that aims to protect network and information systems and the physical\nenvironment of those systems from incidents, and shall include at least the\nfollowing: (c) business continuity, such as backup management and disaster\nrecovery, and crisis management;",
+      "locator": "21(2)(c)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for continuity, backup or recovery, and crisis-management material. An example in the text is not a closed checklist.",
+  "scope": "business continuity, such as backup management and disaster recovery, and crisis management",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

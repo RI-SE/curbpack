@@ -1,0 +1,14 @@
+Compare the candidate with the source passage below. The candidate is a draft. It is not approved.
+
+Source provision:
+{provisions}
+
+Current candidate:
+{candidate}
+
+Name concrete gaps only: a missing field, an unsupported field, or a missing evidence aspect. When you can, quote the source words and give the locator.
+
+Return one JSON object and no other text:
+{"findings":[{"field":"","aspect":"","quote":"","locator":""}]}
+
+Use an empty findings array when there is no actionable gap. Do not call the draft legally correct. Do not give a score.

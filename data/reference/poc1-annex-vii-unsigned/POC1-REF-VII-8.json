@@ -1,0 +1,46 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "SBOM",
+      "software bill of materials",
+      "CycloneDX",
+      "SPDX",
+      "dependency inventory",
+      "SOUP"
+    ],
+    "expected_evidence": [
+      "implementation reference",
+      "process description"
+    ],
+    "path_hints": [
+      "*SBOM*",
+      "*sbom*",
+      "*soup*",
+      "*bom*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "POC1-REF-VII-8",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "where applicable, the software bill of materials, further to a reasoned\nrequest from a market surveillance authority provided that it is necessary in\norder for that authority to be able to check compliance with the essential\ncybersecurity requirements set out in Annex I.",
+      "locator": "VII.8",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

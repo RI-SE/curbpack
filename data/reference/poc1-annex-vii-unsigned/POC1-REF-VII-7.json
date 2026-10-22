@@ -1,0 +1,32 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "EU declaration of conformity",
+      "declaration of conformity",
+      "DoC"
+    ],
+    "expected_evidence": [
+      "process description"
+    ],
+    "path_hints": [
+      "*declaration*conformity*",
+      "*DoC*"
+    ]
+  },
+  "id": "POC1-REF-VII-7",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a copy of the EU declaration of conformity;",
+      "locator": "VII.7",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

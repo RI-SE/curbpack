@@ -1,0 +1,25 @@
+Propose discovery_hints a person can use to look for organisation documentation that may evidence each provision. A hint is a search suggestion. It is not evidence, and it does not add a legal duty.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: copy the input locus character for character. Do not add or remove parentheses. 3 stays 3. 2(a) stays 2(a).
+- discovery_hints:
+  - concepts: one short English phrase for every distinct artefact or condition named in that law_text, usually 4 to 8. Do not stop at four when the passage names more. Do not replace a named feature with a broader label that drops it. Prefer words an organisation repository would contain.
+  - path_hints: 2 to 6 filename globs such as "*SECURITY*" or "*incident*", covering those same artefacts. Prefer names a repository actually uses.
+  - sources: where those files usually live. Each entry is {"source":"..."}. Use "documents" for written documentation. Add "git" when the artifact is typically a tracked file, such as a policy, playbook, or architecture description, and keep "documents" as well. Add "requirements" for a tracked requirement or risk record. Add "test_management" for test reports and for validation of a process. Do not invent other source ids. Do not add "args" unless that source needs them.
+  - expected_evidence: 1 to 3 of exactly "process description", "requirement", "implementation reference", "test result". Use "test result" for tests and process validation. Use "implementation reference" for an architecture description, asset inventory, or technical measure list. Use "requirement" for a risk record, policy, or stated rule. Use "process description" for how a measure is operated.
+
+Rules:
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- When one passage names several artefacts, hint each of them. A continuity passage that names backup, disaster recovery, and crisis management needs a separate concept for each.
+- When a passage asks for measures appropriate and proportionate to the risks, hint the risk analysis and the named measure types in that law_text, not only the word risk.
+- Do not copy an artefact from a neighbouring provision.
+- Do not assert that the law requires a named standard, method, file format, or tool. Naming a common artifact to look for, such as an incident-response plan or an access-control policy, is allowed.
+- Do not leave concepts, path_hints, or expected_evidence empty.
+- Do not include id, locator, claim, search, or law_text.
+- Do not return a bare array. Reply with only one JSON object, with one result for every input locus. The row below shows the shape, not the whole reply:
+  {"provisions":[{"locus":"2(a)","discovery_hints":{"concepts":["risk analysis policy","information system security policy"],"path_hints":["*risk*polic*","*information*security*"],"sources":[{"source":"documents"}],"expected_evidence":["process description","requirement"]}}]}

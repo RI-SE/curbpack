@@ -1,0 +1,49 @@
+{
+  "applicability": "where appropriate",
+  "discovery_hints": {
+    "concepts": [
+      "multi-factor authentication",
+      "continuous authentication",
+      "secured communications",
+      "emergency communication"
+    ],
+    "expected_evidence": [
+      "multi-factor or continuous authentication practice",
+      "secured voice, video, and text communications",
+      "secured emergency communication systems"
+    ],
+    "path_hints": [
+      "*multi*factor*",
+      "*authentication*",
+      "*mfa*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-2J-AUTHENTICATION-COMMS",
+  "note": "The paragraph 2 chapeau is kept in this passage so that 'shall' stays pointable. The all-hazards approach, and the aim of protecting network and information systems and their physical environment, are that shared parent qualification. They are not ten separate duties. 'At least' means the list is a minimum. This passage does not itself name essential and important entities; the chapeau refers to the measures in paragraph 1. Unresolved attachment: the trailing 'where appropriate' may qualify the whole point or only the last system. 'Or' between multi-factor authentication and continuous authentication solutions is an alternative. 'Within the entity' may modify only the emergency systems or also the secured communications. Voice, video, and text are joined by 'and'. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The measures referred to in paragraph 1 shall be based on an all-hazards\napproach that aims to protect network and information systems and the physical\nenvironment of those systems from incidents, and shall include at least the\nfollowing: (j) the use of multi-factor authentication or continuous\nauthentication solutions, secured voice, video and text communications and\nsecured emergency communication systems within the entity, where appropriate.",
+      "locator": "21(2)(j)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for multi-factor or continuous authentication, and for secured voice, video, and text communications and secured emergency systems. Do not treat both authentication forms as always required.",
+  "scope": "multi-factor authentication or continuous authentication solutions, secured voice, video and text communications and secured emergency communication systems within the entity",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

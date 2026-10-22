@@ -1,0 +1,43 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "Commission implementing act",
+      "Article 21",
+      "32022L2555",
+      "online market places"
+    ],
+    "expected_evidence": [
+      "Commission implementing act for the entity types listed in this subparagraph"
+    ],
+    "path_hints": [
+      "*implementing*act*",
+      "*32022L2555*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-5-ACTS-LISTED-ENTITIES",
+  "note": "The deadline is in the passage. This reference does not decide whether the acts were adopted or what they contain. The entity list is closed for this subparagraph and keeps the wording 'online market places'. A product security document is not evidence of the Commission's act.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "By 17 October 2024, the Commission shall adopt implementing acts laying down\nthe technical and the methodological requirements of the measures referred to\nin paragraph 2 with regard to DNS service providers, TLD name registries,\ncloud computing service providers, data centre service providers, content\ndelivery network providers, managed service providers, managed security\nservice providers, providers of online market places, of online search engines\nand of social networking services platforms, and trust service providers.",
+      "locator": "21(5)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for the Commission implementing acts required by 17 October 2024 for the listed entity types. A company security policy is not that act.",
+  "responsible": "the Commission",
+  "scope": "DNS service providers, TLD name registries, cloud computing service providers, data centre service providers, content delivery network providers, managed service providers, managed security service providers, providers of online market places, of online search engines and of social networking services platforms, and trust service providers",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

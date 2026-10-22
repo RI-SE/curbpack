@@ -1,0 +1,42 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "European standard",
+      "international standard",
+      "technical specification",
+      "implementing act"
+    ],
+    "expected_evidence": [
+      "preparatory record on standards and technical specifications for the Article 21(5) acts"
+    ],
+    "path_hints": [
+      "*implementing*act*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-5-PREPARE-STANDARDS",
+  "note": "'When preparing' limits this sentence to those implementing acts. 'To the extent possible' qualifies the duty. It is not written as an exception, so exceptions is omitted. Technical specifications are named separately from standards. A company's choice of a standard is not evidence of this Commission duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "When preparing the implementing acts referred to in the first and second\nsubparagraphs of this paragraph, the Commission shall, to the extent possible,\nfollow European and international standards, as well as relevant technical\nspecifications.",
+      "locator": "21(5)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for how the Commission, when preparing the implementing acts of the first and second subparagraphs, followed European and international standards and relevant technical specifications to the extent possible.",
+  "responsible": "the Commission",
+  "scope": "European and international standards, as well as relevant technical specifications",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

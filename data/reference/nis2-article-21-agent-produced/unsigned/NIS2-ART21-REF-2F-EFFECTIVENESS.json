@@ -1,0 +1,43 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "effectiveness of cybersecurity measures",
+      "risk-management review"
+    ],
+    "expected_evidence": [
+      "policy or procedure for assessing effectiveness of risk-management measures"
+    ],
+    "path_hints": [
+      "*effectiveness*",
+      "*risk*management*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-2F-EFFECTIVENESS",
+  "note": "The paragraph 2 chapeau is kept in this passage so that 'shall' stays pointable. The all-hazards approach, and the aim of protecting network and information systems and their physical environment, are that shared parent qualification. They are not ten separate duties. 'At least' means the list is a minimum. This passage does not itself name essential and important entities; the chapeau refers to the measures in paragraph 1. This point is about assessing effectiveness. It is not the measures themselves and not the corrective action in paragraph 4. It names policies and procedures, not a particular metric. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The measures referred to in paragraph 1 shall be based on an all-hazards\napproach that aims to protect network and information systems and the physical\nenvironment of those systems from incidents, and shall include at least the\nfollowing: (f) policies and procedures to assess the effectiveness of\ncybersecurity risk-management measures;",
+      "locator": "21(2)(f)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for policies or procedures whose purpose is to assess whether risk-management measures work.",
+  "scope": "policies and procedures to assess the effectiveness of cybersecurity risk-management measures",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

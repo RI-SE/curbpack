@@ -1,0 +1,45 @@
+{
+  "applicability": "where appropriate, encryption",
+  "discovery_hints": {
+    "concepts": [
+      "cryptography policy",
+      "encryption"
+    ],
+    "expected_evidence": [
+      "cryptography policy or procedure",
+      "encryption practice where encryption is appropriate"
+    ],
+    "path_hints": [
+      "*cryptograph*",
+      "*encrypt*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-2H-CRYPTOGRAPHY",
+  "note": "The paragraph 2 chapeau is kept in this passage so that 'shall' stays pointable. The all-hazards approach, and the aim of protecting network and information systems and their physical environment, are that shared parent qualification. They are not ten separate duties. 'At least' means the list is a minimum. This passage does not itself name essential and important entities; the chapeau refers to the measures in paragraph 1. 'where appropriate' is placed immediately before 'encryption'. It is read as qualifying encryption, not the duty to have policies and procedures on the use of cryptography. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The measures referred to in paragraph 1 shall be based on an all-hazards\napproach that aims to protect network and information systems and the physical\nenvironment of those systems from incidents, and shall include at least the\nfollowing: (h) policies and procedures regarding the use of cryptography and,\nwhere appropriate, encryption;",
+      "locator": "21(2)(h)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for cryptography policies and procedures. Treat encryption as conditional on 'where appropriate', which this point does not define.",
+  "scope": "the use of cryptography and, where appropriate, encryption",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

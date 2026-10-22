@@ -1,0 +1,311 @@
+"""Run exist and contents. Write the one Packs v2 run result."""
+
+from __future__ import annotations
+
+import copy
+import json
+import re
+import subprocess
+from pathlib import Path
+
+from checks.schema import validate_check_args
+from common.canonical import pack_directory_digest, version_digest
+from common.errors import CheckError, ModelError
+from common.jsonio import read_json
+from common.store import load_claims, load_pack_directory, save_run_result
+from common.validate import validate_curbpack_config, validate_run_result
+from common.version import TOOL, TOOL_VERSION
+
+# A contents/placeholder probe fails when one of these is present.
+# This is the PoC list, not a claim that it matches every curbcheck build.
+_PLACEHOLDERS = (
+    re.compile(r"(?i)\blorem ipsum\b"),
+    re.compile(r"(?i)\bTODO\b"),
+    re.compile(r"(?i)\bTBD\b"),
+    re.compile(r"(?i)\bFIXME\b"),
+    re.compile(r"(?i)\bplaceholder\b"),
+    re.compile(r"(?i)<placeholder>"),
+)
+
+
+def git_snapshot(repo: Path) -> dict | None:
+    """HEAD and clean/dirty when this directory is a Git checkout with a commit."""
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if head.returncode != 0:
+        return None
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+    )
+    if status.returncode != 0:
+        return None
+    worktree = "dirty" if status.stdout.strip() else "clean"
+    return {"commit": head.stdout.strip(), "worktree": worktree}
+
+
+def process_exit_code(result: dict) -> int:
+    """0 only when at least one Check ran and every Claim and Check passed."""
+    rows = result.get("claims") or []
+    executed = 0
+    for row in rows:
+        if row.get("status") != "pass":
+            return 1
+        for item in row.get("checks") or []:
+            if item.get("status") != "pass":
+                return 1
+            executed += 1
+    if executed < 1:
+        return 1
+    return 0
+
+
+def _inside(repo: Path, relative: str) -> Path:
+    root = repo.resolve()
+    path = (root / relative).resolve()
+    if path != root and root not in path.parents:
+        raise ModelError("check", "args.path", "a path inside the repository")
+    return path
+
+
+def _targets(args: dict) -> list[str]:
+    if "paths" in args:
+        return list(args["paths"])
+    return [args["path"]]
+
+
+def run_exist(repo: Path, args: dict) -> dict:
+    missing = [rel for rel in _targets(args) if not _inside(repo, rel).is_file()]
+    if missing:
+        return {"status": "fail", "detail": "; ".join(f"{rel} is absent" for rel in missing)}
+    return {"status": "pass"}
+
+
+def _compare(actual: int, op: str, expected: int) -> bool:
+    if op == ">":
+        return actual > expected
+    if op == ">=":
+        return actual >= expected
+    if op == "<":
+        return actual < expected
+    if op == "<=":
+        return actual <= expected
+    raise ModelError("contents", "op", "> >= < or <=")
+
+
+def repo_tokens(repo: Path) -> list[str]:
+    tokens = [repo.resolve().name]
+    package = repo / "package.json"
+    if package.is_file():
+        try:
+            name = json.loads(package.read_text(encoding="utf-8")).get("name")
+        except json.JSONDecodeError:
+            name = None
+        if isinstance(name, str) and name.strip():
+            tokens.append(name.strip())
+    gomod = repo / "go.mod"
+    if gomod.is_file():
+        for line in gomod.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("module "):
+                module = line.split(None, 1)[1].strip()
+                if module:
+                    tokens.append(module)
+                break
+    unique = []
+    for token in tokens:
+        if token not in unique:
+            unique.append(token)
+    return unique
+
+
+def _probe_failure(repo: Path, path: Path, relative: str, probe: dict) -> str | None:
+    data = path.read_bytes()
+    text = data.decode("utf-8", errors="replace")
+    kind = probe["kind"]
+    if kind == "size":
+        if not _compare(len(data), probe["op"], probe["bytes"]):
+            return f"{relative} is {len(data)} bytes, not {probe['op']} {probe['bytes']}"
+        return None
+    if kind == "words":
+        count = len(text.split())
+        if not _compare(count, probe["op"], probe["n"]):
+            return f"{relative} has {count} words, not {probe['op']} {probe['n']}"
+        return None
+    if kind == "headers":
+        missing = [header for header in probe["headers"] if header not in text]
+        if missing:
+            return f"{relative} is missing header {missing[0]!r}"
+        return None
+    if kind == "token":
+        tokens = repo_tokens(repo)
+        if not any(token and token in text for token in tokens):
+            return f"{relative} does not contain the repo token ({', '.join(tokens)})"
+        return None
+    if kind == "pattern":
+        try:
+            found = re.search(probe["pattern"], text) is not None
+        except re.error as exc:
+            raise ModelError("contents", "probes.pattern", f"a valid regular expression ({exc})") from exc
+        if found:
+            return f"{relative} matches forbidden pattern {probe['pattern']!r}"
+        return None
+    if kind == "placeholder":
+        for compiled in _PLACEHOLDERS:
+            match = compiled.search(text)
+            if match:
+                return f"{relative} contains placeholder text {match.group(0)!r}"
+        return None
+    raise CheckError(f"unknown probe kind {kind!r}")
+
+
+def run_contents(repo: Path, args: dict) -> dict:
+    missing = [rel for rel in _targets(args) if not _inside(repo, rel).is_file()]
+    if missing:
+        return {"status": "fail", "detail": "; ".join(f"{rel} is absent" for rel in missing)}
+    failures = []
+    for rel in _targets(args):
+        path = _inside(repo, rel)
+        for probe in args["probes"]:
+            failure = _probe_failure(repo, path, rel, probe)
+            if failure:
+                failures.append(failure)
+    if failures:
+        return {"status": "fail", "detail": "; ".join(failures)}
+    return {"status": "pass"}
+
+
+def _execute_check(repo: Path, check: str, args: dict) -> dict:
+    try:
+        validate_check_args(check, args)
+    except (CheckError, ModelError) as exc:
+        return {"status": "fail", "detail": str(exc)}
+    if check == "exist":
+        return run_exist(repo, args)
+    if check == "contents":
+        return run_contents(repo, args)
+    return {"status": "fail", "detail": f"check {check!r} is not implemented"}
+
+
+def _check_row(index: int, item: dict, outcome: dict) -> dict:
+    row = {
+        "index": index,
+        "check": item["check"],
+        "args": copy.deepcopy(item["args"]),
+        "status": outcome["status"],
+    }
+    if outcome["status"] != "pass":
+        row["detail"] = outcome["detail"]
+    return row
+
+
+def _aggregate(checks: list[dict]) -> str:
+    statuses = [item["status"] for item in checks]
+    if "fail" in statuses:
+        return "fail"
+    if "skipped" in statuses:
+        return "skipped"
+    return "pass"
+
+
+def run_claim(repo: Path, claim: dict) -> dict:
+    configured = claim.get("checks") or []
+    if not configured:
+        raise ModelError(f"claim {claim.get('id', '?')}", "checks", "one or more checks to execute")
+    results = []
+    for index, item in enumerate(configured):
+        outcome = _execute_check(repo, item["check"], item["args"])
+        results.append(_check_row(index, item, outcome))
+    return {
+        "id": claim["id"],
+        "digest": version_digest(claim),
+        "status": _aggregate(results),
+        "checks": results,
+    }
+
+
+def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip: dict[str, str] | None = None) -> dict:
+    skip = skip or {}
+    rows = []
+    for claim in claims:
+        if not claim.get("checks"):
+            continue
+        reason = skip.get(claim["id"])
+        if reason is not None:
+            if not str(reason).strip():
+                raise ModelError(f"claim {claim['id']}", "detail", "a reason for skipped")
+            detail = str(reason).strip()
+            results = [
+                _check_row(index, item, {"status": "skipped", "detail": detail})
+                for index, item in enumerate(claim["checks"])
+            ]
+            rows.append(
+                {
+                    "id": claim["id"],
+                    "digest": version_digest(claim),
+                    "status": "skipped",
+                    "checks": results,
+                }
+            )
+            continue
+        rows.append(run_claim(repo, claim))
+    result = {
+        "packs": packs,
+        "tool": TOOL,
+        "tool_version": TOOL_VERSION,
+        "claims": rows,
+    }
+    git = git_snapshot(repo)
+    if git is not None:
+        result["commit"] = git["commit"]
+        result["worktree"] = git["worktree"]
+    return validate_run_result(result)
+
+
+def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict) -> set[str]:
+    present = {requirement["id"] for _pack, requirements in loaded for requirement in requirements}
+    if "requirements" in config:
+        unknown = sorted(set(config["requirements"]) - present)
+        if unknown:
+            raise ModelError("curbpack.json", "requirements", f"ids present in the selected packs, not {unknown[0]}")
+        return set(config["requirements"])
+    excluded = set(config.get("exclude_requirements") or [])
+    return present - excluded
+
+
+def run_repository(repo: Path, packs_root: Path, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    loaded = []
+    pack_rows = []
+    for pack_id in config["packs"]:
+        pack_dir = packs_root / pack_id
+        if not (pack_dir / "pack.json").is_file():
+            raise ModelError("curbpack.json", "packs", f"a pack directory at {pack_dir}")
+        pack, requirements = load_pack_directory(pack_dir)
+        loaded.append((pack, requirements))
+        pack_rows.append(
+            {"id": pack["id"], "version": pack["version"], "digest": pack_directory_digest(pack_dir)}
+        )
+    selected = selected_requirement_ids(loaded, config)
+    claims = load_claims(repo / "claims")
+    for claim in claims:
+        if claim["requirement_id"] not in selected:
+            raise ModelError(
+                f"claim {claim['id']}",
+                "requirement_id",
+                "a requirement selected in curbpack.json",
+            )
+    result = build_run_result(repo, claims, pack_rows, skip=skip)
+    return result, process_exit_code(result)
+
+
+def run_and_write(repo: Path, packs_root: Path, out: Path, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
+    result, code = run_repository(repo, packs_root, skip=skip)
+    save_run_result(out, result)
+    return result, code

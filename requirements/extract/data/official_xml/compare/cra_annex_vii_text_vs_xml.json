@@ -1,0 +1,117 @@
+{
+  "section": "VII",
+  "text_source": "/Users/DanielFl/Documents/aProjects/aslak/curbpack-studio/requirements/extract/data/annex_vii.txt",
+  "xml_source": "/Users/DanielFl/Documents/aProjects/aslak/curbpack-studio/requirements/extract/data/official_xml/cra/L_202402847EN.007501.fmx.xml",
+  "text_count": 13,
+  "xml_count": 13,
+  "structural": {
+    "text_only_loci": [],
+    "xml_only_loci": [],
+    "shared_loci": [
+      "1(a)",
+      "1(b)",
+      "1(c)",
+      "1(d)",
+      "2(a)",
+      "2(b)",
+      "2(c)",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ]
+  },
+  "exact_text_differences": [
+    {
+      "locus": "1(a)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a general description of the product with digital elements, including:\n(a) its intended purpose;",
+      "xml_law_text": "a general description of the product with digital elements, including: (a) its\nintended purpose;"
+    },
+    {
+      "locus": "1(b)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a general description of the product with digital elements, including:\n(b) versions of software affecting compliance with essential cybersecurity\nrequirements;",
+      "xml_law_text": "a general description of the product with digital elements, including: (b)\nversions of software affecting compliance with essential cybersecurity\nrequirements;"
+    },
+    {
+      "locus": "1(c)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a general description of the product with digital elements, including:\n(c) where the product with digital elements is a hardware product, photographs\nor illustrations showing external features, marking and internal layout;",
+      "xml_law_text": "a general description of the product with digital elements, including: (c)\nwhere the product with digital elements is a hardware product, photographs or\nillustrations showing external features, marking and internal layout;"
+    },
+    {
+      "locus": "1(d)",
+      "exact_match": false,
+      "normalized_match": false,
+      "text_law_text": "a general description of the product with digital elements, including:\n(d) the information and instructions as set out in Annex II;",
+      "xml_law_text": "a general description of the product with digital elements, including: (d)\nuser information and instructions as set out in Annex II;"
+    },
+    {
+      "locus": "2(a)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including:\n(a) necessary information on the design and development of the product with\ndigital elements, including, where applicable, drawings and schemes and a\ndescription of the system architecture explaining how software components\nbuild on or feed into each other and integrate into the overall processing;",
+      "xml_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including: (a)\nnecessary information on the design and development of the product with\ndigital elements, including, where applicable, drawings and schemes and a\ndescription of the system architecture explaining how software components\nbuild on or feed into each other and integrate into the overall processing;"
+    },
+    {
+      "locus": "2(b)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including:\n(b) necessary information and specifications of the vulnerability handling\nprocesses put in place by the manufacturer, including the software bill of\nmaterials, the coordinated vulnerability disclosure policy, evidence of the\nprovision of a contact address for the reporting of the vulnerabilities and a\ndescription of the technical solutions chosen for the secure distribution of\nupdates;",
+      "xml_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including: (b)\nnecessary information and specifications of the vulnerability handling\nprocesses put in place by the manufacturer, including the software bill of\nmaterials, the coordinated vulnerability disclosure policy, evidence of the\nprovision of a contact address for the reporting of the vulnerabilities and a\ndescription of the technical solutions chosen for the secure distribution of\nupdates;"
+    },
+    {
+      "locus": "2(c)",
+      "exact_match": false,
+      "normalized_match": true,
+      "text_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including:\n(c) necessary information and specifications of the production and monitoring\nprocesses of the product with digital elements and the validation of those\nprocesses;",
+      "xml_law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including: (c)\nnecessary information and specifications of the production and monitoring\nprocesses of the product with digital elements and the validation of those\nprocesses;"
+    }
+  ],
+  "normalization_differences": [
+    {
+      "locus": "1(d)",
+      "exact_match": false,
+      "normalized_match": false,
+      "text_law_text": "a general description of the product with digital elements, including:\n(d) the information and instructions as set out in Annex II;",
+      "xml_law_text": "a general description of the product with digital elements, including: (d)\nuser information and instructions as set out in Annex II;"
+    }
+  ],
+  "exact_matches": [
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8"
+  ],
+  "normalized_only_matches": [
+    "1(a)",
+    "1(b)",
+    "1(c)",
+    "2(a)",
+    "2(b)",
+    "2(c)"
+  ],
+  "genuine_wording_differences": [
+    "1(d)"
+  ],
+  "counts": {
+    "shared_loci": 13,
+    "exact_matches": 6,
+    "normalization_only_matches": 6,
+    "genuine_wording_differences": 1
+  },
+  "unresolved_questions": [
+    "Locus 1(d) differs in wording (fixture 'the information…' vs Formex TXT 'user information…'). The controlled text fixture is left unchanged until independently verified against the official OJ/PDF; Formex is not treated as automatic ground truth.",
+    "Normalized equality is not semantic equivalence.",
+    "Text atomizer wraps at 78 columns; Formex extraction collapses whitespace then rewraps — exact-byte mismatches can be formatting-only.",
+    "EUR-Lex HTML notice retrieval was WAF-blocked; XML identity is CELLAR Formex ZIP checksums in MANIFEST.json."
+  ]
+}

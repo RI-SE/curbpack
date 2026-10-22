@@ -1,0 +1,45 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "Article 22",
+      "coordinated security risk assessment",
+      "critical supply chain"
+    ],
+    "expected_evidence": [
+      "record that coordinated critical-supply-chain assessment results were taken into account"
+    ],
+    "path_hints": [
+      "*article*22*",
+      "*supply*chain*assessment*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-3-ARTICLE22-RESULTS",
+  "note": "Cross-reference only. Article 22 is not copied into this requirement. The passage does not say that such a result exists for every entity. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Member States shall also ensure that, when considering which measures referred\nto in that point are appropriate, entities are required to take into account\nthe results of the coordinated security risk assessments of critical supply\nchains carried out in accordance with Article 22(1).",
+      "locator": "21(3)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for a record that results of Article 22(1) coordinated supply-chain assessments were taken into account when judging point (d) measures. This passage does not require the entity to carry out that Union-level assessment.",
+  "responsible": "Member States",
+  "scope": "the results of the coordinated security risk assessments of critical supply chains carried out in accordance with Article 22(1)",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

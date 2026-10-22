@@ -1,0 +1,44 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "system architecture",
+      "software architecture",
+      "design description",
+      "component integration",
+      "drawings and schemes"
+    ],
+    "expected_evidence": [
+      "process description",
+      "implementation reference"
+    ],
+    "path_hints": [
+      "*architecture*",
+      "*design*",
+      "*overview*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "POC1-REF-VII-2A",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a description of the design, development and production of the product with\ndigital elements and vulnerability handling processes, including: (a)\nnecessary information on the design and development of the product with\ndigital elements, including, where applicable, drawings and schemes and a\ndescription of the system architecture explaining how software components\nbuild on or feed into each other and integrate into the overall processing;",
+      "locator": "VII.2(a)",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

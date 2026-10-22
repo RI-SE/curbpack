@@ -1,0 +1,272 @@
+{
+  "1(a)": {
+    "concepts": [
+      "intended purpose",
+      "intended use",
+      "product purpose",
+      "what the product does"
+    ],
+    "path_hints": [
+      "*README*",
+      "*overview*",
+      "*product*"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ]
+  },
+  "1(b)": {
+    "concepts": [
+      "software version",
+      "release version",
+      "version affecting compliance",
+      "changelog",
+      "SBOM"
+    ],
+    "path_hints": [
+      "*CHANGELOG*",
+      "*VERSION*",
+      "*SBOM*",
+      "*soup*"
+    ],
+    "sources": [
+      "documents",
+      "git"
+    ],
+    "expected_evidence": [
+      "implementation reference",
+      "process description"
+    ]
+  },
+  "1(c)": {
+    "concepts": [
+      "photograph",
+      "illustration",
+      "external features",
+      "internal layout",
+      "hardware marking"
+    ],
+    "path_hints": [
+      "*photo*",
+      "*hardware*",
+      "*enclosure*"
+    ],
+    "expected_evidence": [
+      "process description"
+    ]
+  },
+  "1(d)": {
+    "concepts": [
+      "user instructions",
+      "security instructions",
+      "secure configuration",
+      "user manual",
+      "product disposal"
+    ],
+    "path_hints": [
+      "*user_manual*",
+      "*manual*security*",
+      "*instructions*"
+    ],
+    "expected_evidence": [
+      "process description"
+    ]
+  },
+  "2(a)": {
+    "concepts": [
+      "system architecture",
+      "software architecture",
+      "design description",
+      "component integration",
+      "drawings and schemes"
+    ],
+    "path_hints": [
+      "*architecture*",
+      "*design*",
+      "*overview*"
+    ],
+    "sources": [
+      "documents",
+      "git"
+    ],
+    "expected_evidence": [
+      "process description",
+      "implementation reference"
+    ]
+  },
+  "2(b)": {
+    "concepts": [
+      "vulnerability handling",
+      "vulnerability disclosure",
+      "coordinated vulnerability disclosure",
+      "security contact",
+      "SBOM",
+      "software bill of materials",
+      "secure updates",
+      "security policy"
+    ],
+    "path_hints": [
+      "*SECURITY*",
+      "*security.txt*",
+      "*SBOM*",
+      "*vulnerability*",
+      "*CVD*",
+      "*incident*"
+    ],
+    "sources": [
+      "documents",
+      "git"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement",
+      "implementation reference"
+    ]
+  },
+  "2(c)": {
+    "concepts": [
+      "production process",
+      "manufacturing process",
+      "process validation",
+      "monitoring process",
+      "release process"
+    ],
+    "path_hints": [
+      "*production*",
+      "*release*",
+      "*CI*",
+      "*pipeline*"
+    ],
+    "sources": [
+      "documents",
+      "test_management"
+    ],
+    "expected_evidence": [
+      "process description",
+      "test result"
+    ]
+  },
+  "3": {
+    "concepts": [
+      "risk assessment",
+      "cybersecurity risk",
+      "threat model",
+      "STRIDE",
+      "identified risks",
+      "residual risk",
+      "Annex I"
+    ],
+    "path_hints": [
+      "*risk*assessment*",
+      "*threat*model*",
+      "*CRA*ASSESSMENT*",
+      "*THREAT*"
+    ],
+    "sources": [
+      "documents",
+      "requirements"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ]
+  },
+  "4": {
+    "concepts": [
+      "support period",
+      "end of support",
+      "end of life",
+      "maintenance period",
+      "Expires"
+    ],
+    "path_hints": [
+      "*support*period*",
+      "*End-of-Life*",
+      "*eol*",
+      "*security.txt*"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ]
+  },
+  "5": {
+    "concepts": [
+      "harmonised standard",
+      "common specification",
+      "certification scheme",
+      "alternative solution",
+      "technical specification applied"
+    ],
+    "path_hints": [
+      "*standard*",
+      "*compliance*",
+      "*CRA*"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ]
+  },
+  "6": {
+    "concepts": [
+      "test report",
+      "conformity test",
+      "security test",
+      "vulnerability handling test",
+      "test results"
+    ],
+    "path_hints": [
+      "*test*report*",
+      "*security*test*",
+      "*TEST*"
+    ],
+    "sources": [
+      "test_management",
+      "documents"
+    ],
+    "expected_evidence": [
+      "test result",
+      "process description"
+    ]
+  },
+  "7": {
+    "concepts": [
+      "EU declaration of conformity",
+      "declaration of conformity",
+      "DoC"
+    ],
+    "path_hints": [
+      "*declaration*conformity*",
+      "*DoC*"
+    ],
+    "expected_evidence": [
+      "process description"
+    ]
+  },
+  "8": {
+    "concepts": [
+      "SBOM",
+      "software bill of materials",
+      "CycloneDX",
+      "SPDX",
+      "dependency inventory",
+      "SOUP"
+    ],
+    "path_hints": [
+      "*SBOM*",
+      "*sbom*",
+      "*soup*",
+      "*bom*"
+    ],
+    "sources": [
+      "documents",
+      "git"
+    ],
+    "expected_evidence": [
+      "implementation reference",
+      "process description"
+    ]
+  }
+}

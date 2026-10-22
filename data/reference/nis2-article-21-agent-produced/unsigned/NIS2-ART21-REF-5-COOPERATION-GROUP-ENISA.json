@@ -1,0 +1,43 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "Cooperation Group",
+      "ENISA",
+      "draft implementing act",
+      "Article 14(4)"
+    ],
+    "expected_evidence": [
+      "record of Commission advice and cooperation with the Cooperation Group and ENISA"
+    ],
+    "path_hints": [
+      "*enisa*",
+      "*cooperation*group*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-5-COOPERATION-GROUP-ENISA",
+  "note": "Article 14(4), point (e), is a cross-reference and is not copied. The duty in this sentence is on the Commission. It is not a duty written onto ENISA or the Cooperation Group. A company consultation record is not evidence of this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The Commission shall exchange advice and cooperate with the Cooperation Group\nand ENISA on the draft implementing acts in accordance with Article 14(4),\npoint (e).",
+      "locator": "21(5)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for exchange of advice and cooperation with the Cooperation Group and ENISA on the draft implementing acts, as referred to in Article 14(4), point (e).",
+  "responsible": "The Commission",
+  "scope": "exchange advice and cooperate with the Cooperation Group and ENISA",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

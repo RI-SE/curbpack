@@ -1,0 +1,39 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "examination procedure",
+      "Article 39(2)",
+      "implementing act"
+    ],
+    "expected_evidence": [
+      "adoption record citing the examination procedure in Article 39(2)"
+    ],
+    "path_hints": [
+      "*implementing*act*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-5-EXAMINATION-PROCEDURE",
+  "note": "This is the adoption procedure for those implementing acts. Article 39(2) is not copied. No party is named, so responsible is omitted. A product repository does not establish which committee procedure was used.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Those implementing acts shall be adopted in accordance with the examination\nprocedure referred to in Article 39(2).",
+      "locator": "21(5)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for adoption of those implementing acts through the examination procedure referred to in Article 39(2). The sentence does not name the Commission.",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

@@ -1,0 +1,35 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "intended purpose",
+      "intended use",
+      "product purpose",
+      "what the product does"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ],
+    "path_hints": [
+      "*README*",
+      "*overview*",
+      "*product*"
+    ]
+  },
+  "id": "POC1-REF-VII-1A",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a general description of the product with digital elements, including: (a) its\nintended purpose;",
+      "locator": "VII.1(a)",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

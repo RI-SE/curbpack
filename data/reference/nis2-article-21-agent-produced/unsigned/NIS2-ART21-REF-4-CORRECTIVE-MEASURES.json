@@ -1,0 +1,47 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "corrective measures",
+      "non-compliance",
+      "undue delay"
+    ],
+    "expected_evidence": [
+      "corrective-action record for a found gap against the paragraph 2 measures"
+    ],
+    "path_hints": [
+      "*corrective*",
+      "*non-compliance*",
+      "*noncompliance*",
+      "*remediat*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-4-CORRECTIVE-MEASURES",
+  "note": "The trigger is an entity that finds non-compliance with the paragraph 2 measures. Detection is not a separate duty in this paragraph. 'Without undue delay' has no duration here. The passage is not extended to paragraph 1 or paragraph 3. Necessary, appropriate, and proportionate all qualify the corrective measures. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Member States shall ensure that an entity that finds that it does not comply\nwith the measures provided for in paragraph 2 takes, without undue delay, all\nnecessary, appropriate and proportionate corrective measures.",
+      "locator": "21(4)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for corrective measures taken without undue delay after the entity finds it does not comply with the paragraph 2 measures. This passage does not define the delay or require the finding itself.",
+  "responsible": "Member States",
+  "scope": "all necessary, appropriate and proportionate corrective measures",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

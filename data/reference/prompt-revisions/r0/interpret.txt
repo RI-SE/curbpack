@@ -1,0 +1,22 @@
+Propose Packs v2 Requirement fields for each provision. Use only what that provision's own law_text supports.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: exactly the input locus
+- id: a stable Requirement id, unique in this reply, named for the obligation. Not a claim slug.
+- locator: a source locator such as VII.3, VII.1(a), or VII.2(b)
+- applicability: one string, only the where-condition written in this law_text. Omit the key when there is none. "Where applicable" belongs here.
+- strength: MUST, SHOULD, or MAY only when this law_text contains shall, should, or may. Omit it otherwise. "Where applicable" is not MAY.
+- responsible: one string, only the party this law_text names as holding the duty. Omit otherwise. A body that only receives or requests material is not responsible.
+
+Rules:
+- Do not emit scope, exceptions, or note. Do not restate law_text in another field.
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- Do not copy a duty from the annex introduction or from another article.
+- Do not include note, claim, search, law_text, signed, or origin.
+- Do not return a bare array. Reply with only one JSON object. The row below shows the shape, not the whole reply:
+  {"provisions":[{"locus":"3","id":"CRA-ANNEX-VII-RISK","locator":"VII.3"}]}

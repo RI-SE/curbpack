@@ -1,0 +1,48 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "supplier vulnerability",
+      "service provider vulnerability",
+      "supplier cybersecurity practices",
+      "secure development procedure"
+    ],
+    "expected_evidence": [
+      "account of vulnerabilities specific to each direct supplier and service provider",
+      "account of supplier product quality and cybersecurity practices"
+    ],
+    "path_hints": [
+      "*supplier*",
+      "*third*party*",
+      "*vendor*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-3-SUPPLIER-ACCOUNT",
+  "note": "This applies when considering which paragraph 2, point (d), measures are appropriate. That is a 'when' condition, so applicability is omitted. The vulnerability clause says 'each direct supplier and service provider'. The quality and practices clause says 'their suppliers and service providers' and does not repeat 'direct'. Secure development procedures are an inclusion, not a complete catalogue. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Member States shall ensure that, when considering which measures referred to\nin paragraph 2, point (d), of this Article are appropriate, entities take into\naccount the vulnerabilities specific to each direct supplier and service\nprovider and the overall quality of products and cybersecurity practices of\ntheir suppliers and service providers, including their secure development\nprocedures.",
+      "locator": "21(3)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for how direct-supplier and service-provider vulnerabilities, and the quality of products and cybersecurity practices of suppliers and service providers, were taken into account when judging supply-chain measures.",
+  "responsible": "Member States",
+  "scope": "the vulnerabilities specific to each direct supplier and service provider and the overall quality of products and cybersecurity practices of their suppliers and service providers, including their secure development procedures",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

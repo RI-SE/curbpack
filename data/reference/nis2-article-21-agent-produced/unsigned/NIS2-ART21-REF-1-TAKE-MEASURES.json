@@ -1,0 +1,49 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "cybersecurity risk management",
+      "technical measures",
+      "operational measures",
+      "organisational measures",
+      "incident impact"
+    ],
+    "expected_evidence": [
+      "risk-management policy",
+      "description of technical, operational, and organisational measures"
+    ],
+    "path_hints": [
+      "*risk*management*",
+      "*security*measures*",
+      "*nis2*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-1-TAKE-MEASURES",
+  "note": "The duty named by 'shall' is on Member States. The conduct they must ensure is that of essential and important entities. Both aims are in the passage: manage the risks, and prevent or minimise the impact of incidents. The systems are those the entities use for their operations or for the provision of their services. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Member States shall ensure that essential and important entities take\nappropriate and proportionate technical, operational and organisational\nmeasures to manage the risks posed to the security of network and information\nsystems which those entities use for their operations or for the provision of\ntheir services, and to prevent or minimise the impact of incidents on\nrecipients of their services and on other services.",
+      "locator": "21(1)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for the technical, operational, and organisational measures applied to the network and information systems used for operations or services, covering both risk management and incident impact. 'Appropriate and proportionate' is not defined numerically here.",
+  "responsible": "Member States",
+  "scope": "technical, operational and organisational measures to manage the risks posed to the security of network and information systems which those entities use for their operations or for the provision of their services, and to prevent or minimise the impact of incidents on recipients of their services and on other services",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

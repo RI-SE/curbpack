@@ -1,0 +1,16 @@
+Propose Packs v2 discovery_hints for each provision.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: exactly the input locus
+- discovery_hints: object with concepts (string array), and optionally path_hints, sources as [{"source":"...","args":{...}}], expected_evidence
+
+Rules:
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- Do not include id, locator, claim, search, or law_text on the result.
+- Reply with only one JSON object:
+  {"provisions":[{"locus":"3","discovery_hints":{"concepts":["risk assessment"],"path_hints":["*risk*"],"sources":[{"source":"documents"}]}}]}

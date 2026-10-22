@@ -1,0 +1,48 @@
+{
+  "applicability": "where applicable, relevant European and international standards",
+  "discovery_hints": {
+    "concepts": [
+      "state-of-the-art",
+      "security level",
+      "cost of implementation",
+      "European standard",
+      "international standard"
+    ],
+    "expected_evidence": [
+      "record of the security level judged against the risks",
+      "standards considered where applicable"
+    ],
+    "path_hints": [
+      "*risk*assessment*",
+      "*standard*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-1-SECURITY-LEVEL",
+  "note": "No party is the subject of 'shall'; the measures shall ensure the level of security. 'where applicable' is read as qualifying the standards, not the state-of-the-art or the cost. 'The first subparagraph' means the take-measures passage in this same paragraph. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "Taking into account the state-of-the-art and, where applicable, relevant\nEuropean and international standards, as well as the cost of implementation,\nthe measures referred to in the first subparagraph shall ensure a level of\nsecurity of network and information systems appropriate to the risks posed.",
+      "locator": "21(1)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for how the security level of the paragraph 1 measures was judged against the risks, including state-of-the-art, cost, and standards where applicable.",
+  "scope": "the state-of-the-art and, where applicable, relevant European and international standards, as well as the cost of implementation",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

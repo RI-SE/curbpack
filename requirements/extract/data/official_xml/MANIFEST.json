@@ -1,0 +1,173 @@
+{
+  "retrieval_date_utc": "2026-10-13",
+  "retrieval_timestamp_utc": "2026-10-13T11:40:29Z",
+  "notes": [
+    "EUR-Lex HTML/TXT/XML notice endpoints returned AWS WAF challenge (HTTP 202) from this environment; Formex was retrieved from Publications Office CELLAR instead.",
+    "Each ZIP is the English Formex V4 manifestation for the original OJ act (not a consolidation).",
+    "Do not mix CRA schema formex-06.02.1 with NIS2 schema formex-05.59; both are Formex but packaged differently."
+  ],
+  "sources": [
+    {
+      "adapter_keys": [
+        "cra-xml"
+      ],
+      "celex": "32024R2847",
+      "identifier": "CELEX:32024R2847",
+      "title": "Regulation (EU) 2024/2847 of the European Parliament and of the Council of 23 October 2024 on horizontal cybersecurity requirements for products with digital elements and amending Regulations (EU) No 168/2013 and (EU) No 2019/1020 and Directive (EU) 2020/1828 (Cyber Resilience Act)",
+      "language": "en",
+      "lg_doc": "EN",
+      "edition": {
+        "kind": "original_oj",
+        "oj_series": "L",
+        "oj_number": "2024/2847",
+        "oj_date_iso": "20241120",
+        "act_date_iso": "20241023",
+        "eli": "http://data.europa.eu/eli/reg/2024/2847/oj",
+        "not": "consolidated_or_corrigendum"
+      },
+      "formex_schema": "http://formex.publications.europa.eu/schema/formex-06.02.1-20231031.xd",
+      "retrieval": {
+        "method": "CELLAR REST",
+        "url": "https://publications.europa.eu/resource/celex/32024R2847",
+        "accept": "application/zip;mtype=fmx4",
+        "accept_language": "eng",
+        "redirected_to": "http://publications.europa.eu/resource/cellar/21b7d4eb-a6e2-11ef-85f0-01aa75ed71a1.0006.02/zip",
+        "cellar_work": "21b7d4eb-a6e2-11ef-85f0-01aa75ed71a1"
+      },
+      "zip": {
+        "path": "cra/OJABA_L_202402847_ENG.fmx4.zip",
+        "sha256": "93a1084b14383c0828b060ca933e9e83f9e8477fb2f9fbf81ee47750565f3155",
+        "bytes": 96866
+      },
+      "doc_entry": "cra/L_202402847EN.doc.fmx.xml",
+      "files": [
+        {
+          "path": "cra/L_202402847EN.000101.fmx.xml",
+          "bytes": 372718,
+          "sha256": "aa803515e0617037a4b3f283094d9dd35692074676f06a34e5136d1a058aac5e"
+        },
+        {
+          "path": "cra/L_202402847EN.006801.fmx.xml",
+          "bytes": 7522,
+          "sha256": "0162a6f25e3e4bab14d443845b5efabe4b09cc4450bc811c10fcba257efab3a8"
+        },
+        {
+          "path": "cra/L_202402847EN.007001.fmx.xml",
+          "bytes": 4176,
+          "sha256": "1c218a77e7c6e62d29e36f0632ff0cd38215963e7a229c5278db64dac0ed84b4"
+        },
+        {
+          "path": "cra/L_202402847EN.007101.fmx.xml",
+          "bytes": 3934,
+          "sha256": "031ac7bcfc5c6d8ece20ef6253cfa262df07b6f33b1c403866c6384941a5d844"
+        },
+        {
+          "path": "cra/L_202402847EN.007201.fmx.xml",
+          "bytes": 1712,
+          "sha256": "fb65dbb9157e204742003bb263776ffdca9343c2bc93dcbc68b3a1dfb93da72c"
+        },
+        {
+          "path": "cra/L_202402847EN.007301.fmx.xml",
+          "bytes": 2426,
+          "sha256": "6c85587500dbafb96a3a888cecbc3ae639e9b4dd0dd31363ca7a2324e4c91c7e"
+        },
+        {
+          "path": "cra/L_202402847EN.007401.fmx.xml",
+          "bytes": 1627,
+          "sha256": "1d767bb1daf557605317ff8ae6082806e5931901851ed1f242696c0ffff15219"
+        },
+        {
+          "path": "cra/L_202402847EN.007501.fmx.xml",
+          "bytes": 5130,
+          "sha256": "34796e49040eed5f83c0a762a3ce205a1bcf768fcedea65802944791ace06d4f"
+        },
+        {
+          "path": "cra/L_202402847EN.007601.fmx.xml",
+          "bytes": 26591,
+          "sha256": "67ccac7e0ccb9e46c4bd05622eb4a30bbdc860dd174a426eb94d872847d0a275"
+        },
+        {
+          "path": "cra/L_202402847EN.doc.fmx.xml",
+          "bytes": 3613,
+          "sha256": "17e075edc0538616cd3e11dd659e513e675cbf2a6957c3a4bc799a05c059d540"
+        },
+        {
+          "path": "cra/L_202402847EN.toc.fmx.xml",
+          "bytes": 1014,
+          "sha256": "4bcd1e209a1c1af5988e7fba3a8129309bda55021aca0c2ab69e547d2c4b82d6"
+        },
+        {
+          "path": "cra/OJABA_L_202402847_ENG.fmx4.zip",
+          "bytes": 96866,
+          "sha256": "93a1084b14383c0828b060ca933e9e83f9e8477fb2f9fbf81ee47750565f3155"
+        }
+      ]
+    },
+    {
+      "adapter_keys": [
+        "nis"
+      ],
+      "celex": "32022L2555",
+      "identifier": "CELEX:32022L2555",
+      "title": "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December 2022 on measures for a high common level of cybersecurity across the Union, amending Regulation (EU) No 910/2014 and Directive (EU) 2018/1972, and repealing Directive (EU) 2016/1148 (NIS 2 Directive)",
+      "language": "en",
+      "lg_doc": "EN",
+      "edition": {
+        "kind": "original_oj",
+        "oj_series": "L",
+        "oj_number": "333",
+        "oj_date_iso": "20221227",
+        "act_date_iso": "20221214",
+        "eli": "http://data.europa.eu/eli/dir/2022/2555/oj",
+        "not": "swedish_implementing_legislation_or_consolidation"
+      },
+      "formex_schema": "http://formex.publications.europa.eu/schema/formex-05.59-20170418.xd",
+      "retrieval": {
+        "method": "CELLAR REST",
+        "url": "https://publications.europa.eu/resource/celex/32022L2555",
+        "accept": "application/zip;mtype=fmx4",
+        "accept_language": "eng",
+        "redirected_to": "http://publications.europa.eu/resource/cellar/9b84d482-85bd-11ed-9887-01aa75ed71a1.0006.02/zip",
+        "cellar_work": "9b84d482-85bd-11ed-9887-01aa75ed71a1"
+      },
+      "zip": {
+        "path": "nis2/L_2022333EN.fmx4.zip",
+        "sha256": "260e9b24760def5bb3ac7cf8681065572dd8bd537b5ce4ebaaac420259878985",
+        "bytes": 77994
+      },
+      "doc_entry": "nis2/L_2022333EN.01008001.doc.xml",
+      "files": [
+        {
+          "path": "nis2/L_2022333EN.01008001.doc.xml",
+          "bytes": 2395,
+          "sha256": "2004470d247c3c251019d2166eeb08b70af039be4907b64d74a5fd58415b1018"
+        },
+        {
+          "path": "nis2/L_2022333EN.01008001.xml",
+          "bytes": 310144,
+          "sha256": "ff05d68d9fb09db269117cfc4c196002cc978d02fcceb5b29e53d5bd9f9ec316"
+        },
+        {
+          "path": "nis2/L_2022333EN.01014301.xml",
+          "bytes": 23977,
+          "sha256": "2cd69fb46af6e9548b31434bcffc39a6461d857dbd72d1b1e900b05b336dd7b8"
+        },
+        {
+          "path": "nis2/L_2022333EN.01014801.xml",
+          "bytes": 7983,
+          "sha256": "2792b20eb39b3026cc1e1f0eecead9c9e9bac972ae98029e03d1fbddf37a4d32"
+        },
+        {
+          "path": "nis2/L_2022333EN.01015001.xml",
+          "bytes": 7543,
+          "sha256": "c7c159373eb68b0fb17dd79d76d9fc8c145291dd38a6851262122e78472f8e8b"
+        },
+        {
+          "path": "nis2/L_2022333EN.fmx4.zip",
+          "bytes": 77994,
+          "sha256": "260e9b24760def5bb3ac7cf8681065572dd8bd537b5ce4ebaaac420259878985"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "user instructions",
+      "security instructions",
+      "secure configuration",
+      "user manual",
+      "product disposal"
+    ],
+    "expected_evidence": [
+      "process description"
+    ],
+    "path_hints": [
+      "*user_manual*",
+      "*manual*security*",
+      "*instructions*"
+    ]
+  },
+  "id": "POC1-REF-VII-1D",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a general description of the product with digital elements, including: (d)\nuser information and instructions as set out in Annex II;",
+      "locator": "VII.1(d)",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

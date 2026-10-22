@@ -1,0 +1,20 @@
+Propose Packs v2 Requirement identity fields for each provision.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: exactly the input locus
+- id: a stable Requirement id string
+- locator: a source locator string such as VII.3
+- note: optional short note; omit when unused
+- strength: optional MUST, SHOULD, or MAY only when the law_text supports it
+- responsible, applicability, exceptions, scope: optional non-empty strings when supportable
+
+Rules:
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- Do not include claim, search, law_text, signed, or origin.
+- Reply with only one JSON object:
+  {"provisions":[{"locus":"3","id":"CRA-ANNEX-VII-RISK","locator":"VII.3"}]}

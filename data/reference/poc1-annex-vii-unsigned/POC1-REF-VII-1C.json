@@ -1,0 +1,36 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "photograph",
+      "illustration",
+      "external features",
+      "internal layout",
+      "hardware marking"
+    ],
+    "expected_evidence": [
+      "process description"
+    ],
+    "path_hints": [
+      "*photo*",
+      "*hardware*",
+      "*enclosure*"
+    ]
+  },
+  "id": "POC1-REF-VII-1C",
+  "note": "often N/A for pure software",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "a general description of the product with digital elements, including: (c)\nwhere the product with digital elements is a hardware product, photographs or\nillustrations showing external features, marking and internal layout;",
+      "locator": "VII.1(c)",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

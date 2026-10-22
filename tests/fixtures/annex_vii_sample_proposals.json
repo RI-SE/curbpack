@@ -1,0 +1,17 @@
+[
+  {
+    "locus": "3",
+    "id": "CRA-ANNEX-VII-RISK",
+    "locator": "VII.3",
+    "discovery_hints": {
+      "concepts": ["risk assessment"],
+      "path_hints": ["*risk*assessment*", "*THREAT*"],
+      "sources": [{"source": "documents"}]
+    }
+  },
+  {
+    "locus": "1(a)",
+    "id": "FIXTURE-VII-1A",
+    "locator": "VII.1(a)"
+  }
+]

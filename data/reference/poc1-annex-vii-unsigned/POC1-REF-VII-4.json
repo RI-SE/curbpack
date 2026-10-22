@@ -1,0 +1,37 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "support period",
+      "end of support",
+      "end of life",
+      "maintenance period",
+      "Expires"
+    ],
+    "expected_evidence": [
+      "process description",
+      "requirement"
+    ],
+    "path_hints": [
+      "*support*period*",
+      "*End-of-Life*",
+      "*eol*",
+      "*security.txt*"
+    ]
+  },
+  "id": "POC1-REF-VII-4",
+  "pack_id": "poc1-annex-vii-reference",
+  "references": [
+    {
+      "law_text": "relevant information that was taken into account to determine the support\nperiod pursuant to Article 13(8) of the product with digital elements;",
+      "locator": "VII.4",
+      "nr": 1
+    }
+  ],
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32024R2847",
+    "instrument": "CRA",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32024R2847"
+  }
+}

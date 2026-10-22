@@ -1,0 +1,63 @@
+{
+  "id": "cra",
+  "status": "partial",
+  "pack_id": "cra-baseline",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "sections": [
+    {
+      "id": "I",
+      "title": "Essential cybersecurity requirements",
+      "in_scope": false,
+      "ready": false
+    },
+    {
+      "id": "II",
+      "title": "Information and instructions to the user",
+      "in_scope": true,
+      "ready": false
+    },
+    {
+      "id": "III",
+      "title": "Important products with digital elements",
+      "in_scope": false,
+      "ready": false
+    },
+    {
+      "id": "IV",
+      "title": "Critical products with digital elements",
+      "in_scope": false,
+      "ready": false
+    },
+    {
+      "id": "V",
+      "title": "EU declaration of conformity",
+      "in_scope": true,
+      "ready": false
+    },
+    {
+      "id": "VI",
+      "title": "Simplified EU declaration of conformity",
+      "in_scope": false,
+      "ready": false
+    },
+    {
+      "id": "VII",
+      "title": "Content of the technical documentation",
+      "in_scope": true,
+      "ready": true,
+      "fixture": "../../data/annex_vii.txt"
+    },
+    {
+      "id": "VIII",
+      "title": "Conformity assessment procedures",
+      "in_scope": true,
+      "ready": false
+    }
+  ]
+}

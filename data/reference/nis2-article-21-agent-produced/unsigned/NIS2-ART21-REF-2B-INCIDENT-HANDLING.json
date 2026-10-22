@@ -1,0 +1,41 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "incident handling",
+      "incident response procedure"
+    ],
+    "expected_evidence": [
+      "incident handling procedure"
+    ],
+    "path_hints": [
+      "*incident*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-2B-INCIDENT-HANDLING",
+  "note": "The paragraph 2 chapeau is kept in this passage so that 'shall' stays pointable. The all-hazards approach, and the aim of protecting network and information systems and their physical environment, are that shared parent qualification. They are not ten separate duties. 'At least' means the list is a minimum. This passage does not itself name essential and important entities; the chapeau refers to the measures in paragraph 1. One listed item: incident handling. Articles on incident reporting are outside this point and are not added. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "The measures referred to in paragraph 1 shall be based on an all-hazards\napproach that aims to protect network and information systems and the physical\nenvironment of those systems from incidents, and shall include at least the\nfollowing: (b) incident handling;",
+      "locator": "21(2)(b)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for an incident-handling procedure. A report to an authority is a different duty and is not stated here.",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}

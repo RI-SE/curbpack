@@ -1,0 +1,26 @@
+Propose discovery_hints a person can use to look for product documentation that may evidence each provision. A hint is a search suggestion. It is not evidence, and it does not add a legal duty.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: copy the input locus character for character. Do not add or remove parentheses. 3 stays 3. 1(a) stays 1(a).
+- discovery_hints:
+  - concepts: one short English phrase for every distinct artefact or condition named in that law_text, usually 4 to 8. Do not stop at four when the passage names more. Do not replace a named feature with a broader label that drops it. Prefer words a product repository would contain.
+  - path_hints: 2 to 6 filename globs such as "*SECURITY*" or "*sbom*", covering those same artefacts. Prefer names a repository actually uses.
+  - sources: where those files usually live. Each entry is {"source":"..."}. Use "documents" for written documentation. Add "git" when the artifact is typically a tracked file, such as an SBOM, changelog, or architecture description, and keep "documents" as well. Add "requirements" for a tracked requirement or risk record. Add "test_management" for test reports and for validation of a process. Do not invent other source ids. Do not add "args" unless that source needs them.
+  - expected_evidence: 1 to 3 of exactly "process description", "requirement", "implementation reference", "test result". Use "test result" for tests and process validation. Use "implementation reference" for a bill of materials, version list, or architecture description. Use "requirement" for a risk record or a stated rule.
+
+Rules:
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- When one passage names several artefacts, hint each of them. A vulnerability-handling passage that names a bill of materials, a disclosure policy, a contact address, and secure distribution of updates needs a separate concept for each of those four.
+- When a passage asks for the solutions adopted where named standards, common specifications, or certification schemes have not been applied, hint those named instruments and the alternative solutions. Do not hint only the standards.
+- A risk assessment that includes how named essential requirements apply needs a concept for that applicability, not only the word assessment.
+- Do not copy an artefact from a neighbouring provision. A bill of materials provided on request is not a vulnerability-contact duty and not an update-distribution duty.
+- Do not assert that the law requires a named standard, method, file format, or tool. Naming a common artifact to look for, such as a threat-model note or an SBOM file, is allowed.
+- Do not leave concepts, path_hints, or expected_evidence empty.
+- Do not include id, locator, claim, search, or law_text.
+- Do not return a bare array. Reply with only one JSON object, with one result for every input locus. The row below shows the shape, not the whole reply:
+  {"provisions":[{"locus":"1(a)","discovery_hints":{"concepts":["intended purpose","intended use","product purpose","what the product does"],"path_hints":["*README*","*overview*","*product*"],"sources":[{"source":"documents"}],"expected_evidence":["process description","requirement"]}}]}

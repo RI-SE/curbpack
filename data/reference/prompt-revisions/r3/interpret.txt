@@ -1,0 +1,24 @@
+Propose Packs v2 Requirement fields for each provision. Use only what that provision's own law_text supports. Do not inherit a modal verb or a party from a heading, the annex introduction, or another row.
+
+Provisions (JSON array). Each object has locus and law_text:
+---
+{provisions}
+---
+
+For each provision return one object with:
+- locus: exactly the input locus
+- id: a stable Requirement id, unique in this reply, named for the obligation. Not a claim slug.
+- locator: the address inside the instrument, never the bare locus. An annex point is the annex roman numeral, a dot, and the locus. Points that list the content of the technical documentation are Annex VII, so locus 1(a) is VII.1(a) and locus 3 is VII.3. An article paragraph keeps its article number, such as 13(8).
+- applicability: one string, the condition only. If this law_text contains "where", the key is required, including a where-clause in the middle of a sentence that limits which products an artefact applies to. Omit the key only when "where" does not appear. "Where applicable" belongs here. Keep a request or necessity limit from the same sentence. Leave out the name of the document being required. Do not paste the whole law_text. Do not turn the limit into strength or into a new duty.
+- strength: MUST only when this law_text contains shall. SHOULD only when it contains should. MAY only when it contains may. Omit strength when this law_text does not contain those words. Do not set MUST on every row. A later shall in the same law_text is still MUST. A noun-phrase opening does not cancel it. "Where applicable" is not MAY.
+- responsible: one string, only when this law_text names that party as holding the duty. Omit the key when the party is not in this law_text. Do not write manufacturer unless this law_text says manufacturer. A body that only receives or requests material is not responsible.
+
+Before answering, check every row against its own law_text. A row whose law_text contains where and has no applicability is wrong. A row whose law_text contains shall and has no strength MUST is wrong. A row whose law_text lacks shall, should, and may must not have strength.
+
+Rules:
+- Do not emit scope, exceptions, or note. Do not restate law_text in another field.
+- One object per input locus. Do not invent, drop, or duplicate loci.
+- Do not copy a duty from the annex introduction or from another provision.
+- Do not include note, claim, search, law_text, signed, or origin.
+- Do not return a bare array. Reply with only one JSON object and one result for every input locus. The row below shows the shape, not the whole reply:
+  {"provisions":[{"locus":"3","id":"CRA-ANNEX-VII-RISK","locator":"VII.3"}]}

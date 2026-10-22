@@ -1,0 +1,55 @@
+{
+  "1(a)": {
+    "id": "vii-1a",
+    "claim": "vii-1a-intended-purpose"
+  },
+  "1(b)": {
+    "id": "vii-1b",
+    "claim": "vii-1b-software-versions-affecting-compliance"
+  },
+  "1(c)": {
+    "id": "vii-1c",
+    "claim": "vii-1c-hardware-illustrations",
+    "note": "often N/A for pure software"
+  },
+  "1(d)": {
+    "id": "vii-1d",
+    "claim": "vii-1d-annex-ii-instructions"
+  },
+  "2(a)": {
+    "id": "vii-2a",
+    "claim": "vii-2a-design-development-architecture"
+  },
+  "2(b)": {
+    "id": "vii-2b",
+    "claim": "vii-2b-vulnerability-handling-process"
+  },
+  "2(c)": {
+    "id": "vii-2c",
+    "claim": "vii-2c-production-monitoring"
+  },
+  "3": {
+    "id": "vii-3",
+    "claim": "vii-3-cybersecurity-risk-assessment"
+  },
+  "4": {
+    "id": "vii-4",
+    "claim": "vii-4-support-period-rationale"
+  },
+  "5": {
+    "id": "vii-5",
+    "claim": "vii-5-standards-or-alternative-solutions"
+  },
+  "6": {
+    "id": "vii-6",
+    "claim": "vii-6-conformity-test-reports"
+  },
+  "7": {
+    "id": "vii-7",
+    "claim": "vii-7-eu-declaration-of-conformity"
+  },
+  "8": {
+    "id": "vii-8",
+    "claim": "vii-8-sbom-on-reasoned-request"
+  }
+}

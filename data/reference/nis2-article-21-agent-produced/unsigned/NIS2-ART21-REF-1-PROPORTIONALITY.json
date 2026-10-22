@@ -1,0 +1,47 @@
+{
+  "discovery_hints": {
+    "concepts": [
+      "proportionality",
+      "risk exposure",
+      "entity size",
+      "incident likelihood",
+      "incident severity",
+      "societal impact"
+    ],
+    "expected_evidence": [
+      "proportionality assessment covering exposure, size, likelihood, and severity"
+    ],
+    "path_hints": [
+      "*proportional*",
+      "*risk*assessment*"
+    ],
+    "sources": [
+      {
+        "source": "documents"
+      },
+      {
+        "source": "git"
+      }
+    ]
+  },
+  "id": "NIS2-ART21-REF-1-PROPORTIONALITY",
+  "note": "'When assessing' is a condition of this sentence. It is not a 'where' clause, so applicability is omitted. The sentence names no duty-holder. The factors are cumulative. 'Those measures' refers to the measures in this paragraph. Discovery hints name plausible artifacts. They are not proof that a measure is appropriate, proportionate, or in place, and they are not proof that a Member State has transposed this duty.",
+  "pack_id": "nis2-article-21-agent-reference",
+  "references": [
+    {
+      "law_text": "When assessing the proportionality of those measures, due account shall be\ntaken of the degree of the entity’s exposure to risks, the entity’s size and\nthe likelihood of occurrence of incidents and their severity, including their\nsocietal and economic impact.",
+      "locator": "21(1)",
+      "nr": 1
+    }
+  ],
+  "remediation_hint": "Look for a proportionality assessment that takes account of exposure, size, likelihood, and severity, including societal and economic impact.",
+  "scope": "the degree of the entity’s exposure to risks, the entity’s size and the likelihood of occurrence of incidents and their severity, including their societal and economic impact",
+  "source": {
+    "framework": "EU",
+    "identifier": "CELEX:32022L2555",
+    "instrument": "NIS2",
+    "language": "en",
+    "url": "https://publications.europa.eu/resource/celex/32022L2555"
+  },
+  "strength": "MUST"
+}
