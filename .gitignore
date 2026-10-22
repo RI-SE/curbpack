@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local workspace and generated runs (do not exclude curated reference data)
+/data/workspace/
+/poc2/data/workspace/
+**/.DS_Store
+
+# Local editor files
+.idea/
+.vscode/
