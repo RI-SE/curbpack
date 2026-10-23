@@ -6,4 +6,4 @@ Apply security controls to actual risks, and record their implementation and evi
 - Validate untrusted inputs, file paths, uploaded archives, and external document data at relevant boundaries.
 - Do not report SSDF compliance because a policy exists. A claim needs a real control and test or other verifiable evidence.
 - Changes affecting cryptographic signing or validation must use the normative Packs v2 semantics, with negative tests for changed content or invalid signatures.
-- Dependency and vulnerability scanning may be introduced when matched to an approved control and workflow, not as unconfigured tools for appearance's sake.
+- Use approved security review and vulnerability scanning when available. Verify findings and record their disposition. Confirmed High/Critical vulnerabilities must be fixed or explicitly risk-accepted by the maintainer before release.
