@@ -28,6 +28,7 @@ Preserve existing functioning user flows. Document and verify what the imported 
 | REV-01 | Compile a report from a specific Check run |
 | REV-02 | Review and sign a report without confusing different runs |
 | SYS-01 | Complete and verify the full pilot workflow |
+| SYS-02 | Keep every pipeline case in the one functional suite. Not a release blocker. |
 
 Story details: [`stories/`](stories/). The original Pack Editor stories remain unchanged.
 

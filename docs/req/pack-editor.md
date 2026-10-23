@@ -34,3 +34,14 @@ These are testable behavior contracts derived from the agreed stories. Where beh
 ## Test mapping
 
 When implementing, map each REQ-PE ID to an executable test or recorded manual acceptance test in `docs/test/`, including success, cancellation and failure paths. Tests and current implementation status are **not** asserted by this draft. Import the fresh PoC2 tests and establish their baseline first.
+
+## SYS-02 — one suite for the pipeline
+
+**Status:** Draft. Not a pilot release blocker.
+**Source:** [SYS-02](../agile/epics/01-pack-editor/stories/SYS-02-one-test-suite.md).
+
+| ID | Status | Required observable behavior | Derived from |
+| --- | --- | --- | --- |
+| **SYS-R01** | DRAFT | `make test` and `make ci-tests` execute `scripts/ci/checks/tests.py`. That script loads `tests/test_*.py` and no other suite. After this story, `tests/cs/` and `tests/ci/` are absent. | SYS-02 |
+| **SYS-R02** | DRAFT | With no `ONLY`, `make ci-tests` prints one dotted line for `tests` and `Summary: N PASS, M FAIL`. `ONLY=tests` prints one line per case and one summary. An unknown `ONLY` exits nonzero and lists the valid names. There is no extra Make target and no `run_cs_checks` script. | SYS-02; `docs/agile/future_cicd.md` presentation section |
+| **SYS-R03** | DRAFT | `select_working_copy` and `select_published_pack` raise `ModelError` when `pack_id` is not a single directory name, and a normal id still selects. The assertion lives in a `tests/test_*.py` module. The product check already in `requirements/workspace.py` `_pack_id_name` stays; this requirement does not redefine Packs v2. | SYS-02; SEC-02 evidence, folded here |

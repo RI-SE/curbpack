@@ -6,7 +6,7 @@
 
 The intended trace is **Epic → Story → REQ → Test → Implementation**, not one automatically generated requirement per story. Never pretend a draft requirement is already implemented or tested. Use stable IDs and maintain links when refining.
 
-- `pack-editor.md`: **draft** derivation from EP-01. Requires review against actual code and the authoritative Packs v2 specification before being declared the implementation baseline.
+- `pack-editor.md`: **draft** derivation from EP-01, including SYS-R01–SYS-R03 for the one pipeline suite. Requires review against actual code and the authoritative Packs v2 specification before being declared the implementation baseline.
 - `checks.md`: **draft** derivation from CHK-05. The maintainer accepted the decisions on 2026-10-23. Rows stay draft until their tests pass.
 - Other subsystems: requirements not written yet; do not invent them from their folder names.
 
