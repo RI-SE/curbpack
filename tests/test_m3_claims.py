@@ -122,7 +122,7 @@ class ClaimsTest(unittest.TestCase):
             result = run_claim(Path(tmp), fresh)
         self.assertEqual(result["status"], "fail")
         self.assertEqual(result["checks"][0]["status"], "fail")
-        self.assertIn("not implemented", result["checks"][0]["detail"])
+        self.assertIn("unavailable", result["checks"][0]["detail"])
 
     def test_top_level_check_is_not_a_claim(self):
         with self.assertRaises(ModelError):

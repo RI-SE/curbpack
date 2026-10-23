@@ -482,3 +482,166 @@ class GitFreshTest(unittest.TestCase):
         self.assertEqual(result["checks"][0]["status"], "fail")
         self.assertIn("not a directory path", result["checks"][0]["detail"])
         self.assertEqual(result["checks"][1]["status"], "pass")
+
+
+def _author(repo: Path, path: str, *, name: str | None = None, email: str | None = None) -> dict:
+    args = {"path": path}
+    if name is not None:
+        args["name"] = name
+    if email is not None:
+        args["email"] = email
+    result = run_claim(
+        repo,
+        build_claim(
+            claim_id="claim-author",
+            requirement_id="CRA-ANNEX-VII-RISK",
+            source="documents",
+            args={"path": path},
+            checks=[{"check": "git_author", "args": args}],
+            description="The evidence file has the named author.",
+            severity="high",
+        ),
+    )
+    return result["checks"][0]
+
+
+class GitAuthorTest(unittest.TestCase):
+    def test_matching_name_and_email_pass_without_detail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _commit(repo, "risk", "2026-10-23T12:00:00Z")
+            row = _author(repo, "risk.md", name="PoC2", email="poc2@example.com")
+        self.assertEqual(row["status"], "pass")
+        self.assertNotIn("detail", row)
+
+    def test_a_different_author_fails_and_names_the_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            commit = _commit(repo, "risk", "2026-10-19T12:00:00Z")
+            (repo / "README.md").write_text("other\n", encoding="utf-8")
+            _git(repo, "config", "user.name", "Anna")
+            _git(repo, "config", "user.email", "anna@example.com")
+            other = _commit(repo, "readme", "2026-10-23T12:00:00Z")
+            wrong = _author(repo, "risk.md", name="Anna", email="anna@example.com")
+            case = _author(repo, "risk.md", name="poc2")
+            email_only = _author(repo, "risk.md", email="poc2@example.com")
+        self.assertEqual(wrong["status"], "fail")
+        self.assertIn(commit, wrong["detail"])
+        self.assertNotIn(other, wrong["detail"])
+        self.assertEqual(case["status"], "fail")
+        self.assertEqual(email_only["status"], "pass")
+        self.assertNotIn("detail", email_only)
+
+    def test_an_unsigned_commit_still_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _commit(repo, "risk", "2026-10-23T12:00:00Z")
+            signature = _git(repo, "log", "-1", "--format=%G?")
+            row = _author(repo, "risk.md", name="PoC2", email="poc2@example.com")
+        self.assertEqual(signature, "N")
+        self.assertEqual(row["status"], "pass")
+        self.assertNotIn("detail", row)
+
+    def test_a_missing_path_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            _git(repo, "commit", "--allow-empty", "-m", "empty", when="2026-10-23T12:00:00Z")
+            row = _author(repo, "risk.md", name="PoC2")
+        self.assertEqual(row["status"], "fail")
+        self.assertIn("absent", row["detail"])
+
+    def test_a_non_utf8_author_fails_and_the_next_check_still_runs(self):
+        when = "2026-10-23T12:00:00Z"
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _git(repo, "add", "risk.md")
+            tree = _git(repo, "write-tree")
+            raw = (
+                f"tree {tree}\n".encode("ascii")
+                + b"author \xc5se <ase@example.com> 1792756800 +0000\n"
+                + b"committer PoC2 <poc2@example.com> 1792756800 +0000\n"
+                + b"\nlatin1 author\n"
+            )
+            stored = subprocess.run(
+                ["git", "-C", str(repo), "hash-object", "-t", "commit", "-w", "--stdin"],
+                input=raw,
+                capture_output=True,
+                check=True,
+            )
+            _git(repo, "update-ref", "HEAD", stored.stdout.decode().strip())
+            result = run_claim(
+                repo,
+                build_claim(
+                    claim_id="claim-author",
+                    requirement_id="CRA-ANNEX-VII-RISK",
+                    source="documents",
+                    args={"path": "risk.md"},
+                    checks=[
+                        {"check": "git_author", "args": {"path": "risk.md", "name": "PoC2"}},
+                        {
+                            "check": "git_fresh",
+                            "args": {"path": "risk.md", "max_age_days": 0, "as_of": when},
+                        },
+                    ],
+                    description="The evidence file has the named author.",
+                    severity="high",
+                ),
+            )
+        self.assertEqual(result["checks"][0]["status"], "fail")
+        self.assertIn("not UTF-8", result["checks"][0]["detail"])
+        self.assertEqual(result["checks"][1]["status"], "pass")
+        self.assertNotIn("detail", result["checks"][1])
+
+    def test_a_utf8_author_passes_when_the_repo_prints_latin1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            _git(repo, "config", "i18n.logOutputEncoding", "ISO-8859-1")
+            _git(repo, "config", "user.name", "Åse")
+            _git(repo, "config", "user.email", "ase@example.com")
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _commit(repo, "risk", "2026-10-23T12:00:00Z")
+            row = _author(repo, "risk.md", name="Åse", email="ase@example.com")
+        self.assertEqual(row["status"], "pass")
+        self.assertNotIn("detail", row)
+
+    def test_a_unit_separator_in_the_name_is_not_the_email(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _git(repo, "add", "risk.md")
+            tree = _git(repo, "write-tree")
+            raw = (
+                f"tree {tree}\n".encode("ascii")
+                + b"author PoC2\x1fpoc2@example.com <evil@example.com> 1792756800 +0000\n"
+                + b"committer PoC2 <poc2@example.com> 1792756800 +0000\n"
+                + b"\nseparator in the name\n"
+            )
+            stored = subprocess.run(
+                ["git", "-C", str(repo), "hash-object", "-t", "commit", "-w", "--stdin"],
+                input=raw,
+                capture_output=True,
+                check=True,
+            )
+            _git(repo, "update-ref", "HEAD", stored.stdout.decode().strip())
+            injected = _author(repo, "risk.md", name="PoC2", email="poc2@example.com")
+            recorded = _author(
+                repo,
+                "risk.md",
+                name="PoC2\x1fpoc2@example.com",
+                email="evil@example.com",
+            )
+        self.assertEqual(injected["status"], "fail")
+        self.assertIn("evil@example.com", injected["detail"])
+        self.assertEqual(recorded["status"], "pass")
+        self.assertNotIn("detail", recorded)

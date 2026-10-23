@@ -7,7 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from checks.run import build_run_result, process_exit_code, run_contents, run_exist
+from checks.filecheck import run_contents, run_exist
+from checks.run import build_run_result, process_exit_code
 from claims.bind import build_claim
 from common.store import load_run_result, save_pack, save_requirement
 from common.version import TOOL_VERSION

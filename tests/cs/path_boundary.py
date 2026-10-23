@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from checks.run import run_contents, run_exist
+from checks.filecheck import run_contents, run_exist
 from common.errors import ModelError
 from discovery.search import iter_markdown, read_source_text
 from _support import run

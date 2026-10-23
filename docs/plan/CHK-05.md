@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-23 |
-| Current task | Task 4 — git_author is not a signature |
-| Last completed task | Task 3 — git_fresh uses the last commit that changed the path |
-| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 33. Review of the uncommitted Task 3 diff: no Critical or Important findings. |
+| Current task | Task 5 — git_signed and git_signer |
+| Last completed task | Task 4 — git_author is not a signature |
+| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_check_dispatch tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 44. `python3 tests/cs/path_boundary.py` OK 3. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- docs/plan/CHK-05.md`. |
 | Requirements | `docs/req/checks.md` — CHK-R01–CHK-R13 DRAFT. Maintainer accepted OPEN-1 through OPEN-8 on 2026-10-23. |
 | Packs v2 | `docs/reference/packs2.md`, imported from Curbpack `b07b8deb9fed331b493241251087ce7ce648f5e4`. §4 and §4.1 name `git_fresh`, `git_signed`, `git_author`, and `git_signer`. |
 | Blockers | None |
-| **Exact next action** | Task 4: write the failing `git_author` test. A matching name and email passes. A different author fails. The same author on an unsigned commit still passes. A missing path is its own fail. |
+| **Exact next action** | Task 5. Implement `git_signed` and `git_signer` as subcommands of `curbcheck-git`. |
 
 ## Requirements and acceptance mapping
 
@@ -35,7 +35,7 @@
 | CHK-R07 | CHK-05 | `tests/test_git_checks.py` `test_monday_change_fails_when_friday_head_touched_another_file`, `test_a_rename_does_not_keep_the_old_path_history`, `test_missing_dirty_and_untracked_paths_fail`, `test_a_symlink_with_the_same_bytes_differs_from_head`. Author, signer, and signature still use this commit in Tasks 4–5. | DRAFT |
 | CHK-R08 | CHK-05 | `tests/test_git_checks.py` `test_age_equal_to_the_maximum_passes`, `test_a_future_commit_fails`, `test_a_recent_file_passes_without_detail`. | DRAFT |
 | CHK-R09 | CHK-05 | No test. OPEN-4 accepted 2026-10-23. | DRAFT |
-| CHK-R10 | CHK-05 | No test. OPEN-5 accepted 2026-10-23. | DRAFT |
+| CHK-R10 | CHK-05 | `tests/test_git_checks.py` `GitAuthorTest`: name, email, case, unsigned commit, missing path, non-UTF-8 author, Latin-1 `logOutputEncoding`, and a unit separator in the name. OPEN-5 accepted 2026-10-23. | DRAFT |
 | CHK-R11 | CHK-05 | Passing `git_fresh` rows omit `detail`. Fail rows for Monday, dirty, and untracked paths name the last-change commit. A symlink loop and a path through a file name the cause and omit the commit id. The passing-row half of acceptance 4 stays deferred. | DRAFT |
 | CHK-R12 | CHK-05 | `tests/test_git_checks.py` `test_missing_dirty_and_untracked_paths_fail`, `test_a_symlink_loop_fails_and_the_next_check_still_runs`, `test_a_path_through_a_file_fails_and_the_next_check_still_runs`. `skipped` is still only the caller skip. Signature and author failures are Tasks 4–5. | DRAFT |
 | CHK-R13 | CHK-05 | No test. OPEN-8 accepted 2026-10-23. Discovery form stays unchanged. `tests/test_discover_claims_ui.py` still expects the current form. | DRAFT |
@@ -67,7 +67,7 @@ Packs v2 §4 and §4.1 are committed. `git_fresh` covers the age rule, fail-clos
 - [x] Packs v2 commit `b07b8deb9fed331b493241251087ce7ce648f5e4` names the four Check ids. No new result field.
 - [x] Implementation tasks are listed below. The checkpoint current task is Task 2.
 
-The extension point is an in-process branch in `checks/run.py` `_execute_check`, as `exist` and `contents` already use. The registry `command` string is not a subprocess dispatch, and this story does not add a checker framework. `fresh` and `owned` stay registered and non-passing so the current discovery form can still save them.
+The runner looks up the registry `command` and executes it: `<command> <check-id> --repo <path> --args <json>`. stdout is one JSON object, `{"status":"pass"}` or `{"status":"fail","detail":"..."}`. A missing or crashed tool is `fail` for that Check, and the next Check still runs. `curbcheck` does not branch on the Check id. `fresh` and `owned` stay registered and non-passing so the current discovery form can still save them.
 
 ### Task 2 — register the four Git Check schemas
 
@@ -103,10 +103,10 @@ The extension point is an in-process branch in `checks/run.py` `_execute_check`,
 **Validation:** The new test. A missing path is its own `fail`.
 **Stop if:** The author Check starts verifying a signature.
 
-- [ ] RED observed.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Regression tests and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed.
+- [x] Minimal implementation and GREEN verified.
+- [x] Regression tests and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 5 — git_signed and git_signer
 
@@ -154,4 +154,16 @@ The extension point is an in-process branch in `checks/run.py` `_execute_check`,
 - **2026-10-23 / Task 3:** First review of the reopened diff, still blocking. A clean absolute or `../` symlink raised `ModelError` and aborted the Claim. A clean dangling symlink and a symlink to a directory failed as `absent`. `chmod +x` passed while `core.filemode=true`. RED for those cases, then fixed: presence uses `lstat` on the unresolved entry, a path that leaves the repo is `fail` without aborting later Checks, and the executable bit is compared only when `core.filemode` is not `false`. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 31.
 - **2026-10-23 / Task 3 BLOCKED:** Re-review of the reopened diff, still blocking. No further round. Important: `_entry_path` only turns `ModelError` into `fail`. A symlink loop raises `RuntimeError`, and `notdir/child.md` raises `NotADirectoryError` from `lstat`. Either leaves `run_claim`, so later Checks are not recorded. Minor, not fixed: `core.filemode=0` is still treated as tracked; a repo with no commit is still `git is unavailable`; tests still set author date and committer date to the same instant. Uncommitted files stay uncommitted. Task 4 has not started.
 - **2026-10-23 / Task 3:** Maintainer reopened the step for the two aborts. RED: a symlink loop raised `RuntimeError: Symlink loop from ...`, and `notdir/child.md` raised `NotADirectoryError`. Both left `run_claim`. Caught `OSError` and `RuntimeError` in `run_git_fresh`. A loop detail says `symlink loop`. A path through a file says `not a directory path`. The next Check still runs. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 33.
-- **2026-10-23 / Task 3 VERIFIED:** Review found no Critical or Important findings. Minor, left as recorded: a symlink loop and a path through a file omit the last-change commit id; the `OSError`/`RuntimeError` handler wraps the whole freshness body; the two new tests do not assert the Claim aggregate or that the passing row omits `detail`; `core.filemode` values other than `false` stay tracked; a repo with no commit is still reported as `git is unavailable`; tests still set author date and committer date together. Next action is Task 4.
+- **2026-10-23 / Task 3 VERIFIED:** Review found no Critical or Important findings. Minor, left as recorded: a symlink loop and a path through a file omit the last-change commit id; the `OSError`/`RuntimeError` handler wraps the whole freshness body; the two new tests do not assert the Claim aggregate or that the passing row omits `detail`; `core.filemode` values other than `false` stay tracked; a repo with no commit is still reported as `git is unavailable`; tests still set author date and committer date together. Next action is Task 4. Commit `52053b2030a22a3f36ccc42f7b7e546f0dc2b7af`.
+- **2026-10-23 / Task 4 IMPL-START:** CHK-R10, CHK-R12. Files: `checks/run.py`, `tests/test_git_checks.py`. Test: `python3 -m unittest tests.test_git_checks.GitAuthorTest`.
+- **2026-10-23 / Task 4 RED:** That command, 4 failures, detail `check 'git_author' is not implemented`.
+- **2026-10-23 / Task 4 REVIEW-START:** `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 37. `git_author` compares author name and email on the last commit that changed the path and does not read a signature.
+- **2026-10-23 / Task 4:** First review, blocking. A non-UTF-8 author raised `UnicodeDecodeError` and dropped the next Check. RED reproduced that error. Caught it and returned `fail` with `author is not UTF-8`. Author and freshness logs pass `--no-show-signature`. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 38.
+- **2026-10-23 / Task 4 BLOCKED:** Re-review, still blocking. No further round. Critical: `_author_of` splits `git log` on U+001F and uses the second and third pieces. An author name that itself contains U+001F can make `name` `PoC2` and `email` `poc2@example.com` pass while the recorded email is `evil@example.com`. Minor, not fixed: the UTF-8 failure returns `(None, None, None)` from a function typed as a string tuple or `None`; the checkpoint table still says CHK-R10 has no test. Uncommitted files stay uncommitted. Task 5 has not started.
+- **2026-10-23 / Task 4:** Maintainer asked to request UTF-8 from Git. RED: author `Åse` failed when `i18n.logOutputEncoding` was ISO-8859-1. `_git_run` now passes `-c i18n.logOutputEncoding=utf-8`. A commit whose author bytes are not UTF-8 still fails with `author is not UTF-8`. The unit-separator false pass remains.
+- **2026-10-23 / Task 4:** Maintainer asked for NUL-separated author fields. RED: name `PoC2` plus U+001F plus `poc2@example.com`, with recorded email `evil@example.com`, returned `pass` for the injected email. `git log -1 -z --format=%H%x00%an%x00%ae` now requires exactly three fields. Any other count is `fail` and is not compared. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 40.
+- **2026-10-23 / dispatch:** Maintainer rejected the in-process branch. `checks/run.py` now executes the registry `command`. `exist`, `contents`, and the Git checks are `checks/bin/curbcheck-exist`, `curbcheck-contents`, and `curbcheck-git`. A missing tool is `fail`, and the next Check still runs. Not reviewed.
+- **2026-10-23 / Task 4 review:** NUL split review found no Critical issue. Important: `_git_run` used `text=True`, so Git's UTF-8 output was decoded with the process locale. Under ISO-8859-1 a real UTF-8 author failed and a non-UTF-8 author could pass. Both `_git_run` copies now pass `encoding="utf-8"`. `python3 -m unittest tests.test_check_dispatch tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 43. Minor, recorded: point CHK-R10 at `GitAuthorTest`. That row is updated.
+- **2026-10-23 / Task 4 BLOCKED:** Re-review of the working tree, still blocking. No further round. Important: `checks/toolmain.py` catches every exception, so a symlink that leaves the repo becomes a fail row and later Checks still run. At HEAD that `ModelError` left `run_claim` and no result was written. `checks/ARCHITECTURE.md` still says the escape raises `ModelError` before a row is written. `tests/cs/path_boundary.py` calls `run_exist` directly. Mailmap was raised and checked on Git 2.54.0: a committed `.mailmap` changes `%aN` to the mapped name and leaves `%an` as the commit header, including with `--use-mailmap` and `log.mailmap=true`. That false pass was not reproduced. Minor, not fixed: the check executables always exit 0; `_git_run` is copied in `checks/run.py` and `checks/gitcheck.py`; `checks/dispatch.py` still decodes stdout with the process locale; `checks/ARCHITECTURE.md` does not describe `git_fresh` and `git_author`. Uncommitted files stay uncommitted. Task 5 has not started.
+- **2026-10-23 / Task 4:** Maintainer reopened the step. The runner already failed a symlink that leaves the repo and still recorded the next Check. `tests/test_check_dispatch.py` `test_a_symlink_out_of_the_repo_fails_and_the_next_check_still_runs` passed on the first run. `detail` does not contain the outside bytes. `checks/ARCHITECTURE.md` now says that. Direct `run_exist` and `run_contents` still raise `ModelError`.
+- **2026-10-23 / Task 4 VERIFIED:** Review found no Critical or Important findings. `git_fresh` and `git_author` are named in `checks/ARCHITECTURE.md`, and `fresh` / `owned` are described as registry ids for the discovery form. Minor, left: `_git_run` stays copied in `checks/run.py` and `checks/gitcheck.py` so the runner does not import the Git Check; `checks/toolmain.py` turns every tool exception into a fail row; `checks/dispatch.py` still decodes tool stdout with the process locale. Next action is Task 5.

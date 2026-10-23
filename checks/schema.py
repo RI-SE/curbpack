@@ -1,4 +1,4 @@
-"""Args schemas from available_checks.json. This build runs exist and contents."""
+"""Args schemas from available_checks.json. The runner executes the registered command."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from pathlib import Path
 
 from common.errors import CheckError, ModelError
 
-IMPLEMENTED = {"exist", "contents"}
 OPS = {">", ">=", "<", "<="}
 PROBE_KINDS = {"size", "words", "headers", "token", "pattern", "placeholder"}
 _REGISTRY_PATH = Path(__file__).with_name("available_checks.json")

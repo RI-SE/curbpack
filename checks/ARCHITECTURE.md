@@ -26,7 +26,7 @@ The runner evaluates Claim files that the repo selects and writes one run result
 | `process_exit_code(result)` | A run result. | `0` or `1`. |
 | `git_snapshot(repo)` | A directory. | `commit` and `worktree`, or absent when Git has no HEAD. |
 
-`available_checks.json` is the registry of Check ids, commands, and args JSON Schemas. `validate_check_args` reads it. This build executes `exist` and `contents` in-process. A registered id with no in-process implementation, including `fresh`, `owned`, and `dep_ban`, is a non-passing Check result. An id absent from the registry is rejected when the Claim is saved.
+`available_checks.json` is the registry of Check ids, commands, and args JSON Schemas. `validate_check_args` reads it. The runner executes the registered `command` as a process: `<command> <check-id> --repo <path> --args <json>`. stdout is one result object. A missing or crashed tool is a non-passing Check result, and the next Check still runs. `fresh`, `owned`, and `dep_ban` stay registered and non-passing because their commands are not installed. An id absent from the registry is rejected when the Claim is saved.
 
 The runner does not read `discovery_hints`, `note`, `remediation_hint`, or Claim `description`. It does not write Requirements, Claims, packs, or the review report.
 
@@ -56,17 +56,19 @@ The output path is an argument. The demo writes `<product-repo>/.curbpack/run-re
 
 ## Checks this build runs
 
-`exist` and `contents` follow `packs2.md` §4. `validate_check_args` is the schema check. Paths are relative, and a path that escapes the repo raises `ModelError` before any row is written.
+`exist` and `contents` follow `packs2.md` §4. `validate_check_args` is the schema check. Paths are relative. A `../` path or an absolute path is rejected before a tool runs. A symlink that resolves outside the repo is a failing Check: the outside bytes are not read and do not appear in `detail`, and later Checks in that Claim are still recorded. `run_exist` and `run_contents`, called directly, still raise `ModelError`.
 
 | Check | Observable result |
 | --- | --- |
 | `exist` | `pass` when every path is a file. Otherwise `fail`, and `detail` names each absent path. The bytes are not read. |
 | `contents` | A missing file is `fail`, and `detail` says the file is absent. Probe failures are not added for that file. When every file is present, each probe runs, and the first failures are joined into `detail`. `pass` has no `detail`. |
 | `token` probe | The file contains the repo directory name, a `package.json` `name`, or a `go.mod` module line. |
-| `placeholder` probe | The file matches one of the patterns in `checks/run.py`. That list is this build's list. |
+| `placeholder` probe | The file matches one of the patterns in `checks/filecheck.py`. That list is this build's list. |
 | `headers` probe | Each string is a literal substring. |
+| `git_fresh` | Age of the last commit that changed `path`, measured from `as_of`. Packs v2 §4.1. |
+| `git_author` | Exact author name and email on that commit. Not a signature. Packs v2 §4.1. |
 
-`fresh`, `owned`, and `dep_ban` are specified in `packs2.md` §4 and are not implemented. `npm_dep_ban` and `manifest_dep_ban` are aliases of `dep_ban`, so they use the same not-implemented error. Any other id is an unknown check type. Both errors are `CheckError`, raised before a result file is written. The runner does not record them as `skipped`.
+`fresh` and `owned` are not Check ids in Packs v2 §4. They stay in this registry so the current discovery form can save them, and a run fails them because `curbcheck-fresh` and `curbcheck-owned` are not installed. `dep_ban` is specified in Packs v2 §4. `npm_dep_ban` and `manifest_dep_ban` use `curbcheck-dep-ban`, which is not installed, so a run records `fail`. An id absent from the registry is rejected when the Claim is saved. The runner does not record these as `skipped`.
 
 `file_present` is not a check id.
 
@@ -106,8 +108,8 @@ Direct calls, no UI. `tests/test_m4_checks.py` already covers the `exist` and `c
 
 ## Current code
 
-`exist`, `contents`, nested results, the exit code, and the Git snapshot match this file. A skip reason is stored as each Check's `detail`. A skip id that matches no Claim is ignored. Registered ids without an in-process implementation fail that Check and do not pass. The check page has no skip form. The Check action deletes the review report after a successful run; this is a **verified implementation defect** contradicting the normative contract in `poc2/review/ARCHITECTURE.md`. A corrective implementation change and regression test must preserve the report. Checks do not compute Discovery candidate-grey-out; the Claims UI derives that from an existing run result.
+`exist`, `contents`, nested results, the exit code, and the Git snapshot match this file. A skip reason is stored as each Check's `detail`. A skip id that matches no Claim is ignored. A registered id whose command is missing fails that Check and does not pass. The check page has no skip form. The Check action deletes the review report after a successful run; this is a **verified implementation defect** contradicting the normative contract in `poc2/review/ARCHITECTURE.md`. A corrective implementation change and regression test must preserve the report. Checks do not compute Discovery candidate-grey-out; the Claims UI derives that from an existing run result.
 
 ## Unresolved
 
-None. `fresh`, `owned`, and `dep_ban` wait for implementation of the schemas `packs2.md` already states. They are not a new result field.
+None. `git_signed` and `git_signer` are registered and fail until their subcommands exist. `fresh` and `owned` stay registered for the discovery form. They are not a new result field.
