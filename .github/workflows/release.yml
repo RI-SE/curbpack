@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: CI run id whose tested artifacts are published
+        required: true
+        type: string
+      tag:
+        description: Release tag to create
+        required: true
+        type: string
+      source_only:
+        description: Publish source only and state that the standalone binaries are absent
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Publish the selected CI run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--run-id "${{ inputs.source_run_id }}" --tag "${{ inputs.tag }}")
+          if [ "${{ inputs.source_only }}" = "true" ]; then
+            args+=(--source-only)
+          fi
+          python scripts/release/publish.py "${args[@]}"

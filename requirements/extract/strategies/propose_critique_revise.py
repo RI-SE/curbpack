@@ -19,10 +19,11 @@ from pathlib import Path
 from typing import Callable
 
 from common.errors import ModelError
+from common.paths import install_root
 from requirements.extract.call import _llm_note, _parse_and_validate, _parse_json_object
 from requirements.extract.trace import Trace, now_utc, sha256_text
 
-_GUIDANCE = Path(__file__).resolve().parent.parent / "guidance"
+_GUIDANCE = install_root() / "requirements" / "extract" / "guidance"
 _CRITIQUE_PATH = _GUIDANCE / "critique.txt"
 _REVISE_PATH = _GUIDANCE / "revise.txt"
 _MAX_ATTEMPTS = 3

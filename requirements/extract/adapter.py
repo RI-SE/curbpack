@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from common.errors import ModelError
+from common.paths import install_root
 from common.jsonio import read_json
 from requirements.extract.formex.inventory import inventory_package
 from requirements.extract.formex.package import load_doc_package
@@ -12,7 +13,7 @@ from requirements.extract.formex.provisions import extract_section_provisions
 from requirements.extract.formex.text import element_text
 import xml.etree.ElementTree as ET
 
-ADAPTERS = Path(__file__).resolve().parent / "adapters"
+ADAPTERS = install_root() / "requirements" / "extract" / "adapters"
 
 _SOURCE_FIELDS = ("framework", "instrument", "identifier", "language", "url")
 

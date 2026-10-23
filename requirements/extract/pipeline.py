@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from common.errors import ModelError
+from common.paths import install_root
 from requirements.extract.assemble import assemble_requirements
 from requirements.extract.adapter import ADAPTERS, load_adapter
 from requirements.extract.atomize import atomize
 
-DATA = Path(__file__).resolve().parent / "data"
+DATA = install_root() / "requirements" / "extract" / "data"
 FIXTURE = DATA / "annex_vii.txt"
 
 CRA_SOURCE = {

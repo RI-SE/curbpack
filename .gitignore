@@ -23,3 +23,7 @@ venv/
 # Local editor files
 .idea/
 .vscode/
+
+# Built pilot binaries and PyInstaller work files
+/dist/
+/build/

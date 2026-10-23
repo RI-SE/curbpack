@@ -30,6 +30,7 @@ from claims.bind import (
     write_claim,
 )
 from common.canonical import version_digest
+from common.paths import default_workspace, install_root
 from common.errors import CheckError, ModelError, SigningUnavailable
 from common.jsonio import read_json, write_json
 from common.keystore import load_or_create_key, trust_store
@@ -111,7 +112,7 @@ from review.compile import (
 from scaffold.stub import write_stub
 from workflow import snapshot
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = install_root()
 _VENDOR = {
     "/vendor/jsondiffpatch.js": (
         ROOT / "requirements" / "ui" / "vendor" / "jsondiffpatch" / "jsondiffpatch.umd.js",
@@ -122,7 +123,7 @@ _VENDOR = {
         "text/css; charset=utf-8",
     ),
 }
-DEFAULT_WORKSPACE = ROOT / "data" / "workspace"
+DEFAULT_WORKSPACE = default_workspace()
 
 
 class Workspace:

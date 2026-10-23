@@ -6,12 +6,13 @@ import json
 import re
 from pathlib import Path
 
+from common.paths import install_root
 from requirements.extract.atomize import atomize
 from requirements.extract.formex.package import OFFICIAL_XML
 from requirements.extract.formex.provisions import extract_section_provisions
 from requirements.extract.formex.text import collapse_ws
 
-DATA = Path(__file__).resolve().parents[1] / "data"
+DATA = install_root() / "requirements" / "extract" / "data"
 ANNEX_VII_TXT = DATA / "annex_vii.txt"
 COMPARE_DIR = OFFICIAL_XML / "compare"
 

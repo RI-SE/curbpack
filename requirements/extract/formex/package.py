@@ -8,9 +8,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from common.errors import ModelError
+from common.paths import install_root
 from common.jsonio import read_json
 
-OFFICIAL_XML = Path(__file__).resolve().parents[1] / "data" / "official_xml"
+OFFICIAL_XML = install_root() / "requirements" / "extract" / "data" / "official_xml"
 
 _ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII")
 

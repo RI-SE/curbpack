@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements.txt
+      - run: make ci-tests
+
+  package:
+    name: package (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            artifact: curbpack-studio-macos-arm64
+          - os: windows-latest
+            artifact: curbpack-studio-windows-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install GNU make
+        if: runner.os == 'Windows'
+        run: |
+          choco install make -y
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
+      - run: python -m pip install -r requirements.txt pyinstaller
+      - run: make ci-tests
+      - run: make package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            dist/curbpack-studio-*
+            dist/SHA256SUMS
+          if-no-files-found: error
