@@ -208,6 +208,44 @@ class CompileReportTest(unittest.TestCase):
             self.assertTrue(reading["verifiable"])
             self.assertEqual(load_report(path)["signed"]["name"], "Ada Reviewer")
 
+    def test_compile_keeps_pass_fail_and_explicit_skip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "present.md").write_text("present\n", encoding="utf-8")
+            passed = _claim("claim-pass", "docs/present.md")
+            missing = _claim("claim-miss", "docs/missing.md")
+            skipped = _claim("claim-skip", "docs/present.md")
+            run = build_run_result(
+                repo,
+                [passed, missing, skipped],
+                _packs(),
+                skip={"claim-skip": "the file is out of scope for this review"},
+            )
+            report = compile_report(
+                run_result=run,
+                requirements=[_requirement("REQ-A")],
+                claims=[passed, missing, skipped],
+            )
+            by_id = {row["id"]: row for row in report["run_result"]["claims"]}
+            self.assertEqual(by_id["claim-pass"]["status"], "pass")
+            self.assertEqual(by_id["claim-pass"]["checks"][0]["status"], "pass")
+            self.assertEqual(by_id["claim-miss"]["status"], "fail")
+            self.assertIn("is absent", by_id["claim-miss"]["checks"][0]["detail"])
+            self.assertEqual(by_id["claim-skip"]["status"], "skipped")
+            self.assertEqual(
+                by_id["claim-skip"]["checks"][0]["detail"],
+                "the file is out of scope for this review",
+            )
+            self.assertEqual(report["run_result"]["packs"][0]["version"], "0.1.0")
+            self.assertNotIn("meets_cra", report)
+            page = review_page(report, None, saved=True, report_exists=True, same_run_value=True).decode()
+            self.assertIn('data-claim="claim-pass" data-status="pass"', page)
+            self.assertIn('data-claim="claim-miss" data-status="fail"', page)
+            self.assertIn('data-claim="claim-skip" data-status="skipped"', page)
+            self.assertIn("the file is out of scope for this review", page)
+            self.assertNotIn('data-claim="claim-skip" data-status="pass"', page)
+
 
 class ReviewPageTest(unittest.TestCase):
     def test_page_shows_an_older_run_and_requirements_that_were_not_checked(self):
