@@ -15,4 +15,4 @@ Old CTAM and PoC1 are historical references only, not runtime dependencies or au
 
 ## Working from a story
 
-For any approved epic/story work (including resumptions), use the repo-local Cursor skill `.cursor/skills/story-workflow/SKILL.md` (`/story-workflow`). It defines the required sequence: derive and approve system requirements, use Plan Mode and save the step plan, write and execute a failing test first, implement and verify each small step, document the checkpoint, then commit locally. Do not push. The existing policies and authoritative Packs v2 contract still govern content; the skill governs execution.
+For any approved epic/story work (including resumptions), follow `.cursor/skills/story-workflow/SKILL.md` (`/story-workflow`). Policies and the authoritative Packs v2 contract govern content; the skill governs execution.
