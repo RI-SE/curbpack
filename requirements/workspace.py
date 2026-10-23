@@ -19,7 +19,7 @@ from requirements.extract.adapter import section_provisions
 
 
 def list_working_copies(root: Path, pack_id: str) -> list[str]:
-    directory = root / pack_id
+    directory = root / _pack_id_name(pack_id)
     if not directory.is_dir():
         return []
     names = []
@@ -99,6 +99,7 @@ def mark_published_selected(root: Path, pack_id: str, version: str) -> Path:
 
 
 def select_published_pack(root: Path, pack_id: str, version: str) -> Path:
+    pack_id = _pack_id_name(pack_id)
     version = _version_name(version)
     directory = root / "published" / pack_id / version
     if not directory.is_dir():
@@ -113,7 +114,7 @@ def select_published_pack(root: Path, pack_id: str, version: str) -> Path:
 
 
 def list_published_versions(root: Path, pack_id: str) -> list[str]:
-    directory = root / "published" / pack_id
+    directory = root / "published" / _pack_id_name(pack_id)
     if not directory.is_dir():
         return []
     names = []
@@ -300,9 +301,13 @@ def list_publication_blockers(root: Path, directory: Path, trust: dict[str, byte
     version = pack.get("version")
     pack_id = pack.get("id")
     if isinstance(version, str) and version and isinstance(pack_id, str) and pack_id:
-        destination = root / "published" / pack_id / version
-        if destination.exists():
-            blockers.append(f"published version {version} already exists")
+        try:
+            destination = root / "published" / _pack_id_name(pack_id) / version
+        except ModelError as exc:
+            blockers.append(str(exc))
+        else:
+            if destination.exists():
+                blockers.append(f"published version {version} already exists")
     else:
         blockers.append("pack.version is missing")
     if not requirements:
@@ -332,7 +337,7 @@ def publish_pack(root: Path, copy_dir: Path, *, version: str, trust: dict[str, b
     every source provision was written.
     """
     pack = _require_publishable(copy_dir, version, trust)
-    destination = root / "published" / pack["id"] / version
+    destination = root / "published" / _pack_id_name(pack["id"]) / version
     if destination.exists():
         raise ModelError("published pack", "version", f"a new directory, not {version}")
     temp = root / f".publish-tmp-{secrets.token_hex(8)}"
@@ -439,8 +444,14 @@ def work_directory(copy_dir: Path) -> Path:
     return copy_dir.parent / f"{copy_dir.name}.work"
 
 
+def _pack_id_name(pack_id: str) -> str:
+    if not pack_id or Path(pack_id).name != pack_id or pack_id in {".", ".."}:
+        raise ModelError("pack", "id", "a single directory name")
+    return pack_id
+
+
 def _copy_directory(root: Path, pack_id: str, timestamp: str) -> Path:
-    return root / pack_id / timestamp
+    return root / _pack_id_name(pack_id) / timestamp
 
 
 def _write_extract_diagnostics(
