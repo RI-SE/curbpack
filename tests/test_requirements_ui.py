@@ -156,13 +156,13 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertIn('class="field-info"', editor)
                 self.assertIn("ⓘ", editor)
                 self.assertIn(
-                    'title="MUST, SHOULD, or MAY — only when that word is in law_text. Leave empty otherwise."',
+                    'aria-label="MUST, SHOULD, or MAY — only when that word is in law_text. Leave empty otherwise."',
                     editor,
                 )
                 self.assertIn('name="expected_evidence"', editor)
                 self.assertIn('placeholder="process description"', editor)
                 self.assertIn(
-                    'title="Kind of artifact to look for. One per line. Not proof by itself."',
+                    'aria-label="Kind of artifact to look for. One per line. Not proof by itself."',
                     editor,
                 )
                 _post(
@@ -251,11 +251,22 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertGreater(len(names), 1)
                 self.assertEqual(_bytes(created["copy"]), copy_after_publish)
                 new_stamp = next(stamp for stamp in names if stamp != "2026-10-13T090000Z")
+                self.assertEqual(job.get("base_timestamp"), "2026-10-13T090000Z")
+                self.assertEqual(job.get("copy_timestamp"), new_stamp)
                 chosen = selected_copy(root, "cra-xml-baseline")
                 self.assertIsNotNone(chosen)
-                self.assertEqual(chosen.name, new_stamp)
+                self.assertEqual(chosen.name, "2026-10-13T090000Z")
                 refreshed = _get(base + "/requirements?document=cra-annex-vii")
-                self.assertIn(new_stamp, refreshed)
+                self.assertIn("2026-10-13T090000Z", refreshed)
+                self.assertNotIn(new_stamp, refreshed)
+                _post(
+                    base + "/requirements/select",
+                    {
+                        "adapter_id": "cra-xml",
+                        "timestamp": new_stamp,
+                        "next": "edit",
+                    },
+                )
                 opened = _get(base + "/requirements/copy")
                 self.assertIn("FIXTURE-VII-", opened)
                 llm_path = root / "cra-xml-baseline" / f"{new_stamp}.work" / "llm.json"
