@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 
@@ -11,8 +13,24 @@ def dump_text(obj: object) -> str:
 
 
 def write_json(path: Path, obj: object) -> None:
+    """Replace the file in one step so a reader never sees a half-written document."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(dump_text(obj), encoding="utf-8")
+    handle = tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        delete=False,
+    )
+    temporary = Path(handle.name)
+    try:
+        with handle:
+            handle.write(dump_text(obj))
+        os.replace(temporary, path)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def read_json(path: Path) -> object:
