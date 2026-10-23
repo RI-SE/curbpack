@@ -4,8 +4,8 @@ Curbpack Studio starts from the verified behavior of the **fresh PoC2 pilot**. T
 
 For an approved change:
 1. Read the relevant epic/story (`docs/agile/`) and derived requirements (`docs/req/`). Do not guess at open decisions.
-2. Check the relevant `docs/arch/` contract, `policies/` and existing implementation. Resolve contradictions instead of silently choosing an interpretation.
-3. Use the authoritative **Packs v2** contract from the separate Curbpack repository (`../curbpack/docs/reference/packs2.md`) for persistent Pack, Requirement, Claim, signature and result data; do not invent fields.
+2. Check `doc/ARCHITECTURE.md`, the applicable subsystem `ARCHITECTURE.md`, `policies/` and existing implementation. Resolve contradictions instead of silently choosing an interpretation.
+3. Use the authoritative **Packs v2** contract at `docs/reference/packs2.md` in this repository for persistent Pack, Requirement, Claim, signature and result data; do not invent fields.
 4. After importing the pilot, read its existing architecture and active plans before altering affected code.
 5. Check `git status`; preserve unrelated edits and signed/published data.
 

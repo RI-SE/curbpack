@@ -2,7 +2,7 @@
 
 Keep the design as simple as the approved user stories allow.
 
-- **Packs v2** in the separate Curbpack repository is authoritative for Pack, Requirement, Claim, signing, and result formats. Do not create alternative persistent versions of these objects.
+- **Packs v2** in `docs/reference/packs2.md` is authoritative for Pack, Requirement, Claim, signing, and result formats. Do not create alternative persistent versions of these objects.
 - Keep one system architecture and one architecture contract per actual subsystem when these have been reconciled with the imported pilot. Do not create extra layers or entities without a concrete requirement and an explicit architecture decision.
 - Preserve the existing separation: Requirements/Pack Editor, Claims (including Discovery), Checks, Compile, Review, and the application shell. Treat these as existing responsibilities, not a mandate to move code today.
 - Each proposed architecture change must state the observable problem, the simplest alternative, the affected contract, and how the change will be tested.

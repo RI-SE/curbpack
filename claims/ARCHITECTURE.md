@@ -1,7 +1,7 @@
 # Discovery & Claims — subsystem architecture
 
 Status: **normative target; implementation gaps are identified explicitly.**  
-Normative domain model: `docs/reference/packs2.md` in the curbpack repository (`/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/reference/packs2.md`).  
+Normative domain model: `docs/reference/packs2.md` in this repository.
 Sibling PoC2 docs (`poc2/doc/ARCHITECTURE.md`, working rules, end-to-end scenario) describe the wider product. This file owns Discovery and Claims under `poc2/claims/`; some current code is still in `poc2/discovery/` until migration.
 
 Extract is out of scope. Do not change Extract’s implementation or architecture from this document.

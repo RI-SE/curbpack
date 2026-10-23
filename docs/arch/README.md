@@ -1,5 +1,3 @@
 # Architecture documents
 
-Target: `SYSTEM.md` plus one document for each real subsystem (for example Requirements, Claims, Checks, Compile and Review). These are **not** written in advance from guesses.
-
-When importing the pilot, retain its current architecture files until they have been reviewed and migrated. A placeholder is not allowed to override a working subsystem contract.
+Current system contract: [`../../doc/ARCHITECTURE.md`](../../doc/ARCHITECTURE.md). Subsystem contracts live at `requirements/ARCHITECTURE.md`, `claims/ARCHITECTURE.md`, `checks/ARCHITECTURE.md`, and `review/ARCHITECTURE.md` at repository root. See [`SYSTEM.md`](SYSTEM.md) for the index. Avoid a second specification here.

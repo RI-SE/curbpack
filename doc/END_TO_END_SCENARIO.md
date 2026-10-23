@@ -2,7 +2,7 @@
 
 The historical scenario below is the text written on 12 October 2026. It is kept unchanged, including its design findings. It is not normative.
 
-`docs/reference/packs2.md` in the curbpack repository is the model. Where the historical text disagrees with that document, the document wins. Two examples: `discovery_hints` belongs on the Requirement, and a missing file is `fail`.
+`docs/reference/packs2.md` in Studio is the model. Where the historical text disagrees with that document, the document wins. Two examples: `discovery_hints` belongs on the Requirement, and a missing file is `fail`.
 
 ## Historical scenario (12 October 2026)
 

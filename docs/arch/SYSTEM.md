@@ -1,9 +1,5 @@
-# System architecture
+# Studio architecture - index
 
-**Status: migration placeholder, not an approved architecture contract.**
+The current governing system architecture is [`../../doc/ARCHITECTURE.md`](../../doc/ARCHITECTURE.md). Each subsystem has its own `ARCHITECTURE.md` at the subsystem root. The persistent data contract is [`../reference/packs2.md`](../reference/packs2.md).
 
-The product consists of an application shell, Requirements/Pack Editor, Claims (including Discovery), Checks, Compile and Review. Their actual contracts must be taken from the fresh PoC2 code and its existing architecture files before this document is finalized.
-
-**Authoritative data contract:** `docs/reference/packs2.md` in the separate Curbpack repository. Do not infer schema from this placeholder.
-
-**Next action:** after the fresh PoC2 archive is imported and tests baselined, review its `doc/ARCHITECTURE.md` and subsystem `ARCHITECTURE.md` files, move agreed contracts into `docs/arch/` in separate reviewed changes, and update all references. Do not change code simply to match document paths.
+This file is an index, not a competing architecture specification. Do not migrate code or architecture files merely to change documentation paths before the pilot.

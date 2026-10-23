@@ -2,7 +2,7 @@
 
 Status: design decision for the check runner. Sentences that describe `poc2/checks/` are confirmed by that code. The contracts here are what implementation follows. `poc2/checks/` does not follow the alias rule yet.
 
-Normative domain model: `docs/reference/packs2.md` in the curbpack repository, §2.5, §3.1, and §4. The run result and the check args are those structs. This file does not add a result shape.
+Normative domain model: `docs/reference/packs2.md` in this repository, §2.5, §3.1, and §4. The run result and the check args are those structs. This file does not add a result shape.
 
 Sibling documents:
 

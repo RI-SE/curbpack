@@ -1,6 +1,6 @@
 # Requirements architecture
 
-Status: **target subsystem contract, ready for iterative review; not a claim that current PoC2 code conforms**. This is the **only** `ARCHITECTURE.md` for the Requirements subsystem, including Extract. The separate `poc2/extract/ARCHITECTURE.md` has been removed and is not a second contract. The governing overall boundary is `poc2/doc/ARCHITECTURE.md`; the authoritative persistent schema is `docs/reference/packs2.md` in Curbpack. PoC1 is a *functional and UX reference*, never a schema authority.
+Status: **target subsystem contract, ready for iterative review; not a claim that current PoC2 code conforms**. This is the **only** `ARCHITECTURE.md` for the Requirements subsystem, including Extract. The separate `poc2/extract/ARCHITECTURE.md` has been removed and is not a second contract. The governing overall boundary is `doc/ARCHITECTURE.md`; the persistent contract reference is `docs/reference/packs2.md` in Studio. PoC1 is a *functional and UX reference*, never a schema authority.
 
 ## 1. Scope and invariants
 

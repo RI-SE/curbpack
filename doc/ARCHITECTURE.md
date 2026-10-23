@@ -1,6 +1,8 @@
-# PoC2 Architecture
+# Studio architecture (imported from PoC2)
 
-Status: normative target architecture for PoC2. PoC2 is the foundation of the finished product. This file owns overall subsystem boundaries and interfaces. It is not a replacement for `docs/reference/packs2.md` in the curbpack repository. That file is not part of CTAM. `poc/` is the functional reference and stays unchanged.
+**Status:** retained normative architecture for the imported pilot. This file owns subsystem boundaries; `docs/reference/packs2.md` owns persistent data formats. It is not a second Packs v2 specification.
+
+**Path convention:** this document predates the move to Studio. Any `poc2/` path here means the **root of this Studio repository**; the `poc/` references identify a retired functional baseline, not a directory or runtime dependency required here. Keep the distinction between current and proposed target paths. Do not move code as part of this documentation review.
 
 **Direction.** All new PoC2 development follows the target subsystem architecture below. Current physical paths remain valid until migration; do not change behaviour or interfaces merely to fit the target layout.
 
@@ -8,13 +10,13 @@ Status: normative target architecture for PoC2. PoC2 is the foundation of the fi
 
 PoC2 carries the Packs v2 lifecycle: source text, reviewed requirements, discovery, repository claims, checks, compile, and final human review. `poc/` shows behaviour that already works. PoC2 does not import it.
 
-`docs/reference/packs2.md` in the curbpack repository is the common persistent domain model. It is authoritative for the meaning and fields of Pack, Requirement (including `discovery_hints`), Claim, source/check IDs and `args`, signing, and run results. Do not introduce alternate persistent representations. If a field or lifecycle rule is unresolved, record the precise question rather than improvising a schema.
+`docs/reference/packs2.md` in this repository is the common persistent domain model. It is authoritative for the meaning and fields of Pack, Requirement (including `discovery_hints`), Claim, source/check IDs and `args`, signing, and run results. Do not introduce alternate persistent representations. If a field or lifecycle rule is unresolved, record the precise question rather than improvising a schema.
 
 Each subsystem owns one `ARCHITECTURE.md` containing its component contracts. This file does not duplicate those specifications. Extract is a component of Requirements. Its code is `poc2/requirements/extract/`, and its contract is [`../requirements/ARCHITECTURE.md`](../requirements/ARCHITECTURE.md). The check runner is in [`../checks/ARCHITECTURE.md`](../checks/ARCHITECTURE.md). Compile and final review are currently specified together in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md); the target splits them into `compile/` and `review/` without inventing new Packs v2 types.
 
 `doc/END_TO_END_SCENARIO.md` keeps the 12 October narrative unchanged. Its acceptance criteria are the end-to-end test for that Annex VII point 3 path. The narrative is not a second specification. Scenarios that cross several subsystems are in this file.
 
-Keep existing `poc/` untouched as reference and create the implementation under `poc2/`.
+The original `poc/` and CTAM repositories are historical references only. Studio is the implementation repository.
 
 ## Architecture documentation
 

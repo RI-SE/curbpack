@@ -2,7 +2,7 @@
 
 **Status:** Draft for review, **not** an approved implementation contract.  
 **Source:** [EP-01 Pack Editor](../agile/epics/01-pack-editor/EPIC.md) and its [PE-01–PE-11 stories](../agile/epics/01-pack-editor/stories/).  
-**External contract:** `docs/reference/packs2.md` in the separate Curbpack repository. That specification, not this document, defines persistent Pack and Requirement schemas.
+**External contract:** `docs/reference/packs2.md` in this repository. That specification, not this document, defines persistent Pack and Requirement schemas.
 
 These are testable behavior contracts derived from the agreed stories. Where behavior has not been decided, it stays open rather than being filled in by an agent.
 

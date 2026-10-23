@@ -30,7 +30,7 @@ Milestone pass criteria below remain valid for their slices. Closing the plan as
 
 - `doc/END_TO_END_SCENARIO.md` holds the 12 October narrative unchanged, and the acceptance criteria that map its steps onto `packs2.md`.
 - Those criteria are the end-to-end acceptance test for the later milestones.
-- `docs/reference/packs2.md` in the curbpack repository stays normative. It is not a file in CTAM. The historical narrative does not override it.
+- `docs/reference/packs2.md` in this repository stays normative. The historical narrative does not override it.
 - `poc/` is unchanged.
 
 **Pass:** the scenario and its acceptance criteria are in `poc2/doc/`, and the architecture doc points at them.
