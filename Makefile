@@ -18,10 +18,10 @@ start:
 	$(PYTHON) -m app
 
 test:
-	$(PYTHON) scripts/ci/checks/tests.py
+	@$(PYTHON) scripts/ci/checks/tests.py
 
 ci-tests:
-	$(PYTHON) scripts/ci/run.py
+	@$(PYTHON) scripts/ci/run.py
 
 package:
 	$(PYTHON) scripts/build/package.py

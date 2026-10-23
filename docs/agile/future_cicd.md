@@ -33,6 +33,31 @@ No `make sast`, `make secrets`, `make vuln`, `make sbom` or `make sign`. Do not 
 
 `make ci-tests ONLY=vuln` reruns one check. `ONLY` must never reduce a release pipeline's mandatory gate.
 
+Two presentation levels use the same scripts. `make ci-tests` is a quiet line per check, in the shape of Curbpack `scripts/ci-tests.sh`:
+
+```text
+tests .................... [PASS]
+sast ..................... [PASS]
+secrets .................. [PASS]
+vuln ..................... [FAIL]
+
+Summary: 3 PASS, 1 FAIL
+```
+
+`make test`, and `make ci-tests ONLY=<check>`, print every case in that check so the failure can be found. The detail, the colors, and the reason come from CTAM's `test` runner:
+
+```text
+test_claim_binding ............... [PASS]
+test_review_compile .............. [PASS]
+test_signature ................... [PASS]
+test_requirements_ui ............. [FAIL]
+  Expected title, found aria-label
+
+Summary: 193 PASS, 1 FAIL
+```
+
+A negative case that is expected to fail is a `[PASS]` when it fails as specified. It does not dump a traceback. The process exit code is the real result: `0` only when the summary has no `[FAIL]`. No new test framework, and no extra Make target.
+
 ## 3. Individually executable scripts
 
 Example layout. Names may vary. Document the registry in one place.
@@ -61,7 +86,7 @@ scripts/
 - Each script can be run directly, without Make or CI, and returns `0` on success and nonzero on failure.
 - `scripts/ci/run.sh` runs the registered mandatory checks in a stable order, or exactly one check when `ONLY` is set. An unknown `ONLY` value fails and lists the valid names.
 - `make test` and the `tests` CI check execute the same test scripts, not two suites. Tests may use reusable reference-repository states prepared by dedicated setup scripts.
-- Use green and red when the terminal supports color. Text labels and exit codes must work without color in CI logs. Show an aggregate summary without hiding an individual failure.
+- Use green and red when the terminal supports color. Text labels and exit codes must work without color in CI logs. The all-checks run stays one line per check. The single-check run shows each case and the failure reason.
 - SBOM generation, artifact signing and promotion are separate scripts, not security tests. Their results are recorded as separate pipeline steps. A check may validate their outputs without generating them again.
 
 ## 4. CI orchestration
