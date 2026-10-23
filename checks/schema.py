@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from common.errors import CheckError, ModelError
@@ -134,6 +134,27 @@ def _validate_json_schema(value: object, schema: dict, where: str) -> None:
 _RFC3339 = re.compile(
     r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$"
 )
+
+
+def parse_rfc3339(value: str) -> datetime:
+    """The same instant profile `_rfc3339` accepts, as an aware datetime."""
+    if not _rfc3339(value):
+        raise ModelError("as_of", "value", "an RFC 3339 instant")
+    match = _RFC3339.fullmatch(value)
+    year, month, day, hour, minute, second = (int(match.group(index)) for index in range(1, 7))
+    fraction = match.group(7)
+    micro = int((fraction[1:] + "000000")[:6]) if fraction else 0
+    offset = match.group(8)
+    if offset == "Z":
+        zone = timezone.utc
+    else:
+        sign = 1 if offset[0] == "+" else -1
+        zone = timezone(sign * timedelta(hours=int(offset[1:3]), minutes=int(offset[4:6])))
+    leap = second == 60
+    instant = datetime(year, month, day, hour, minute, 59 if leap else second, micro, zone)
+    if leap:
+        instant += timedelta(seconds=1)
+    return instant
 
 
 def _rfc3339(value: str) -> bool:

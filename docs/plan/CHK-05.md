@@ -11,16 +11,16 @@
 
 | Field | Value |
 | --- | --- |
-| Plan status | APPROVED |
+| Plan status | BLOCKED |
 | Approved by | Maintainer, 2026-10-23 |
 | Current task | Task 3 — git_fresh uses the last commit that changed the path |
 | Last completed task | Task 2 — four Git Check schemas registered |
-| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_git_checks tests.test_m3_claims tests.test_m4_checks tests.test_discover_claims_ui` OK 17. RED before the schemas: 5 tests, 4 errors, 1 failure, unknown check type. |
+| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 31. That run does not cover a symlink loop or a path whose parent is a file. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- docs/plan/CHK-05.md`. |
 | Requirements | `docs/req/checks.md` — CHK-R01–CHK-R13 DRAFT. Maintainer accepted OPEN-1 through OPEN-8 on 2026-10-23. |
 | Packs v2 | `docs/reference/packs2.md`, imported from Curbpack `b07b8deb9fed331b493241251087ce7ce648f5e4`. §4 and §4.1 name `git_fresh`, `git_signed`, `git_author`, and `git_signer`. |
-| Blockers | None |
-| **Exact next action** | Task 3: write the failing `git_fresh` test for a fresh file, Monday versus Friday, and a missing, dirty, or untracked path. |
+| Blockers | Task 3 re-review: a symlink loop raises `RuntimeError`, and a path through a file such as `notdir/child.md` raises `NotADirectoryError`. Either aborts the run. No further review round. |
+| **Exact next action** | Stop. Do not edit Task 3 further and do not start Task 4 until the maintainer reopens the step. The uncommitted `git_fresh` code is not a completed step. |
 
 ## Requirements and acceptance mapping
 
@@ -145,3 +145,11 @@ The extension point is an in-process branch in `checks/run.py` `_execute_check`,
 - **2026-10-23 / Task 1:** Maintainer said to continue. Plan status set to APPROVED. Tasks 2–6 added. Build starts at Task 2. `python3 scripts/check_story_plan.py CHK-05 --phase ready` passed.
 - **2026-10-23 / Task 2 IMPL-START:** CHK-R01, CHK-R06, CHK-R13. Files: `checks/available_checks.json`, `checks/schema.py`, `tests/test_git_checks.py`. Test: `python3 -m unittest tests.test_git_checks.GitCheckSchemaTest`.
 - **2026-10-23 / Task 2:** RED: that command, 5 tests, 4 errors and 1 failure, `unknown check type`. GREEN after the schemas: `python3 -m unittest tests.test_git_checks tests.test_m3_claims tests.test_m4_checks tests.test_discover_claims_ui` OK 17. First review: RFC 3339 check was too loose (Important). Fixed `_rfc3339` to require seconds and an offset of `Z` or `±HH:MM`, and added those cases. Second review: no Critical or Important findings. Minor, left as recorded: lowercase `t`/`z` rejected; a wrong `openpgp` value is reported as a missing `allowed_signers`; `git_signer` test does not repeat the both-trust-inputs case. Unrelated dirty files were not included.
+- **2026-10-23 / Task 3 IMPL-START:** CHK-R07, CHK-R08, CHK-R11, CHK-R12. Files: `checks/run.py`, `tests/test_git_checks.py`. Test: `python3 -m unittest tests.test_git_checks.GitFreshTest`.
+- **2026-10-23 / Task 3 REVIEW-START:** First review, blocking. A pathspec such as `notes[1].md` matched `notes1.md` and passed. `git diff --quiet` treated `--skip-worktree` and `--assume-unchanged` as clean while the worktree bytes differed from HEAD. Fixed in the uncommitted diff: `GIT_LITERAL_PATHSPECS=1`, and dirty detection compares `git hash-object` with `git ls-tree HEAD`. Added `test_a_bracket_path_is_not_a_glob` and `test_skip_worktree_and_assume_unchanged_do_not_hide_a_dirty_file`. `python3 -m unittest tests.test_git_checks tests.test_m4_checks` then OK 19.
+- **2026-10-23 / Task 3 BLOCKED:** Second review, still blocking. No third round. Important: `Path.is_file()` and `git hash-object` follow symlinks, so replacing a fresh file with a symlink to the same bytes returns `pass` while Git reports a typechange; a clean tracked symlink can fail `differs from HEAD`. Important: `_git_run` copies the process environment, so an inherited `GIT_DIR` makes `git -C` read another repository and can pass a stale file. Minor, not fixed: a repo with no commit is reported as `git is unavailable`; tests set author date and committer date to the same instant; `parse_rfc3339` labels a bad committer stamp as a bad `as_of`. Uncommitted files stay uncommitted. Task 4 has not started.
+- **2026-10-23 / Task 3:** Maintainer reopened the step. Accepted fix: drop inherited repository pointers in the Git child environment for `_git_run` and `git_snapshot`; hash a real symlink as its link text and require mode `120000`. A regular file stays on `git hash-object -- path`. Planned tests: symlink typechange fails, a clean symlink passes, inherited `GIT_DIR` stays on the repo argument, a CRLF worktree with `eol=lf` matches the LF blob.
+- **2026-10-23 / Task 3 RED:** The four new tests. Symlink typechange returned `pass`. A clean symlink returned `fail`. Inherited `GIT_DIR` returned `pass`. The CRLF worktree already returned `pass` on Git 2.54 because `git hash-object -- path` applies the `eol=lf` clean filter, so that case stays a regression test with no extra hashing code.
+- **2026-10-23 / Task 3 REVIEW-START:** `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 28.
+- **2026-10-23 / Task 3:** First review of the reopened diff, still blocking. A clean absolute or `../` symlink raised `ModelError` and aborted the Claim. A clean dangling symlink and a symlink to a directory failed as `absent`. `chmod +x` passed while `core.filemode=true`. RED for those cases, then fixed: presence uses `lstat` on the unresolved entry, a path that leaves the repo is `fail` without aborting later Checks, and the executable bit is compared only when `core.filemode` is not `false`. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 31.
+- **2026-10-23 / Task 3 BLOCKED:** Re-review of the reopened diff, still blocking. No further round. Important: `_entry_path` only turns `ModelError` into `fail`. A symlink loop raises `RuntimeError`, and `notdir/child.md` raises `NotADirectoryError` from `lstat`. Either leaves `run_claim`, so later Checks are not recorded. Minor, not fixed: `core.filemode=0` is still treated as tracked; a repo with no commit is still `git is unavailable`; tests still set author date and committer date to the same instant. Uncommitted files stay uncommitted. Task 4 has not started.

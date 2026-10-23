@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import copy
 import json
+import math
+import os
 import re
+import stat
 import subprocess
 from pathlib import Path
 
-from checks.schema import validate_check_args
+from checks.schema import parse_rfc3339, validate_check_args
 from common.canonical import pack_directory_digest, version_digest
 from common.errors import CheckError, ModelError
 from common.jsonio import read_json
@@ -28,24 +31,35 @@ _PLACEHOLDERS = (
 )
 
 
+# These point Git at a different repository or pathspec dialect than the repo argument.
+_GIT_ENV_DROP = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_NAMESPACE",
+        "GIT_GLOB_PATHSPECS",
+        "GIT_NOGLOB_PATHSPECS",
+    }
+)
+
+
+def _git_child_env() -> dict[str, str]:
+    env = {key: value for key, value in os.environ.items() if key not in _GIT_ENV_DROP}
+    env["GIT_LITERAL_PATHSPECS"] = "1"
+    return env
+
+
 def git_snapshot(repo: Path) -> dict | None:
     """HEAD and clean/dirty when this directory is a Git checkout with a commit."""
-    try:
-        head = subprocess.run(
-            ["git", "-C", str(repo), "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError:
+    head = _git_run(repo, "rev-parse", "HEAD")
+    if head is None or head.returncode != 0:
         return None
-    if head.returncode != 0:
-        return None
-    status = subprocess.run(
-        ["git", "-C", str(repo), "status", "--porcelain"],
-        capture_output=True,
-        text=True,
-    )
-    if status.returncode != 0:
+    status = _git_run(repo, "status", "--porcelain")
+    if status is None or status.returncode != 0:
         return None
     worktree = "dirty" if status.stdout.strip() else "clean"
     return {"commit": head.stdout.strip(), "worktree": worktree}
@@ -181,6 +195,153 @@ def run_contents(repo: Path, args: dict) -> dict:
     return {"status": "pass"}
 
 
+def _git_run(repo: Path, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            text=True,
+            env=_git_child_env(),
+            input=input_text,
+        )
+    except FileNotFoundError:
+        return None
+
+
+def _entry_path(repo: Path, relative: str) -> Path:
+    """Worktree path without resolving a final symlink."""
+    root = repo.resolve()
+    path = root / relative
+    parent = path.parent.resolve()
+    if parent != root and root not in parent.parents:
+        raise ModelError("check", "args.path", "a path inside the repository")
+    return path
+
+
+def _head_mode_and_blob(repo: Path, relative: str) -> tuple[str, str] | None:
+    """Mode and blob at HEAD. None if Git failed. Empty strings when the path is absent."""
+    head = _git_run(repo, "ls-tree", "HEAD", "--", relative)
+    if head is None or head.returncode != 0:
+        return None
+    parts = head.stdout.split()
+    if len(parts) < 3:
+        return "", ""
+    return parts[0], parts[2]
+
+
+def _worktree_blob(repo: Path, relative: str) -> str | None:
+    """Blob id Git would record for the worktree entry. None if Git failed."""
+    path = _entry_path(repo, relative)
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return ""
+    if stat.S_ISLNK(info.st_mode):
+        hashed = _git_run(repo, "hash-object", "--stdin", input_text=os.readlink(path))
+    elif stat.S_ISREG(info.st_mode):
+        hashed = _git_run(repo, "hash-object", "--", relative)
+    else:
+        return ""
+    if hashed is None or hashed.returncode != 0:
+        return None
+    return hashed.stdout.strip()
+
+
+def _worktree_differs_from_head(repo: Path, relative: str) -> bool | None:
+    """True when the worktree entry is not the blob at HEAD. None if Git failed."""
+    head = _head_mode_and_blob(repo, relative)
+    blob = _worktree_blob(repo, relative)
+    if head is None or blob is None:
+        return None
+    mode, head_blob = head
+    if not head_blob or not blob:
+        return True
+    path = _entry_path(repo, relative)
+    if stat.S_ISLNK(path.lstat().st_mode):
+        return mode != "120000" or blob != head_blob
+    if mode == "120000" or blob != head_blob:
+        return True
+    if not _filemode_tracked(repo):
+        return False
+    recorded = "100755" if path.lstat().st_mode & 0o111 else "100644"
+    return recorded != mode
+
+
+def _filemode_tracked(repo: Path) -> bool:
+    probed = _git_run(repo, "config", "--get", "core.filemode")
+    if probed is None or probed.returncode != 0:
+        return True
+    return probed.stdout.strip().lower() != "false"
+
+
+def _last_change(repo: Path, relative: str) -> tuple[str, str] | None:
+    """Commit id and committer instant for the last commit that changes the path."""
+    log = _git_run(repo, "log", "-1", "--format=%H%n%cI", "HEAD", "--", relative)
+    if log is None or log.returncode != 0:
+        return None
+    lines = [line.strip() for line in log.stdout.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return None
+    return lines[0], lines[1]
+
+
+def _fail_with_commit(repo: Path, relative: str, cause: str) -> dict:
+    found = _last_change(repo, relative)
+    if found is None:
+        return {"status": "fail", "detail": cause}
+    return {"status": "fail", "detail": f"{cause}; commit {found[0]}"}
+
+
+def run_git_fresh(repo: Path, args: dict) -> dict:
+    """Age of the last commit that changed path, measured from args.as_of."""
+    relative = args["path"]
+    probe = _git_run(repo, "rev-parse", "--is-inside-work-tree")
+    if probe is None:
+        return {"status": "fail", "detail": "git is unavailable"}
+    if probe.returncode != 0 or probe.stdout.strip() != "true":
+        return {"status": "fail", "detail": f"{relative} has no Git metadata"}
+    try:
+        entry = _entry_path(repo, relative)
+        try:
+            info = entry.lstat()
+        except FileNotFoundError:
+            return _fail_with_commit(repo, relative, f"{relative} is absent")
+        if not (stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode)):
+            return _fail_with_commit(repo, relative, f"{relative} is absent")
+        listed = _git_run(repo, "ls-files", "--", relative)
+        if listed is None:
+            return {"status": "fail", "detail": "git is unavailable"}
+        if listed.returncode != 0:
+            return {"status": "fail", "detail": f"{relative} has no Git metadata"}
+        if not listed.stdout.strip():
+            return {"status": "fail", "detail": f"{relative} is untracked"}
+        differs = _worktree_differs_from_head(repo, relative)
+        if differs is None:
+            return {"status": "fail", "detail": "git is unavailable"}
+        if differs:
+            return _fail_with_commit(repo, relative, f"{relative} differs from HEAD")
+        found = _last_change(repo, relative)
+        if found is None:
+            return {"status": "fail", "detail": f"{relative} has no commit"}
+        commit, stamp = found
+        try:
+            committer = parse_rfc3339(stamp)
+            as_of = parse_rfc3339(args["as_of"])
+        except ModelError as exc:
+            return {"status": "fail", "detail": str(exc)}
+        if committer > as_of:
+            return {"status": "fail", "detail": f"{relative} commit {commit} is after as_of"}
+        age = math.floor((as_of - committer).total_seconds() / 86400)
+        if age <= args["max_age_days"]:
+            return {"status": "pass"}
+        return {
+            "status": "fail",
+            "detail": f"{relative} commit {commit} is {age} days old, max {args['max_age_days']}",
+        }
+    except ModelError as exc:
+        return {"status": "fail", "detail": str(exc)}
+
+
 def _execute_check(repo: Path, check: str, args: dict) -> dict:
     try:
         validate_check_args(check, args)
@@ -190,6 +351,8 @@ def _execute_check(repo: Path, check: str, args: dict) -> dict:
         return run_exist(repo, args)
     if check == "contents":
         return run_contents(repo, args)
+    if check == "git_fresh":
+        return run_git_fresh(repo, args)
     return {"status": "fail", "detail": f"check {check!r} is not implemented"}
 
 
