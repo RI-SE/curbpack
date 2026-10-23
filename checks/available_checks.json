@@ -88,6 +88,101 @@
       }
     },
     {
+      "id": "git_fresh",
+      "command": "curbcheck-git",
+      "args_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "max_age_days", "as_of"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "max_age_days": {"type": "integer", "minimum": 0},
+          "as_of": {"type": "string", "minLength": 1, "format": "date-time"}
+        }
+      }
+    },
+    {
+      "id": "git_signed",
+      "command": "curbcheck-git",
+      "args_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "allowed_signers"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "allowed_signers": {"type": "string", "minLength": 1}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "openpgp"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "openpgp": {"const": "repo"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "git_author",
+      "command": "curbcheck-git",
+      "args_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "name"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "name": {"type": "string", "minLength": 1},
+              "email": {"type": "string", "minLength": 1}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "email"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "email": {"type": "string", "minLength": 1}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "git_signer",
+      "command": "curbcheck-git",
+      "args_schema": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "signer", "allowed_signers"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "signer": {"type": "string", "minLength": 1},
+              "allowed_signers": {"type": "string", "minLength": 1}
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "signer", "openpgp"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "signer": {"type": "string", "minLength": 1},
+              "openpgp": {"const": "repo"}
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "dep_ban",
       "command": "curbcheck-dep-ban",
       "args_schema": {

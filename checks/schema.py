@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime
 from pathlib import Path
 
 from common.errors import CheckError, ModelError
@@ -112,10 +114,15 @@ def _validate_json_schema(value: object, schema: dict, where: str) -> None:
         minimum = schema.get("minLength")
         if isinstance(minimum, int) and len(value) < minimum:
             raise ModelError(where, "value", "non-empty string")
+        if schema.get("format") == "date-time" and not _rfc3339(value):
+            raise ModelError(where, "value", "an RFC 3339 instant")
         return
     if expected == "integer":
         if isinstance(value, bool) or not isinstance(value, int):
             raise ModelError(where, "value", "integer")
+        minimum = schema.get("minimum")
+        if isinstance(minimum, int) and not isinstance(minimum, bool) and value < minimum:
+            raise ModelError(where, "value", f"at least {minimum}")
         return
     if expected == "boolean":
         if not isinstance(value, bool):
@@ -124,9 +131,38 @@ def _validate_json_schema(value: object, schema: dict, where: str) -> None:
         raise ModelError(where, "value", repr(schema["const"]))
 
 
+_RFC3339 = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$"
+)
+
+
+def _rfc3339(value: str) -> bool:
+    """YYYY-MM-DDTHH:MM:SS with an optional fraction and Z or ±HH:MM."""
+    match = _RFC3339.fullmatch(value)
+    if match is None:
+        return False
+    year, month, day, hour, minute, second = (int(match.group(index)) for index in range(1, 7))
+    if hour > 23 or minute > 59 or second > 60:
+        return False
+    if second == 60 and (hour != 23 or minute != 59):
+        return False
+    offset = match.group(8)
+    if offset != "Z":
+        off_hour, off_minute = int(offset[1:3]), int(offset[4:6])
+        if off_hour > 23 or off_minute > 59:
+            return False
+    try:
+        datetime(year, month, day)
+    except ValueError:
+        return False
+    return True
+
+
 def _safe_paths(args: dict, check: str) -> None:
     if isinstance(args.get("path"), str):
         _safe_rel(args["path"], check, "path")
+    if isinstance(args.get("allowed_signers"), str):
+        _safe_rel(args["allowed_signers"], check, "allowed_signers")
     paths = args.get("paths")
     if isinstance(paths, list):
         for index, item in enumerate(paths):
