@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+When executing or resuming a story, apply the existing `AGENTS.md` and
+`.cursor/skills/story-workflow/SKILL.md`. The story's one tracked plan follows
+`docs/plan/TEMPLATE.md` (adapted from `doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md`).
+Run `python3 scripts/check_story_plan.py <STORY-ID> --phase ready` before Build,
+`--phase checkpoint` before marking a completed step, and `--phase done` at closure.
+A failed check blocks that transition. These checks validate documentation
+structure only, not test truth, secure behavior or SSDF compliance.
