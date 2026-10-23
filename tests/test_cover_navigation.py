@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import tempfile
 import threading
 import unittest
@@ -16,7 +15,7 @@ from requirements.ui.pages import job_fragment
 
 
 class CoverNavigationTest(unittest.TestCase):
-    def test_empty_workspace_requirement_link_is_explained_and_logged(self):
+    def test_empty_workspace_requirement_link_is_explained(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
@@ -72,18 +71,13 @@ class CoverNavigationTest(unittest.TestCase):
                 ):
                     self.assertIn("<h1>", _get(base + path))
 
-                with self.assertLogs("poc2.app", level=logging.ERROR) as captured:
-                    status, body = _get_status(base + "/requirement")
+                status, body = _get_status(base + "/requirement")
                 self.assertEqual(status, 400)
                 self.assertIn("Prepare sample workspace", body)
                 self.assertIn("Requirements catalog", body)
+                self.assertIn("demo pack", body)
                 self.assertNotIn("Traceback", body)
                 self.assertNotIn("FileNotFoundError", body)
-                joined = "\n".join(captured.output)
-                self.assertIn("request failed", joined)
-                self.assertIn("/requirement", joined)
-                self.assertIn("demo pack", joined)
-                self.assertIn("Traceback", joined)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

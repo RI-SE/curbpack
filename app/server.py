@@ -344,16 +344,16 @@ def make_handler(ws: Workspace):
             self.end_headers()
 
         def _fail(self, exc: BaseException) -> None:
-            _LOG.error(
-                "request failed method=%s path=%s: %s\n%s",
-                self.command,
-                self.path,
-                exc,
-                traceback.format_exc(),
-            )
             if isinstance(exc, (ModelError, CheckError, SigningUnavailable)):
                 message = str(exc)
             else:
+                _LOG.error(
+                    "request failed method=%s path=%s: %s\n%s",
+                    self.command,
+                    self.path,
+                    exc,
+                    traceback.format_exc(),
+                )
                 message = (
                     "The server could not complete that request. "
                     "See the server log for details."
