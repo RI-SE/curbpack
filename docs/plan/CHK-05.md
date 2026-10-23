@@ -11,16 +11,16 @@
 
 | Field | Value |
 | --- | --- |
-| Plan status | BLOCKED |
+| Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-23 |
-| Current task | Task 3 — git_fresh uses the last commit that changed the path |
-| Last completed task | Task 2 — four Git Check schemas registered |
-| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 31. That run does not cover a symlink loop or a path whose parent is a file. |
+| Current task | Task 4 — git_author is not a signature |
+| Last completed task | Task 3 — git_fresh uses the last commit that changed the path |
+| Last verified tests | 2026-10-23: `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 33. Review of the uncommitted Task 3 diff: no Critical or Important findings. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- docs/plan/CHK-05.md`. |
 | Requirements | `docs/req/checks.md` — CHK-R01–CHK-R13 DRAFT. Maintainer accepted OPEN-1 through OPEN-8 on 2026-10-23. |
 | Packs v2 | `docs/reference/packs2.md`, imported from Curbpack `b07b8deb9fed331b493241251087ce7ce648f5e4`. §4 and §4.1 name `git_fresh`, `git_signed`, `git_author`, and `git_signer`. |
-| Blockers | Task 3 re-review: a symlink loop raises `RuntimeError`, and a path through a file such as `notdir/child.md` raises `NotADirectoryError`. Either aborts the run. No further review round. |
-| **Exact next action** | Stop. Do not edit Task 3 further and do not start Task 4 until the maintainer reopens the step. The uncommitted `git_fresh` code is not a completed step. |
+| Blockers | None |
+| **Exact next action** | Task 4: write the failing `git_author` test. A matching name and email passes. A different author fails. The same author on an unsigned commit still passes. A missing path is its own fail. |
 
 ## Requirements and acceptance mapping
 
@@ -28,19 +28,19 @@
 | --- | --- | --- | --- |
 | CHK-R01 | CHK-05 | `tests/test_git_checks.py` `test_four_ids_share_one_command_and_old_ids_remain`. | DRAFT |
 | CHK-R02 | CHK-05 | Packs v2 §2.5 `checks[]`. Runner loop in `checks/run.py` `run_claim`. No mixed Git Check test. | DRAFT |
-| CHK-R03 | CHK-05 | Same runner loop and Packs v2 §3.1 aggregate. Not tested with one failing and one passing Git Check. | DRAFT |
-| CHK-R04 | CHK-05 | `common/validate.py` rejects `detail` on `pass` and unknown Check-result keys. | DRAFT |
+| CHK-R03 | CHK-05 | `tests/test_git_checks.py` `test_a_symlink_loop_fails_and_the_next_check_still_runs` and `test_a_path_through_a_file_fails_and_the_next_check_still_runs`: one `git_fresh` fails and the next passes. A Claim that mixes `git_fresh` with another Git id is Task 6. | DRAFT |
+| CHK-R04 | CHK-05 | `common/validate.py` rejects `detail` on `pass` and unknown Check-result keys. Passing `git_fresh` rows in `GitFreshTest` omit `detail`. | DRAFT |
 | CHK-R05 | CHK-05 | `tests/test_m3_claims.py`, `tests/test_m4_checks.py` (baseline above). | DRAFT |
 | CHK-R06 | CHK-05 | `tests/test_git_checks.py` GitCheckSchemaTest. Packs v2 `b07b8deb`. `fresh` and `owned` stay registered. | DRAFT |
-| CHK-R07 | CHK-05 | No test. OPEN-2 accepted 2026-10-23. Last commit that changed the path. Monday plus `max_age_days` 2 is fail when `as_of` is later than two days. | DRAFT |
-| CHK-R08 | CHK-05 | No test. OPEN-3 accepted 2026-10-23. | DRAFT |
+| CHK-R07 | CHK-05 | `tests/test_git_checks.py` `test_monday_change_fails_when_friday_head_touched_another_file`, `test_a_rename_does_not_keep_the_old_path_history`, `test_missing_dirty_and_untracked_paths_fail`, `test_a_symlink_with_the_same_bytes_differs_from_head`. Author, signer, and signature still use this commit in Tasks 4–5. | DRAFT |
+| CHK-R08 | CHK-05 | `tests/test_git_checks.py` `test_age_equal_to_the_maximum_passes`, `test_a_future_commit_fails`, `test_a_recent_file_passes_without_detail`. | DRAFT |
 | CHK-R09 | CHK-05 | No test. OPEN-4 accepted 2026-10-23. | DRAFT |
 | CHK-R10 | CHK-05 | No test. OPEN-5 accepted 2026-10-23. | DRAFT |
-| CHK-R11 | CHK-05 | No test. OPEN-6 accepted 2026-10-23. Green row shows path and HEAD. Last-change commit id is in `detail` only on fail. Passing-row half of acceptance 4 is deferred. | DRAFT |
-| CHK-R12 | CHK-05 | No test. OPEN-7 accepted 2026-10-23. Problems are `fail` with a reason. `skipped` stays the deliberate Claim skip. | DRAFT |
+| CHK-R11 | CHK-05 | Passing `git_fresh` rows omit `detail`. Fail rows for Monday, dirty, and untracked paths name the last-change commit. A symlink loop and a path through a file name the cause and omit the commit id. The passing-row half of acceptance 4 stays deferred. | DRAFT |
+| CHK-R12 | CHK-05 | `tests/test_git_checks.py` `test_missing_dirty_and_untracked_paths_fail`, `test_a_symlink_loop_fails_and_the_next_check_still_runs`, `test_a_path_through_a_file_fails_and_the_next_check_still_runs`. `skipped` is still only the caller skip. Signature and author failures are Tasks 4–5. | DRAFT |
 | CHK-R13 | CHK-05 | No test. OPEN-8 accepted 2026-10-23. Discovery form stays unchanged. `tests/test_discover_claims_ui.py` still expects the current form. | DRAFT |
 
-Packs v2 §4 and §4.1 are committed. Story acceptance still to test: 1 (Git ids), 3 (independent Git results), 5 (fail closed), 6 (author is not signer), and 8 (the Git cases). Acceptance 2 for the discovery form is deferred with CHK-R13. The passing-row half of acceptance 4 is deferred with CHK-R11. Acceptance 7 is the existing copy-through rule in CHK-R04.
+Packs v2 §4 and §4.1 are committed. `git_fresh` covers the age rule, fail-closed paths, and one failing Check beside a passing Check. Story acceptance still to test: 3 for two different Git ids, 6 (author is not signer), and 8 for `git_author`, `git_signed`, and `git_signer`. Acceptance 2 for the discovery form is deferred with CHK-R13. The passing-row half of acceptance 4 is deferred with CHK-R11. Acceptance 7 is the existing copy-through rule in CHK-R04.
 
 ## Tasks
 
@@ -90,10 +90,10 @@ The extension point is an in-process branch in `checks/run.py` `_execute_check`,
 **Validation:** The new test and `tests.test_m4_checks`.
 **Stop if:** The check would read the wall clock, follow a rename, or put `detail` on `pass`.
 
-- [ ] RED observed for the age and missing-path behavior.
-- [ ] Minimal `git_fresh` implementation and GREEN verified.
-- [ ] Regression tests and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the age and missing-path behavior.
+- [x] Minimal `git_fresh` implementation and GREEN verified.
+- [x] Regression tests and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 4 — git_author is not a signature
 
@@ -153,3 +153,5 @@ The extension point is an in-process branch in `checks/run.py` `_execute_check`,
 - **2026-10-23 / Task 3 REVIEW-START:** `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 28.
 - **2026-10-23 / Task 3:** First review of the reopened diff, still blocking. A clean absolute or `../` symlink raised `ModelError` and aborted the Claim. A clean dangling symlink and a symlink to a directory failed as `absent`. `chmod +x` passed while `core.filemode=true`. RED for those cases, then fixed: presence uses `lstat` on the unresolved entry, a path that leaves the repo is `fail` without aborting later Checks, and the executable bit is compared only when `core.filemode` is not `false`. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 31.
 - **2026-10-23 / Task 3 BLOCKED:** Re-review of the reopened diff, still blocking. No further round. Important: `_entry_path` only turns `ModelError` into `fail`. A symlink loop raises `RuntimeError`, and `notdir/child.md` raises `NotADirectoryError` from `lstat`. Either leaves `run_claim`, so later Checks are not recorded. Minor, not fixed: `core.filemode=0` is still treated as tracked; a repo with no commit is still `git is unavailable`; tests still set author date and committer date to the same instant. Uncommitted files stay uncommitted. Task 4 has not started.
+- **2026-10-23 / Task 3:** Maintainer reopened the step for the two aborts. RED: a symlink loop raised `RuntimeError: Symlink loop from ...`, and `notdir/child.md` raised `NotADirectoryError`. Both left `run_claim`. Caught `OSError` and `RuntimeError` in `run_git_fresh`. A loop detail says `symlink loop`. A path through a file says `not a directory path`. The next Check still runs. `python3 -m unittest tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 33.
+- **2026-10-23 / Task 3 VERIFIED:** Review found no Critical or Important findings. Minor, left as recorded: a symlink loop and a path through a file omit the last-change commit id; the `OSError`/`RuntimeError` handler wraps the whole freshness body; the two new tests do not assert the Claim aggregate or that the passing row omits `detail`; `core.filemode` values other than `false` stay tracked; a repo with no commit is still reported as `git is unavailable`; tests still set author date and committer date together. Next action is Task 4.

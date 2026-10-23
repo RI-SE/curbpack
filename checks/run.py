@@ -292,6 +292,14 @@ def _fail_with_commit(repo: Path, relative: str, cause: str) -> dict:
     return {"status": "fail", "detail": f"{cause}; commit {found[0]}"}
 
 
+def _path_error_detail(relative: str, exc: Exception) -> str:
+    if isinstance(exc, NotADirectoryError):
+        return f"{relative} is not a directory path"
+    if isinstance(exc, RuntimeError) and "Symlink loop" in str(exc):
+        return f"{relative} is a symlink loop"
+    return f"{relative} cannot be read"
+
+
 def run_git_fresh(repo: Path, args: dict) -> dict:
     """Age of the last commit that changed path, measured from args.as_of."""
     relative = args["path"]
@@ -340,6 +348,8 @@ def run_git_fresh(repo: Path, args: dict) -> dict:
         }
     except ModelError as exc:
         return {"status": "fail", "detail": str(exc)}
+    except (OSError, RuntimeError) as exc:
+        return {"status": "fail", "detail": _path_error_detail(relative, exc)}
 
 
 def _execute_check(repo: Path, check: str, args: dict) -> dict:

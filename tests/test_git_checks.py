@@ -145,6 +145,30 @@ def _commit(repo: Path, message: str, when: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
+def _two_fresh(repo: Path, first: str, second: str, as_of: str) -> dict:
+    return run_claim(
+        repo,
+        build_claim(
+            claim_id="claim-fresh",
+            requirement_id="CRA-ANNEX-VII-RISK",
+            source="documents",
+            args={"path": first},
+            checks=[
+                {
+                    "check": "git_fresh",
+                    "args": {"path": first, "max_age_days": 0, "as_of": as_of},
+                },
+                {
+                    "check": "git_fresh",
+                    "args": {"path": second, "max_age_days": 0, "as_of": as_of},
+                },
+            ],
+            description="The evidence file changed recently enough.",
+            severity="high",
+        ),
+    )
+
+
 def _fresh(repo: Path, path: str, max_age_days: int, as_of: str) -> dict:
     result = run_claim(repo, _fresh_claim(path, max_age_days, as_of))
     return result["checks"][0]
@@ -432,3 +456,29 @@ class GitFreshTest(unittest.TestCase):
                     self.assertIn("differs", result["detail"])
                 else:
                     self.assertNotIn("detail", result)
+
+    def test_a_symlink_loop_fails_and_the_next_check_still_runs(self):
+        when = "2026-10-23T12:00:00Z"
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _commit(repo, "risk", when)
+            (repo / "loop").symlink_to("loop")
+            result = _two_fresh(repo, "loop/child.md", "risk.md", when)
+        self.assertEqual(result["checks"][0]["status"], "fail")
+        self.assertIn("symlink loop", result["checks"][0]["detail"])
+        self.assertEqual(result["checks"][1]["status"], "pass")
+
+    def test_a_path_through_a_file_fails_and_the_next_check_still_runs(self):
+        when = "2026-10-23T12:00:00Z"
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _init(repo)
+            (repo / "notdir").write_text("file\n", encoding="utf-8")
+            (repo / "risk.md").write_text("risk\n", encoding="utf-8")
+            _commit(repo, "files", when)
+            result = _two_fresh(repo, "notdir/child.md", "risk.md", when)
+        self.assertEqual(result["checks"][0]["status"], "fail")
+        self.assertIn("not a directory path", result["checks"][0]["detail"])
+        self.assertEqual(result["checks"][1]["status"], "pass")
