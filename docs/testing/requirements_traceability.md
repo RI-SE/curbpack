@@ -1,0 +1,61 @@
+# Requirement traceability
+
+Each row is a `MUST-*` id from `daniel/ny_sdd/docs/REQUIREMENTS.md`. No carried case names that id. The id is listed in [outside.md](outside.md). That list is not a pass.
+
+| Requirement | Sentence | Carried case |
+| --- | --- | --- |
+| MUST-01 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-02 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-03 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-04 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-10 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-11 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-12 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-13 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-14 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-20 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-21 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-22 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-23 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-24 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-25 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-30 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-31 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-32 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-33 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-34 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-35 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-40 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-41 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-42 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-43 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-44 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-45 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-46 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-47 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-48 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-50 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-51 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-52 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-53 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-60 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-61 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-62 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-63 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-70 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-71 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-72 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-73 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-74 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-80 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-81 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-82 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-83 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-84 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-90 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-91 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-92 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-93 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-94 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-95 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
+| MUST-96 | `daniel/ny_sdd/docs/REQUIREMENTS.md` | none |
