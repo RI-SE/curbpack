@@ -16,7 +16,7 @@
 | Current task | Task 3 — closed |
 | Last completed task | Task 3 — checkpoint passed, then status set to DONE |
 | Last verified tests | 2026-10-24: python3 -m checks --repo /tmp/tst01-suite.tqJXSt/repo --packs docs/reference/test-packs --out /tmp/tst01-suite.tqJXSt/repo/run-result.json — claims 7 exit 0, pass 7, fail 0, worktree clean. Nine-claim probe the same day exited 1. |
-| Last checkpoint commit | None |
+| Last checkpoint commit | 441d143e2f74f17653ffd885beb3e9e1b7952291 |
 | Requirements | TST-R01–TST-R07 in this plan |
 | Packs v2 | `docs/reference/packs2.md` at Studio `971b1ae`. This story does not edit it. |
 | Blockers | None |
