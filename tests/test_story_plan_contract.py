@@ -67,7 +67,7 @@ class StoryPlanTest(unittest.TestCase):
         self.assertTrue(any("Unchecked" in e for e in module.validate_plan(changed, "done")))
 
     def test_template_is_draft_only(self):
-        template = (SCRIPT.parents[1] / "docs" / "plan" / "TEMPLATE.md").read_text()
+        template = (SCRIPT.parents[1] / "plan" / "TEMPLATE.md").read_text()
         self.assertEqual([], module.validate_plan(template, "draft"))
         self.assertTrue(module.validate_plan(template, "ready"))
 

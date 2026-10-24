@@ -16,7 +16,7 @@
 | Current task | Task 0 — derive requirements and get plan approval |
 | Last completed task | None |
 | Last verified tests | 2026-10-23 baseline above. Not a story acceptance run. |
-| Last checkpoint commit | None. Resolve with `git log -1 --format=%H -- docs/plan/SYS-02.md`. |
+| Last checkpoint commit | None. Resolve with `git log -1 --format=%H -- plan/SYS-02.md`. |
 | Requirements | `docs/req/pack-editor.md` — SYS-R01, SYS-R02, SYS-R03 DRAFT |
 | Packs v2 | Not applicable. This story does not change Pack, Requirement, Claim, signature, or result fields. Contract file remains `docs/reference/packs2.md`. |
 | Blockers | None |
@@ -35,7 +35,7 @@
 ### Task 0 — derive and approve requirements and plan
 
 **Inputs / contracts:** SYS-02 story; `docs/req/pack-editor.md` SYS-R01–SYS-R03; `Makefile`; `scripts/ci/run.py`; `scripts/ci/checks/tests.py`; `docs/agile/future_cicd.md` presentation section; `policies/testing.md`; EP-03 SEC-03 line in `docs/agile/epics/03-ssdf-security/EPIC.md`.
-**Change files:** the story, `docs/req/pack-editor.md`, `docs/req/README.md`, `docs/plan/SYS-02.md`, the EP-01 story row, the EP-03 SEC-03 pointer.
+**Change files:** the story, `docs/req/pack-editor.md`, `docs/req/README.md`, `plan/SYS-02.md`, the EP-01 story row, the EP-03 SEC-03 pointer.
 **Acceptance / stop:** Human approval recorded on this checkpoint. No product code in this task.
 
 - [ ] Requirements derived, traceable, reviewed and approved.

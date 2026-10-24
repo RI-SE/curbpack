@@ -6,9 +6,10 @@ Curbpack Studio provides a local UI for Requirements, evidence Discovery and Cla
 
 - `AGENTS.md` - agent entry point; `.cursor/skills/story-workflow/SKILL.md` governs approved story execution.
 - `policies/` - project-wide engineering rules.
-- `doc/ARCHITECTURE.md` and subsystem `ARCHITECTURE.md` - current system/subsystem architecture contracts.
+- `docs/arch/ARCHITECTURE.md` and subsystem `ARCHITECTURE.md` - current system/subsystem architecture contracts.
 - `docs/reference/packs2.md` - imported Packs v2 data-model reference; provenance and status in `docs/reference/README.md`.
-- `docs/agile/`, `docs/req/`, `docs/plan/`, `docs/test/` - user stories, requirements, work plans and acceptance evidence.
+- `docs/agile/`, `docs/req/`, `docs/test/` - user stories, derived requirements, and acceptance evidence.
+- `plan/` - active story plans. `impl/` - finished story plans. `impl/pilot/` - imported pilot protocols, not the live board.
 - `app/`, `requirements/`, `claims/`, `discovery/`, `checks/`, `review/`, `common/` - actual pilot implementation.
 - `tests/` - existing Python tests.
 

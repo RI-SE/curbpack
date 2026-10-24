@@ -11,7 +11,7 @@
 
 ## Resumable execution protocol (OptiCAP style — mandatory)
 
-**Source of truth:** this tracked file at `poc2/doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md`. The architecture files are authoritative for behavior; this plan is authoritative only for execution progress. No separate status database, chat memory, or hidden agent scratchpad.
+**Source of truth:** this tracked file at `impl/pilot/REQUIREMENTS_IMPLEMENTATION_PLAN.md`. The architecture files are authoritative for behavior; this plan is authoritative only for execution progress. No separate status database, chat memory, or hidden agent scratchpad.
 
 **At the beginning of every Cursor session:**
 1. Read the overall and Requirements architecture, the Packs v2 reference, and **this file**, starting with *Current checkpoint* below.
@@ -38,7 +38,7 @@
 | Last verified local commit | Experiment `e6ff438dd7ef6b1f3bdaa32a148f59c96108c2a1`. Reference JSON `d8c743ac2360bd232b326635ff2e66defcc62f8f`. Reference provenance `4dc03a25a4a9a5954b780f29fc0308a80b198c6e`. |
 | Uncommitted files | Pre-existing unrelated: untracked `poc2/AGENTS.md`; dirty `poc/data/**`; `.DS_Store`, `daniel/`, `docs/superpowers/`, `poc2/poc2/`, `poc2.zip`, `poc2/requirements.zip`. New working copies stay gitignored under `poc2/data/workspace/`. |
 | Last tests and result | `cd poc2 && .venv/bin/python -m unittest tests.test_requirements_produce tests.test_requirements_extract tests.test_xml_adapters` — PASS, 26 tests. `cd poc2 && .venv/bin/python -m unittest discover -s tests` — PASS, 96 tests (outside the sandbox; a sandboxed run failed 3 git-init tests). |
-| Active blocker/decision | Task 20 human walkthrough still open. Do **not** mark Task 20 done; do **not** start Task 21. Do not continue prompt iteration. Hardware applicability and VII.5 `MUST` are still missing from the prompt experiment. The reference is not a certified gold standard. Side plan `poc2/doc/PLAN/AGENT_LOOP_EXPERIMENT.md` recorded the revise-loop subset run. It did not add `agent_loop` and did not edit `ARCHITECTURE.md`. |
+| Active blocker/decision | Task 20 human walkthrough still open. Do **not** mark Task 20 done; do **not** start Task 21. Do not continue prompt iteration. Hardware applicability and VII.5 `MUST` are still missing from the prompt experiment. The reference is not a certified gold standard. Side plan `impl/pilot/AGENT_LOOP_EXPERIMENT.md` recorded the revise-loop subset run. It did not add `agent_loop` and did not edit `ARCHITECTURE.md`. |
 | **Exact next action** | Human Task 20 walkthrough. Do not start Task 21. Do not run a fourth prompt revision. |
 
 **Architecture cleanup (2026-10-21):** removed `poc2/extract/` (`ARCHITECTURE.md` and the empty `__init__.py`). Extract stays a component of `poc2/requirements/`. Task 20 is not done. This is not Task 21. `cd poc2 && .venv/bin/python -m unittest discover -s tests` — 148 tests, 2 failures, 2 errors. The failures are `test_requirements_ui` and `test_ui_smoke` looking for old page text, and the errors are `test_discover_feedback` and `test_pilot_pack_selection`. None of them import `poc2/extract/`.
@@ -67,7 +67,7 @@ Limitation (honest): pilot Discover is thin (chooser + `discover_candidates` onl
 No production code in this step. These readings are the limited scope for later tasks. They do not add a schema.
 
 1. **Signing.** `curbpack/docs/reference/packs2.md` §2.2 requires `signed` on a published Requirement and omits `origin` on the publisher's Requirement. `poc2/common/validate.py` `validate_requirement(..., published=True)` already requires `signed`, rejects `origin`, and requires `source.edition`. `published=False` allows an unsigned draft. `validate_pack(..., sealed=True)` requires the pack `signed` block. `read_signature` does not consult Git; its unsigned reason text mentions a signed Git commit, but no lookup exists. Open contract 3 stays closed for implementation: no task adds a Git-path lookup. Task 6 publication uses `published=True` for each Requirement and requires the directory seal. An absent `signed` fails that publication check. It does not make a working-copy draft invalid.
-2. **Paths.** Requirements owns path order. The overall architecture example that grouped timestamp then pack id was illustrative and disagreed with `requirements/ARCHITECTURE.md`. This step changes only that example in `poc2/doc/ARCHITECTURE.md` to `<root>/<pack-id>/<YYYY-MM-DDTHHMMSSZ>/` and `published/<pack-id>/<version>/`. Diagnostics stay outside the sealed directory. The plan's sibling `<timestamp>.work/` and `jobs/` locations are the implementation choice the Requirements document leaves open. They are not Packs v2 fields.
+2. **Paths.** Requirements owns path order. The overall architecture example that grouped timestamp then pack id was illustrative and disagreed with `requirements/ARCHITECTURE.md`. This step changes only that example in `docs/arch/ARCHITECTURE.md` to `<root>/<pack-id>/<YYYY-MM-DDTHHMMSSZ>/` and `published/<pack-id>/<version>/`. Diagnostics stay outside the sealed directory. The plan's sibling `<timestamp>.work/` and `jobs/` locations are the implementation choice the Requirements document leaves open. They are not Packs v2 fields.
 3. **Coverage publication is decided.** See open contract 2. Coverage stays diagnostic. It is not a publication gate, and a release does not certify complete legal coverage.
 4. **Ids.** Further CRA loci still have no naming convention. Tests pass `FIXTURE-VII-1A` and `VII.1(a)` as caller inputs.
 5. **Baseline imports.** Tests run from `poc2/` with `.venv/bin/python`. Domain imports are `common.*`, `extract.pipeline`, `extract.atomize`, `requirements.editing`. `extract_annex_vii_risk` and `PUBLISHED_LOCUS` still publish only locus `3`.
@@ -101,7 +101,7 @@ These apply to every task. Values are taken from the Requirements specification 
 - UI modules render and collect input. Filesystem traversal, validation, signing, and publication rules stay in ordinary Python functions.
 - Do not import `poc/`. Do not modify `poc/`.
 - Do not create empty component directories. Task 0 moves the existing Extract modules and their data. Later tasks add files under `poc2/requirements/extract/` rather than recreating `poc2/extract/` code.
-- All `ARCHITECTURE.md` files are read-only during implementation, as `poc2/doc/POLICIES/DEVELOPMENT.md` requires. Record documentation conflicts in this plan. Do not edit an architecture file to remove one.
+- All `ARCHITECTURE.md` files are read-only during implementation, as `policies/development.md` requires. Record documentation conflicts in this plan. Do not edit an architecture file to remove one.
 - Existing checks, claims, discovery, compile, and review keep reading a Pack directory of `pack.json` plus Requirement JSON files.
 - Local signing stays Ed25519 via `common.keystore`. The UI sentence remains: "Local Ed25519 keys are created when someone signs. They are not X.509 certificates."
 
@@ -128,7 +128,7 @@ PoC1 behavior to reimplement, without its files: catalog listing, extract progre
 
 ## Storage layout used by this plan
 
-`poc2/doc/ARCHITECTURE.md` draws `internal/data/<timestamp>/<pack-id>/`. `poc2/requirements/ARCHITECTURE.md` draws `<root>/<pack-id>/<timestamp>/` plus `published/<pack-id>/<version>/`, and the overall document assigns path detail to the Requirements specification. This plan follows the Requirements specification.
+`docs/arch/ARCHITECTURE.md` draws `internal/data/<timestamp>/<pack-id>/`. `poc2/requirements/ARCHITECTURE.md` draws `<root>/<pack-id>/<timestamp>/` plus `published/<pack-id>/<version>/`, and the overall document assigns path detail to the Requirements specification. This plan follows the Requirements specification.
 
 The workspace root is a function argument. It is not stored on a Requirement.
 
@@ -167,9 +167,9 @@ Do not invent a persistent schema or a Requirement id convention to close these.
 
 3. **Signed Git commit as a seal when `signed` is absent.** `packs2.md` §2.6 specifies the five facts. It does not say which repository or path `read_signature` should inspect. `common.signing.read_signature` does not consult Git today. No phase adds that lookup.
 
-4. **Working-copy path order.** Keep the pack-first layout in `requirements/ARCHITECTURE.md`: `<root>/<pack-id>/<YYYY-MM-DDTHHMMSSZ>/` and `published/<pack-id>/<version>/`. The illustrative edit in `poc2/doc/ARCHITECTURE.md` (`fd406a4`) is an accepted one-time exception. Further `ARCHITECTURE.md` edits are not allowed during implementation.
+4. **Working-copy path order.** Keep the pack-first layout in `requirements/ARCHITECTURE.md`: `<root>/<pack-id>/<YYYY-MM-DDTHHMMSSZ>/` and `published/<pack-id>/<version>/`. The illustrative edit in `docs/arch/ARCHITECTURE.md` (`fd406a4`) is an accepted one-time exception. Further `ARCHITECTURE.md` edits are not allowed during implementation.
 
-5. **Extract's old architecture file is removed.** `poc2/doc/ARCHITECTURE.md` no longer points at `poc2/extract/ARCHITECTURE.md`. That file and `poc2/extract/` were removed on 2026-10-21. Do not implement its `decisions.json` or replay sections, and do not recreate the file.
+5. **Extract's old architecture file is removed.** `docs/arch/ARCHITECTURE.md` no longer points at `poc2/extract/ARCHITECTURE.md`. That file and `poc2/extract/` were removed on 2026-10-21. Do not implement its `decisions.json` or replay sections, and do not recreate the file.
 
 `pack.version` on the working copy and the version passed to `publish_pack` must be the same string. The user saves that version onto the working copy, seals the directory, then publishes. Publication copies bytes. It does not rewrite `pack.version` inside the release, because a rewritten `pack.json` would no longer match the directory seal.
 
@@ -223,7 +223,7 @@ Expected: PASS, 19 tests. The same assertions as before the move. Result: PASS, 
 Do not start Task 1 in this step.
 
 ```bash
-git add poc2/requirements/extract poc2/extract/atomize.py poc2/extract/pipeline.py poc2/extract/data poc2/demo_setup.py poc2/tests/test_m1_requirement.py poc2/tests/test_m2_discovery.py poc2/tests/test_m3_claims.py poc2/tests/test_m4_checks.py poc2/tests/test_e2e_annex_vii.py poc2/doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md
+git add poc2/requirements/extract poc2/extract/atomize.py poc2/extract/pipeline.py poc2/extract/data poc2/demo_setup.py poc2/tests/test_m1_requirement.py poc2/tests/test_m2_discovery.py poc2/tests/test_m3_claims.py poc2/tests/test_m4_checks.py poc2/tests/test_e2e_annex_vii.py impl/pilot/REQUIREMENTS_IMPLEMENTATION_PLAN.md
 git commit -m "$(cat <<'EOF'
 Move existing Extract code under Requirements without changing behavior.
 
@@ -236,12 +236,12 @@ EOF
 
 Do not edit these files while implementing.
 
-1. `poc2/doc/ARCHITECTURE.md` current-path table still lists Extract at `poc2/extract/` (+ `extract/ARCHITECTURE.md`). After Task 0 the code and data are at `poc2/requirements/extract/`. The target column already names that path. The current-path cell is stale until a human edits it.
+1. `docs/arch/ARCHITECTURE.md` current-path table still lists Extract at `poc2/extract/` (+ `extract/ARCHITECTURE.md`). After Task 0 the code and data are at `poc2/requirements/extract/`. The target column already names that path. The current-path cell is stale until a human edits it.
 2. `poc2/extract/ARCHITECTURE.md` stays in `poc2/extract/` and still describes that tree, including `decisions.json`. It is historical. Do not copy that contract into `requirements/ARCHITECTURE.md`, and do not replace the file with a pointer during implementation.
 3. The uncommitted working copy of `poc2/requirements/ARCHITECTURE.md` still names `poc2/extract/data/annex_vii.txt` as the current fixture path. After Task 0 that file is `poc2/requirements/extract/data/annex_vii.txt`.
-4. The old Phase 6 sentence that would add a line to `poc2/doc/ARCHITECTURE.md` is not executed. Architecture files stay read-only under `poc2/doc/POLICIES/DEVELOPMENT.md`.
+4. The old Phase 6 sentence that would add a line to `docs/arch/ARCHITECTURE.md` is not executed. Architecture files stay read-only under `policies/development.md`.
 
-**Resolved 2026-10-21.** An authorised cleanup removed `poc2/extract/`, including `ARCHITECTURE.md`. Items 1 and 2 above record the conflict at Task 0. They are not an instruction to keep that file. The current-path row in `poc2/doc/ARCHITECTURE.md` lists Extract at `poc2/requirements/extract/`. The fixture path in `poc2/requirements/ARCHITECTURE.md` is `poc2/requirements/extract/data/annex_vii.txt`. Item 4 still stands for other architecture edits.
+**Resolved 2026-10-21.** An authorised cleanup removed `poc2/extract/`, including `ARCHITECTURE.md`. Items 1 and 2 above record the conflict at Task 0. They are not an instruction to keep that file. The current-path row in `docs/arch/ARCHITECTURE.md` lists Extract at `poc2/requirements/extract/`. The fixture path in `poc2/requirements/ARCHITECTURE.md` is `poc2/requirements/extract/data/annex_vii.txt`. Item 4 still stands for other architecture edits.
 
 ## Phase 1 — Dated copy, several Requirements, edit, publish
 
@@ -1001,7 +1001,7 @@ Result: PASS, 83 tests.
 
 - [x] **Step 3: Commit** with message `Place later Extract modules with the moved code.`
 
-The current-path row in `poc2/doc/ARCHITECTURE.md` and the historical `poc2/extract/ARCHITECTURE.md` stay unchanged. Those conflicts are listed under Task 0. Do not copy the old `decisions.json` contract into the Requirements specification. The 2026-10-21 cleanup later removed `poc2/extract/` and updated that current-path row. Task 15 itself did not.
+The current-path row in `docs/arch/ARCHITECTURE.md` and the historical `poc2/extract/ARCHITECTURE.md` stay unchanged. Those conflicts are listed under Task 0. Do not copy the old `decisions.json` contract into the Requirements specification. The 2026-10-21 cleanup later removed `poc2/extract/` and updated that current-path row. Task 15 itself did not.
 
 
 ## Phase 7 — Requirements 1.0 hardening and integration
@@ -1021,7 +1021,7 @@ Result: PASS, 84 tests.
 - [x] **Task 17: Demonstrate source coverage.** Verify every provision in the selected source is represented in the run accounting and inspectable in the UI; incomplete and intentionally excluded items must be visually distinct. Resolve the human-approved scope-exclusion gate before making publication claim. Do not silently skip invalid LLM output or use placeholder Requirements as production IDs.
 
 Selected-copy catalog renders `coverage.json` loci with distinct written/excluded/failed classes. Open contract 2 already decided coverage is not a publication gate; the catalog keeps the diagnostic disclaimer. Invalid LLM output still fails producers (Task 14/16); FIXTURE ids remain test-only labels.
-- [x] **Task 18: Source adapters.** Complete a tested CRA Annex VII adapter with stable locators and deterministic segmentation; explicitly verify current canonical source against fixture. Evaluate official Formex XML as a source-specific implementation option rather than an assumed dependency. NIS2 and Medtech remain honest stubs until separately scoped; do not advertise them as supported. **Parallel work:** official CRA/NIS2 Formex adapters are tracked in `poc2/doc/PLAN/XML_SOURCE_ADAPTERS_PLAN.md` (does not mark this task done until that plan’s acceptance criteria pass and are reconciled here).
+- [x] **Task 18: Source adapters.** Complete a tested CRA Annex VII adapter with stable locators and deterministic segmentation; explicitly verify current canonical source against fixture. Evaluate official Formex XML as a source-specific implementation option rather than an assumed dependency. NIS2 and Medtech remain honest stubs until separately scoped; do not advertise them as supported. **Parallel work:** official CRA/NIS2 Formex adapters are tracked in `impl/pilot/XML_SOURCE_ADAPTERS_PLAN.md` (does not mark this task done until that plan’s acceptance criteria pass and are reconciled here).
 
 **Reconciliation (2026-10-13):** `XML_SOURCE_ADAPTERS_PLAN.md` is COMPLETE. CRA text fixture adapter remains; Formex is optional via `cra-xml`. NIS2 is no longer a stub: it is a **partial** Formex adapter (Art.1–46 ready; annexes I–III not ready with diagnostics). Medtech remains **stub**. Source dropdown shows `partial`/`stub` status so support is not overstated. Compare artifacts document `1(d)` as the only genuine wording difference.
 - [x] **Task 19: Sign/publication semantics.** Test unsigned vs signed Requirements strictly as `packs2.md` allows; no-op edits, stale writes, invalid signatures, altered pack bytes, zero and partial coverage, duplicate version, and failure rollback. Check output directories are truly immutable to the product APIs. Verify a published version opens in downstream Claims/Checks without data conversion.
@@ -1122,7 +1122,7 @@ TESTS: <exact commands> — PASS / FAIL / NOT RUN (reason)
 GIT: <local commit sha> or <uncommitted changes>
 BLOCKERS: <none or exact decision>
 NEXT: Phase N / Task M / step K — <one concrete next action>
-CHECKPOINT: poc2/doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md updated [yes/no + reason]
+CHECKPOINT: impl/pilot/REQUIREMENTS_IMPLEMENTATION_PLAN.md updated [yes/no + reason]
 ```
 
 ## Spec coverage

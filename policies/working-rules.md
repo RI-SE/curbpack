@@ -2,7 +2,7 @@
 
 The goal is code a human engineer can read and safely change six months later. Favor clarity over rapid generation, cleverness, compactness or theoretical extensibility.
 
-1. **Follow the target subsystem architecture.** All new PoC2 development must follow the target structure and ownership in `doc/ARCHITECTURE.md`. Deviations require an explicit architectural decision. Current physical paths remain valid until migration; do not change behaviour merely to match the layout.
+1. **Follow the target subsystem architecture.** All new PoC2 development must follow the target structure and ownership in `docs/arch/ARCHITECTURE.md`. Deviations require an explicit architectural decision. Current physical paths remain valid until migration; do not change behaviour merely to match the layout.
 2. **Read before editing.** Inspect the relevant old PoC behavior and the applicable `packs2.md` fields. State the input, output and acceptance check for the next small change.
 3. **One concern per function.** Prefer small named functions, ordinary Python data structures, explicit parameters and unsurprising control flow. Avoid giant orchestrators and accidental cross-component imports.
 4. **UI is only UI.** No domain logic, file scanning, validation rules or data-format transformations in HTML handlers, pages, callbacks or event code. Use named use-case functions and test them independently.

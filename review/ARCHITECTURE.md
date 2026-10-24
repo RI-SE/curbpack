@@ -8,7 +8,7 @@ Sibling documents:
 
 - `poc2/checks/ARCHITECTURE.md` — the only writer of a run result.
 - `poc2/claims/ARCHITECTURE.md` — Claim sealing (`sign_claim`). Final review reads that seal and does not write it.
-- `poc2/doc/ARCHITECTURE.md` — the cover page and the product scenarios.
+- `docs/arch/ARCHITECTURE.md` — the cover page and the product scenarios.
 - `poc2/tests/Review_ACCEPTANCE_SCENARIOS.md` — testable behavioral acceptance for Review/Discovery integration, not a second normative architecture.
 
 This activity is final human Review of a Check run. Claims Review in the Claims document is a separate Claim-sealing action; the older Curbpack CLI `review` for deterministic document/reference inspection is not the final human Review UI.

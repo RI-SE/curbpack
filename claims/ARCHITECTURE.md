@@ -2,7 +2,7 @@
 
 Status: **normative target; implementation gaps are identified explicitly.**  
 Normative domain model: `docs/reference/packs2.md` in this repository.
-Sibling PoC2 docs (`poc2/doc/ARCHITECTURE.md`, working rules, end-to-end scenario) describe the wider product. This file owns Discovery and Claims under `poc2/claims/`; some current code is still in `poc2/discovery/` until migration.
+Sibling documents (`docs/arch/ARCHITECTURE.md`, `policies/working-rules.md`, `docs/concepts/end-to-end-scenario.md`) describe the wider product. This file owns Discovery and Claims under `poc2/claims/`; some current code is still in `poc2/discovery/` until migration.
 
 Extract is out of scope. Do not change Extract’s implementation or architecture from this document.
 
@@ -471,7 +471,7 @@ Not architecture blockers:
 2. **Claim `id` suggestion in UI** — UX only; manual ids satisfy the model.
 3. **Which concrete `source` ids the first non-stopgap reach implements** — decide when implementing source selection; until then the markdown walk remains an explicit limitation, and unsupported IDs must not silently look like empty success once selection is on. A Candidate `path` does not record the `{source, args}` entry that produced it. `read_source_text` takes the locator alone. Which reach applies when more than one source can emit the same locator is part of this decision. Do not add a field to Candidate for it here.
 
-Extract / pack-publication open questions stay in `poc2/doc/ARCHITECTURE.md`.
+Extract / pack-publication open questions stay in `docs/arch/ARCHITECTURE.md`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Discover claims view — review plan
 
-> **Status: COMPLETE as a record of the researcher pilot.** The Claim shape in the global constraints below — one Check per Claim file — was superseded by `curbpack/docs/reference/packs2.md` §2.4. A Claim now has `source`, source `args`, `description`, and `checks[]`. Create writes one Claim for the evidence. Architecture sentences from section 3 are applied for the rest of the pilot: a finding may have zero checks, Create does not overwrite, and an unsigned Claim with Checks can be evaluated. This file belongs in `doc/IMPL/`.
+> **Status: COMPLETE as a record of the researcher pilot.** The Claim shape in the global constraints below — one Check per Claim file — was superseded by `curbpack/docs/reference/packs2.md` §2.4. A Claim now has `source`, source `args`, `description`, and `checks[]`. Create writes one Claim for the evidence. Architecture sentences from section 3 are applied for the rest of the pilot: a finding may have zero checks, Create does not overwrite, and an unsigned Claim with Checks can be evaluated. This file belongs in `impl/pilot/`.
 >
 > **Later Review, not this pilot:** a completed Review report must list every unsigned Claim and every Claim whose signature does not verify, with their Requirement ids, in an appendix. That list must not change check results.
 >
@@ -75,7 +75,7 @@ PoC1 does not create a Packs v2 Claim. The check list and the signed flag are bo
 
 Apply these sentences only. Do not rewrite the surrounding sections. Until they are in the architecture files, do not implement.
 
-### `poc2/doc/ARCHITECTURE.md` — HTTP server
+### `docs/arch/ARCHITECTURE.md` — HTTP server
 
 Replace:
 

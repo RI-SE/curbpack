@@ -1,6 +1,6 @@
 # PoC2 Implementation Plan
 
-This is a sequence of demonstrable increments, **not** a rewrite-all checklist. Re-plan only when actual code or tests show a reason. New work follows the target subsystem architecture in `doc/ARCHITECTURE.md`.
+This is a sequence of demonstrable increments, **not** a rewrite-all checklist. Re-plan only when actual code or tests show a reason. New work follows the target subsystem architecture in `docs/arch/ARCHITECTURE.md`.
 
 ## Product ambition and functional baseline
 
@@ -28,12 +28,12 @@ Milestone pass criteria below remain valid for their slices. Closing the plan as
 
 **Closed.** Documentation baseline only. No application code.
 
-- `doc/END_TO_END_SCENARIO.md` holds the 12 October narrative unchanged, and the acceptance criteria that map its steps onto `packs2.md`.
+- `docs/concepts/end-to-end-scenario.md` holds the 12 October narrative unchanged, and the acceptance criteria that map its steps onto `packs2.md`.
 - Those criteria are the end-to-end acceptance test for the later milestones.
 - `docs/reference/packs2.md` in this repository stays normative. The historical narrative does not override it.
 - `poc/` is unchanged.
 
-**Pass:** the scenario and its acceptance criteria are in `poc2/doc/`, and the architecture doc points at them.
+**Pass:** the scenario and its acceptance criteria are in `docs/concepts/end-to-end-scenario.md`, and `docs/arch/ARCHITECTURE.md` points at them.
 
 ## M1 — Requirement creation and management (first app)
 
@@ -75,7 +75,7 @@ Milestone pass criteria below remain valid for their slices. Closing the plan as
 - Capture a human conclusion without pretending it is a machine check. Signing must be verifiable or clearly marked unavailable in the PoC.
 - Integrate a thin demo cover page for navigation and status only.
 
-**Pass:** the path in `doc/END_TO_END_SCENARIO.md` meets that file's acceptance criteria, with identifiable inputs, outputs and explicit limitations.
+**Pass:** the path in `docs/concepts/end-to-end-scenario.md` meets that file's acceptance criteria, with identifiable inputs, outputs and explicit limitations.
 
 ## Progress
 
@@ -139,8 +139,8 @@ Limitations that remain:
 
 Next: none for 0.0.1a. Further checks (`fresh`, `owned`, `dep_ban`) and other annex points are out of this slice.
 
-The checks, compile, final-review, and cover-page contracts are in `checks/ARCHITECTURE.md`, `review/ARCHITECTURE.md`, and `doc/ARCHITECTURE.md`. Where this slice is narrower than those contracts, those files say so.
+The checks, compile, final-review, and cover-page contracts are in `checks/ARCHITECTURE.md`, `review/ARCHITECTURE.md`, and `docs/arch/ARCHITECTURE.md`. Where this slice is narrower than those contracts, those files say so.
 
 ## Execution discipline
 
-Do one milestone at a time. The end-to-end acceptance test is the criteria section of `doc/END_TO_END_SCENARIO.md`, read against `packs2.md`. Before each milestone, name the smallest working slice; after it, demonstrate the output, tests and changed files. Refactor only when concrete duplication or coupling appears. Avoid parallel app rewrites, temporary adapters that become permanent, or changing Packs v2 merely to accommodate existing PoC code. If Packs v2 is ambiguous, record the exact blocker and continue independent work rather than silently deciding a new schema.
+Do one milestone at a time. The end-to-end acceptance test is the criteria section of `docs/concepts/end-to-end-scenario.md`, read against `packs2.md`. Before each milestone, name the smallest working slice; after it, demonstrate the output, tests and changed files. Refactor only when concrete duplication or coupling appears. Avoid parallel app rewrites, temporary adapters that become permanent, or changing Packs v2 merely to accommodate existing PoC code. If Packs v2 is ambiguous, record the exact blocker and continue independent work rather than silently deciding a new schema.

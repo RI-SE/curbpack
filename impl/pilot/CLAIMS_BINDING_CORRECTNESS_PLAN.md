@@ -1,6 +1,6 @@
 # Claims binding correctness (pilot Step 1)
 
-Status: COMPLETE — move to `poc2/doc/IMPL/` after commit.
+Status: COMPLETE — move to `impl/pilot/` after commit.
 
 ## Current checkpoint
 

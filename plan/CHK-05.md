@@ -16,7 +16,7 @@
 | Current task | Task 5 — git_signed and git_signer |
 | Last completed task | Task 4 — git_author is not a signature |
 | Last verified tests | 2026-10-23: `python3 -m unittest tests.test_check_dispatch tests.test_git_checks tests.test_m4_checks tests.test_m3_claims` OK 44. `python3 tests/cs/path_boundary.py` OK 3. |
-| Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- docs/plan/CHK-05.md`. |
+| Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/CHK-05.md`. |
 | Requirements | `docs/req/checks.md` — CHK-R01–CHK-R13 DRAFT. Maintainer accepted OPEN-1 through OPEN-8 on 2026-10-23. |
 | Packs v2 | `docs/reference/packs2.md`, imported from Curbpack `b07b8deb9fed331b493241251087ce7ce648f5e4`. §4 and §4.1 name `git_fresh`, `git_signed`, `git_author`, and `git_signer`. |
 | Blockers | None |
@@ -47,7 +47,7 @@ Packs v2 §4 and §4.1 are committed. `git_fresh` covers the age rule, fail-clos
 ### Task 0 — derive and approve requirements and plan
 
 **Inputs / contracts:** CHK-05 story; `checks/ARCHITECTURE.md`; `checks/available_checks.json`; `checks/run.py`; `common/validate.py`; `claims/ui/researcher.py`; `claims/ui/http.py`; `policies/architecture.md`; `policies/testing.md`; Packs v2 §2.5, §3.1, §4 at `a9ea1ef`.
-**Change files:** `docs/req/checks.md`, `docs/req/README.md`, `docs/plan/CHK-05.md`
+**Change files:** `docs/req/checks.md`, `docs/req/README.md`, `plan/CHK-05.md`
 **Acceptance / stop:** Human approval recorded on this checkpoint. Any OPEN item still open blocks Build.
 
 - [x] Requirements derived and conflicts recorded with file references. Proposals are not normative.

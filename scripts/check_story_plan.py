@@ -93,9 +93,17 @@ def main() -> int:
     args = ap.parse_args()
     if not re.fullmatch(r"[A-Z][A-Z0-9]*-[0-9]{2,3}", args.story_id):
         ap.error("story_id must be a canonical story ID such as CHK-05")
-    path = args.root / "docs" / "plan" / (args.story_id + ".md")
+    if args.phase == "done":
+        path = args.root / "impl" / (args.story_id + ".md")
+        missing = (
+            f"ERROR: DONE plan must be at {path}. "
+            f"Move it from plan/{args.story_id}.md when the story is closed."
+        )
+    else:
+        path = args.root / "plan" / (args.story_id + ".md")
+        missing = f"ERROR: Missing canonical plan: {path}"
     if not path.is_file():
-        print(f"ERROR: Missing canonical plan: {path}", file=sys.stderr)
+        print(missing, file=sys.stderr)
         return 1
     problems = validate_plan(path.read_text(encoding="utf-8"), args.phase)
     for p in problems:

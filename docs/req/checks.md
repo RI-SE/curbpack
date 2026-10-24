@@ -43,7 +43,7 @@ Each proposal is one way to satisfy the story. It is not a schema. Implementatio
 - The same story says not to implement the old `owned` Check under that name without an explicit Packs v2 compatibility decision.
 - `checks/available_checks.json` already contains those `fresh` and `owned` schemas. The discovery form hardcodes both (`claims/ui/researcher.py`, `claims/ui/http.py`).
 
-**Proposal:** Change Packs v2 §4 and the published catalog in the Curbpack repository first. Replace the Check questions now named `fresh` and `owned` with four ids, one command, and one args schema each. Do not implement `owned`. Do not add the four ids only in this repository's `available_checks.json` while §4 still names `fresh` and `owned`. Record the Packs v2 commit in `docs/plan/CHK-05.md` before any studio test for those ids.
+**Proposal:** Change Packs v2 §4 and the published catalog in the Curbpack repository first. Replace the Check questions now named `fresh` and `owned` with four ids, one command, and one args schema each. Do not implement `owned`. Do not add the four ids only in this repository's `available_checks.json` while §4 still names `fresh` and `owned`. Record the Packs v2 commit in `plan/CHK-05.md` before any studio test for those ids.
 
 **Justification:** The story requires the catalog alignment before coding, and policy forbids a second persistent Check contract. Implementing either the proposed ids or `owned` from this draft would publish a catalog Packs v2 does not contain, or would implement the Check the story excluded.
 
@@ -71,7 +71,7 @@ Each proposal is one way to satisfy the story. It is not a schema. Implementatio
 
 ### OPEN-4 — Signature verification and trust
 
-**Unspecified:** SSH versus OpenPGP, what a verified signature is, and which trust configuration is used. The pilot signs Claims with local Ed25519 keys (`doc/IMPLEMENTATION_PLAN.md`). Those keys are not Git commit signatures. The same note says an unsigned Git commit leaves the Claim unsigned and that the Git author string is not the signer.
+**Unspecified:** SSH versus OpenPGP, what a verified signature is, and which trust configuration is used. The pilot signs Claims with local Ed25519 keys (`impl/pilot/IMPLEMENTATION_PLAN.md`). Those keys are not Git commit signatures. The same note says an unsigned Git commit leaves the Claim unsigned and that the Git author string is not the signer.
 
 **Proposal:** Verify only a signature on the relevant commit that Git itself accepts for that repository's configured SSH or OpenPGP trust. The Check's `args` name the trust input that was already present in the product repo (allowed signers file or the repo's Git configuration). A missing signature, a signature Git does not accept, a missing Git binary, or a missing trust input is `fail` with a `detail` that distinguishes those cases. Do not embed a new trust store, do not fetch keys, and do not treat Claim `signed` as a Git signature.
 

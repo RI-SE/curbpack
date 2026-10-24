@@ -19,7 +19,7 @@
 
 ## Configuration conflict (stopped)
 
-`poc2/doc/ARCHITECTURE.md` says deployment configuration, outside Packs v2, tells the process where Pack directories are and which product-repo path receives the durable report, and that a later named setting must extend that existing configuration explicitly.
+`docs/arch/ARCHITECTURE.md` says deployment configuration, outside Packs v2, tells the process where Pack directories are and which product-repo path receives the durable report, and that a later named setting must extend that existing configuration explicitly.
 
 `validate_curbpack_config` allows only `packs`, `exclude_requirements`, `requirements`, and `hunt`. There is no existing named setting for a report path or a Pack directory. Adding one would invent a configuration field the contracts do not define.
 
@@ -36,14 +36,14 @@ What the contracts already allow, and this plan does:
 
 | Field | Value |
 | --- | --- |
-| Plan state | IN PROGRESS. Implementation of Tasks 1–3 is in the tree. This plan is not Done. Do not move it to `poc2/doc/IMPL/`. |
+| Plan state | IN PROGRESS. Implementation of Tasks 1–3 is in the tree. This plan is not Done. Do not move it to `impl/pilot/`. |
 | Current phase/task | Stop for independent review. |
 | Last completed task | Task 2 and the Review regression. Opening Review does not write. `POST /review/compile` writes `docs/reports/review-report.json`. Replacing that file requires `confirm=yes` and does not copy `decision`. A later Check leaves the file. The page and the cover show `same_run`. |
 | Last verified local commit | Task 1 is `c105ab52c8a1ac512d9914292b9bce9a2cb78ed6`. Task 2 is `56892d0d0b0798424f8ab60845f08ca06af3f4f6`. |
 | Uncommitted files | None for this plan after that commit. Unrelated and not part of this plan: `poc/data/**`, `daniel/`, `docs/superpowers/specs/2026-10-02-curbpack-scan-design.md`, `poc2.zip`, `poc2 2.zip`, `poc/data/step2_discover/feedback/cra-vii__European-Parliament-MCP-Server.json`. |
 | Last tests and result | `cd poc2 && .venv/bin/python -m unittest tests.test_review_report_kept tests.test_review_discover_again tests.test_review_replace_flow tests.test_review_coverage tests.test_review_coverage_ui tests.test_ui_smoke tests.test_review_compile tests.test_pilot_pack_selection tests.test_e2e_annex_vii tests.test_claim_workflow` — PASS, 25 tests, outside the sandbox. The two `ModelError` tracebacks in that run are the refused decision-before-compile and unconfirmed replace. `cd poc2 && .venv/bin/python -m unittest discover -s tests` — 165 tests, FAILED (failures=1, errors=1 on the first run; the error was a different discover-job test on the second run). Stable failure: `test_requirements_ui.RequirementsUiTest.test_catalog_edit_sign_publish_and_extract` looks for `title="MUST, SHOULD, or MAY…"` and the editor uses `aria-label`. That file is not in this diff. The discover-job `invalid JSON` error did not repeat on the same test and the discover-to-claim test passed alone. Browser: `http://127.0.0.1:8771/review` showed `not saved` before any file existed; after `POST /review/compile` the page showed the unsigned reading, `same run: yes`, and the replace checkbox, and the file was `docs/reports/review-report.json`. A later Check after the evidence changed left the decision in place and the page said `same run: no. This saved report is an older run.` `POST /review/compile` without `confirm` returned HTTP 400 and kept the decision. `POST /review/compile` with `confirm=yes` dropped `decision`. The cover then said `Report: review report verifiable no. same run: yes.` Button clicks in the browser were blocked; the pages were loaded and the form routes were posted. |
 | Active blocker/decision | No named configuration field for a report path. Use `docs/reports/review-report.json`. Do not invent a setting. The full suite is not green because of the Requirements editor assertion above. That is outside this plan. |
-| **Exact next action** | Independent review of this plan under `policies/review.md`. Do not move this file to `poc2/doc/IMPL/`. Do not start Requirements Task 21. Do not push. |
+| **Exact next action** | Independent review of this plan under `policies/review.md`. Do not move this file to `impl/pilot/`. Do not start Requirements Task 21. Do not push. |
 
 ## Tasks
 
@@ -80,4 +80,4 @@ What the contracts already allow, and this plan does:
 - [x] `cd poc2 && .venv/bin/python -m unittest discover -s tests` — 165 tests. Not green. See the checkpoint. The stable failure is the Requirements editor `title` assertion, outside this diff.
 - [x] Exercise Review in the browser: preview does not write; compile writes `docs/reports/review-report.json`; a later Check leaves that file; compile without confirmation leaves it; compile with confirmation replaces it without the old decision. Pages were loaded. The form posts were the HTTP routes. Button clicks were blocked.
 - [x] Update this checkpoint with commands, results, and the commit hash.
-- [ ] Stop for independent review. Do not move this file to `poc2/doc/IMPL/`. Do not start Requirements Task 21.
+- [ ] Stop for independent review. Do not move this file to `impl/pilot/`. Do not start Requirements Task 21.

@@ -1,6 +1,6 @@
 # Agentic development harness — NIST SSDF evidence map
 
-**Historical source:** CTAM `policies/work-items.md`, `policies/review.md`, and PoC2 `doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md`. This file maps existing controls; it does not replace these rules.
+**Historical source:** CTAM `policies/work-items.md`, `policies/review.md`, and PoC2 `impl/pilot/REQUIREMENTS_IMPLEMENTATION_PLAN.md`. This file maps existing controls; it does not replace these rules.
 
 **Reference:** NIST SP 800-218 SSDF v1.1 (2022), https://csrc.nist.gov/pubs/sp/800/218/final. Mapping is a control plan, **not a claim of SSDF compliance**. The automated plan check validates structure only, not secure behavior.
 

@@ -6,7 +6,7 @@ Status: recorded. Human chose to repair `propose_critique_revise`. The subset ru
 
 | Field | Value |
 | --- | --- |
-| Plan state | RECORDED. Human chose to repair `propose_critique_revise` and not add `agent_loop`. No `ARCHITECTURE.md` edit. The subset run is recorded below. This file stays in `poc2/doc/PLAN/` because the original acceptance named `agent_loop`, which was not added. Local commits only. Branch `main`. Do not push. |
+| Plan state | RECORDED. Human chose to repair `propose_critique_revise` and not add `agent_loop`. No `ARCHITECTURE.md` edit. The subset run is recorded below. This file stays in `impl/pilot/` because the original acceptance named `agent_loop`, which was not added. Local commits only. Branch `main`. Do not push. |
 | Source | Copied from `/Users/DanielFl/Downloads/AGENT_IMPLEMENTATION_PLAN.md` on 2026-10-14 after the user said to run it. `poc2/AGENTS.md` was read first. |
 | Last completed task | Subset run `2026-10-14T052026Z`, copy `2026-10-14T052102Z`. Code commits `214a1da`, `d0d1480`, `03e6612`. |
 | Uncommitted files | Pre-existing unrelated files stay unstaged: `daniel/`, `docs/superpowers/`, the PoC feedback JSON, and the `poc2/requirements.zip` deletion. Trace and the dated copy are gitignored under `poc2/data/workspace/`. |
@@ -22,7 +22,7 @@ The plan below adds optional `strategy='agent_loop'` and `max_rounds=10` only fo
 
 The same plan says the existing `propose_critique_revise` path must not be silently rebranded as the agent. In `produce.py` the critique return value is discarded (`_critique_text`); the revise call still sends the previous proposal JSON. `REQUIREMENTS_IMPLEMENTATION_PLAN.md` records that as a known defect, not redesigned.
 
-`poc2/doc/POLICIES/DEVELOPMENT.md` says an implementation plan that conflicts with the architecture stops the affected task. Permission to run this plan is not permission to edit `ARCHITECTURE.md`.
+`policies/development.md` says an implementation plan that conflicts with the architecture stops the affected task. Permission to run this plan is not permission to edit `ARCHITECTURE.md`.
 
 A separate trace directory outside any sealed Pack does not conflict with Packs v2, provided `llm` notes keep the existing fields and raw responses stay out of those notes. That part waits on the strategy decision.
 

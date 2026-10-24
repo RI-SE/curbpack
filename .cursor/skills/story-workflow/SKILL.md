@@ -21,14 +21,14 @@ Read `AGENTS.md`, applicable `policies/`, the story, relevant architecture, actu
 
 For a nontrivial story, switch to **Plan Mode** (`Shift+Tab`), not direct code generation. Write these files immediately, before maintainer approval:
 
-- The canonical plan `docs/plan/<STORY-ID>.md`, following `docs/plan/TEMPLATE.md`, with `Plan status = DRAFT`, the checkpoint filled in, and an exact next action. Mark every step `TODO` initially. Cursor's temporary plan under `.cursor/plans/` is not the canonical plan; do not keep two competing active plans.
+- The canonical plan `plan/<STORY-ID>.md`, following `plan/TEMPLATE.md`, with `Plan status = DRAFT`, the checkpoint filled in, and an exact next action. Mark every step `TODO` initially. Cursor's temporary plan under `.cursor/plans/` is not the canonical plan; do not keep two competing active plans.
 - Derived requirements in the existing relevant document under `docs/req/`. Each requirement has an ID, source story ID, explicit behavior, a verifiable acceptance condition, and status DRAFT. Avoid parallel requirements files and duplicated normative contracts. Link plan steps to requirement IDs and planned tests.
 
 The plan records: story and proposed requirements (each with stable ID and acceptance evidence); current behavior and baseline commands/results; changes actually needed (including "already implemented"); small independently verifiable steps in dependency order (files owned by which subsystem, expected observable change, test to write first, relevant regression checks, and rollback/stop condition); risks for provenance, signature or report preservation, Git worktree/revision, auth/authorization, input validation, secrets and external-model/network dependencies where relevant.
 
 Then run one independent plan review. Dispatch a **new** subagent with its own context, using the existing Superpowers `writing-plans` prompt `plan-document-reviewer-prompt.md`. Do not restate that prompt. Give it paths only — no summary of architecture, policy, or Packs v2, and no session history:
 
-- `docs/plan/<STORY-ID>.md`, the story, and the `docs/req/` document
+- `plan/<STORY-ID>.md`, the story, and the `docs/req/` document
 - the relevant `*/ARCHITECTURE.md` and `docs/arch/` files
 - `policies/`
 - `docs/reference/packs2.md`
@@ -47,7 +47,7 @@ Task 0 already wrote the requirements as DRAFT. Add or edit an executable test f
 
 For each approved step:
 
-1. Mark `IMPL-START` with the requirement IDs, expected files and planned test in `docs/plan/<STORY-ID>.md`.
+1. Mark `IMPL-START` with the requirement IDs, expected files and planned test in `plan/<STORY-ID>.md`.
 2. Write the smallest deterministic automated test that demonstrates the *missing* behavior, then **run it and record the expected failure** (RED). Confirm it failed for the intended reason, not import/setup/network breakage. If the test already passes, report that behavior as already present; do not force a fake RED or write unnecessary production code.
 3. Make the smallest in-scope implementation change (GREEN). No opportunistic refactor, new abstraction, UI redesign, unrelated dependency or Packs v2 change. Existing Python business logic remains independent of GUI.
 4. Run the focused test plus impacted regression tests; include real integration/CLI/browser acceptance where required. Capture exact commands, counts, failures, skips and reason. Do not describe a skipped/unrun test as passing.
@@ -70,4 +70,4 @@ Do not combine unrelated steps in one commit. Existing known baseline failures m
 
 After **each step**, report: step/requirement IDs, changed files, RED evidence or already-implemented observation, GREEN/regression commands and actual results, independent-review findings, local commit hash, open risks and exact next step. Update the canonical plan so a fresh agent context can resume without relying on chat history.
 
-The story is `DONE` only when every applicable requirement has evidenced acceptance, no new regression is hidden, the plan has final status, and the final report clearly distinguishes implemented, existing, unverified and deferred work. Do not push automatically.
+The story is `DONE` only when every applicable requirement has evidenced acceptance, no new regression is hidden, the plan has final status, and the final report clearly distinguishes implemented, existing, unverified and deferred work. Move `plan/<STORY-ID>.md` to `impl/<STORY-ID>.md`, then run `python3 scripts/check_story_plan.py <STORY-ID> --phase done`. Phases `draft`, `ready`, and `checkpoint` read `plan/<STORY-ID>.md`. Phase `done` reads `impl/<STORY-ID>.md`. Do not move a file out of `impl/pilot/`. Do not push automatically.

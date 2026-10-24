@@ -6,7 +6,7 @@ Normative domain model: `docs/reference/packs2.md` in this repository, §2.5, §
 
 Sibling documents:
 
-- `poc2/doc/ARCHITECTURE.md` — how a run result joins the other activities, and the cover page.
+- `docs/arch/ARCHITECTURE.md` — how a run result joins the other activities, and the cover page.
 - `poc2/review/ARCHITECTURE.md` — compile and final review. They read a run result. They do not produce one.
 - `poc2/claims/ARCHITECTURE.md` — Claim files this runner reads. Claim sealing stays there.
 

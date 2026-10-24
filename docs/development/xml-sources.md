@@ -87,4 +87,4 @@ Current classification (after `NO.P` leak fix; fixture unchanged):
 
 ## Plan
 
-Implementation progress: `poc2/doc/PLAN/XML_SOURCE_ADAPTERS_PLAN.md` is COMPLETE. Requirements Task 18 reconciles against that acceptance.
+Implementation progress: `impl/pilot/XML_SOURCE_ADAPTERS_PLAN.md` is COMPLETE. Requirements Task 18 reconciles against that acceptance.

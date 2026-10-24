@@ -12,9 +12,9 @@ PoC2 carries the Packs v2 lifecycle: source text, reviewed requirements, discove
 
 `docs/reference/packs2.md` in this repository is the common persistent domain model. It is authoritative for the meaning and fields of Pack, Requirement (including `discovery_hints`), Claim, source/check IDs and `args`, signing, and run results. Do not introduce alternate persistent representations. If a field or lifecycle rule is unresolved, record the precise question rather than improvising a schema.
 
-Each subsystem owns one `ARCHITECTURE.md` containing its component contracts. This file does not duplicate those specifications. Extract is a component of Requirements. Its code is `poc2/requirements/extract/`, and its contract is [`../requirements/ARCHITECTURE.md`](../requirements/ARCHITECTURE.md). The check runner is in [`../checks/ARCHITECTURE.md`](../checks/ARCHITECTURE.md). Compile and final review are currently specified together in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md); the target splits them into `compile/` and `review/` without inventing new Packs v2 types.
+Each subsystem owns one `ARCHITECTURE.md` containing its component contracts. This file does not duplicate those specifications. Extract is a component of Requirements. Its code is `poc2/requirements/extract/`, and its contract is [`../requirements/ARCHITECTURE.md`](../../requirements/ARCHITECTURE.md). The check runner is in [`../checks/ARCHITECTURE.md`](../../checks/ARCHITECTURE.md). Compile and final review are currently specified together in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md); the target splits them into `compile/` and `review/` without inventing new Packs v2 types.
 
-`doc/END_TO_END_SCENARIO.md` keeps the 12 October narrative unchanged. Its acceptance criteria are the end-to-end test for that Annex VII point 3 path. The narrative is not a second specification. Scenarios that cross several subsystems are in this file.
+`docs/concepts/end-to-end-scenario.md` keeps the 12 October narrative unchanged. Its acceptance criteria are the end-to-end test for that Annex VII point 3 path. The narrative is not a second specification. Scenarios that cross several subsystems are in this file.
 
 The original `poc/` and CTAM repositories are historical references only. Studio is the implementation repository.
 
@@ -22,7 +22,7 @@ The original `poc/` and CTAM repositories are historical references only. Studio
 
 | Document | Owns |
 | --- | --- |
-| `poc2/doc/ARCHITECTURE.md` (this file) | Overall architecture, subsystem boundaries, interfaces, current vs target paths |
+| `docs/arch/ARCHITECTURE.md` (this file) | Overall architecture, subsystem boundaries, interfaces, current vs target paths |
 | One `ARCHITECTURE.md` per subsystem | That subsystem's components and internal contracts |
 
 There is exactly one `ARCHITECTURE.md` per subsystem. Components, including Extract, are specified in their subsystem document; existing component documents may remain as temporary references during migration, but are not additional target architecture documents. Do not duplicate contracts.
@@ -52,12 +52,6 @@ This is the agreed physical target structure, not merely an illustrative diagram
 ```text
 
 poc2/
-
-├── doc/
-
-│   ├── ARCHITECTURE.md
-
-│   └── WORKING_RULES.md
 
 ├── requirements/
 
@@ -109,20 +103,20 @@ Until migration, existing implementation paths and documentation links remain au
 
 | Concern | Current path (valid until migration) | Target path |
 | --- | --- | --- |
-| Overall architecture | `poc2/doc/ARCHITECTURE.md` | unchanged |
-| Working rules | `poc2/doc/WORKING_RULES.md` | unchanged |
-| Requirements subsystem | `poc2/requirements/` (+ [`ARCHITECTURE.md`](../requirements/ARCHITECTURE.md)) | `poc2/requirements/` |
-| Extract component | `poc2/requirements/extract/` (contracts in [`../requirements/ARCHITECTURE.md`](../requirements/ARCHITECTURE.md)) | `poc2/requirements/extract/` |
+| Overall architecture | `docs/arch/ARCHITECTURE.md` | unchanged |
+| Working rules | `policies/working-rules.md` | unchanged |
+| Requirements subsystem | `poc2/requirements/` (+ [`ARCHITECTURE.md`](../../requirements/ARCHITECTURE.md)) | `poc2/requirements/` |
+| Extract component | `poc2/requirements/extract/` (contracts in [`../requirements/ARCHITECTURE.md`](../../requirements/ARCHITECTURE.md)) | `poc2/requirements/extract/` |
 | Requirements Editor | `poc2/requirements/editing.py` (and related) | `poc2/requirements/editor/` |
 | Requirements UI | Pages/handlers under `poc2/app/` | `poc2/requirements/ui/` |
-| Claims subsystem | `poc2/claims/` (+ [`ARCHITECTURE.md`](../claims/ARCHITECTURE.md)) | `poc2/claims/` |
+| Claims subsystem | `poc2/claims/` (+ [`ARCHITECTURE.md`](../../claims/ARCHITECTURE.md)) | `poc2/claims/` |
 | Discovery component | `poc2/discovery/` | `poc2/claims/discovery/` |
 | Claims Editor / review callables | `poc2/claims/` (e.g. `bind.py`) | `poc2/claims/editor/` (and claims review callables under the Claims subsystem) |
 | Claims UI | Pages/handlers under `poc2/app/` | `poc2/claims/ui/` |
-| Checks | `poc2/checks/` (+ [`ARCHITECTURE.md`](../checks/ARCHITECTURE.md)) | `poc2/checks/` |
+| Checks | `poc2/checks/` (+ [`ARCHITECTURE.md`](../../checks/ARCHITECTURE.md)) | `poc2/checks/` |
 | Checks UI | `check_page` in `poc2/app/pages.py` | `poc2/checks/ui/` |
-| Compile | Functions under `poc2/review/` (e.g. `compile.py`); contracts in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md) | `poc2/compile/` (+ its own `ARCHITECTURE.md`) |
-| Final review | Same `poc2/review/` tree; contracts in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md) | `poc2/review/` (final review only; compile contracts move out) |
+| Compile | Functions under `poc2/review/` (e.g. `compile.py`); contracts in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md) | `poc2/compile/` (+ its own `ARCHITECTURE.md`) |
+| Final review | Same `poc2/review/` tree; contracts in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md) | `poc2/review/` (final review only; compile contracts move out) |
 | Review UI | `review_page` in `poc2/app/pages.py` | `poc2/review/ui/` |
 | Shared IO / validate / signing | `poc2/common/` | `poc2/common/` |
 | Cover / navigation | `poc2/app/` | `poc2/app/` (navigation and integration only) |
@@ -195,8 +189,8 @@ Subsystems do not have to run in one fixed order. Discovery, claim edits, and ch
 | Find candidate evidence | claims (Discovery) | Local QA / engineer | Requirement `discovery_hints`, repo `hunt`, working tree | A candidate list on the Discover job, plus Useful/Poor, checks, and added findings in workspace feedback | Those records are operational. They are not Claims, Requirements, or a domain type |
 | Bind and maintain claims | claims | Local QA / engineer | Requirements, the chosen candidate path, product sources | Claims with `requirement_id`, `source`, source `args`, `description`, and `checks[]` | One Requirement may have multiple Claims. One piece of evidence with several Checks is one Claim |
 | Seal Claim | claims | Local QA / company key holder | Claim | Same Claim with `signed` set | Signing operation on the existing Claim |
-| Evaluate | checks | `curbcheck` or the PoC2 check runner | `curbpack.json`, pack directories, Claim files, the working tree | One run result | [`../checks/ARCHITECTURE.md`](../checks/ARCHITECTURE.md). Read-only evaluation |
-| Compile | compile | The person who builds the bundle | That run result, the Requirement files and Claim files it names | One review report in the product repository | Currently specified in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md). Does not run checks. Does not commit |
+| Evaluate | checks | `curbcheck` or the PoC2 check runner | `curbpack.json`, pack directories, Claim files, the working tree | One run result | [`../checks/ARCHITECTURE.md`](../../checks/ARCHITECTURE.md). Read-only evaluation |
+| Compile | compile | The person who builds the bundle | That run result, the Requirement files and Claim files it names | One review report in the product repository | Currently specified in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md). Does not run checks. Does not commit |
 | Final review | review | Reviewer | The review report | `decision` and `review-sign` on that report | The reviewer's words. Not a check result and not a Claim seal |
 | Scaffold | unresolved | Engineer | A relative path in the product repo | A new file on that path | Current code: `scaffold/stub.py`. Refuses to overwrite. Product content, not a Claim or a result. Placement in the target tree is open |
 
@@ -245,7 +239,7 @@ PoC2 operates on **configured filesystem locations**, not on a new timestamped P
 
 `curbpack.json` in the product repository names the Pack id and version that product uses. The Pack bytes stay in the publisher's repository. Deployment configuration, already outside Packs v2, says how the process reaches those Pack directories and which product-repo path receives the durable report. A later named setting must extend that existing configuration explicitly.
 
-`.curbpack/` in the product repository is temporary working data, including the run result. The durable report is specified in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md). Compile and `review-sign` do not create a Git commit. The user may commit the report afterwards. That commit is a later revision of the product repository. It is not the code revision the report describes.
+`.curbpack/` in the product repository is temporary working data, including the run result. The durable report is specified in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md). Compile and `review-sign` do not create a Git commit. The user may commit the report afterwards. That commit is a later revision of the product repository. It is not the code revision the report describes.
 
 A dirty worktree remains allowed. The report must not present the recorded commit as the sole content that was checked. That distinction is the review contract's reading of `worktree`, not a new field.
 
@@ -281,13 +275,13 @@ There is no Candidate schema and no ClaimDraft schema.
 
 - **common/**: small, explicit functions that load, validate, and persist Packs v2 objects, plus shared signing helpers. The same object shape is read and written by Extract, editors, and downstream tools. The old top-level fields `law_text`, `search`, and `claim` are forbidden on a Requirement. `references[].law_text` is required, as `packs2.md` specifies.
 
-- **requirements/**: Extract and proposal review/application, import of published Packs, configured working content, Compare, Consolidator, Requirements editing and human review, validation and signing, and the Requirements UI. It does not perform product discovery, create Claims, evaluate checks or manage Git history and distribution. Details: [`../requirements/ARCHITECTURE.md`](../requirements/ARCHITECTURE.md).
+- **requirements/**: Extract and proposal review/application, import of published Packs, configured working content, Compare, Consolidator, Requirements editing and human review, validation and signing, and the Requirements UI. It does not perform product discovery, create Claims, evaluate checks or manage Git history and distribution. Details: [`../requirements/ARCHITECTURE.md`](../../requirements/ARCHITECTURE.md).
 
-- **claims/**: Discovery, Claims editing/rebinding/review, sealing Claims, and the Claims UI. It must not rewrite publisher Requirements merely to bind product-specific evidence. Details: [`../claims/ARCHITECTURE.md`](../claims/ARCHITECTURE.md). Current Discovery code remains under `poc2/discovery/` until moved.
+- **claims/**: Discovery, Claims editing/rebinding/review, sealing Claims, and the Claims UI. It must not rewrite publisher Requirements merely to bind product-specific evidence. Details: [`../claims/ARCHITECTURE.md`](../../claims/ARCHITECTURE.md). Current Discovery code remains under `poc2/discovery/` until moved.
 
-- **checks/**: [`../checks/ARCHITECTURE.md`](../checks/ARCHITECTURE.md). The runner executes each entry in `checks[]` and writes one run result.
+- **checks/**: [`../checks/ARCHITECTURE.md`](../../checks/ARCHITECTURE.md). The runner executes each entry in `checks[]` and writes one run result.
 
-- **compile/**: builds the review report from a run result. Does not run checks. Until split, contracts remain in [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md).
+- **compile/**: builds the review report from a run result. Does not run checks. Until split, contracts remain in [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md).
 
 - **review/**: final human review — `decision` and `review-sign` on the report. Does not run checks. Claim sealing stays in Claims.
 
@@ -325,7 +319,7 @@ Local single-user operation with configured filesystem paths requires no OIDC or
 
 For every migrated component, verify: (1) it reads a Packs v2 fixture; (2) it performs its real task; (3) it writes/returns the expected data shape; (4) round-trip editing preserves unrelated fields; (5) it works through direct calls without UI; and (6) errors are explicit. End-to-end verification uses a controlled sample product and at least one Requirement with multiple Claims, a missing file failure, and a clean/dirty run where supported.
 
-Do not equate a green structural check with the legal Requirement being fulfilled. Keep human review explicit. The Annex VII point 3 path is the acceptance criteria in `doc/END_TO_END_SCENARIO.md`. The product scenarios below add the paths that cross several subsystems.
+Do not equate a green structural check with the legal Requirement being fulfilled. Keep human review explicit. The Annex VII point 3 path is the acceptance criteria in `docs/concepts/end-to-end-scenario.md`. The product scenarios below add the paths that cross several subsystems.
 
 ## Subsystems stay independent
 
@@ -346,7 +340,7 @@ Packs v2 objects are the interface. A subsystem reads the object the previous wr
 
 A product change is a new check run. A new sealed Requirement is a Requirements save and, when the person wants it, a new discovery. None of those restart Extract. The cover page links to each area and does not order them.
 
-**Review of failed evidence (cross-subsystem contract).** Review shows the failed Claim, its existing Checks and the Requirement. From that context a user opens **the existing Discovery for that one Requirement in a popup**; the failed Claim remains visible in the underlying Review view. Discovery searches as usual and neither reads nor changes Claims. A presentation-only hook, supplied with the applicable Check run and existing Claims, **greys out** candidate evidence already covered by a matching Claim with passing Checks for that Requirement. It does not remove candidates, alter ranking, modify the discovery job, or declare compliance. With missing, stale, ambiguous or failing Check coverage, the candidate is not greyed. The user inspects candidates and their suitable Checks, explicitly **adds one or more new Claims**, then **deletes the old Claim if it has truly been replaced**; nothing is implicitly replaced or retired. Checks are rerun, new Claim(s) can be reviewed/signed, and final Review records/signs its separate human decision. Discovery never executes Checks or creates Claims. No new Finder/Reconcile/Relocate component, domain type or parallel workflow record is introduced. Details and UI acceptance belong to [`../claims/ARCHITECTURE.md`](../claims/ARCHITECTURE.md), [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md) and the Review acceptance scenarios.
+**Review of failed evidence (cross-subsystem contract).** Review shows the failed Claim, its existing Checks and the Requirement. From that context a user opens **the existing Discovery for that one Requirement in a popup**; the failed Claim remains visible in the underlying Review view. Discovery searches as usual and neither reads nor changes Claims. A presentation-only hook, supplied with the applicable Check run and existing Claims, **greys out** candidate evidence already covered by a matching Claim with passing Checks for that Requirement. It does not remove candidates, alter ranking, modify the discovery job, or declare compliance. With missing, stale, ambiguous or failing Check coverage, the candidate is not greyed. The user inspects candidates and their suitable Checks, explicitly **adds one or more new Claims**, then **deletes the old Claim if it has truly been replaced**; nothing is implicitly replaced or retired. Checks are rerun, new Claim(s) can be reviewed/signed, and final Review records/signs its separate human decision. Discovery never executes Checks or creates Claims. No new Finder/Reconcile/Relocate component, domain type or parallel workflow record is introduced. Details and UI acceptance belong to [`../claims/ARCHITECTURE.md`](../../claims/ARCHITECTURE.md), [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md) and the Review acceptance scenarios.
 
 `same_run` and the section-progress row are computed on read. The cover does not write them, and it does not keep a workflow file. PoC1's `state.json` and `scan.json` are not inputs.
 
@@ -366,18 +360,18 @@ The counts are not a second copy of those objects. A missing run result is the l
 
 | Link | Page |
 | --- | --- |
-| Requirements | The catalog / editor / review in [`../requirements/ARCHITECTURE.md`](../requirements/ARCHITECTURE.md) |
-| Discover | Discovery in [`../claims/ARCHITECTURE.md`](../claims/ARCHITECTURE.md) |
+| Requirements | The catalog / editor / review in [`../requirements/ARCHITECTURE.md`](../../requirements/ARCHITECTURE.md) |
+| Discover | Discovery in [`../claims/ARCHITECTURE.md`](../../claims/ARCHITECTURE.md) |
 | Claims | The Claims editor in that document. Claim sealing is the Claim review surface linked from the editor. |
 | Scaffold | The stub form. It calls `write_stub`. Placement of scaffold in the target tree is open. |
-| Check | The check page in [`../checks/ARCHITECTURE.md`](../checks/ARCHITECTURE.md) |
-| Review | Compile and final review; currently [`../review/ARCHITECTURE.md`](../review/ARCHITECTURE.md) |
+| Check | The check page in [`../checks/ARCHITECTURE.md`](../../checks/ARCHITECTURE.md) |
+| Review | Compile and final review; currently [`../review/ARCHITECTURE.md`](../../review/ARCHITECTURE.md) |
 
 The demo's prepare action loads a fixture workspace. It is not a subsystem activity, and the other pages do not call it. The current `snapshot` reads only `CRA-ANNEX-VII-RISK.json`. The target contract is the table above; it must read the configured working content or an available published Pack where applicable.
 
 ## Product acceptance scenarios
 
-Each scenario uses the contracts already named. Domain checks call the functions. UI checks render a page or post a form and assert which function ran. The Annex VII point 3 criteria in `doc/END_TO_END_SCENARIO.md` stay the test for that single-provision path.
+Each scenario uses the contracts already named. Domain checks call the functions. UI checks render a page or post a form and assert which function ran. The Annex VII point 3 criteria in `docs/concepts/end-to-end-scenario.md` stay the test for that single-provision path.
 
 1. **Several Annex VII provisions.** A deterministic CRA adapter identifies every locus in the controlled source. Extract proposes unsigned Requirements for explicit review and application in the configured working directory, including correctly mapped `references[].law_text` and `discovery_hints`. The user can edit multiple Requirements; no existing Requirement is removed or overwritten merely by running Extract.
 

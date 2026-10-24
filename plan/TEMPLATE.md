@@ -2,7 +2,7 @@
 
 ## Summary
 
-<!-- Based on the existing PoC2 resumable execution plan in doc/PLAN/REQUIREMENTS_IMPLEMENTATION_PLAN.md.
+<!-- Based on the existing PoC2 resumable execution plan in impl/pilot/REQUIREMENTS_IMPLEMENTATION_PLAN.md.
      Execution rules remain in AGENTS.md and the existing story-workflow Skill. -->
 
 - **Story:** `docs/agile/epics/.../stories/<STORY-ID>-...md`
@@ -19,7 +19,7 @@
 | Current task | Task 0 — derive requirements and get plan approval |
 | Last completed task | None |
 | Last verified tests | Not run; baseline to be established |
-| Last checkpoint commit | Resolve: `git log -1 --format=%H -- docs/plan/<STORY-ID>.md` (none if uncommitted) |
+| Last checkpoint commit | Resolve: `git log -1 --format=%H -- plan/<STORY-ID>.md` (none if uncommitted) |
 | Requirements | `docs/req/<area>.md` — draft IDs / approved IDs |
 | Packs v2 | Local verified path and Git commit; or `not applicable` with reason |
 | Blockers | <specific missing decision, or None> |
@@ -36,7 +36,7 @@
 ### Task 0 — derive and approve requirements and plan
 
 **Inputs / contracts:** <source files and revision>
-**Change files:** `docs/req/...`, `docs/plan/<STORY-ID>.md`
+**Change files:** `docs/req/...`, `plan/<STORY-ID>.md`
 **Acceptance / stop:** human approval recorded; conflicts resolved.
 
 - [ ] Requirements derived, traceable, reviewed and approved.

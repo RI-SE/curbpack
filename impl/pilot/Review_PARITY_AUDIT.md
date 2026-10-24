@@ -66,4 +66,4 @@ The product owner's later explicit decision supersedes the earlier proposal for 
 - The pilot does **not** require durable per-item Keep/Re-hunt marks or automatic cross-run review-currency reconciliation. Those remain unimplemented and are not to be declared achieved. The current report retains free-text decisions; it is not a structured per-Claim decision log.
 - **Independent defect remains:** actual `/check` code deletes saved Review reports; this violates the normative non-destructive Checks contract and requires a separate code fix/test. Compile's single report filename still lacks reliable multi-report retention without an external mechanism.
 
-The authoritative operational contracts are `poc2/doc/ARCHITECTURE.md`, `poc2/claims/ARCHITECTURE.md` and `poc2/review/ARCHITECTURE.md`. This audit records why; it is not a fourth specification.
+The authoritative operational contracts are `docs/arch/ARCHITECTURE.md`, `poc2/claims/ARCHITECTURE.md` and `poc2/review/ARCHITECTURE.md`. This audit records why; it is not a fourth specification.
