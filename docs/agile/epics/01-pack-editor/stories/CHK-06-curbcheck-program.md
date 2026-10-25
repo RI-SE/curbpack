@@ -1,7 +1,7 @@
 # CHK-06 — Ship curbcheck as its own program
 
 **Epic:** EP-01
-**Status:** Ready
+**Status:** Done
 **Depends on:** CHK-02
 
 ## Story
