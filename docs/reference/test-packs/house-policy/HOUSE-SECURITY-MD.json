@@ -1,0 +1,19 @@
+{
+  "id": "HOUSE-SECURITY-MD",
+  "pack_id": "house-policy",
+  "remediation_hint": "Add SECURITY.md with vulnerability reporting and response expectations.",
+  "source": {
+    "framework": "internal",
+    "instrument": "House Policy Example",
+    "identifier": "HOUSE-SECURITY-MD",
+    "language": "en",
+    "url": "packs/house-policy/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "HOUSE-SECURITY-MD",
+      "law_text": "SECURITY.md present with Security header and substantive content."
+    }
+  ]
+}

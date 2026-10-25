@@ -1,0 +1,44 @@
+{
+  "id": "CRA-ANNEX-VII-MANUAL",
+  "requirement_id": "CRA-ANNEX-VII-MANUAL",
+  "source": "documents",
+  "args": {
+    "path": "docs/annex-vii/user_manual_security.md"
+  },
+  "description": "User manual security sections present and bound to this repository.",
+  "severity": "medium",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/annex-vii/user_manual_security.md"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/annex-vii/user_manual_security.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 150,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# User Manual — Security",
+              "## Secure Configuration",
+              "## Product Disposal"
+            ]
+          },
+          {
+            "kind": "token"
+          }
+        ]
+      }
+    }
+  ]
+}

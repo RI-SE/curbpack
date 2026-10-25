@@ -1,0 +1,19 @@
+{
+  "id": "HOUSE-SECURITY-TXT",
+  "pack_id": "house-policy",
+  "remediation_hint": "Create .well-known/security.txt with Contact and Expires fields.",
+  "source": {
+    "framework": "internal",
+    "instrument": "House Policy Example",
+    "identifier": "HOUSE-SECURITY-TXT",
+    "language": "en",
+    "url": "packs/house-policy/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "HOUSE-SECURITY-TXT",
+      "law_text": "security.txt present for coordinated disclosure."
+    }
+  ]
+}

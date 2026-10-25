@@ -1,0 +1,51 @@
+Curbpack commit: b07b8deb9fed331b493241251087ce7ce648f5e4
+No signed block was written.
+
+Source pack ids: 3. Present: 3. Absent: 0.
+Source requirement ids: 0. pack.json has rules, not requirement objects. Present: 0. Absent: 0.
+Source claim ids: 0. The old pack file has no claim object. Present: 0. Absent: 0.
+Present plus absence equals source for those ids: 3 + 0 = 3.
+
+Source rule ids: 15. Present as requirements: 9. Absent: 6.
+Present plus absence equals source for rule ids: 9 + 6 = 15.
+Claims written for a written requirement: 9. Claims not written: 6.
+Present plus absence equals source for those claims: 9 + 6 = 15.
+
+The old `expected` sentence is the requirement `law_text` when the instrument is the policy itself, and it is the claim `description`. What the file must contain is an `exist` check and `contents` probes `size`, `words`, `headers`, and `token`. What must not appear is a `contents` probe `pattern` (old `text_forbid`), a `placeholder` probe, or `dep_ban`. `settlement` is not a field. A pass is the probes holding. It is not a Yes.
+
+House policy language is en. The five house requirements use the rule's own `expected` sentence as `law_text`. `source.instrument` is the pack name `House Policy Example`. `source.identifier` and `locator` are the rule id. `source.framework` is `internal`, from the pack description "internal engineering policy". `source.url` is `packs/house-policy/pack.json`, the file that sentence was read from. The pack has no http address. `type` was not copied.
+
+CRA law text for the four statute requirements is the Formex provision text in
+requirements/extract/data/official_xml/cra. source.identifier is CELEX:32024R2847
+and source.language is en, both already in the citation URL. source.edition was
+not set. The citation date effective_from is not an edition. Claim `description`
+on those four is the rule's `expected` sentence.
+
+Written
+CRA-ANNEX-VII-RISK (cra-baseline): locator VII.3. Claim checks exist and contents. Carried. On the suite checkout both pass. Fields not copied: type, settlement.
+CRA-ANNEX-VII-SUPPORT (cra-baseline): locator VII.4. Claim checks exist and contents. Carried. On the suite checkout both pass. Fields not copied: type, settlement.
+CRA-ANNEX-VII-MANUAL (cra-baseline): locators VII.1(d), II.8(a), II.8(d). Claim checks exist and contents. Carried. On the suite checkout both pass. Fields not copied: type, settlement.
+CRA-ART14-PATH (cra-baseline): every Formex provision of Article 14, locators 14(1) through 14(10). strength MUST. Claim checks exist and contents. Carried. On the suite checkout both pass. Fields not copied: type, settlement, citations.effective_from.
+HOUSE-SECURITY-MD (house-policy): law_text is the expected sentence. Claim checks exist and contents. Carried. On the suite checkout both pass. Field not copied: type.
+HOUSE-SECURITY-TXT (house-policy): law_text is the expected sentence. Claim checks exist and contents. Carried. On the suite checkout both pass. Field not copied: type.
+HOUSE-DEP-AXIOS-PIN (house-policy): law_text is the expected sentence. Claim check dep_ban. Not one of the seven files the suite copies in. Field not copied: type.
+HOUSE-SECRET-PATHS (house-policy): law_text is the expected sentence. Claim check contents with probe pattern, on the eight source paths. Not one of the seven files the suite copies in. Field not copied: type.
+HOUSE-ANTI-PLACEHOLDER (house-policy): law_text is the expected sentence. Claim check contents with probe placeholder. Carried. On the suite checkout it passes. Field not copied: type.
+
+Absence
+CRA-ANTI-PLACEHOLDER (cra-baseline): Not written. The citation is Annex VII with no point, and the rule is a placeholder probe, not a provision. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type, settlement.
+CRA-DEP-AXIOS-PIN (cra-baseline): Not written. The rule has no citation, so there is no CRA passage to copy. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type.
+MD-SW-CLASS (medtech-iec62304): Not written. The citation names IEC 62304 article 4.3. This repository has no verbatim text of that standard. The rule's expected sentence is not that text. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type, settlement.
+MD-SOUP (medtech-iec62304): Not written. The citation names IEC 62304 and does not give a clause with verbatim text. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type, settlement.
+MD-PROBLEM-RESOLUTION (medtech-iec62304): Not written. The citation names IEC 62304 and does not give a clause with verbatim text. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type, settlement.
+MD-ANTI-PLACEHOLDER (medtech-iec62304): Not written. The citation names IEC 62304 and does not give a clause with verbatim text. A claim was not written, because the checker refuses a claim whose requirement is not in the pack. Fields not copied: type, settlement.
+
+Fields that are not ids
+cra-baseline citations[0].annex='VII': no field on pack.source. The written requirements use it as the locator prefix VII.
+medtech-iec62304 citations[0].article='software lifecycle': no field on pack.source. It would be a reference locator, and no requirement was written.
+medtech-iec62304 extends='cra-baseline': no Packs v2 field. The pack was still written without it.
+
+Proof
+The suite in docs/testing/procedures/README.md. git archive of cyberready-test-product commit dee885ffb421e4646fea07fbb4a629616c09efc6 into a directory outside this repository. curbpack.json lists the three pack ids. The seven carried claim files are copied in. That tree is committed so git status --porcelain is empty. The reference product is not edited.
+python3 -m checks --repo <prepared-repo> --packs docs/reference/test-packs --out <prepared-repo>/run-result.json
+Stdout: claims 7 exit 0. worktree clean. packs[] is cra-baseline 0.1.0, house-policy 0.1.0, medtech-iec62304 0.2.0, each with a digest. All seven claims pass. The temporary repo was deleted.

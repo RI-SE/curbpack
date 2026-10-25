@@ -1,0 +1,19 @@
+{
+  "id": "HOUSE-DEP-AXIOS-PIN",
+  "pack_id": "house-policy",
+  "remediation_hint": "Upgrade axios to a patched release and refresh the lockfile.",
+  "source": {
+    "framework": "internal",
+    "instrument": "House Policy Example",
+    "identifier": "HOUSE-DEP-AXIOS-PIN",
+    "language": "en",
+    "url": "packs/house-policy/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "HOUSE-DEP-AXIOS-PIN",
+      "law_text": "No banned axios versions in dependencies or devDependencies."
+    }
+  ]
+}

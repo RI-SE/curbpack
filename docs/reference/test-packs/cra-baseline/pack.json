@@ -1,0 +1,13 @@
+{
+  "id": "cra-baseline",
+  "name": "CRA Annex VII draft structure (informational)",
+  "version": "0.1.0",
+  "assurance_class": "structural_draft",
+  "description": "Structural file/header gates for CRA Annex VII drafts, an Art 14 reporting-path file, and dependency hygiene — not essential-requirements conformity. Informational — not a conformity assessment.",
+  "jurisdiction": "EU",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  }
+}

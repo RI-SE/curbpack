@@ -1,0 +1,19 @@
+{
+  "id": "HOUSE-ANTI-PLACEHOLDER",
+  "pack_id": "house-policy",
+  "remediation_hint": "Replace TODO / lorem ipsum / [insert ...] with real contact and process details.",
+  "source": {
+    "framework": "internal",
+    "instrument": "House Policy Example",
+    "identifier": "HOUSE-ANTI-PLACEHOLDER",
+    "language": "en",
+    "url": "packs/house-policy/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "HOUSE-ANTI-PLACEHOLDER",
+      "law_text": "No placeholder patterns in required security docs."
+    }
+  ]
+}

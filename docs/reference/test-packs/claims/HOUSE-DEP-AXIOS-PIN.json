@@ -1,0 +1,23 @@
+{
+  "id": "HOUSE-DEP-AXIOS-PIN",
+  "requirement_id": "HOUSE-DEP-AXIOS-PIN",
+  "source": "documents",
+  "args": {
+    "path": "package.json"
+  },
+  "description": "No banned axios versions in dependencies or devDependencies.",
+  "severity": "critical",
+  "checks": [
+    {
+      "check": "dep_ban",
+      "args": {
+        "package": "axios",
+        "banned_versions": [
+          "1.6.0",
+          "^1.6.0",
+          "~1.6.0"
+        ]
+      }
+    }
+  ]
+}

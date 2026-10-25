@@ -1,0 +1,43 @@
+{
+  "id": "CRA-ANNEX-VII-SUPPORT",
+  "requirement_id": "CRA-ANNEX-VII-SUPPORT",
+  "source": "documents",
+  "args": {
+    "path": "docs/annex-vii/support_period.md"
+  },
+  "description": "Support period document present with End of Support section and repo-bound product mention.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/annex-vii/support_period.md"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/annex-vii/support_period.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 120,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# Support Period",
+              "## End of Support"
+            ]
+          },
+          {
+            "kind": "token"
+          }
+        ]
+      }
+    }
+  ]
+}

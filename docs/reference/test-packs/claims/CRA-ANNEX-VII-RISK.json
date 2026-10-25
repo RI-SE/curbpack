@@ -1,0 +1,45 @@
+{
+  "id": "CRA-ANNEX-VII-RISK",
+  "requirement_id": "CRA-ANNEX-VII-RISK",
+  "source": "documents",
+  "args": {
+    "path": "docs/annex-vii/risk_assessment.md"
+  },
+  "description": "Risk assessment exceeds structural thresholds, contains required headers, and is bound to this repository.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/annex-vii/risk_assessment.md",
+          "README.md"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/annex-vii/risk_assessment.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 200,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# Risk Assessment",
+              "## Product Overview",
+              "## Identified Risks"
+            ]
+          },
+          {
+            "kind": "token"
+          }
+        ]
+      }
+    }
+  ]
+}

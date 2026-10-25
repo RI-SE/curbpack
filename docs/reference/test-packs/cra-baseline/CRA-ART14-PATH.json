@@ -1,0 +1,105 @@
+{
+  "id": "CRA-ART14-PATH",
+  "pack_id": "cra-baseline",
+  "remediation_hint": "Populate docs/incident/art14-path.md with this product's Art 14 reporting path (named owner + Drafted date). After you run a tabletop, record the date in `Last tabletop:`. Distinguish reporting (11 Sept 2026) from vulnerability-handling/public SPOC (later clock). Do not claim EU Login works. Mention this product (package.json name, go.mod module, or repo directory name).",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "14(1)",
+      "law_text": "A manufacturer shall notify any actively exploited vulnerability contained in\nthe product with digital elements that it becomes aware of simultaneously to\nthe CSIRT designated as coordinator, in accordance with paragraph 7 of this\nArticle, and to ENISA. The manufacturer shall notify that actively exploited\nvulnerability via the single reporting platform established pursuant to\nArticle 16."
+    },
+    {
+      "nr": 2,
+      "locator": "14(2)(a)",
+      "law_text": "For the purposes of the notification referred to in paragraph 1, the\nmanufacturer shall submit: (a) an early warning notification of an actively\nexploited vulnerability, without undue delay and in any event within 24 hours\nof the manufacturer becoming aware of it, indicating, where applicable, the\nMember States on the territory of which the manufacturer is aware that their\nproduct with digital elements has been made available;"
+    },
+    {
+      "nr": 3,
+      "locator": "14(2)(b)",
+      "law_text": "For the purposes of the notification referred to in paragraph 1, the\nmanufacturer shall submit: (b) unless the relevant information has already\nbeen provided, a vulnerability notification, without undue delay and in any\nevent within 72 hours of the manufacturer becoming aware of the actively\nexploited vulnerability, which shall provide general information, as\navailable, about the product with digital elements concerned, the general\nnature of the exploit and of the vulnerability concerned as well as any\ncorrective or mitigating measures taken, and corrective or mitigating measures\nthat users can take, and which shall also indicate, where applicable, how\nsensitive the manufacturer considers the notified information to be;"
+    },
+    {
+      "nr": 4,
+      "locator": "14(2)(c)",
+      "law_text": "For the purposes of the notification referred to in paragraph 1, the\nmanufacturer shall submit: (c) unless the relevant information has already\nbeen provided, a final report, no later than 14 days after a corrective or\nmitigating measure is available, including at least the following:"
+    },
+    {
+      "nr": 5,
+      "locator": "14(3)",
+      "law_text": "A manufacturer shall notify any severe incident having an impact on the\nsecurity of the product with digital elements that it becomes aware of\nsimultaneously to the CSIRT designated as coordinator, in accordance with\nparagraph 7 of this Article, and to ENISA. The manufacturer shall notify that\nincident via the single reporting platform established pursuant to Article 16."
+    },
+    {
+      "nr": 6,
+      "locator": "14(4)(a)",
+      "law_text": "For the purposes of the notification referred to in paragraph 3, the\nmanufacturer shall submit: (a) an early warning notification of a severe\nincident having an impact on the security of the product with digital\nelements, without undue delay and in any event within 24 hours of the\nmanufacturer becoming aware of it, including at least whether the incident is\nsuspected of being caused by unlawful or malicious acts, which shall also\nindicate, where applicable, the Member States on the territory of which the\nmanufacturer is aware that their product with digital elements has been made\navailable;"
+    },
+    {
+      "nr": 7,
+      "locator": "14(4)(b)",
+      "law_text": "For the purposes of the notification referred to in paragraph 3, the\nmanufacturer shall submit: (b) unless the relevant information has already\nbeen provided, an incident notification, without undue delay and in any event\nwithin 72 hours of the manufacturer becoming aware of the incident, which\nshall provide general information, where available, about the nature of the\nincident, an initial assessment of the incident, as well as any corrective or\nmitigating measures taken, and corrective or mitigating measures that users\ncan take, and which shall also indicate, where applicable, how sensitive the\nmanufacturer considers the notified information to be;"
+    },
+    {
+      "nr": 8,
+      "locator": "14(4)(c)",
+      "law_text": "For the purposes of the notification referred to in paragraph 3, the\nmanufacturer shall submit: (c) unless the relevant information has already\nbeen provided, a final report, within one month after the submission of the\nincident notification under point (b), including at least the following:"
+    },
+    {
+      "nr": 9,
+      "locator": "14(5)(a)",
+      "law_text": "For the purposes of paragraph 3, an incident having an impact on the security\nof the product with digital elements shall be considered to be severe where:\n(a) it negatively affects or is capable of negatively affecting the ability of\na product with digital elements to protect the availability, authenticity,\nintegrity or confidentiality of sensitive or important data or functions; or"
+    },
+    {
+      "nr": 10,
+      "locator": "14(5)(b)",
+      "law_text": "For the purposes of paragraph 3, an incident having an impact on the security\nof the product with digital elements shall be considered to be severe where:\n(b) it has led or is capable of leading to the introduction or execution of\nmalicious code in a product with digital elements or in the network and\ninformation systems of a user of the product with digital elements."
+    },
+    {
+      "nr": 11,
+      "locator": "14(6)",
+      "law_text": "Where necessary, the CSIRT designated as coordinator initially receiving the\nnotification may request manufacturers to provide an intermediate report on\nrelevant status updates about the actively exploited vulnerability or severe\nincident having an impact on the security of the product with digital\nelements."
+    },
+    {
+      "nr": 12,
+      "locator": "14(7)(a)",
+      "law_text": "The notifications referred to in paragraphs 1 and 3 of this Article shall be\nsubmitted via the single reporting platform referred to in Article 16 using\none of the electronic notification end-points referred to in Article 16(1).\nThe notification shall be submitted using the electronic notification\nend-point of the CSIRT designated as coordinator of the Member State where the\nmanufacturers have their main establishment in the Union and shall be\nsimultaneously accessible to ENISA. For the purposes of this Regulation, a\nmanufacturer shall be considered to have its main establishment in the Union\nin the Member State where the decisions related to the cybersecurity of its\nproducts with digital elements are predominantly taken. If such a Member State\ncannot be determined, the main establishment shall be considered to be in the\nMember State where the manufacturer concerned has the establishment with the\nhighest number of employees in the Union. Where a manufacturer has no main\nestablishment in the Union, it shall submit the notifications referred to in\nparagraphs 1 and 3 using the electronic notification end-point of the CSIRT\ndesignated as coordinator in the Member State determined pursuant to the\nfollowing order and based on the information available to the manufacturer:\n(a) the Member State in which the authorised representative acting on behalf\nof the manufacturer for the highest number of products with digital elements\nof that manufacturer is established;"
+    },
+    {
+      "nr": 13,
+      "locator": "14(7)(b)",
+      "law_text": "The notifications referred to in paragraphs 1 and 3 of this Article shall be\nsubmitted via the single reporting platform referred to in Article 16 using\none of the electronic notification end-points referred to in Article 16(1).\nThe notification shall be submitted using the electronic notification\nend-point of the CSIRT designated as coordinator of the Member State where the\nmanufacturers have their main establishment in the Union and shall be\nsimultaneously accessible to ENISA. For the purposes of this Regulation, a\nmanufacturer shall be considered to have its main establishment in the Union\nin the Member State where the decisions related to the cybersecurity of its\nproducts with digital elements are predominantly taken. If such a Member State\ncannot be determined, the main establishment shall be considered to be in the\nMember State where the manufacturer concerned has the establishment with the\nhighest number of employees in the Union. Where a manufacturer has no main\nestablishment in the Union, it shall submit the notifications referred to in\nparagraphs 1 and 3 using the electronic notification end-point of the CSIRT\ndesignated as coordinator in the Member State determined pursuant to the\nfollowing order and based on the information available to the manufacturer:\n(b) the Member State in which the importer placing on the market the highest\nnumber of products with digital elements of that manufacturer is established;"
+    },
+    {
+      "nr": 14,
+      "locator": "14(7)(c)",
+      "law_text": "The notifications referred to in paragraphs 1 and 3 of this Article shall be\nsubmitted via the single reporting platform referred to in Article 16 using\none of the electronic notification end-points referred to in Article 16(1).\nThe notification shall be submitted using the electronic notification\nend-point of the CSIRT designated as coordinator of the Member State where the\nmanufacturers have their main establishment in the Union and shall be\nsimultaneously accessible to ENISA. For the purposes of this Regulation, a\nmanufacturer shall be considered to have its main establishment in the Union\nin the Member State where the decisions related to the cybersecurity of its\nproducts with digital elements are predominantly taken. If such a Member State\ncannot be determined, the main establishment shall be considered to be in the\nMember State where the manufacturer concerned has the establishment with the\nhighest number of employees in the Union. Where a manufacturer has no main\nestablishment in the Union, it shall submit the notifications referred to in\nparagraphs 1 and 3 using the electronic notification end-point of the CSIRT\ndesignated as coordinator in the Member State determined pursuant to the\nfollowing order and based on the information available to the manufacturer:\n(c) the Member State in which the distributor making available on the market\nthe highest number of products with digital elements of that manufacturer is\nestablished;"
+    },
+    {
+      "nr": 15,
+      "locator": "14(7)(d)",
+      "law_text": "The notifications referred to in paragraphs 1 and 3 of this Article shall be\nsubmitted via the single reporting platform referred to in Article 16 using\none of the electronic notification end-points referred to in Article 16(1).\nThe notification shall be submitted using the electronic notification\nend-point of the CSIRT designated as coordinator of the Member State where the\nmanufacturers have their main establishment in the Union and shall be\nsimultaneously accessible to ENISA. For the purposes of this Regulation, a\nmanufacturer shall be considered to have its main establishment in the Union\nin the Member State where the decisions related to the cybersecurity of its\nproducts with digital elements are predominantly taken. If such a Member State\ncannot be determined, the main establishment shall be considered to be in the\nMember State where the manufacturer concerned has the establishment with the\nhighest number of employees in the Union. Where a manufacturer has no main\nestablishment in the Union, it shall submit the notifications referred to in\nparagraphs 1 and 3 using the electronic notification end-point of the CSIRT\ndesignated as coordinator in the Member State determined pursuant to the\nfollowing order and based on the information available to the manufacturer:\n(d) the Member State in which the highest number of users of products with\ndigital elements of that manufacturer are located."
+    },
+    {
+      "nr": 16,
+      "locator": "14(8)",
+      "law_text": "After becoming aware of an actively exploited vulnerability or a severe\nincident having an impact on the security of the product with digital\nelements, the manufacturer shall inform the impacted users of the product with\ndigital elements, and where appropriate all users, of that vulnerability or\nincident and, where necessary, of any risk mitigation and corrective measures\nthat the users can deploy to mitigate the impact of that vulnerability or\nincident, where appropriate in a structured, machine-readable format that is\neasily automatically processable. Where the manufacturer fails to inform the\nusers of the product with digital elements in a timely manner, the notified\nCSIRTs designated as coordinators may provide such information to the users\nwhen considered to be proportionate and necessary for preventing or mitigating\nthe impact of that vulnerability or incident."
+    },
+    {
+      "nr": 17,
+      "locator": "14(9)",
+      "law_text": "By 11 December 2025, the Commission shall adopt delegated acts in accordance\nwith Article 61 of this Regulation to supplement this Regulation by specifying\nthe terms and conditions for applying the cybersecurity-related grounds in\nrelation to delaying the dissemination of notifications as referred to in\nArticle 16(2) of this Regulation. The Commission shall cooperate with the\nCSIRTs network established pursuant to Article 15 of Directive (EU) 2022/2555\nand ENISA in preparing the draft delegated acts."
+    },
+    {
+      "nr": 18,
+      "locator": "14(10)",
+      "law_text": "The Commission may, by means of implementing acts, specify further the format\nand procedures of the notifications referred to in this Article as well as in\nArticles 15 and 16. Those implementing acts shall be adopted in accordance\nwith the examination procedure referred to in Article 62(2). The Commission\nshall cooperate with the CSIRTs network and ENISA in preparing those draft\nimplementing acts."
+    }
+  ],
+  "strength": "MUST"
+}

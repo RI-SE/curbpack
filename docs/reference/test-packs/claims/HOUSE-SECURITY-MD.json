@@ -1,0 +1,44 @@
+{
+  "id": "HOUSE-SECURITY-MD",
+  "requirement_id": "HOUSE-SECURITY-MD",
+  "source": "documents",
+  "args": {
+    "path": "SECURITY.md"
+  },
+  "description": "SECURITY.md present with Security header and substantive content.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "SECURITY.md"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": "SECURITY.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 80,
+            "op": ">="
+          },
+          {
+            "kind": "words",
+            "n": 20,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# Security"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

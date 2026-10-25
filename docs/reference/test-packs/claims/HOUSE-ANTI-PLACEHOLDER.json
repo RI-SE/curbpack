@@ -1,0 +1,29 @@
+{
+  "id": "HOUSE-ANTI-PLACEHOLDER",
+  "requirement_id": "HOUSE-ANTI-PLACEHOLDER",
+  "source": "documents",
+  "args": {
+    "paths": [
+      "SECURITY.md",
+      ".well-known/security.txt"
+    ]
+  },
+  "description": "No placeholder patterns in required security docs.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "contents",
+      "args": {
+        "paths": [
+          "SECURITY.md",
+          ".well-known/security.txt"
+        ],
+        "probes": [
+          {
+            "kind": "placeholder"
+          }
+        ]
+      }
+    }
+  ]
+}

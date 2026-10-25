@@ -1,0 +1,19 @@
+{
+  "id": "CRA-ANNEX-VII-RISK",
+  "pack_id": "cra-baseline",
+  "remediation_hint": "Populate docs/annex-vii/risk_assessment.md with product-specific risk models (no placeholders). Mention this product (package.json name, go.mod module, or repo directory name) and keep README.md present.",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "VII.3",
+      "law_text": "an assessment of the cybersecurity risks against which the product with\ndigital elements is designed, developed, produced, delivered and maintained\npursuant to Article 13, including how the essential cybersecurity requirements\nset out in Part I of Annex I are applicable;"
+    }
+  ]
+}

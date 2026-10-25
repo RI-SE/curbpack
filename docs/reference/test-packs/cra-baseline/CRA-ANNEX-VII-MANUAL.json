@@ -1,0 +1,29 @@
+{
+  "id": "CRA-ANNEX-VII-MANUAL",
+  "pack_id": "cra-baseline",
+  "remediation_hint": "Add Secure Configuration and Product Disposal guidance. Mention this product (package.json name, go.mod module, or repo directory name).",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "VII.1(d)",
+      "law_text": "a general description of the product with digital elements, including: (d)\nuser information and instructions as set out in Annex II;"
+    },
+    {
+      "nr": 2,
+      "locator": "II.8(a)",
+      "law_text": "detailed instructions or an internet address referring to such detailed\ninstructions and information on: (a) the necessary measures during initial\ncommissioning and throughout the lifetime of the product with digital elements\nto ensure its secure use;"
+    },
+    {
+      "nr": 3,
+      "locator": "II.8(d)",
+      "law_text": "detailed instructions or an internet address referring to such detailed\ninstructions and information on: (d) the secure decommissioning of the product\nwith digital elements, including information on how user data can be securely\nremoved;"
+    }
+  ]
+}

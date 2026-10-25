@@ -1,0 +1,38 @@
+{
+  "id": "HOUSE-SECURITY-TXT",
+  "requirement_id": "HOUSE-SECURITY-TXT",
+  "source": "documents",
+  "args": {
+    "path": ".well-known/security.txt"
+  },
+  "description": "security.txt present for coordinated disclosure.",
+  "severity": "medium",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          ".well-known/security.txt"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": ".well-known/security.txt",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 40,
+            "op": ">="
+          },
+          {
+            "kind": "words",
+            "n": 5,
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ]
+}

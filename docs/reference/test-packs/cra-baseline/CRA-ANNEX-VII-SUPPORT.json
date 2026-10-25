@@ -1,0 +1,19 @@
+{
+  "id": "CRA-ANNEX-VII-SUPPORT",
+  "pack_id": "cra-baseline",
+  "remediation_hint": "Declare a concrete product support period and rationale in docs/annex-vii/support_period.md. Mention this product (package.json name, go.mod module, or repo directory name).",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "VII.4",
+      "law_text": "relevant information that was taken into account to determine the support\nperiod pursuant to Article 13(8) of the product with digital elements;"
+    }
+  ]
+}

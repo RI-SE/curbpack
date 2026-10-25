@@ -1,0 +1,46 @@
+{
+  "id": "CRA-ART14-PATH",
+  "requirement_id": "CRA-ART14-PATH",
+  "source": "documents",
+  "args": {
+    "path": "docs/incident/art14-path.md"
+  },
+  "description": "Art 14 reporting path file present with required headers and a repo-bound product mention. Documented draft only — not a live SRP check; badge shows rehearsed only after human fills Last tabletop:.",
+  "severity": "medium",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/incident/art14-path.md"
+        ]
+      }
+    },
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/incident/art14-path.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 200,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# Art 14 reporting path",
+              "## Reporting clock (CRA Art 14)",
+              "## Handling clock (not this file)",
+              "## Named owner",
+              "## Rehearsal dated artifact"
+            ]
+          },
+          {
+            "kind": "token"
+          }
+        ]
+      }
+    }
+  ]
+}
