@@ -1,6 +1,6 @@
 # Checks — derived system requirements
 
-**Status:** Draft for review, **not** an approved implementation contract.
+**Status:** CHK-R01–CHK-R13 stay draft for CHK-05. CHK-R14–CHK-R17 are the approved CHK-06 contract.
 **Source:** [CHK-05](../agile/epics/01-pack-editor/stories/CHK-05-remaning-checks.md). CHK-02 is context for the existing runner only.
 **External contract:** `docs/reference/packs2.md` in this repository, imported from Curbpack commit `b07b8deb9fed331b493241251087ce7ce648f5e4`. That commit records §4 and §4.1 for the four Git Checks. It, not this document, defines Claim `checks[]`, the Check registry, and the run result.
 
@@ -120,6 +120,18 @@ If this proposal is approved, acceptance 4 is only partly met: the result identi
 **Justification:** A new form is a GUI change the story excluded, and the form cannot be drawn until OPEN-1 fixes the fields. Runner tests still cover the mechanical Checks. Acceptance 2's user-facing attach stays a later story.
 
 **Maintainer decision (2026-10-23):** accepted. Acceptance 2 for the discovery form is deferred.
+
+## CHK-06 — the curbcheck program
+
+**Status:** Approved for CHK-06 on 2026-10-25. CHK-R01–CHK-R13 above stay as written for CHK-05.
+**Source:** [CHK-06](../agile/epics/01-pack-editor/stories/CHK-06-curbcheck-program.md).
+
+| ID | Status | Required observable behavior | Derived from |
+| --- | --- | --- | --- |
+| **CHK-R14** | APPROVED | `make package` writes two files for the host it is running on: the Studio application `curbpack-studio-<host>` and the program `curbcheck-<host>`. macOS ARM64 uses those names with no extension. Windows x64 adds `.exe`. `dist/SHA256SUMS` has one line for each file that package wrote. | CHK-06 acceptance 1 |
+| **CHK-R15** | APPROVED | The curbcheck file accepts `--repo`, `--packs`, `--out`, and `--skip`. It loads `available_checks.json` from inside the file. It runs `exist` through `curbcheck-exist`, `contents` through `curbcheck-contents`, and `git_fresh` and `git_author` through `curbcheck-git`. `git_signed` and `git_signer` return not implemented. `dep_ban` fails because `curbcheck-dep-ban` is absent. Git is the `git` on the machine. | CHK-06 acceptance 2 |
+| **CHK-R16** | APPROVED | The Studio package is built from `app/__main__.py` and does not receive `checks/bin`. A source checkout still runs those three programs from `checks/bin/` when you start `python3 -m checks`. | CHK-06 acceptance 3–4 |
+| **CHK-R17** | APPROVED | The package job uploads the curbcheck file with the Studio file. Install and CI docs that tell a person to run this program name it `curbcheck`. `docs/concepts/README.md` says those four Checks run through the three programs, not in process. The package stays `checks/`. The curbcheck build does not import `app`, `requirements.ui`, `claims.ui`, review, or scaffold. | CHK-06 acceptance 5–6 |
 
 ## Not in this document
 

@@ -9,23 +9,25 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
 def run_check_tool(repo: Path, command: str, check: str, args: dict) -> dict:
     """argv: <command> <check-id> --repo <path> --args <json>. stdout is one result object."""
-    root = Path(__file__).resolve().parents[1]
-    bin_dir = Path(__file__).resolve().parent / "bin"
-    env = os.environ.copy()
-    env["PYTHONPATH"] = os.pathsep.join(part for part in (str(root), env.get("PYTHONPATH", "")) if part)
-    env["PATH"] = os.pathsep.join(part for part in (str(bin_dir), env.get("PATH", "")) if part)
+    argv = [command, check, "--repo", str(repo), "--args", json.dumps(args)]
+    kwargs = {"capture_output": True, "text": True}
+    if getattr(sys, "frozen", False):
+        kwargs["executable"] = sys.executable
+    else:
+        root = Path(__file__).resolve().parents[1]
+        bin_dir = Path(__file__).resolve().parent / "bin"
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join(part for part in (str(root), env.get("PYTHONPATH", "")) if part)
+        env["PATH"] = os.pathsep.join(part for part in (str(bin_dir), env.get("PATH", "")) if part)
+        kwargs["env"] = env
     try:
-        completed = subprocess.run(
-            [command, check, "--repo", str(repo), "--args", json.dumps(args)],
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+        completed = subprocess.run(argv, **kwargs)
     except OSError:
         return {"status": "fail", "detail": f"check tool {command!r} is unavailable"}
     return _result(command, completed)

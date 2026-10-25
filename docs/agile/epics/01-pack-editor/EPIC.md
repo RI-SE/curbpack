@@ -25,6 +25,7 @@ Preserve existing functioning user flows. Document and verify what the imported 
 | CHK-02 | Run deterministic Checks on configured Claims |
 | CHK-03 | Understand PASS, FAIL and SKIP outcomes |
 | CHK-04 | Trace each result to the checked evidence and revision |
+| CHK-06 | Ship curbcheck as its own program |
 | REV-01 | Compile a report from a specific Check run |
 | REV-02 | Review and sign a report without confusing different runs |
 | SYS-01 | Complete and verify the full pilot workflow |
@@ -40,11 +41,12 @@ Story details: [`stories/`](stories/). The original Pack Editor stories remain u
 - Re-running Checks does not silently replace an already signed review report or make an old report appear current.
 - Previously passing tests continue to pass, and recorded end-to-end acceptance results support the demonstrated behavior. Known pre-existing failures are reported, not hidden.
 - Packs v2 is unchanged unless a separate, explicitly reviewed contract decision is made.
+- `make package` builds the Studio application and a separate curbcheck program. The Studio file does not contain the check programs. From source, `python3 -m checks` still runs them.
 
 **Not part of EP-01:** splitting up large GUI files, introducing shared Pydantic modules, central Docker/database deployment, or rewriting the Check engine for architectural neatness. Those improvements belong to later work, including EP-02.
 
 ## Specification status
 
-Pack Editor has draft derived requirements in [`docs/req/pack-editor.md`](../../../req/pack-editor.md). CHK, REV and SYS stories **do not yet have formal derived requirements or approved acceptance tests**. Their next step is to compare these stories with the fresh pilot, identify real gaps and specify/test only those gaps before implementing changes.
+Pack Editor has draft derived requirements in [`docs/req/pack-editor.md`](../../../req/pack-editor.md). CHK-06 has approved rows CHK-R14–CHK-R17 in [`docs/req/checks.md`](../../../req/checks.md). The other CHK, REV and SYS stories **do not yet have formal derived requirements or approved acceptance tests**. Their next step is to compare these stories with the fresh pilot, identify real gaps and specify/test only those gaps before implementing changes.
 
 Open product decisions and provenance rules: [`docs/agile/DECISIONS.md`](../../DECISIONS.md). Packs v2 in the Curbpack repository remains the authoritative persisted data contract.

@@ -8,12 +8,12 @@ import sys
 from pathlib import Path
 
 
-def main(handle) -> int:
+def main(handle, argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("check")
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--args", required=True)
-    ns = parser.parse_args()
+    ns = parser.parse_args(argv)
     try:
         payload = json.loads(ns.args)
     except json.JSONDecodeError:

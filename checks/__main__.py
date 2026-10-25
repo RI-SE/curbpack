@@ -1,15 +1,52 @@
-"""Run curbcheck on a product repo and write one run result."""
+"""Run curbcheck on a product repo and write one run result.
+
+A packaged build is one file. When that file is started with argv0 set to a
+registered command, it runs that command. A source checkout still starts the
+programs in checks/bin.
+"""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
+from checks.commands import contents_handle, exist_handle, git_handle
 from checks.run import run_and_write
+from checks.schema import load_registry
+from checks.toolmain import main as tool_main
+
+_HANDLERS = {
+    "curbcheck-exist": exist_handle,
+    "curbcheck-contents": contents_handle,
+    "curbcheck-git": git_handle,
+}
+
+
+def _registered_commands() -> set[str]:
+    return {item["command"] for item in load_registry()["checks"] if isinstance(item.get("command"), str)}
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw = sys.argv if argv is None else argv
+    command = Path(raw[0]).name
+    if command in _registered_commands():
+        return _tool(command, raw[1:])
+    return _cli(raw if argv is not None else raw[1:])
+
+
+def _tool(command: str, argv: list[str]) -> int:
+    handle = _HANDLERS.get(command)
+    if handle is None:
+        sys.stdout.write(
+            json.dumps({"status": "fail", "detail": f"check tool {command!r} is unavailable"}) + "\n"
+        )
+        return 0
+    return tool_main(handle, argv)
+
+
+def _cli(argv: list[str] | None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate claims and write a Packs v2 run result.")
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--packs", type=Path, required=True, help="Directory that contains <pack-id>/pack.json")
