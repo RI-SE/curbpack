@@ -46,5 +46,6 @@ jobs:
           name: ${{ matrix.artifact }}
           path: |
             dist/curbpack-studio-*
+            dist/curbcheck-*
             dist/SHA256SUMS
           if-no-files-found: error

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one PyInstaller binary for the OS that is running this script, then smoke-test it."""
+"""Build the Studio application and curbcheck for the OS running this script, then smoke-test both."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ DATAS = (
     ("requirements/ui/vendor", "requirements/ui/vendor"),
     ("checks/available_checks.json", "checks"),
 )
+CURBCHECK_DATAS = (("checks/available_checks.json", "checks"),)
 
 
 def host_label(system: str, machine: str) -> str:
@@ -35,14 +36,26 @@ def host_label(system: str, machine: str) -> str:
     )
 
 
-def binary_name(label: str) -> str:
-    name = f"curbpack-studio-{label}"
+def _host_filename(prefix: str, label: str) -> str:
+    name = f"{prefix}-{label}"
     if label.startswith("windows"):
         return name + ".exe"
     return name
 
 
-def _pyinstaller_args(name: str) -> list[str]:
+def studio_name(label: str) -> str:
+    return _host_filename("curbpack-studio", label)
+
+
+def binary_name(label: str) -> str:
+    return studio_name(label)
+
+
+def curbcheck_name(label: str) -> str:
+    return _host_filename("curbcheck", label)
+
+
+def _pyinstaller_args(name: str, entry: str, datas: tuple[tuple[str, str], ...]) -> list[str]:
     args = [
         sys.executable,
         "-m",
@@ -65,46 +78,75 @@ def _pyinstaller_args(name: str) -> list[str]:
         str(ROOT / "scripts" / "build" / "hooks"),
     ]
     separator = os.pathsep
-    for source, dest in DATAS:
+    for source, dest in datas:
         args.extend(["--add-data", f"{ROOT / source}{separator}{dest}"])
-    args.append(str(ROOT / "app" / "__main__.py"))
+    args.append(str(ROOT / entry))
     return args
 
 
-def write_sums(binary: Path) -> Path:
-    digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+def studio_args(name: str) -> list[str]:
+    return _pyinstaller_args(name, "app/__main__.py", DATAS)
+
+
+def curbcheck_args(name: str) -> list[str]:
+    return _pyinstaller_args(name, "checks/__main__.py", CURBCHECK_DATAS)
+
+
+def write_sums(binaries: list[Path]) -> Path:
+    lines = []
+    for binary in binaries:
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        lines.append(f"{digest}  {binary.name}")
     sums = DIST / "SHA256SUMS"
-    sums.write_text(f"{digest}  {binary.name}\n", encoding="utf-8")
+    sums.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return sums
+
+
+def _build(args: list[str], filename: str) -> Path | None:
+    completed = subprocess.run(args, cwd=ROOT)
+    if completed.returncode != 0:
+        print("[FAIL] package", flush=True)
+        return None
+    binary = DIST / filename
+    if not binary.is_file():
+        print(f"[FAIL] package did not write {binary}", flush=True)
+        return None
+    return binary
 
 
 def main() -> int:
     import platform
 
     label = host_label(platform.system(), platform.machine())
-    name = binary_name(label)
+    studio = studio_name(label)
+    checker = curbcheck_name(label)
     try:
         import PyInstaller  # noqa: F401
     except ImportError:
         print("[FAIL] package requires PyInstaller in this interpreter", flush=True)
         return 1
     DIST.mkdir(parents=True, exist_ok=True)
-    completed = subprocess.run(_pyinstaller_args(Path(name).stem), cwd=ROOT)
-    if completed.returncode != 0:
-        print("[FAIL] package", flush=True)
-        return completed.returncode
-    binary = DIST / name
-    if not binary.is_file():
-        print(f"[FAIL] package did not write {binary}", flush=True)
+    studio_binary = _build(studio_args(Path(studio).stem), studio)
+    if studio_binary is None:
         return 1
     sys.path.insert(0, str(ROOT / "scripts" / "release"))
-    from smoke import smoke
+    from smoke import smoke, smoke_curbcheck
 
-    if smoke(binary) != 0:
+    if smoke(studio_binary) != 0:
         print("[FAIL] package", flush=True)
         return 1
-    sums = write_sums(binary)
-    print(f"[PASS] package {binary.name}", flush=True)
+    print(f"[PASS] package {studio_binary.name}", flush=True)
+    checker_binary = _build(curbcheck_args(Path(checker).stem), checker)
+    if checker_binary is None:
+        return 1
+    if smoke_curbcheck(checker_binary) != 0:
+        print("[FAIL] package", flush=True)
+        return 1
+    if not studio_binary.is_file():
+        print(f"[FAIL] package removed {studio_binary.name} while building curbcheck", flush=True)
+        return 1
+    sums = write_sums([studio_binary, checker_binary])
+    print(f"[PASS] package {checker_binary.name}", flush=True)
     print(f"[PASS] wrote {sums.name} after the smoke test", flush=True)
     return 0
 

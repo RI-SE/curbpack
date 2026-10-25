@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -12,6 +13,9 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts" / "build"))
 
 from checks.dispatch import run_check_tool
 from checks.__main__ import main
@@ -172,3 +176,55 @@ class ToolReentryTest(unittest.TestCase):
         self.assertEqual(loaded["claims"][0]["status"], "skipped")
         self.assertEqual(loaded["claims"][0]["checks"][0]["detail"], "not this build")
         self.assertIn("skipped", buf.getvalue())
+
+
+class PackageArgsTest(unittest.TestCase):
+    def test_names_and_argv_keep_studio_and_curbcheck_apart(self):
+        from package import curbcheck_args, curbcheck_name, studio_args, studio_name
+        self.assertEqual(studio_name("macos-arm64"), "curbpack-studio-macos-arm64")
+        self.assertEqual(curbcheck_name("macos-arm64"), "curbcheck-macos-arm64")
+        self.assertEqual(studio_name("windows-x64"), "curbpack-studio-windows-x64.exe")
+        self.assertEqual(curbcheck_name("windows-x64"), "curbcheck-windows-x64.exe")
+        studio = studio_args("curbpack-studio-macos-arm64")
+        checker = curbcheck_args("curbcheck-macos-arm64")
+        self.assertTrue(studio[-1].endswith("app/__main__.py"))
+        self.assertNotIn("checks/bin", " ".join(studio))
+        self.assertTrue(checker[-1].endswith("checks/__main__.py"))
+        self.assertTrue(any("available_checks.json" in part for part in checker))
+        self.assertFalse(any("requirements/ui" in part for part in checker))
+        self.assertNotIn("checks/bin", " ".join(checker))
+
+    def test_sums_name_every_packaged_file(self):
+        from package import write_sums
+
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            studio = directory / "curbpack-studio-macos-arm64"
+            checker = directory / "curbcheck-macos-arm64"
+            studio.write_bytes(b"studio")
+            checker.write_bytes(b"curbcheck")
+            with patch("package.DIST", directory):
+                sums = write_sums([studio, checker])
+            text = sums.read_text(encoding="utf-8")
+            expected = []
+            for path in (studio, checker):
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                expected.append(f"{digest}  {path.name}")
+            self.assertEqual(text.splitlines(), expected)
+
+    def test_importing_the_checker_does_not_import_the_application(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import checks.__main__\n"
+                "import sys\n"
+                "banned = ('app', 'requirements.ui', 'claims.ui', 'review', 'scaffold')\n"
+                "loaded = [name for name in banned if name in sys.modules or any(key == name or key.startswith(name + '.') for key in sys.modules)]\n"
+                "raise SystemExit(0 if not loaded else 'loaded ' + ','.join(loaded))\n",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
