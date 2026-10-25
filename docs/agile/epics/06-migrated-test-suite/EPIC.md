@@ -24,3 +24,7 @@ Phase A is the plan. Phase B does not start until that plan names the maintainer
 ## Out of scope
 
 `cyberready-test-product`, `daniel/ny_sdd/`, `docs/reference/test-packs/`, `docs/reference/packs2.md`, and application code.
+
+## After this epic
+
+The seven carried cases stay the first green slice of curbcheck verification. EP-10 moves that run to `make test-curbcheck` under `tests/check/`. The claim files stay in `docs/reference/test-packs/claims/`. This epic does not start that move.

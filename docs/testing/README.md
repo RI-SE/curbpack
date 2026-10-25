@@ -12,7 +12,17 @@ Exit 0 is a pass of the suite only when stdout contains `claims 7 exit 0` and no
 
 ## Prepare the repo
 
-The steps are in [procedures/README.md](procedures/README.md). In short: archive reference-product commit `dee885ffb421e4646fea07fbb4a629616c09efc6` into a temporary directory outside this repository, write `curbpack.json` with packs `cra-baseline`, `house-policy`, and `medtech-iec62304`, copy the seven carried claim files into `claims/`, and commit that tree in the temporary repo. Delete the temporary repo after the run. Do not edit the reference product.
+From the Studio root:
+
+```sh
+make test-curbcheck
+```
+
+That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The catalogue of the remaining Curbpack rows is [tests/check/catalogue.md](../../tests/check/catalogue.md).
+
+Do not export `CURBPACK_PACKS_DIR`. Do not run `curbpack check`. Do not archive a local product checkout. Do not edit the reference product. `tmp/` is not committed.
+
+The steps are also in [procedures/README.md](procedures/README.md).
 
 ## Reading order
 

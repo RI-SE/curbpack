@@ -319,6 +319,8 @@ Local single-user operation with configured filesystem paths requires no OIDC or
 
 For every migrated component, verify: (1) it reads a Packs v2 fixture; (2) it performs its real task; (3) it writes/returns the expected data shape; (4) round-trip editing preserves unrelated fields; (5) it works through direct calls without UI; and (6) errors are explicit. End-to-end verification uses a controlled sample product and at least one Requirement with multiple Claims, a missing file failure, and a clean/dirty run where supported.
 
+curbcheck's own verification is a separate chain. It lives under `tests/check/` and runs as `make test-curbcheck`. It clones a product repository, mutates it, and runs curbcheck. It does not open the Studio application. `make test` remains the Studio suite. The two trees do not call each other. `checks/` may import `common/` and does not import the application, a tool UI, review, or scaffold.
+
 Do not equate a green structural check with the legal Requirement being fulfilled. Keep human review explicit. The Annex VII point 3 path is the acceptance criteria in `docs/concepts/end-to-end-scenario.md`. The product scenarios below add the paths that cross several subsystems.
 
 ## Subsystems stay independent

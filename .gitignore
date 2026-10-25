@@ -27,3 +27,6 @@ venv/
 # Built pilot binaries and PyInstaller work files
 /dist/
 /build/
+
+# Disposable verification clone and the filled run file
+/tmp/

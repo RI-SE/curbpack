@@ -1,0 +1,11 @@
+# Starting cyberready-test-product commit for curbcheck verification.
+#
+# This is a pin file, not a product. The product is
+# RI-SE/cyberready-test-product. make test-curbcheck clones it into
+# tmp/cyberready-test-product. Do not introduce a second product tree.
+#
+# The pin holds the scripts that create the R states. Bump it in the same
+# Studio change that adopts a new product commit.
+
+commit 2b0c3f30bda411917ca0cd5b5f545e04de11cd25
+url git@github.com:RI-SE/cyberready-test-product.git

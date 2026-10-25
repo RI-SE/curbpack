@@ -10,7 +10,22 @@ python3 -m checks --repo <prepared-repo> --packs docs/reference/test-packs --out
 
 ## Prepare the suite repo
 
-Do this in a directory outside the Studio work tree. Do not edit `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product`.
+From the Studio root, `make test-curbcheck` clones the pinned reference product, restores it by sourcing `tmp/verification-run.sh`, applies R1 with the product's `setup.sh`, and runs the seven carried checks. It does not archive a checkout. The earlier archive of `dee885ffb421e4646fea07fbb4a629616c09efc6` is the record of how TST-01 prepared a tree. It is not this command.
+
+`make test-curbcheck` does this:
+
+1. Clone `git@github.com:RI-SE/cyberready-test-product.git` at the commit in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`.
+2. Source `tmp/verification-run.sh`, which deletes that clone and clones it again at the same commit.
+3. On the clone, `./external_test/curbpack/setup.sh R1 --commit`. The script file is not edited.
+4. Write `curbpack.json` with packs `cra-baseline`, `house-policy`, and `medtech-iec62304`.
+5. Copy the seven claim files from `docs/reference/test-packs/claims/` into the clone's `claims/`.
+6. Run `python3 -m checks --repo <clone> --packs docs/reference/test-packs --out <clone>/run-result.json`.
+
+Stdout `claims 7 exit 0` and no claim status `fail` is the pass. Manual rows are printed after that and are not part of the count.
+
+## TST-01 archive record
+
+TST-01 prepared a tree outside the Studio work tree. Do not edit `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product`.
 
 1. Extract reference-product commit `dee885ffb421e4646fea07fbb4a629616c09efc6`:
 

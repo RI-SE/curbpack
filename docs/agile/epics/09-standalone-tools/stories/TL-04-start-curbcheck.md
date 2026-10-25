@@ -12,3 +12,4 @@
 - It reads `curbpack.json`, pack directories, and Claim files, and writes one run result. It does not write Requirement, Claim, or report files.
 - Exit 0 only when at least one Check ran and every row passed. A failed, skipped, or empty run exits 1. A usage error exits 2.
 - The package directory stays `checks/`. This story does not rename it.
+- curbcheck's verification is `make test-curbcheck` under `tests/check/`. That target is specified by EP-10. This story does not build it, and it does not add those cases to `make test`.

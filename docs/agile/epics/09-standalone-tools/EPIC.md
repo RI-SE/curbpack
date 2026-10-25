@@ -44,7 +44,7 @@ Each tool story can land on its own after the epic is accepted. TL-07 stays true
 1. A person can start each packs2 product in the table above and do that product's job without starting another product.
 2. Requirements and curbpack-claims answer on the command line and in their own UI. curbcheck and curbpack-compile are command line. curbpack-scaffold and curbpack-review are UI. pilot_app is the cover.
 3. No tool imports `pilot_app` or another tool's UI. A tool reads another tool's Packs v2 files through `common/`.
-4. `python3 -m checks` still starts curbcheck. EP-07's name for that command stays.
+4. `python3 -m checks` still starts curbcheck. EP-07's name for that command stays. curbcheck's verification is `make test-curbcheck` under `tests/check/`. It is not `make test`.
 5. Signed Requirement, Claim, pack, and report bytes are unchanged by a start that does not edit that object.
 6. `docs/arch/ARCHITECTURE.md` names these programs and calls the shell `pilot_app`. It stops describing the tools only as directories of one application. Packs v2 fields do not change.
 7. The EP-01 cover journeys still run from pilot_app.

@@ -30,6 +30,8 @@ The runner evaluates Claim files that the repo selects and writes one run result
 
 The runner does not read `discovery_hints`, `note`, `remediation_hint`, or Claim `description`. It does not write Requirements, Claims, packs, or the review report.
 
+`checks/` may import `common/`. It does not import `app`, `pilot_app`, `requirements.ui`, `claims.ui`, review, or scaffold. curbcheck and the Studio application share this repository and one version until curbcheck needs its own. The verification of curbcheck is `make test-curbcheck`, under `tests/check/`. `make test` stays the Studio suite. Manual rows in `tests/check/` are reported and are not a pass. A Check whose command is not installed stays a non-passing result there too.
+
 ## What the runner loads
 
 `curbpack.json` selects packs and requirements (`packs2.md` §2.3). `run_repository` loads each `packs_root/<id>/pack.json` and the Requirement files beside it.
