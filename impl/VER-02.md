@@ -38,4 +38,4 @@
 
 ## Work log
 
-- **2026-10-25 — Task 1.** `python3 -m unittest tests.test_curbcheck_catalogue -v` printed 3 OK, including one row per catalogue id. `make test-curbcheck` in the same session printed `claims 7 exit 0`. Commit `890628ac3f577aea34583f2749194c44f7c7b474`.
+- **2026-10-25 — Task 1.** `python3 -m unittest tests.test_curbcheck_catalogue -v` printed 3 OK. `make test-curbcheck` printed `claims 7 exit 0`, then the copied suites: PASS 1, FAIL 0, MANUAL 5, TBD 34, BLOCKED 2, OUTSIDE 25, REF 1, CATALOGUE 68, DISPLAYED 68. The procedure text is in `tests/check/suites/` and `tests/check/docs/procedures/`. A row that calls `curbpack` is outside and is not a pass. Commit `890628ac3f577aea34583f2749194c44f7c7b474` held the first id list. The procedures followed in the next commit.

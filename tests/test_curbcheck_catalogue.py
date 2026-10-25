@@ -1,4 +1,4 @@
-"""The curbcheck catalogue keeps every Curbpack row and does not call it a pass."""
+"""The copied curbcheck procedures keep every Curbpack row."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SUITES = ROOT / "tests/check/suites"
 
-CATALOGUE_IDS = (
+SUITE_IDS = (
     "PK-001", "PK-002", "PK-003", "PK-004", "PK-005",
     "EV-001", "EV-002", "EV-003", "EV-004", "EV-005", "EV-006", "EV-007", "EV-008", "EV-009",
     "FS-001", "FS-002", "FS-003", "FS-004", "FS-005", "FS-006", "FS-007",
@@ -20,24 +21,32 @@ CATALOGUE_IDS = (
     "RL-001", "RL-002", "RL-003", "RL-004", "RL-005",
     "CL-001", "CL-002", "CL-003", "CL-004",
     "UV-001", "UV-002", "UV-003", "UV-004", "UV-005", "UV-006", "UV-007", "UV-008",
-    "CR-01", "CR-02", "CR-03", "CR-04", "CR-05", "CR-06", "CR-07", "CR-08", "CR-09", "CR-10", "CR-11",
 )
 
 
 class CurbcheckCatalogueTest(unittest.TestCase):
-    def test_every_catalogue_id_is_listed_once(self):
-        text = (ROOT / "tests/check/catalogue.md").read_text(encoding="utf-8")
-        for case_id in CATALOGUE_IDS:
-            rows = [line for line in text.splitlines() if line.startswith(f"| {case_id} |")]
+    def test_every_suite_id_is_a_copied_procedure(self):
+        texts = [path.read_text(encoding="utf-8") for path in SUITES.glob("*.md")]
+        blob = "\n".join(texts)
+        for case_id in SUITE_IDS:
+            rows = [line for line in blob.splitlines() if line.startswith(f"| {case_id} |")]
             self.assertEqual(len(rows), 1, case_id)
+        ev = (SUITES / "EV.md").read_text(encoding="utf-8")
+        self.assertIn("## EV-002 —", ev)
+        self.assertIn("setup.sh R2 --commit", ev)
 
-    def test_manual_ids_match_the_code_review_rows(self):
+    def test_code_review_procedure_is_the_full_text(self):
+        text = (ROOT / "tests/check/docs/procedures/2_code_review_procedures.md").read_text(encoding="utf-8")
+        for number in range(1, 12):
+            self.assertIn(f"| CR-{number:02d} |", text)
+        self.assertIn("Can malformed, ambiguous, duplicate, conflicting or unsupported rules", text)
         ids = (ROOT / "tests/check/manual.ids").read_text(encoding="utf-8").split()
         self.assertEqual(ids, [f"CR-{number:02d}" for number in range(1, 12)])
 
-    def test_make_test_does_not_run_the_curbcheck_suite(self):
-        text = (ROOT / "Makefile").read_text(encoding="utf-8")
-        test_recipe = text.split("test:\n", 1)[1].split("\n\n", 1)[0]
-        self.assertNotIn("test-curbcheck", test_recipe)
-        self.assertNotIn("tests/check/run.sh", test_recipe)
-        self.assertIn("test-curbcheck:\n\t@sh tests/check/run.sh", text.replace("    ", "\t"))
+    def test_runner_does_not_pass_a_curbpack_procedure(self):
+        runner = (ROOT / "tests/check/automation/suit-runner.sh").read_text(encoding="utf-8")
+        self.assertIn("tests/check/suites", runner)
+        self.assertIn("procedure calls curbpack", runner)
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        test_recipe = makefile.split("test:\n", 1)[1].split("\n\n", 1)[0]
+        self.assertNotIn("tests/check", test_recipe)

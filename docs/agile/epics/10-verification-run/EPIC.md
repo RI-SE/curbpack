@@ -1,6 +1,6 @@
 # EP-10 — Verify curbcheck
 
-**Status:** Done. TST-01 is accepted. Does not wait for REF-01. Does not edit `cyberready-test-product`. Does not edit `states/R1.sh` through `states/R7.sh`. `make test-curbcheck` prints `claims 7 exit 0` on pin `2b0c3f30bda411917ca0cd5b5f545e04de11cd25` and prints CR-01 through CR-11. The remaining catalogue rows are in `tests/check/catalogue.md` with their Curbpack status. Rows that still need `curbpack check` stay outside the pass.
+**Status:** The seven carried checks run. The Curbpack suite procedures and the manual procedures are copied under `tests/check/`. `make test-curbcheck` prints `claims 7 exit 0` on pin `2b0c3f30bda411917ca0cd5b5f545e04de11cd25`, prints CR-01 through CR-11, and reports every other catalogue row from those files. A copied procedure that calls `curbpack` is outside the pass. Does not wait for REF-01. Does not edit `cyberready-test-product` or `states/R1.sh` through `states/R7.sh`.
 
 **Goal:** `make test-curbcheck` verifies curbcheck. The run lives under `tests/check/`. It clones the reference product, applies one existing R-state with the product's `setup.sh`, and runs curbcheck on that clone. The Studio application is not part of the run. `make test` stays the Studio suite.
 

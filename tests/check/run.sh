@@ -58,4 +58,12 @@ if printf '%s\n' "$checks_out" | grep -E '^fail '; then
 	echo "error: a claim failed" >&2
 	exit 1
 fi
-exit "$checks_code"
+if [ "$checks_code" -ne 0 ]; then
+	exit "$checks_code"
+fi
+
+mkdir -p "$root/tmp/suit-runner"
+printf '%s\n' "carried" >"$root/tmp/suit-runner/EV-001.carried"
+echo
+echo "catalogue from tests/check/suites:"
+sh "$root/tests/check/automation/suit-runner.sh" all

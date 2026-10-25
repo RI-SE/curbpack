@@ -18,7 +18,7 @@ From the Studio root:
 make test-curbcheck
 ```
 
-That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The catalogue of the remaining Curbpack rows is [tests/check/catalogue.md](../../tests/check/catalogue.md).
+That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The copied procedures are [tests/check/suites/](../../tests/check/suites/) and [tests/check/docs/procedures/](../../tests/check/docs/procedures/). A procedure that still calls `curbpack` is reported outside and is not a pass.
 
 Do not export `CURBPACK_PACKS_DIR`. Do not run `curbpack check`. Do not archive a local product checkout. Do not edit the reference product. `tmp/` is not committed.
 

@@ -1,6 +1,6 @@
 # VER-02 — Bring the rest of the curbcheck catalogue
 
-**Status:** Done. Every catalogue id from the Curbpack suites is one row in `tests/check/catalogue.md`. Executable rows that still need `curbpack check` are outside the pass. To be specified stays To be specified.
+**Status:** The suite files, their shell procedures, and the manual procedures are copied under `tests/check/`. `make test-curbcheck` reports each catalogue row from those files. A row whose procedure calls `curbpack` is outside the pass. To be specified stays To be specified.
 
 **Epic:** [EP-10 Verify curbcheck](../EPIC.md)
 
