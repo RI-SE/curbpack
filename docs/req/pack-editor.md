@@ -8,7 +8,7 @@ These are testable behavior contracts derived from the agreed stories. Where beh
 
 | Requirement | Required observable behavior | Derived from |
 | --- | --- | --- |
-| **REQ-PE-001** | The start page offers Pack Editor and still links to Discovery, Check, and Review. Opening the pack list shows the current editable Packs. That open does not change an existing catalog file or any Pack file. A missing catalog may still be created with the pilot's default rows. The link label and the source-page heading stay as they are. Status DRAFT. | PE-01 |
+| **REQ-PE-001** | The start page offers Pack Editor and still links to Discovery, Check, and Review. Opening the pack list shows the current editable Packs. That open does not change an existing catalog file or any Pack file. A missing catalog may still be created with the pilot's default rows. The link label and the source-page heading stay as they are. Status accepted for PE-01. Evidence: `test_opening_an_existing_catalog_shows_the_pack_and_does_not_change_it` locks the existing catalog, the cover links, and the pack list. `test_empty_workspace_requirement_link_is_explained` locks the missing-catalog seed and the source-page heading. | PE-01 |
 | **REQ-PE-002** | Each Pack row identifies the Pack, its official document and selected adapter; **Edit** opens the selected Pack. | PE-02 |
 | **REQ-PE-003** | **Add Pack** accepts a Pack name, official document name, document URL and a configured adapter. Saving creates an editable Pack entry; it must not start extraction or publication. | PE-03 |
 | **REQ-PE-004** | Opening a Pack shows only its registered sources, as in the current pilot; the heading displays document and adapter. Each source row retains the existing **Extract** and **Edit** operations. Opening makes no Requirement changes. Do not silently change how source rows relate to adapter-enumerated sections. | PE-04 |
@@ -33,7 +33,7 @@ These are testable behavior contracts derived from the agreed stories. Where beh
 
 ## Test mapping
 
-When implementing, map each REQ-PE ID to an executable test or recorded manual acceptance test in `docs/test/`, including success, cancellation and failure paths. Tests and current implementation status are **not** asserted by this draft. Import the fresh PoC2 tests and establish their baseline first.
+When implementing, map each REQ-PE ID to an executable test or recorded manual acceptance test in `docs/test/`, including success, cancellation and failure paths. REQ-PE-002 and later are not asserted by this draft. REQ-PE-001 is evidenced by the two tests named on that row. Import the fresh PoC2 tests and establish their baseline first.
 
 ## SYS-02 — one suite for the pipeline
 

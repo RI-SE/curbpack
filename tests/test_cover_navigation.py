@@ -1,4 +1,4 @@
-"""Empty workspace: cover and Requirements catalog work; legacy /requirement does not crash."""
+"""Cover and Requirements catalog: empty workspace, an existing catalog, and legacy /requirement."""
 
 from __future__ import annotations
 
@@ -78,6 +78,37 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertIn("demo pack", body)
                 self.assertNotIn("Traceback", body)
                 self.assertNotIn("FileNotFoundError", body)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_opening_an_existing_catalog_shows_the_pack_and_does_not_change_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            catalog_path = root / "registered_sources.json"
+            catalog_path.write_text(
+                '{"documents":[{"id":"house","name":"House Rules",'
+                '"official_name":"House","url":"https://example.test/house",'
+                '"adapter_id":"cra-xml"}],"sources":[]}\n',
+                encoding="utf-8",
+            )
+            before = catalog_path.read_bytes()
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                cover = _get(base + "/")
+                self.assertIn("Pack Editor", cover)
+                self.assertIn('href="/requirements">Packs', cover)
+                for href in ("/discover", "/check", "/review"):
+                    self.assertIn(f'href="{href}"', cover)
+                listed = _get(base + "/requirements")
+                self.assertIn("<h1>Packs</h1>", listed)
+                self.assertIn("House Rules", listed)
+                self.assertEqual(catalog_path.read_bytes(), before)
+                self.assertFalse((root / "selection.json").exists())
+                self.assertEqual(list(root.rglob("pack.json")), [])
             finally:
                 httpd.shutdown()
                 httpd.server_close()
