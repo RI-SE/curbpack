@@ -7,6 +7,7 @@ Curbpack Studio is the local application for Requirements, evidence Discovery an
 - [Documentation index](docs/README.md) — install, product use, and how this repository is tested.
 - [Development](docs/development/README.md) — how to run Studio tests and curbcheck verification from a checkout.
 - [Testing curbcheck](docs/testing/README.md) — `make test-curbcheck`, the seven carried checks, and the copied catalogue under `tests/check/`.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — what a change needs before it lands.
 - `AGENTS.md` — agent entry point; `.cursor/skills/story-workflow/SKILL.md` governs approved story execution.
 - `policies/` — project-wide engineering rules.
 - `docs/arch/ARCHITECTURE.md` and subsystem `ARCHITECTURE.md` — current architecture contracts.

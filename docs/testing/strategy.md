@@ -26,7 +26,7 @@ The carried cases are the seven ids in [procedures/cases.md](procedures/cases.md
 
 ## Outside
 
-[outside.md](outside.md) lists every id this suite does not carry: the two claims that cannot pass, the four CTAM ids, and every `MUST-*` from `daniel/ny_sdd/docs/REQUIREMENTS.md`. No carried case names a `MUST-*` id. A row in that file is not a pass.
+[outside.md](outside.md) lists every id this suite does not carry: the two claims that cannot pass, the four CTAM ids, and every `MUST-*` from [docs/arch/SYSTEM_REQUIREMENTS.md](../arch/SYSTEM_REQUIREMENTS.md). No carried case names a `MUST-*` id. A row in that file is not a pass.
 
 ## Results
 

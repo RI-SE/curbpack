@@ -14,6 +14,7 @@ This short record preserves conclusions from the Pack Editor discussion. It is *
 - All Requirements remain traceable to the original regulatory document, edition and exact supporting passages/locations, including multiple legal references when required. Editing, re-extraction and new Pack versions must not erase this provenance. Modified signed payloads need new signatures. Published versions remain immutable.
 - Packs v2 is the authoritative persisted Pack/Requirement contract. Pack membership uses `requirement.pack_id`; legal provenance uses `source` and `references[]`. `origin` is reserved for descent from a published Pack, not extraction provenance. Adapter/model/prompt/run diagnostics belong outside normative Requirement fields. Confirm precise semantics against `docs/reference/packs2.md` before coding.
 - Pilot-first: import implementation and tests **only from a fresh PoC2 ZIP**, establish its actual test baseline, finish the pilot and avoid premature refactoring. The starter includes no PoC2 code, keys or generated workspace.
+- The license is Apache-2.0, as `LICENSE`. A later change of license is a separate ownership decision.
 
 ## Explicitly open — do not decide automatically
 
@@ -22,7 +23,7 @@ This short record preserves conclusions from the Pack Editor discussion. It is *
 - Whether to extract multiple sections per operation; a single section at a time suffices as the initial behavior.
 - How the user explicitly confirms the treatment of a Requirement that disappears on re-extraction. Its disappearance must be visible and cannot silently delete approved work.
 - Whether Pack publication includes all eligible reviewed Requirements or a deliberate selected subset.
-- Licensing, public repository visibility, and authorization to publish code remain separate ownership decisions; no license is selected in this starter.
+- Public repository visibility and authorization to publish code remain separate ownership decisions. The license is not one of them.
 
 ## Ideas for later epics, not Pack Editor requirements
 

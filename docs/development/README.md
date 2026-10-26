@@ -45,6 +45,10 @@ Packs and claims come from the clone's `external_test/curbpack-studio/`. A catal
 
 `make package` builds the Studio binary and a separate curbcheck binary for this host, then smokes both. See [Install](../user-guides/install.md) and [CI/CD](../user-guides/ci-cd.md).
 
+## Check in a product pipeline
+
+[Check in CI](ci.md) is the job a product repository runs on GitHub Actions, GitLab CI, and Jenkins. `make test` and `make ci-tests` test this repository.
+
 ## Temporary notes
 
 Delete a note when it is no longer needed. [Official XML sources](xml-sources.md) stays; it is the procedure for the pinned Formex XML.

@@ -20,6 +20,8 @@ legal source
 
 A passing Check is an observation about configured arguments. It is not a legal compliance determination. The review report has no field for a conclusion that the product meets the Cyber Resilience Act.
 
+Curbpack prepares structural evidence for human review. It is not a conformity assessment, certification, CE-marking decision, notified-body opinion, or legal conclusion under [Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2024/2847/oj).
+
 ## Start here
 
 | You are | Start here |
@@ -60,6 +62,7 @@ Do not treat the guides above as a second contract.
 | Persistent data | [Packs v2](reference/packs2.md) |
 | Product configuration | [Configuration](reference/configuration.md) |
 | System boundaries and the cover | [Architecture](arch/ARCHITECTURE.md) |
+| Inherited requirement ids | [System requirements](arch/SYSTEM_REQUIREMENTS.md) |
 | Annex VII point 3, historical narrative and current acceptance | [End-to-end scenario](concepts/end-to-end-scenario.md) |
 | Stories | [Agile](agile/README.md) |
 | Derived requirements | [Requirements](req/README.md) |
