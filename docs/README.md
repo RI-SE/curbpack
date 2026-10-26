@@ -58,6 +58,7 @@ Do not treat the guides above as a second contract.
 | Subject | Document |
 | --- | --- |
 | Persistent data | [Packs v2](reference/packs2.md) |
+| Product configuration | [Configuration](reference/configuration.md) |
 | System boundaries and the cover | [Architecture](arch/ARCHITECTURE.md) |
 | Annex VII point 3, historical narrative and current acceptance | [End-to-end scenario](concepts/end-to-end-scenario.md) |
 | Stories | [Agile](agile/README.md) |

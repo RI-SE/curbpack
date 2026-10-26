@@ -1,21 +1,27 @@
 #!/bin/sh
-# make test-curbcheck. Clone, restore, apply R1, run the seven carried checks.
-# Manual rows are printed and are not a pass.
+# make test-curbcheck. Follows docs/testing/: start verification run, source,
+# R1 via the Studio fixture, packs from that fixture, then the catalogue.
 set -eu
 
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 
-"$root/scripts/start-verification-run.sh" --yes
+CONFIRM_TMP_WIPE=1 "$root/scripts/start-verification-run.sh" --yes
 # shellcheck disable=SC1091
 . "$root/tmp/verification-run.sh"
 
 product=$REFERENCE_PRODUCT_ROOT
+fixture=$product/external_test/curbpack-studio
+if [ ! -d "$fixture/packs" ] || [ ! -d "$fixture/claims" ]; then
+	echo "error: pin is missing external_test/curbpack-studio packs/claims" >&2
+	exit 1
+fi
+
 (
-	cd "$product"
-	./external_test/curbpack/setup.sh R1 --commit
+	cd "$fixture"
+	SUT=curbpack-studio ./setup.sh R1 --commit
 )
-if ! git -C "$product" diff --quiet -- external_test/curbpack/states/R1.sh; then
+if ! git -C "$product" diff --quiet -- external_test/curbpack-studio/states/R1.sh; then
 	echo "error: states/R1.sh changed inside the clone" >&2
 	exit 1
 fi
@@ -31,12 +37,12 @@ for id in \
 	HOUSE-SECURITY-MD \
 	HOUSE-SECURITY-TXT
 do
-	cp "$root/docs/reference/test-packs/claims/$id.json" "$product/claims/$id.json"
+	cp "$fixture/claims/$id.json" "$product/claims/$id.json"
 done
 
 out=$product/run-result.json
 set +e
-checks_out=$(python3 -m checks --repo "$product" --packs "$root/docs/reference/test-packs" --out "$out")
+checks_out=$(python3 -m checks --repo "$product" --packs "$fixture/packs" --out "$out")
 checks_code=$?
 set -e
 printf '%s\n' "$checks_out"

@@ -26,15 +26,20 @@ That is the same suite CI runs for the `tests` check. It does not clone the refe
 
 ### curbcheck
 
-From the repository root:
+Follow [testing/README.md](../testing/README.md). From the repository root, start the run first:
+
+```sh
+CONFIRM_TMP_WIPE=1 make start-verification-run
+source tmp/verification-run.sh
+```
+
+Then prepare R1 and run the seven carried checks as that document states, or run the same sequence with:
 
 ```sh
 make test-curbcheck
 ```
 
-That clones the pin in `tests/cyberready-test-product.pin`, applies R1 with the product's `setup.sh`, runs the seven carried checks with `python3 -m checks`, prints the manual code-review rows, and reports every catalogue row from the copied procedures under `tests/check/suites/`. A row whose procedure still calls `curbpack` is outside the pass. Details: [testing/README.md](../testing/README.md).
-
-SSH access to `git@github.com:RI-SE/cyberready-test-product.git` is required for that clone.
+Packs and claims come from the clone's `external_test/curbpack-studio/`. A catalogue row whose procedure still calls `curbpack` is outside the pass. SSH access to `git@github.com:RI-SE/cyberready-test-product.git` is required for the clone.
 
 ## Package
 

@@ -2,24 +2,46 @@
 
 This is curbcheck's verification. Studio's functional suite is `make test`; start there from [Development](../development/README.md).
 
-From the Studio repository root:
+Follow the documents in this order. Do not start in a suite file.
+
+1. [Verification strategy](strategy.md)
+2. [Requirement traceability](requirements_traceability.md)
+3. [Test setup](procedures/README.md) — start the verification run here
+4. [Carried cases](procedures/cases.md)
+5. [Outside ids](outside.md)
+6. Copied suite procedures under [tests/check/suites/](../../tests/check/suites/) and [tests/check/docs/](../../tests/check/docs/)
+
+## Start a verification run
+
+From the Studio repository root, once per run:
 
 ```sh
-make test-curbcheck
+make start-verification-run
+# or non-interactive:
+CONFIRM_TMP_WIPE=1 make start-verification-run
 ```
 
-That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The copied procedures are [tests/check/suites/](../../tests/check/suites/) and [tests/check/docs/procedures/](../../tests/check/docs/procedures/). A procedure that still calls `curbpack` is reported outside and is not a pass.
+That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product` and writes `tmp/verification-run.sh`. Then, still from the Studio root:
 
-Do not export `CURBPACK_PACKS_DIR`. Do not run `curbpack check`. Do not archive a local product checkout. Do not edit the reference product. `tmp/` is not committed.
+```sh
+source tmp/verification-run.sh
+```
 
-The steps are also in [procedures/README.md](procedures/README.md).
+That prints `Verification run configuration: OK`, deletes the clone, and clones it again at the pin. Do not export `CURBPACK_PACKS_DIR`. Do not run `curbpack check`. Do not archive a local product checkout. Do not edit the reference product. `tmp/` is not committed.
 
-## Reading order
+## Run the carried checks
 
-1. [Verification strategy](strategy.md) — what this suite runs.
-2. [Requirement traceability](requirements_traceability.md) — every `MUST-*` id, and that no carried case names it.
-3. [Test setup](procedures/README.md) — R1–R7, PF-01–PF-17, and how the suite repo is prepared.
-4. [Carried cases](procedures/cases.md) — the seven ids, expected status `pass`, and the check arguments.
-5. [Outside ids](outside.md) — ids this suite does not pass. That list is not a pass.
+After the source above, the mechanical steps are in [procedures/README.md](procedures/README.md). In short: apply R1 with the Studio fixture `setup.sh`, write `curbpack.json`, copy the seven claim files from the fixture's `claims/`, and run:
+
+```sh
+python3 -m checks \
+  --repo "$REFERENCE_PRODUCT_ROOT" \
+  --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs" \
+  --out "$REFERENCE_PRODUCT_ROOT/run-result.json"
+```
+
+Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. Manual rows are in [tests/check/manual.md](../../tests/check/manual.md). They are not a pass.
+
+`make test-curbcheck` runs that same sequence for CI after it starts the verification run. A person testing by the book starts with `make start-verification-run` and `source tmp/verification-run.sh` first.
 
 [Test records](generated_test_record_template.md) are blank copies kept outside this repository. [Code review](procedures/2_code_review_procedures.md) is not a carried case.
