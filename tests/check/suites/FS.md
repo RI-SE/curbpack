@@ -19,6 +19,8 @@ using the recorded `<commit hash>` and `<date>`, and building the CLI. This is d
 
 Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare the case’s named R-state through product `setup.sh` on that already-restored baseline. Then apply EC and pack input as the case states. FS-001 keeps that R1 checkout and selects [PF-05](../docs/procedures/1_pack_template_instantiation.md#pf-05) with `mutate_pack.sh`. It does not create an R-id or a `tmp/R*` repository.
 
+Note: FS pack mutate cases are outside (not Packs v2); the old curbpack observation is not used. See automation/fs.sh.
+
 ## Test suite overview
 
 

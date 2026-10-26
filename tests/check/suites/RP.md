@@ -28,6 +28,8 @@ using the recorded `<commit hash>` and `<date>`, and building the CLI. This is d
 
 Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. RP-001 and RP-002 then prepare R1 or R2 via product `setup.sh` on that already-restored baseline. RP-003 to RP-005 select PF-10, PF-11, or PF-12 with `mutate_pack.sh` and review the installed files under `external_test/curbpack/review-pack-input/`. They do not create an R-id or a `tmp/R*` repository.
 
+Note: RP share/review cases are outside; the old curbpack observation is not used. See automation/rp.sh.
+
 ## Test suite overview
 
 

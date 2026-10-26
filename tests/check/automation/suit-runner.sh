@@ -5,7 +5,7 @@
 #
 #   sh tests/check/automation/suit-runner.sh all|SUITE|CASE|VARIANT
 #
-# A procedure that calls curbpack is reported OUTSIDE and is not a pass.
+# Cases call python3 -m checks (or return 2 with outside:/not implemented:).
 # EV-001 is the seven carried checks when tmp/suit-runner/EV-001.carried exists.
 #
 # PK-001 is a reference to EV-001, not a second PASS.
@@ -138,6 +138,15 @@ source_suite() {
 	case " $sourced_suites " in
 		*" $src_id "*) return 0 ;;
 	esac
+	# Shared Studio/curbcheck helpers once per process.
+	case " $sourced_suites " in
+		*" __helpers__ "*) ;;
+		*)
+			# shellcheck disable=SC1091
+			. "$automation_dir/helpers.sh"
+			sourced_suites="$sourced_suites __helpers__"
+			;;
+	esac
 	src_path=$(suite_file "$src_id")
 	if [ -f "$src_path" ]; then
 		# shellcheck disable=SC1090
@@ -184,6 +193,8 @@ classify_status() {
 		2)
 			if grep -qi 'not specified yet' "$log"; then
 				printf '%s\n' "TBD"
+			elif grep -qiE 'outside:|not implemented:' "$log"; then
+				printf '%s\n' "OUTSIDE"
 			elif grep -qi 'cannot be run' "$log" ||
 				grep -qi 'does not invent a tag' "$log" ||
 				grep -qi 'assignment does not name' "$log" ||
@@ -278,18 +289,6 @@ execute_function() {
 		fi
 		return 0
 	fi
-	if type "$ex_fn" 2>/dev/null | grep -q 'curbpack '; then
-		printf '%s\n' "$ex_id: outside. The copied procedure calls curbpack. That observation is not a curbcheck pass." >"$ex_log"
-		ex_result=OUTSIDE
-		print_status_end "$ex_result"
-		write_case_status "$ex_id" "$ex_result"
-		printf '  %soutside: procedure calls curbpack\n' "$ex_indent"
-		if [ "$ex_count" = "yes" ]; then
-			count_result "$ex_result"
-			displayed_count=$((displayed_count + 1))
-		fi
-		return 0
-	fi
 	ex_rel=tmp/suit-runner/$ex_id.log
 	"$ex_fn" >"$ex_log" 2>&1
 	ex_rc=$?
@@ -302,7 +301,7 @@ execute_function() {
 			printf '  %s%s\n' "$ex_indent" "$(short_reason "$ex_log" "$ex_id")"
 			printf '  %slog: %s\n' "$ex_indent" "$ex_rel"
 			;;
-		MANUAL|TBD)
+		MANUAL|TBD|OUTSIDE)
 			printf '  %s%s\n' "$ex_indent" "$(short_reason "$ex_log" "$ex_id")"
 			;;
 	esac

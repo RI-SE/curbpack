@@ -22,6 +22,8 @@ using the recorded `<commit hash>` and `<date>`, and building the CLI. This is d
 
 Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare R1 via product `setup.sh` on that already-restored baseline. Then apply EC as the case states. PK-002, PK-003, PK-004, and PK-005 keep that same R1 checkout and select the named PF with `mutate_pack.sh`. They do not create an R-id or a `tmp/R*` repository.
 
+Note: PK mutate/pack.json cases are outside (not Packs v2); the old curbpack observation is not used. See automation/pk.sh. PK-001 remains a reference to EV-001.
+
 ## Test suite overview
 
 

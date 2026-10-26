@@ -23,6 +23,8 @@ using the recorded `<commit hash>` and `<date>`, and building the CLI. This is d
 
 Each executable case starts the same way: from the Curbpack root, `source tmp/verification-run.sh`. That restore puts the disposable reference product back at the frozen baseline. You can run the cases in any order. Do not keep using the previous case’s directory. Then prepare R1 via product `setup.sh` on that already-restored baseline. Then apply EC as the case states. PV-006 keeps that same R1 checkout and selects PF-06 with `mutate_pack.sh`. It does not create an R-id or a `tmp/R*` repository.
 
+Note: PV cases that need `.curbpack` cache fields are outside; the old curbpack observation is not used. See automation/pv.sh.
+
 ## Test suite overview
 
 
