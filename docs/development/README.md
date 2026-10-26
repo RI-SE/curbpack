@@ -39,7 +39,7 @@ Then prepare R1 and run the seven carried checks as that document states, or run
 make test-curbcheck
 ```
 
-Packs and claims come from the clone's `external_test/curbpack-studio/`. A catalogue row whose procedure still calls `curbpack` is outside the pass. SSH access to `git@github.com:RI-SE/cyberready-test-product.git` is required for the clone.
+Packs and claims come from the clone's `external_test/curbpack-studio/`. A catalogue row whose procedure still calls `curbpack` is outside the pass. The clone uses the public HTTPS URL in `tests/cyberready-test-product.pin`.
 
 ## Package
 

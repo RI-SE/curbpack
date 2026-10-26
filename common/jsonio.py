@@ -15,17 +15,10 @@ def dump_text(obj: object) -> str:
 def write_json(path: Path, obj: object) -> None:
     """Replace the file in one step so a reader never sees a half-written document."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        dir=path.parent,
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        delete=False,
-    )
-    temporary = Path(handle.name)
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    temporary = Path(name)
     try:
-        with handle:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(dump_text(obj))
         os.replace(temporary, path)
     except Exception:

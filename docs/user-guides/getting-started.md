@@ -18,7 +18,7 @@ This walkthrough is a guided experiment. A written pilot record still needs the 
 
 ```bash
 mkdir -p ~/curbpack-playground/packs/walkthrough
-git clone git@github.com:RI-SE/cyberready-test-product.git ~/curbpack-playground/product
+git clone https://github.com/RI-SE/cyberready-test-product.git ~/curbpack-playground/product
 cd ~/curbpack-playground/product
 git rev-parse HEAD
 git status

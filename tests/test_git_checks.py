@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from checks import gitcheck
 from checks.run import git_snapshot, run_claim
 from checks.schema import load_registry, validate_check_args
 from claims.bind import build_claim
@@ -377,6 +378,29 @@ class GitFreshTest(unittest.TestCase):
             result = _fresh(repo, "risk.md", 0, "2026-10-23T12:00:00Z")
         self.assertEqual(result["status"], "pass")
         self.assertNotIn("detail", result)
+
+    def test_windows_symlink_text_matches_the_blob_git_stores(self):
+        original = gitcheck.os.name
+        gitcheck.os.name = "nt"
+        try:
+            self.assertEqual(gitcheck._symlink_target_text(r"C:\repo\ext.txt"), "C:/repo/ext.txt")
+            self.assertEqual(
+                gitcheck._symlink_target_text("\\\\?\\C:\\repo\\ext.txt"),
+                "C:/repo/ext.txt",
+            )
+            self.assertEqual(
+                gitcheck._symlink_target_text(r"..\outside\ext.txt"),
+                "../outside/ext.txt",
+            )
+        finally:
+            gitcheck.os.name = original
+
+    def test_a_file_parent_is_not_a_directory_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "notdir").write_text("file\n", encoding="utf-8")
+            self.assertTrue(gitcheck._not_a_directory_path(repo, "notdir/child.md"))
+            self.assertFalse(gitcheck._not_a_directory_path(repo, "missing.md"))
 
     def test_a_clean_symlink_passes_for_every_target_kind(self):
         when = "2026-10-23T12:00:00Z"

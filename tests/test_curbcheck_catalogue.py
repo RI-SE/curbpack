@@ -33,7 +33,8 @@ class CurbcheckCatalogueTest(unittest.TestCase):
             self.assertEqual(len(rows), 1, case_id)
         ev = (SUITES / "EV.md").read_text(encoding="utf-8")
         self.assertIn("## EV-002 —", ev)
-        self.assertIn("setup.sh R2 --commit", ev)
+        self.assertIn("SUT=curbpack-studio ./setup.sh R1 --commit", ev)
+        self.assertIn("R2 via Studio fixture `setup.sh`", ev)
 
     def test_code_review_procedure_is_the_full_text(self):
         text = (ROOT / "tests/check/docs/procedures/2_code_review_procedures.md").read_text(encoding="utf-8")
@@ -43,10 +44,13 @@ class CurbcheckCatalogueTest(unittest.TestCase):
         ids = (ROOT / "tests/check/manual.ids").read_text(encoding="utf-8").split()
         self.assertEqual(ids, [f"CR-{number:02d}" for number in range(1, 12)])
 
-    def test_runner_does_not_pass_a_curbpack_procedure(self):
+    def test_runner_uses_the_verification_run(self):
         runner = (ROOT / "tests/check/automation/suit-runner.sh").read_text(encoding="utf-8")
         self.assertIn("tests/check/suites", runner)
-        self.assertIn("procedure calls curbpack", runner)
+        self.assertIn("REFERENCE_PRODUCT_ROOT", runner)
+        self.assertIn("python3 -m checks", runner)
+        self.assertNotIn("curbpack check", runner)
+        self.assertNotIn("procedure calls curbpack", runner)
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
         test_recipe = makefile.split("test:\n", 1)[1].split("\n\n", 1)[0]
         self.assertNotIn("tests/check", test_recipe)

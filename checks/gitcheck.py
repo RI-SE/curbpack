@@ -47,6 +47,17 @@ def _git_run(repo: Path, *args: str, input_text: str | None = None) -> subproces
         return None
 
 
+def _git_run_bytes(repo: Path, *args: str) -> subprocess.CompletedProcess | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            env=_git_child_env(),
+        )
+    except FileNotFoundError:
+        return None
+
+
 def _entry_path(repo: Path, relative: str) -> Path:
     """Worktree path without resolving a final symlink."""
     root = repo.resolve()
@@ -68,6 +79,16 @@ def _head_mode_and_blob(repo: Path, relative: str) -> tuple[str, str] | None:
     return parts[0], parts[2]
 
 
+def _symlink_target_text(target: str) -> str:
+    """Link text Git stores. On Windows that text uses forward slashes."""
+    if os.name != "nt":
+        return target
+    text = target.replace("\\", "/")
+    if text.startswith("//?/"):
+        text = text[4:]
+    return text
+
+
 def _worktree_blob(repo: Path, relative: str) -> str | None:
     """Blob id Git would record for the worktree entry. None if Git failed."""
     path = _entry_path(repo, relative)
@@ -76,7 +97,12 @@ def _worktree_blob(repo: Path, relative: str) -> str | None:
     except FileNotFoundError:
         return ""
     if stat.S_ISLNK(info.st_mode):
-        hashed = _git_run(repo, "hash-object", "--stdin", input_text=os.readlink(path))
+        hashed = _git_run(
+            repo,
+            "hash-object",
+            "--stdin",
+            input_text=_symlink_target_text(os.readlink(path)),
+        )
     elif stat.S_ISREG(info.st_mode):
         hashed = _git_run(repo, "hash-object", "--", relative)
     else:
@@ -139,6 +165,32 @@ def _path_error_detail(relative: str, exc: Exception) -> str:
     return f"{relative} cannot be read"
 
 
+def _not_a_directory_path(repo: Path, relative: str) -> bool:
+    """True when a parent of relative exists and is not a directory.
+
+    Windows reports that path as missing. POSIX raises NotADirectoryError.
+    """
+    cursor = repo
+    for part in Path(relative).parts[:-1]:
+        cursor = cursor / part
+        try:
+            info = cursor.lstat()
+        except FileNotFoundError:
+            return False
+        except NotADirectoryError:
+            return True
+        if stat.S_ISLNK(info.st_mode):
+            try:
+                if not cursor.is_dir():
+                    return True
+            except OSError:
+                return True
+            continue
+        if not stat.S_ISDIR(info.st_mode):
+            return True
+    return False
+
+
 def _prepare_git_path(repo: Path, relative: str) -> dict | None:
     """Fail when path is not a clean tracked entry. None when history may be read."""
     probe = _git_run(repo, "rev-parse", "--is-inside-work-tree")
@@ -151,6 +203,8 @@ def _prepare_git_path(repo: Path, relative: str) -> dict | None:
         try:
             info = entry.lstat()
         except FileNotFoundError:
+            if _not_a_directory_path(repo, relative):
+                return {"status": "fail", "detail": f"{relative} is not a directory path"}
             return _fail_with_commit(repo, relative, f"{relative} is absent")
         if not (stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode)):
             return _fail_with_commit(repo, relative, f"{relative} is absent")
@@ -176,29 +230,49 @@ def _prepare_git_path(repo: Path, relative: str) -> dict | None:
 _AUTHOR_UNREADABLE = object()
 
 
+def _author_name_email(raw: bytes):
+    """Name and email from a raw commit. None when the author bytes are not UTF-8."""
+    header, _, _message = raw.partition(b"\n\n")
+    for line in header.split(b"\n"):
+        if not line.startswith(b"author "):
+            continue
+        body = line[len(b"author ") :]
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+        end = text.rfind(">")
+        start = text.rfind(" <", 0, end if end >= 0 else None)
+        if start < 1 or end < 0:
+            return _AUTHOR_UNREADABLE
+        name = text[:start]
+        email = text[start + 2 : end]
+        if not name or not email or not text[end + 1 :].strip():
+            return _AUTHOR_UNREADABLE
+        return name, email
+    return _AUTHOR_UNREADABLE
+
+
 def _author_of(repo: Path, relative: str):
-    """Commit id, author name, and author email. Unreadable when the record is not three fields."""
-    try:
-        log = _git_run(
-            repo,
-            "log",
-            "-1",
-            "-z",
-            "--no-show-signature",
-            "--format=%H%x00%an%x00%ae",
-            "HEAD",
-            "--",
-            relative,
-        )
-    except UnicodeDecodeError:
-        return None, None, None
-    if log is None or log.returncode != 0 or not log.stdout:
+    """Commit id, author name, and author email. Unreadable when the record is not three fields.
+
+    The author line is read from the commit object. Git on Windows exits instead of
+    printing an author that is not UTF-8, which would otherwise look like a missing commit.
+    """
+    listed = _git_run(repo, "rev-list", "-1", "HEAD", "--", relative)
+    if listed is None or listed.returncode != 0 or not listed.stdout.strip():
         return None
-    text = log.stdout[:-1] if log.stdout.endswith("\0") else log.stdout
-    parts = text.split("\0")
-    if len(parts) != 3 or not parts[0]:
+    commit = listed.stdout.strip()
+    raw = _git_run_bytes(repo, "cat-file", "commit", commit)
+    if raw is None or raw.returncode != 0:
+        return None
+    parsed = _author_name_email(raw.stdout)
+    if parsed is None:
+        return None, None, None
+    if parsed is _AUTHOR_UNREADABLE:
         return _AUTHOR_UNREADABLE
-    return parts[0], parts[1], parts[2]
+    name, email = parsed
+    return commit, name, email
 
 
 def run_git_fresh(repo: Path, args: dict) -> dict:
