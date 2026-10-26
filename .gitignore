@@ -30,3 +30,6 @@ venv/
 
 # Disposable verification clone and the filled run file
 /tmp/
+
+# Private local notes (never part of the product repo)
+/daniel/
