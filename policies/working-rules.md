@@ -14,7 +14,7 @@ The goal is code a human engineer can read and safely change six months later. F
 10. **Comments explain why.** Type hints and short docstrings at non-obvious boundaries; do not comment every line or auto-generate prose that restates code.
 11. **Tests prove behavior.** Small deterministic tests for transformations and round trips; one honest, non-mocked integration path at each milestone. Mock external services only at deliberate boundaries.
 12. **Keep the old PoC pristine.** Use `poc/` as a behavior reference, not as a runtime dependency. Do not modify, import from or read its mutable data at runtime in `poc2/`.
-13. **Keep commits reviewable.** Commit verified, coherent increments locally. Before editing, inspect status and do not include unrelated work. No push, PR, release, remote mutation or destructive Git operations without approval.
+13. **Keep commits reviewable.** Commit verified, coherent increments locally. One verified step is one local commit, and the plan records that commit's hash. A later pull request keeps those commits. Before editing, inspect status and do not include unrelated work. No push, pull request, release, remote mutation, squash, or other history rewrite without approval.
 14. **Bound agent context.** At the end of each stage, write a short record of what works, tests run, unresolved issues and next action. Start a new context from that record when necessary; do not invent a complex agent coordination system.
 
 ## Minimal definition of done for one component
