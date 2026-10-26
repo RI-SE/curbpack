@@ -1,18 +1,40 @@
 # Instructions for coding agents
 
-Curbpack Studio starts from the verified behavior of the **fresh PoC2 pilot**. The stories in `docs/agile/epics/01-pack-editor/` and derived requirements in `docs/req/pack-editor.md` describe desired changes; **they are not permission to implement them automatically**.
+Stories and epics describe desired behavior. They are not permission to implement it.
 
-For an approved change:
-1. Read the relevant epic/story (`docs/agile/`) and derived requirements (`docs/req/`). Do not guess at open decisions.
-2. Check `docs/arch/ARCHITECTURE.md`, the applicable subsystem `ARCHITECTURE.md`, `policies/` and existing implementation. Resolve contradictions instead of silently choosing an interpretation.
-3. Use the authoritative **Packs v2** contract at `docs/reference/packs2.md` in this repository for persistent Pack, Requirement, Claim, signature and result data; do not invent fields.
-4. After importing the pilot, read its existing architecture and the active story plan in `plan/` before altering affected code. Do not resume a file in `impl/pilot/`.
-5. Check `git status`; preserve unrelated edits and signed/published data.
+## Story work
 
-Implement one approved testable change at a time. Connect story → requirement → acceptance test. Run focused and relevant regression tests; report commands, actual results and remaining gaps. Avoid speculative layers, duplicated schemas or bulk refactoring. Do not mark unverified work complete. Do not push, publish, tag, rewrite history or perform destructive Git operations without permission.
+For all planning, implementation, testing, review, or resumption of approved story work, follow `.cursor/skills/story-workflow/SKILL.md` (`/story-workflow`).
 
-Old CTAM and PoC1 are historical references only, not runtime dependencies or authorities for Packs v2.
+1. Read the epic/story in `docs/agile/` and the requirements defined in the story. Older stories may instead have derived requirements in `docs/req/`.
+2. Acceptance behavior for new stories is defined in the story using Given/When/Then, examples, or an equivalent semi-executable form. Do not create duplicate derived requirements when the story already defines the required behavior.
+3. The canonical live plan is `plan/<STORY-ID>.md`. When the story is verified DONE, it moves to `impl/<STORY-ID>.md`. Do not resume implementation from a file in `impl/`.
+4. Acceptance tests are derived directly from the story and must remain readable by a human as executable specifications. Do not invent behavior for unresolved decisions.
 
-## Working from a story
+## Authority and constraints
 
-For any approved epic/story work (including resumptions), follow `.cursor/skills/story-workflow/SKILL.md` (`/story-workflow`). The live plan is `plan/<STORY-ID>.md`. When the story is DONE, that file moves to `impl/<STORY-ID>.md`. Policies and the authoritative Packs v2 contract govern content; the skill governs execution.
+Before changing affected code, inspect the applicable:
+
+- epic/story in `docs/agile/`;
+- legacy derived requirements in `docs/req/`, when applicable;
+- `docs/arch/ARCHITECTURE.md`;
+- `docs/arch/SYSTEM_REQUIREMENTS.md`;
+- subsystem `ARCHITECTURE.md`;
+- `policies/`, including the testing, architecture, and working rules;
+- existing implementation and tests.
+
+For persistent Pack, Requirement, Claim, signature, and result data, `docs/reference/packs2.md` is authoritative. Do not invent fields or duplicate the persistent schema.
+
+Resolve contradictions through the story workflow rather than silently choosing an interpretation.
+
+## Change discipline
+
+Implement only approved story scope, one verified step at a time. Preserve unrelated working-tree changes, existing behavior outside the approved change, and signed or published data.
+
+Avoid speculative abstractions, duplicated schemas, unrelated refactoring, or architecture changes outside the approved scope. Do not weaken tests merely to make them pass.
+
+## Git and external actions
+
+Local commits made according to `/story-workflow` are allowed.
+
+Do not push, publish, create releases or tags, modify remotes, rewrite history, perform destructive Git operations, or upload confidential material without explicit permission.

@@ -17,7 +17,7 @@ venv/
 
 # Local workspace and generated runs (do not exclude curated reference data)
 /data/workspace/
-/poc2/data/workspace/
+
 **/.DS_Store
 
 # Local editor files
