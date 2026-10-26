@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
+import secrets
+import time
 from pathlib import Path
 
 
@@ -13,12 +14,15 @@ def dump_text(obj: object) -> str:
 
 
 def write_json(path: Path, obj: object) -> None:
-    """Replace the file in one step so a reader never sees a half-written document."""
+    """Replace the file in one step so a reader never sees a half-written document.
+
+    The temporary file is created with the directory's own permissions. mkstemp's
+    owner-only mode stays unreadable on the Windows CI runner after the replace.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    temporary = Path(name)
+    temporary = path.with_name(f".{path.name}.{secrets.token_hex(4)}.tmp")
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        with temporary.open("w", encoding="utf-8") as handle:
             handle.write(dump_text(obj))
         os.replace(temporary, path)
     except Exception:
@@ -27,9 +31,20 @@ def write_json(path: Path, obj: object) -> None:
 
 
 def read_json(path: Path) -> object:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        raise
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{path}: invalid JSON ({exc})") from exc
+    denied: PermissionError | None = None
+    for _ in range(8):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raise
+        except PermissionError as exc:
+            # A replace in progress on Windows denies the reader for a moment.
+            denied = exc
+            time.sleep(0.01)
+            continue
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path}: invalid JSON ({exc})") from exc
+    assert denied is not None
+    raise denied
