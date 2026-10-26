@@ -5,9 +5,6 @@
 #
 #   sh tests/check/automation/suit-runner.sh all|SUITE|CASE|VARIANT
 #
-# Cases call python3 -m checks (or return 2 with outside:/not implemented:).
-# EV-001 is the seven carried checks when tmp/suit-runner/EV-001.carried exists.
-#
 # PK-001 is a reference to EV-001, not a second PASS.
 
 automation_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -18,7 +15,6 @@ fail_count=0
 manual_count=0
 tbd_count=0
 blocked_count=0
-outside_count=0
 ref_count=0
 displayed_count=0
 catalogue_total=0
@@ -138,15 +134,6 @@ source_suite() {
 	case " $sourced_suites " in
 		*" $src_id "*) return 0 ;;
 	esac
-	# Shared Studio/curbcheck helpers once per process.
-	case " $sourced_suites " in
-		*" __helpers__ "*) ;;
-		*)
-			# shellcheck disable=SC1091
-			. "$automation_dir/helpers.sh"
-			sourced_suites="$sourced_suites __helpers__"
-			;;
-	esac
 	src_path=$(suite_file "$src_id")
 	if [ -f "$src_path" ]; then
 		# shellcheck disable=SC1090
@@ -193,8 +180,6 @@ classify_status() {
 		2)
 			if grep -qi 'not specified yet' "$log"; then
 				printf '%s\n' "TBD"
-			elif grep -qiE 'outside:|not implemented:' "$log"; then
-				printf '%s\n' "OUTSIDE"
 			elif grep -qi 'cannot be run' "$log" ||
 				grep -qi 'does not invent a tag' "$log" ||
 				grep -qi 'assignment does not name' "$log" ||
@@ -245,7 +230,6 @@ count_result() {
 		MANUAL) manual_count=$((manual_count + 1)) ;;
 		TBD) tbd_count=$((tbd_count + 1)) ;;
 		BLOCKED) blocked_count=$((blocked_count + 1)) ;;
-		OUTSIDE) outside_count=$((outside_count + 1)) ;;
 		EV-001|REF) ref_count=$((ref_count + 1)) ;;
 	esac
 }
@@ -277,18 +261,18 @@ execute_function() {
 	flush_print "$ex_prefix"
 
 	mkdir -p "$log_dir"
+# Studio checkout is the tool root (old scripts call this CURBPACK_ROOT).
+export CURBPACK_ROOT="${CURBPACK_ROOT:-$repo_root}"
+export STUDIO_ROOT="${STUDIO_ROOT:-$repo_root}"
+# Packs for curbcheck: fixture on the clone, or explicit override.
+export CURBCHECK_PACKS="${CURBCHECK_PACKS:-${REFERENCE_PRODUCT_ROOT:+$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs}}"
+export CURBPACK_PACKS_DIR="${CURBPACK_PACKS_DIR:-$CURBCHECK_PACKS}"
+# Put the current curbcheck CLI on PATH (python3 -m checks with suite-compatible flags).
+export PATH="$repo_root/scripts/bin:$PATH"
+	# shellcheck disable=SC1091
+	. "$repo_root/tests/check/automation/studio-pf01.sh"
+
 	ex_log=$log_dir/$ex_id.log
-	if [ "$ex_id" = "EV-001" ] && [ -f "$log_dir/EV-001.carried" ]; then
-		printf '%s\n' "EV-001: the seven carried checks already ran in this make test-curbcheck. This row is not run again." >"$ex_log"
-		ex_result=PASS
-		print_status_end "$ex_result"
-		write_case_status "$ex_id" "$ex_result"
-		if [ "$ex_count" = "yes" ]; then
-			count_result "$ex_result"
-			displayed_count=$((displayed_count + 1))
-		fi
-		return 0
-	fi
 	ex_rel=tmp/suit-runner/$ex_id.log
 	"$ex_fn" >"$ex_log" 2>&1
 	ex_rc=$?
@@ -301,7 +285,7 @@ execute_function() {
 			printf '  %s%s\n' "$ex_indent" "$(short_reason "$ex_log" "$ex_id")"
 			printf '  %slog: %s\n' "$ex_indent" "$ex_rel"
 			;;
-		MANUAL|TBD|OUTSIDE)
+		MANUAL|TBD)
 			printf '  %s%s\n' "$ex_indent" "$(short_reason "$ex_log" "$ex_id")"
 			;;
 	esac
@@ -357,24 +341,22 @@ run_leaf() {
 
 status_rank() {
 	case "$1" in
-		FAIL) printf '%s\n' 6 ;;
-		BLOCKED) printf '%s\n' 5 ;;
-		TBD) printf '%s\n' 4 ;;
-		MANUAL) printf '%s\n' 3 ;;
-		OUTSIDE) printf '%s\n' 2 ;;
+		FAIL) printf '%s\n' 5 ;;
+		BLOCKED) printf '%s\n' 4 ;;
+		TBD) printf '%s\n' 3 ;;
+		MANUAL) printf '%s\n' 2 ;;
 		EV-001|REF) printf '%s\n' 1 ;;
 		PASS) printf '%s\n' 0 ;;
-		*) printf '%s\n' 5 ;;
+		*) printf '%s\n' 4 ;;
 	esac
 }
 
 rank_to_status() {
 	case "$1" in
-		6) printf '%s\n' FAIL ;;
-		5) printf '%s\n' BLOCKED ;;
-		4) printf '%s\n' TBD ;;
-		3) printf '%s\n' MANUAL ;;
-		2) printf '%s\n' OUTSIDE ;;
+		5) printf '%s\n' FAIL ;;
+		4) printf '%s\n' BLOCKED ;;
+		3) printf '%s\n' TBD ;;
+		2) printf '%s\n' MANUAL ;;
 		1) printf '%s\n' REF ;;
 		*) printf '%s\n' PASS ;;
 	esac
@@ -571,7 +553,6 @@ print_counts() {
 	printf '%s\n' "MANUAL $manual_count"
 	printf '%s\n' "TBD $tbd_count"
 	printf '%s\n' "BLOCKED $blocked_count"
-	printf '%s\n' "OUTSIDE $outside_count"
 	printf '%s\n' "REF $ref_count"
 	printf '%s\n' "CATALOGUE $catalogue_total"
 	printf '%s\n' "DISPLAYED $displayed_count"
@@ -643,7 +624,7 @@ if [ "$displayed_count" -ne "$catalogue_total" ] && [ "$selector" = "all" ]; the
 	printf 'error: DISPLAYED %s does not match CATALOGUE %s\n' "$displayed_count" "$catalogue_total" >&2
 	exit 1
 fi
-if [ "$fail_count" -ne 0 ]; then
+if [ "$fail_count" -ne 0 ] || [ "$blocked_count" -ne 0 ]; then
 	exit 1
 fi
 exit 0
