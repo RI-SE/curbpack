@@ -1,24 +1,14 @@
-# Migrated verification suite
+# Testing curbcheck
 
-Run this from the Studio repository root. `<prepared-repo>` is a checkout outside this repository.
+This is curbcheck's verification. Studio's functional suite is `make test`; start there from [Development](../development/README.md).
 
-```sh
-python3 -m checks --repo <prepared-repo> --packs docs/reference/test-packs --out <prepared-repo>/run-result.json
-```
-
-`--packs` is the directory `docs/reference/test-packs`. The pack ids are in `<prepared-repo>/curbpack.json`, not in that flag. The runner reads `curbpack.json` and `<prepared-repo>/claims/`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
-
-Exit 0 is a pass of the suite only when stdout contains `claims 7 exit 0` and no claim status is `fail`. The pass count is 7. The fail count is 0. Those seven ids, and the expected status `pass` next to each one, are in [procedures/cases.md](procedures/cases.md).
-
-## Prepare the repo
-
-From the Studio root:
+From the Studio repository root:
 
 ```sh
 make test-curbcheck
 ```
 
-That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The copied procedures are [tests/check/suites/](../../tests/check/suites/) and [tests/check/docs/procedures/](../../tests/check/docs/procedures/). A procedure that still calls `curbpack` is reported outside and is not a pass.
+That clones the pin in `tests/cyberready-test-product.pin` into `tmp/cyberready-test-product`, sources `tmp/verification-run.sh`, applies `./external_test/curbpack/setup.sh R1 --commit` on the clone, writes `curbpack.json`, copies the seven claim files, and runs `python3 -m checks`. Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. It prints the manual rows in [tests/check/manual.md](../../tests/check/manual.md). Those rows are not a pass. The copied procedures are [tests/check/suites/](../../tests/check/suites/) and [tests/check/docs/procedures/](../../tests/check/docs/procedures/). A procedure that still calls `curbpack` is reported outside and is not a pass.
 
 Do not export `CURBPACK_PACKS_DIR`. Do not run `curbpack check`. Do not archive a local product checkout. Do not edit the reference product. `tmp/` is not committed.
 

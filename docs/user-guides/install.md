@@ -42,7 +42,7 @@ make test
 make ci-tests
 ```
 
-`make test` runs the functional tests. `make ci-tests` runs the mandatory CI checks. `ONLY=tests` selects that one check. Today the only registered check name is `tests`.
+`make test` runs the Studio functional tests. It does not run curbcheck's product clone. `make test-curbcheck` is that run; see [Development](../development/README.md) and [Testing curbcheck](../testing/README.md). `make ci-tests` runs the mandatory CI checks. `ONLY=tests` selects the Studio suite. Today the only registered check name is `tests`.
 
 These commands do not certify a product repository. In the browser, confirm the cover loads and that **Packs** (`/requirements`), **Discovery & Claims** (`/discover`), **Check** (`/check`) and **Review** (`/review`) open.
 
