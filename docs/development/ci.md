@@ -2,11 +2,11 @@
 
 A product pipeline runs the same Check as the shell command in the [developer guide](../user-guides/developers.md).
 
-The job checks out three trees:
+The job checks out three sibling directories. Studio and the packs root stay outside the product tree, so `git status` in the product still describes the commit under test.
 
-1. The product repository, which contains `curbpack.json`.
-2. A Studio source tree, pinned to one commit.
-3. The packs root, pinned to one commit. That directory contains `<pack-id>/pack.json` for every id named in the product's `curbpack.json`. The job does not fetch a newer Pack by itself.
+1. `product/` is the product repository, which contains `curbpack.json`.
+2. `studio/` is a Studio source tree, pinned to one commit. `python3 -m checks` is started in that directory.
+3. `packs/` is the packs root, pinned to one commit. That directory contains `<pack-id>/pack.json` for every id named in the product's `curbpack.json`. The job does not fetch a newer Pack by itself.
 
 From the Studio tree, after `python3 -m pip install -r requirements.txt`:
 
@@ -48,6 +48,8 @@ jobs:
     steps:
       - name: Checkout product
         uses: actions/checkout@v4
+        with:
+          path: product
 
       - name: Checkout Studio
         uses: actions/checkout@v4
@@ -74,16 +76,16 @@ jobs:
         working-directory: studio
         run: |
           python3 -m checks \
-            --repo "$GITHUB_WORKSPACE" \
+            --repo "$GITHUB_WORKSPACE/product" \
             --packs "$GITHUB_WORKSPACE/packs" \
-            --out "$GITHUB_WORKSPACE/.curbpack/run-result.json"
+            --out "$GITHUB_WORKSPACE/product/.curbpack/run-result.json"
 
       - name: Keep the run result
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: run-result
-          path: .curbpack/run-result.json
+          path: product/.curbpack/run-result.json
           if-no-files-found: ignore
 ```
 
@@ -101,16 +103,16 @@ variables:
 check:
   image: python:3.12
   script:
-    - git clone "$STUDIO_REPOSITORY" studio
-    - git -C studio checkout "$STUDIO_COMMIT"
-    - git clone "$PACKS_REPOSITORY" packs
-    - git -C packs checkout "$PACKS_COMMIT"
-    - python3 -m pip install -r studio/requirements.txt
+    - git clone "$STUDIO_REPOSITORY" "$CI_PROJECT_DIR/../studio"
+    - git -C "$CI_PROJECT_DIR/../studio" checkout "$STUDIO_COMMIT"
+    - git clone "$PACKS_REPOSITORY" "$CI_PROJECT_DIR/../packs"
+    - git -C "$CI_PROJECT_DIR/../packs" checkout "$PACKS_COMMIT"
+    - python3 -m pip install -r "$CI_PROJECT_DIR/../studio/requirements.txt"
     - |
-      cd studio
+      cd "$CI_PROJECT_DIR/../studio"
       python3 -m checks \
         --repo "$CI_PROJECT_DIR" \
-        --packs "$CI_PROJECT_DIR/packs" \
+        --packs "$CI_PROJECT_DIR/../packs" \
         --out "$CI_PROJECT_DIR/.curbpack/run-result.json"
   artifacts:
     when: always
@@ -122,7 +124,7 @@ Put this in the product repository's `.gitlab-ci.yml`. A non-zero status fails t
 
 ## Jenkins
 
-The agent needs Git and Python 3.12. `checkout scm` is the product repository.
+The agent needs Git and Python 3.12. `checkout scm` inside `product/` is the product repository.
 
 ```groovy
 pipeline {
@@ -136,7 +138,9 @@ pipeline {
     stages {
         stage('Check') {
             steps {
-                checkout scm
+                dir('product') {
+                    checkout scm
+                }
                 sh '''
                     git clone "$STUDIO_REPOSITORY" studio
                     git -C studio checkout "$STUDIO_COMMIT"
@@ -145,16 +149,16 @@ pipeline {
                     python3 -m pip install -r studio/requirements.txt
                     cd studio
                     python3 -m checks \
-                      --repo "$WORKSPACE" \
+                      --repo "$WORKSPACE/product" \
                       --packs "$WORKSPACE/packs" \
-                      --out "$WORKSPACE/.curbpack/run-result.json"
+                      --out "$WORKSPACE/product/.curbpack/run-result.json"
                 '''
             }
         }
     }
     post {
         always {
-            archiveArtifacts artifacts: '.curbpack/run-result.json', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'product/.curbpack/run-result.json', allowEmptyArchive: true
         }
     }
 }
