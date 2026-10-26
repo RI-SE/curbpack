@@ -441,7 +441,7 @@ class GitFreshTest(unittest.TestCase):
 
     def test_an_executable_bit_fails_only_when_git_tracks_filemode(self):
         when = "2026-10-23T12:00:00Z"
-        for tracked, expected in (("true", "fail"), ("false", "pass")):
+        for tracked in ("true", "false"):
             with self.subTest(filemode=tracked):
                 with tempfile.TemporaryDirectory() as tmp:
                     repo = Path(tmp)
@@ -450,7 +450,9 @@ class GitFreshTest(unittest.TestCase):
                     (repo / "exec.md").write_text("body\n", encoding="utf-8")
                     _commit(repo, "exec", when)
                     (repo / "exec.md").chmod(0o755)
+                    executable = bool((repo / "exec.md").stat().st_mode & 0o111)
                     result = _fresh(repo, "exec.md", 0, when)
+                expected = "fail" if tracked == "true" and executable else "pass"
                 self.assertEqual(result["status"], expected)
                 if expected == "fail":
                     self.assertIn("differs", result["detail"])

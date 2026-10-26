@@ -13,10 +13,31 @@ import sys
 from pathlib import Path
 
 
+_WINDOWS_PROGRAM = {".exe", ".bat", ".cmd", ".com"}
+
+
+def _windows_script(command: str, bin_dir: Path) -> Path | None:
+    """An extensionless tool script. Windows will not start that file itself."""
+    candidate = Path(command)
+    if not candidate.is_file():
+        candidate = bin_dir / command
+    if not candidate.is_file() or candidate.suffix.lower() in _WINDOWS_PROGRAM:
+        return None
+    return candidate
+
+
+def _tool_argv(command: str, tail: list[str], script: Path | None) -> list[str]:
+    """Windows starts an extensionless script with this interpreter. The script still receives the check id, repo, and args."""
+    if script is None:
+        return [command, *tail]
+    return [sys.executable, str(script), *tail]
+
+
 def run_check_tool(repo: Path, command: str, check: str, args: dict) -> dict:
     """argv: <command> <check-id> --repo <path> --args <json>. stdout is one result object."""
-    argv = [command, check, "--repo", str(repo), "--args", json.dumps(args)]
+    tail = [check, "--repo", str(repo), "--args", json.dumps(args)]
     kwargs = {"capture_output": True, "text": True}
+    script = None
     if getattr(sys, "frozen", False):
         kwargs["executable"] = sys.executable
     else:
@@ -26,6 +47,9 @@ def run_check_tool(repo: Path, command: str, check: str, args: dict) -> dict:
         env["PYTHONPATH"] = os.pathsep.join(part for part in (str(root), env.get("PYTHONPATH", "")) if part)
         env["PATH"] = os.pathsep.join(part for part in (str(bin_dir), env.get("PATH", "")) if part)
         kwargs["env"] = env
+        if os.name == "nt":
+            script = _windows_script(command, bin_dir)
+    argv = _tool_argv(command, tail, script)
     try:
         completed = subprocess.run(argv, **kwargs)
     except OSError:

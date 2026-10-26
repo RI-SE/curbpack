@@ -187,12 +187,14 @@ class PackageArgsTest(unittest.TestCase):
         self.assertEqual(curbcheck_name("windows-x64"), "curbcheck-windows-x64.exe")
         studio = studio_args("curbpack-studio-macos-arm64")
         checker = curbcheck_args("curbcheck-macos-arm64")
-        self.assertTrue(studio[-1].endswith("app/__main__.py"))
-        self.assertNotIn("checks/bin", " ".join(studio))
-        self.assertTrue(checker[-1].endswith("checks/__main__.py"))
-        self.assertTrue(any("available_checks.json" in part for part in checker))
-        self.assertFalse(any("requirements/ui" in part for part in checker))
-        self.assertNotIn("checks/bin", " ".join(checker))
+        studio_text = " ".join(part.replace("\\", "/") for part in studio)
+        checker_text = " ".join(part.replace("\\", "/") for part in checker)
+        self.assertTrue(studio[-1].replace("\\", "/").endswith("app/__main__.py"))
+        self.assertNotIn("checks/bin", studio_text)
+        self.assertTrue(checker[-1].replace("\\", "/").endswith("checks/__main__.py"))
+        self.assertTrue(any("available_checks.json" in part.replace("\\", "/") for part in checker))
+        self.assertFalse(any("requirements/ui" in part.replace("\\", "/") for part in checker))
+        self.assertNotIn("checks/bin", checker_text)
 
     def test_sums_name_every_packaged_file(self):
         from package import write_sums

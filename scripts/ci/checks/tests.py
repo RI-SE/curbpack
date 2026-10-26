@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the functional tests. make test prints each case. A quiet CI check prints one line."""
+"""Run the functional tests. make test prints each case. A quiet CI check prints one line when it passes, and the full failure report when it does not."""
 
 from __future__ import annotations
 
@@ -55,6 +55,50 @@ class _Result(unittest.TextTestResult):
         super().addSkip(test, reason)
         self.rows.append((case_name(test), False, f"skipped: {reason}"))
 
+    def addSubTest(self, test: unittest.TestCase, subtest: unittest.TestCase, err) -> None:
+        super().addSubTest(test, subtest, err)
+        if err is not None:
+            self.rows.append((case_name(subtest), False, short_reason(err)))
+
+
+def _print_details(result: _Result) -> None:
+    """Tracebacks, captured output, skips, and unexpected successes."""
+    for label, entries in (("ERROR", result.errors), ("FAIL", result.failures)):
+        for test, err in entries:
+            print(flush=True)
+            print("=" * 70, flush=True)
+            print(f"{label}: {test.id()}", flush=True)
+            print("-" * 70, flush=True)
+            print(str(err).rstrip("\n"), flush=True)
+    for test, reason in result.skipped:
+        print(flush=True)
+        print(f"SKIP: {test.id()}", flush=True)
+        print(reason, flush=True)
+    for test in result.unexpectedSuccesses:
+        print(flush=True)
+        print(f"UNEXPECTED SUCCESS: {test.id()}", flush=True)
+
+
+def report(result: _Result, *, quiet: bool) -> int:
+    failed = [row for row in result.rows if not row[1]]
+    bad = bool(failed or result.failures or result.errors or result.unexpectedSuccesses)
+    passed = len(result.rows) - len(failed)
+    if quiet:
+        print(dotted("tests", not bad), flush=True)
+        if bad:
+            _print_details(result)
+            print(flush=True)
+            print(summary(passed, len(failed)), flush=True)
+        return 1 if bad else 0
+    width = max((len(name) for name, _, _ in result.rows), default=21) + 3
+    for name, ok, reason in result.rows:
+        print(dotted(name, ok, width), flush=True)
+        if reason:
+            print(f"  {reason}", flush=True)
+    print(flush=True)
+    print(summary(passed, len(failed)), flush=True)
+    return 1 if bad else 0
+
 
 def main() -> int:
     os.chdir(ROOT)
@@ -69,20 +113,8 @@ def main() -> int:
     suite = unittest.defaultTestLoader.discover("tests")
     result = _Result()
     suite.run(result)
-    failed = [row for row in result.rows if not row[1]]
-    passed = len(result.rows) - len(failed)
     quiet = os.environ.get("CURBPACK_CHECK_QUIET", "").strip() == "1"
-    if quiet:
-        print(dotted("tests", not failed), flush=True)
-    else:
-        width = max((len(name) for name, _, _ in result.rows), default=21) + 3
-        for name, ok, reason in result.rows:
-            print(dotted(name, ok, width), flush=True)
-            if reason:
-                print(f"  {reason}", flush=True)
-        print(flush=True)
-        print(summary(passed, len(failed)), flush=True)
-    return 1 if failed else 0
+    return report(result, quiet=quiet)
 
 
 if __name__ == "__main__":

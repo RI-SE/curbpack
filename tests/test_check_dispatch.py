@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import os
 import stat
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from checks.dispatch import run_check_tool
+from checks.dispatch import _tool_argv, _windows_script, run_check_tool
 from checks.run import run_claim
 from claims.bind import build_claim
 
@@ -33,11 +34,15 @@ class DispatchTest(unittest.TestCase):
             seen = root / "seen.json"
             script = root / "curbcheck-probe"
             script.write_text(
-                "#!/bin/sh\n"
-                "printf '%s\\n' \"$1\" > \"$CURBCHECK_SEEN\"\n"
-                "printf '%s\\n' \"$3\" >> \"$CURBCHECK_SEEN\"\n"
-                "printf '%s\\n' \"$5\" >> \"$CURBCHECK_SEEN\"\n"
-                "printf '%s\\n' '{\"status\":\"fail\",\"detail\":\"probe says no\"}'\n"
+                "#!/usr/bin/env python3\n"
+                "import os, sys\n"
+                "from pathlib import Path\n"
+                "Path(os.environ['CURBCHECK_SEEN']).write_text(\n"
+                "    sys.argv[1] + '\\n' + sys.argv[3] + '\\n' + sys.argv[5] + '\\n',\n"
+                "    encoding='utf-8',\n"
+                ")\n"
+                "sys.stdout.write('{\"status\":\"fail\",\"detail\":\"probe says no\"}\\n')\n",
+                encoding="utf-8",
             )
             script.chmod(script.stat().st_mode | stat.S_IXUSR)
             os.environ["CURBCHECK_SEEN"] = str(seen)
@@ -55,7 +60,7 @@ class DispatchTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             script = root / "curbcheck-crash"
-            script.write_text("#!/bin/sh\nexit 2\n")
+            script.write_text("#!/usr/bin/env python3\nimport sys\nsys.exit(2)\n", encoding="utf-8")
             script.chmod(script.stat().st_mode | stat.S_IXUSR)
             result = run_check_tool(root, str(script), "demo", {"path": "a.md"})
             self.assertEqual(result["status"], "fail")
@@ -82,6 +87,23 @@ class DispatchTest(unittest.TestCase):
         self.assertIn("unavailable", result["checks"][0]["detail"])
         self.assertEqual(result["checks"][1], {"index": 1, "check": "exist", "args": {"paths": ["docs/a.md"]}, "status": "pass"})
         self.assertNotIn("detail", result["checks"][1])
+
+    def test_windows_runs_an_extensionless_tool_with_this_interpreter(self):
+        bin_dir = Path(__file__).resolve().parents[1] / "checks" / "bin"
+        script = _windows_script("curbcheck-exist", bin_dir)
+        tail = ["exist", "--repo", "/repo", "--args", json.dumps({"paths": ["docs/a.md"]})]
+        self.assertEqual(script, bin_dir / "curbcheck-exist")
+        self.assertEqual(_tool_argv("curbcheck-exist", tail, script), [sys.executable, str(script), *tail])
+
+    def test_windows_leaves_a_missing_command_and_a_real_program_unchanged(self):
+        bin_dir = Path(__file__).resolve().parents[1] / "checks" / "bin"
+        tail = ["fresh", "--repo", "/repo", "--args", "{}"]
+        self.assertIsNone(_windows_script("curbcheck-fresh", bin_dir))
+        self.assertEqual(_tool_argv("curbcheck-fresh", tail, None), ["curbcheck-fresh", *tail])
+        with tempfile.TemporaryDirectory() as tmp:
+            program = Path(tmp) / "curbcheck-exist.exe"
+            program.write_bytes(b"")
+            self.assertIsNone(_windows_script(str(program), bin_dir))
 
     def test_a_symlink_out_of_the_repo_fails_and_the_next_check_still_runs(self):
         with tempfile.TemporaryDirectory() as tmp:

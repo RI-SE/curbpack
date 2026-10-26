@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
+import io
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -70,3 +73,56 @@ class CiRunnerTest(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertIn("[FAIL] unknown ONLY=docker", completed.stdout)
         self.assertIn("tests", completed.stdout)
+
+
+def _ci_tests():
+    path = ROOT / "scripts" / "ci" / "checks" / "tests.py"
+    spec = importlib.util.spec_from_file_location("ci_check_tests", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class QuietCiReportTest(unittest.TestCase):
+    def test_a_passing_quiet_check_stays_one_line(self):
+        ci = _ci_tests()
+
+        class Sample(unittest.TestCase):
+            def test_ok(self):
+                self.assertTrue(True)
+
+        result = ci._Result()
+        unittest.defaultTestLoader.loadTestsFromTestCase(Sample).run(result)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = ci.report(result, quiet=True)
+        text = buf.getvalue()
+        self.assertEqual(code, 0)
+        self.assertEqual(text.count("\n"), 1)
+        self.assertIn("[PASS]", text)
+        self.assertNotIn("Traceback", text)
+
+    def test_a_failing_quiet_check_prints_the_traceback_and_captured_output(self):
+        ci = _ci_tests()
+
+        class Sample(unittest.TestCase):
+            def test_ok(self):
+                self.assertTrue(True)
+
+            def test_bad(self):
+                print("marker-from-stdout")
+                self.assertEqual(1, 2)
+
+        result = ci._Result()
+        unittest.defaultTestLoader.loadTestsFromTestCase(Sample).run(result)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = ci.report(result, quiet=True)
+        text = buf.getvalue()
+        self.assertEqual(code, 1)
+        self.assertIn("[FAIL]", text)
+        self.assertIn("FAIL:", text)
+        self.assertIn("AssertionError: 1 != 2", text)
+        self.assertIn("marker-from-stdout", text)
+        self.assertIn("Summary: 1 PASS, 1 FAIL", text)
+        self.assertNotIn("test_ok", text.split("FAIL:", 1)[-1])
