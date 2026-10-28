@@ -8,9 +8,9 @@ The pilot must work **before EP-02 (modularizing Studio)**. This epic is about f
 
 ## User journey
 
-1. Open Pack Editor and choose or add a Pack. Each editable Pack has a regulatory document and a configured adapter.
-2. Edit the Pack's existing source list; extract, compare, edit and sign Requirements without losing source references. Publish the selected Pack under a version.
-3. Select a product repository and the applicable published Packs, then use Claims to associate Requirements with specific product evidence.
+1. Open one repository. Its `curbpack.json` names the Pack ids, and a packs root locates those Packs. Authoring uses a root inside that repository. A product repository may point the root at an exported packs directory. [SYS-03](stories/SYS-03-one-repo-door.md) is that door.
+2. Edit the Pack's existing source list; extract, compare, edit and sign Requirements without losing source references. Export the selected Pack with PE-11. That export is not a published release.
+3. Stay on the repository SYS-03 opened. Claims associate Requirements with evidence in that repository's `claims/`. The packs root locates the Pack files.
 4. Run the configured Checks against that evidence and inspect PASS, FAIL and justified SKIP outcomes.
 5. Compile the actual run results, review them and sign a report. A previous report must never be misrepresented as a report of the latest run.
 
@@ -20,18 +20,21 @@ Preserve existing functioning user flows. Document and verify what the imported 
 
 | ID | User goal |
 | --- | --- |
-| PE-01–PE-11 | Choose Packs; extract, review, edit, sign and publish Requirements |
-| CHK-01 | Select a product repository and applicable Packs |
+| SYS-03 | One repository is the door for Packs, Claims, Check, and Review. Required for the pilot. |
+| SYS-04 | Rename the repository key `hunt` to `search_hints`. |
+| PE-01–PE-11 | Choose Packs; extract, review, edit, sign and export Requirements |
+| CHK-01 | One `curbpack.json` page: what was loaded, which Packs and Requirements, and that repo's Claims |
 | CHK-02 | Run deterministic Checks on configured Claims |
 | CHK-03 | Understand PASS, FAIL and SKIP outcomes |
 | CHK-04 | Trace each result to the checked evidence and revision |
 | CHK-06 | Ship curbcheck as its own program |
 | REV-01 | Compile a report from a specific Check run |
 | REV-02 | Review and sign a report without confusing different runs |
+| DOC-04 | One authoritative Packs v2 model and matching JSON Schemas |
 | SYS-01 | Complete and verify the full pilot workflow |
 | SYS-02 | Keep every pipeline case in the one functional suite. Not a release blocker. |
 
-Story details: [`stories/`](stories/). The original Pack Editor stories remain unchanged.
+Story details: [`stories/`](stories/). PE-11 is Export. SYS-03 is the door those pages share.
 
 ## Epic acceptance
 
@@ -49,4 +52,4 @@ Story details: [`stories/`](stories/). The original Pack Editor stories remain u
 
 Pack Editor has draft derived requirements in [`docs/req/pack-editor.md`](../../../req/pack-editor.md). CHK-06 has approved rows CHK-R14–CHK-R17 in [`docs/req/checks.md`](../../../req/checks.md). The other CHK, REV and SYS stories **do not yet have formal derived requirements or approved acceptance tests**. Their next step is to compare these stories with the fresh pilot, identify real gaps and specify/test only those gaps before implementing changes.
 
-Open product decisions and provenance rules: [`docs/agile/DECISIONS.md`](../../DECISIONS.md). Packs v2 in the Curbpack repository remains the authoritative persisted data contract.
+Open product decisions and provenance rules: [`docs/agile/DECISIONS.md`](../../DECISIONS.md). Packs v2 in the Curbpack repository remains the authoritative persisted data contract. [DOC-04](stories/DOC-04-single-persistent-model.md) proposes one Studio model contract for that data. It is draft and is not authorization to implement.

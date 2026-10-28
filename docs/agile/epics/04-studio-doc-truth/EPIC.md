@@ -1,6 +1,6 @@
 # EP-04 — Studio documentation truth
 
-**Status:** Done. `daniel/ny_sdd/` is the Studio account. Merging it into `docs/` is the next story.
+**Status:** DOC-01, DOC-02, and DOC-03 are done. `daniel/ny_sdd/` stays that account. [DOC-06](stories/DOC-06-published-reader-docs.md) updates the published documents a reader opens from the repository README. An extra path under `daniel/ny_sdd/` still fails this epic. DOC-06 does not merge `daniel/ny_sdd/` into `docs/`.
 
 **Goal:** `daniel/ny_sdd/` ends as the Studio account of the moved baseline.
 
@@ -25,6 +25,7 @@ DOC-03 replaces `docs/architecture/packs.md` with `docs/architecture/packs2.md` 
 | [DOC-01](stories/DOC-01-ny-sdd-structure.md) | Mirror the split under `daniel/ny_sdd/` | Done |
 | [DOC-02](stories/DOC-02-curbcheck-requirements.md) | Keep the requirement list, ids and substance | Done |
 | [DOC-03](stories/DOC-03-align-studio-docs.md) | Align the other text with `docs/` and write the delta | Done |
+| [DOC-06](stories/DOC-06-published-reader-docs.md) | Update the published documents a reader opens from the README | DOC-03 is accepted |
 
 ## Epic acceptance
 
@@ -35,4 +36,4 @@ DOC-03 replaces `docs/architecture/packs.md` with `docs/architecture/packs2.md` 
 
 ## Out of scope
 
-`docs/testing/`, `docs/reference/test-packs/`, application code, and `cyberready-test-product`. Those are EP-06, EP-05, and EP-07. Merging `daniel/ny_sdd/` into `docs/` is the next story.
+`docs/testing/` below its README, `docs/reference/test-packs/`, `docs/reference/packs2.md`, application code, and `cyberready-test-product`. Those are EP-06, EP-05, DOC-04, and EP-07. Merging `daniel/ny_sdd/` into `docs/` is not DOC-06.
