@@ -41,7 +41,7 @@ The existing PoC2 pilot is the functional and regression baseline. Refactoring s
 
 ## Not part of EP-02
 
-- A central Docker deployment, database, multiuser service or new GUI.
+- The development container ([EP-12](../12-development-environment/EPIC.md)), a central database, a multiuser service, or a new GUI.
 - New business features, UX redesign, Packs v2 changes or a new API version merely for architectural purity.
 - Generic plugin frameworks, service abstractions, or additional layers without an existing need.
 - Unrelated cleanup before the tested pilot baseline is established.

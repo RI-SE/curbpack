@@ -19,6 +19,8 @@ This short record preserves conclusions from the Pack Editor discussion. It is *
 ## Explicitly open — do not decide automatically
 
 - How the editable workspace maps to **Git repository, working tree and branch**. The existing per-source **Working copy** column may not be the right concept. Git is considered the intended working environment, but the workflow/UI is not agreed.
+- **Multi-version Pack workflow** (side-by-side releases, has-update marks, pack-exchange zip, Claim impact after taking in a new release, optional SQLite index) lives in draft epic [EP-11](epics/11-pack-version-lifecycle/EPIC.md). It is not EP-01 pilot scope.
+- **Pilot simplification (agreed for EP-01 focus):** the operator may work against the **latest / single active** working copy or selected Pack release only. Immutable `published/<id>/<version>/` trees may already exist on disk; the pilot does not have to offer editing multiple versions at once. Full multi-version grip is EP-11.
 - The exact meaning of a source row versus adapter-enumerated section choices; retain the working pilot behavior until agreed otherwise.
 - Whether to extract multiple sections per operation; a single section at a time suffices as the initial behavior.
 - How the user explicitly confirms the treatment of a Requirement that disappears on re-extraction. Its disappearance must be visible and cannot silently delete approved work.
@@ -27,6 +29,7 @@ This short record preserves conclusions from the Pack Editor discussion. It is *
 
 ## Ideas for later epics, not Pack Editor requirements
 
+- The development container (build and start with Make, same build in CI) is draft [EP-12](epics/12-development-environment/EPIC.md). It is not a pilot requirement.
 - Aslak's old `extends` is **not automatically equivalent** to a simple dependency. Before introducing Pack inheritance or silent overrides, establish whether the real need is an explicit `requires` dependency. A narrowly configured **Check** could, for example, verify that a required Pack ID/version is present in `curbpack.json`. This is an idea, **not an approved new Packs v2 field or implemented Check**. Passing such a Check verifies only that configured condition, not overall legal compliance.
 - Claims/Discovery, Checks, Compile and Review require their own user journeys, stories and derived Requirements. Existing PoC2 functions are references; these stories are not fabricated here.
 - The long-term specification quality goal is that an independent developer or local-model-assisted agent can reconstruct **equivalent observable application behavior**, validated by the same acceptance and regression tests. Identical source code is neither necessary nor guaranteed. Do not treat this as a pilot feature request.

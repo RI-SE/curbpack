@@ -36,8 +36,9 @@ EP-02 keeps functions callable without the GUI and still places HTTP in `app/`. 
 | [TL-05](stories/TL-05-start-compile.md) | Person preparing a handoff | curbpack-compile, alone |
 | [TL-06](stories/TL-06-start-review.md) | Reviewer | curbpack-review, alone |
 | [TL-07](stories/TL-07-start-pilot-app.md) | Pilot operator | pilot_app, the integrated cover |
+| [TL-08](stories/TL-08-check-module-discovery.md) | curbcheck maintainer | Discover Check families as Python modules (draft; after TL-04) |
 
-Each tool story can land on its own after the epic is accepted. TL-07 stays true the whole time: the pilot journeys in EP-01 still start from one cover.
+Each tool story can land on its own after the epic is accepted. TL-07 stays true the whole time: the pilot journeys in EP-01 still start from one cover. TL-08 does not change which program a person starts; it changes how curbcheck finds Check implementations inside that program.
 
 ## Epic acceptance
 
@@ -54,7 +55,8 @@ Each tool story can land on its own after the epic is accepted. TL-07 stays true
 - Creating a Git repository per tool. The import rule above is what makes that copy small later.
 - Renaming the `checks` package. The product name is curbcheck; the start command is `python3 -m checks`.
 - The deferred scaffold role in `docs/arch/ARCHITECTURE.md` (propose remediation from check results, `remediation_hint`, and templates). TL-03 is the stub writer in packs2.
-- New Packs v2 fields, a plugin framework, a second check engine, or a new domain type.
+- New Packs v2 fields, a second check engine, or a new domain type.
+- A third-party plugin marketplace or loading Check code from the product repo / network. **TL-08** is in-repo module discovery under one declared package path inside curbcheck — not that marketplace.
 - Rewriting EP-02's thin pages, shared models, or headless tests. Those stories remain EP-02.
 
 ## Open until this epic is accepted

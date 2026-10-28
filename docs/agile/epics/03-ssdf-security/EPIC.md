@@ -24,7 +24,7 @@ This is an **evidence and risk-reduction epic**, not an assertion or certificate
 | [SEC-02](stories/SEC-02-confine-pack-selection.md) | Reject `pack_id` path escape without breaking valid Pack selection | P0 **if reproduced**; release blocker if reachable by untrusted input |
 | SEC-03 | Not this epic. The functional suite is [SYS-02](../../01-pack-editor/stories/SYS-02-one-test-suite.md). Separate scripts remain only for scanner checks that do not exist yet (SEC-04). | Later |
 | SEC-04 | Add justified SAST, secrets and dependency-vulnerability checks as **independent scripts**, each runnable locally and in CI, with explicit fail/waiver rules | P1, not empty Make targets |
-| SEC-05 | Verify GitHub branch/CI permissions, secret handling, dependency inputs and SHA-256 provenance of published artifacts | P1, reuse delivery chain; no Docker/signing project |
+| SEC-05 | Verify GitHub branch/CI permissions, secret handling, dependency inputs and SHA-256 provenance of published artifacts | P1, reuse delivery chain; no signing project. The development container is [EP-12](../12-development-environment/EPIC.md). |
 | SEC-06 | Provide a practical vulnerability intake, severity/ownership, remediation, exception and retest loop; record a real finding end-to-end | P1, existing issues/workflow |
 
 Only SEC-01 and SEC-02 are expanded into story files now. Define and approve the other stories when they are scheduled, not as speculative implementation plans.
@@ -40,4 +40,4 @@ Only SEC-01 and SEC-02 are expanded into story files now. Define and approve the
 
 ## Outside this epic
 
-No new security framework, R-state harness, generic fuzz platform, Docker deployment, CI rewrite, artificial test taxonomy, duplicate policies, or changes to Packs v2 without a separately approved contract decision. Release packaging, signing and SBOM work remain governed by `docs/agile/future_cicd.md` when explicitly scheduled. Preserve today's pilot delivery scope except for confirmed security release blockers.
+No new security framework, R-state harness, generic fuzz platform, Docker deployment, CI rewrite, artificial test taxonomy, duplicate policies, or changes to Packs v2 without a separately approved contract decision. The development container is [EP-12](../12-development-environment/EPIC.md). Release packaging, signing and SBOM work remain governed by `docs/agile/future_cicd.md` when explicitly scheduled. Preserve today's pilot delivery scope except for confirmed security release blockers.

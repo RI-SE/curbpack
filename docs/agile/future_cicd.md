@@ -1,8 +1,8 @@
 # Future CI/CD policy
 
-**Status:** Not in force. Studio has no Makefile and no CI workflow. Do not add them during the pilot.
+**Status:** Not in force. The pilot already runs `make test`, `make ci-tests`, and `make package` from `Makefile` and `.github/workflows/`. Do not add the rest of this draft during the pilot.
 
-This file takes effect when EP-01 is accepted, by moving it to `policies/cicd.md`. The full layout below is the target. The first slice is only `make test` and `make ci-tests`, both running the same existing test scripts. Docker, scanners, SBOM, and signing wait until there is a real artifact to build, scan, and sign. Omit commands the project does not have.
+This file takes effect when EP-01 is accepted, by moving it to `policies/cicd.md`. The full layout below is the target. The first slice is only `make test` and `make ci-tests`, both running the same existing test scripts. The development container is draft [EP-12](epics/12-development-environment/EPIC.md). Scanners, SBOM, and signing still wait until there is a real artifact to scan and sign. Omit commands the project does not have.
 
 **Applies to:** Projects that build, test and distribute software. Independent of language, Git provider and CI service.
 

@@ -43,7 +43,7 @@ Story details: [`stories/`](stories/). The original Pack Editor stories remain u
 - Packs v2 is unchanged unless a separate, explicitly reviewed contract decision is made.
 - `make package` builds the Studio application and a separate curbcheck program. The Studio file does not contain the check programs. From source, `python3 -m checks` still runs them.
 
-**Not part of EP-01:** splitting up large GUI files, introducing shared Pydantic modules, central Docker/database deployment, or rewriting the Check engine for architectural neatness. Those improvements belong to later work, including EP-02.
+**Not part of EP-01:** splitting up large GUI files, introducing shared Pydantic modules, central database deployment, or rewriting the Check engine for architectural neatness. Those improvements belong to later work, including EP-02. The development container is [EP-12](../12-development-environment/EPIC.md). **Multi-version Pack grip** (side-by-side releases, pack-exchange, Claim impact, SQLite index) is draft [EP-11](../11-pack-version-lifecycle/EPIC.md); the pilot may focus on the single active / latest working copy or selected release.
 
 ## Specification status
 
