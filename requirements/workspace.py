@@ -366,15 +366,20 @@ def publish_pack(root: Path, copy_dir: Path, *, version: str, trust: dict[str, b
     return destination
 
 
-def export_pack(copy_dir: Path, destination: Path) -> Path:
+def export_pack(copy_dir: Path, destination: Path, *, overwrite: bool = False) -> Path:
     """Copy one working copy to ``destination/<pack-id>/``.
 
     Pack file bytes are copied as they are. This does not publish a release.
-    An existing ``destination/<pack-id>/`` is left untouched.
+    An existing ``destination/<pack-id>/`` is left untouched unless ``overwrite``
+    is true. Overwrite replaces that directory after the temp copy is verified.
+    It does not merge files into the old directory.
     """
     if not destination.is_dir():
         raise ModelError("export", "destination", "an existing directory")
-    raw = read_json(copy_dir / "pack.json")
+    try:
+        raw = read_json(copy_dir / "pack.json")
+    except ValueError as exc:
+        raise ModelError("export", "pack.json", "valid JSON") from exc
     raw_id = raw.get("id") if isinstance(raw, dict) else None
     if not isinstance(raw_id, str):
         raise ModelError("export", "id", "a single directory name")
@@ -383,6 +388,8 @@ def export_pack(copy_dir: Path, destination: Path) -> Path:
         path.name for path in copy_dir.glob("*.json") if path.is_file()
     )
     temp = destination / f".export-tmp-{secrets.token_hex(8)}"
+    final = destination / pack_id
+    aside: Path | None = None
     try:
         temp.mkdir(exist_ok=False)
         for name in names:
@@ -397,11 +404,22 @@ def export_pack(copy_dir: Path, destination: Path) -> Path:
             raise ModelError("export", "id", pack_id)
         if not requirements:
             raise ModelError("export", "requirements", "at least one requirement")
-        final = destination / pack_id
+        if final.exists() and not overwrite:
+            raise ModelError(
+                "export",
+                "destination",
+                f"a free directory, not {final.resolve()}",
+            )
         if final.exists():
-            raise ModelError("export", "destination", f"a free directory, not {final}")
+            aside = destination / f".{pack_id}-replaced-{secrets.token_hex(8)}"
+            os.rename(final, aside)
         os.rename(temp, final)
+        if aside is not None:
+            shutil.rmtree(aside)
+            aside = None
     except Exception:
+        if aside is not None and aside.exists() and not final.exists():
+            os.rename(aside, final)
         if temp.exists():
             shutil.rmtree(temp)
         raise
