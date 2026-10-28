@@ -35,11 +35,11 @@ Note: RP share/review cases are outside; the old curbpack observation is not use
 
 | ID     | Test case / purpose                                          | Requirements addressed | Test class | Procedure status |
 | ------ | ------------------------------------------------------------ | ---------------------- | ---------- | ---------------- |
-| RP-001 | Machine-to-human consistency, clean result                   | MUST-02, MUST-04       | A          | Executable       |
-| RP-002 | Machine-to-human consistency, failed result                  | MUST-02, MUST-04       | A          | Executable       |
-| RP-003 | Tampered machine result or substituted state                 | —                      | A          | Executable       |
-| RP-004 | Removed finding from executive summary                       | —                      | A          | Executable       |
-| RP-005 | Incomplete or truncated Review Pack file                     | —                      | A          | Executable       |
+| RP-001 | Machine-to-human consistency, clean result                   | MUST-02, MUST-04       | A          | Blocked (Review Pack outside this runner) |
+| RP-002 | Machine-to-human consistency, failed result                  | MUST-02, MUST-04       | A          | Blocked (Review Pack outside this runner) |
+| RP-003 | Tampered machine result or substituted state                 | —                      | A          | Blocked (Review Pack outside this runner) |
+| RP-004 | Removed finding from executive summary                       | —                      | A          | Blocked (Review Pack outside this runner) |
+| RP-005 | Incomplete or truncated Review Pack file                     | —                      | A          | Blocked (Review Pack outside this runner) |
 | RP-006 | Human attestation boundary                                   | MUST-72                | C          | To be specified  |
 | RP-007 | Generated proposal or automated edit                         | MUST-71                | C          | To be specified  |
 

@@ -30,13 +30,13 @@ Note: PV cases that need `.curbpack` cache fields are outside; the old curbpack 
 
 | ID     | Test case / purpose                                               | Requirements addressed | Test class | Procedure status |
 | ------ | ----------------------------------------------------------------- | ---------------------- | ---------- | ---------------- |
-| PV-001 | Clean committed HEAD SHA on the result (EC-01)                    | MUST-31                | A          | Executable       |
-| PV-002 | Dirty working-tree bytes in cache file identity (EC-02)           | MUST-31                | A          | Executable       |
-| PV-003 | Detached HEAD is not reported as a named branch (EC-03)           | —                      | A          | Executable       |
+| PV-001 | Clean committed HEAD SHA on the result (EC-01)                    | MUST-31                | A          | Executable (run-result.commit / worktree) |
+| PV-002 | Dirty working-tree recorded on the result (EC-02)                 | MUST-31                | A          | Executable (run-result.worktree) |
+| PV-003 | Detached HEAD is not reported as a named branch (EC-03)           | —                      | A          | Executable (run-result.commit; no branch) |
 | PV-004 | Shallow clone / other Git-state variants (EC-04, EC-05)           | —                      | C          | To be specified  |
-| PV-005 | Pack id, version, and sha256 on cache pack_sources                | MUST-31                | A          | Executable       |
-| PV-006 | Pack-byte substitution visible in cache pack_sources              | MUST-31                | A          | Executable       |
-| PV-007 | Evaluator version and explicit as_of on cache/receipt             | MUST-31                | A          | Executable       |
+| PV-005 | Pack id, version, and digest on run-result packs[]                | MUST-31                | A          | Executable       |
+| PV-006 | Pack-byte substitution visible in cache pack_sources              | MUST-31                | A          | Blocked (mutate outside Packs v2) |
+| PV-007 | Evaluator tool and tool_version on the result                     | MUST-31                | A          | Executable       |
 
 
 ---

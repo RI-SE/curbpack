@@ -1,0 +1,35 @@
+{
+  "id": "FIX-OWNED-POLICY",
+  "requirement_id": "FIX-OWNED-POLICY",
+  "source": "documents",
+  "args": {
+    "path": "docs/owned-policy.md"
+  },
+  "description": "Repo-bound draft with expected git author on last commit.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/owned-policy.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 30,
+            "op": ">="
+          },
+          {
+            "kind": "token"
+          }
+        ]
+      }
+    },
+    {
+      "check": "git_author",
+      "args": {
+        "path": "docs/owned-policy.md",
+        "email": "owner@example.com"
+      }
+    }
+  ]
+}

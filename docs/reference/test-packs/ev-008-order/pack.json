@@ -1,0 +1,7 @@
+{
+  "id": "ev-008-order",
+  "name": "EV-008 order independence (test only)",
+  "version": "0.0.1",
+  "assurance_class": "structural_draft",
+  "description": "Two failing exist Claims for EV-008 rule/file order. Test-only; not for production."
+}

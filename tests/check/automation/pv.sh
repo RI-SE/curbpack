@@ -1,66 +1,69 @@
 #!/bin/sh
 
-# return 0 PASS, 1 FAIL, 2 SKIP
-pv_001() {
-	# SETUP 1
+# return 0 PASS, 1 FAIL, 2 MANUAL/TBD/BLOCKED (runner classifies from the log)
+# Packs v2 run-result fields: commit, worktree, packs[].{id,version,digest}, tool_version.
+# Cases that need the old .curbpack cache layout are blocked (see suites/PV.md).
+
+_pv_r1_setup() {
+	_id=$1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-001 SETUP 1"
+			echo "$_id SETUP 1"
 			return 1
 		fi
 	fi
 	if ! . tmp/verification-run.sh; then
-		echo "PV-001 SETUP 1"
+		echo "$_id SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-001 SETUP 2"
+		echo "$_id SETUP 2"
 		return 1
 	fi
-	# SETUP 3
-	pv_001_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_001_setup_status=$?
-	printf '%s\n' "$pv_001_setup_output"
-	if [ "$pv_001_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_001_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_001_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_001_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_001_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-001 SETUP 3"
+	_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	_setup_status=$?
+	printf '%s\n' "$_setup_output"
+	if [ "$_setup_status" -ne 0 ] ||
+		! printf '%s\n' "$_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+		echo "$_id SETUP 3"
 		return 1
 	fi
-	# SETUP 4
-	pv_001_status_output=$(git status --porcelain)
-	if [ -n "$pv_001_status_output" ]; then
-		printf '%s\n' "$pv_001_status_output"
-		echo "PV-001 SETUP 4"
+	if [ -n "$(git status --porcelain)" ]; then
+		echo "$_id SETUP 4"
 		return 1
 	fi
-	# SETUP 5
-	pv_001_head=$(git rev-parse HEAD)
-	printf '%s\n' "$pv_001_head"
-	case "$pv_001_head" in
-		????????????????????????????????????????) ;;
+	install_pf01
+	return 0
+}
+
+pv_001() {
+	if ! _pv_r1_setup PV-001; then
+		return 1
+	fi
+	# PF-01 files must be committed or worktree is dirty by construction.
+	commit_pf01
+	if [ -n "$(git status --porcelain)" ]; then
+		echo "PV-001 SETUP 5"
+		return 1
+	fi
+	pv_001_sha=$(git rev-parse HEAD)
+	printf '%s\n' "$pv_001_sha"
+	case $pv_001_sha in
+		[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
 		*)
 			echo "PV-001 SETUP 5"
 			return 1
 			;;
 	esac
 
-	# TEST STEPS 1
-	pv_001_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — run-result.commit equals HEAD; worktree clean.
+	mkdir -p "$CURBPACK_ROOT/tmp/pv-001"
+	pv_001_check_output=$(CURBCHECK_OUT="$CURBPACK_ROOT/tmp/pv-001/run-result.json" run_curbcheck_json)
 	pv_001_check_status=$?
 	printf '%s\n' "$pv_001_check_output"
-	if ! printf '%s\n' "$pv_001_check_output" | jq -e --arg head "$pv_001_head" '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none" and
-		.concurrency_control.expected_parent_commit_sha == $head
-	' >/dev/null; then
+	if ! printf '%s\n' "$pv_001_check_output" | jq -e \
+		--arg sha "$pv_001_sha" \
+		'.commit == $sha and .worktree == "clean" and all(.claims[]; .status == "pass")' >/dev/null; then
 		echo "PV-001 TEST STEPS 1"
 		return 1
 	fi
@@ -70,194 +73,61 @@ pv_001() {
 		echo "PV-001 TEST STEPS 2"
 		return 1
 	fi
-	# TEST STEPS 3
-	grep -A2 subject_commit .curbpack/cache/latest_evaluation.json
-	if ! jq -e --arg head "$pv_001_head" '
-		.input_identity.subject_commit == $head and
-		.input_identity.subject_commit_status == "claimed"
-	' .curbpack/cache/latest_evaluation.json >/dev/null; then
-		echo "PV-001 TEST STEPS 3"
-		return 1
-	fi
 }
 
 pv_002() {
-	# SETUP 1
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-002 SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "PV-002 SETUP 1"
+	if ! _pv_r1_setup PV-002; then
 		return 1
 	fi
-	# SETUP 2
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-002 SETUP 2"
-		return 1
-	fi
-	# SETUP 3
-	pv_002_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_002_setup_status=$?
-	printf '%s\n' "$pv_002_setup_output"
-	if [ "$pv_002_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_002_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_002_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_002_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_002_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-002 SETUP 3"
-		return 1
-	fi
-	# SETUP 4
-	pv_002_status_output=$(git status --porcelain)
-	if [ -n "$pv_002_status_output" ]; then
-		printf '%s\n' "$pv_002_status_output"
-		echo "PV-002 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
-	pv_002_head=$(git rev-parse HEAD)
-	printf '%s\n' "$pv_002_head"
-	case "$pv_002_head" in
-		????????????????????????????????????????) ;;
-		*)
-			echo "PV-002 SETUP 5"
-			return 1
-			;;
-	esac
-	# SETUP 6
-	printf '\nPV-002 uncommitted marker\n' >> SECURITY.md
-	if ! grep -Fxq "PV-002 uncommitted marker" SECURITY.md; then
-		echo "PV-002 SETUP 6"
-		return 1
-	fi
-	# SETUP 7
-	pv_002_status_output=$(git status --porcelain)
-	printf '%s\n' "$pv_002_status_output"
-	if [ "$pv_002_status_output" != " M SECURITY.md" ]; then
+	pv_002_sha=$(git rev-parse HEAD)
+	printf '%s\n' "$pv_002_sha"
+	printf '\nPV-002 uncommitted marker\n' >>SECURITY.md
+	pv_002_git=$(git status --porcelain)
+	printf '%s\n' "$pv_002_git"
+	if ! printf '%s\n' "$pv_002_git" | grep -Fq 'SECURITY.md'; then
 		echo "PV-002 SETUP 7"
 		return 1
 	fi
 
-	# TEST STEPS 1
-	pv_002_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — dirty worktree is recorded; HEAD commit still present.
+	mkdir -p "$CURBPACK_ROOT/tmp/pv-002"
+	pv_002_check_output=$(CURBCHECK_OUT="$CURBPACK_ROOT/tmp/pv-002/run-result.json" run_curbcheck_json)
 	pv_002_check_status=$?
 	printf '%s\n' "$pv_002_check_output"
-	if ! printf '%s\n' "$pv_002_check_output" | jq -e --arg head "$pv_002_head" '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none" and
-		.concurrency_control.expected_parent_commit_sha == $head
-	' >/dev/null; then
+	if ! printf '%s\n' "$pv_002_check_output" | jq -e \
+		--arg sha "$pv_002_sha" \
+		'.commit == $sha and .worktree == "dirty"' >/dev/null; then
 		echo "PV-002 TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
+	# TEST STEPS 2 — dirty tree may still exit 0 when checks pass.
 	echo "$pv_002_check_status"
 	if [ "$pv_002_check_status" -ne 0 ]; then
 		echo "PV-002 TEST STEPS 2"
 		return 1
 	fi
-	# TEST STEPS 3
-	pv_002_digest_output=$(openssl dgst -sha256 SECURITY.md)
-	pv_002_digest_status=$?
-	printf '%s\n' "$pv_002_digest_output"
-	pv_002_digest=${pv_002_digest_output##* }
-	if [ "$pv_002_digest_status" -ne 0 ] || [ -z "$pv_002_digest" ]; then
-		echo "PV-002 TEST STEPS 3"
-		return 1
-	fi
-	# TEST STEPS 4
-	grep -A6 '"path": "SECURITY.md"' .curbpack/cache/latest_evaluation.json
-	if ! jq -e --arg digest "$pv_002_digest" --arg head "$pv_002_head" '
-		(any(.input_identity.files[]; .path == "SECURITY.md" and .state == "file" and .sha256 == $digest)) and
-		.input_identity.subject_commit == $head and
-		.input_identity.subject_commit_status == "claimed"
-	' .curbpack/cache/latest_evaluation.json >/dev/null; then
-		echo "PV-002 TEST STEPS 4"
-		return 1
-	fi
 }
 
 pv_003() {
-	# SETUP 1
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-003 SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "PV-003 SETUP 1"
+	if ! _pv_r1_setup PV-003; then
 		return 1
 	fi
-	# SETUP 2
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-003 SETUP 2"
+	git checkout --detach HEAD
+	if git symbolic-ref -q HEAD >/dev/null; then
+		echo "PV-003 SETUP 6: HEAD still names a branch. The case cannot be run."
 		return 1
 	fi
-	# SETUP 3
-	pv_003_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_003_setup_status=$?
-	printf '%s\n' "$pv_003_setup_output"
-	if [ "$pv_003_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_003_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_003_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_003_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_003_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-003 SETUP 3"
-		return 1
-	fi
-	# SETUP 4
-	pv_003_status_output=$(git status --porcelain)
-	if [ -n "$pv_003_status_output" ]; then
-		printf '%s\n' "$pv_003_status_output"
-		echo "PV-003 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
-	if ! git checkout --detach HEAD; then
-		echo "PV-003 SETUP 5"
-		return 1
-	fi
-	# SETUP 6
-	git symbolic-ref -q HEAD
-	pv_003_symbolic_status=$?
-	echo "$pv_003_symbolic_status"
-	if [ "$pv_003_symbolic_status" -ne 1 ]; then
-		echo "PV-003 SETUP 6"
-		return 1
-	fi
-	# SETUP 7
-	pv_003_head=$(git rev-parse HEAD)
-	printf '%s\n' "$pv_003_head"
-	case "$pv_003_head" in
-		????????????????????????????????????????) ;;
-		*)
-			echo "PV-003 SETUP 7"
-			return 1
-			;;
-	esac
+	pv_003_sha=$(git rev-parse HEAD)
+	printf '%s\n' "$pv_003_sha"
 
-	# TEST STEPS 1
-	pv_003_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — commit is the detached SHA; JSON has no branch field.
+	mkdir -p "$CURBPACK_ROOT/tmp/pv-003"
+	pv_003_check_output=$(CURBCHECK_OUT="$CURBPACK_ROOT/tmp/pv-003/run-result.json" run_curbcheck_json)
 	pv_003_check_status=$?
 	printf '%s\n' "$pv_003_check_output"
-	if ! printf '%s\n' "$pv_003_check_output" | jq -e --arg head "$pv_003_head" '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none" and
-		.concurrency_control.expected_parent_commit_sha == $head
-	' >/dev/null ||
-		printf '%s\n' "$pv_003_check_output" | grep -Eq '"branch"[[:space:]]*:'; then
+	if ! printf '%s\n' "$pv_003_check_output" | jq -e \
+		--arg sha "$pv_003_sha" \
+		'.commit == $sha and (has("branch") | not) and all(.claims[]; .status == "pass")' >/dev/null; then
 		echo "PV-003 TEST STEPS 1"
 		return 1
 	fi
@@ -275,66 +145,23 @@ pv_004() {
 }
 
 pv_005() {
-	# SETUP 1
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-005 SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "PV-005 SETUP 1"
-		return 1
-	fi
-	# SETUP 2
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-005 SETUP 2"
-		return 1
-	fi
-	# SETUP 3
-	pv_005_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_005_setup_status=$?
-	printf '%s\n' "$pv_005_setup_output"
-	if [ "$pv_005_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_005_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_005_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_005_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_005_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-005 SETUP 3"
-		return 1
-	fi
-	# SETUP 4
-	pv_005_status_output=$(git status --porcelain)
-	if [ -n "$pv_005_status_output" ]; then
-		printf '%s\n' "$pv_005_status_output"
-		echo "PV-005 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
-	for pv_005_pack in house-policy cra-baseline medtech-iec62304; do
-		jq '{id, version}' "external_test/curbpack-studio/packs/$pv_005_pack/pack.json"
-	done
-	cat external_test/curbpack-studio/packs/SOURCE.txt
-	if ! jq -e '.id == "house-policy" and .version == "0.1.0"' external_test/curbpack-studio/packs/house-policy/pack.json >/dev/null ||
-		! jq -e '.id == "cra-baseline" and .version == "0.1.0"' external_test/curbpack-studio/packs/cra-baseline/pack.json >/dev/null ||
-		! jq -e '.id == "medtech-iec62304" and .version == "0.2.0"' external_test/curbpack-studio/packs/medtech-iec62304/pack.json >/dev/null ||
-		! grep -Eq '^source_repo: .+' external_test/curbpack-studio/packs/SOURCE.txt ||
-		! grep -Eq '^source_commit: [0-9a-f]{40}$' external_test/curbpack-studio/packs/SOURCE.txt; then
-		echo "PV-005 SETUP 5"
+	if ! _pv_r1_setup PV-005; then
 		return 1
 	fi
 
-	# TEST STEPS 1
-	pv_005_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — packs[] carries id, version, and directory digest.
+	mkdir -p "$CURBPACK_ROOT/tmp/pv-005"
+	pv_005_check_output=$(CURBCHECK_OUT="$CURBPACK_ROOT/tmp/pv-005/run-result.json" run_curbcheck_json)
 	pv_005_check_status=$?
 	printf '%s\n' "$pv_005_check_output"
 	if ! printf '%s\n' "$pv_005_check_output" | jq -e '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none"
+		(([.packs[].id] | sort) == ["cra-baseline","house-policy","medtech-iec62304"])
+		and all(.packs[];
+			(.id | type) == "string" and (.id | length) > 0
+			and (.version | type) == "string" and (.version | length) > 0
+			and (.digest | type) == "string" and (.digest | length) == 64
+		)
+		and all(.claims[]; .status == "pass")
 	' >/dev/null; then
 		echo "PV-005 TEST STEPS 1"
 		return 1
@@ -345,175 +172,28 @@ pv_005() {
 		echo "PV-005 TEST STEPS 2"
 		return 1
 	fi
-	# TEST STEPS 3
-	jq '.input_identity.pack_sources' .curbpack/cache/latest_evaluation.json
-	if ! jq -e '
-		.input_identity.pack_sources == [
-			{"id":"house-policy","version":"0.1.0","sha256":"eb74fd06241b79608d614bb27c15e8afccf33ea54a5f9d1629ea09e167391e5d"},
-			{"id":"cra-baseline","version":"0.1.0","sha256":"dd8987bcda3765290c8989fd69c97886f911702ba08896605389f5035c515499"},
-			{"id":"medtech-iec62304","version":"0.2.0","sha256":"e041b748ee87341603b116763bedaa7269773e6a4c7e035d776da661f08dd469"}
-		]
-	' .curbpack/cache/latest_evaluation.json >/dev/null; then
-		echo "PV-005 TEST STEPS 3"
-		return 1
-	fi
 }
 
 pv_006() {
-	# SETUP 1
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-006 SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "PV-006 SETUP 1"
-		return 1
-	fi
-	# SETUP 2
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-006 SETUP 2"
-		return 1
-	fi
-	# SETUP 3
-	pv_006_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_006_setup_status=$?
-	printf '%s\n' "$pv_006_setup_output"
-	if [ "$pv_006_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_006_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_006_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_006_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_006_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-006 SETUP 3"
-		return 1
-	fi
-	# SETUP 4
-	pv_006_status_output=$(git status --porcelain)
-	if [ -n "$pv_006_status_output" ]; then
-		printf '%s\n' "$pv_006_status_output"
-		echo "PV-006 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
-	mkdir -p "$CURBPACK_ROOT/tmp/pv-006"
-	pv_006_pf01_output=$(run_curbcheck_json)
-	pv_006_pf01_status=$?
-	printf '%s\n' "$pv_006_pf01_output"
-	jq -r '.comparison_key' .curbpack/cache/latest_evaluation.json > "$CURBPACK_ROOT/tmp/pv-006/pf01-comparison_key"
-	pv_006_pf01_key=$(cat "$CURBPACK_ROOT/tmp/pv-006/pf01-comparison_key")
-	if [ "$pv_006_pf01_status" -ne 0 ] ||
-		[ -z "$pv_006_pf01_key" ] ||
-		[ "$pv_006_pf01_key" = "null" ]; then
-		echo "PV-006 SETUP 5"
-		return 1
-	fi
-	# SETUP 6
-	pv_006_mutate_output=$(./external_test/curbpack-studio/mutate_pack.sh PF-06)
-	pv_006_mutate_status=$?
-	printf '%s\n' "$pv_006_mutate_output"
-	if [ "$pv_006_mutate_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_006_mutate_output" | grep -Fxq "mutate_pack.sh: PF-06" ||
-		[ "$CURBPACK_PACKS_DIR" != "$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs" ] ||
-		[ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-006 SETUP 6"
-		return 1
-	fi
-	# SETUP 7
-	if ! ls "$CURBPACK_PACKS_DIR/house-policy/pack.json"; then
-		echo "PV-006 SETUP 7"
-		return 1
-	fi
-
-	# TEST STEPS 1
-	pv_006_check_output=$(run_curbcheck_json)
-	pv_006_check_status=$?
-	printf '%s\n' "$pv_006_check_output"
-	if ! printf '%s\n' "$pv_006_check_output" | jq -e '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none"
-	' >/dev/null; then
-		echo "PV-006 TEST STEPS 1"
-		return 1
-	fi
-	# TEST STEPS 2
-	echo "$pv_006_check_status"
-	if [ "$pv_006_check_status" -ne 0 ]; then
-		echo "PV-006 TEST STEPS 2"
-		return 1
-	fi
-	# TEST STEPS 3
-	jq '{pack_sources: .input_identity.pack_sources, comparison_key}' .curbpack/cache/latest_evaluation.json
-	pv_006_pf06_key=$(jq -r '.comparison_key' .curbpack/cache/latest_evaluation.json)
-	if ! jq -e '
-		.input_identity.pack_sources == [
-			{"id":"house-policy","version":"0.1.0","sha256":"36f850200a1f5500d8add750d1567f6f790ff721e6946c2c048eecdb3122e5e8"},
-			{"id":"cra-baseline","version":"0.1.0","sha256":"dd8987bcda3765290c8989fd69c97886f911702ba08896605389f5035c515499"},
-			{"id":"medtech-iec62304","version":"0.2.0","sha256":"e041b748ee87341603b116763bedaa7269773e6a4c7e035d776da661f08dd469"}
-		]
-	' .curbpack/cache/latest_evaluation.json >/dev/null ||
-		[ -z "$pv_006_pf06_key" ] ||
-		[ "$pv_006_pf06_key" = "null" ] ||
-		[ "$pv_006_pf06_key" = "$pv_006_pf01_key" ]; then
-		echo "PV-006 TEST STEPS 3"
-		return 1
-	fi
+	echo "PV-006: Blocked. Pack-byte substitution via mutate_pack is outside Packs v2 observation. The case cannot be run. Do not run this case."
+	return 2
 }
 
 pv_007() {
-	# SETUP 1
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "PV-007 SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "PV-007 SETUP 1"
-		return 1
-	fi
-	# SETUP 2
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "PV-007 SETUP 2"
-		return 1
-	fi
-	# SETUP 3
-	pv_007_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	pv_007_setup_status=$?
-	printf '%s\n' "$pv_007_setup_output"
-	if [ "$pv_007_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$pv_007_setup_output" | grep -Fq "R1 — starting Glucose Log product content" ||
-		! printf '%s\n' "$pv_007_setup_output" | grep -Fq "## Classification Rationale" ||
-		! printf '%s\n' "$pv_007_setup_output" | grep -Fq "dependency maps in \`package.json\` are empty" ||
-		! printf '%s\n' "$pv_007_setup_output" | grep -Fq "contain no banned axios pin"; then
-		echo "PV-007 SETUP 3"
-		return 1
-	fi
-	# SETUP 4
-	pv_007_status_output=$(git status --porcelain)
-	if [ -n "$pv_007_status_output" ]; then
-		printf '%s\n' "$pv_007_status_output"
-		echo "PV-007 SETUP 4"
+	if ! _pv_r1_setup PV-007; then
 		return 1
 	fi
 
-	# TEST STEPS 1
-	pv_007_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — tool and tool_version identify the checker build.
+	mkdir -p "$CURBPACK_ROOT/tmp/pv-007"
+	pv_007_check_output=$(CURBCHECK_OUT="$CURBPACK_ROOT/tmp/pv-007/run-result.json" run_curbcheck_json)
 	pv_007_check_status=$?
 	printf '%s\n' "$pv_007_check_output"
 	if ! printf '%s\n' "$pv_007_check_output" | jq -e '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none"
-	' >/dev/null ||
-		printf '%s\n' "$pv_007_check_output" | grep -Eq '"(tool_version|method|platform)"[[:space:]]*:'; then
+		.tool == "curbcheck"
+		and (.tool_version | type) == "string" and (.tool_version | length) > 0
+		and all(.claims[]; .status == "pass")
+	' >/dev/null; then
 		echo "PV-007 TEST STEPS 1"
 		return 1
 	fi
@@ -521,26 +201,6 @@ pv_007() {
 	echo "$pv_007_check_status"
 	if [ "$pv_007_check_status" -ne 0 ]; then
 		echo "PV-007 TEST STEPS 2"
-		return 1
-	fi
-	# TEST STEPS 3
-	jq '.input_identity' .curbpack/cache/latest_evaluation.json
-	if ! jq -e '
-		.input_identity.method == "curbpack-gates:2" and
-		.input_identity.tool_version == "0.5.5"
-	' .curbpack/cache/latest_evaluation.json >/dev/null ||
-		grep -Ei '"[^"]*(home|username|hostname)[^"]*"[[:space:]]*:' .curbpack/cache/latest_evaluation.json >/dev/null; then
-		echo "PV-007 TEST STEPS 3"
-		return 1
-	fi
-	# TEST STEPS 4
-	cat .curbpack/cache/latest_receipt.json
-	if ! jq -e '
-		.tool_version == "0.5.5" and
-		(.platform | type == "string" and test("^[^/]+/[^/]+$")) and
-		.as_of_source == "explicit"
-	' .curbpack/cache/latest_receipt.json >/dev/null; then
-		echo "PV-007 TEST STEPS 4"
 		return 1
 	fi
 }

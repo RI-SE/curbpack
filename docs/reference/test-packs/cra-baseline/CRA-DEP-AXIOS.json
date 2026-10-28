@@ -1,0 +1,19 @@
+{
+  "id": "CRA-DEP-AXIOS",
+  "pack_id": "cra-baseline",
+  "remediation_hint": "Upgrade axios to a patched release (>=1.8.4 recommended) and refresh the lockfile.",
+  "source": {
+    "framework": "EU",
+    "instrument": "CRA",
+    "identifier": "CELEX:32024R2847",
+    "language": "en",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "CRA-DEP-AXIOS",
+      "law_text": "Dependency tree free of listed unmitigated axios pins."
+    }
+  ]
+}

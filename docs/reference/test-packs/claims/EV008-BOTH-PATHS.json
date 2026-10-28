@@ -1,0 +1,24 @@
+{
+  "id": "EV008-BOTH-PATHS",
+  "requirement_id": "EV008-ALPHA",
+  "source": "documents",
+  "args": {
+    "paths": [
+      "docs/ev008-alpha.md",
+      "docs/ev008-beta.md"
+    ]
+  },
+  "description": "EV-008 both targets present (file-order independence).",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/ev008-alpha.md",
+          "docs/ev008-beta.md"
+        ]
+      }
+    }
+  ]
+}

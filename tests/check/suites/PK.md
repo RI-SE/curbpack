@@ -30,10 +30,10 @@ Note: PK mutate/pack.json cases are outside (not Packs v2); the old curbpack obs
 | ID     | Test case / purpose                                                      | Requirements addressed | Test class | Procedure status |
 | ------ | ------------------------------------------------------------------------ | ---------------------- | ---------- | ---------------- |
 | PK-001 | Valid pack baseline yields a pass                                        | —                      | A          | Covered by EV-001|
-| PK-002 | Malformed or truncated pack input                                        | MUST-22, MUST-40       | A          | Executable       |
-| PK-003 | Duplicate or conflicting rules and pack versions                         | MUST-40                | A          | Partial          |
-| PK-004 | Unsupported check type is not treated as a pass                          | MUST-22, MUST-40       | A          | Executable       |
-| PK-005 | Invalid regular expression is not treated as a pass                      | MUST-22, MUST-40       | A          | Executable       |
+| PK-002 | Malformed or truncated pack input                                        | MUST-22, MUST-40       | A          | Blocked (pack mutate outside Packs v2) |
+| PK-003 | Duplicate or conflicting rules and pack versions                         | MUST-40                | A          | Blocked (pack mutate outside Packs v2) |
+| PK-004 | Unsupported check type is not treated as a pass                          | MUST-22, MUST-40       | A          | Blocked (pack mutate outside Packs v2) |
+| PK-005 | Invalid regular expression is not treated as a pass                      | MUST-22, MUST-40       | A          | Blocked (pack mutate outside Packs v2) |
 
 
 ---

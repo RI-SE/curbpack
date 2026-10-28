@@ -1,0 +1,7 @@
+{
+  "id": "fresh-owned-test",
+  "name": "Fresh and owned check fixture (test only)",
+  "version": "0.0.1",
+  "assurance_class": "structural_draft",
+  "description": "Test fixture for git_fresh and git_author — Packs v2 translation of curbpack fresh/owned. Not for production use."
+}

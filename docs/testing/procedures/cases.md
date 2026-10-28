@@ -275,26 +275,6 @@ Expected status: pass
 
 These ids are named here so the check arguments match the claim file. Each id is in [outside.md](../outside.md). Neither is a pass. Neither has expected status `pass`.
 
-## HOUSE-DEP-AXIOS-PIN
-
-Outside. Not a pass.
-
-```json
-[
-  {
-    "check": "dep_ban",
-    "args": {
-      "package": "axios",
-      "banned_versions": [
-        "1.6.0",
-        "^1.6.0",
-        "~1.6.0"
-      ]
-    }
-  }
-]
-```
-
 ## HOUSE-SECRET-PATHS
 
 Outside. Not a pass.

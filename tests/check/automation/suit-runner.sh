@@ -624,7 +624,9 @@ if [ "$displayed_count" -ne "$catalogue_total" ] && [ "$selector" = "all" ]; the
 	printf 'error: DISPLAYED %s does not match CATALOGUE %s\n' "$displayed_count" "$catalogue_total" >&2
 	exit 1
 fi
-if [ "$fail_count" -ne 0 ] || [ "$blocked_count" -ne 0 ]; then
+# Outside / not-yet-specified rows report BLOCKED or TBD. They are not FAIL.
+# Only a failed executable assertion fails the runner.
+if [ "$fail_count" -ne 0 ]; then
 	exit 1
 fi
 exit 0

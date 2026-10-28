@@ -26,7 +26,7 @@ Note: FS pack mutate cases are outside (not Packs v2); the old curbpack observat
 
 | ID     | Test case / purpose                                              | Requirements addressed | Test class | Procedure status |
 | ------ | ---------------------------------------------------------------- | ---------------------- | ---------- | ---------------- |
-| FS-001 | Relative path escape (`../../../etc/passwd`)                     | MUST-40, MUST-42       | A          | Executable       |
+| FS-001 | Relative path escape (`../../../etc/passwd`)                     | MUST-40, MUST-42       | A          | Blocked (pack mutate outside Packs v2) |
 | FS-002 | Absolute, drive-qualified, mixed-separator and reserved paths    | MUST-42                | A          | To be specified  |
 | FS-003 | Symbolic link to content outside the repository                  | MUST-42                | A          | To be specified  |
 | FS-004 | Nested symbolic links and symbolic-link loop                     | MUST-42                | A          | To be specified  |

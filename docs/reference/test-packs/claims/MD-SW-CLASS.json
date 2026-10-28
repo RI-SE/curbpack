@@ -1,0 +1,32 @@
+{
+  "id": "MD-SW-CLASS",
+  "requirement_id": "MD-SW-CLASS",
+  "source": "documents",
+  "args": {
+    "path": "docs/medtech/software_safety_class.md"
+  },
+  "description": "The reviewed document explains the product software safety classification.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "contents",
+      "args": {
+        "path": "docs/medtech/software_safety_class.md",
+        "probes": [
+          {
+            "kind": "size",
+            "bytes": 100,
+            "op": ">="
+          },
+          {
+            "kind": "headers",
+            "headers": [
+              "# Software Safety Class",
+              "## Classification Rationale"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

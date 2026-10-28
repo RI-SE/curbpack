@@ -33,7 +33,7 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 | EV-005 | Skipped, excluded or unsupported target is not treated as a pass  | MUST-23                | A          | Executable       |
 | EV-006 | Token-only text does not yield a pass                             | —                      | A          | Executable       |
 | EV-007 | Each supported check type fails when its condition is changed     | —                      | A          | Executable       |
-| EV-008 | Outcome does not depend on rule order or file order               | —                      | A          | Partial (A executable; B blocked) |
+| EV-008 | Outcome does not depend on rule order or file order               | —                      | A          | Executable       |
 | EV-009 | Thin rule-satisfying text yields a pass without a substance claim | —                      | A          | Executable       |
 
 
@@ -86,25 +86,63 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 ## EV-003 — Verify that a missing required section yields a fail
 
+### SETUP
+
+- Repository state: R3 via Studio fixture `setup.sh`.
+- Claims: Packs v2 `MD-SW-CLASS` (translated from curbpack `medtech-iec62304` `annex_file`).
+- Packs: `$CURBPACK_ROOT/docs/reference/test-packs`.
+
 ### TEST STEPS
 
-Note: outside — MD-SW-CLASS claim does not exist in the Studio fixture; the old curbpack observation is not used.
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks ... --out run-result.json` | Claim `MD-SW-CLASS` has status `fail`. |
+| 2    | Process exit code | Non-zero. |
 
 ---
 
 ## EV-004 — Verify that an unreadable required target is not reported as a pass
 
+### Requirements
+
+- MUST-22
+- MUST-24
+
+### SETUP
+
+- Repository state: R1 via Studio fixture, then `chmod 000 SECURITY.md` (file present, unreadable).
+- Claims: the seven carried claims (PF-01).
+
 ### TEST STEPS
 
-Note: outside — unreadable target raises PermissionError; the old curbpack stderr observation is not used.
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks ... --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `fail`. Both `exist` and `contents` are `fail` with `unreadable` in `detail`. |
+| 2    | Process exit code | Non-zero. |
 
 ---
 
 ## EV-005 — Verify that a skipped, excluded or unsupported target is not treated as a pass
 
+### Requirements
+
+- MUST-23
+
+### SETUP
+
+- Repository state: R1 via Studio fixture.
+- Claims: the seven carried claims (PF-01).
+- Skip: `--skip HOUSE-SECURITY-MD=EV-005 excluded target` (Packs v2 replacement for curbpack `--diff` / `skipped_rules`).
+
 ### TEST STEPS
 
-Note: outside — needs `--diff` / skipped_rules / `.curbpack` cache fields Studio does not write; the old curbpack observation is not used.
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks ... --skip HOUSE-SECURITY-MD='EV-005 excluded target' --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `skipped`; every Check on that Claim is `skipped`. It is not `pass`. |
+| 2    | Process exit code | Non-zero. |
 
 ---
 
@@ -134,9 +172,12 @@ Note: outside — needs `--diff` / skipped_rules / `.curbpack` cache fields Stud
 | ---- | ------ | --------------- |
 | 1    | `python3 -m checks` after R2 + seven claims | `HOUSE-SECURITY-MD` status `fail`; process exit non-zero. |
 
-### EV-007-B — MD-SW-CLASS (outside)
+### EV-007-B — MD-SW-CLASS (R3)
 
-Note: outside — MD-SW-CLASS claim does not exist; the old curbpack observation is not used.
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R3 + Packs v2 `MD-SW-CLASS` | `MD-SW-CLASS` status `fail`; process exit non-zero. |
 
 ### EV-007-C — placeholder probe (R4 + TODO)
 
@@ -145,37 +186,60 @@ Note: outside — MD-SW-CLASS claim does not exist; the old curbpack observation
 | ---- | ------ | --------------- |
 | 1    | `python3 -m checks` after R4, append TODO to SECURITY.md, house claims | `HOUSE-ANTI-PLACEHOLDER` status `fail`; process exit non-zero. |
 
-### EV-007-D — dep_ban house (outside)
+### EV-007-D — dep_ban house (R1 + banned axios pin)
 
-Note: outside — needs `dep_ban` / HOUSE-DEP-AXIOS-PIN; dep_ban is not installed.
 
-### EV-007-E — dep_ban cra (outside)
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R1, pin `axios` `^1.6.0`, Packs v2 `HOUSE-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
 
-Note: outside — needs `dep_ban` / CRA-DEP-AXIOS-PIN; dep_ban is not installed.
+### EV-007-E — dep_ban cra (R1 + banned axios pin)
 
-### EV-007-F — secret paths pattern (outside)
 
-Note: outside — HOUSE-SECRET-PATHS fails on absent paths before pattern; the old curbpack observation is not used.
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R1, pin `axios` `^1.6.0`, Packs v2 `CRA-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
 
-### EV-007-G — fresh/owned stale (outside)
+### EV-007-F — secret paths pattern (R1 + PEM in SECURITY.md)
 
-Note: outside — missing checkers `fresh` / `owned` / `git_signed` / `git_signer`; not implemented for this case.
 
-### EV-007-H — fresh/owned wrong author (outside)
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R1, PEM marker, Packs v2 `HOUSE-SECRET-PATHS` | status `fail`; exit non-zero. |
 
-Note: outside — missing checkers `fresh` / `owned` / `git_signed` / `git_signer`; not implemented for this case.
+### EV-007-G — git_fresh stale (R6)
+
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R6, Packs v2 `FIX-FRESH-REVIEW` (`git_fresh`) | status `fail`; exit non-zero. |
+
+### EV-007-H — git_author wrong author (R7)
+
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | `python3 -m checks` after R7, Packs v2 `FIX-OWNED-POLICY` (`git_author`) | status `fail`; exit non-zero. |
 
 ---
 
 ## EV-008 — Verify that outcome does not depend on rule order or file order
 
-### EV-008-A — rule order packs (outside)
+### EV-008-A — rule order (ALPHA/BETA Claims)
 
-Note: outside — EV-008 special rule-order packs are not rewritten to Packs v2; the old curbpack observation is not used.
 
-### EV-008-B — file order (blocked)
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | Two runs on R1 with missing `docs/ev008-*.md`: Claims loaded ALPHA-then-BETA, then BETA-then-ALPHA | Same id→status map; both `EV008-ALPHA` and `EV008-BETA` are `fail`. |
+| 2    | Process exit codes | Both non-zero. |
 
-Note: blocked — missing test seam; the old curbpack observation is not used.
+### EV-008-B — file order (paths list)
+
+
+| Step | Action | Expected result |
+| ---- | ------ | --------------- |
+| 1    | Two runs with one Claim whose `exist.paths` is ALPHA-then-BETA, then BETA-then-ALPHA | Both `fail`; sorted missing-path details are identical. |
+| 2    | Process exit codes | Both non-zero. |
 
 ---
 

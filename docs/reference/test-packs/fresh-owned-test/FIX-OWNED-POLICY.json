@@ -1,0 +1,19 @@
+{
+  "id": "FIX-OWNED-POLICY",
+  "pack_id": "fresh-owned-test",
+  "remediation_hint": "Edit docs/owned-policy.md with product token; commit as owner@example.com.",
+  "source": {
+    "framework": "internal",
+    "instrument": "Fresh-owned test fixture",
+    "identifier": "FIX-OWNED-POLICY",
+    "language": "en",
+    "url": "packs/fresh-owned-test/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "FIX-OWNED-POLICY",
+      "law_text": "Repo-bound draft with expected git author on last commit."
+    }
+  ]
+}

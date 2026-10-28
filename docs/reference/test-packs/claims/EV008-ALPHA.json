@@ -1,0 +1,20 @@
+{
+  "id": "EV008-ALPHA",
+  "requirement_id": "EV008-ALPHA",
+  "source": "documents",
+  "args": {
+    "path": "docs/ev008-alpha.md"
+  },
+  "description": "EV-008 alpha target is present.",
+  "severity": "high",
+  "checks": [
+    {
+      "check": "exist",
+      "args": {
+        "paths": [
+          "docs/ev008-alpha.md"
+        ]
+      }
+    }
+  ]
+}

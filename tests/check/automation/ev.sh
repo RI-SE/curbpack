@@ -110,40 +110,21 @@ ev_002() {
 		return 1
 	fi
 
-	# TEST STEPS 1
+	install_pf01
+
+	# TEST STEPS 1 — HOUSE-SECURITY-MD status fail (Packs v2).
 	ev_002_check_output=$(run_curbcheck_json)
 	ev_002_check_status=$?
 	printf '%s\n' "$ev_002_check_output"
 	if ! printf '%s\n' "$ev_002_check_output" | jq -e '
-		.failures == [{
-			"gate_id": "HOUSE-SECURITY-MD",
-			"severity": "high",
-			"type": "POLICY_VIOLATION",
-			"sanitized_description": "SECURITY.md missing, too short, or lacking required header.",
-			"ast_coordinates": {
-				"target_file": "SECURITY.md",
-				"node_path": "",
-				"target_symbol": "",
-				"fallback_lines": ""
-			},
-			"remediation": {
-				"action_required": "Add SECURITY.md with vulnerability reporting and response expectations.",
-				"expected_state": "SECURITY.md present with Security header and substantive content."
-			}
-		}] and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 80 and
-		.outcome == "findings" and
-		.failed_rules == 1 and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none"
+		any(.claims[]; .id == "HOUSE-SECURITY-MD" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-002 TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_002_check_status"
-	if [ "$ev_002_check_status" -ne 1 ]; then
+	if [ "$ev_002_check_status" -eq 0 ]; then
 		echo "EV-002 TEST STEPS 2"
 		return 1
 	fi
@@ -190,42 +171,23 @@ ev_003() {
 		echo "EV-003 SETUP 6"
 		return 1
 	fi
+	install_md_sw_class
 
-	# TEST STEPS 1
-	ev_003_check_output=$(run_curbcheck_json)
+	# TEST STEPS 1 — MD-SW-CLASS status fail (Packs v2 translation of annex_file).
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-003"
+	ev_003_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-003/summary")
 	ev_003_check_status=$?
 	printf '%s\n' "$ev_003_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-003/summary"
 	if ! printf '%s\n' "$ev_003_check_output" | jq -e '
-		.failures == [{
-			"gate_id": "MD-SW-CLASS",
-			"severity": "high",
-			"type": "POLICY_VIOLATION",
-			"sanitized_description": "IEC 62304 software safety classification rationale missing. (missing header: ## Classification Rationale)",
-			"ast_coordinates": {
-				"target_file": "docs/medtech/software_safety_class.md",
-				"node_path": "",
-				"target_symbol": "",
-				"fallback_lines": ""
-			},
-			"remediation": {
-				"action_required": "Document Class A/B/C rationale in docs/medtech/software_safety_class.md.",
-				"expected_state": "Safety class declared with rationale."
-			}
-		}] and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 80 and
-		.outcome == "findings" and
-		.failed_rules == 1 and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none" and
-		([.failures[].gate_id] | index("HOUSE-SECURITY-MD") | not)
+		any(.claims[]; .id == "MD-SW-CLASS" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-003 TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_003_check_status"
-	if [ "$ev_003_check_status" -ne 1 ]; then
+	if [ "$ev_003_check_status" -eq 0 ]; then
 		echo "EV-003 TEST STEPS 2"
 		return 1
 	fi
@@ -248,65 +210,47 @@ ev_004() {
 		echo "EV-004 SETUP 2"
 		return 1
 	fi
-	# SETUP 3
+	# SETUP 3 — R1 then make required SECURITY.md present but unreadable.
 	ev_004_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_004_setup_status=$?
 	printf '%s\n' "$ev_004_setup_output"
-	if [ "$ev_004_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_004_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+	if [ "$ev_004_setup_status" -ne 0 ]; then
 		echo "EV-004 SETUP 3"
 		return 1
 	fi
-	# SETUP 4
-	if [ -n "$(git status --porcelain)" ]; then
-		echo "EV-004 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
 	if [ ! -f SECURITY.md ]; then
-		echo "EV-004 SETUP 5"
+		echo "EV-004 SETUP 3"
 		return 1
 	fi
-	# SETUP 6
 	chmod 000 SECURITY.md
-	ev_004_mode=$(ls -l SECURITY.md)
-	printf '%s\n' "$ev_004_mode"
-	if [ ! -f SECURITY.md ] || ! printf '%s\n' "$ev_004_mode" | grep -q '^----------'; then
-		echo "EV-004 SETUP 6"
-		return 1
-	fi
-	# SETUP 7
-	if test -r SECURITY.md; then
-		echo "EV-004 SETUP 7: this machine can still read SECURITY.md. The case cannot be run."
-		return 1
-	fi
-	echo 1
-	# SETUP 8
-	ev_004_git=$(git status --porcelain)
-	printf '%s\n' "$ev_004_git"
-	if ! printf '%s\n' "$ev_004_git" | grep -Fq 'SECURITY.md'; then
-		echo "EV-004 SETUP 8"
-		return 1
-	fi
+	install_pf01
 
-	# TEST STEPS 1
+	# TEST STEPS 1 — claim must not be pass (MUST-24).
 	mkdir -p "$CURBPACK_ROOT/tmp/ev-004"
-	run_curbcheck_json >"$CURBPACK_ROOT/tmp/ev-004/stdout" 2>"$CURBPACK_ROOT/tmp/ev-004/stderr"
-	ev_004_status=$?
-	cat "$CURBPACK_ROOT/tmp/ev-004/stdout"
-	cat "$CURBPACK_ROOT/tmp/ev-004/stderr" >&2
-	ev_004_stdout=$(cat "$CURBPACK_ROOT/tmp/ev-004/stdout")
-	ev_004_stderr=$(cat "$CURBPACK_ROOT/tmp/ev-004/stderr")
-	if [ -n "$ev_004_stdout" ] ||
-		! printf '%s\n' "$ev_004_stderr" | grep -Fq 'read input SECURITY.md' ||
-		! printf '%s\n' "$ev_004_stderr" | grep -Fq 'permission denied' ||
-		! printf '%s\n' "$ev_004_stderr" | grep -Fq "$REFERENCE_PRODUCT_ROOT/SECURITY.md"; then
+	ev_004_check_output=$(run_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-004/summary")
+	ev_004_check_status=$?
+	chmod 644 SECURITY.md 2>/dev/null || true
+	printf '%s\n' "$ev_004_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-004/summary"
+	if ! printf '%s\n' "$ev_004_check_output" | jq -e '
+		any(.claims[]; .id == "HOUSE-SECURITY-MD" and .status == "fail")
+		and any(.claims[];
+			.id == "HOUSE-SECURITY-MD"
+			and any(.checks[]; .check == "exist" and .status == "fail"
+				and (.detail | test("unreadable")))
+		)
+		and any(.claims[];
+			.id == "HOUSE-SECURITY-MD"
+			and any(.checks[]; .check == "contents" and .status == "fail"
+				and (.detail | test("unreadable")))
+		)
+	' >/dev/null; then
 		echo "EV-004 TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
-	echo "$ev_004_status"
-	if [ "$ev_004_status" -ne 1 ]; then
+	echo "$ev_004_check_status"
+	if [ "$ev_004_check_status" -eq 0 ]; then
 		echo "EV-004 TEST STEPS 2"
 		return 1
 	fi
@@ -329,70 +273,40 @@ ev_005() {
 		echo "EV-005 SETUP 2"
 		return 1
 	fi
-	# SETUP 3
+	# SETUP 3 — R1 good tree; skip replaces curbpack --diff skipped_rules.
 	ev_005_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_005_setup_status=$?
 	printf '%s\n' "$ev_005_setup_output"
-	if [ "$ev_005_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_005_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+	if [ "$ev_005_setup_status" -ne 0 ]; then
 		echo "EV-005 SETUP 3"
 		return 1
 	fi
-	# SETUP 4
-	if [ -n "$(git status --porcelain)" ]; then
-		echo "EV-005 SETUP 4"
-		return 1
-	fi
-	# SETUP 5
-	printf '%s\n' '# EV-005 skip stimulus' 'This file is not a pack target.' > docs/ev005-skip.md
-	if [ ! -f docs/ev005-skip.md ]; then
-		echo "EV-005 SETUP 5"
-		return 1
-	fi
-	# SETUP 6
-	ev_005_git=$(git status --porcelain)
-	printf '%s\n' "$ev_005_git"
-	if ! printf '%s\n' "$ev_005_git" | grep -Fq '?? docs/ev005-skip.md'; then
-		echo "EV-005 SETUP 6"
-		return 1
-	fi
+	install_pf01
 
-	# TEST STEPS 1
-	ev_005_check_output=$(curbcheck --diff --json --as-of "$AS_OF_DATE")
+	# TEST STEPS 1 — --skip → Claim status skipped, never pass (MUST-23 / Packs v2).
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-005"
+	ev_005_check_output=$(
+		run_curbcheck_json --skip 'HOUSE-SECURITY-MD=EV-005 excluded target' \
+			2>"$CURBPACK_ROOT/tmp/ev-005/summary"
+	)
 	ev_005_check_status=$?
 	printf '%s\n' "$ev_005_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-005/summary"
 	if ! printf '%s\n' "$ev_005_check_output" | jq -e '
-		.failures == null and
-		.pack_id == "house-policy,medtech-iec62304" and
-		.readiness_score == 100 and
-		.outcome == "incomplete" and
-		.skipped_rules == 1 and
-		.evaluated_rules == 14 and
-		.conformity_claim == "none"
+		any(.claims[]; .id == "HOUSE-SECURITY-MD" and .status == "skipped")
+		and all(.claims[]; .id != "HOUSE-SECURITY-MD" or .status != "pass")
+		and any(.claims[];
+			.id == "HOUSE-SECURITY-MD"
+			and all(.checks[]; .status == "skipped")
+		)
 	' >/dev/null; then
 		echo "EV-005 TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_005_check_status"
-	if [ "$ev_005_check_status" -ne 1 ]; then
+	if [ "$ev_005_check_status" -eq 0 ]; then
 		echo "EV-005 TEST STEPS 2"
-		return 1
-	fi
-	# TEST STEPS 3
-	ev_005_skip=$(grep -A2 skipped_rule_ids .curbpack/cache/latest_evaluation.json)
-	printf '%s\n' "$ev_005_skip"
-	if ! printf '%s\n' "$ev_005_skip" | grep -Fq 'HOUSE-SECRET-PATHS'; then
-		echo "EV-005 TEST STEPS 3"
-		return 1
-	fi
-	# TEST STEPS 4
-	ev_005_report=$(cat .curbpack/cache/latest_action_report.md)
-	printf '%s\n' "$ev_005_report"
-	if ! printf '%s\n' "$ev_005_report" | grep -Fq '**Outcome:** incomplete' ||
-		! printf '%s\n' "$ev_005_report" | grep -Fq '**Failed / evaluated / skipped:** 0 / 14 / 1' ||
-		! printf '%s\n' "$ev_005_report" | grep -Fq 'Evaluation incomplete: some rules were skipped'; then
-		echo "EV-005 TEST STEPS 4"
 		return 1
 	fi
 }
@@ -443,27 +357,29 @@ ev_006() {
 		echo "EV-006 SETUP 7"
 		return 1
 	fi
-	echo 0
+	# SETUP 8 — R4 token-only text does not trip the placeholder probe.
+	printf '\nTODO\n' >> SECURITY.md
+	if ! grep -q 'TODO' SECURITY.md; then
+		echo "EV-006 SETUP 8"
+		return 1
+	fi
+	install_house_claims
 
-	# TEST STEPS 1
-	ev_006_check_output=$(curbcheck --packs house-policy --json --as-of "$AS_OF_DATE")
+	# TEST STEPS 1 — HOUSE-ANTI-PLACEHOLDER status fail.
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-006"
+	ev_006_check_output=$(run_house_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-006/summary")
 	ev_006_check_status=$?
 	printf '%s\n' "$ev_006_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-006/summary"
 	if ! printf '%s\n' "$ev_006_check_output" | jq -e '
-		.failures[0].gate_id == "HOUSE-ANTI-PLACEHOLDER" and
-		.pack_id == "house-policy" and
-		.readiness_score == 80 and
-		.outcome == "findings" and
-		.failed_rules == 1 and
-		.evaluated_rules == 5 and
-		.conformity_claim == "none"
+		any(.claims[]; .id == "HOUSE-ANTI-PLACEHOLDER" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-006 TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_006_check_status"
-	if [ "$ev_006_check_status" -ne 1 ]; then
+	if [ "$ev_006_check_status" -eq 0 ]; then
 		echo "EV-006 TEST STEPS 2"
 		return 1
 	fi
@@ -506,25 +422,21 @@ ev_007_a() {
 		return 1
 	fi
 
-	# TEST STEPS 1
+	install_pf01
+
+	# TEST STEPS 1 — HOUSE-SECURITY-MD status fail.
 	ev_007_a_check_output=$(run_curbcheck_json)
 	ev_007_a_check_status=$?
 	printf '%s\n' "$ev_007_a_check_output"
 	if ! printf '%s\n' "$ev_007_a_check_output" | jq -e '
-		.outcome == "findings" and
-		.failed_rules == 1 and
-		.evaluated_rules == 15 and
-		.conformity_claim == "none" and
-		.pack_id == "house-policy,medtech-iec62304" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "HOUSE-SECURITY-MD"
+		any(.claims[]; .id == "HOUSE-SECURITY-MD" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-A TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_007_a_check_status"
-	if [ "$ev_007_a_check_status" -ne 1 ]; then
+	if [ "$ev_007_a_check_status" -eq 0 ]; then
 		echo "EV-007-A TEST STEPS 2"
 		return 1
 	fi
@@ -566,22 +478,23 @@ ev_007_b() {
 		echo "EV-007-B SETUP 5"
 		return 1
 	fi
+	install_md_sw_class
 
 	# TEST STEPS 1
-	ev_007_b_check_output=$(run_curbcheck_json)
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-b"
+	ev_007_b_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-b/summary")
 	ev_007_b_check_status=$?
 	printf '%s\n' "$ev_007_b_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-b/summary"
 	if ! printf '%s\n' "$ev_007_b_check_output" | jq -e '
-		.outcome == "findings" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "MD-SW-CLASS"
+		any(.claims[]; .id == "MD-SW-CLASS" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-B TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_007_b_check_status"
-	if [ "$ev_007_b_check_status" -ne 1 ]; then
+	if [ "$ev_007_b_check_status" -eq 0 ]; then
 		echo "EV-007-B TEST STEPS 2"
 		return 1
 	fi
@@ -619,29 +532,35 @@ ev_007_c() {
 		return 1
 	fi
 
-	# TEST STEPS 1
-	ev_007_c_check_output=$(curbcheck --packs house-policy --json --as-of "$AS_OF_DATE")
+	# SETUP 5 — R4 token-only text does not trip the placeholder probe.
+	printf '\nTODO\n' >> SECURITY.md
+	if ! grep -q 'TODO' SECURITY.md; then
+		echo "EV-007-C SETUP 5"
+		return 1
+	fi
+	install_house_claims
+
+	# TEST STEPS 1 — HOUSE-ANTI-PLACEHOLDER status fail.
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-c"
+	ev_007_c_check_output=$(run_house_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-c/summary")
 	ev_007_c_check_status=$?
 	printf '%s\n' "$ev_007_c_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-c/summary"
 	if ! printf '%s\n' "$ev_007_c_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "house-policy" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "HOUSE-ANTI-PLACEHOLDER"
+		any(.claims[]; .id == "HOUSE-ANTI-PLACEHOLDER" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-C TEST STEPS 1"
 		return 1
 	fi
 	# TEST STEPS 2
 	echo "$ev_007_c_check_status"
-	if [ "$ev_007_c_check_status" -ne 1 ]; then
+	if [ "$ev_007_c_check_status" -eq 0 ]; then
 		echo "EV-007-C TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_007_d() {
-	# SETUP 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-007-D SETUP 1"
@@ -652,55 +571,48 @@ ev_007_d() {
 		echo "EV-007-D SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-007-D SETUP 2"
 		return 1
 	fi
-	# SETUP 3
 	ev_007_d_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_007_d_setup_status=$?
 	printf '%s\n' "$ev_007_d_setup_output"
-	if [ "$ev_007_d_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_007_d_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+	if [ "$ev_007_d_setup_status" -ne 0 ]; then
 		echo "EV-007-D SETUP 3"
 		return 1
 	fi
-	# SETUP 4
-	if [ -n "$(git status --porcelain)" ]; then
+	pin_banned_axios
+	if ! grep -F '"axios": "^1.6.0"' package.json; then
 		echo "EV-007-D SETUP 4"
 		return 1
 	fi
-	# SETUP 5
-	python3 -c 'import json; p="package.json"; d=json.load(open(p)); d["dependencies"]={"axios":"1.6.0"}; json.dump(d, open(p,"w"), indent=2); open(p,"a").write("\n")'
-	if ! grep -F '"axios": "1.6.0"' package.json || [ -z "$(git status --porcelain)" ]; then
-		echo "EV-007-D SETUP 5"
-		return 1
-	fi
+	install_house_dep_axios
 
-	# TEST STEPS 1
-	ev_007_d_check_output=$(curbcheck --packs house-policy --json --as-of "$AS_OF_DATE")
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-d"
+	ev_007_d_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-d/summary")
 	ev_007_d_check_status=$?
 	printf '%s\n' "$ev_007_d_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-d/summary"
 	if ! printf '%s\n' "$ev_007_d_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "house-policy" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "HOUSE-DEP-AXIOS-PIN"
+		any(.claims[]; .id == "HOUSE-DEP-AXIOS-PIN" and .status == "fail")
+		and any(.claims[];
+			.id == "HOUSE-DEP-AXIOS-PIN"
+			and any(.checks[]; .check == "dep_ban" and .status == "fail"
+				and (.detail | test("banned pin")))
+		)
 	' >/dev/null; then
 		echo "EV-007-D TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
 	echo "$ev_007_d_check_status"
-	if [ "$ev_007_d_check_status" -ne 1 ]; then
+	if [ "$ev_007_d_check_status" -eq 0 ]; then
 		echo "EV-007-D TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_007_e() {
-	# SETUP 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-007-E SETUP 1"
@@ -711,55 +623,48 @@ ev_007_e() {
 		echo "EV-007-E SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-007-E SETUP 2"
 		return 1
 	fi
-	# SETUP 3
 	ev_007_e_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_007_e_setup_status=$?
 	printf '%s\n' "$ev_007_e_setup_output"
-	if [ "$ev_007_e_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_007_e_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+	if [ "$ev_007_e_setup_status" -ne 0 ]; then
 		echo "EV-007-E SETUP 3"
 		return 1
 	fi
-	# SETUP 4
-	if [ -n "$(git status --porcelain)" ]; then
+	pin_banned_axios
+	if ! grep -F '"axios": "^1.6.0"' package.json; then
 		echo "EV-007-E SETUP 4"
 		return 1
 	fi
-	# SETUP 5
-	python3 -c 'import json; p="package.json"; d=json.load(open(p)); d["dependencies"]={"axios":"1.6.0"}; json.dump(d, open(p,"w"), indent=2); open(p,"a").write("\n")'
-	if ! grep -F '"axios": "1.6.0"' package.json || [ -z "$(git status --porcelain)" ]; then
-		echo "EV-007-E SETUP 5"
-		return 1
-	fi
+	install_cra_dep_axios
 
-	# TEST STEPS 1
-	ev_007_e_check_output=$(curbcheck --packs cra-baseline --json --as-of "$AS_OF_DATE")
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-e"
+	ev_007_e_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-e/summary")
 	ev_007_e_check_status=$?
 	printf '%s\n' "$ev_007_e_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-e/summary"
 	if ! printf '%s\n' "$ev_007_e_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "cra-baseline" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "CRA-DEP-AXIOS-PIN"
+		any(.claims[]; .id == "CRA-DEP-AXIOS-PIN" and .status == "fail")
+		and any(.claims[];
+			.id == "CRA-DEP-AXIOS-PIN"
+			and any(.checks[]; .check == "dep_ban" and .status == "fail"
+				and (.detail | test("banned pin")))
+		)
 	' >/dev/null; then
 		echo "EV-007-E TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
 	echo "$ev_007_e_check_status"
-	if [ "$ev_007_e_check_status" -ne 1 ]; then
+	if [ "$ev_007_e_check_status" -eq 0 ]; then
 		echo "EV-007-E TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_007_f() {
-	# SETUP 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-007-F SETUP 1"
@@ -770,12 +675,10 @@ ev_007_f() {
 		echo "EV-007-F SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-007-F SETUP 2"
 		return 1
 	fi
-	# SETUP 3
 	ev_007_f_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_007_f_setup_status=$?
 	printf '%s\n' "$ev_007_f_setup_output"
@@ -784,42 +687,37 @@ ev_007_f() {
 		echo "EV-007-F SETUP 3"
 		return 1
 	fi
-	# SETUP 4
 	if [ -n "$(git status --porcelain)" ]; then
 		echo "EV-007-F SETUP 4"
 		return 1
 	fi
-	# SETUP 5
 	printf '%s\n' '' '-----BEGIN RSA PRIVATE KEY-----' 'fixture-only' '-----END RSA PRIVATE KEY-----' >> SECURITY.md
 	if ! grep -F -- '-----BEGIN RSA PRIVATE KEY-----' SECURITY.md ||
 		! git status --porcelain | grep -Fq 'SECURITY.md'; then
 		echo "EV-007-F SETUP 5"
 		return 1
 	fi
+	install_house_secret_paths
 
-	# TEST STEPS 1
-	ev_007_f_check_output=$(curbcheck --packs house-policy --json --as-of "$AS_OF_DATE")
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-f"
+	ev_007_f_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-f/summary")
 	ev_007_f_check_status=$?
 	printf '%s\n' "$ev_007_f_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-f/summary"
 	if ! printf '%s\n' "$ev_007_f_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "house-policy" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "HOUSE-SECRET-PATHS"
+		any(.claims[]; .id == "HOUSE-SECRET-PATHS" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-F TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
 	echo "$ev_007_f_check_status"
-	if [ "$ev_007_f_check_status" -ne 1 ]; then
+	if [ "$ev_007_f_check_status" -eq 0 ]; then
 		echo "EV-007-F TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_007_g() {
-	# SETUP 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-007-G SETUP 1"
@@ -830,12 +728,10 @@ ev_007_g() {
 		echo "EV-007-G SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-007-G SETUP 2"
 		return 1
 	fi
-	# SETUP 3
 	ev_007_g_setup_output=$(./external_test/curbpack-studio/setup.sh R6 --commit)
 	ev_007_g_setup_status=$?
 	printf '%s\n' "$ev_007_g_setup_output"
@@ -844,57 +740,41 @@ ev_007_g() {
 		echo "EV-007-G SETUP 3"
 		return 1
 	fi
-	# SETUP 4
 	if [ -n "$(git status --porcelain)" ]; then
 		echo "EV-007-G SETUP 4"
 		return 1
 	fi
-	# SETUP 5
 	if ! test -f docs/review-log.md || ! test -f docs/owned-policy.md; then
 		echo "EV-007-G SETUP 5"
 		return 1
 	fi
-	echo 0
-	# SETUP 6
 	ev_007_g_log=$(git log -1 --format='%ae %aI' -- docs/review-log.md)
 	printf '%s\n' "$ev_007_g_log"
 	if ! printf '%s\n' "$ev_007_g_log" | grep -q '^owner@example.com 2022-01-01T00:00:00'; then
 		echo "EV-007-G SETUP 6"
 		return 1
 	fi
-	# SETUP 7
-	ev_007_g_packs=$CURBPACK_PACKS_DIR
-	ev_007_g_mutate_output=$(./external_test/curbpack-studio/mutate_pack.sh PF-07)
-	printf '%s\n' "$ev_007_g_mutate_output"
-	if ! printf '%s\n' "$ev_007_g_mutate_output" | grep -Fxq "mutate_pack.sh: PF-07" ||
-		[ "$CURBPACK_PACKS_DIR" != "$ev_007_g_packs" ]; then
-		echo "EV-007-G SETUP 7"
-		return 1
-	fi
+	install_fix_fresh_review
 
-	# TEST STEPS 1
-	ev_007_g_check_output=$(curbcheck --packs fresh-owned-test --json --as-of "$AS_OF_DATE")
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-g"
+	ev_007_g_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-g/summary")
 	ev_007_g_check_status=$?
 	printf '%s\n' "$ev_007_g_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-g/summary"
 	if ! printf '%s\n' "$ev_007_g_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "fresh-owned-test" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "FIX-FRESH-REVIEW"
+		any(.claims[]; .id == "FIX-FRESH-REVIEW" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-G TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
 	echo "$ev_007_g_check_status"
-	if [ "$ev_007_g_check_status" -ne 1 ]; then
+	if [ "$ev_007_g_check_status" -eq 0 ]; then
 		echo "EV-007-G TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_007_h() {
-	# SETUP 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-007-H SETUP 1"
@@ -905,12 +785,10 @@ ev_007_h() {
 		echo "EV-007-H SETUP 1"
 		return 1
 	fi
-	# SETUP 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-007-H SETUP 2"
 		return 1
 	fi
-	# SETUP 3
 	ev_007_h_setup_output=$(./external_test/curbpack-studio/setup.sh R7 --commit)
 	ev_007_h_setup_status=$?
 	printf '%s\n' "$ev_007_h_setup_output"
@@ -919,58 +797,41 @@ ev_007_h() {
 		echo "EV-007-H SETUP 3"
 		return 1
 	fi
-	# SETUP 4
 	if [ -n "$(git status --porcelain)" ]; then
 		echo "EV-007-H SETUP 4"
 		return 1
 	fi
-	# SETUP 5
 	if ! test -f docs/review-log.md || ! test -f docs/owned-policy.md; then
 		echo "EV-007-H SETUP 5"
 		return 1
 	fi
-	echo 0
-	# SETUP 6
 	ev_007_h_log=$(git log -1 --format='%ae %aI' -- docs/owned-policy.md)
 	printf '%s\n' "$ev_007_h_log"
 	if ! printf '%s\n' "$ev_007_h_log" | grep -q '^wrong@example.com 2026-09-13T12:00:00'; then
 		echo "EV-007-H SETUP 6"
 		return 1
 	fi
-	# SETUP 7
-	ev_007_h_packs=$CURBPACK_PACKS_DIR
-	ev_007_h_mutate_output=$(./external_test/curbpack-studio/mutate_pack.sh PF-07)
-	printf '%s\n' "$ev_007_h_mutate_output"
-	if ! printf '%s\n' "$ev_007_h_mutate_output" | grep -Fxq "mutate_pack.sh: PF-07" ||
-		[ "$CURBPACK_PACKS_DIR" != "$ev_007_h_packs" ]; then
-		echo "EV-007-H SETUP 7"
-		return 1
-	fi
+	install_fix_owned_policy
 
-	# TEST STEPS 1
-	ev_007_h_check_output=$(curbcheck --packs fresh-owned-test --json --as-of "$AS_OF_DATE")
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-007-h"
+	ev_007_h_check_output=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-007-h/summary")
 	ev_007_h_check_status=$?
 	printf '%s\n' "$ev_007_h_check_output"
+	cat "$CURBPACK_ROOT/tmp/ev-007-h/summary"
 	if ! printf '%s\n' "$ev_007_h_check_output" | jq -e '
-		.outcome == "findings" and
-		.pack_id == "fresh-owned-test" and
-		(.failures | length) == 1 and
-		.failures[0].gate_id == "FIX-OWNED-POLICY"
+		any(.claims[]; .id == "FIX-OWNED-POLICY" and .status == "fail")
 	' >/dev/null; then
 		echo "EV-007-H TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS 2
 	echo "$ev_007_h_check_status"
-	if [ "$ev_007_h_check_status" -ne 1 ]; then
+	if [ "$ev_007_h_check_status" -eq 0 ]; then
 		echo "EV-007-H TEST STEPS 2"
 		return 1
 	fi
 }
 
 ev_008_a() {
-	mkdir -p "${CURBPACK_ROOT:-.}/tmp/ev-008"
-	# SETUP pack A 1
 	if [ -n "${CURBPACK_ROOT:-}" ]; then
 		if ! cd "$CURBPACK_ROOT"; then
 			echo "EV-008-A SETUP 1"
@@ -981,139 +842,106 @@ ev_008_a() {
 		echo "EV-008-A SETUP 1"
 		return 1
 	fi
-	# SETUP pack A 2
 	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
 		echo "EV-008-A SETUP 2"
 		return 1
 	fi
-	# SETUP pack A 3
 	ev_008_a_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
 	ev_008_a_setup_status=$?
 	printf '%s\n' "$ev_008_a_setup_output"
-	if [ "$ev_008_a_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_008_a_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
+	if [ "$ev_008_a_setup_status" -ne 0 ]; then
 		echo "EV-008-A SETUP 3"
 		return 1
 	fi
-	# SETUP pack A 4
-	if [ -n "$(git status --porcelain)" ]; then
-		echo "EV-008-A SETUP 4"
-		return 1
-	fi
-	# SETUP pack A 5
-	ev_008_a_packs=$CURBPACK_PACKS_DIR
-	ev_008_a_mutate_output=$(./external_test/curbpack-studio/mutate_pack.sh PF-08)
-	printf '%s\n' "$ev_008_a_mutate_output"
-	if ! printf '%s\n' "$ev_008_a_mutate_output" | grep -Fxq "mutate_pack.sh: PF-08" ||
-		[ "$CURBPACK_PACKS_DIR" != "$ev_008_a_packs" ]; then
-		echo "EV-008-A SETUP 5"
-		return 1
-	fi
-	# SETUP pack A 6
-	if test -e docs/ev008-alpha.md || test -e docs/ev008-beta.md; then
-		echo "EV-008-A SETUP 6"
-		return 1
-	fi
-	echo 0
-
-	# TEST STEPS pack A 1
-	ev_008_obs_a=$(curbcheck --packs ev-008-rule-order-a --json --as-of "$AS_OF_DATE")
-	ev_008_st_a=$?
-	printf '%s\n' "$ev_008_obs_a"
-	printf '%s\n' "$ev_008_obs_a" >"$CURBPACK_ROOT/tmp/ev-008/obs-a.json"
-	if ! printf '%s\n' "$ev_008_obs_a" | jq -e '
-		.outcome == "findings" and
-		.conformity_claim == "none" and
-		.failed_rules == 2 and
-		.evaluated_rules == 2 and
-		((.failures | map(.gate_id) | sort) == ["EV008-ALPHA","EV008-BETA"])
-	' >/dev/null; then
+	# Both targets absent — two Claims, ALPHA-then-BETA vs BETA-then-ALPHA load order.
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-008-a"
+	install_ev008_rule_order_claims alpha-beta
+	ev_008_a_ab=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-008-a/summary-ab")
+	ev_008_a_ab_status=$?
+	printf '%s\n' "$ev_008_a_ab" >"$CURBPACK_ROOT/tmp/ev-008-a/ab.json"
+	cat "$CURBPACK_ROOT/tmp/ev-008-a/summary-ab"
+	install_ev008_rule_order_claims beta-alpha
+	ev_008_a_ba=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-008-a/summary-ba")
+	ev_008_a_ba_status=$?
+	printf '%s\n' "$ev_008_a_ba" >"$CURBPACK_ROOT/tmp/ev-008-a/ba.json"
+	cat "$CURBPACK_ROOT/tmp/ev-008-a/summary-ba"
+	if ! jq -n -e \
+		--slurpfile ab "$CURBPACK_ROOT/tmp/ev-008-a/ab.json" \
+		--slurpfile ba "$CURBPACK_ROOT/tmp/ev-008-a/ba.json" '
+		($ab[0].claims | map({key: .id, value: .status}) | from_entries) as $a
+		| ($ba[0].claims | map({key: .id, value: .status}) | from_entries) as $b
+		| ($a == $b)
+		and ($a["EV008-ALPHA"] == "fail")
+		and ($a["EV008-BETA"] == "fail")
+	'; then
 		echo "EV-008-A TEST STEPS 1"
 		return 1
 	fi
-	# TEST STEPS pack A 2
-	echo "$ev_008_st_a"
-	if [ "$ev_008_st_a" -ne 1 ]; then
+	echo "$ev_008_a_ab_status $ev_008_a_ba_status"
+	if [ "$ev_008_a_ab_status" -eq 0 ] || [ "$ev_008_a_ba_status" -eq 0 ]; then
 		echo "EV-008-A TEST STEPS 2"
-		return 1
-	fi
-
-	# SETUP pack B 1 (independent restore)
-	if [ -n "${CURBPACK_ROOT:-}" ]; then
-		if ! cd "$CURBPACK_ROOT"; then
-			echo "EV-008-A SETUP 1"
-			return 1
-		fi
-	fi
-	if ! . tmp/verification-run.sh; then
-		echo "EV-008-A SETUP 1"
-		return 1
-	fi
-	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
-		echo "EV-008-A SETUP 2"
-		return 1
-	fi
-	ev_008_b_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
-	ev_008_b_setup_status=$?
-	printf '%s\n' "$ev_008_b_setup_output"
-	if [ "$ev_008_b_setup_status" -ne 0 ] ||
-		! printf '%s\n' "$ev_008_b_setup_output" | grep -Fq "R1 — starting Glucose Log product content"; then
-		echo "EV-008-A SETUP 3"
-		return 1
-	fi
-	if [ -n "$(git status --porcelain)" ]; then
-		echo "EV-008-A SETUP 4"
-		return 1
-	fi
-	ev_008_b_mutate_output=$(./external_test/curbpack-studio/mutate_pack.sh PF-09)
-	printf '%s\n' "$ev_008_b_mutate_output"
-	if ! printf '%s\n' "$ev_008_b_mutate_output" | grep -Fxq "mutate_pack.sh: PF-09"; then
-		echo "EV-008-A SETUP 5"
-		return 1
-	fi
-	if test -e docs/ev008-alpha.md || test -e docs/ev008-beta.md; then
-		echo "EV-008-A SETUP 6"
-		return 1
-	fi
-
-	# TEST STEPS pack B 1
-	ev_008_obs_b=$(curbcheck --packs ev-008-rule-order-b --json --as-of "$AS_OF_DATE")
-	ev_008_st_b=$?
-	printf '%s\n' "$ev_008_obs_b"
-	printf '%s\n' "$ev_008_obs_b" >"$CURBPACK_ROOT/tmp/ev-008/obs-b.json"
-	if ! printf '%s\n' "$ev_008_obs_b" | jq -e '
-		.outcome == "findings" and
-		.conformity_claim == "none" and
-		.failed_rules == 2 and
-		.evaluated_rules == 2 and
-		((.failures | map(.gate_id) | sort) == ["EV008-ALPHA","EV008-BETA"])
-	' >/dev/null; then
-		echo "EV-008-A TEST STEPS 1"
-		return 1
-	fi
-	# TEST STEPS pack B 2
-	echo "$ev_008_st_b"
-	if [ "$ev_008_st_b" -ne 1 ]; then
-		echo "EV-008-A TEST STEPS 2"
-		return 1
-	fi
-	# TEST STEPS pack B 3
-	ev_008_norm_a=$(jq -c '[.failures[] | {gate_id, sanitized_description, target_file: .ast_coordinates.target_file}] | sort_by(.gate_id,.sanitized_description,.target_file)' "$CURBPACK_ROOT/tmp/ev-008/obs-a.json")
-	ev_008_norm_b=$(jq -c '[.failures[] | {gate_id, sanitized_description, target_file: .ast_coordinates.target_file}] | sort_by(.gate_id,.sanitized_description,.target_file)' "$CURBPACK_ROOT/tmp/ev-008/obs-b.json")
-	ev_008_out_a=$(jq -r '.outcome + " " + .conformity_claim' "$CURBPACK_ROOT/tmp/ev-008/obs-a.json")
-	ev_008_out_b=$(jq -r '.outcome + " " + .conformity_claim' "$CURBPACK_ROOT/tmp/ev-008/obs-b.json")
-	printf '%s\n%s\n' "$ev_008_norm_a" "$ev_008_norm_b"
-	if [ "$ev_008_st_a" -ne 1 ] || [ "$ev_008_st_b" -ne 1 ] ||
-		[ "$ev_008_out_a" != "$ev_008_out_b" ] ||
-		[ "$ev_008_norm_a" != "$ev_008_norm_b" ]; then
-		echo "EV-008-A TEST STEPS 3"
 		return 1
 	fi
 }
 
 ev_008_b() {
-	echo "EV-008-B: Blocked. Missing test seam. The case cannot be run. Do not run this variant."
-	return 2
+	if [ -n "${CURBPACK_ROOT:-}" ]; then
+		if ! cd "$CURBPACK_ROOT"; then
+			echo "EV-008-B SETUP 1"
+			return 1
+		fi
+	fi
+	if ! . tmp/verification-run.sh; then
+		echo "EV-008-B SETUP 1"
+		return 1
+	fi
+	if ! cd "$REFERENCE_PRODUCT_ROOT" || [ "$(pwd)" != "$REFERENCE_PRODUCT_ROOT" ]; then
+		echo "EV-008-B SETUP 2"
+		return 1
+	fi
+	ev_008_b_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_008_b_setup_status=$?
+	printf '%s\n' "$ev_008_b_setup_output"
+	if [ "$ev_008_b_setup_status" -ne 0 ]; then
+		echo "EV-008-B SETUP 3"
+		return 1
+	fi
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-008-b"
+	install_ev008_file_order_claim alpha-beta
+	ev_008_b_ab=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-008-b/summary-ab")
+	ev_008_b_ab_status=$?
+	printf '%s\n' "$ev_008_b_ab" >"$CURBPACK_ROOT/tmp/ev-008-b/ab.json"
+	cat "$CURBPACK_ROOT/tmp/ev-008-b/summary-ab"
+	install_ev008_file_order_claim beta-alpha
+	ev_008_b_ba=$(run_studio_packs_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-008-b/summary-ba")
+	ev_008_b_ba_status=$?
+	printf '%s\n' "$ev_008_b_ba" >"$CURBPACK_ROOT/tmp/ev-008-b/ba.json"
+	cat "$CURBPACK_ROOT/tmp/ev-008-b/summary-ba"
+	# Same Claim id, both fail; missing-path set in detail is order-independent.
+	if ! jq -n -e \
+		--slurpfile ab "$CURBPACK_ROOT/tmp/ev-008-b/ab.json" \
+		--slurpfile ba "$CURBPACK_ROOT/tmp/ev-008-b/ba.json" '
+		($ab[0].claims[0]) as $a
+		| ($ba[0].claims[0]) as $b
+		| ($a.id == "EV008-BOTH-PATHS")
+		and ($b.id == "EV008-BOTH-PATHS")
+		and ($a.status == "fail")
+		and ($b.status == "fail")
+		and ($a.checks[0].status == "fail")
+		and ($b.checks[0].status == "fail")
+		and (($a.checks[0].detail | split("; ") | sort)
+			== ($b.checks[0].detail | split("; ") | sort))
+		and ($a.checks[0].detail | test("ev008-alpha"))
+		and ($a.checks[0].detail | test("ev008-beta"))
+	'; then
+		echo "EV-008-B TEST STEPS 1"
+		return 1
+	fi
+	echo "$ev_008_b_ab_status $ev_008_b_ba_status"
+	if [ "$ev_008_b_ab_status" -eq 0 ] || [ "$ev_008_b_ba_status" -eq 0 ]; then
+		echo "EV-008-B TEST STEPS 2"
+		return 1
+	fi
 }
 
 ev_009() {
@@ -1162,20 +990,21 @@ ev_009() {
 		echo "EV-009 SETUP 7"
 		return 1
 	fi
-	echo 0
+	install_house_claims
 
-	# TEST STEPS 1
-	ev_009_check_output=$(curbcheck --packs house-policy --json --as-of "$AS_OF_DATE")
+	# TEST STEPS 1 — three house claims pass. Summary includes "claims 3 exit 0".
+	mkdir -p "$CURBPACK_ROOT/tmp/ev-009"
+	ev_009_check_output=$(run_house_curbcheck_json 2>"$CURBPACK_ROOT/tmp/ev-009/summary")
 	ev_009_check_status=$?
 	printf '%s\n' "$ev_009_check_output"
-	if ! printf '%s\n' "$ev_009_check_output" | jq -e '
-		.failures == null and
-		.pack_id == "house-policy" and
-		.readiness_score == 100 and
-		.outcome == "pass" and
-		.evaluated_rules == 5 and
-		.conformity_claim == "none"
-	' >/dev/null; then
+	cat "$CURBPACK_ROOT/tmp/ev-009/summary"
+	if ! grep -Fq "claims 3 exit 0" "$CURBPACK_ROOT/tmp/ev-009/summary" ||
+		! printf '%s\n' "$ev_009_check_output" | jq -e '
+			(([.claims[].id] | sort) == [
+				"HOUSE-ANTI-PLACEHOLDER","HOUSE-SECURITY-MD","HOUSE-SECURITY-TXT"
+			])
+			and all(.claims[]; .status == "pass")
+		' >/dev/null; then
 		echo "EV-009 TEST STEPS 1"
 		return 1
 	fi

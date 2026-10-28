@@ -4,7 +4,6 @@ An id in this table is not a pass. Disposition is OUT-01, not this suite.
 
 | id |
 | --- |
-| HOUSE-DEP-AXIOS-PIN |
 | HOUSE-SECRET-PATHS |
 | R8 |
 | R9 |

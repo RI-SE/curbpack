@@ -1,0 +1,19 @@
+{
+  "id": "EV008-ALPHA",
+  "pack_id": "ev-008-order",
+  "remediation_hint": "Add docs/ev008-alpha.md.",
+  "source": {
+    "framework": "internal",
+    "instrument": "EV-008 order independence",
+    "identifier": "EV008-ALPHA",
+    "language": "en",
+    "url": "packs/ev-008-order/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "EV008-ALPHA",
+      "law_text": "docs/ev008-alpha.md present."
+    }
+  ]
+}

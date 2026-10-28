@@ -1,0 +1,23 @@
+{
+  "id": "CRA-DEP-AXIOS-PIN",
+  "requirement_id": "CRA-DEP-AXIOS",
+  "source": "documents",
+  "args": {
+    "path": "package.json"
+  },
+  "description": "The reviewed dependency manifest does not pin a prohibited axios version.",
+  "severity": "critical",
+  "checks": [
+    {
+      "check": "dep_ban",
+      "args": {
+        "package": "axios",
+        "banned_versions": [
+          "1.6.0",
+          "^1.6.0",
+          "~1.6.0"
+        ]
+      }
+    }
+  ]
+}

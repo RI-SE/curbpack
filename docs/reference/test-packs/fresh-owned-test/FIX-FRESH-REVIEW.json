@@ -1,0 +1,19 @@
+{
+  "id": "FIX-FRESH-REVIEW",
+  "pack_id": "fresh-owned-test",
+  "remediation_hint": "Commit an updated docs/review-log.md.",
+  "source": {
+    "framework": "internal",
+    "instrument": "Fresh-owned test fixture",
+    "identifier": "FIX-FRESH-REVIEW",
+    "language": "en",
+    "url": "packs/fresh-owned-test/pack.json"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "FIX-FRESH-REVIEW",
+      "law_text": "Review log commit is within freshness window."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "MD-SW-CLASS",
+  "pack_id": "medtech-iec62304",
+  "remediation_hint": "Document Class A/B/C rationale in docs/medtech/software_safety_class.md.",
+  "source": {
+    "framework": "IEC",
+    "instrument": "IEC 62304",
+    "identifier": "4.3",
+    "language": "en",
+    "url": "https://www.iso.org/standard/38421.html"
+  },
+  "references": [
+    {
+      "nr": 1,
+      "locator": "4.3",
+      "law_text": "IEC 62304 software safety classification rationale missing."
+    }
+  ]
+}
