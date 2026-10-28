@@ -99,6 +99,26 @@ class CheckBehaviorTest(unittest.TestCase):
         self.assertIn("is absent", contents["detail"])
         self.assertNotIn("header", contents["detail"])
 
+    def test_unreadable_required_file_is_not_a_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            relative = "SECURITY.md"
+            path = repo / relative
+            path.write_text("# Security\n", encoding="utf-8")
+            path.chmod(0o000)
+            try:
+                exist = run_exist(repo, {"path": relative})
+                contents = run_contents(
+                    repo,
+                    {"path": relative, "probes": [{"kind": "size", "op": ">", "bytes": 0}]},
+                )
+            finally:
+                path.chmod(0o644)
+        self.assertEqual(exist["status"], "fail")
+        self.assertIn("unreadable", exist["detail"])
+        self.assertEqual(contents["status"], "fail")
+        self.assertIn("unreadable", contents["detail"])
+
     def test_stub_fails_contents_and_a_real_file_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

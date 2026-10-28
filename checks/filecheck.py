@@ -35,9 +35,19 @@ def _targets(args: dict) -> list[str]:
 
 
 def run_exist(repo: Path, args: dict) -> dict:
-    missing = [rel for rel in _targets(args) if not _inside(repo, rel).is_file()]
-    if missing:
-        return {"status": "fail", "detail": "; ".join(f"{rel} is absent" for rel in missing)}
+    failures = []
+    for rel in _targets(args):
+        path = _inside(repo, rel)
+        if not path.is_file():
+            failures.append(f"{rel} is absent")
+            continue
+        try:
+            with path.open("rb"):
+                pass
+        except OSError as exc:
+            failures.append(f"{rel} is unreadable ({exc})")
+    if failures:
+        return {"status": "fail", "detail": "; ".join(failures)}
     return {"status": "pass"}
 
 
@@ -125,10 +135,13 @@ def run_contents(repo: Path, args: dict) -> dict:
     failures = []
     for rel in _targets(args):
         path = _inside(repo, rel)
-        for probe in args["probes"]:
-            failure = _probe_failure(repo, path, rel, probe)
-            if failure:
-                failures.append(failure)
+        try:
+            for probe in args["probes"]:
+                failure = _probe_failure(repo, path, rel, probe)
+                if failure:
+                    failures.append(failure)
+        except OSError as exc:
+            failures.append(f"{rel} is unreadable ({exc})")
     if failures:
         return {"status": "fail", "detail": "; ".join(failures)}
     return {"status": "pass"}
