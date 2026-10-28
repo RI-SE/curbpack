@@ -3,19 +3,11 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      source_run_id:
-        description: CI run id whose tested artifacts are published
-        required: true
-        type: string
       tag:
-        description: Release tag to create
-        required: true
-        type: string
-      source_only:
-        description: Publish source only and state that the standalone binaries are absent
+        description: Optional tag. Leave empty to use the tested commit's date, vYYYY.MM.DD
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: ""
 
 jobs:
   publish:
@@ -28,12 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Publish the selected CI run
+      - name: Publish the latest green CI run on main
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          args=(--run-id "${{ inputs.source_run_id }}" --tag "${{ inputs.tag }}")
-          if [ "${{ inputs.source_only }}" = "true" ]; then
-            args+=(--source-only)
-          fi
-          python scripts/release/publish.py "${args[@]}"
+        run: python scripts/release/publish.py --tag "${{ inputs.tag }}"
