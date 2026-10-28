@@ -1,6 +1,6 @@
 # Contributing
 
-Curbpack Studio and curbcheck live in this repository. The license is Apache-2.0 (`LICENSE`).
+This repository is Curbpack. It contains the Curbpack Studio application and the curbcheck program. The license is Apache-2.0 (`LICENSE`).
 
 This page is how a change gets in. It is not a second data contract. Persistent Pack, Requirement, Claim, signature, and result fields are [Packs v2](docs/reference/packs2.md). Product use is [docs/README.md](docs/README.md). How to run the suites is [Development](docs/development/README.md).
 

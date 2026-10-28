@@ -1,4 +1,4 @@
-# Curbpack Studio documentation
+# Curbpack documentation
 
 Start with the shortest path for what you need to do.
 
