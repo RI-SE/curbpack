@@ -7,18 +7,28 @@ export adds no Pack field.
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.parse
+import urllib.request
+from contextlib import contextmanager
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
+from app.server import Workspace, make_handler
 from checks.run import run_repository
 from common.canonical import pack_directory_digest
 from common.errors import ModelError
-from common.store import load_pack_directory
+from common.keystore import load_or_create_key
+from common.signing import sign_object
+from common.store import load_pack_directory, load_requirement, save_requirement
 from requirements.extract.adapter import ADAPTERS, load_adapter
 from requirements.extract.pipeline import draft_pack
-from requirements.workspace import extract_section
+from requirements.workspace import extract_section, mark_published_selected, mark_selected
 from tests.test_requirements_publish import _sample_proposals
 
 
@@ -304,3 +314,234 @@ def _file_bytes(directory: Path) -> dict[str, bytes]:
         for path in sorted(directory.rglob("*"))
         if path.is_file()
     }
+
+
+_XML_PACK = {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"}
+_BAD_SIGNATURE_REASON = (
+    "The certificate for name is not available. Verification does not fetch it."
+)
+
+
+class ExportPageTest(unittest.TestCase):
+    """PE11-R01, PE11-R02, PE11-R03, PE11-R07, PE11-R09, PE11-R13, PE11-R15."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.adapter = load_adapter(ADAPTERS / "cra-xml" / "adapter.json")
+
+    def _extract(self, at: str) -> Path:
+        return extract_section(
+            self.root,
+            ADAPTERS / "cra-xml",
+            self.adapter,
+            "VII",
+            _sample_proposals(),
+            _XML_PACK,
+            at=at,
+        )["copy"]
+
+    def test_pack_sources_row_submits_export_for_that_document(self):
+        with _httpd(self.root) as base:
+            page = _http_get(base + "/requirements")
+        self.assertIn('action="/requirements/export"', page)
+        self.assertIn('name="document" value="cra-annex-vii"', page)
+        self.assertIn('type="submit">Export Pack</button>', page)
+        self.assertNotIn('type="button">Publish</button>', page)
+        self.assertNotIn("publish them as a pack", page)
+        self.assertIn("Git history is separate from Export.", page)
+        self.assertIn("docs/reference/packs2.md", page)
+        self.assertIn("requirements/ARCHITECTURE.md", page)
+        self.assertIn("installation-specific", page)
+        self.assertNotIn("published/", page)
+        self.assertNotIn(str(self.root.resolve()), page)
+
+    def test_export_page_names_the_selected_copy_and_unsigned_readings(self):
+        copy = self._extract("2026-10-13T090000Z")
+        mark_selected(self.root, "cra-xml-baseline", copy.name)
+        with _httpd(self.root) as base:
+            page = _http_get(base + "/requirements/export?document=cra-annex-vii")
+        self.assertIn("cra-xml-baseline", page)
+        self.assertIn("2026-10-13T090000Z", page)
+        self.assertIn("Signed: 0", page)
+        self.assertIn("Unsigned: 2", page)
+        self.assertIn(">Pack</strong>", page)
+        self.assertIn("Unsigned", page)
+
+    def test_missing_selection_names_the_pack_and_writes_no_destination(self):
+        self._extract("2026-10-13T090000Z")
+        destination = self.root / "outside"
+        with _httpd(self.root) as base:
+            page = _http_get(base + "/requirements/export?document=cra-annex-vii")
+            _status, body = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+        self.assertIn("cra-xml-baseline", page)
+        self.assertIn("No working copy is selected", page)
+        self.assertFalse(destination.exists())
+        self.assertIn("cra-xml-baseline", body)
+        self.assertFalse((self.root / "outside").exists())
+
+    def test_blank_destination_writes_nothing(self):
+        copy = self._extract("2026-10-13T090000Z")
+        mark_selected(self.root, "cra-xml-baseline", copy.name)
+        cwd_pack = Path.cwd() / "cra-xml-baseline"
+        self.addCleanup(lambda: shutil.rmtree(cwd_pack, ignore_errors=True))
+        with _httpd(self.root) as base:
+            _status, body = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": ""},
+            )
+        self.assertIn("destination", body)
+        self.assertFalse(cwd_pack.exists())
+        self.assertFalse((self.root / "outside").exists())
+
+    def test_export_reports_the_absolute_path_without_release_words(self):
+        copy = self._extract("2026-10-13T090000Z")
+        mark_selected(self.root, "cra-xml-baseline", copy.name)
+        source = _file_bytes(copy)
+        destination = self.root / "outside"
+        destination.mkdir()
+        with _httpd(self.root) as base:
+            _status, body = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+        exported = destination / "cra-xml-baseline"
+        self.assertIn("Exported Pack", body)
+        self.assertIn(str(exported.resolve()), body)
+        lowered = body.lower()
+        for word in ("published", "released", "approved", "registered"):
+            self.assertNotIn(word, lowered)
+        self.assertEqual((exported / "pack.json").read_bytes(), (copy / "pack.json").read_bytes())
+        self.assertEqual(_file_bytes(copy), source)
+
+    def test_non_verifying_signature_is_shown_and_still_exported(self):
+        copy = self._extract("2026-10-13T090000Z")
+        mark_selected(self.root, "cra-xml-baseline", copy.name)
+        private, _public = load_or_create_key(self.root / "keys", "Ada Jurist")
+        signed = sign_object(
+            load_requirement(copy / "CRA-ANNEX-VII-RISK.json"),
+            name="Ada Jurist",
+            private_key=private,
+            at="2026-10-12T09:00:00Z",
+        )
+        save_requirement(copy, signed, published=False)
+        other_path = copy / "FIXTURE-VII-1A.json"
+        other = json.loads(other_path.read_text(encoding="utf-8"))
+        other["signed"] = {
+            "name": "No Such Person",
+            "at": "2026-10-12T09:00:00Z",
+            "signature": "AAAA",
+        }
+        other_path.write_text(json.dumps(other) + "\n", encoding="utf-8")
+        source_bytes = other_path.read_bytes()
+        destination = self.root / "outside"
+        destination.mkdir()
+        with _httpd(self.root) as base:
+            page = _http_get(base + "/requirements/export?document=cra-annex-vii")
+            _status, body = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+        self.assertIn("Signed: 1", page)
+        self.assertIn("Unsigned: 0", page)
+        self.assertIn(_BAD_SIGNATURE_REASON, page)
+        exported = (destination / "cra-xml-baseline" / "FIXTURE-VII-1A.json").read_bytes()
+        self.assertEqual(exported, source_bytes)
+
+    def test_existing_directory_offers_overwrite_and_replace_removes_the_sentinel(self):
+        copy = self._extract("2026-10-13T090000Z")
+        mark_selected(self.root, "cra-xml-baseline", copy.name)
+        destination = self.root / "outside"
+        destination.mkdir()
+        final = destination / "cra-xml-baseline"
+        final.mkdir()
+        sentinel = final / "keep.txt"
+        sentinel.write_bytes(b"keep")
+        with _httpd(self.root) as base:
+            _status, conflict = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+            self.assertEqual(sentinel.read_bytes(), b"keep")
+            self.assertIn(str(final.resolve()), conflict)
+            self.assertIn(">Overwrite</button>", conflict)
+            self.assertIn('name="destination"', conflict)
+            self.assertIn('href="/requirements"', conflict)
+            _status, done = _http_post(
+                base + "/requirements/export",
+                {
+                    "document": "cra-annex-vii",
+                    "destination": str(destination),
+                    "overwrite": "1",
+                },
+            )
+        self.assertFalse(sentinel.exists())
+        self.assertIn("Exported Pack", done)
+        self.assertIn(str(final.resolve()), done)
+
+    def test_published_selection_and_unselected_post_write_nothing(self):
+        copy = self._extract("2026-10-13T090000Z")
+        published = self.root / "published" / "cra-xml-baseline" / "0.1.0"
+        published.mkdir(parents=True)
+        for path in copy.glob("*.json"):
+            shutil.copyfile(path, published / path.name)
+        mark_published_selected(self.root, "cra-xml-baseline", "0.1.0")
+        published_before = _file_bytes(published)
+        destination = self.root / "outside"
+        destination.mkdir()
+        with _httpd(self.root) as base:
+            _status, body = _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+        self.assertIn("No working copy is selected", body)
+        self.assertIn("cra-xml-baseline", body)
+        self.assertEqual(list(destination.iterdir()), [])
+        self.assertEqual(_file_bytes(published), published_before)
+
+    def test_export_uses_the_selected_copy_not_the_later_timestamp(self):
+        earlier = self._extract("2026-10-13T090000Z")
+        later = self._extract("2026-10-13T100000Z")
+        later_risk = later / "CRA-ANNEX-VII-RISK.json"
+        later_risk.write_bytes(later_risk.read_bytes() + b"\n")
+        mark_selected(self.root, "cra-xml-baseline", earlier.name)
+        destination = self.root / "outside"
+        destination.mkdir()
+        with _httpd(self.root) as base:
+            _http_post(
+                base + "/requirements/export",
+                {"document": "cra-annex-vii", "destination": str(destination)},
+            )
+        exported = destination / "cra-xml-baseline" / "CRA-ANNEX-VII-RISK.json"
+        self.assertEqual(exported.read_bytes(), (earlier / "CRA-ANNEX-VII-RISK.json").read_bytes())
+        self.assertNotEqual(exported.read_bytes(), later_risk.read_bytes())
+
+
+@contextmanager
+def _httpd(root: Path):
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+
+
+def _http_get(url: str) -> str:
+    with urllib.request.urlopen(url) as response:
+        return response.read().decode("utf-8")
+
+
+def _http_post(url: str, fields: dict) -> tuple[int, str]:
+    request = urllib.request.Request(url, data=urllib.parse.urlencode(fields).encode())
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.status, response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8")

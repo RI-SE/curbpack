@@ -26,7 +26,7 @@ def documents_page(model: dict) -> bytes:
 <p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
 A pack is the requirements from all sections of one law document (typically a URL) — that
 document is the pack source. Here you extract and refine requirements from the source, then
-publish them as a pack.</p>
+export the selected working copy as a Pack directory.</p>
 {_baselines_note(str(model.get("workspace_root") or ""))}
 {_add_toolbar()}
 {flash}
@@ -39,31 +39,75 @@ publish them as a pack.</p>
 
 
 def _baselines_note(workspace_root: str) -> str:
-    """Baselines are Git history of the workspace. UI integration comes later."""
-    root = workspace_root.strip() or "<workspace-root>"
-    root_html = html.escape(root)
-    return f"""
+    """Baselines are Git history. The absolute workspace root is not the portable layout."""
+    del workspace_root
+    return """
 <details class="card">
-<summary>Baselines (Git in the repo — UI later)</summary>
-<p class="muted">A baseline is a commit of the organisation workspace, not a separate Studio object.
-Git integration in this UI comes in a later version. Until then, use the workspace path and
-ordinary Git commands.</p>
-<p>Workspace root:</p>
-<pre><code>{root_html}</code></pre>
-<p>Layout (pack id and UTC timestamped working copies):</p>
-<pre><code>{root_html}/&lt;pack-id&gt;/&lt;YYYY-MM-DDThhmmssZ&gt;/
-{root_html}/published/&lt;pack-id&gt;/&lt;version&gt;/</code></pre>
-<p>Example commands from that root:</p>
-<pre><code>cd {root_html}
-git status
+<summary>Baselines (Git — UI later)</summary>
+<p class="muted">A baseline is a Git commit of this installation's workspace.
+Git history is separate from Export. Export copies the selected working copy
+to a directory you choose. The Pack file layout is
+<code>docs/reference/packs2.md</code>. How Studio stores working copies is
+described in <code>requirements/ARCHITECTURE.md</code>.</p>
+<p>Git commands below are an installation-specific example. They are not a portable layout.</p>
+<pre><code>git status
 git add &lt;pack-id&gt;/&lt;timestamp&gt;
 git commit -m "Baseline: &lt;pack-id&gt; at &lt;timestamp&gt;"
-git log --oneline -- &lt;pack-id&gt;
-git checkout &lt;commit&gt; -- &lt;pack-id&gt;/&lt;timestamp&gt;</code></pre>
+git log --oneline -- &lt;pack-id&gt;</code></pre>
 <p class="muted">Restoring a revision recovers Packs v2 files. It does not change pack id, timestamp
 selection, <code>pack.version</code>, <code>origin</code>, or signatures by itself.</p>
 </details>
 """
+
+
+def export_page(model: dict) -> bytes:
+    pack_id = html.escape(str(model.get("pack_id") or ""))
+    document_id = html.escape(str(model.get("document_id") or ""))
+    destination = html.escape(str(model.get("destination") or ""))
+    conflict = str(model.get("conflict") or "")
+    message = _flash(str(model.get("message") or ""))
+    cancel = '<p><a href="/requirements">Cancel</a></p>'
+    if not model.get("timestamp"):
+        body = f"""
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
+<h1>Export Pack</h1>
+<p>No working copy is selected for <code>{pack_id}</code>.</p>
+{cancel}
+"""
+        return page("Export Pack", body)
+    readings = _reading_block("Pack", model.get("seal"))
+    for item in model.get("blocked") or []:
+        readings += _reading_block(str(item.get("title") or "Requirement"), item.get("reading"))
+    conflict_html = ""
+    if conflict:
+        shown = html.escape(conflict)
+        conflict_html = f"""
+<p class="err">{shown}</p>
+<form method="post" action="/requirements/export">
+<input type="hidden" name="document" value="{document_id}">
+<input type="hidden" name="destination" value="{destination}">
+<input type="hidden" name="overwrite" value="1">
+<button type="submit">Overwrite</button>
+</form>
+<p>Or choose another directory.</p>
+"""
+    body = f"""
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
+<h1>Export Pack</h1>
+<p>Pack <code>{pack_id}</code> · <code>{html.escape(str(model.get("timestamp") or ""))}</code></p>
+<p>Signed: {int(model.get("signed") or 0)}</p>
+<p>Unsigned: {int(model.get("unsigned") or 0)}</p>
+{readings}
+{message}
+{conflict_html}
+<form method="post" action="/requirements/export">
+<input type="hidden" name="document" value="{document_id}">
+<label>Destination <input name="destination" value="{destination}"></label>
+<button type="submit">Export</button>
+</form>
+{cancel}
+"""
+    return page("Export Pack", body)
 
 
 def catalog_page(model: dict) -> bytes:
@@ -127,7 +171,9 @@ def _document_row(document: dict) -> str:
         '<form method="get" action="/requirements">'
         f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
         '<button type="submit">Sections</button></form>'
-        '<button type="button">Publish</button>'
+        '<form method="get" action="/requirements/export">'
+        f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
+        '<button type="submit">Export Pack</button></form>'
         f"{_signature_badge(document)}"
         "</td></tr>"
     )

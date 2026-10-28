@@ -102,6 +102,7 @@ from requirements.workspace import (
     mark_published_selected,
     mark_selected,
     mark_source_adapter,
+    export_pack,
     publish_pack,
     read_selection,
     resolve_copy_ref,
@@ -504,6 +505,8 @@ def make_handler(ws: Workspace):
                 return requirement_pages.extract_review_page(_extract_review_model(ws, query))
             if path == "/requirements/copy":
                 return requirement_pages.copy_page(_copy_model(ws, query))
+            if path == "/requirements/export":
+                return requirement_pages.export_page(_export_model(ws, query))
             if path == "/requirements/publish":
                 return requirement_pages.publication_page(_publication_model(ws, query))
             if path == "/requirements/compare":
@@ -716,6 +719,9 @@ def make_handler(ws: Workspace):
                 source = (form.get("source") or [""])[0]
                 destination = (form.get("destination") or [""])[0]
                 self._redirect(f"/requirements/compare?left={source}&right={destination}")
+                return
+            if path == "/requirements/export":
+                _export_selected(self, ws, form)
                 return
             if path == "/requirements/publish":
                 _publish_selected(ws, form)
@@ -1322,6 +1328,104 @@ def _registered_sources(ws: Workspace) -> list[dict]:
             }
         )
     return sources
+
+
+def _export_model(ws: Workspace, query: dict) -> dict:
+    document_id = (query.get("document") or [""])[0].strip()
+    document, pack_id, directory = _export_document(ws, document_id)
+    exported = (query.get("exported") or [""])[0]
+    model = {
+        "document_id": document_id,
+        "document_name": str(document.get("name") or ""),
+        "pack_id": pack_id,
+        "timestamp": None,
+        "signed": 0,
+        "unsigned": 0,
+        "seal": None,
+        "blocked": [],
+        "destination": (query.get("destination") or [""])[0],
+        "conflict": (query.get("conflict") or [""])[0],
+        "message": f"Exported Pack {exported}" if exported else "",
+    }
+    if directory is None:
+        return model
+    trust = trust_store(ws.keys)
+    pack, requirements = load_working_copy(directory)
+    signed = 0
+    unsigned = 0
+    blocked = []
+    for requirement in requirements:
+        reading = read_signature(requirement, trust, what="requirement")
+        if reading.get("verifiable"):
+            signed += 1
+        elif isinstance(requirement.get("signed"), dict):
+            blocked.append(
+                {"title": str(requirement.get("id") or "Requirement"), "reading": reading}
+            )
+        else:
+            unsigned += 1
+    model.update(
+        {
+            "timestamp": directory.name,
+            "signed": signed,
+            "unsigned": unsigned,
+            "seal": read_pack_seal(directory, trust),
+            "blocked": blocked,
+            "pack_version": pack.get("version"),
+        }
+    )
+    return model
+
+
+def _export_document(ws: Workspace, document_id: str) -> tuple[dict, str, Path | None]:
+    """Catalog document, its adapter pack id, and the selected working copy only."""
+    if not document_id:
+        raise ModelError("export", "document", "a catalog document")
+    document = find_document(ensure_catalog(ws.root), document_id)
+    if document is None:
+        raise ModelError("catalog", "document", f"a known document, not {document_id}")
+    adapters = {item["id"]: item for item in _formex_sources()}
+    adapter = adapters.get(str(document.get("adapter_id") or ""))
+    pack_id = adapter.get("pack_id") if isinstance(adapter, dict) else None
+    if not isinstance(pack_id, str) or not pack_id:
+        raise ModelError("export", "pack_id", "one adapter pack id")
+    return document, pack_id, selected_copy(ws.root, pack_id)
+
+
+def _export_selected(handler, ws: Workspace, form: dict) -> None:
+    document_id = (form.get("document") or [""])[0].strip()
+    destination_text = (form.get("destination") or [""])[0].strip()
+    overwrite = (form.get("overwrite") or [""])[0] == "1"
+    if not destination_text:
+        raise ModelError("export", "destination", "an existing directory")
+    _document, pack_id, directory = _export_document(ws, document_id)
+    if directory is None:
+        raise ModelError(
+            "export",
+            "selection",
+            f"No working copy is selected for {pack_id}",
+        )
+    try:
+        final = export_pack(directory, Path(destination_text), overwrite=overwrite)
+    except ModelError as exc:
+        if exc.field == "destination" and "free directory, not " in exc.expected:
+            conflict = exc.expected.split("free directory, not ", 1)[1]
+            handler._redirect(
+                "/requirements/export?document="
+                + quote(document_id, safe="")
+                + "&destination="
+                + quote(destination_text, safe="")
+                + "&conflict="
+                + quote(conflict, safe="")
+            )
+            return
+        raise
+    handler._redirect(
+        "/requirements/export?document="
+        + quote(document_id, safe="")
+        + "&exported="
+        + quote(str(final), safe="")
+    )
 
 
 def _documents_model(ws: Workspace, query: dict) -> dict:
