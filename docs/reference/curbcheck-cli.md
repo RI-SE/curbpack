@@ -8,15 +8,21 @@ A source checkout and a packaged binary take the same arguments. The Check page 
 
 ## Start
 
-From a source checkout of this repository, including Linux:
+The command is `curbcheck`. In a source checkout that is `scripts/bin/curbcheck`, which starts the checks module. A packaged build is the `curbcheck-<host>` file from `make package`. Both take the same arguments.
 
 ```bash
-python3 -m checks --repo /path/to/product \
-  --packs /path/to/packs-root \
-  --out /path/to/product/.curbpack/run-result.json
+curbcheck --repo /path/to/product
 ```
 
-On Windows, from the same kind of checkout, the module start is `python -m checks` with the same flags.
+When the current directory contains `curbpack.json`, the repository argument can be omitted:
+
+```bash
+curbcheck
+```
+
+That reads `<repo>/curbpack.json`, loads packs from `<repo>/<curbpack>/packs`, loads claims from `<repo>/<curbpack>/claims`, and writes `<repo>/<curbpack>/run-result.json`. `curbpack` is the relative directory in the file. When the key is absent, that directory is `curbpack`.
+
+`--packs` replaces the packs directory. The value is the directory that directly contains `<pack-id>/pack.json`. `--out` replaces the run result file.
 
 `make package` on the matching host also writes a single file:
 
@@ -25,20 +31,20 @@ On Windows, from the same kind of checkout, the module start is `python -m check
 | macOS ARM64 | `dist/curbcheck-macos-arm64` |
 | Windows x64 | `dist/curbcheck-windows-x64.exe` |
 
-Run that file with the same `--repo`, `--packs`, `--out`, and `--skip`. Git is the `git` already on the machine. The Studio application file is a different program and does not contain the check tools.
+Run that file with the same arguments. Git is the `git` already on the machine. The Studio application file is a different program and does not contain the check tools.
 
-`-h` prints the four flags. The usage line names whatever file started the process (`__main__.py` from `python3 -m checks`, or the packaged file name). There is no `--version` flag. The build string is `tool_version` inside the result. In this tree that string is `0.0.1a`, from `common/version.py`.
+`-h` prints the flags. The usage line names whatever file started the process. There is no `--version` flag. The build string is `tool_version` inside the result. In this tree that string is `0.0.1a`, from `common/version.py`.
 
 ## Arguments
 
 | Flag | Required | Meaning |
 | --- | --- | --- |
-| `--repo` | yes | Product repository. The process reads `<repo>/curbpack.json` and `<repo>/claims/*.json`. |
-| `--packs` | yes | Directory whose children are pack directories. Each selected id is `<packs>/<pack-id>/pack.json`. This is a path, not a comma-separated list of ids. |
-| `--out` | yes | File that receives the run result. Parent directories are created. The file is replaced in one step after the result has been validated. |
+| `--repo` | when `./curbpack.json` is absent | Product repository. The process reads `<repo>/curbpack.json`. |
+| `--packs` | no | Directory whose children are pack directories. Each selected id is `<packs>/<pack-id>/pack.json`. Default: `<repo>/<curbpack>/packs`. This is a path, not a comma-separated list of ids. |
+| `--out` | no | File that receives the run result. Default: `<repo>/<curbpack>/run-result.json`. Parent directories are created. The file is replaced in one step after the result has been validated. |
 | `--skip` | no | `claim-id=reason`. Repeat the flag to skip more than one Claim. See [Skip](#skip). |
 
-`--repo`, `--packs`, and `--out` are paths. A missing flag, or `--skip` without an `=` , exits 2 and writes nothing:
+`--repo`, `--packs`, and `--out` are paths. `--repo` is required when the current directory has no `curbpack.json`. `--skip` without an `=` exits 2 and writes nothing:
 
 ```text
 skip needs claim-id=reason, got 'nope'
@@ -48,7 +54,7 @@ There is no global `--as-of`, `--packs id,id`, `--json`, `--heal`, or `--diff`. 
 
 ## What the run reads
 
-`curbpack.json` sits at the repository root. The runner validates `packs`, `requirements`, `exclude_requirements`, and `hunt` when they are present. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope. A valid `hunt` block stays in the file; the run does not walk its globs or discovery sources.
+`curbpack.json` sits at the repository root. The runner validates `packs`, `requirements`, `exclude_requirements`, `search_hints`, and `curbpack` when they are present. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
 
 `packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way.
 
@@ -58,9 +64,9 @@ There is no global `--as-of`, `--packs id,id`, `--json`, `--heal`, or `--diff`. 
 }
 ```
 
-For each id, the runner loads `<packs>/<id>/pack.json` and the Requirement JSON files beside it (every `*.json` in that directory except `pack.json`). The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory. It does not fetch a newer pack, and it does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`.
+For each id, the runner loads `<packs>/<id>/pack.json` and the Requirement JSON files beside it (every `*.json` in that directory except `pack.json`). With no `--packs`, `<packs>` is `<repo>/<curbpack>/packs`. The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory. It does not fetch a newer pack, and it does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`.
 
-Claims are the `*.json` files directly inside `<repo>/claims/`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection stops the run before a result is written. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
+Claims are the `*.json` files directly inside `<repo>/<curbpack>/claims/`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection stops the run before a result is written. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
 
 The runner does not read `discovery_hints`, `note`, `remediation_hint`, or the Claim `description` to decide pass or fail. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
 
@@ -145,9 +151,7 @@ Exit 0 is the repository gate. A Check tool's own process often exits 0 even whe
 ## Skip
 
 ```bash
-python3 -m checks --repo /path/to/product \
-  --packs /path/to/packs-root \
-  --out /path/to/run.json \
+curbcheck --repo /path/to/product \
   --skip HOUSE-SECURITY-MD='not this build'
 ```
 
@@ -303,7 +307,7 @@ Starting a tool by hand is a debugging interface. Its `-h` lists `check`, `--rep
 
 ## Runs that write nothing
 
-These stop with an exception on stderr and exit 1. `--out` is left as it was, including left absent.
+These stop with an exception on stderr and exit 1. The run result file is left as it was, including left absent.
 
 | Situation | What you see |
 | --- | --- |

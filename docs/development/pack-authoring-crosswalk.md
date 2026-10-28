@@ -184,12 +184,10 @@ curbpack packs export-graph
 
 Embedded packs shipped inside the CLI.
 
-**Changed.** There is no `CURBPACK_PACKS_DIR` and no `packs doctor` or `export-graph`. Pack Editor lists the editable Packs in the workspace. Check takes the packs root as `--packs`, a directory of `<pack-id>/pack.json`:
+**Changed.** There is no `CURBPACK_PACKS_DIR` and no `packs doctor` or `export-graph`. Pack Editor lists the editable Packs in the workspace. `curbcheck` loads `<curbpack>/packs/<pack-id>/pack.json`. `--packs` replaces that directory:
 
 ```sh
-python3 -m checks --repo /path/to/product \
-  --packs /path/to/packs \
-  --out /path/to/product/.curbpack/run-result.json
+curbcheck --repo /path/to/product --packs /path/to/packs
 ```
 
 A missing Pack directory is an error, and the runner writes nothing.
@@ -222,10 +220,10 @@ What the screen does have is a dated working copy. **Extract** allocates one. **
 
 `curbpack check` resolved the selected pack, loaded dependencies, validated definitions, composed rules, and evaluated them.
 
-The Studio runner loads the selected Pack directories, loads Claim files under the product's `claims/` directory, skips Claims with an empty `checks` array, and writes one run result. A Claim whose `requirement_id` is not selected is an error and writes nothing. A selected Requirement with no executed Claim produces no row.
+The Studio runner loads the selected Pack directories, loads Claim files under `<curbpack>/claims/`, skips Claims with an empty `checks` array, and writes one run result. A Claim whose `requirement_id` is not selected is an error and writes nothing. A selected Requirement with no executed Claim produces no row.
 
 ```sh
-python3 -m checks --repo /path/to/product --packs /path/to/packs --out /path/to/product/.curbpack/run-result.json
+curbcheck --repo /path/to/product
 ```
 
 Exit 0 only when at least one Check ran and every row passed. Then change the evidence or the Claim and run it again. A pass means the arguments held for that tree. It does not certify the product.
@@ -271,7 +269,7 @@ product curbpack.json names the Pack id
         ↓
 Discovery, then save a Claim with checks[]
         ↓
-python3 -m checks --repo ... --packs ... --out ...
+curbcheck --repo ...
         ↓
 read the rows, change the product or the Claim, run again
 ```

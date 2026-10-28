@@ -7,14 +7,14 @@
 
 ## How the outputs relate
 
-`python3 -m checks` evaluates the current repository state against the selected packs and reports whether the Checks pass, fail, or were skipped. Compile creates the review report from that result.
+`curbcheck` evaluates the current repository state against the selected packs and reports whether the Checks pass, fail, or were skipped. Compile creates the review report from that result.
 
 ```text
 selected packs
         +
 product repository
         ↓
-python3 -m checks
+curbcheck
         ↓
 pass / fail / skipped, with detail when a Check did not pass
         ↓
@@ -27,7 +27,7 @@ docs/reports/review-report.json
 recipient / reviewer
 ```
 
-Compile does not perform a different evaluation from `python3 -m checks`.
+Compile does not perform a different evaluation from `curbcheck`.
 
 A **pack** defines Requirements. Claims in the product repository select the Checks `curbcheck` evaluates.
 
@@ -39,7 +39,7 @@ Curbpack Studio prepares review material. The reviewer decides what the result m
 
 | Artifact | Format / path | Producer | Purpose |
 | --- | --- | --- | --- |
-| Run result | `<product-repo>/.curbpack/run-result.json` from the Check page; the `--out` file from `python3 -m checks` | Check page, `python3 -m checks`, or a packaged curbcheck file | Result for the checked repository state |
+| Run result | `<product-repo>/<curbpack>/run-result.json` from `curbcheck`; `<product-repo>/.curbpack/run-result.json` from the Check page | Check page or `curbcheck` | Result for the checked repository state |
 | Review report | `<product-repo>/docs/reports/review-report.json` | Compile on `/review` | The run result together with the Requirements, Claims, and signature appendix for review |
 
 `.curbpack/` is temporary working data. The review report is the durable file in the product repository. Its location is fixed in the review compiler.
@@ -69,15 +69,15 @@ Opening `/review` when no report file exists shows a preview and does not write.
 
 ## Check and Compile
 
-`python3 -m checks` writes the run result:
+`curbcheck` writes the run result:
 
 ```text
-python3 -m checks --repo <product> --packs <packs> --out <product>/.curbpack/run-result.json
+curbcheck --repo <product>
         ↓
-run result
+<product>/<curbpack>/run-result.json
 ```
 
-The Check page writes the same kind of file at `<product-repo>/.curbpack/run-result.json`. `--out` is required for `python3 -m checks`; that path is the file for that invocation. On Windows the module start is `python -m checks` with the same flags. A packaged curbcheck file takes the same `--repo`, `--packs`, and `--out`.
+`--packs` and `--out` are optional. `--out` replaces that file. The Check page writes `<product-repo>/.curbpack/run-result.json`. A packaged `curbcheck` file takes the same arguments.
 
 Check and Compile are separate actions. Compile builds the review report from the run result. It does not run Checks.
 
@@ -89,7 +89,7 @@ docs/reports/review-report.json
 
 Compile writes that file from the current run result, including a run whose Checks did not pass. It writes nothing when there is no run-result file to load, or when no pack directory is available to load; the error names `run_result`. An existing report is replaced only after confirmation.
 
-Compile does not perform a different check from `python3 -m checks`.
+Compile does not perform a different check from `curbcheck`.
 
 ## Reviewing a received review report
 
@@ -104,10 +104,10 @@ This is the material contained in that file.
 It is different from:
 
 ```bash
-python3 -m checks --repo <product> --packs <packs> --out <out>
+curbcheck --repo <product>
 ```
 
-`python3 -m checks` evaluates the product repository against selected packs.
+`curbcheck` evaluates the product repository against selected packs.
 
 The review report is material that someone else has already prepared. The Review page records `decision` and can sign the report. It does not re-run Checks.
 
@@ -127,7 +127,7 @@ The run result is [Packs v2](packs2.md) §3.1. `validate_run_result` checks it b
 | Check result | `index`, `check`, `args`, `status`. `status` is `pass`, `fail`, or `skipped`. `detail` is omitted on `pass` and required on `fail` and `skipped`. |
 | Process exit | The process status. The CLI summary prints it after a result has been written. |
 | Run result path (Check page) | `<product-repo>/.curbpack/run-result.json` |
-| Run result path (`python3 -m checks`) | The `--out` path. Parent directories are created. The file is replaced in one step after the result has been validated. |
+| Run result path (`curbcheck`) | `<product>/<curbpack>/run-result.json`, or the `--out` path when that flag is set. Parent directories are created. The file is replaced in one step after the result has been validated. |
 | Review report path | `<product-repo>/docs/reports/review-report.json` |
 | Review report fields | `run_result`, `requirements`, `claims`, `appendix`. `decision` and `signed` when recorded. |
 | Appendix item | `id`, `requirement_id`, `reason` |
@@ -137,14 +137,14 @@ The run result is [Packs v2](packs2.md) §3.1. `validate_run_result` checks it b
 
 | Output | Intended use |
 | --- | --- |
-| Run result | Machine-readable Check outcomes from `python3 -m checks` and the Check page; read by Compile |
+| Run result | Machine-readable Check outcomes from `curbcheck` and the Check page; read by Compile |
 | Review report | Material sent to a reviewer. `decision` and `signed` are recorded on that same file. |
 
 ## Exit and output behavior
 
 | Command | Behavior |
 | --- | --- |
-| `python3 -m checks` | Exit `0` when at least one Check ran and every Claim and every Check is `pass`. A dirty worktree does not change this. Exit `1` when a Check failed or was skipped, when no Check ran, or when the run stops with an exception before writing. Exit `2` when the arguments could not be parsed, or `--skip` has no `=`. Exit `2`, and a stop before the result is saved, leave `--out` as it was. A finished run replaces `--out`, including a run that exits `1` because a Check failed or was skipped. After the file is written, stdout is a short summary. |
+| `curbcheck` | Exit `0` when at least one Check ran and every Claim and every Check is `pass`. A dirty worktree does not change this. Exit `1` when a Check failed or was skipped, when no Check ran, or when the run stops with an exception before writing. Exit `2` when the arguments could not be parsed, or `--skip` has no `=`. Exit `2`, and a stop before the result is saved, leave `--out` as it was. A finished run replaces `--out`, including a run that exits `1` because a Check failed or was skipped. After the file is written, stdout is a short summary. |
 | Check page | `POST /check` writes `<product-repo>/.curbpack/run-result.json` through the same runner and leaves the review report as it was. A run that stops before the result is saved leaves the run-result file as it was. |
 | Compile | `POST /review/compile` writes the review report from the current run result, including a run that did not pass. It writes nothing when no run-result file is loaded, or when no pack directory is available to load. An existing file is replaced only when the form sends `confirm=yes`. |
 | Save decision | `POST /review` requires the report file, sets `decision`, and removes the report `signed`. |

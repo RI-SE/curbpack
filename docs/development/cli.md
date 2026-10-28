@@ -4,7 +4,7 @@ Temporary maintainer note. Delete `docs/development/` when this crosswalk is no 
 
 The previous product's binary was `curbpack`. Its commands covered environment setup, repository inspection, handoff, receiving a review pack, and pack maintenance. The normal path was `scan`, `init`, `check`.
 
-Studio does not provide that binary. The jobs that still exist have a page or `python3 -m checks`. The jobs that do not exist are listed here so they are not rediscovered as missing features.
+Studio does not provide that binary. The jobs that still exist have a page or `curbcheck`. The jobs that do not exist are listed here so they are not rediscovered as missing features.
 
 Packs v2 is the contract for the objects those jobs read and write. See [the product flow](../reference/packs2.md).
 
@@ -17,7 +17,7 @@ Packs v2 is the contract for the objects those jobs read and write. See [the pro
 | `curbpack demo` | Isolated sandbox check. Flags `--open`, `--keep`, `--out`. | **Prepare sample workspace** on the cover. It is a small demo workspace, not Glucose Log, and it does not become the Check Pack unless you select it. No `--keep`. |
 | `curbpack scan` | Read-only diagnosis. Exit 0 even when evidence was missing. Alias `reality-check`. Flags `--packs`, `--badge`, `--format markdown`. From v0.5.3. | No scan. Discovery lists candidates. Check evaluates Claims. A finished Discovery is not a pass. |
 | `curbpack init` | Wrote `.curbpack.json` and could add scaffold, hooks, IDE files. Flags `--profile house\|cra\|medtech`, `--packs`, `--workflow`, `--bare`, `--dry-run`, `--yes`, `--hooks` / `--no-hooks`, `--skill` / `--no-skill`, `--ide` / `--no-ide`. | No init. Write `curbpack.json` yourself. Pack Editor registers documents. Studio does not install hooks. |
-| `curbpack check` | Evaluated composed rules. The repository gate. Exit 1 on gate failure. | **Run curbcheck**, or `python3 -m checks --repo --packs --out`. Exit 0 only when at least one Check ran and every row passed. Exit 1 otherwise. Exit 2 is a usage error from the argument parser. |
+| `curbpack check` | Evaluated composed rules. The repository gate. Exit 1 on gate failure. | **Run `curbcheck`.** `--repo` is required when the current directory has no `curbpack.json`. `--packs` and `--out` are optional. Exit 0 only when at least one Check ran and every row passed. Exit 1 otherwise. Exit 2 is a usage error from the argument parser. |
 | `curbpack ask` | Explained a GateFailure. `--propose` suggested text. | No ask. Read the row detail, `law_text`, and `remediation_hint`. Nothing writes a proposed file from a failure JSON. |
 | `curbpack fix` | Templated remediation, narrowly `--art14`, with preview and `--yes`. | No fix. Scaffold can write a new stub and refuses to overwrite. Automatic remediation is deferred. |
 | `curbpack validate` | Full dual-representation gate. Shared many flags with `check`, including `--heal` and `--diff`. | No second gate. One run result is the evaluation. |
@@ -42,19 +42,19 @@ Packs v2 is the contract for the objects those jobs read and write. See [the pro
 | `--heal` | Wrote stubs. Not part of CI. | No heal. Scaffold is a separate, optional write of a new file. |
 | `--diff`, `--delta` | Incremental evaluation. `file_present` and `annex_file` still ran for the whole tree. Not for release. | No incremental mode. The selection in `curbpack.json` is the whole run. |
 | `--as-of` | Fixed the clock for reproducibility. | `git_fresh` takes `as_of` on that Check's arguments. The runner does not have a global `--as-of`. |
-| `--packs`, `--pack` | Selected packs for that invocation. | The product file `curbpack.json` selects ids. `--packs` on `python3 -m checks` is the directory that contains those Packs, not a comma-separated id list. |
+| `--packs`, `--pack` | Selected packs for that invocation. | The product file `curbpack.json` selects ids. `--packs` on `curbcheck` is optional. It is the directory that contains those Packs, not a comma-separated id list. |
 | `--score` | Scoring output. | No score flag. Optional Discovery assessment shows score and rank only when assessment ran. |
 | `--json` | Machine-readable check output. | The run result file is the JSON. The process also prints a short text summary. |
 | `--form-hints` | Form hints. | `discovery_hints` live on the Requirement. |
 | `--apply-stub` | Applied a stub. | Scaffold, and only for a path that does not already exist. |
-| `--skip` | Not the same as a rule waiver in the old CLI. | `--skip claim-id=reason` on `python3 -m checks`. The reason is stored. An empty reason writes nothing. The Check page has no skip form. |
+| `--skip` | Not the same as a rule waiver in the old CLI. | `--skip claim-id=reason` on `curbcheck`. The reason is stored. An empty reason writes nothing. The Check page has no skip form. |
 
 ## Aliases
 
 | Old alias | Of | Studio |
 | --- | --- | --- |
 | `reality-check` | `scan` | No scan. |
-| `help`, `-h`, `--help` | top-level help | `python3 -m app -h`, `python3 -m checks -h`, `make` with no target. |
+| `help`, `-h`, `--help` | top-level help | `python3 -m app -h`, `curbcheck -h`, `make` with no target. |
 | `version`, `-v`, `--version` | top-level version | No `curbpack version`. The run result has `tool` and `tool_version`. |
 | `--delta` | `--diff` | No diff mode. |
 | `pathway status --tech` | `--technical` | No pathway. |
@@ -65,7 +65,7 @@ Packs v2 is the contract for the objects those jobs read and write. See [the pro
 
 The old global mapping was 0 success, 1 gate failure or a contradicted review, 2 usage or environment. Scan returned 0 when diagnosis finished. Drift always returned 0. `review --verify-chain` returned 1 when the chain failed. `doctor --repair` returned 2 when the binary was missing.
 
-`python3 -m checks` uses 0, 1, and 2 as follows.
+`curbcheck` uses 0, 1, and 2 as follows.
 
 * 0: at least one Check ran, and every Claim and every Check passed. A dirty worktree does not change this.
 * 1: a Check failed or was skipped, or no Check ran. A Claim whose Requirement is not selected raises before a result file is written. That failure is the exception text, not a formatted status line.
@@ -81,4 +81,4 @@ Studio does not read those variables to select Packs, to sign, or to confirm a r
 
 ## Help text you will not see
 
-Top-level `curbpack --help` listed workflow commands, advanced commands, and exit codes, and warned that `completion -h` was a usage error. None of that text is Studio's help. `python3 -m checks -h` documents `--repo`, `--packs`, `--out`, and `--skip`.
+Top-level `curbpack --help` listed workflow commands, advanced commands, and exit codes, and warned that `completion -h` was a usage error. None of that text is Studio's help. `curbcheck -h` documents `--repo`, `--packs`, `--out`, and `--skip`. `--packs` and `--out` are optional.
