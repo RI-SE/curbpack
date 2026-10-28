@@ -366,6 +366,48 @@ def publish_pack(root: Path, copy_dir: Path, *, version: str, trust: dict[str, b
     return destination
 
 
+def export_pack(copy_dir: Path, destination: Path) -> Path:
+    """Copy one working copy to ``destination/<pack-id>/``.
+
+    Pack file bytes are copied as they are. This does not publish a release.
+    An existing ``destination/<pack-id>/`` is left untouched.
+    """
+    if not destination.is_dir():
+        raise ModelError("export", "destination", "an existing directory")
+    raw = read_json(copy_dir / "pack.json")
+    raw_id = raw.get("id") if isinstance(raw, dict) else None
+    if not isinstance(raw_id, str):
+        raise ModelError("export", "id", "a single directory name")
+    pack_id = _pack_id_name(raw_id)
+    names = sorted(
+        path.name for path in copy_dir.glob("*.json") if path.is_file()
+    )
+    temp = destination / f".export-tmp-{secrets.token_hex(8)}"
+    try:
+        temp.mkdir(exist_ok=False)
+        for name in names:
+            source = copy_dir / name
+            target = temp / name
+            data = source.read_bytes()
+            target.write_bytes(data)
+            if target.read_bytes() != data:
+                raise ModelError("export", name, "the source bytes")
+        pack, requirements = load_pack_directory(temp)
+        if pack.get("id") != pack_id:
+            raise ModelError("export", "id", pack_id)
+        if not requirements:
+            raise ModelError("export", "requirements", "at least one requirement")
+        final = destination / pack_id
+        if final.exists():
+            raise ModelError("export", "destination", f"a free directory, not {final}")
+        os.rename(temp, final)
+    except Exception:
+        if temp.exists():
+            shutil.rmtree(temp)
+        raise
+    return final.resolve()
+
+
 def _require_publishable(directory: Path, version: str, trust: dict[str, bytes]) -> dict:
     pack, requirements = load_working_copy(directory)
     if pack.get("version") != version:
