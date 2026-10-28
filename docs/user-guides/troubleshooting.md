@@ -41,7 +41,7 @@ If a package build fails because the executable is locked, close the running pro
 
 ## Git hooks
 
-Studio does not install Git hooks. A Check in CI is `python3 -m checks`. It does not write stubs. Scaffold, used by a person, writes a new file and refuses to overwrite.
+Studio does not install Git hooks. A Check in CI is `curbcheck`. It does not write stubs. Scaffold, used by a person, writes a new file and refuses to overwrite.
 
 ## WSL and Windows filesystems
 
@@ -73,7 +73,7 @@ Record:
 
 - the Studio commit or the build you ran
 - the operating system
-- the exact command, including `--workspace`, `--repo`, `--packs`, and `--out`
+- the exact command, including `--workspace` and any `curbcheck` arguments you passed (`--repo`, `--packs`, `--out`, `--skip`)
 - the workspace path, with secrets removed
 - the Requirement id, Claim id, and Check arguments
 - the run result's `commit` and `worktree`

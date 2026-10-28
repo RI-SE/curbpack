@@ -2,7 +2,7 @@
 
 This guide is for people working in a real product repository.
 
-If you have not seen a Check fail because a file moved, do the [reference-product walkthrough](getting-started.md) first. For how to start the application, see [Install](install.md).
+[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, and Review. This page is the longer procedure on a real product repository. For how to start the application, see [Install](install.md).
 
 You can rerun Discovery, Claim edits, or Check without repeating Extract.
 
@@ -33,7 +33,7 @@ A product repository selects Packs by writing `curbpack.json`:
 ```json
 {
   "packs": ["cra-baseline"],
-  "hunt": {
+  "search_hints": {
     "sources": [{ "source": "documents" }],
     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
     "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
@@ -54,10 +54,10 @@ Check loads those ids from the packs root. Two ids select both Packs. They are n
 or:
 
 ```sh
-python3 -m checks --repo /path/to/your/product-repo \
-  --packs /path/to/packs-root \
-  --out /path/to/your/product-repo/.curbpack/run-result.json
+curbcheck --repo /path/to/your/product-repo
 ```
+
+That reads `curbpack.json`, loads packs from `<curbpack>/packs`, loads claims from `<curbpack>/claims`, and writes `<curbpack>/run-result.json`. `--packs` and `--out` override those two paths.
 
 On a repository that has just been pointed at a Pack, expect failures until Claims name evidence the product actually has, and until that evidence meets the probes.
 
@@ -128,4 +128,4 @@ A failed row can stay on the review page while you open Discovery for that Requi
 
 ## 9. Next: run the Check where the repository changes
 
-Continue with [CI/CD](ci-cd.md). The Check you automate is `python3 -m checks`.
+Continue with [CI/CD](ci-cd.md). The Check you automate is `curbcheck`.

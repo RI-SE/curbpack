@@ -83,9 +83,7 @@ Currency of an assessment is often a different Requirement. Say that in `decisio
 
 ## 6. What a green result means
 
-A green result means the Checks that ran passed for that tree.
-
-It does not by itself establish legal compliance, certification, CE marking, notified-body approval, or a regulator or RISE endorsement.
+A green result means the Checks that ran passed for that tree. A person still decides what that means.
 
 If a Claim failed and the evidence moved, use **Discover again** for that Requirement. The failed Claim stays visible. Add a new Claim for the new path. Retire the old Claim after you have confirmed the replacement. Run Checks again. Sign the new Claim in Claims if you approve it. Sign the report separately. Closing the popup changes nothing.
 

@@ -2,8 +2,6 @@
 
 Start with the shortest path for what you need to do.
 
-Persistent Pack, Requirement, Claim, signature and result fields are defined by [Packs v2](reference/packs2.md). That file and [its provenance note](reference/README.md) are the local contract. These guides describe how to use the application. They are not a second contract.
-
 ## The workflow
 
 The cover at `http://127.0.0.1:8770` links the activities. They do not have to be visited in one fixed order. A Check can run when the product repository, the selected Pack and the Claims already exist, without opening Extract first.
@@ -18,25 +16,23 @@ legal source
     → Review compiles that result, records a decision, and signs the report
 ```
 
-A passing Check is an observation about configured arguments. It is not a legal compliance determination. The review report has no field for a conclusion that the product meets the Cyber Resilience Act.
-
-Curbpack prepares structural evidence for human review. It is not a conformity assessment, certification, CE-marking decision, notified-body opinion, or legal conclusion under [Regulation (EU) 2024/2847](https://eur-lex.europa.eu/eli/reg/2024/2847/oj).
+A passing Check is what those questions observed. A person still decides what that means.
 
 ## Start here
 
 | You are | Start here |
 | --- | --- |
 | **New user** | [Install](user-guides/install.md) · [Getting Started](user-guides/getting-started.md) |
-| **Builder / product team** | [Developer guide](user-guides/developers.md) · [CI/CD](user-guides/ci-cd.md) |
 | **Buyer / reviewer** | [Reviewer guide](user-guides/reviewers.md) |
 | **Authority / auditor** | [Reviewer guide](user-guides/reviewers.md) |
 | **Pack author** | [Pack author guide](user-guides/pack-developers.md) |
-| **Studio contributor** | [Development](development/README.md) · [Architecture](arch/ARCHITECTURE.md) · [Stories](agile/README.md) · [Requirements](req/README.md) |
+| **Builder / product team** | [Developer guide](user-guides/developers.md) · [CI/CD](user-guides/ci-cd.md) |
+| **Curbpack contributor** | [Development](development/README.md) · [Architecture](arch/ARCHITECTURE.md) · [Stories](agile/README.md) · [Requirements](req/README.md) |
 
 | Goal | Read |
 | --- | --- |
 | Install and start Studio | [Install](user-guides/install.md) |
-| Try the reference product and break one piece of evidence | [Getting started](user-guides/getting-started.md) |
+| Walk Pack Editor, Discovery & Claims, Check, and Review | [Getting started](user-guides/getting-started.md) |
 | Use Studio on a product repository | [Developer guide](user-guides/developers.md) |
 | Run the same Check outside the browser | [CI/CD](user-guides/ci-cd.md) |
 | Test this repository (Studio and curbcheck) | [Development](development/README.md) · [Testing curbcheck](testing/README.md) |
@@ -54,8 +50,6 @@ Curbpack prepares structural evidence for human review. It is not a conformity a
 | Review received material | [Reviewer guide](user-guides/reviewers.md) |
 
 ## Already in this repository
-
-Do not treat the guides above as a second contract.
 
 | Subject | Document |
 | --- | --- |
