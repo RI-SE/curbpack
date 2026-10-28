@@ -10,7 +10,7 @@
 
 ## Read
 
-`daniel/ny_sdd/docs/REQUIREMENTS.md` from DOC-01. `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/testing/requirements_traceability.md`, every row.
+`daniel/ny_sdd/docs/REQUIREMENTS.md` from DOC-01. `docs/testing/requirements_traceability.md`, every row.
 
 ## Write only
 

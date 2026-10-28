@@ -10,10 +10,10 @@
 
 ## Read
 
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/scripts/start-verification-run.sh`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/testing/verification_run_template.sh`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/tests/cyberready-test-product.pin`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/testing/test_suites/README.md` and `EV.md` through the EV-001 steps only
+- `scripts/start-verification-run.sh`
+- `testing/verification_run_template.sh`
+- `tests/cyberready-test-product.pin`
+- `tests/check/suites/README.md` and `EV.md` through the EV-001 steps only
 - `docs/testing/README.md`, `docs/testing/procedures/2_code_review_procedures.md`, and `plan/TST-01.md` as TST-01 left them
 - Read-only: `external_test/curbpack/setup.sh` and `states/R1.sh` at pin `2b0c3f30bda411917ca0cd5b5f545e04de11cd25`
 
@@ -70,4 +70,4 @@ R1 passes only after an edit to `states/R1.sh` or to another R or PF script. Lea
 
 A carried claim fails for the reason TST-01 already recorded (`curbcheck-dep-ban` missing, or a `contents` path absent). That claim stays outside. Do not add it to the seven.
 
-An Executable row from `curbpack/testing/test_suites/` is copied in with its old JSON (`outcome`, `readiness_score`, `evaluated_rules`) as the expected result. Leave the row for VER-02. This story does not move it.
+An Executable row from `tests/check/suites/` is copied in with its old JSON (`outcome`, `readiness_score`, `evaluated_rules`) as the expected result. Leave the row for VER-02. This story does not move it.

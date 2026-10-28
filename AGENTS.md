@@ -2,6 +2,17 @@
 
 Stories and epics describe desired behavior. They are not permission to implement it.
 
+## Checkout layout
+
+This repository is Curbpack Studio. The checkout directory is `curbpack`. That directory was previously named `curbpack-studio`.
+
+`git rev-parse --show-toplevel` is this repository. There is no git superproject. Paths in tracked files are relative to that toplevel. A path that starts with `../` is one directory above the toplevel, not relative to the file that mentions it:
+
+- `../ctam`
+- `../cyberready-test-product`
+
+Do not write an absolute path to the directory that contains these checkouts. The program name `curbpack-studio`, the frozen workspace `~/curbpack-studio/workspace`, and a product fixture `external_test/curbpack` or `external_test/curbpack-studio` are names inside a product tree.
+
 ## Story work
 
 For all planning, implementation, testing, review, or resumption of approved story work, follow `.cursor/skills/story-workflow/SKILL.md` (`/story-workflow`).

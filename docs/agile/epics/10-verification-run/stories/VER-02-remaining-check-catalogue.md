@@ -10,8 +10,8 @@
 
 ## Read
 
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/testing/test_suites/`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/testing/procedures/`
+- `tests/check/suites/`
+- `docs/testing/procedures/`
 - `tests/check/` as VER-01 left it
 - `docs/testing/outside.md`
 
@@ -25,7 +25,7 @@ Do not edit the reference product, an R script, a PF script, `docs/reference/tes
 
 ## The move
 
-Copy each catalogue row from `curbpack/testing/test_suites/` into `tests/check/`. Keep its id and its status.
+Copy each catalogue row from `tests/check/suites/` into `tests/check/`. Keep its id and its status.
 
 - An **Executable** row names the Studio observation: the curbcheck argv, the R-state, and the expected run-result status. The old `curbpack check` fields `outcome`, `readiness_score`, and `evaluated_rules` are not that observation.
 - A row marked **To be specified** stays **To be specified**. The text comes with it. This story does not invent the missing steps.
@@ -36,7 +36,7 @@ The seven carried checks stay the rows VER-01 already runs. This story does not 
 
 ## Accept when
 
-- Every catalogue id in `curbpack/testing/test_suites/` is under `tests/check/` once.
+- Every catalogue id in `tests/check/suites/` is under `tests/check/` once.
 - `make test-curbcheck` still prints `claims 7 exit 0` for the VER-01 run.
 - Manual rows and **To be specified** rows are printed and are absent from the pass count.
 - `make test` does not run `tests/check/`.

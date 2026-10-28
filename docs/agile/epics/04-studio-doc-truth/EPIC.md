@@ -30,7 +30,7 @@ DOC-03 replaces `docs/architecture/packs.md` with `docs/architecture/packs2.md` 
 
 - `cmp docs/reference/packs2.md daniel/ny_sdd/docs/architecture/packs2.md` prints nothing and exits 0.
 - `find daniel/ny_sdd -type f | sed 's#^daniel/ny_sdd/##' | sort` prints `docs/baseline-delta.md` and the paths above, with `packs2.md` in place of `packs.md`, and nothing else.
-- Every matrix id from `curbpack/docs/testing/requirements_traceability.md` is still a requirement in `docs/REQUIREMENTS.md`, with the same id. The matrix row count and that row count are equal.
+- Every matrix id from `docs/testing/requirements_traceability.md` is still a requirement in `docs/REQUIREMENTS.md`, with the same id. The matrix row count and that row count are equal.
 - `docs/baseline-delta.md` has one row per id that was done, simplified, or missed, and no other status.
 
 ## Out of scope

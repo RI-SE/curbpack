@@ -8,7 +8,7 @@ curbcheck and Studio stay in this repository. `checks/` may import `common/`. It
 
 ## What the detective pass found
 
-The Executable rows live in `/Users/DanielFl/Documents/aProjects/aslak/curbpack/testing/test_suites/`. There are 32 of them. Each one sources `tmp/verification-run.sh`, then mutates the clone, then runs `curbpack check`. None of them runs curbcheck. Other catalogue rows are **To be specified** or a human step. Those texts stay. A row that is not executable is not turned into a pass.
+The Executable rows live in `tests/check/suites/`. There are 32 of them. Each one sources `tmp/verification-run.sh`, then mutates the clone, then runs `curbpack check`. None of them runs curbcheck. Other catalogue rows are **To be specified** or a human step. Those texts stay. A row that is not executable is not turned into a pass.
 
 `scripts/start-verification-run.sh` clones `git@github.com:RI-SE/cyberready-test-product.git` into `tmp/cyberready-test-product`. The pin in `tests/cyberready-test-product.pin` is `2b0c3f30bda411917ca0cd5b5f545e04de11cd25`, and that commit is `origin/main`. The local product checkout is five commits ahead of that pin and is not what a clone returns. `external_test/curbpack-studio/` is untracked there, so a clone does not contain it.
 
@@ -34,7 +34,7 @@ VER-01 does not copy the 32 Executable rows. VER-02 copies the catalogue, includ
 - The manual rows that belong to that run are listed by `make test-curbcheck` and are not counted as passes.
 - The run does not export `CURBPACK_PACKS_DIR`, does not run `curbpack check`, does not build `tmp/curbpack`, and does not start the Studio application.
 - A second source of `tmp/verification-run.sh` removes the previous clone before the next case.
-- After VER-02, every catalogue row from `curbpack/testing/test_suites/` is present under `tests/check/` with its Curbpack status. A **To be specified** row and a human step stay that way.
+- After VER-02, every catalogue row from `tests/check/suites/` is present under `tests/check/` with its Curbpack status. A **To be specified** row and a human step stay that way.
 
 ## Out of scope
 

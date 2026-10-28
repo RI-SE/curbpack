@@ -16,7 +16,7 @@ A passing check is not a legal conformity determination.
 
 [PF-01](procedures/1_pack_template_instantiation.md) is pack ids `cra-baseline`, `house-policy`, and `medtech-iec62304` from `external_test/curbpack-studio/packs`. PF-02 through PF-17 keep the product effects in that file. This suite does not run them.
 
-R8, R9, PF-18, and PF-19 stay defined in `ctam/docs/testing/procedures.md`. They are listed in [outside.md](outside.md). This suite does not run them.
+R8, R9, PF-18, and PF-19 stay defined in `../ctam/docs/testing/procedures.md`. They are listed in [outside.md](outside.md). This suite does not run them.
 
 State scripts under the reference product are not edited and are not replaced.
 
