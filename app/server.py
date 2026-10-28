@@ -84,6 +84,7 @@ from requirements.catalog import (
     ensure_catalog,
     find_document,
     list_formex_adapter_choices,
+    load_catalog,
     save_catalog,
 )
 from requirements.compare import apply_extraction_choices, apply_transfer, compare_copies, extraction_review
@@ -1610,21 +1611,52 @@ def _locator_sort_key(locators: list) -> tuple:
     return (prefix.upper(), int(number), clause or "", rest)
 
 
+def _document_for_adapter(root: Path, adapter_id: str) -> dict | None:
+    """The pack source for this adapter, when the catalog names exactly one."""
+    if not adapter_id:
+        return None
+    matches = [
+        row
+        for row in load_catalog(root).get("documents") or []
+        if isinstance(row, dict) and str(row.get("adapter_id") or "") == adapter_id
+    ]
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _copy_document(root: Path, adapter_id: str) -> dict:
+    document = _document_for_adapter(root, adapter_id)
+    if document is None:
+        return {"document_id": "", "document_name": ""}
+    return {
+        "document_id": str(document.get("id") or ""),
+        "document_name": str(document.get("name") or ""),
+    }
+
+
 def _copy_model(ws: Workspace, _query: dict) -> dict:
     selection = read_selection(ws.root)
     if selection and isinstance(selection.get("pack_id"), str):
         _sync_adapter_for_pack(ws, selection["pack_id"])
     adapter = _active_adapter(ws)
+    adapter_id = str(adapter.get("id") or "")
+    document = _copy_document(ws.root, adapter_id)
     directory = resolve_selected_pack(ws.root)
     if directory is None:
         directory = selected_copy(ws.root, adapter["pack_id"])
     if directory is None:
-        return {"adapter_id": adapter.get("id"), "timestamp": None, "requirements": []}
+        return {
+            "adapter_id": adapter_id,
+            "timestamp": None,
+            "requirements": [],
+            **document,
+        }
     _pack, requirements = load_working_copy(directory)
     trust = trust_store(ws.keys)
     kind = (selection or {}).get("kind") or "working"
     return {
-        "adapter_id": adapter.get("id"),
+        "adapter_id": adapter_id,
         "timestamp": directory.name,
         "pack_kind": kind,
         "read_only": kind == "published",
@@ -1633,6 +1665,7 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
         "message": "Published Pack — read-only. Use Compare to copy into a working copy."
         if kind == "published"
         else "",
+        **document,
     }
 
 

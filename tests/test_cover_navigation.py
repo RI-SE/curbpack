@@ -12,6 +12,7 @@ from pathlib import Path
 
 from app.server import Workspace, make_handler
 from requirements.ui.pages import job_fragment
+from requirements.workspace import create_extraction_copy, mark_selected
 
 
 class CoverNavigationTest(unittest.TestCase):
@@ -110,6 +111,39 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertEqual(catalog_path.read_bytes(), before)
                 self.assertFalse((root / "selection.json").exists())
                 self.assertEqual(list(root.rglob("pack.json")), [])
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_requirements_list_links_to_the_current_pack_source_sections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "registered_sources.json").write_text(
+                '{"documents":[{"id":"cra-annex-vii","name":"CRA Annex VII",'
+                '"official_name":"Content of the technical documentation",'
+                '"url":"https://example.test/cra","adapter_id":"cra-xml"}],'
+                '"sources":[]}\n',
+                encoding="utf-8",
+            )
+            copy = create_extraction_copy(
+                root,
+                "cra-xml-baseline",
+                {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"},
+                at="2026-10-27T065647Z",
+            )
+            mark_selected(root, "cra-xml-baseline", copy.name)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/requirements/copy")
+                link = '<a href="/requirements?document=cra-annex-vii">CRA Annex VII</a>'
+                self.assertIn(link, page)
+                self.assertLess(page.index(">Pack Sources</a>"), page.index(link))
+                self.assertLess(page.index(link), page.index("<h1>Requirements</h1>"))
+                sections = _get(base + "/requirements?document=cra-annex-vii")
+                self.assertIn("Sections of <strong>CRA Annex VII</strong>", sections)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
