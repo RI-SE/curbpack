@@ -27,7 +27,7 @@ The examples use a Linux runner and `python3 -m checks`. On macOS ARM64 the pack
 
 Copy the job into the product repository. `.github/workflows/ci.yml` in the Studio repository runs `make ci-tests` and `make package` for Studio.
 
-Replace `OWNER/curbpack-studio`, `STUDIO_COMMIT`, `OWNER/packs`, and `PACKS_COMMIT` before use. The job's Git credentials must be able to read those two repositories. When the packs root already sits inside the product tree, drop the packs checkout and point `--packs` at that directory.
+Studio is `RI-SE/curbpack`. Replace `STUDIO_COMMIT`, `OWNER/packs`, and `PACKS_COMMIT` before use. The job's Git credentials must be able to read those two repositories. When the packs root already sits inside the product tree, drop the packs checkout and point `--packs` at that directory.
 
 ## GitHub
 
@@ -54,7 +54,7 @@ jobs:
       - name: Checkout Studio
         uses: actions/checkout@v4
         with:
-          repository: OWNER/curbpack-studio
+          repository: RI-SE/curbpack
           ref: STUDIO_COMMIT
           path: studio
 
@@ -95,7 +95,7 @@ A non-zero status fails the Check step.
 
 ```yaml
 variables:
-  STUDIO_REPOSITORY: "https://github.com/OWNER/curbpack-studio.git"
+  STUDIO_REPOSITORY: "https://github.com/RI-SE/curbpack.git"
   STUDIO_COMMIT: "STUDIO_COMMIT"
   PACKS_REPOSITORY: "https://github.com/OWNER/packs.git"
   PACKS_COMMIT: "PACKS_COMMIT"
@@ -130,7 +130,7 @@ The agent needs Git and Python 3.12. `checkout scm` inside `product/` is the pro
 pipeline {
     agent any
     environment {
-        STUDIO_REPOSITORY = 'https://github.com/OWNER/curbpack-studio.git'
+        STUDIO_REPOSITORY = 'https://github.com/RI-SE/curbpack.git'
         STUDIO_COMMIT = 'STUDIO_COMMIT'
         PACKS_REPOSITORY = 'https://github.com/OWNER/packs.git'
         PACKS_COMMIT = 'PACKS_COMMIT'
