@@ -26,7 +26,7 @@ The runner evaluates Claim files that the repo selects and writes one run result
 | `process_exit_code(result)` | A run result. | `0` or `1`. |
 | `git_snapshot(repo)` | A directory. | `commit` and `worktree`, or absent when Git has no HEAD. |
 
-`available_checks.json` is the registry of Check ids, commands, and args JSON Schemas. `validate_check_args` reads it. The runner executes the registered `command` as a process: `<command> <check-id> --repo <path> --args <json>`. stdout is one result object. A missing or crashed tool is a non-passing Check result, and the next Check still runs. `fresh`, `owned`, and `dep_ban` stay registered and non-passing because their commands are not installed. An id absent from the registry is rejected when the Claim is saved.
+`available_checks.json` is the registry of Check ids, commands, and args JSON Schemas. `validate_check_args` reads it. The runner executes the registered `command` as a process: `<command> <check-id> --repo <path> --args <json>`. stdout is one result object. A missing or crashed tool is a non-passing Check result, and the next Check still runs. `fresh` and `owned` stay registered and non-passing because their commands are not installed. Node Checks (`dep_ban` and aliases) run through `curbcheck-node`, same pattern as Git Checks on `curbcheck-git`. An id absent from the registry is rejected when the Claim is saved.
 
 The runner does not read `discovery_hints`, `note`, `remediation_hint`, or Claim `description`. It does not write Requirements, Claims, packs, or the review report.
 
@@ -70,7 +70,7 @@ The output path is an argument. The demo writes `<product-repo>/.curbpack/run-re
 | `git_fresh` | Age of the last commit that changed `path`, measured from `as_of`. Packs v2 §4.1. |
 | `git_author` | Exact author name and email on that commit. Not a signature. Packs v2 §4.1. |
 
-`fresh` and `owned` are not Check ids in Packs v2 §4. They stay in this registry so the current discovery form can save them, and a run fails them because `curbcheck-fresh` and `curbcheck-owned` are not installed. `dep_ban` is specified in Packs v2 §4. `npm_dep_ban` and `manifest_dep_ban` use `curbcheck-dep-ban`, which is not installed, so a run records `fail`. An id absent from the registry is rejected when the Claim is saved. The runner does not record these as `skipped`.
+`fresh` and `owned` are not Check ids in Packs v2 §4. They stay in this registry so the current discovery form can save them, and a run fails them because `curbcheck-fresh` and `curbcheck-owned` are not installed. `dep_ban` is specified in Packs v2 §4. `npm_dep_ban` and `manifest_dep_ban` are aliases on `curbcheck-node`; that tool inspects root `package.json` dependency maps for an exact banned version string. An id absent from the registry is rejected when the Claim is saved. The runner does not record these as `skipped`.
 
 `file_present` is not a check id.
 
@@ -104,7 +104,7 @@ Direct calls, no UI. `tests/test_m4_checks.py` already covers the `exist` and `c
 2. A short file, or a file missing a header named in `args`, is `fail` on `contents`. A file that meets every probe is `pass` with no `detail`.
 3. Two Checks on one Claim produce one row with two indexed Check results. A second Claim for other evidence produces a second row. A Claim with no Checks is omitted. A Claim whose Requirement is not selected raises, and no result file is written.
 4. `skip` with a reason writes `skipped` and does not read the file. An empty reason raises and does not write. A skip id that is not a Claim in this run raises and does not write. A result whose only row is `skipped` exits 1. A result with no rows exits 1.
-5. `fresh`, `owned`, `dep_ban`, `npm_dep_ban`, and `manifest_dep_ban` are registered and produce a non-passing Check result. An unknown id is rejected by `validate_check_args`. Neither is a pass.
+5. `fresh` and `owned` are registered and produce a non-passing Check result because their commands are absent. `dep_ban` (and aliases) run as subcommands of `curbcheck-node` and pass or fail on the Node manifest pin. An unknown id is rejected by `validate_check_args`.
 6. A Git repo records `commit` and `worktree`. A dirty tree can still exit 0 when every row is `pass`. A directory that is not a Git checkout omits both keys.
 7. The written file passes `validate_run_result` and round-trips through `load_run_result`.
 

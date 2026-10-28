@@ -130,12 +130,16 @@ class ToolReentryTest(unittest.TestCase):
             self.assertEqual(result["status"], "fail")
             self.assertIn("not implemented", result["detail"])
 
-    def test_dep_ban_is_unavailable(self):
+    def test_dep_ban_fails_on_banned_pin(self):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
+        (repo / "package.json").write_text(
+            '{"dependencies":{"axios":"1.0.0"}}\n',
+            encoding="utf-8",
+        )
         code, result = _invoke(
             [
-                "curbcheck-dep-ban",
+                "curbcheck-node",
                 "dep_ban",
                 "--repo",
                 str(repo),
@@ -144,7 +148,25 @@ class ToolReentryTest(unittest.TestCase):
             ]
         )
         self.assertEqual(code, 0)
-        self.assertEqual(result, {"status": "fail", "detail": "check tool 'curbcheck-dep-ban' is unavailable"})
+        self.assertEqual(result["status"], "fail")
+        self.assertIn("banned pin", result["detail"])
+        self.assertIn("axios=1.0.0", result["detail"])
+
+    def test_dep_ban_passes_when_pin_absent(self):
+        tmp, repo = _repo_with_file()
+        self.addCleanup(tmp.cleanup)
+        (repo / "package.json").write_text('{"dependencies":{}}\n', encoding="utf-8")
+        code, result = _invoke(
+            [
+                "curbcheck-node",
+                "dep_ban",
+                "--repo",
+                str(repo),
+                "--args",
+                json.dumps({"package": "axios", "banned_versions": ["1.0.0"]}),
+            ]
+        )
+        self.assertEqual((code, result), (0, {"status": "pass"}))
 
     def test_skip_stores_the_reason(self):
         tmp, repo = _repo_with_file()

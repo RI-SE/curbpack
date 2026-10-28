@@ -184,7 +184,7 @@
     },
     {
       "id": "dep_ban",
-      "command": "curbcheck-dep-ban",
+      "command": "curbcheck-node",
       "args_schema": {
         "type": "object",
         "additionalProperties": false,
@@ -201,7 +201,7 @@
     },
     {
       "id": "npm_dep_ban",
-      "command": "curbcheck-dep-ban",
+      "command": "curbcheck-node",
       "alias_of": "dep_ban",
       "args_schema": {
         "type": "object",
@@ -219,7 +219,7 @@
     },
     {
       "id": "manifest_dep_ban",
-      "command": "curbcheck-dep-ban",
+      "command": "curbcheck-node",
       "alias_of": "dep_ban",
       "args_schema": {
         "type": "object",

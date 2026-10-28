@@ -183,13 +183,13 @@ Paths in args are relative to `--repo`. An absolute path, or a path that contain
 | `git_author` | `curbcheck-git` | Runs |
 | `git_signed` | `curbcheck-git` | Registered. The tool answers that this id is not implemented. |
 | `git_signer` | `curbcheck-git` | Registered. The tool answers that this id is not implemented. |
-| `dep_ban` | `curbcheck-dep-ban` | Registered. The command is not installed, so the Check fails. |
-| `npm_dep_ban` | `curbcheck-dep-ban` | Registry alias id of `dep_ban`. Same missing command. |
-| `manifest_dep_ban` | `curbcheck-dep-ban` | Registry alias id of `dep_ban`. Same missing command. |
+| `dep_ban` | `curbcheck-node` | Node: inspects root `package.json` dependency maps for an exact banned version string. |
+| `npm_dep_ban` | `curbcheck-node` | Registry alias id of `dep_ban`. |
+| `manifest_dep_ban` | `curbcheck-node` | Registry alias id of `dep_ban`. |
 | `fresh` | `curbcheck-fresh` | Registered so a discovery form can save it. Not a Packs v2 §4 id. The command is not installed, so the Check fails. |
 | `owned` | `curbcheck-owned` | Registered so a discovery form can save it. Not a Packs v2 §4 id. The command is not installed, so the Check fails. |
 
-An id that is not in the registry fails that Check with a detail that names the unknown type. The result file is still written. A missing command is recorded as `fail` with a detail such as `check tool 'curbcheck-dep-ban' is unavailable`. The next Check still runs. None of these are `skipped`, and none of them are `pass`.
+An id that is not in the registry fails that Check with a detail that names the unknown type. The result file is still written. A missing command is recorded as `fail` with a detail such as `check tool 'curbcheck-node' is unavailable`. The next Check still runs. None of these are `skipped`, and none of them are `pass`.
 
 `file_present` is not a Check id.
 
@@ -285,7 +285,7 @@ Both are registered on `curbcheck-git`. This build's handler answers `not implem
 
 ### `dep_ban`, `fresh`, and `owned`
 
-`dep_ban`, `npm_dep_ban`, and `manifest_dep_ban` take `package` and `banned_versions` (one or more strings) and name the command `curbcheck-dep-ban`. `fresh` takes `path` plus either `max_age_days` or `since_ref`. `owned` takes `path`, `bind_repo_token` set to `true`, and an optional `name` or `email`. None of those three commands is installed, so a run records `fail` and the detail says the check tool is unavailable.
+`dep_ban`, `npm_dep_ban`, and `manifest_dep_ban` take `package` and `banned_versions` (one or more strings) and run as subcommands of `curbcheck-node` against root `package.json` — same shape as Git Checks on `curbcheck-git`. `fresh` takes `path` plus either `max_age_days` or `since_ref`. `owned` takes `path`, `bind_repo_token` set to `true`, and an optional `name` or `email`. `fresh` and `owned` are not installed, so a run records `fail` and the detail says the check tool is unavailable.
 
 ## The three programs the runner starts
 

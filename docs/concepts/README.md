@@ -52,7 +52,7 @@ A Claim references exactly one Requirement. One Requirement may have several Cla
 
 `exist` asks whether the paths are files. `contents` asks whether the bytes match the probes. A missing file fails `contents` as well, and the detail says the file is absent. It does not also report a missing header.
 
-This build runs `exist` through `curbcheck-exist`, `contents` through `curbcheck-contents`, and `git_fresh` and `git_author` through `curbcheck-git`. `git_signed` and `git_signer` are registered on that same program and fail with the detail that the check is not implemented. `dep_ban`, `fresh`, and `owned` fail because their commands are not installed. They do not pass. `file_present` and `annex_file` are not in that registry.
+This build runs `exist` through `curbcheck-exist`, `contents` through `curbcheck-contents`, `git_fresh` and `git_author` through `curbcheck-git`, and `dep_ban` through `curbcheck-node`. `git_signed` and `git_signer` are registered on that same Git program and fail with the detail that the check is not implemented. `fresh` and `owned` fail because their commands are not installed. They do not pass. `file_present` and `annex_file` are not in that registry.
 
 ### [Evidence](evidence.md)
 

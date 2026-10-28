@@ -121,12 +121,16 @@ def _fill_curbcheck_repo(repo: Path, packs: Path) -> tuple[Path, Path]:
     docs = repo / "docs"
     docs.mkdir()
     (docs / "a.md").write_text("hello\n", encoding="utf-8")
+    (repo / "package.json").write_text(
+        '{"name":"smoke","dependencies":{"axios":"1.0.0"}}\n',
+        encoding="utf-8",
+    )
     when = "2026-10-23T12:00:00Z"
     _git(repo, "init", "-b", "main")
     _git(repo, "config", "user.email", "poc2@example.com")
     _git(repo, "config", "user.name", "PoC2")
     _git(repo, "config", "commit.gpgsign", "false")
-    _git(repo, "add", "docs/a.md")
+    _git(repo, "add", "docs/a.md", "package.json")
     _git(repo, "commit", "-m", "add doc", when=when)
     pack_dir = packs / "cra-baseline"
     source = dict(extract_annex_vii_risk()["source"])
@@ -230,7 +234,7 @@ def smoke_curbcheck(binary: Path) -> int:
         if "not implemented" not in signed or "not implemented" not in signer:
             print("[FAIL] smoke curbcheck git signature checks were not left unimplemented", flush=True)
             return 1
-        if "unavailable" not in dep:
+        if "banned pin" not in dep:
             print(f"[FAIL] smoke curbcheck dep_ban detail was {dep!r}", flush=True)
             return 1
         skipped = _run_curbcheck(binary, repo, packs, out, skip="claim-exist=not this build")

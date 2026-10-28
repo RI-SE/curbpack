@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""Node Checks. One executable; subcommand is the registered Check id (e.g. dep_ban)."""
+
+from checks.commands import node_handle
+from checks.toolmain import main
+
+if __name__ == "__main__":
+    raise SystemExit(main(node_handle))

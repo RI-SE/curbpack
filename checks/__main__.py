@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from checks.commands import contents_handle, exist_handle, git_handle
+from checks.commands import contents_handle, exist_handle, git_handle, node_handle
 from checks.run import run_and_write
 from checks.schema import load_registry
 from checks.toolmain import main as tool_main
@@ -21,6 +21,7 @@ _HANDLERS = {
     "curbcheck-exist": exist_handle,
     "curbcheck-contents": contents_handle,
     "curbcheck-git": git_handle,
+    "curbcheck-node": node_handle,
 }
 
 
