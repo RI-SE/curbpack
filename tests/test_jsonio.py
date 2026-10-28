@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from common.jsonio import read_json, write_json
+
+
+def os_replace():
+    return os.replace
 
 
 class WriteJsonTest(unittest.TestCase):
@@ -36,3 +41,21 @@ class WriteJsonTest(unittest.TestCase):
             with patch.object(Path, "read_text", flaky):
                 self.assertEqual(read_json(path), {"status": "done"})
             self.assertEqual(calls["n"], 2)
+
+    def test_replace_waits_out_a_windows_permission_denied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "job.json"
+            real = os_replace()
+            calls = {"n": 0}
+
+            def flaky(src, dst):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise PermissionError(13, "Access is denied", str(dst))
+                return real(src, dst)
+
+            with patch("common.jsonio.os.replace", flaky):
+                write_json(path, {"status": "done"})
+            self.assertEqual(read_json(path), {"status": "done"})
+            self.assertEqual(calls["n"], 2)
+            self.assertEqual(list(Path(tmp).glob(".job.json.*.tmp")), [])

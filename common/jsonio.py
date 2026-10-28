@@ -24,10 +24,24 @@ def write_json(path: Path, obj: object) -> None:
     try:
         with temporary.open("w", encoding="utf-8") as handle:
             handle.write(dump_text(obj))
-        os.replace(temporary, path)
+        _replace(temporary, path)
     except Exception:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def _replace(temporary: Path, path: Path) -> None:
+    """Retry when Windows still has the destination open for a poll."""
+    denied: PermissionError | None = None
+    for _ in range(8):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError as exc:
+            denied = exc
+            time.sleep(0.01)
+    assert denied is not None
+    raise denied
 
 
 def read_json(path: Path) -> object:

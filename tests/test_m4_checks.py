@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import tempfile
 import unittest
@@ -105,7 +106,7 @@ class CheckBehaviorTest(unittest.TestCase):
             relative = "SECURITY.md"
             path = repo / relative
             path.write_text("# Security\n", encoding="utf-8")
-            path.chmod(0o000)
+            release = _deny_read(path)
             try:
                 exist = run_exist(repo, {"path": relative})
                 contents = run_contents(
@@ -113,7 +114,7 @@ class CheckBehaviorTest(unittest.TestCase):
                     {"path": relative, "probes": [{"kind": "size", "op": ">", "bytes": 0}]},
                 )
             finally:
-                path.chmod(0o644)
+                release()
         self.assertEqual(exist["status"], "fail")
         self.assertIn("unreadable", exist["detail"])
         self.assertEqual(contents["status"], "fail")
@@ -228,6 +229,42 @@ class CheckBehaviorTest(unittest.TestCase):
             self.assertEqual(row["checks"][0]["status"], "pass")
             self.assertEqual(row["checks"][1]["check"], "contents")
             self.assertEqual(row["checks"][1]["status"], "fail")
+
+
+def _deny_read(path: Path):
+    """Hold the file so the next open fails. chmod(0) only marks Windows read-only."""
+    if os.name != "nt":
+        path.chmod(0)
+
+        def release() -> None:
+            path.chmod(0o644)
+
+        return release
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = kernel32.CreateFileW(str(path), 0x80000000, 0, None, 3, 0x80, None)
+    # ctypes returns INVALID_HANDLE_VALUE as a signed -1 or as an unsigned all-ones pointer.
+    invalid = {None, 0, -1, (1 << (ctypes.sizeof(ctypes.c_void_p) * 8)) - 1}
+    if handle in invalid:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    def release() -> None:
+        kernel32.CloseHandle(handle)
+
+    return release
 
 
 def _good(repo: Path) -> str:
