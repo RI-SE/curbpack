@@ -104,6 +104,12 @@ class TryDiscoveryUiTest(unittest.TestCase):
                 self.assertIn("try-discovery-dialog", editor)
                 self.assertIn("GO", editor)
                 self.assertIn("Sample", editor)
+                self.assertIn('id="try-add-repo-open"', editor)
+                self.assertIn(">Add repo</button>", editor)
+                self.assertIn('id="try-add-repo"', editor)
+                self.assertIn('name="next"', editor)
+                self.assertIn('id="try-browse-path"', editor)
+                self.assertIn('id="repo-browse"', editor)
 
                 started = _post(
                     base + "/requirements/requirement/CRA-ANNEX-VII-RISK/try-discovery",
@@ -154,6 +160,58 @@ class TryDiscoveryUiTest(unittest.TestCase):
                 )
                 self.assertIn("<mark>", file_page)
                 self.assertIn("risk assessment", file_page)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+
+    def test_try_discovery_add_repo_returns_to_dialog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            adapter = load_adapter(ADAPTERS / "cra-xml" / "adapter.json")
+            created = extract_section(
+                root,
+                ADAPTERS / "cra-xml",
+                adapter,
+                "VII",
+                _proposals(),
+                {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"},
+                at="2026-10-13T090000Z",
+            )
+            mark_source_adapter(root, "cra-xml")
+            mark_selected(root, "cra-xml-baseline", created["copy"].name)
+            product = root / "product"
+            product.mkdir()
+            (product / "docs").mkdir()
+            (product / "curbpack.json").write_text(
+                json.dumps({"packs": ["cra-xml-baseline"], "hunt": {}}),
+                encoding="utf-8",
+            )
+
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            try:
+                editor = _get(base + "/requirements/requirement/CRA-ANNEX-VII-RISK")
+                self.assertIn("No product repos yet.", editor)
+                self.assertIn('id="try-add-repo-open"', editor)
+                self.assertIn(">Add repo</button>", editor)
+                self.assertNotIn("Add one under Discovery", editor)
+
+                after = _post(
+                    base + "/discover/repos",
+                    {
+                        "name": "From try",
+                        "path": str(product),
+                        "next": "/requirements/requirement/CRA-ANNEX-VII-RISK?try_open=1",
+                    },
+                )
+                self.assertIn('data-open="1"', after)
+                self.assertIn("From try", after)
+                self.assertIn('name="repo_id"', after)
+                self.assertIn('value="from-try"', after)
+                self.assertNotIn("No product repos yet.", after)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

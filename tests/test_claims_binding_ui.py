@@ -90,7 +90,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
             base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
             try:
                 discover = _get(base + "/discover")
-                self.assertIn("Document name", discover)
+                self.assertIn(">Pack</th>", discover)
                 self.assertIn("CRA Annex VII", discover)
                 self.assertIn("2026-10-14T080000Z", discover)
                 _post(

@@ -79,6 +79,25 @@ def save_check(
     return document
 
 
+def dismiss_why(
+    workspace: Path,
+    *,
+    repo_id: str,
+    source_id: str,
+    timestamp: str,
+    requirement_id: str,
+    path: str,
+    why: str,
+    known_ids: list[str],
+) -> dict:
+    """Remember that this discovery sentence was declined. The claim is untouched."""
+    document = _checked(workspace, repo_id, source_id, timestamp, requirement_id, path, known_ids)
+    entry = _entry(document, requirement_id, path)
+    entry["dismissed_why"] = why.strip()
+    _write(workspace, repo_id, source_id, timestamp, document)
+    return document
+
+
 def add_finding(
     workspace: Path,
     *,

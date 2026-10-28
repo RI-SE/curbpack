@@ -36,6 +36,11 @@ def overview_rows(
         ran = block is not None
         assessed = any(item.get("assessment_state") in {"assessed", "reused", "failed"} for item in findings)
         high = sum(1 for item in findings if item.get("rank") == "High")
+        owned = [
+            claim
+            for claim in claims
+            if isinstance(claim, dict) and claim.get("requirement_id") == requirement_id
+        ]
         rows.append(
             {
                 "id": requirement_id,
@@ -44,7 +49,8 @@ def overview_rows(
                 "high": high if assessed else None,
                 "useful": sum(1 for item in findings if item.get("vote") == "useful"),
                 "poor": sum(1 for item in findings if item.get("vote") == "poor"),
-                "signing": signing_label(claims, requirement_id, repo, trust),
+                "claims": len(owned),
+                "signing": _signing(owned, repo, trust),
             }
         )
     return rows
@@ -64,6 +70,7 @@ def merge_findings(candidates: list, marks: dict) -> list[dict]:
         row["vote"] = extra.get("vote") or ""
         row["checks"] = [item for item in extra.get("checks") or [] if isinstance(item, dict)]
         row["human_why"] = extra.get("human_why") or ""
+        row["dismissed_why"] = extra.get("dismissed_why") or ""
         row["added"] = bool(extra.get("added"))
         rows.append(row)
         seen.add(path)
@@ -79,6 +86,7 @@ def merge_findings(candidates: list, marks: dict) -> list[dict]:
                 "vote": extra.get("vote") or "",
                 "checks": [item for item in extra.get("checks") or [] if isinstance(item, dict)],
                 "human_why": extra.get("human_why") or "",
+                "dismissed_why": extra.get("dismissed_why") or "",
                 "added": True,
             }
         )

@@ -24,7 +24,7 @@ class CoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
-                self.assertIn("No Pack", cover)
+                self.assertIn("Curbpack Studio", cover)
                 self.assertIn('href="/requirements"', cover)
                 self.assertNotIn('href="/requirements/copy"', cover)
                 self.assertIn("Developer", cover)
@@ -43,12 +43,12 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertIn('data-adapter="nis"', catalog)
                 self.assertIn("https://publications.europa.eu/resource/celex/32024R2847", catalog)
                 self.assertIn("https://publications.europa.eu/resource/celex/32022L2555", catalog)
-                self.assertIn('type="submit">Edit</button>', catalog)
+                self.assertIn('type="submit">Sections</button>', catalog)
                 self.assertNotIn("disabled>Edit", catalog)
                 self.assertIn('class="sign-bad" disabled', catalog)
                 self.assertIn(">unsigned</button>", catalog)
                 self.assertIn('type="button">Publish</button>', catalog)
-                self.assertNotIn("Extract", catalog)
+                self.assertNotIn(">Extract</button>", catalog)
                 editor = _get(base + "/requirements?document=cra-annex-vii")
                 self.assertIn("Pack Editor", editor)
                 self.assertIn(">Signed</th>", editor)
@@ -100,11 +100,11 @@ class CoverNavigationTest(unittest.TestCase):
             try:
                 cover = _get(base + "/")
                 self.assertIn("Pack Editor", cover)
-                self.assertIn('href="/requirements">Packs', cover)
+                self.assertIn('href="/requirements">Pack Editor</a>', cover)
                 for href in ("/discover", "/check", "/review"):
                     self.assertIn(f'href="{href}"', cover)
                 listed = _get(base + "/requirements")
-                self.assertIn("<h1>Packs</h1>", listed)
+                self.assertIn("<h1>Pack Sources</h1>", listed)
                 self.assertIn("House Rules", listed)
                 self.assertEqual(catalog_path.read_bytes(), before)
                 self.assertFalse((root / "selection.json").exists())

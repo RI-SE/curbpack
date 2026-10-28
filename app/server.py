@@ -16,13 +16,14 @@ from urllib.parse import parse_qs, quote, urlparse
 _LOG = logging.getLogger("poc2.app")
 
 from app import pages
-from checks.run import process_exit_code, run_and_write
+from checks.run import process_exit_code, run_pack_directories, run_and_write
 from claims.bind import (
     build_claim,
     exist_args_for_path,
     law_passages,
     read_claim,
     read_claim_seal,
+    read_claims,
     rebind_from_fields,
     require_requirement_id,
     retire_claim,
@@ -35,7 +36,15 @@ from common.errors import CheckError, ModelError, SigningUnavailable
 from common.jsonio import read_json, write_json
 from common.keystore import load_or_create_key, trust_store
 from common.signing import read_signature
-from common.store import load_pack, load_pack_directory, load_requirement, save_requirement
+from common.store import (
+    load_claims,
+    load_pack,
+    load_pack_directory,
+    load_requirement,
+    load_run_result,
+    save_requirement,
+    save_run_result,
+)
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
 from demo_setup import prepare_demo
@@ -43,6 +52,7 @@ from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import reviewable_targets
 from discovery.jobs import request_abort as abort_discover_job
 from discovery.jobs import start_discover_job
+from discovery.browse import list_directories
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import (
     candidate_for_path,
@@ -83,7 +93,9 @@ from requirements.ui import pages as requirement_pages
 from requirements.ui import try_discovery as try_discovery_ui
 from requirements.workspace import (
     ensure_default_selection,
+    list_pack_ids,
     list_pack_options,
+    list_published_versions,
     list_working_copies,
     load_working_copy,
     list_publication_blockers,
@@ -92,7 +104,9 @@ from requirements.workspace import (
     mark_source_adapter,
     publish_pack,
     read_selection,
+    resolve_copy_ref,
     resolve_selected_pack,
+    select_published_pack,
     select_working_copy,
     selected_copy,
     selected_source_adapter,
@@ -374,6 +388,9 @@ def make_handler(ws: Workspace):
             if parsed.path.startswith("/requirements/try-discovery/jobs/"):
                 self._send_try_job(parsed.path[len("/requirements/try-discovery/jobs/") :])
                 return
+            if parsed.path == "/discover/browse":
+                self._send_browse(parse_qs(parsed.query))
+                return
             try:
                 body = self._get(parsed.path, parse_qs(parsed.query))
                 self._send(200, body)
@@ -413,6 +430,30 @@ def make_handler(ws: Workspace):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_browse(self, query: dict) -> None:
+            try:
+                payload = list_directories(
+                    (query.get("dir") or [""])[0],
+                    start=ws.root,
+                )
+                body = json.dumps(payload).encode("utf-8")
+            except ModelError as exc:
+                body = json.dumps({"error": str(exc)}).encode("utf-8")
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            except Exception as exc:
+                self._fail(exc)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def _send_try_job(self, job_id: str) -> None:
             try:
                 body = json.dumps(read_try_job(ws.root / "jobs", job_id)).encode("utf-8")
@@ -429,6 +470,12 @@ def make_handler(ws: Workspace):
             parsed = urlparse(self.path)
             try:
                 self._post(parsed.path, self._form())
+            except ModelError as exc:
+                target = _requirement_editor_for_error(exc)
+                if target:
+                    self._redirect(target)
+                    return
+                self._fail(exc)
             except Exception as exc:
                 self._fail(exc)
 
@@ -479,6 +526,8 @@ def make_handler(ws: Workspace):
                 requirement = load_requirement(_require_demo_requirement(ws))
                 reading = snapshot(ws.root)["requirement_reading"]
                 return pages.requirement_page(requirement, reading)
+            if path == "/discover/repo":
+                return claim_pages.discover_page(_discover_model(ws, query, product=True))
             if path == "/discover":
                 return claim_pages.discover_page(_discover_model(ws, query))
             if path == "/claims":
@@ -495,8 +544,14 @@ def make_handler(ws: Workspace):
             if path == "/scaffold":
                 return pages.scaffold_page()
             if path == "/check":
-                info = snapshot(ws.root)
-                return pages.check_page(info["run_result"], info["run_exit"])
+                editor = _check_editor_model(ws, query)
+                result, exit_code = _check_report(ws, query, editor)
+                return pages.check_page(
+                    result,
+                    exit_code,
+                    message=_check_message(query),
+                    editor=editor,
+                )
             if path == "/review":
                 report, reading, error, saved, report_exists, same, unchecked = _review_view(ws)
                 return pages.review_page(
@@ -675,7 +730,15 @@ def make_handler(ws: Workspace):
                     path=(form.get("path") or [""])[0],
                 )
                 save_repos(ws.root, data)
-                self._redirect("/discover?added=1")
+                new_id = str((data.get("repos") or [])[-1].get("id") or "")
+                next_url = _safe_local_next((form.get("next") or [""])[0])
+                if next_url:
+                    join = "&" if "?" in next_url else "?"
+                    if new_id and "try_repo=" not in next_url:
+                        next_url = f"{next_url}{join}try_repo={quote(new_id, safe='')}"
+                    self._redirect(next_url)
+                else:
+                    self._redirect("/discover?added=1")
                 return
             if path == "/discover/run":
                 job_id = _start_discover(ws, form)
@@ -780,6 +843,27 @@ def make_handler(ws: Workspace):
                 self._redirect("/scaffold?wrote=1")
                 return
             if path == "/check":
+                repo_id = (form.get("repo_id") or [""])[0].strip()
+                action = (form.get("action") or [""])[0].strip()
+                if repo_id and action in {"save", "check"}:
+                    repo = _registered_repo_path(ws, repo_id)
+                    pack_ids = [item.strip() for item in form.get("pack") or [] if item.strip()]
+                    if action == "save":
+                        _write_curbpack(repo, pack_ids)
+                        self._redirect(f"/check?repo={quote(repo_id, safe='')}&read=yes&saved=1")
+                        return
+                    directories = []
+                    for pack_id in pack_ids:
+                        directory = _pack_directory_for_check(ws.root, pack_id)
+                        if directory is None:
+                            raise ModelError("check", "pack", f"a copy of {pack_id} in this workspace")
+                        directories.append(directory)
+                    result, code = run_pack_directories(repo, directories)
+                    save_run_result(repo / ".curbpack" / "run-result.json", result)
+                    self._redirect(
+                        f"/check?repo={quote(repo_id, safe='')}&read=yes&exit={code}&rows={len(result['claims'])}"
+                    )
+                    return
                 result, code = run_and_write(ws.repo, ws.packs, ws.run_path)
                 self._redirect(f"/check?exit={code}&rows={len(result['claims'])}")
                 return
@@ -923,18 +1007,162 @@ def _sync_adapter_for_pack(ws: Workspace, pack_id: str) -> None:
             return
 
 
-def _discover_model(ws: Workspace, query: dict) -> dict:
+def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dict:
     job = None
     job_id = (query.get("job") or [""])[0]
     if job_id:
         job = read_discover_job(ws.root / "jobs", job_id)
+    repos = load_repos(ws.root).get("repos") or []
+    requested = (query.get("repo") or [""])[0].strip()
+    repo = _selected_discover_repo(ws, repos, requested)
     return {
-        "sources": _registered_sources(ws),
-        "repos": load_repos(ws.root).get("repos") or [],
+        "mode": "product" if product else "pilot",
+        "repo_id": str((repo or {}).get("id") or ""),
+        "repo_name": str((repo or {}).get("name") or ""),
+        "repos": repos,
+        "sections": _discover_sections(ws, repo, product=product),
         "reviewable": reviewable_targets(ws.root),
         "job": job,
         "error": (query.get("error") or [""])[0],
+        "workspace_root": str(ws.root.resolve()),
     }
+
+
+def _selected_discover_repo(ws: Workspace, repos: list, requested: str) -> dict | None:
+    if requested:
+        return find_repo({"repos": repos}, requested)
+    product = ws.repo.resolve()
+    for row in repos:
+        if not isinstance(row, dict):
+            continue
+        try:
+            path = resolve_repo_path(ws.root, str(row.get("path") or ""))
+        except ModelError:
+            continue
+        if path == product:
+            return row
+    for row in repos:
+        if isinstance(row, dict) and row.get("id"):
+            return row
+    return None
+
+
+def _discover_sections(ws: Workspace, repo: dict | None, *, product: bool) -> list[dict]:
+    packs: set[str] | None = None
+    repo_path: Path | None = None
+    if isinstance(repo, dict):
+        try:
+            repo_path = resolve_repo_path(ws.root, str(repo.get("path") or ""))
+        except ModelError:
+            repo_path = None
+    if product:
+        packs = _curbpack_pack_ids(repo_path)
+    sections = []
+    for source in _registered_sources(ws):
+        pack_id = source.get("pack_id")
+        if not isinstance(pack_id, str) or not pack_id:
+            continue
+        if packs is not None and pack_id not in packs:
+            continue
+        choices = _copy_choices(ws.root, pack_id)
+        for choice in choices:
+            requirements, claims, unclaimed = _copy_claim_counts(
+                ws.root, repo_path, pack_id, choice["value"]
+            )
+            choice["requirements"] = requirements
+            choice["claims"] = claims
+            choice["unclaimed"] = unclaimed
+        if product:
+            choices = [choice for choice in choices if choice.get("chosen")][:1]
+        sections.append(
+            {
+                "source_id": source.get("source_id") or "",
+                "name": source.get("name") or "",
+                "section_id": source.get("section_id") or "",
+                "pack_id": pack_id,
+                "copies": choices,
+            }
+        )
+    return sections
+
+
+def _curbpack_pack_ids(repo: Path | None) -> set[str]:
+    if repo is None:
+        return set()
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        return set()
+    document = read_json(path)
+    if not isinstance(document, dict):
+        return set()
+    return {item for item in document.get("packs") or [] if isinstance(item, str) and item}
+
+
+def _copy_choices(root: Path, pack_id: str) -> list[dict]:
+    """The selected working copy, or the latest one, plus every published release."""
+    selection = read_selection(root)
+    stamps = list_working_copies(root, pack_id)
+    published = list_published_versions(root, pack_id)
+    selected_here = (
+        isinstance(selection, dict)
+        and selection.get("pack_id") == pack_id
+    )
+    published_version = ""
+    if selected_here and selection.get("kind") == "published" and selection.get("version") in published:
+        published_version = selection["version"]
+    working_stamp = ""
+    if selected_here and selection.get("kind") == "working" and selection.get("timestamp") in stamps:
+        working_stamp = selection["timestamp"]
+    elif stamps:
+        working_stamp = stamps[-1]
+    choices = []
+    if working_stamp:
+        choices.append(
+            {
+                "value": working_stamp,
+                "label": f"Working copy · {working_stamp}",
+                "chosen": not published_version,
+            }
+        )
+    for version in published:
+        choices.append(
+            {
+                "value": f"published:{version}",
+                "label": f"Published · {version}",
+                "chosen": version == published_version,
+            }
+        )
+    return choices
+
+
+def _copy_claim_counts(root: Path, repo: Path | None, pack_id: str, ref: str) -> tuple[int, int, int]:
+    """Requirement count, claim count, and requirements that have no claim."""
+    try:
+        directory = resolve_copy_ref(root, pack_id, ref)
+        _pack, requirements = load_working_copy(directory)
+    except ModelError:
+        return 0, 0, 0
+    ids = {
+        item["id"]
+        for item in requirements
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+    if repo is None:
+        return len(ids), 0, len(ids)
+    claims_dir = repo / "claims"
+    claims = read_claims(claims_dir) if claims_dir.is_dir() else []
+    claim_count = sum(
+        1
+        for claim in claims
+        if isinstance(claim, dict) and claim.get("requirement_id") in ids
+    )
+    claimed = {
+        claim.get("requirement_id")
+        for claim in claims
+        if isinstance(claim, dict)
+    }
+    unclaimed = sum(1 for requirement_id in ids if requirement_id not in claimed)
+    return len(ids), claim_count, unclaimed
 
 
 def _start_discover(ws: Workspace, form: dict) -> str:
@@ -952,8 +1180,8 @@ def _start_discover(ws: Workspace, form: dict) -> str:
     if not isinstance(pack_id, str) or not pack_id:
         raise ModelError("discover", "pack_id", "a pack id on the source")
     if not timestamp:
-        raise ModelError("discover", "timestamp", "a dated working copy")
-    directory = select_working_copy(ws.root, pack_id, timestamp)
+        raise ModelError("discover", "timestamp", "a working copy or published release")
+    directory = resolve_copy_ref(ws.root, pack_id, timestamp)
     _pack, requirements = load_working_copy(directory)
     repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
     config_path = repo / "curbpack.json"
@@ -1109,6 +1337,7 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
     return {
         "documents": documents,
         "adapters": list_formex_adapter_choices(),
+        "workspace_root": str(ws.root.resolve()),
         "job": _catalog_job(ws, query),
         "message": _catalog_message(query, added="Document added."),
         "error": (query.get("error") or [""])[0],
@@ -1349,6 +1578,8 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         "reading": read_signature(requirement, trust, what="requirement"),
         "seal": read_pack_seal(directory, trust),
         "pack_version": pack.get("version"),
+        "pack_id": pack.get("id"),
+        "copy_timestamp": directory.name,
         "message": _editor_message(query),
         "repos": load_repos(ws.root).get("repos") or [],
         "try_repo_id": try_repo,
@@ -1358,6 +1589,13 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         "try_assess_limit": 5,
         "try_error": (query.get("try_error") or [""])[0],
         "try_job": try_job,
+        "workspace_root": str(ws.root.resolve()),
+        "error": (query.get("error") or [""])[0],
+        "invalid_fields": [
+            name.strip()
+            for name in (query.get("invalid") or [])
+            if str(name).strip()
+        ],
     }
 
 
@@ -1432,6 +1670,167 @@ def _editor_message(query: dict) -> str:
     if (query.get("signed") or [""])[0]:
         return "Signed with the local Ed25519 key."
     return ""
+
+
+def _check_message(query: dict) -> str:
+    if (query.get("saved") or [""])[0]:
+        return "Saved curbpack.json in the repo."
+    return ""
+
+
+def _check_editor_model(ws: Workspace, query: dict) -> dict:
+    repos = [
+        row
+        for row in (load_repos(ws.root).get("repos") or [])
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    ]
+    repo_id = (query.get("repo") or [""])[0].strip()
+    if repo_id and not any(row.get("id") == repo_id for row in repos):
+        raise ModelError("check", "repo", f"a registered repository, not {repo_id}")
+    choice = (query.get("read") or [""])[0].strip()
+    config: dict = {}
+    ask = False
+    if repo_id:
+        path = _registered_repo_path(ws, repo_id) / "curbpack.json"
+        if path.is_file():
+            loaded = read_json(path)
+            config = loaded if isinstance(loaded, dict) else {}
+            ask = choice not in {"yes", "no"}
+    named = [item for item in config.get("packs") or [] if isinstance(item, str)] if choice == "yes" else []
+    known = list_pack_ids(ws.root)
+    pack_ids = sorted(set(known) | (set(named) if choice == "yes" else set()))
+    packs = []
+    for pack_id in pack_ids:
+        directory = _pack_directory_for_check(ws.root, pack_id)
+        version = ""
+        copy = "No copy in this workspace"
+        if directory is not None:
+            meta = _pack_meta_for_check(directory)
+            version = str(meta.get("version") or "")
+            copy = _copy_label(directory)
+        packs.append(
+            {
+                "id": pack_id,
+                "copy": copy,
+                "version": version,
+                "included": pack_id in named,
+                "directory": directory,
+            }
+        )
+    claims = _repo_claims(ws, repo_id, packs)
+    for pack in packs:
+        pack_id = pack["id"]
+        pack["claims"] = sum(1 for claim in claims if claim.get("pack_id") == pack_id)
+        pack.pop("directory", None)
+    kept = {key: config[key] for key in ("hunt", "exclude_requirements", "requirements") if key in config}
+    return {
+        "repos": repos,
+        "repo_id": repo_id,
+        "ask_read": ask,
+        "packs": packs,
+        "claims": claims,
+        "kept": kept,
+    }
+
+
+def _repo_claims(ws: Workspace, repo_id: str, packs: list[dict]) -> list[dict]:
+    if not repo_id:
+        return []
+    requirement_pack: dict[str, str] = {}
+    for pack in packs:
+        directory = pack.get("directory")
+        pack_id = str(pack.get("id") or "")
+        if not isinstance(directory, Path) or not pack_id:
+            continue
+        try:
+            _pack, requirements = load_pack_directory(directory)
+        except ModelError:
+            continue
+        for requirement in requirements:
+            requirement_id = requirement.get("id")
+            if isinstance(requirement_id, str):
+                requirement_pack.setdefault(requirement_id, pack_id)
+    rows = []
+    for claim in load_claims(_registered_repo_path(ws, repo_id) / "claims"):
+        args = claim.get("args") if isinstance(claim.get("args"), dict) else {}
+        rows.append(
+            {
+                "id": str(claim.get("id") or ""),
+                "requirement_id": str(claim.get("requirement_id") or ""),
+                "path": str(args.get("path") or ""),
+                "pack_id": requirement_pack.get(str(claim.get("requirement_id") or ""), ""),
+                "checks": len(claim.get("checks") or []),
+            }
+        )
+    return rows
+
+
+def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None, int | None]:
+    repo_id = str(editor.get("repo_id") or "")
+    if repo_id and (query.get("exit") or [""])[0] != "":
+        path = _registered_repo_path(ws, repo_id) / ".curbpack" / "run-result.json"
+        if path.is_file():
+            result = load_run_result(path)
+            return result, int((query.get("exit") or ["1"])[0] or "1")
+    info = snapshot(ws.root)
+    return info["run_result"], info["run_exit"]
+
+
+def _registered_repo_path(ws: Workspace, repo_id: str) -> Path:
+    row = find_repo(load_repos(ws.root), repo_id)
+    if row is None:
+        raise ModelError("check", "repo", f"a registered repository, not {repo_id}")
+    return resolve_repo_path(ws.root, str(row.get("path") or ""))
+
+
+def _write_curbpack(repo: Path, pack_ids: list[str]) -> None:
+    path = repo / "curbpack.json"
+    current: dict = {}
+    if path.is_file():
+        loaded = read_json(path)
+        if isinstance(loaded, dict):
+            current = loaded
+    document = {key: current[key] for key in ("hunt", "exclude_requirements", "requirements") if key in current}
+    document["packs"] = pack_ids
+    from common.validate import validate_curbpack_config
+
+    write_json(path, validate_curbpack_config(document))
+
+
+def _pack_directory_for_check(root: Path, pack_id: str) -> Path | None:
+    selection = read_selection(root)
+    if isinstance(selection, dict) and selection.get("pack_id") == pack_id:
+        chosen = resolve_selected_pack(root)
+        if chosen is not None:
+            return chosen
+    stamps = [
+        stamp
+        for stamp in list_working_copies(root, pack_id)
+        if (root / pack_id / stamp / "pack.json").is_file()
+    ]
+    if stamps:
+        return select_working_copy(root, pack_id, stamps[-1])
+    versions = list_published_versions(root, pack_id)
+    if versions:
+        return select_published_pack(root, pack_id, versions[-1])
+    return None
+
+
+def _pack_meta_for_check(directory: Path) -> dict:
+    path = directory / "pack.json"
+    if not path.is_file():
+        return {}
+    try:
+        pack = load_pack(path)
+    except ModelError:
+        return {}
+    return pack if isinstance(pack, dict) else {}
+
+
+def _copy_label(directory: Path) -> str:
+    if directory.parent.name == "published":
+        return f"Published · {directory.name}"
+    return f"Working copy · {directory.name}"
 
 
 def _selected_requirement(ws: Workspace, requirement_id: str):
@@ -1677,24 +2076,91 @@ def _apply_extraction_review(ws: Workspace, form: dict) -> str:
 
 def _compare_model(ws: Workspace, query: dict) -> dict:
     adapter = _active_adapter(ws)
-    copies = list_working_copies(ws.root, adapter["pack_id"])
+    pack_id = adapter["pack_id"]
+    options = _compare_options(ws, pack_id)
     left = (query.get("left") or [""])[0]
     right = (query.get("right") or [""])[0]
-    model = {"copies": copies, "left": left, "right": right, "diff": None}
+    values = {str(item.get("value") or "") for item in options}
+    if left and left not in values:
+        left = ""
+    if right and right not in values:
+        right = ""
+    model = {
+        "options": options,
+        "copies": [item["value"] for item in options if item.get("kind") == "working"],
+        "left": left,
+        "right": right,
+        "diff": None,
+        "can_transfer": False,
+    }
     if left and right:
-        model["diff"] = compare_copies(
-            select_working_copy(ws.root, adapter["pack_id"], left),
-            select_working_copy(ws.root, adapter["pack_id"], right),
-        )
+        left_dir = _resolve_compare_ref(ws.root, pack_id, left)
+        right_dir = _resolve_compare_ref(ws.root, pack_id, right)
+        model["diff"] = compare_copies(left_dir, right_dir)
+        model["can_transfer"] = _compare_ref_kind(right) == "working" and _compare_ref_kind(
+            left
+        ) in {"working", "published"}
     return model
+
+
+def _compare_options(ws: Workspace, pack_id: str) -> list[dict]:
+    """Working copies (selected labeled) plus published releases for Compare."""
+    selection = read_selection(ws.root)
+    selected_stamp = ""
+    if (
+        isinstance(selection, dict)
+        and selection.get("pack_id") == pack_id
+        and selection.get("kind") == "working"
+        and isinstance(selection.get("timestamp"), str)
+    ):
+        selected_stamp = selection["timestamp"]
+    options: list[dict] = []
+    for stamp in list_working_copies(ws.root, pack_id):
+        if stamp == selected_stamp:
+            label = f"Working copy · {stamp}"
+        else:
+            label = f"Copy · {stamp}"
+        options.append({"value": stamp, "label": label, "kind": "working"})
+    for version in list_published_versions(ws.root, pack_id):
+        options.append(
+            {
+                "value": f"published:{version}",
+                "label": f"Published · {version}",
+                "kind": "published",
+            }
+        )
+    options.sort(
+        key=lambda item: (
+            0 if item.get("value") == selected_stamp else 1 if item.get("kind") == "working" else 2,
+            str(item.get("value") or ""),
+        )
+    )
+    return options
+
+
+def _compare_ref_kind(ref: str) -> str:
+    raw = (ref or "").strip()
+    if raw.startswith("published:"):
+        return "published"
+    return "working" if raw else ""
+
+
+def _resolve_compare_ref(root: Path, pack_id: str, ref: str) -> Path:
+    raw = (ref or "").strip()
+    if raw.startswith("published:"):
+        return select_published_pack(root, pack_id, raw.split(":", 1)[1])
+    return select_working_copy(root, pack_id, raw)
 
 
 def _apply_compare_form(ws: Workspace, form: dict) -> None:
     adapter = _active_adapter(ws)
-    source = select_working_copy(ws.root, adapter["pack_id"], (form.get("source") or [""])[0])
-    destination = select_working_copy(
-        ws.root, adapter["pack_id"], (form.get("destination") or [""])[0]
-    )
+    pack_id = adapter["pack_id"]
+    source_ref = (form.get("source") or [""])[0]
+    destination_ref = (form.get("destination") or [""])[0]
+    if _compare_ref_kind(destination_ref) != "working":
+        raise ModelError("compare", "destination", "a working copy, not a published release")
+    source = _resolve_compare_ref(ws.root, pack_id, source_ref)
+    destination = _resolve_compare_ref(ws.root, pack_id, destination_ref)
     field = (form.get("field") or [""])[0].strip()
     destination_digest = (form.get("destination_digest") or [""])[0]
     apply_transfer(
@@ -1714,6 +2180,78 @@ def _publish_selected(ws: Workspace, form: dict) -> None:
         raise ModelError("working copy", "timestamp", "a selected working copy")
     version = (form.get("version") or [""])[0].strip()
     publish_pack(ws.root, directory, version=version, trust=trust_store(ws.keys))
+
+
+def _safe_local_next(raw: str) -> str:
+    """Allow only same-origin relative paths (open redirect guard)."""
+    value = (raw or "").strip()
+    if not value.startswith("/") or value.startswith("//"):
+        return ""
+    if "\\" in value or "\n" in value or "\r" in value:
+        return ""
+    return value
+
+
+def _requirement_editor_for_error(exc: ModelError) -> str:
+    """Send publish/sign field errors back to the Requirement editor with highlights."""
+    object_name = str(exc.object_name or "")
+    if not object_name.startswith("requirement "):
+        return ""
+    rest = object_name[len("requirement ") :].strip()
+    requirement_id = rest.split(".", 1)[0].strip()
+    if not requirement_id or "/" in requirement_id:
+        return ""
+    field = str(exc.field or "").strip()
+    if "." in field:
+        field = field.rsplit(".", 1)[-1]
+    form_fields = {
+        "edition",
+        "framework",
+        "instrument",
+        "identifier",
+        "language",
+        "url",
+        "note",
+        "remediation_hint",
+        "strength",
+        "responsible",
+        "applicability",
+        "exceptions",
+        "scope",
+        "concepts",
+        "expected_evidence",
+        "path_hints",
+    }
+    message = _human_requirement_field_error(field, str(exc.expected or ""))
+    params = [f"error={quote(message, safe='')}"]
+    if field in form_fields:
+        params.append(f"invalid={quote(field, safe='')}")
+    return f"/requirements/requirement/{quote(requirement_id, safe='')}?{'&'.join(params)}"
+
+
+def _human_requirement_field_error(field: str, expected: str) -> str:
+    """Short editor flash: 'Field Edition: expected non empty string'."""
+    labels = {
+        "edition": "Edition",
+        "framework": "Framework",
+        "instrument": "Instrument",
+        "identifier": "Identifier",
+        "language": "Language",
+        "url": "URL",
+        "note": "Note",
+        "remediation_hint": "Remediation hint",
+        "strength": "Strength",
+        "responsible": "Responsible",
+        "applicability": "Applicability",
+        "exceptions": "Exceptions",
+        "scope": "Scope",
+        "concepts": "Concepts",
+        "expected_evidence": "Expected evidence",
+        "path_hints": "Path hints",
+    }
+    label = labels.get(field) or (field.replace("_", " ").strip().title() or "field")
+    expected_text = (expected or "a valid value").replace("non-empty", "non empty")
+    return f"Field {label}: expected {expected_text}"
 
 
 def _claims_redirect(form: dict, extra: str) -> str:

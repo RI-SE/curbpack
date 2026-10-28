@@ -98,6 +98,13 @@ def mark_published_selected(root: Path, pack_id: str, version: str) -> Path:
     return directory
 
 
+def resolve_copy_ref(root: Path, pack_id: str, ref: str) -> Path:
+    """A working-copy timestamp, or ``published:<version>``."""
+    if ref.startswith("published:"):
+        return select_published_pack(root, pack_id, ref.split(":", 1)[1])
+    return select_working_copy(root, pack_id, ref)
+
+
 def select_published_pack(root: Path, pack_id: str, version: str) -> Path:
     pack_id = _pack_id_name(pack_id)
     version = _version_name(version)

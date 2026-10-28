@@ -17,6 +17,7 @@ SCORE_HELP = (
 
 def dialog_html(model: dict) -> str:
     requirement_id = html.escape(str(model.get("requirement_id") or ""))
+    plain_id = str(model.get("requirement_id") or "")
     repos = list(model.get("repos") or [])
     try_repo = str(model.get("try_repo_id") or "")
     open_flag = ' data-open="1"' if model.get("try_open") else ""
@@ -28,20 +29,29 @@ def dialog_html(model: dict) -> str:
         options.append(
             f'<option value="{html.escape(repo_id)}"{selected}>{html.escape(name)}</option>'
         )
+    add_btn = (
+        '<button type="button" id="try-add-repo-open" class="secondary">Add repo</button>'
+    )
     if len(options) == 1:
-        repo_field = '<p class="muted">No product repos yet. Add one under Discovery &amp; Claims.</p>'
+        repo_field = (
+            f'<p class="muted">No product repos yet.</p>'
+            f'<p class="actions">{add_btn}</p>'
+        )
         go_disabled = " disabled"
     else:
         repo_field = (
             f'<label>Product repo<select name="repo_id" required>{"".join(options)}</select></label>'
+            f'<p class="actions">{add_btn}</p>'
         )
         go_disabled = ""
     results = _results(model)
     error = model.get("try_error")
     error_html = f'<p class="err">{html.escape(str(error))}</p>' if error else ""
     job = model.get("try_job")
-    job_html = _job_dialog(job, str(model.get("requirement_id") or "")) if job else ""
-    plain_id = str(model.get("requirement_id") or "")
+    job_html = _job_dialog(job, plain_id) if job else ""
+    next_href = html.escape(
+        f"/requirements/requirement/{quote(plain_id, safe='')}?try_open=1"
+    )
     title = f"Discovery test run for {plain_id}" if plain_id else "Discovery test run"
     return f"""
 <dialog id="try-discovery-dialog" class="try-discovery"{open_flag}>
@@ -62,16 +72,32 @@ def dialog_html(model: dict) -> str:
 {results}
 </div>
 </dialog>
+{_add_repo_dialog(next_href, str(model.get("workspace_root") or ""))}
 {job_html}
 <script>
 (function () {{
   const dialog = document.getElementById("try-discovery-dialog");
   const openBtn = document.getElementById("try-discovery-open");
   const closeBtn = document.getElementById("try-discovery-close");
+  const addOpen = document.getElementById("try-add-repo-open");
+  const addDialog = document.getElementById("try-add-repo");
+  const addCancel = document.getElementById("try-add-repo-cancel");
+  const browseBtn = document.getElementById("try-browse-path");
+  const pathInput = document.getElementById("try-repo-path");
+  const nameInput = document.querySelector('#try-add-repo input[name="name"]');
   if (openBtn) openBtn.addEventListener("click", () => dialog.showModal());
   if (closeBtn) closeBtn.addEventListener("click", () => dialog.close());
   dialog.addEventListener("cancel", (event) => {{ event.preventDefault(); dialog.close(); }});
   if (dialog.dataset.open === "1" && !document.getElementById("try-job")) dialog.showModal();
+  if (addOpen && addDialog) {{
+    addOpen.addEventListener("click", () => addDialog.showModal());
+  }}
+  if (addCancel && addDialog) {{
+    addCancel.addEventListener("click", () => addDialog.close());
+  }}
+  if (browseBtn && pathInput && typeof window.openRepoBrowse === "function") {{
+    browseBtn.addEventListener("click", () => window.openRepoBrowse(pathInput, nameInput));
+  }}
   dialog.querySelectorAll("tr.hit-row").forEach((row) => {{
     row.addEventListener("click", (event) => {{
       if (event.target.closest("a")) return;
@@ -84,6 +110,30 @@ def dialog_html(model: dict) -> str:
   }});
 }})();
 </script>
+"""
+
+
+def _add_repo_dialog(next_href: str, workspace_root: str) -> str:
+    """Same Add-repo form as Discovery & Claims; returns here via hidden next."""
+    from discovery.browse_ui import browse_dialog_and_script, path_field_with_browse
+
+    start = workspace_root.strip() or "/"
+    return f"""
+<dialog id="try-add-repo">
+<div class="head"><h2>Add repo</h2></div>
+<div class="body">
+<form method="post" action="/discover/repos">
+<input type="hidden" name="next" value="{next_href}">
+<label>Name<input type="text" name="name" required autocomplete="off" placeholder="cyberready-test-product"></label>
+{path_field_with_browse(path_id="try-repo-path", browse_id="try-browse-path")}
+<p class="actions">
+<button type="button" class="secondary" id="try-add-repo-cancel">Cancel</button>
+<button type="submit">Save</button>
+</p>
+</form>
+</div>
+</dialog>
+{browse_dialog_and_script(start_path=start)}
 """
 
 

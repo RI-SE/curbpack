@@ -30,6 +30,15 @@ label{display:block;font-size:.78rem;color:var(--muted);margin:.6rem 0 .2rem}
 .field-info .tip{display:none;position:absolute;z-index:20;left:0;top:1.25rem;width:min(22rem,70vw);padding:.75rem .85rem;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:.85rem;font-weight:400;line-height:1.4;white-space:normal;box-shadow:0 8px 24px rgba(0,0,0,.08)}
 .field-info:hover .tip,.field-info:focus .tip{display:block}
 .field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:.55rem .75rem;margin:.65rem 0}
+.ro-field{font-size:.78rem;color:var(--muted)}
+.ro-field strong,.ro-field a{display:block;margin-top:.15rem;font-size:1rem;font-weight:700;color:var(--ink)}
+.ro-field a{font-weight:400;color:var(--accent);word-break:break-all}
+.identity-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.req-identity .identity-bar .field-grid{flex:1;margin:0 0 .75rem;grid-template-columns:repeat(3,max-content);justify-content:start}
+a.details{display:inline-block;background:#fff;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:.45rem .75rem;text-decoration:none;white-space:nowrap}
+a.details:hover{background:#ecfdf5}
+.req-identity .ref-law{margin:0 0 .75rem}
+.req-identity .law-flow{white-space:normal;font-family:inherit;font-size:1rem;line-height:1.35}
 .field-grid label{margin:0}
 .field-grid label.span-2{grid-column:span 2}
 .hint-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -82,9 +91,12 @@ select{font:inherit;max-width:18rem;padding:.35rem .4rem;border:1px solid #cbd5e
 a.edit-review{display:inline-block;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;padding:.45rem .75rem;font-weight:600}
 a.edit-review:hover{background:#15803d;color:#fff}
 a.edit-review[hidden]{display:none}
+.discover-wrap .repo-picker{margin:0 0 .75rem}
 .discover-wrap table{width:100%}
 .discover-wrap .path-cell{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .discover-wrap select.copy-select{max-width:16rem}
+.discover-wrap th.num,.discover-wrap td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.discover-wrap th.num.wrap{white-space:normal;line-height:1.2;max-width:6.5rem}
 body:has(.req-desk) main{max-width:min(1400px,100%)}
 .req-head{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:center;justify-content:space-between;margin:0 0 .35rem}
 .req-head h1{margin:0;flex:1;min-width:12rem}
@@ -119,6 +131,17 @@ body:has(.req-desk) main{max-width:min(1400px,100%)}
 .hits-table tr.detail-row[hidden]{display:none}
 .hits-table .detail-inner{padding:.85rem 1rem 1rem 2.4rem}
 .hits-table .why-cell{line-height:1.35}
+label.show-suggestions{display:flex;align-items:center;gap:.4rem;margin:.75rem 0 .35rem;font-size:.92rem}
+.hits-table tr.suggestion-row,.hits-table .suggestion{display:none}
+.hits-table.show-suggestions tr.suggestion-row{display:table-row}
+.hits-table.show-suggestions .suggestion{display:block}
+.hits-table.show-suggestions .motivation-current.has-suggestion{display:none}
+form.motivation-pick{margin:0}
+button.motivation-old,button.motivation-new{display:block;width:100%;margin:0;padding:0;background:none;border:0;font:inherit;line-height:1.35;text-align:left;cursor:pointer;white-space:normal}
+button.motivation-old{margin-bottom:.35rem;color:#b91c1c;text-decoration:line-through}
+button.motivation-new{color:#15803d}
+button.motivation-old:hover{text-decoration:line-through underline}
+button.motivation-new:hover{text-decoration:underline}
 .rank-High{color:#15803d;font-weight:700}
 .rank-Medium{color:#a16207;font-weight:700}
 .rank-Low,.rank-None{color:#78716c}
@@ -128,6 +151,7 @@ button.check-pick{background:#fff;color:#44403c;border:1px solid #d6d3d1;font-si
 button.add-open{background:#fff;color:var(--accent);border:1px dashed #99f6e4;font-size:1.1rem;line-height:1;padding:.25rem .7rem;font-weight:600}
 button.add-open:hover{background:#ecfdf5}
 dialog.checks [hidden]{display:none}
+input.invalid,textarea.invalid{border:1px solid #b91c1c;background:#fef2f2}
 dialog.checks input.invalid{border:1px solid #b91c1c;background:#fef2f2}
 dialog.checks button.save-check{background:#15803d}
 dialog.checks label.check-inline{display:flex;align-items:center;gap:.4rem;color:var(--ink)}
@@ -146,7 +170,7 @@ def page(title: str, body: str) -> bytes:
     doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>{html.escape(title)}</title>
 <style>{CSS}</style></head><body><main>
-<p><a href="/">Pilot</a> <span class="muted">— cover for the four tools. In production they run separately.</span></p>
+<p><a href="/">Home</a> <span class="muted">· Curbpack Studio. Turn law into checkable packs.</span></p>
 {body}
 </main></body></html>"""
     return doc.encode("utf-8")
@@ -251,28 +275,14 @@ def _reading(reading: dict | None) -> str:
 
 
 def cover(model: dict, message: str = "", error: str = "") -> bytes:
-    selection = model.get("selection")
-    options = model.get("options") or []
-    if selection:
-        pack_note = ""
-    elif options:
-        pack_note = (
-            '<p class="muted">No Pack selected yet. '
-            'Pick a working copy in the <a href="/requirements">Pack Editor</a>.</p>'
-        )
-    else:
-        pack_note = (
-            '<p class="err">No Pack is available. Extract a working copy in the '
-            '<a href="/requirements">Pack Editor</a>, or publish one.</p>'
-        )
     body = f"""
-<h1>Curbpack</h1>
-<p class="muted">Pack Editor builds and publishes Packs.
-Discovery &amp; Claims picks a working copy when you run Discover.</p>
+<h1>Curbpack Studio</h1>
+<p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
+The pilot workflow: author packs from law text → create claims in your product →
+check regularly → review the result and fix what failed.</p>
 {_flash(message, error)}
-{pack_note}
 <div class="card">
-<p><a href="/requirements">Packs</a></p>
+<p><a href="/requirements">Pack Editor</a></p>
 <p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
 <p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
 <p><a href="/review">Review — compile and sign review</a></p>
@@ -287,7 +297,7 @@ Discovery &amp; Claims picks a working copy when you run Discover.</p>
 <p class="muted">Sample Prepare does not become the active Pack unless you select it. Check and Review keep curbpack.json semantics.</p>
 </details>
 """
-    return page("Curbpack", body)
+    return page("Curbpack Studio", body)
 
 
 def _lines(values) -> str:
@@ -476,7 +486,13 @@ def scaffold_page(message: str = "", error: str = "") -> bytes:
     return page("Scaffold", body)
 
 
-def check_page(result: dict | None, exit_code: int | None, message: str = "", error: str = "") -> bytes:
+def check_page(
+    result: dict | None,
+    exit_code: int | None,
+    message: str = "",
+    error: str = "",
+    editor: dict | None = None,
+) -> bytes:
     if result is None:
         shown = "<p>No run yet.</p>"
     else:
@@ -514,12 +530,126 @@ def check_page(result: dict | None, exit_code: int | None, message: str = "", er
         shown = git + f"<p>exit {exit_code}</p>" + table
     body = f"""
 <h1>Check</h1>
-<p class="muted">Runs exist and contents against the working tree. A green row is not a legal conclusion.</p>
+<p class="muted">Choose a repo, tick the packs it uses, and save <code>curbpack.json</code> into that repo.
+The file is not signed. A green check row is not a legal conclusion.</p>
 {_flash(message, error)}
+{_curbpack_editor(editor or {})}
+<h2>Report</h2>
 <div class="card">{shown}</div>
-<form method="post" action="/check"><button type="submit">Run curbcheck</button></form>
 """
     return page("Check", body)
+
+
+def _curbpack_editor(editor: dict) -> str:
+    repo_id = str(editor.get("repo_id") or "")
+    options = ['<option value="">Choose a repo</option>']
+    for repo in editor.get("repos") or []:
+        if not isinstance(repo, dict):
+            continue
+        row_id = str(repo.get("id") or "")
+        name = str(repo.get("name") or row_id)
+        selected = " selected" if row_id == repo_id else ""
+        options.append(
+            f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
+        )
+    picker = (
+        '<form method="get" class="repo-picker" action="/check">'
+        '<label>Repo <select name="repo" onchange="this.form.submit()">'
+        + "".join(options)
+        + "</select></label></form>"
+    )
+    if not repo_id:
+        return f'<div class="card discover-wrap">{picker}<p class="muted">Choose a repo to edit its curbpack.json.</p></div>'
+    ask = ""
+    if editor.get("ask_read"):
+        ask = (
+            '<p class="muted">This repo has a curbpack.json. Read it and tick the packs it names?</p>'
+            '<p class="actions">'
+            f'<a class="details" href="/check?repo={html.escape(quote(repo_id))}&read=yes">Read it</a>'
+            f'<a class="details" href="/check?repo={html.escape(quote(repo_id))}&read=no">Start empty</a>'
+            "</p>"
+        )
+    rows = []
+    for pack in editor.get("packs") or []:
+        if not isinstance(pack, dict):
+            continue
+        pack_id = str(pack.get("id") or "")
+        checked = " checked" if pack.get("included") else ""
+        rows.append(
+            "<tr>"
+            f"<td><code>{html.escape(pack_id)}</code></td>"
+            f"<td>{html.escape(str(pack.get('copy') or ''))}</td>"
+            f"<td><code>{html.escape(str(pack.get('version') or ''))}</code></td>"
+            f'<td class="num">{int(pack.get("claims") or 0)}</td>'
+            f'<td><input type="checkbox" name="pack" value="{html.escape(pack_id)}"{checked}></td>'
+            "</tr>"
+        )
+    if not rows:
+        rows.append('<tr><td colspan="5" class="muted">No packs in this workspace.</td></tr>')
+    claim_rows = []
+    for claim in editor.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        claim_rows.append(
+            "<tr>"
+            f"<td><code>{html.escape(str(claim.get('id') or ''))}</code></td>"
+            f"<td><code>{html.escape(str(claim.get('pack_id') or ''))}</code></td>"
+            f"<td><code>{html.escape(str(claim.get('requirement_id') or ''))}</code></td>"
+            f"<td><code>{html.escape(str(claim.get('path') or ''))}</code></td>"
+            f'<td class="num">{int(claim.get("checks") or 0)}</td>'
+            "</tr>"
+        )
+    if claim_rows:
+        claim_table = (
+            "<h2>Claims in this repo</h2><table><thead><tr>"
+            "<th>Claim</th><th>Pack</th><th>Requirement</th><th>Evidence</th>"
+            '<th class="num"># Checks</th>'
+            "</tr></thead><tbody>"
+            + "".join(claim_rows)
+            + "</tbody></table>"
+        )
+    else:
+        claim_table = '<p class="muted">No claims in this repo.</p>'
+    kept = html.escape(json.dumps(editor.get("kept") or {}, ensure_ascii=False))
+    return f"""
+<div class="card discover-wrap">
+{picker}
+{ask}
+<form method="post" action="/check" id="curbpack-editor" data-kept="{kept}">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<table><thead><tr>
+<th>Pack</th><th>Copy</th><th>Version</th><th class="num"># Claims</th><th>Include</th>
+</tr></thead><tbody>
+{"".join(rows)}
+</tbody></table>
+{claim_table}
+<p class="actions">
+<button type="submit" name="action" value="save">Save</button>
+<button type="submit" name="action" value="check">Check</button>
+<button type="button" id="export-open" class="secondary">Export</button>
+</p>
+</form>
+<dialog id="export-curbpack">
+<div class="head"><h2>curbpack.json</h2>
+<button type="button" class="secondary" id="export-close">Close</button></div>
+<div class="body">
+<textarea id="export-body" readonly></textarea>
+</div>
+</dialog>
+<script>
+const editor = document.getElementById("curbpack-editor");
+const dialog = document.getElementById("export-curbpack");
+document.getElementById("export-open").addEventListener("click", () => {{
+  const kept = JSON.parse(editor.dataset.kept || "{{}}");
+  const packs = [...editor.querySelectorAll('input[name="pack"]:checked')].map((box) => box.value);
+  const payload = {{packs, ...kept}};
+  document.getElementById("export-body").value = JSON.stringify(payload, null, 2);
+  dialog.showModal();
+}});
+document.getElementById("export-close").addEventListener("click", () => dialog.close());
+</script>
+</div>
+"""
 
 
 def review_page(

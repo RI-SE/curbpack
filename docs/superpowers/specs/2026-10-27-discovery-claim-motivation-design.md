@@ -25,6 +25,10 @@ Order: candidates keep today's score order. Claim-only rows follow, ordered by p
 
 The page label for `description` is **Motivation**. The stored key remains `description`.
 
+This page is the claim editor for one requirement. A checkbox **Show discovered claim candidates** sits above the table and starts unchecked. Unchecked, the table lists claims and their saved motivations. Checked, it also shows discovery sentences: a differing sentence as the red and green pair, and a candidate that has no claim yet as its own row.
+
+Each column header has a **?** with a short explanation: Evidence Source, Score, Motivation, Checks, and Review. Score keeps its existing explanation. Motivation's explanation says the saved text is red and struck through, and the discovery sentence is green.
+
 The grey "Already covered — passed in the selected Check run" note stays as it is when the page is opened from review. It does not replace the text pair below.
 
 ## When the texts differ
@@ -44,7 +48,7 @@ A file added by hand with no model `why` and no claim shows the typed rationale 
 
 ## Writes
 
-Keeping the red text writes nothing. A signed claim stays signed. The pair remains on the next load. There is no dismissed-change flag.
+Clicking the red text writes nothing on the claim. A signed claim stays signed. That green sentence is hidden until a later discovery produces a different one. The hide is stored in discovery feedback, not on the claim.
 
 Choosing the green text on an existing claim sets `description` to that `why` string. `source`, `args`, and `checks` stay as they are. `why` is not stored on the claim.
 

@@ -166,9 +166,9 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 home = _get(base + "/")
-                self.assertIn(">Pilot</a>", home)
-                self.assertIn("cover for the four tools", home)
-                self.assertIn("In production they run separately", home)
+                self.assertIn(">Home</a>", home)
+                self.assertIn("Turn law into checkable packs", home)
+                self.assertIn("author packs from law text", home)
                 self.assertNotIn(">PoC2</a>", home)
                 self.assertNotIn("Active Pack", home)
                 self.assertNotIn("/select-pack", home)
@@ -189,9 +189,9 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn("REQ-A", requirements)
 
                 discover = _get(base + "/discover")
-                self.assertIn("Document name", discover)
+                self.assertIn(">Pack</th>", discover)
                 self.assertIn("Section", discover)
-                self.assertIn("Working copy", discover)
+                self.assertIn(">Copy</th>", discover)
                 self.assertIn("Add repo", discover)
                 self.assertIn("CRA Annex VII", discover)
                 self.assertNotIn("matched_by", discover)
@@ -202,7 +202,8 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                     {"kind": "published", "pack_id": "cra-baseline", "ref": "0.1.0"},
                 )
                 published_discover = _get(base + "/discover")
-                self.assertIn("Document name", published_discover)
+                self.assertIn(">Pack</th>", published_discover)
+                self.assertIn(">Copy</th>", published_discover)
                 self.assertNotIn("REQ-A", published_discover)
                 self.assertEqual((root / "product" / "curbpack.json").read_bytes(), before_curb)
                 self.assertEqual(_file_bytes(published), before_pub)
@@ -221,7 +222,8 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 home = _get(base + "/")
-                self.assertIn("No Pack", home)
+                self.assertIn("Curbpack Studio", home)
+                self.assertIn("author packs from law text", home)
                 self.assertIn('href="/requirements"', home)
                 self.assertIn("Developer", home)
                 for href in ("/discover", "/claims", "/check", "/review", "/scaffold"):

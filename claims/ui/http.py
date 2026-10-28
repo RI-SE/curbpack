@@ -8,12 +8,12 @@ from claims.bind import create_configured_claims, read_claim, read_claims, rebin
 from claims.ui.coverage import covered_paths, load_run
 from claims.ui import researcher
 from common.errors import CheckError, ModelError
-from discovery.feedback import add_finding, load_feedback, save_check, save_vote
+from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
 from discovery.jobs import latest_job
 from discovery.present import overview_rows, signing_label
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
-from requirements.workspace import load_working_copy, select_working_copy
+from requirements.workspace import load_working_copy, resolve_copy_ref
 
 
 def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict) -> bytes | None:
@@ -27,7 +27,15 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
             repo=context["repo"],
             trust=trust,
         )
-        return researcher.overview_page({**_ids(context), "rows": rows})
+        gap = _one(query, "gap") == "1"
+        if gap:
+            claimed = {
+                claim.get("requirement_id")
+                for claim in context["claims"]
+                if isinstance(claim, dict)
+            }
+            rows = [row for row in rows if row.get("id") not in claimed]
+        return researcher.overview_page({**_ids(context), "rows": rows, "gap": gap})
     if not path.startswith("/discover/claims/"):
         return None
     requirement_id, kind = _split(path)
@@ -59,6 +67,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         "/discover/feedback/vote",
         "/discover/feedback/checks",
         "/discover/feedback/add",
+        "/discover/feedback/motivation",
         "/discover/claims/create",
     }:
         return None
@@ -93,6 +102,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
                 "values": {key: _one(form, key) for key in _CHECK_FIELDS},
             }
             return researcher.requirement_page(model)
+        return _back(context, requirement_id)
+    if path == "/discover/feedback/motivation":
+        _choose_motivation(root, context, requirement_id, file_path, form, known)
         return _back(context, requirement_id)
     if path == "/discover/feedback/add":
         add_finding(**common, repo=context["repo"], rationale=_one(form, "rationale"))
@@ -143,7 +155,7 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
     pack_id = source.get("pack_id")
     if not isinstance(pack_id, str) or not pack_id:
         raise ModelError("discover", "pack_id", "a pack id on the source")
-    directory = select_working_copy(root, pack_id, timestamp)
+    directory = resolve_copy_ref(root, pack_id, timestamp)
     _pack, requirements = load_working_copy(directory)
     requirements = [item for item in requirements if isinstance(item, dict) and isinstance(item.get("id"), str)]
     repo = resolve_repo_path(root, str(row.get("path") or ""))
@@ -153,7 +165,10 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
     claims = read_claims(claims_dir) if claims_dir.is_dir() else []
     return {
         "repo_id": repo_id,
+        "repo_name": str(row.get("name") or repo_id),
         "source_id": source_id,
+        "section_name": str(source.get("name") or source_id),
+        "section_id": str(source.get("section_id") or ""),
         "timestamp": timestamp,
         "repo": repo,
         "requirements": requirements,
@@ -214,7 +229,10 @@ def _candidate(context: dict, requirement_id: str, path: str) -> dict | None:
 def _ids(context: dict) -> dict:
     return {
         "repo_id": context["repo_id"],
+        "repo_name": context.get("repo_name") or context["repo_id"],
         "source_id": context["source_id"],
+        "section_name": context.get("section_name") or context["source_id"],
+        "section_id": context.get("section_id") or "",
         "timestamp": context["timestamp"],
     }
 
@@ -326,6 +344,45 @@ def _integer(form: dict, key: str) -> int:
     if not raw.lstrip("-").isdigit():
         raise ModelError("contents", key, "integer")
     return int(raw)
+
+
+def _choose_motivation(root: Path, context: dict, requirement_id: str, file_path: str, form: dict, known_ids: list) -> None:
+    """Keep drops the green sentence. Take copies it into description."""
+    why = _one(form, "why").strip()
+    choice = _one(form, "choice")
+    if choice == "keep":
+        dismiss_why(
+            root,
+            repo_id=context["repo_id"],
+            source_id=context["source_id"],
+            timestamp=context["timestamp"],
+            requirement_id=requirement_id,
+            path=file_path,
+            why=why,
+            known_ids=known_ids,
+        )
+        return
+    if choice != "take" or not why:
+        return
+    claim = _claim_for_path(context["claims"], requirement_id, file_path)
+    if not isinstance(claim, dict):
+        return
+    if str(claim.get("description") or "").strip() == why:
+        return
+    if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
+        return
+    write_claim(context["repo"] / "claims", rebind(claim, description=why))
+
+
+def _claim_for_path(claims: list, requirement_id: str, path: str) -> dict | None:
+    wanted = path.strip()
+    for claim in claims:
+        if not isinstance(claim, dict) or claim.get("requirement_id") != requirement_id:
+            continue
+        args = claim.get("args") if isinstance(claim.get("args"), dict) else {}
+        if str(args.get("path") or "").strip() == wanted:
+            return claim
+    return None
 
 
 def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict, form: dict) -> None:

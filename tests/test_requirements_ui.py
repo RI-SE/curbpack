@@ -128,6 +128,8 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertIn('data-coverage-status="excluded"', listed)
                 self.assertIn("not a publication check", listed)
                 editor = _get(base + "/requirements/requirement/CRA-ANNEX-VII-RISK")
+                self.assertIn("Working copy", editor)
+                self.assertIn("2026-10-13T090000Z", editor)
                 self.assertIn("cybersecurity risks", editor)
                 self.assertIn("a statement of the intended purpose", editor)
                 self.assertIn("docs", editor)
@@ -184,8 +186,9 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertIn("unsigned", publish)
                 self.assertIn("not a publication blocker", publish)
                 self.assertIn("disabled>Publish release", publish)
-                with self.assertRaises(AssertionError):
-                    _post(base + "/requirements/publish", {"version": "0.1.0"})
+                refused = _post(base + "/requirements/publish", {"version": "0.1.0"})
+                self.assertIn("Field Edition: expected non empty string", refused)
+                self.assertIn('class="invalid"', refused)
                 self.assertFalse((root / "published").exists())
                 _post(
                     base + "/requirements/requirement/CRA-ANNEX-VII-RISK",

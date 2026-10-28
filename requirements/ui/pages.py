@@ -22,8 +22,12 @@ def documents_page(model: dict) -> bytes:
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
     body = f"""
-<h1>Packs</h1>
-<p class="muted">Add a pack. <strong>Edit</strong> opens Pack Editor for its sections.</p>
+<h1>Pack Sources</h1>
+<p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
+A pack is the requirements from all sections of one law document (typically a URL) — that
+document is the pack source. Here you extract and refine requirements from the source, then
+publish them as a pack.</p>
+{_baselines_note(str(model.get("workspace_root") or ""))}
 {_add_toolbar()}
 {flash}
 <div class="card">{table}</div>
@@ -31,7 +35,35 @@ def documents_page(model: dict) -> bytes:
 """
     if model.get("job"):
         body += job_fragment(model["job"]).decode("utf-8")
-    return page("Packs", body)
+    return page("Pack Sources", body)
+
+
+def _baselines_note(workspace_root: str) -> str:
+    """Baselines are Git history of the workspace. UI integration comes later."""
+    root = workspace_root.strip() or "<workspace-root>"
+    root_html = html.escape(root)
+    return f"""
+<details class="card">
+<summary>Baselines (Git in the repo — UI later)</summary>
+<p class="muted">A baseline is a commit of the organisation workspace, not a separate Studio object.
+Git integration in this UI comes in a later version. Until then, use the workspace path and
+ordinary Git commands.</p>
+<p>Workspace root:</p>
+<pre><code>{root_html}</code></pre>
+<p>Layout (pack id and UTC timestamped working copies):</p>
+<pre><code>{root_html}/&lt;pack-id&gt;/&lt;YYYY-MM-DDThhmmssZ&gt;/
+{root_html}/published/&lt;pack-id&gt;/&lt;version&gt;/</code></pre>
+<p>Example commands from that root:</p>
+<pre><code>cd {root_html}
+git status
+git add &lt;pack-id&gt;/&lt;timestamp&gt;
+git commit -m "Baseline: &lt;pack-id&gt; at &lt;timestamp&gt;"
+git log --oneline -- &lt;pack-id&gt;
+git checkout &lt;commit&gt; -- &lt;pack-id&gt;/&lt;timestamp&gt;</code></pre>
+<p class="muted">Restoring a revision recovers Packs v2 files. It does not change pack id, timestamp
+selection, <code>pack.version</code>, <code>origin</code>, or signatures by itself.</p>
+</details>
+"""
 
 
 def catalog_page(model: dict) -> bytes:
@@ -51,7 +83,7 @@ def catalog_page(model: dict) -> bytes:
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Pack Editor</h1>
 <p class="muted">Sections of <strong>{html.escape(name)}</strong>.
 <strong>Extract</strong> writes a separate copy. If you are already editing a working copy, you choose which fields to bring in. Fields you leave out stay as they are.
@@ -94,7 +126,7 @@ def _document_row(document: dict) -> str:
         '<td class="actions">'
         '<form method="get" action="/requirements">'
         f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
-        '<button type="submit">Edit</button></form>'
+        '<button type="submit">Sections</button></form>'
         '<button type="button">Publish</button>'
         f"{_signature_badge(document)}"
         "</td></tr>"
@@ -386,7 +418,7 @@ def source_page(model: dict) -> bytes:
     if unit_count is not None:
         inventory_html = f"<p>Inventory units: {html.escape(str(unit_count))}</p>"
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Source details</h1>
 <p>{html.escape(str(legal.get("instrument") or ""))}
  <code>{html.escape(str(legal.get("identifier") or ""))}</code></p>
@@ -407,7 +439,7 @@ def source_page(model: dict) -> bytes:
 def copy_page(model: dict) -> bytes:
     if not model.get("timestamp"):
         body = """
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Requirements</h1>
 <p>No working copy is selected. Choose a dated copy on the catalog, or start a new extraction.</p>
 """
@@ -457,7 +489,7 @@ def copy_page(model: dict) -> bytes:
     if coverage:
         coverage_html = (
             "<details><summary>Extract coverage</summary>"
-            '<p class="muted">Coverage records what this run wrote, excluded, or failed. '
+            '<p class="muted">Per legal locus: extracted into this working copy, skipped, or failed. '
             "It is not a publication check.</p>"
             f"{_coverage_detail_html(coverage)}</details>"
         )
@@ -472,7 +504,7 @@ def copy_page(model: dict) -> bytes:
 </p>"""
     )
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a>
+<p class="muted"><a href="/requirements">Pack Sources</a>
  · <code>{html.escape(str(model.get("adapter_id") or ""))}</code>
  · {html.escape(kind)}
  · <code>{html.escape(str(model.get("timestamp") or ""))}</code></p>
@@ -488,7 +520,7 @@ def copy_page(model: dict) -> bytes:
 def publication_page(model: dict) -> bytes:
     if not model.get("timestamp"):
         body = """
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Publish</h1>
 <p>No working copy is selected. Publish uses one dated copy and creates a new release.</p>
 """
@@ -506,7 +538,7 @@ def publication_page(model: dict) -> bytes:
     coverage_html = ""
     if coverage_status:
         coverage_html = (
-            f"<p>Extract coverage: <strong>{html.escape(coverage_status)}</strong>. "
+            f"<p>Extract coverage: <strong>{html.escape(_coverage_label(coverage_status))}</strong>. "
             "Incomplete legal coverage stays visible and is not a publication blocker.</p>"
         )
     readings = []
@@ -524,7 +556,7 @@ def publication_page(model: dict) -> bytes:
         )
     requirement_html = "<ul>" + "".join(readings) + "</ul>" if readings else "<p>No requirements.</p>"
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a>
+<p class="muted"><a href="/requirements">Pack Sources</a>
  · <a href="/requirements/copy">Requirements list</a></p>
 <h1>Publish</h1>
 <p>Working copy <code>{html.escape(str(model.get("timestamp") or ""))}</code>.
@@ -549,10 +581,21 @@ def _flash(message: str) -> str:
     return f'<p class="ok">{html.escape(message)}</p>'
 
 
+def _coverage_label(status: str) -> str:
+    """Human label for extract coverage status codes stored as written/excluded/failed."""
+    return {
+        "written": "extracted",
+        "excluded": "skipped",
+        "failed": "failed",
+        "none": "none",
+    }.get(status, status)
+
+
 def _coverage_detail_html(detail: dict | None) -> str:
     if not detail:
         return "<p class=\"muted\">Select a working copy to inspect extract coverage.</p>"
-    status = html.escape(str(detail.get("status") or "none"))
+    raw_status = str(detail.get("status") or "none")
+    status = html.escape(_coverage_label(raw_status))
     rows = []
     for item in detail.get("loci") or []:
         if not isinstance(item, dict):
@@ -568,7 +611,7 @@ def _coverage_detail_html(detail: dict | None) -> str:
         reason_html = f" — {html.escape(str(reason))}" if reason else ""
         rows.append(
             f'<li class="{css}" data-coverage-status="{html.escape(row_status)}">'
-            f"<code>{locus}</code> {html.escape(row_status)}{reason_html}</li>"
+            f"<code>{locus}</code> {html.escape(_coverage_label(row_status))}{reason_html}</li>"
         )
     loci_html = "<ul>" + "".join(rows) + "</ul>" if rows else "<p class=\"muted\">No locus rows.</p>"
     error = detail.get("error")
@@ -628,7 +671,7 @@ def consolidate_page(model: dict) -> bytes:
         )
     listed = "<ul>" + "".join(blocks) + "</ul>" if blocks else "<p>No overlap suggestions.</p>"
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a>
+<p class="muted"><a href="/requirements">Pack Sources</a>
  · <a href="/requirements/copy">Requirements list</a></p>
 <h1>Consolidate</h1>
 <p class="muted">Leaving this page does not save a merge.</p>
@@ -921,7 +964,7 @@ if (form && partsInput) {
             + "</script>"
         )
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Review extraction</h1>
 {_flash(str(model.get("message") or ""))}
 <p class="diff-key"><span class="diff-old">Red</span> is the text you have now. <span class="diff-new">Green</span> is the new definition. Click one green value to use the new definition for that value only. Click the red value beside it to keep yours.</p>
@@ -943,14 +986,43 @@ if (form && partsInput) {
 
 
 def compare_page(model: dict) -> bytes:
-    copies = model.get("copies") or []
-    options = "".join(
-        f"<option value=\"{html.escape(str(stamp))}\">{html.escape(str(stamp))}</option>"
-        for stamp in copies
-    )
+    left = str(model.get("left") or "")
+    right = str(model.get("right") or "")
+    option_rows = list(model.get("options") or [])
+    if not option_rows:
+        # Backward-compatible fallback if only bare timestamps are supplied.
+        option_rows = [
+            {"value": stamp, "label": str(stamp), "kind": "working"}
+            for stamp in (model.get("copies") or [])
+        ]
+
+    def _options_html(selected: str) -> str:
+        bits = []
+        for item in option_rows:
+            value = str(item.get("value") or "")
+            label = str(item.get("label") or value)
+            mark = " selected" if value and value == selected else ""
+            bits.append(
+                f'<option value="{html.escape(value)}"{mark}>{html.escape(label)}</option>'
+            )
+        return "".join(bits)
+
     diff = model.get("diff") or {}
     sections = ""
     if diff:
+        transfer = ""
+        if model.get("can_transfer"):
+            transfer = (
+                "<form method=\"post\" action=\"/requirements/compare/apply\">"
+                f"<input type=\"hidden\" name=\"source\" value=\"{html.escape(left)}\">"
+                f"<input type=\"hidden\" name=\"destination\" value=\"{html.escape(right)}\">"
+                "<label>Requirement<input type=\"text\" name=\"requirement_id\"></label>"
+                "<label>Field<input type=\"text\" name=\"field\"></label>"
+                "<label>Value<input type=\"text\" name=\"value\"></label>"
+                "<label>Source digest<input type=\"text\" name=\"source_digest\"></label>"
+                "<label>Destination digest<input type=\"text\" name=\"destination_digest\"></label>"
+                "<p><button type=\"submit\">Apply transfer</button></p></form>"
+            )
         sections = (
             f"<p>Unchanged: {html.escape(', '.join(diff.get('unchanged') or []) or 'none')}</p>"
             f"<p>Changed: {html.escape(_changed_text(diff.get('changed') or []))}</p>"
@@ -958,23 +1030,17 @@ def compare_page(model: dict) -> bytes:
             f"<p>Only right: {html.escape(', '.join(diff.get('only_right') or []) or 'none')}</p>"
             f"<p>Possible split: {html.escape(str(diff.get('possible_split') or []))}</p>"
             f"<p>Ambiguous: {html.escape(str(diff.get('ambiguous') or []))}</p>"
-            "<form method=\"post\" action=\"/requirements/compare/apply\">"
-            f"<input type=\"hidden\" name=\"source\" value=\"{html.escape(str(model.get('left') or ''))}\">"
-            f"<input type=\"hidden\" name=\"destination\" value=\"{html.escape(str(model.get('right') or ''))}\">"
-            "<label>Requirement<input type=\"text\" name=\"requirement_id\"></label>"
-            "<label>Field<input type=\"text\" name=\"field\"></label>"
-            "<label>Value<input type=\"text\" name=\"value\"></label>"
-            "<label>Source digest<input type=\"text\" name=\"source_digest\"></label>"
-            "<label>Destination digest<input type=\"text\" name=\"destination_digest\"></label>"
-            "<p><button type=\"submit\">Apply transfer</button></p></form>"
+            f"{transfer}"
         )
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a></p>
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Compare</h1>
-<p class="muted">Opening this page does not change either copy.</p>
+<p class="muted">Opening this page does not change either copy.
+The selected working copy is labeled <strong>Working copy</strong>.
+Published releases appear as <strong>Published · version</strong>.</p>
 <form method="get" action="/requirements/compare">
-<label>Left<select name="left">{options}</select></label>
-<label>Right<select name="right">{options}</select></label>
+<label>Left<select name="left">{_options_html(left)}</select></label>
+<label>Right<select name="right">{_options_html(right)}</select></label>
 <p><button type="submit">Show differences</button></p>
 </form>
 {sections}
@@ -988,6 +1054,30 @@ def _changed_text(changed: list) -> str:
     return "; ".join(f"{item.get('id')}: {', '.join(item.get('fields') or [])}" for item in changed)
 
 
+def _copy_line(model: dict, requirement: dict) -> str:
+    stamp = str(model.get("copy_timestamp") or "")
+    pack_id = str(model.get("pack_id") or "")
+    version = str(model.get("pack_version") or "")
+    parts = ["Working copy"]
+    if pack_id:
+        parts.append(f"<code>{html.escape(pack_id)}</code>")
+    if stamp:
+        parts.append(f"<code>{html.escape(stamp)}</code>")
+    if version:
+        parts.append(f"version <code>{html.escape(version)}</code>")
+    origin = requirement.get("origin") if isinstance(requirement.get("origin"), dict) else {}
+    origin_pack = str(origin.get("pack") or "")
+    origin_version = str(origin.get("version") or "")
+    taken = ""
+    if origin_pack or origin_version:
+        taken = (
+            " Taken from published "
+            f"<code>{html.escape(origin_pack)}</code> "
+            f"<code>{html.escape(origin_version)}</code>."
+        )
+    return f'<p class="muted">{" · ".join(parts)}.{taken}</p>'
+
+
 def editor_page(model: dict) -> bytes:
     requirement = model.get("requirement")
     if not isinstance(requirement, dict):
@@ -997,7 +1087,14 @@ def editor_page(model: dict) -> bytes:
     hints = requirement.get("discovery_hints") or {}
     # Locator / law_text are display-only inside the same fieldset (no inputs).
     references = _references(requirement.get("references") or [])
-    fields = _scalars(requirement)
+    invalid = {str(name) for name in (model.get("invalid_fields") or []) if str(name)}
+    fields = _scalars(requirement, invalid)
+    err = str(model.get("error") or "")
+    flash = (
+        f'<p class="err">{html.escape(err)}</p>'
+        if err
+        else _flash(str(model.get("message") or ""))
+    )
     banner = '<p id="unsaved" hidden>Unsaved edits. The saved version is unchanged.</p>'
     # Clean: nothing to save. Dirty: Save+Cancel on, Sign off; signed badge flips.
     script = """
@@ -1025,8 +1122,13 @@ if (cancel) {
   cancel.addEventListener("click", () => { location.reload(); });
 }
 if (fields) {
-  fields.addEventListener("input", markDirty);
+  fields.addEventListener("input", (event) => {
+    markDirty();
+    if (event.target && event.target.classList) event.target.classList.remove("invalid");
+  });
   fields.addEventListener("change", markDirty);
+  const firstBad = fields.querySelector("input.invalid, textarea.invalid");
+  if (firstBad) firstBad.focus();
 }
 </script>
 """
@@ -1046,6 +1148,7 @@ if (fields) {
         "try_ran": bool(model.get("try_ran")),
         "try_error": model.get("try_error") or "",
         "try_job": model.get("try_job"),
+        "workspace_root": model.get("workspace_root") or "",
         "law_passages": [
             {"locator": ref.get("locator"), "law_text": ref.get("law_text")}
             for ref in (requirement.get("references") or [])
@@ -1053,19 +1156,20 @@ if (fields) {
         ],
     }
     body = f"""
-<p class="muted"><a href="/requirements">Packs</a>
+<p class="muted"><a href="/requirements">Pack Sources</a>
  · <a href="/requirements/copy">Requirements list</a></p>
 <div class="req-head">
 <h1>{html.escape(str(requirement.get("id")))}</h1>
 {status}
 </div>
-{_flash(str(model.get("message") or ""))}
+{_copy_line(model, requirement)}
+{flash}
 {banner}
 <form method="post" action="/requirements/requirement/{html.escape(str(requirement.get("id")))}">
 <fieldset id="edit-fields">
 {references}
 {fields}
-{_source_fields(source)}
+{_source_fields(source, invalid)}
 {_hint_fields(hints)}
 <input type="hidden" name="expected_digest" value="{html.escape(str(model.get("expected_digest") or ""))}">
 </fieldset>
@@ -1270,50 +1374,69 @@ def _labeled_input(
     kind: str = "text",
     css_class: str = "",
     title: str | None = None,
+    invalid: bool = False,
 ) -> str:
     label = title if title is not None else _field_label(help_key)
     hint, placeholder = _FIELD_HELP.get(help_key, ("", ""))
     tip = f" {_info_tip(hint)}" if hint else ""
     ph = f' placeholder="{html.escape(placeholder)}"' if placeholder else ""
     class_attr = f' class="{html.escape(css_class)}"' if css_class else ""
+    control_class = ' class="invalid"' if invalid else ""
     if kind == "textarea":
         control = (
-            f'<textarea name="{html.escape(name)}"{ph}>'
+            f'<textarea name="{html.escape(name)}"{control_class}{ph}>'
             f"{html.escape(value)}</textarea>"
         )
     else:
         control = (
             f'<input type="text" name="{html.escape(name)}" '
-            f'value="{html.escape(value)}"{ph}>'
+            f'value="{html.escape(value)}"{control_class}{ph}>'
         )
     return f"<label{class_attr}>{html.escape(label)}{tip}{control}</label>"
 
 
-def _scalars(requirement: dict) -> str:
+def _scalars(requirement: dict, invalid_fields: set[str] | None = None) -> str:
+    bad = invalid_fields or set()
     wide = []
     for field in ("note", "remediation_hint"):
         value = requirement.get(field) or ""
         wide.append(
             f'<input type="hidden" name="present" value="{field}">'
-            + _labeled_input(name=field, value=str(value), help_key=field)
+            + _labeled_input(
+                name=field,
+                value=str(value),
+                help_key=field,
+                invalid=field in bad,
+            )
         )
     compact = []
     for field in ("strength", "responsible", "applicability", "exceptions", "scope"):
         value = requirement.get(field) or ""
         compact.append(
             f'<input type="hidden" name="present" value="{field}">'
-            + _labeled_input(name=field, value=str(value), help_key=field)
+            + _labeled_input(
+                name=field,
+                value=str(value),
+                help_key=field,
+                invalid=field in bad,
+            )
         )
     return "".join(wide) + f'<div class="field-grid">{"".join(compact)}</div>'
 
 
-def _source_fields(source: dict) -> str:
+def _source_fields(source: dict, invalid_fields: set[str] | None = None) -> str:
+    bad = invalid_fields or set()
     compact = []
     for field in ("framework", "instrument", "identifier", "edition", "language"):
         value = source.get(field) or ""
         compact.append(
             f'<input type="hidden" name="present" value="{field}">'
-            + _labeled_input(name=field, value=str(value), help_key=field)
+            + _labeled_input(
+                name=field,
+                value=str(value),
+                help_key=field,
+                invalid=field in bad,
+            )
         )
     url = str(source.get("url") or "")
     url_field = (
@@ -1323,6 +1446,7 @@ def _source_fields(source: dict) -> str:
             value=url,
             help_key="url",
             css_class="span-2",
+            invalid="url" in bad,
         )
     )
     link = ""

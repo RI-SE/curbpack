@@ -205,6 +205,31 @@ def run_repository(repo: Path, packs_root: Path, *, skip: dict[str, str] | None 
     return result, process_exit_code(result)
 
 
+def run_pack_directories(
+    repo: Path, directories: list[Path], *, skip: dict[str, str] | None = None
+) -> tuple[dict, int]:
+    """Run Claims in a repo against these Pack directories."""
+    loaded = []
+    pack_rows = []
+    for directory in directories:
+        pack, requirements = load_pack_directory(directory)
+        loaded.append((pack, requirements))
+        pack_rows.append(
+            {"id": pack["id"], "version": pack["version"], "digest": pack_directory_digest(directory)}
+        )
+    selected = selected_requirement_ids(loaded, {"packs": [row["id"] for row in pack_rows]})
+    claims = load_claims(repo / "claims")
+    for claim in claims:
+        if claim["requirement_id"] not in selected:
+            raise ModelError(
+                f"claim {claim['id']}",
+                "requirement_id",
+                "a requirement selected in curbpack.json",
+            )
+    result = build_run_result(repo, claims, pack_rows, skip=skip)
+    return result, process_exit_code(result)
+
+
 def run_and_write(repo: Path, packs_root: Path, out: Path, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
     result, code = run_repository(repo, packs_root, skip=skip)
     save_run_result(out, result)
