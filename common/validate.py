@@ -309,7 +309,11 @@ def validate_claim(obj: object) -> dict:
 
 def validate_curbpack_config(obj: object) -> dict:
     config = _require_dict(obj, "curbpack.json")
-    _reject_unknown(config, "curbpack.json", {"packs", "exclude_requirements", "requirements", "hunt"})
+    _reject_unknown(
+        config,
+        "curbpack.json",
+        {"packs", "exclude_requirements", "requirements", "search_hints", "curbpack"},
+    )
     _string_list(config.get("packs"), "curbpack.json", "packs")
     if "exclude_requirements" in config and "requirements" in config:
         _expect("curbpack.json", "requirements", "absent when exclude_requirements is set")
@@ -317,33 +321,42 @@ def validate_curbpack_config(obj: object) -> dict:
         _string_list(config["exclude_requirements"], "curbpack.json", "exclude_requirements")
     if "requirements" in config:
         _string_list(config["requirements"], "curbpack.json", "requirements")
-    if "hunt" in config:
-        _validate_hunt(config["hunt"])
+    if "search_hints" in config:
+        _validate_search_hints(config["search_hints"])
+    if "curbpack" in config:
+        _relative_dir(config["curbpack"])
     return config
 
 
-def _validate_hunt(hunt: object) -> None:
-    if not isinstance(hunt, dict):
-        _expect("curbpack.json", "hunt", "object")
-    _reject_unknown(hunt, "curbpack.json.hunt", {"sources", "exclude_path_globs", "prefer_path_globs"})
-    if "sources" in hunt:
-        sources = hunt["sources"]
+def _relative_dir(value: object) -> None:
+    if not isinstance(value, str) or not value.strip():
+        _expect("curbpack.json", "curbpack", "a relative directory")
+    if value.startswith(("/", "\\")) or ".." in value.split("/"):
+        _expect("curbpack.json", "curbpack", "a relative directory")
+
+
+def _validate_search_hints(hints: object) -> None:
+    if not isinstance(hints, dict):
+        _expect("curbpack.json", "search_hints", "object")
+    _reject_unknown(hints, "curbpack.json.search_hints", {"sources", "exclude_path_globs", "prefer_path_globs"})
+    if "sources" in hints:
+        sources = hints["sources"]
         if not isinstance(sources, list):
-            _expect("curbpack.json", "hunt.sources", "list of source objects")
+            _expect("curbpack.json", "search_hints.sources", "list of source objects")
         for index, item in enumerate(sources):
             if not isinstance(item, dict):
-                _expect("curbpack.json", f"hunt.sources[{index}]", "object with source")
-            _reject_unknown(item, f"curbpack.json.hunt.sources[{index}]", {"source", "args"})
-            _nonempty_str(item, f"curbpack.json.hunt.sources[{index}]", "source", required=True)
+                _expect("curbpack.json", f"search_hints.sources[{index}]", "object with source")
+            _reject_unknown(item, f"curbpack.json.search_hints.sources[{index}]", {"source", "args"})
+            _nonempty_str(item, f"curbpack.json.search_hints.sources[{index}]", "source", required=True)
             if "args" in item and not isinstance(item["args"], dict):
-                _expect("curbpack.json", f"hunt.sources[{index}].args", "object")
+                _expect("curbpack.json", f"search_hints.sources[{index}].args", "object")
     for field in ("exclude_path_globs", "prefer_path_globs"):
-        if field in hunt:
-            if not isinstance(hunt[field], list):
-                _expect("curbpack.json", f"hunt.{field}", "list of strings")
-            for index, item in enumerate(hunt[field]):
+        if field in hints:
+            if not isinstance(hints[field], list):
+                _expect("curbpack.json", f"search_hints.{field}", "list of strings")
+            for index, item in enumerate(hints[field]):
                 if not isinstance(item, str):
-                    _expect("curbpack.json", f"hunt.{field}[{index}]", "string")
+                    _expect("curbpack.json", f"search_hints.{field}[{index}]", "string")
 
 
 def validate_run_result(obj: object) -> dict:

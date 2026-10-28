@@ -53,7 +53,7 @@ def _product_with_hunt(root: Path) -> Path:
         repo / "curbpack.json",
         {
             "packs": ["other-authoritative"],
-            "hunt": {
+            "search_hints": {
                 "exclude_path_globs": ["**/node_modules/**"],
                 "prefer_path_globs": ["**/docs/**"],
             },

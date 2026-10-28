@@ -25,6 +25,18 @@ from requirements.editing import apply_edits
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 
 
+def _running_claim(claim_id: str = "claim-risk") -> dict:
+    return build_claim(
+        claim_id=claim_id,
+        requirement_id="CRA-ANNEX-VII-RISK",
+        source="documents",
+        args={"path": "docs/a.md"},
+        checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
+        severity="high",
+        description="The file is the reviewed evidence.",
+    )
+
+
 def _requirement():
     source = dict(extract_annex_vii_risk()["source"])
     source["edition"] = "2024-11-20"
@@ -176,7 +188,7 @@ class ToolReentryTest(unittest.TestCase):
         save_requirement(pack_dir, _requirement())
         (repo / "curbpack.json").write_text('{"packs":["cra-baseline"]}\n', encoding="utf-8")
         write_claim(
-            repo / "claims",
+            repo / "curbpack" / "claims",
             build_claim(
                 claim_id="claim-risk",
                 requirement_id="CRA-ANNEX-VII-RISK",
@@ -198,6 +210,83 @@ class ToolReentryTest(unittest.TestCase):
         self.assertEqual(loaded["claims"][0]["status"], "skipped")
         self.assertEqual(loaded["claims"][0]["checks"][0]["detail"], "not this build")
         self.assertIn("skipped", buf.getvalue())
+        self.assertFalse((repo / "curbpack" / "run-result.json").exists())
+        self.assertIn(str(out), buf.getvalue())
+
+    def test_omitting_packs_and_out_uses_the_directory_in_the_file(self):
+        tmp, repo = _repo_with_file()
+        self.addCleanup(tmp.cleanup)
+        directory = repo / "external_test" / "curbpack"
+        save_pack(directory / "packs" / "cra-baseline", draft_pack())
+        save_requirement(directory / "packs" / "cra-baseline", _requirement())
+        (repo / "curbpack.json").write_text(
+            '{"packs":["cra-baseline"],"curbpack":"external_test/curbpack"}\n',
+            encoding="utf-8",
+        )
+        write_claim(directory / "claims", _running_claim())
+        write_claim(repo / "claims", _running_claim("claim-old-root"))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo)])
+        out = directory / "run-result.json"
+        self.assertEqual(code, 0)
+        loaded = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual([row["id"] for row in loaded["claims"]], ["claim-risk"])
+        self.assertEqual(loaded["claims"][0]["status"], "pass")
+        self.assertIn(f"wrote {out}", buf.getvalue())
+
+    def test_no_arguments_use_the_current_directory(self):
+        tmp, repo = _repo_with_file()
+        self.addCleanup(tmp.cleanup)
+        directory = repo / "curbpack"
+        save_pack(directory / "packs" / "cra-baseline", draft_pack())
+        save_requirement(directory / "packs" / "cra-baseline", _requirement())
+        (repo / "curbpack.json").write_text('{"packs":["cra-baseline"]}\n', encoding="utf-8")
+        write_claim(directory / "claims", _running_claim())
+        previous = Path.cwd()
+        os.chdir(repo)
+        try:
+            buf = io.StringIO()
+            with redirect_stdout(buf), patch.object(sys, "argv", ["curbcheck"]):
+                code = main(None)
+        finally:
+            os.chdir(previous)
+        out = directory / "run-result.json"
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["claims"][0]["status"], "pass")
+        self.assertIn(f"wrote {out.resolve()}", buf.getvalue())
+
+    def test_repo_is_required_away_from_a_product_directory(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        previous = Path.cwd()
+        os.chdir(tmp.name)
+        try:
+            with self.assertRaises(SystemExit) as caught, patch.object(sys, "argv", ["curbcheck"]):
+                main(None)
+        finally:
+            os.chdir(previous)
+        self.assertEqual(caught.exception.code, 2)
+
+    def test_packs_and_out_still_override(self):
+        tmp, repo = _repo_with_file()
+        self.addCleanup(tmp.cleanup)
+        override = Path(tmp.name) / "elsewhere"
+        save_pack(override / "cra-baseline", draft_pack())
+        save_requirement(override / "cra-baseline", _requirement())
+        (repo / "curbpack.json").write_text(
+            '{"packs":["cra-baseline"],"curbpack":"external_test/curbpack"}\n',
+            encoding="utf-8",
+        )
+        write_claim(repo / "external_test" / "curbpack" / "claims", _running_claim())
+        out = Path(tmp.name) / "chosen-result.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo), "--packs", str(override), "--out", str(out)])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["packs"][0]["id"], "cra-baseline")
+        self.assertFalse((repo / "external_test" / "curbpack" / "run-result.json").exists())
+        self.assertFalse((override / "packs").exists())
 
 
 class PackageArgsTest(unittest.TestCase):

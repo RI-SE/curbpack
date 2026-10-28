@@ -47,7 +47,7 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | Run `python3 -m checks ... --out tmp/dt-001/run-$i.json` twenty times | Each exit is `0`. Every claim status is `pass`. |
+| 1    | Run `curbcheck ... --out tmp/dt-001/run-$i.json` twenty times | Each exit is `0`. Every claim status is `pass`. |
 | 2    | Compare `[.claims[] | {id, status}]` across the 20 files | The claim-status maps are identical. |
 
 Observation is claim status in run-result JSON, not old `outcome` / `readiness_score` / `.curbpack` digests.
@@ -73,7 +73,7 @@ Note: not specified yet. Do not run this case. The old curbpack observation is n
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | After R2, `python3 -m checks ... --out tmp/dt-003/r2.json` | `HOUSE-SECURITY-MD` status is `fail`. |
+| 1    | After R2, `curbcheck ... --out tmp/dt-003/r2.json` | `HOUSE-SECURITY-MD` status is `fail`. |
 | 2    | Process exit code | Non-zero. |
 | 3    | Compare retained R1 run-result with R2 | R1 has `HOUSE-SECURITY-MD` `pass`; R2 has `fail`; claim-status maps differ. |
 

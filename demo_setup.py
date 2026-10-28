@@ -34,7 +34,7 @@ def prepare_demo(root: Path) -> None:
         json.dumps(
             {
                 "packs": ["cra-baseline"],
-                "hunt": {
+                "search_hints": {
                     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
                     "prefer_path_globs": ["**/README*", "**/docs/**"],
                 },

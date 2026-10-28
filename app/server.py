@@ -1194,7 +1194,7 @@ def _start_discover(ws: Workspace, form: dict) -> str:
     config = read_json(config_path) if config_path.is_file() else {}
     if not isinstance(config, dict):
         config = {}
-    hunt = {"hunt": config.get("hunt") or {}}
+    hunt = {"search_hints": config.get("search_hints") or {}}
     title = f"Discover — {row.get('name') or repo_id} / {source.get('name') or source_id} {source.get('section_id') or ''}"
     raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
     if not raw_limit.isdigit():
@@ -1723,7 +1723,7 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
     config = read_json(config_path) if config_path.is_file() else {}
     if not isinstance(config, dict):
         config = {}
-    hunt = {"hunt": config.get("hunt") or {}}
+    hunt = {"search_hints": config.get("search_hints") or {}}
     job_id = f"try-{secrets.token_hex(4)}"
     start_try_job(
         ws.root / "jobs",
@@ -1826,7 +1826,7 @@ def _check_editor_model(ws: Workspace, query: dict) -> dict:
         pack_id = pack["id"]
         pack["claims"] = sum(1 for claim in claims if claim.get("pack_id") == pack_id)
         pack.pop("directory", None)
-    kept = {key: config[key] for key in ("hunt", "exclude_requirements", "requirements") if key in config}
+    kept = {key: config[key] for key in ("search_hints", "exclude_requirements", "requirements", "curbpack") if key in config}
     return {
         "repos": repos,
         "repo_id": repo_id,
@@ -1894,7 +1894,7 @@ def _write_curbpack(repo: Path, pack_ids: list[str]) -> None:
         loaded = read_json(path)
         if isinstance(loaded, dict):
             current = loaded
-    document = {key: current[key] for key in ("hunt", "exclude_requirements", "requirements") if key in current}
+    document = {key: current[key] for key in ("search_hints", "exclude_requirements", "requirements", "curbpack") if key in current}
     document["packs"] = pack_ids
     from common.validate import validate_curbpack_config
 

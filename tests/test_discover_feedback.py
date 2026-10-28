@@ -101,7 +101,7 @@ class FeedbackTest(unittest.TestCase):
                 repo_id="sample",
                 repo=repo,
                 requirements=[{"id": "REQ-A", "references": [{"law_text": "Law."}]}],
-                hunt={"hunt": {}},
+                hunt={"search_hints": {}},
                 title="Discover",
                 search=lambda *_args: [],
                 source_id="cra-xml-vii",

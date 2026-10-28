@@ -56,7 +56,7 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks --repo "$REFERENCE_PRODUCT_ROOT" --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" --out "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing `curbpack.json` and copying the seven claims) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
+| 1    | `curbcheck --repo "$REFERENCE_PRODUCT_ROOT" --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" --out "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing `curbpack.json` and copying the seven claims into `curbpack/claims`) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
 | 2    | Process exit code | `0`. |
 
 When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carried run), this row is not re-executed.
@@ -79,7 +79,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --out run-result.json` | Claim `HOUSE-SECURITY-MD` has status `fail` in `run-result.json`. |
+| 1    | `curbcheck ... --out run-result.json` | Claim `HOUSE-SECURITY-MD` has status `fail` in `run-result.json`. |
 | 2    | Process exit code | Non-zero. |
 
 ---
@@ -97,7 +97,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --out run-result.json` | Claim `MD-SW-CLASS` has status `fail`. |
+| 1    | `curbcheck ... --out run-result.json` | Claim `MD-SW-CLASS` has status `fail`. |
 | 2    | Process exit code | Non-zero. |
 
 ---
@@ -119,7 +119,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `fail`. Both `exist` and `contents` are `fail` with `unreadable` in `detail`. |
+| 1    | `curbcheck ... --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `fail`. Both `exist` and `contents` are `fail` with `unreadable` in `detail`. |
 | 2    | Process exit code | Non-zero. |
 
 ---
@@ -141,7 +141,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --skip HOUSE-SECURITY-MD='EV-005 excluded target' --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `skipped`; every Check on that Claim is `skipped`. It is not `pass`. |
+| 1    | `curbcheck ... --skip HOUSE-SECURITY-MD='EV-005 excluded target' --out run-result.json` | Claim `HOUSE-SECURITY-MD` status is `skipped`; every Check on that Claim is `skipped`. It is not `pass`. |
 | 2    | Process exit code | Non-zero. |
 
 ---
@@ -158,7 +158,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --out run-result.json` | Claim `HOUSE-ANTI-PLACEHOLDER` status is `fail`. |
+| 1    | `curbcheck ... --out run-result.json` | Claim `HOUSE-ANTI-PLACEHOLDER` status is `fail`. |
 | 2    | Process exit code | Non-zero. |
 
 ---
@@ -170,56 +170,56 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R2 + seven claims | `HOUSE-SECURITY-MD` status `fail`; process exit non-zero. |
+| 1    | `curbcheck` after R2 + seven claims | `HOUSE-SECURITY-MD` status `fail`; process exit non-zero. |
 
 ### EV-007-B — MD-SW-CLASS (R3)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R3 + Packs v2 `MD-SW-CLASS` | `MD-SW-CLASS` status `fail`; process exit non-zero. |
+| 1    | `curbcheck` after R3 + Packs v2 `MD-SW-CLASS` | `MD-SW-CLASS` status `fail`; process exit non-zero. |
 
 ### EV-007-C — placeholder probe (R4 + TODO)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R4, append TODO to SECURITY.md, house claims | `HOUSE-ANTI-PLACEHOLDER` status `fail`; process exit non-zero. |
+| 1    | `curbcheck` after R4, append TODO to SECURITY.md, house claims | `HOUSE-ANTI-PLACEHOLDER` status `fail`; process exit non-zero. |
 
 ### EV-007-D — dep_ban house (R1 + banned axios pin)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R1, pin `axios` `^1.6.0`, Packs v2 `HOUSE-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
+| 1    | `curbcheck` after R1, pin `axios` `^1.6.0`, Packs v2 `HOUSE-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
 
 ### EV-007-E — dep_ban cra (R1 + banned axios pin)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R1, pin `axios` `^1.6.0`, Packs v2 `CRA-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
+| 1    | `curbcheck` after R1, pin `axios` `^1.6.0`, Packs v2 `CRA-DEP-AXIOS-PIN` | status `fail` with `banned pin` detail; exit non-zero. |
 
 ### EV-007-F — secret paths pattern (R1 + PEM in SECURITY.md)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R1, PEM marker, Packs v2 `HOUSE-SECRET-PATHS` | status `fail`; exit non-zero. |
+| 1    | `curbcheck` after R1, PEM marker, Packs v2 `HOUSE-SECRET-PATHS` | status `fail`; exit non-zero. |
 
 ### EV-007-G — git_fresh stale (R6)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R6, Packs v2 `FIX-FRESH-REVIEW` (`git_fresh`) | status `fail`; exit non-zero. |
+| 1    | `curbcheck` after R6, Packs v2 `FIX-FRESH-REVIEW` (`git_fresh`) | status `fail`; exit non-zero. |
 
 ### EV-007-H — git_author wrong author (R7)
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks` after R7, Packs v2 `FIX-OWNED-POLICY` (`git_author`) | status `fail`; exit non-zero. |
+| 1    | `curbcheck` after R7, Packs v2 `FIX-OWNED-POLICY` (`git_author`) | status `fail`; exit non-zero. |
 
 ---
 
@@ -255,5 +255,5 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks ... --out run-result.json` | `HOUSE-ANTI-PLACEHOLDER`, `HOUSE-SECURITY-MD`, and `HOUSE-SECURITY-TXT` each have status `pass`. Stdout includes `claims 3 exit 0`. |
+| 1    | `curbcheck ... --out run-result.json` | `HOUSE-ANTI-PLACEHOLDER`, `HOUSE-SECURITY-MD`, and `HOUSE-SECURITY-TXT` each have status `pass`. Stdout includes `claims 3 exit 0`. |
 | 2    | Process exit code | `0`. |

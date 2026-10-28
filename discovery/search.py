@@ -129,7 +129,7 @@ def discover_candidates(
 ) -> list[dict]:
     """Return candidate dicts. Does not write a file and does not create a Claim."""
     hints = requirement.get("discovery_hints") or {}
-    hunt = (config or {}).get("hunt") or {}
+    hunt = (config or {}).get("search_hints") or {}
     # `sources` and `args` are intentionally unused. expected_evidence is stored
     # on the requirement and is not a match key.
     concepts = [item for item in (hints.get("concepts") or []) if isinstance(item, str)]
