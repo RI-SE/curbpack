@@ -482,10 +482,20 @@ def source_page(model: dict) -> bytes:
     return page("Source details", body)
 
 
+def _sections_crumb(model: dict) -> str:
+    """Link back to the sections of the pack source this working copy belongs to."""
+    document_id = str(model.get("document_id") or "").strip()
+    name = str(model.get("document_name") or "").strip()
+    if not document_id or not name:
+        return ""
+    href = "/requirements?document=" + document_id
+    return f' · <a href="{html.escape(href)}">{html.escape(name)}</a>'
+
+
 def copy_page(model: dict) -> bytes:
     if not model.get("timestamp"):
-        body = """
-<p class="muted"><a href="/requirements">Pack Sources</a></p>
+        body = f"""
+<p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}</p>
 <h1>Requirements</h1>
 <p>No working copy is selected. Choose a dated copy on the catalog, or start a new extraction.</p>
 """
@@ -550,7 +560,7 @@ def copy_page(model: dict) -> bytes:
 </p>"""
     )
     body = f"""
-<p class="muted"><a href="/requirements">Pack Sources</a>
+<p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}
  · <code>{html.escape(str(model.get("adapter_id") or ""))}</code>
  · {html.escape(kind)}
  · <code>{html.escape(str(model.get("timestamp") or ""))}</code></p>
