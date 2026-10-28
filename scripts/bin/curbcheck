@@ -1,5 +1,5 @@
 #!/bin/sh
-# Packaged name for `python3 -m checks`. Same --repo --packs --out --skip.
+# User command `curbcheck`. This script starts the checks module.
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 exec python3 -m checks "$@"

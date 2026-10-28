@@ -6,7 +6,7 @@ install_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_fixture=$_product/external_test/curbpack
 	printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
+	mkdir -p "$_product/curbpack/claims"
 	for _cid in \
 		CRA-ANNEX-VII-MANUAL \
 		CRA-ANNEX-VII-RISK \
@@ -16,7 +16,7 @@ install_pf01() {
 		HOUSE-SECURITY-MD \
 		HOUSE-SECURITY-TXT
 	do
-		cp "$_fixture/claims/$_cid.json" "$_product/claims/$_cid.json"
+		cp "$_fixture/claims/$_cid.json" "$_product/curbpack/claims/$_cid.json"
 	done
 }
 
@@ -26,10 +26,10 @@ install_house_claims() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	printf '%s\n' '{"packs":["house-policy"]}' >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
+	mkdir -p "$_product/curbpack/claims"
 	for _cid in HOUSE-ANTI-PLACEHOLDER HOUSE-SECURITY-MD HOUSE-SECURITY-TXT
 	do
-		cp "$_claims/$_cid.json" "$_product/claims/$_cid.json"
+		cp "$_claims/$_cid.json" "$_product/curbpack/claims/$_cid.json"
 	done
 }
 
@@ -44,8 +44,8 @@ install_md_sw_class() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
-	cp "$_claims/MD-SW-CLASS.json" "$_product/claims/MD-SW-CLASS.json"
+	mkdir -p "$_product/curbpack/claims"
+	cp "$_claims/MD-SW-CLASS.json" "$_product/curbpack/claims/MD-SW-CLASS.json"
 }
 
 run_studio_packs_curbcheck_json() {
@@ -58,10 +58,10 @@ install_claim() {
 	_packs_json=$2
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	printf '%s\n' "$_packs_json" >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
+	mkdir -p "$_product/curbpack/claims"
 	# Drop other claims so this case observes one row.
-	rm -f "$_product/claims"/*.json
-	cp "$_claims/$_cid.json" "$_product/claims/$_cid.json"
+	rm -f "$_product/curbpack/claims"/*.json
+	cp "$_claims/$_cid.json" "$_product/curbpack/claims/$_cid.json"
 }
 
 # Rewrite git_fresh as_of from the verification-run date (YYYY-MM-DD → RFC3339).
@@ -69,7 +69,7 @@ install_fix_fresh_review() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_as_of=${AS_OF_DATE:?}
 	install_claim FIX-FRESH-REVIEW '{"packs":["fresh-owned-test"]}'
-	python3 - "$_product/claims/FIX-FRESH-REVIEW.json" "$_as_of" <<'PY'
+	python3 - "$_product/curbpack/claims/FIX-FRESH-REVIEW.json" "$_as_of" <<'PY'
 import json, sys
 path, day = sys.argv[1], sys.argv[2]
 data = json.loads(open(path, encoding="utf-8").read())
@@ -114,17 +114,17 @@ install_ev008_rule_order_claims() {
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	_order=$1
 	printf '%s\n' '{"packs":["ev-008-order"]}' >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
-	find "$_product/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
+	mkdir -p "$_product/curbpack/claims"
+	find "$_product/curbpack/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
 	case $_order in
 		alpha-beta)
-			cp "$_claims/EV008-ALPHA.json" "$_product/claims/EV008-ALPHA.json"
-			cp "$_claims/EV008-BETA.json" "$_product/claims/EV008-BETA.json"
+			cp "$_claims/EV008-ALPHA.json" "$_product/curbpack/claims/EV008-ALPHA.json"
+			cp "$_claims/EV008-BETA.json" "$_product/curbpack/claims/EV008-BETA.json"
 			;;
 		beta-alpha)
 			# Lexical order of filenames decides load order; prefix forces BETA first.
-			cp "$_claims/EV008-BETA.json" "$_product/claims/01-EV008-BETA.json"
-			cp "$_claims/EV008-ALPHA.json" "$_product/claims/02-EV008-ALPHA.json"
+			cp "$_claims/EV008-BETA.json" "$_product/curbpack/claims/01-EV008-BETA.json"
+			cp "$_claims/EV008-ALPHA.json" "$_product/curbpack/claims/02-EV008-ALPHA.json"
 			# Claim id stays inside JSON; filenames only control sorted load order.
 			;;
 		*)
@@ -140,9 +140,9 @@ install_ev008_file_order_claim() {
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	_order=$1
 	printf '%s\n' '{"packs":["ev-008-order"]}' >"$_product/curbpack.json"
-	mkdir -p "$_product/claims"
-	find "$_product/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
-	cp "$_claims/EV008-BOTH-PATHS.json" "$_product/claims/EV008-BOTH-PATHS.json"
+	mkdir -p "$_product/curbpack/claims"
+	find "$_product/curbpack/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
+	cp "$_claims/EV008-BOTH-PATHS.json" "$_product/curbpack/claims/EV008-BOTH-PATHS.json"
 	case $_order in
 		alpha-beta)
 			_paths='["docs/ev008-alpha.md","docs/ev008-beta.md"]'
@@ -155,7 +155,7 @@ install_ev008_file_order_claim() {
 			return 1
 			;;
 	esac
-	python3 - "$_product/claims/EV008-BOTH-PATHS.json" "$_paths" <<'PY'
+	python3 - "$_product/curbpack/claims/EV008-BOTH-PATHS.json" "$_paths" <<'PY'
 import json, sys
 path, paths_json = sys.argv[1], sys.argv[2]
 data = json.loads(open(path, encoding="utf-8").read())
@@ -179,7 +179,7 @@ install_house_secret_paths() {
 # Commit PF-01 files so Git reports a clean worktree (PV-001).
 commit_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	git -C "$_product" add curbpack.json claims
+	git -C "$_product" add curbpack.json curbpack/claims
 	git -C "$_product" \
 		-c user.email=curbpack-test@example.com \
 		-c user.name=curbpack-test \
@@ -190,7 +190,7 @@ commit_pf01() {
 remove_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	rm -f "$_product/curbpack.json"
-	rm -rf "$_product/claims"
+	rm -rf "$_product/curbpack/claims"
 }
 
 # Run curbcheck; print only the Packs v2 run-result JSON on stdout (summary goes to stderr).

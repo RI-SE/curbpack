@@ -296,7 +296,7 @@ def _seed_two_requirements(root: Path) -> None:
         json.dumps(
             {
                 "packs": [pack_id],
-                "hunt": {
+                "search_hints": {
                     "exclude_path_globs": ["**/node_modules/**"],
                     "prefer_path_globs": ["**/docs/**"],
                 },

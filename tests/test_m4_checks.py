@@ -195,7 +195,7 @@ class CheckBehaviorTest(unittest.TestCase):
             save_requirement(pack_dir, requirement)
             write_stub(repo, "docs/annex-vii/risk_assessment.md")
             (repo / "curbpack.json").write_text(
-                '{"packs":["cra-baseline"],"hunt":{"exclude_path_globs":["*FUTURE_*"]}}\n',
+                '{"packs":["cra-baseline"],"search_hints":{"exclude_path_globs":["*FUTURE_*"]}}\n',
                 encoding="utf-8",
             )
             from claims.bind import write_claim
@@ -214,7 +214,7 @@ class CheckBehaviorTest(unittest.TestCase):
                 severity="high",
                 description="The risk assessment file is the reviewed evidence.",
             )
-            write_claim(repo / "claims", combined)
+            write_claim(repo / "curbpack" / "claims", combined)
             out = repo / "run-result.json"
             result, code = run_and_write(repo, root / "packs", out)
             self.assertEqual(code, 1)

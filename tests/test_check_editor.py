@@ -68,7 +68,7 @@ class CheckEditorTest(unittest.TestCase):
             repo.mkdir()
             write_json(
                 repo / "curbpack.json",
-                {"packs": ["cra-xml-baseline"], "hunt": {"exclude_path_globs": ["*.png"]}},
+                {"packs": ["cra-xml-baseline"], "search_hints": {"exclude_path_globs": ["*.png"]}},
             )
             write_claim(
                 repo / "claims",
@@ -126,7 +126,7 @@ class CheckEditorTest(unittest.TestCase):
                 self.assertIn('value="nis2-baseline" checked', saved)
                 document = read_json(repo / "curbpack.json")
                 self.assertEqual(document["packs"], ["nis2-baseline"])
-                self.assertEqual(document["hunt"]["exclude_path_globs"], ["*.png"])
+                self.assertEqual(document["search_hints"]["exclude_path_globs"], ["*.png"])
                 self.assertIn('id="export-curbpack"', saved)
             finally:
                 httpd.shutdown()

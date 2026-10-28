@@ -81,7 +81,7 @@ class TryDiscoveryUiTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (product / "curbpack.json").write_text(
-                json.dumps({"packs": ["cra-xml-baseline"], "hunt": {}}),
+                json.dumps({"packs": ["cra-xml-baseline"], "search_hints": {}}),
                 encoding="utf-8",
             )
             data = load_repos(root)
@@ -184,7 +184,7 @@ class TryDiscoveryUiTest(unittest.TestCase):
             product.mkdir()
             (product / "docs").mkdir()
             (product / "curbpack.json").write_text(
-                json.dumps({"packs": ["cra-xml-baseline"], "hunt": {}}),
+                json.dumps({"packs": ["cra-xml-baseline"], "search_hints": {}}),
                 encoding="utf-8",
             )
 

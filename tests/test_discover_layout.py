@@ -55,7 +55,7 @@ class DiscoverLayoutTest(unittest.TestCase):
 
             repo = root / "product"
             repo.mkdir()
-            write_json(repo / "curbpack.json", {"packs": ["cra-xml-baseline", "nis2-baseline"], "hunt": {}})
+            write_json(repo / "curbpack.json", {"packs": ["cra-xml-baseline", "nis2-baseline"], "search_hints": {}})
             write_claim(
                 repo / "claims",
                 build_claim(

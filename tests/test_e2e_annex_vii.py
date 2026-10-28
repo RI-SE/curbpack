@@ -92,7 +92,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 json.dumps(
                     {
                         "packs": ["cra-baseline"],
-                        "hunt": {
+                        "search_hints": {
                             "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
                             "prefer_path_globs": ["**/README*", "**/docs/**"],
                         },
@@ -111,7 +111,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             self.assertIn("docs/threat-model-draft.md", candidate_paths)
             self.assertIn("marketing.md", candidate_paths)
             self.assertNotIn("FUTURE_plan.md", candidate_paths)
-            self.assertFalse((repo / "claims").exists())
+            self.assertFalse((repo / "curbpack" / "claims").exists())
 
             stub = write_stub(repo, "docs/annex-vii/risk_assessment.md")
             self.assertTrue(is_stub(stub))
@@ -153,10 +153,10 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 checks=[],
                 description="A saved proposal that is not executed.",
             )
-            write_claim(repo / "claims", risk)
-            write_claim(repo / "claims", readme_claim)
-            write_claim(repo / "claims", proposal)
-            (repo / "claims" / "claim-readme.json").unlink()
+            write_claim(repo / "curbpack" / "claims", risk)
+            write_claim(repo / "curbpack" / "claims", readme_claim)
+            write_claim(repo / "curbpack" / "claims", proposal)
+            (repo / "curbpack" / "claims" / "claim-readme.json").unlink()
 
             _git(repo, "init", "-b", "main")
             _commit(repo, "bind the stub")
@@ -193,14 +193,14 @@ class AnnexViiScenarioTest(unittest.TestCase):
 
             new_path = "docs/security/risk_assessment.md"
             risk = rebind(
-                load_claim(repo / "claims" / "claim-risk.json"),
+                load_claim(repo / "curbpack" / "claims" / "claim-risk.json"),
                 args={"path": new_path},
                 checks=[
                     {"check": "exist", "args": {"paths": [new_path]}},
                     {"check": "contents", "args": {"path": new_path, "probes": copy_probes(risk)}},
                 ],
             )
-            write_claim(repo / "claims", risk)
+            write_claim(repo / "curbpack" / "claims", risk)
             self.assertEqual(version_digest(load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
             _commit(repo, "point claims at the new path")
             restored, restored_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
@@ -224,7 +224,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
                     {"check": "contents", "args": {"path": new_path, "probes": probes}},
                 ],
             )
-            write_claim(repo / "claims", risk)
+            write_claim(repo / "curbpack" / "claims", risk)
             self.assertEqual(version_digest(load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
             _commit(repo, "follow the header the team uses")
             green, green_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
@@ -233,7 +233,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             report = compile_report(
                 run_result=green,
                 requirements=[load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)],
-                claims=[load_claim(repo / "claims" / "claim-risk.json")],
+                claims=[load_claim(repo / "curbpack" / "claims" / "claim-risk.json")],
             )
             self.assertEqual(report["run_result"], green)
             self.assertNotIn("signed", report)
@@ -271,7 +271,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 sealed["claims"][0],
                 trust,
                 repo=repo,
-                relative="claims/claim-risk.json",
+                relative="curbpack/claims/claim-risk.json",
             )
             self.assertFalse(claim_reading["verifiable"])
             self.assertNotEqual(claim_reading.get("who"), "PoC2")

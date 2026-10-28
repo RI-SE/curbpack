@@ -31,7 +31,7 @@ def _tree(root: Path) -> None:
 
 HUNT = {
     "packs": ["cra-baseline"],
-    "hunt": {
+    "search_hints": {
         "sources": [{"source": "documents"}],
         "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
         "prefer_path_globs": ["**/README*", "**/docs/**"],

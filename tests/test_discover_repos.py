@@ -56,7 +56,7 @@ class DiscoverJobTest(unittest.TestCase):
                     {"id": "REQ-A", "references": [{"locator": "VII.3"}]},
                     {"id": "REQ-B", "references": [{"locator": "VII.4"}]},
                 ],
-                hunt={"hunt": {}},
+                hunt={"search_hints": {}},
                 title="Discover — sample-product / CRA Annex VII VII",
                 search=search,
             )
@@ -245,7 +245,7 @@ def _start(root, repo, search, *, complete, job_id="discover-score", assess_limi
         repo_id="sample-product",
         repo=repo,
         requirements=_requirements(),
-        hunt={"hunt": {}},
+        hunt={"search_hints": {}},
         title="Discover",
         search=search,
         source_id="cra-xml-vii",

@@ -36,7 +36,7 @@ if ! git -C "$product" diff --quiet -- external_test/curbpack/states/R1.sh; then
 fi
 
 printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$product/curbpack.json"
-mkdir -p "$product/claims"
+mkdir -p "$product/curbpack/claims"
 for id in \
 	CRA-ANNEX-VII-MANUAL \
 	CRA-ANNEX-VII-RISK \
@@ -46,12 +46,12 @@ for id in \
 	HOUSE-SECURITY-MD \
 	HOUSE-SECURITY-TXT
 do
-	cp "$fixture/claims/$id.json" "$product/claims/$id.json"
+	cp "$fixture/claims/$id.json" "$product/curbpack/claims/$id.json"
 done
 
 out=$product/run-result.json
 set +e
-checks_out=$(python3 -m checks --repo "$product" --packs "$fixture/packs" --out "$out")
+checks_out=$("$root/scripts/bin/curbcheck" --repo "$product" --packs "$fixture/packs" --out "$out")
 checks_code=$?
 set -e
 printf '%s\n' "$checks_out"

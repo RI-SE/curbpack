@@ -14,14 +14,14 @@ Sibling documents:
 
 ## Responsibilities
 
-The runner evaluates Claim files that the repo selects and writes one run result. A test or `python -m checks` calls the same functions. The page does not walk the tree, compare bytes, or decide `pass` / `fail` / `skipped`.
+The runner evaluates Claim files that the repo selects and writes one run result. `curbcheck` calls the same functions. The page does not walk the tree, compare bytes, or decide `pass` / `fail` / `skipped`.
 
 | Function | Caller passes | Returns |
 | --- | --- | --- |
 | `validate_check_args(check, args)` | Check id and args. | Raises `CheckError` or `ModelError`. Claims Editor calls this before it writes a Claim. |
 | `run_claim(repo, claim)` | Product repo and one Claim. | One row. |
 | `build_run_result(repo, claims, packs, *, skip=None)` | Claims, the pack rows below, and an optional map of claim id to skip reason. | A value `validate_run_result` accepts. |
-| `run_repository(repo, packs_root, *, skip=None)` | Product repo and the directory that contains `<pack-id>/pack.json`. | The result and `process_exit_code`. Writes nothing. |
+| `run_repository(repo, packs_root=None, *, skip=None)` | Product repo. `packs_root`, when passed, is the directory that contains `<pack-id>/pack.json`. When it is omitted, packs load from `<repo>/<curbpack>/packs`. | The result and `process_exit_code`. Writes nothing. |
 | `run_and_write(repo, packs_root, out, *, skip=None)` | Those, plus the output path. | Writes that path only after the result validates. Returns the result and the exit code. |
 | `process_exit_code(result)` | A run result. | `0` or `1`. |
 | `git_snapshot(repo)` | A directory. | `commit` and `worktree`, or absent when Git has no HEAD. |
@@ -34,13 +34,13 @@ The runner does not read `discovery_hints`, `note`, `remediation_hint`, or Claim
 
 ## What the runner loads
 
-`curbpack.json` selects packs and requirements (`packs2.md` §2.3). `run_repository` loads each `packs_root/<id>/pack.json` and the Requirement files beside it.
+`curbpack.json` selects packs and requirements (`packs2.md` §2.3). `curbpack` in that file is a path relative to the repo. When the key is absent, the directory is `curbpack`. `run_repository` loads each `<packs-root>/<id>/pack.json` and the Requirement files beside it. The packs root from the file is `<curbpack>/packs`. An explicit `packs_root` is already that directory, so it does not gain another `packs/` segment.
 
 Each `packs` entry on the result is that pack's `id`, its `version`, and `pack_directory_digest` of that directory. `version` is the hand-set label. A missing pack directory, or a `requirements` id that is not in the loaded files, raises `ModelError` and writes nothing.
 
 Selected ids are `requirements` when that key is set, otherwise every loaded id minus `exclude_requirements`. Both keys together are already rejected by `validate_curbpack_config`.
 
-Every Claim file under the repo's `claims/` directory is loaded. A Claim whose `requirement_id` is not selected raises `ModelError` and writes nothing. A Claim with `checks: []` is omitted. A selected Requirement with no executed Claim produces no row. The runner does not invent a row for it.
+Every Claim file directly under `<repo>/<curbpack>/claims/` is loaded. A Claim whose `requirement_id` is not selected raises `ModelError` and writes nothing. A Claim with `checks: []` is omitted. A selected Requirement with no executed Claim produces no row. The runner does not invent a row for it.
 
 `skip` is a map the caller builds for this run. A listed id marks every configured Check `skipped` and `run_claim` is not called. The reason is stripped and stored as each Check's `detail`. An empty reason raises `ModelError` and writes nothing.
 
@@ -54,7 +54,7 @@ The JSON is `packs2.md` §3.1. `validate_run_result` is the check. `save_run_res
 
 One result per executed Claim, including passes. `digest` is `version_digest` of that whole Claim. Claim `status` is `fail` if any Check fails, otherwise `skipped` if any Check is skipped, otherwise `pass`. Each configured Check has `index`, `check`, `args`, `status`, and `detail` when required. `detail` is omitted on `pass`, required on `fail` and `skipped`. A `pattern` probe fails when the expression matches.
 
-The output path is an argument. The demo writes `<product-repo>/.curbpack/run-result.json`. That directory is temporary working data, not the durable review report, and the file is not inside the pack directory. A failed run leaves the previous file in place. A run does not write or delete the review report.
+The output path is an argument. `curbcheck` writes `<repo>/<curbpack>/run-result.json` when `--out` is omitted. The Studio Check page still writes `<product-repo>/.curbpack/run-result.json`. That directory is temporary working data, not the durable review report, and the file is not inside the pack directory. A failed run leaves the previous file in place. A run does not write or delete the review report.
 
 ## Checks this build runs
 

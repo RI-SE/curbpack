@@ -168,6 +168,25 @@ def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip:
     return validate_run_result(result)
 
 
+def curbpack_directory(repo: Path, config: dict | None = None) -> Path:
+    """Directory named by `curbpack` in `<repo>/curbpack.json`. Absent means `curbpack`."""
+    if config is None:
+        config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    return repo / (config.get("curbpack") or "curbpack")
+
+
+def claim_catalog(repo: Path, directory: Path) -> Path:
+    """`<directory>/claims` when that catalog exists. Otherwise `<repo>/claims`.
+
+    curbcheck writes the directory catalog. Studio still saves Claims beside the
+    repository until that page follows the same directory.
+    """
+    catalog = directory / "claims"
+    if catalog.is_dir() or not (repo / "claims").is_dir():
+        return catalog
+    return repo / "claims"
+
+
 def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict) -> set[str]:
     present = {requirement["id"] for _pack, requirements in loaded for requirement in requirements}
     if "requirements" in config:
@@ -179,8 +198,13 @@ def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict
     return present - excluded
 
 
-def run_repository(repo: Path, packs_root: Path, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
+def run_repository(repo: Path, packs_root: Path | None = None, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    directory = curbpack_directory(repo, config)
+    # An explicit packs_root is the directory that contains <pack-id>/pack.json.
+    # The path from the file is <curbpack>/packs, with no second packs/ segment.
+    if packs_root is None:
+        packs_root = directory / "packs"
     loaded = []
     pack_rows = []
     for pack_id in config["packs"]:
@@ -193,7 +217,7 @@ def run_repository(repo: Path, packs_root: Path, *, skip: dict[str, str] | None 
             {"id": pack["id"], "version": pack["version"], "digest": pack_directory_digest(pack_dir)}
         )
     selected = selected_requirement_ids(loaded, config)
-    claims = load_claims(repo / "claims")
+    claims = load_claims(claim_catalog(repo, directory))
     for claim in claims:
         if claim["requirement_id"] not in selected:
             raise ModelError(
@@ -230,7 +254,9 @@ def run_pack_directories(
     return result, process_exit_code(result)
 
 
-def run_and_write(repo: Path, packs_root: Path, out: Path, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
+def run_and_write(
+    repo: Path, packs_root: Path | None, out: Path, *, skip: dict[str, str] | None = None
+) -> tuple[dict, int]:
     result, code = run_repository(repo, packs_root, skip=skip)
     save_run_result(out, result)
     return result, code
