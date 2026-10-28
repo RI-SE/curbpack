@@ -25,7 +25,7 @@ SAMPLE = """# CHK-05 — Test
 | Last verified tests | `python -m unittest x` — PASS 3 tests |
 | Last checkpoint commit | Resolve from git log |
 | Requirements | docs/req/checks.md CHK-R01 |
-| Packs v2 | ../curbpack/docs/reference/packs2.md at commit abc123 |
+| Packs v2 | docs/reference/packs2.md at commit abc123 |
 | Blockers | None |
 | **Exact next action** | Task 2: write test |
 

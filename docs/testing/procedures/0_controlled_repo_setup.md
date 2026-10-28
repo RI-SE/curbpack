@@ -4,7 +4,7 @@ An R-id is the prepared repository content a case starts from. R1–R7 are Curbp
 
 The carried cases use the file content of reference-product commit `dee885ffb421e4646fea07fbb4a629616c09efc6`, extracted with `git archive`. That content is R1. Preparation is in [procedures/README.md](README.md).
 
-R8 and R9 are not in this file. Their product effects stay in `ctam/docs/testing/procedures.md`. Both ids are in [outside.md](../outside.md).
+R8 and R9 are not in this file. Their product effects stay in `../ctam/docs/testing/procedures.md`. Both ids are in [outside.md](../outside.md).
 
 ## R1 — Starting Glucose Log content
 

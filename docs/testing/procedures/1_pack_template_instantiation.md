@@ -10,7 +10,7 @@ That script copies `external_test/curbpack/pf-fixtures/<PF-id>/` onto the checko
 
 The Studio runner does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`. For PF-01 it loads pack ids from `--packs docs/reference/test-packs` and the `packs` array in `curbpack.json`.
 
-PF-18 and PF-19 are not in this file. Their product effects stay in `ctam/docs/testing/procedures.md`. Both ids are in [outside.md](../outside.md).
+PF-18 and PF-19 are not in this file. Their product effects stay in `../ctam/docs/testing/procedures.md`. Both ids are in [outside.md](../outside.md).
 
 ## PF-01
 

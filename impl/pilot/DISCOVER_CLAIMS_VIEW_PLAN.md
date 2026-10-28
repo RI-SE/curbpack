@@ -1,6 +1,6 @@
 # Discover claims view — review plan
 
-> **Status: COMPLETE as a record of the researcher pilot.** The Claim shape in the global constraints below — one Check per Claim file — was superseded by `curbpack/docs/reference/packs2.md` §2.4. A Claim now has `source`, source `args`, `description`, and `checks[]`. Create writes one Claim for the evidence. Architecture sentences from section 3 are applied for the rest of the pilot: a finding may have zero checks, Create does not overwrite, and an unsigned Claim with Checks can be evaluated. This file belongs in `impl/pilot/`.
+> **Status: COMPLETE as a record of the researcher pilot.** The Claim shape in the global constraints below — one Check per Claim file — was superseded by `docs/reference/packs2.md` §2.4. A Claim now has `source`, source `args`, `description`, and `checks[]`. Create writes one Claim for the evidence. Architecture sentences from section 3 are applied for the rest of the pilot: a finding may have zero checks, Create does not overwrite, and an unsigned Claim with Checks can be evaluated. This file belongs in `impl/pilot/`.
 >
 > **Later Review, not this pilot:** a completed Review report must list every unsigned Claim and every Claim whose signature does not verify, with their Requirement ids, in an appendix. That list must not change check results.
 >
@@ -408,7 +408,7 @@ Preserved throughout: `/requirements` edit and sign, `/claims` create/edit/retir
 
 ## 9. Final acceptance
 
-One walkthrough on the existing CRA Annex VII working copy `poc2/data/workspace/cra-xml-baseline/2026-10-14T043810Z` and repo `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product`. Ollama at `http://127.0.0.1:11434` with `qwen3-coder:30b`. If the model is down, the walkthrough stops at step 4 and is not called parity.
+One walkthrough on the existing CRA Annex VII working copy `poc2/data/workspace/cra-xml-baseline/2026-10-14T043810Z` and repo `../cyberready-test-product`. Ollama at `http://127.0.0.1:11434` with `qwen3-coder:30b`. If the model is down, the walkthrough stops at step 4 and is not called parity.
 
 1. On `/discover`, select that repo, CRA Annex VII, section VII, that working copy. Discover. The popup finishes with one block per Requirement id in the copy.
 2. Open claims. The overview lists those Requirement ids and locators, not `vii-1a` and not a claim slug. Findings counts match the job. High counts match rank High.
@@ -443,7 +443,7 @@ Done: steps 1–9. `read_source_text`, exact excerpt verification, bounded asses
 
 Tested: `cd poc2 && .venv/bin/python -m unittest tests.test_m2_discovery tests.test_discovery_assess tests.test_discover_repos tests.test_discover_feedback tests.test_create_configured_claims tests.test_discover_claims_ui tests.test_claims_binding_ui` — pass. Also `tests.test_ui_smoke tests.test_m4_checks tests.test_requirements_ui tests.test_pilot_pack_selection tests.test_m3_claims` — pass. The HTTP researcher test covers Discover, overview, legal text, model score, highlighted file, Useful reload, rejected empty pattern, saved `exist`, Create, repeated Create unchanged, Claim editor unsigned reading, an added finding, and a finding with no checks.
 
-Live walkthrough, 2026-10-14, server `http://127.0.0.1:8771`, working copy `cra-xml-baseline/2026-10-14T043810Z`, product `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product`, model `qwen3-coder:30b`:
+Live walkthrough, 2026-10-14, server `http://127.0.0.1:8771`, working copy `cra-xml-baseline/2026-10-14T043810Z`, product `../cyberready-test-product`, model `qwen3-coder:30b`:
 
 - Job `discover-407528d0` finished with `assess_limit` 1. Overview lists the Annex VII Requirement ids. `CRA-ANNEX-VII-DESCRIPTION-PURPOSE` shows locator VII.1(a), 9 findings, High 1.
 - The purpose page shows the law text, model score 0.8 High, and the model rationale. Other findings on that page say not assessed and have no score.

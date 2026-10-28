@@ -6,15 +6,14 @@
 
 **Starts when:** now. This story does not wait on DOC-01 or DOC-02. TST-01 and REF-01 wait on this story. This story does not edit the reference product.
 
-**As a tester**, I want the three Packs from `curbpack/packs` in Packs v2 form, so Studio's checker can load those ids.
+**As a tester**, I want the three Packs in `docs/reference/test-packs` in Packs v2 form, so Studio's checker can load those ids.
 
 ## Read
 
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/packs/cra-baseline`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/packs/house-policy`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/packs/medtech-iec62304`
-- Old format: `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/reference/packs.md`
-- New format: `docs/reference/packs2.md`. Claims are product-repo files, not files inside the Pack directory.
+- `docs/reference/test-packs/cra-baseline`
+- `docs/reference/test-packs/house-policy`
+- `docs/reference/test-packs/medtech-iec62304`
+- `docs/reference/packs2.md`. Claims are product-repo files, not files inside the Pack directory.
 
 ## Write only
 

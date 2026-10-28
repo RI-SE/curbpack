@@ -8,14 +8,14 @@
 
 ## Read
 
-- `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product/external_test/curbpack-studio`
+- `../cyberready-test-product/external_test/curbpack-studio`
 - Read-only: `external_test/curbpack` and `external_test/ctam` in that repository
 - `docs/reference/test-packs/` in the Studio repository
 - `docs/testing/` and `plan/TST-01.md` as TST-01 left them
 
 ## Write only
 
-`/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product/external_test/curbpack-studio/`
+`../cyberready-test-product/external_test/curbpack-studio/`
 
 ## Accept when
 

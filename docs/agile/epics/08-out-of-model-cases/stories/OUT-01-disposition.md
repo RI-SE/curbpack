@@ -10,8 +10,8 @@
 
 - `docs/testing/outside.md`
 - `daniel/ny_sdd/docs/REQUIREMENTS.md` and `daniel/ny_sdd/docs/baseline-delta.md`
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/testing/requirements_traceability.md`
-- `/Users/DanielFl/Documents/aProjects/aslak/ctam/docs/testing/procedures.md`
+- `docs/testing/requirements_traceability.md`
+- `../ctam/docs/testing/procedures.md`
 
 ## Write only
 

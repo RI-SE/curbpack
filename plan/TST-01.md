@@ -5,7 +5,7 @@
 - **Story:** `docs/agile/epics/06-migrated-test-suite/stories/TST-01-migrate-testing-docs.md`
 - **Goal:** `docs/testing/README.md` states a `python3 -m checks` argv that exits 0 when every carried case has its expected status.
 - **Scope / exclusions:** Write `plan/TST-01.md` and files under `docs/testing/` only. Do not edit application code, `docs/reference/packs2.md`, `docs/reference/test-packs/`, `daniel/ny_sdd/`, `docs/req/`, or `cyberready-test-product`. Derived requirement rows stay in this plan because an extra `docs/req/` file would violate that commit set. No new Packs v2 field. No edit to an `R*` or `PF*` script.
-- **Baseline:** Source tree `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/testing/` has 9 files (Curbpack `b07b8de`). Reference product HEAD `dee885ffb421e4646fea07fbb4a629616c09efc6`. Studio HEAD `971b1ae`. Probe on 2026-10-24: a temporary archive of that product HEAD, plus `curbpack.json` selecting `cra-baseline`, `house-policy`, and `medtech-iec62304`, plus all 9 claim files from `docs/reference/test-packs/claims/`, run as `python3 -m checks --repo <temp> --packs docs/reference/test-packs --out <temp>/all.json`. Result: claims 9, exit 1. Seven claims `pass`. `HOUSE-DEP-AXIOS-PIN` fails because `curbcheck-dep-ban` is unavailable. `HOUSE-SECRET-PATHS` fails because `.env`, `.env.local`, `credentials.json`, `service-account.json`, and `id_rsa` are absent. The same tree with only the seven passing claim files exits 0. That probe directory sat inside the Studio work tree, so Git reported the Studio worktree dirty. The acceptance run must use a checkout outside this repository.
+- **Baseline:** Source tree `docs/testing/` has 9 files (Curbpack `b07b8de`). Reference product HEAD `dee885ffb421e4646fea07fbb4a629616c09efc6`. Studio HEAD `971b1ae`. Probe on 2026-10-24: a temporary archive of that product HEAD, plus `curbpack.json` selecting `cra-baseline`, `house-policy`, and `medtech-iec62304`, plus all 9 claim files from `docs/reference/test-packs/claims/`, run as `python3 -m checks --repo <temp> --packs docs/reference/test-packs --out <temp>/all.json`. Result: claims 9, exit 1. Seven claims `pass`. `HOUSE-DEP-AXIOS-PIN` fails because `curbcheck-dep-ban` is unavailable. `HOUSE-SECRET-PATHS` fails because `.env`, `.env.local`, `credentials.json`, `service-account.json`, and `id_rsa` are absent. The same tree with only the seven passing claim files exits 0. That probe directory sat inside the Studio work tree, so Git reported the Studio worktree dirty. The acceptance run must use a checkout outside this repository.
 
 ## Current checkpoint
 
@@ -33,14 +33,14 @@ Plan revision: 2026-10-24.1. Maintainer: Maintainer, 2026-10-24.
 | TST-R03 | TST-01 | Each carried case id in `docs/testing/procedures/cases.md` has expected status `pass`, and the same `checks[].check` and `checks[].args` as `docs/reference/test-packs/claims/<id>.json`. | APPROVED |
 | TST-R04 | TST-01 | `docs/testing/outside.md` has one `id` column and the outside ids in this plan. A row there is not a pass. | APPROVED |
 | TST-R05 | TST-01 | `docs/testing/procedures/0_controlled_repo_setup.md` and `1_pack_template_instantiation.md` keep R1–R7 and PF-01–PF-17 with the product effects copied below. They name `external_test/curbpack/states/<id>.sh` and `mutate_pack.sh`. They do not replace those scripts. | APPROVED |
-| TST-R06 | TST-01 | R8, R9, PF-18, and PF-19 stay the ids in `ctam/docs/testing/procedures.md`. They are outside. No reference-product script is edited. | APPROVED |
+| TST-R06 | TST-01 | R8, R9, PF-18, and PF-19 stay the ids in `../ctam/docs/testing/procedures.md`. They are outside. No reference-product script is edited. | APPROVED |
 | TST-R07 | TST-01 | Work log records the argv, the date, pass count 7, fail count 0, and the outside ids. Exit 0 is recorded only for that result. | APPROVED |
 
 ## Source files
 
 Count 9. Carried 9. Outside 0. Carried plus outside equals 9.
 
-| Source file under `curbpack/docs/testing/` | Mark | Studio path |
+| Source file under `docs/testing/` | Mark | Studio path |
 | --- | --- | --- |
 | `README.md` | carried | `docs/testing/README.md` |
 | `strategy.md` | carried | `docs/testing/strategy.md` |
@@ -91,7 +91,7 @@ Outside count: 2 + 4 + 55 = 61. An id in that file is not a pass. Disposition is
 
 ## Product effects kept
 
-R1–R7, from `curbpack/docs/testing/procedures/0_controlled_repo_setup.md`. The script path stays `external_test/curbpack/states/<id>.sh` invoked by `external_test/curbpack/setup.sh <id> --commit` on the reference-product checkout. This story does not run that script against the live product and does not edit it.
+R1–R7, from `docs/testing/procedures/0_controlled_repo_setup.md`. The script path stays `external_test/curbpack/states/<id>.sh` invoked by `external_test/curbpack/setup.sh <id> --commit` on the reference-product checkout. This story does not run that script against the live product and does not edit it.
 
 | ID | Product effect |
 | --- | --- |
@@ -103,7 +103,7 @@ R1–R7, from `curbpack/docs/testing/procedures/0_controlled_repo_setup.md`. The
 | R6 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Owner <owner@example.com>` dated `2022-01-01T00:00:00Z`. |
 | R7 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Wrong Author <wrong@example.com>` dated `2026-09-13T12:00:00Z`. |
 
-PF-01–PF-17, from `curbpack/docs/testing/procedures/1_pack_template_instantiation.md`. The selector stays `external_test/curbpack/mutate_pack.sh <PF-id>`. Studio's runner does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`. PF-01's pack ids are passed as `--packs docs/reference/test-packs`.
+PF-01–PF-17, from `docs/testing/procedures/1_pack_template_instantiation.md`. The selector stays `external_test/curbpack/mutate_pack.sh <PF-id>`. Studio's runner does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`. PF-01's pack ids are passed as `--packs docs/reference/test-packs`.
 
 | ID | Product effect |
 | --- | --- |
@@ -125,13 +125,13 @@ PF-01–PF-17, from `curbpack/docs/testing/procedures/1_pack_template_instantiat
 | PF-16 | Conflicting `HOUSE-SECURITY-MD` definitions, original then `docs/pk003-absent.md`. |
 | PF-17 | Same conflicting definitions as PF-16, order reversed. |
 
-R8 is R1 with `src/app.py` present and `does not calculate insulin` replaced once by `does not calculate insulin (edited)`. R9 is R1 with `src/app.py` absent, not empty. PF-18 copies `external_test/ctam/pf-fixtures/PF-18/context-pack.json` onto `external_test/ctam/context-pack.json`. PF-19 copies `buyer-questions.json` and `context-pack.json` from `external_test/ctam/pf-fixtures/PF-19/` onto `external_test/ctam/`. Those four are outside. The sentences stay in `ctam/docs/testing/procedures.md`.
+R8 is R1 with `src/app.py` present and `does not calculate insulin` replaced once by `does not calculate insulin (edited)`. R9 is R1 with `src/app.py` absent, not empty. PF-18 copies `external_test/ctam/pf-fixtures/PF-18/context-pack.json` onto `external_test/ctam/context-pack.json`. PF-19 copies `buyer-questions.json` and `context-pack.json` from `external_test/ctam/pf-fixtures/PF-19/` onto `external_test/ctam/`. Those four are outside. The sentences stay in `../ctam/docs/testing/procedures.md`.
 
 ## Tasks
 
 ### Task 0 — derive and approve requirements and plan
 
-**Inputs / contracts:** the nine source files, `ctam/docs/testing/procedures.md`, `daniel/ny_sdd/docs/REQUIREMENTS.md`, `docs/reference/test-packs/claims/`, `docs/reference/packs2.md`
+**Inputs / contracts:** the nine source files, `../ctam/docs/testing/procedures.md`, `daniel/ny_sdd/docs/REQUIREMENTS.md`, `docs/reference/test-packs/claims/`, `docs/reference/packs2.md`
 **Change files:** `plan/TST-01.md`
 **Acceptance / stop:** plan review reports no blocking issue; then set Plan status to APPROVED. Stop if a blocking issue remains after one re-review.
 
@@ -161,7 +161,7 @@ R8 is R1 with `src/app.py` present and `does not calculate insulin` replaced onc
 
 Prepare a temporary repo outside this Studio work tree. Read-only source is reference-product commit `dee885ffb421e4646fea07fbb4a629616c09efc6`. Do not edit that product.
 
-1. `git -C /Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product archive dee885ffb421e4646fea07fbb4a629616c09efc6` extracted into the temp repo.
+1. `git -C ../cyberready-test-product archive dee885ffb421e4646fea07fbb4a629616c09efc6` extracted into the temp repo.
 2. Write `<temp>/curbpack.json` with exactly `{"packs":["cra-baseline","house-policy","medtech-iec62304"]}`.
 3. Copy only these seven files into `<temp>/claims/`: `CRA-ANNEX-VII-MANUAL.json`, `CRA-ANNEX-VII-RISK.json`, `CRA-ANNEX-VII-SUPPORT.json`, `CRA-ART14-PATH.json`, `HOUSE-ANTI-PLACEHOLDER.json`, `HOUSE-SECURITY-MD.json`, `HOUSE-SECURITY-TXT.json`, from `docs/reference/test-packs/claims/`. `python3 -m checks` reads that `claims/` directory (`checks/run.py`).
 4. `git init` and one commit in the temp repo so its worktree is clean. That commit is not a Studio commit.
@@ -191,7 +191,7 @@ The epic allows commits to contain only `plan/TST-01.md` and paths under `docs/t
 
 ## Work log
 
-- **2026-10-24 / Task 0:** Dependencies DOC-01, DOC-02, DOC-03, and PK2-01 are Status Done in their stories and epic tables. `cmp docs/reference/packs2.md daniel/ny_sdd/docs/architecture/packs2.md` exited 0. `find daniel/ny_sdd -type f` printed the 17 DOC-03 paths and nothing else. Source file count under `curbpack/docs/testing/` is 9. Probe command: `python3 -m checks --repo <temp> --packs docs/reference/test-packs --out <temp>/all.json` on an archive of product `dee885ffb421e4646fea07fbb4a629616c09efc6` with all 9 claim files. Output: `claims 9 exit 1`; seven `pass`; `HOUSE-DEP-AXIOS-PIN` fail (`curbcheck-dep-ban` unavailable); `HOUSE-SECRET-PATHS` fail (five paths absent). Second probe with those two claim files omitted: `claims 7 exit 0`. Temp directory removed. No reference-product file edited. First plan review found two blocking issues: Task 2 did not state `curbpack.json` and the seven files under `claims/`, and Task 3 moved the plan to `impl/`, which the epic commit list forbids. Both are corrected in revision 2026-10-24.1. Re-review status: Approved. No blocking issues. Advisory notes kept: acceptance signal is `claims 7 exit 0` and no `fail` status; traceability names no catalogue case id. Plan status set to APPROVED. IMPL-START Task 1. Requirements TST-R01–TST-R06. Files: the nine carried paths, `docs/testing/procedures/cases.md`, `docs/testing/outside.md`.
+- **2026-10-24 / Task 0:** Dependencies DOC-01, DOC-02, DOC-03, and PK2-01 are Status Done in their stories and epic tables. `cmp docs/reference/packs2.md daniel/ny_sdd/docs/architecture/packs2.md` exited 0. `find daniel/ny_sdd -type f` printed the 17 DOC-03 paths and nothing else. Source file count under `docs/testing/` is 9. Probe command: `python3 -m checks --repo <temp> --packs docs/reference/test-packs --out <temp>/all.json` on an archive of product `dee885ffb421e4646fea07fbb4a629616c09efc6` with all 9 claim files. Output: `claims 9 exit 1`; seven `pass`; `HOUSE-DEP-AXIOS-PIN` fail (`curbcheck-dep-ban` unavailable); `HOUSE-SECRET-PATHS` fail (five paths absent). Second probe with those two claim files omitted: `claims 7 exit 0`. Temp directory removed. No reference-product file edited. First plan review found two blocking issues: Task 2 did not state `curbpack.json` and the seven files under `claims/`, and Task 3 moved the plan to `impl/`, which the epic commit list forbids. Both are corrected in revision 2026-10-24.1. Re-review status: Approved. No blocking issues. Advisory notes kept: acceptance signal is `claims 7 exit 0` and no `fail` status; traceability names no catalogue case id. Plan status set to APPROVED. IMPL-START Task 1. Requirements TST-R01–TST-R06. Files: the nine carried paths, `docs/testing/procedures/cases.md`, `docs/testing/outside.md`.
 - **2026-10-24 / Task 1:** Wrote the nine carried files, `docs/testing/procedures/cases.md`, and `docs/testing/outside.md`. Check arrays in `cases.md` match the seven claim files. `outside.md` has 61 ids and one column.
 - **2026-10-24 / Task 2:** Prepared `/tmp/tst01-suite.tqJXSt/repo` from `git archive dee885ffb421e4646fea07fbb4a629616c09efc6`, `curbpack.json` packs `cra-baseline`, `house-policy`, `medtech-iec62304`, and the seven claim files under `claims/`. Own commit, porcelain empty. Command from the Studio root: `python3 -m checks --repo /tmp/tst01-suite.tqJXSt/repo --packs docs/reference/test-packs --out /tmp/tst01-suite.tqJXSt/repo/run-result.json`. Stdout: `claims 7 exit 0`. Pass count 7. Fail count 0. Worktree clean. Process exit 0. Reference-product `git status --porcelain` unchanged. Temporary repo deleted. REVIEW-START for Task 1 and Task 2. First code review: Important findings fixed — PF-08 and PF-09 name the EV-008 packs and destination paths; `HOUSE-DEP-AXIOS-PIN` and `HOUSE-SECRET-PATHS` have their `checks` arrays in `docs/testing/procedures/cases.md` and are marked outside, not pass. Minor, left as written: traceability cites the requirements file rather than quoting each sentence; the strategy table calls a non-pass `fail`. Second code review: no Critical or Important findings. Outside ids: `HOUSE-DEP-AXIOS-PIN`, `HOUSE-SECRET-PATHS`, `R8`, `R9`, `PF-18`, `PF-19`, and `MUST-01`, `MUST-02`, `MUST-03`, `MUST-04`, `MUST-10`, `MUST-11`, `MUST-12`, `MUST-13`, `MUST-14`, `MUST-20`, `MUST-21`, `MUST-22`, `MUST-23`, `MUST-24`, `MUST-25`, `MUST-30`, `MUST-31`, `MUST-32`, `MUST-33`, `MUST-34`, `MUST-35`, `MUST-40`, `MUST-41`, `MUST-42`, `MUST-43`, `MUST-44`, `MUST-45`, `MUST-46`, `MUST-47`, `MUST-48`, `MUST-50`, `MUST-51`, `MUST-52`, `MUST-53`, `MUST-60`, `MUST-61`, `MUST-62`, `MUST-63`, `MUST-70`, `MUST-71`, `MUST-72`, `MUST-73`, `MUST-74`, `MUST-80`, `MUST-81`, `MUST-82`, `MUST-83`, `MUST-84`, `MUST-90`, `MUST-91`, `MUST-92`, `MUST-93`, `MUST-94`, `MUST-95`, `MUST-96`.
 - **2026-10-24 / Task 3:** `python3 scripts/check_story_plan.py TST-01 --phase checkpoint` exited 0 while Plan status was APPROVED. Plan status then set to DONE in `plan/TST-01.md`. `impl/TST-01.md` was not created. `--phase done` was not run. No implementation step remains.

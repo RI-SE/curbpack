@@ -71,7 +71,7 @@ Definitions: [0. Controlled repository content](0_controlled_repo_setup.md).
 
 The Studio script is `external_test/curbpack-studio/setup.sh <id> --commit`, which runs `external_test/curbpack-studio/states/<id>.sh`. Those state files stay byte-identical to `external_test/curbpack/states/`. This suite does not replace them.
 
-R8 and R9 are defined in `ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md). This suite does not run them.
+R8 and R9 are defined in `../ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md). This suite does not run them.
 
 ## Pack inputs
 
@@ -79,7 +79,7 @@ Definitions: [1. Pack inputs](1_pack_template_instantiation.md).
 
 PF-01 is the pack set above, loaded from `external_test/curbpack-studio/packs` on the clone. PF-02 through PF-17 keep their product effects and are not carried cases. The selector remains `external_test/curbpack-studio/mutate_pack.sh <PF-id>`. This suite does not replace that script.
 
-PF-18 and PF-19 are defined in `ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md).
+PF-18 and PF-19 are defined in `../ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md).
 
 ## Execution configurations
 

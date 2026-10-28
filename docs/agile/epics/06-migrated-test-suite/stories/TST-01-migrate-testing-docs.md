@@ -4,15 +4,15 @@
 
 **Starts when:** DOC-01, DOC-02, DOC-03, and PK2-01 are accepted. Do not write the plan before that. The ids DOC-03 kept or moved to `docs/baseline-delta.md` are the ids this suite cites.
 
-**As a tester**, I want `curbpack/docs/testing` migrated to `docs/testing/` so the carried cases run through `python3 -m checks`.
+**As a tester**, I want the carried cases in `docs/testing/` to run through `python3 -m checks`.
 
 ## Read
 
-- `/Users/DanielFl/Documents/aProjects/aslak/curbpack/docs/testing/`
-- `/Users/DanielFl/Documents/aProjects/aslak/ctam/docs/testing/procedures.md` for `R8`, `R9`, `PF-18`, and `PF-19` only
+- `docs/testing/`
+- `../ctam/docs/testing/procedures.md` for `R8`, `R9`, `PF-18`, and `PF-19` only
 - `daniel/ny_sdd/docs/REQUIREMENTS.md` and `daniel/ny_sdd/docs/baseline-delta.md`
 - `docs/reference/test-packs/`
-- Read-only: `/Users/DanielFl/Documents/aProjects/aslak/cyberready-test-product/external_test/curbpack-studio/states/` and `external_test/ctam/`
+- Read-only: `../cyberready-test-product/external_test/curbpack-studio/states/` and `external_test/ctam/`
 
 ## Write only
 
@@ -20,7 +20,7 @@
 
 ## Phase A
 
-Write `plan/TST-01.md` from `plan/TEMPLATE.md`. Mark every source file under `curbpack/docs/testing/` as carried or outside. Rewritten text is carried. Record the source-file count, the carried count, and the outside count. Carried plus outside equals the source-file count. Mark `R8`, `R9`, `PF-18`, and `PF-19` carried or outside. Phase B starts only after a dated line in that plan names the maintainer and the plan revision.
+Write `plan/TST-01.md` from `plan/TEMPLATE.md`. Mark every source file under `docs/testing/` as carried or outside. Rewritten text is carried. Record the source-file count, the carried count, and the outside count. Carried plus outside equals the source-file count. Mark `R8`, `R9`, `PF-18`, and `PF-19` carried or outside. Phase B starts only after a dated line in that plan names the maintainer and the plan revision.
 
 ## Phase B
 

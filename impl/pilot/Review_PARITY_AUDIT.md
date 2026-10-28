@@ -8,7 +8,7 @@ Status: evidence-based design audit, 21 October 2026. This is a comparison, **no
 - `poc2(3).zip` (earlier) and `poc2 2.zip` (current): `poc2/review/ARCHITECTURE.md`, `review/compile.py`, `checks/ARCHITECTURE.md`. Evidence of target assertions and current code; source documents acknowledge implementation gaps.
 - `aslaks-first-vision.zip`: `docs/shared-frame.md`, `docs/intent-vs-scope.md`, `docs/method/review-method-1.3.0.md`. Evidence of earlier intent and legacy method, **not a new Packs v2 contract**.
 - `PoC2_ARCHITECTURE_revised.md`: cross-subsystem target, including ownership split requirements / claims / checks / compile / review.
-- Normative Packs v2 is identified by the above documents as `curbpack/docs/reference/packs2.md`; its **complete authoritative source was not independently available in the uploaded extracts**. Schema-sensitive proposals remain conservative and subject to direct contract validation.
+- Normative Packs v2 is identified by the above documents as `docs/reference/packs2.md`; its **complete authoritative source was not independently available in the uploaded extracts**. Schema-sensitive proposals remain conservative and subject to direct contract validation.
 
 ## Parity matrix
 
