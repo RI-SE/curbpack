@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify import verify_directory
@@ -20,6 +21,80 @@ SOURCE_NOTE = (
     "The requirement for standalone Windows x64 and macOS ARM64 binaries is not met. "
     "A checkout of this tag starts with `make start`."
 )
+
+
+def _parse_sums(sum_texts: list[str]) -> list[tuple[str, str]]:
+    parsed: list[tuple[str, str]] = []
+    for text in sum_texts:
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            digest, separator, name = stripped.partition("  ")
+            if separator != "  " or len(digest) != 64 or not name or "/" in name or "\\" in name:
+                raise ValueError(f"publish sums line is not usable: {stripped}")
+            parsed.append((digest, name))
+    named = {name for _digest, name in parsed}
+    if len(named) != len(parsed):
+        raise ValueError("publish sums name a file more than once")
+    mac = [name for _digest, name in parsed if "macos" in name]
+    windows = [name for _digest, name in parsed if "windows" in name]
+    if len(mac) + len(windows) != len(parsed):
+        raise ValueError("publish sums name a file this note cannot check")
+    if not parsed:
+        raise ValueError("publish sums name no binary")
+    return parsed
+
+
+def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
+    """Release text: curl to run, and a separate hash command if you want to compare."""
+    if not repo or "/" not in repo or " " in repo or " " in tag or not tag:
+        raise ValueError("publish needs a repository and a tag")
+    parsed = _parse_sums(sum_texts)
+    base = f"https://github.com/{repo}/releases/download/{quote(tag, safe='')}"
+    mac = [(digest, name) for digest, name in parsed if "macos" in name]
+    windows = [(digest, name) for digest, name in parsed if "windows" in name]
+    blocks = []
+    if mac:
+        curls = "\n".join(f"curl -fsSL -O {base}/{name}" for _digest, name in mac)
+        names = " ".join(name for _digest, name in mac)
+        studio = next(name for _digest, name in mac if name.startswith("curbpack-studio"))
+        hashes = "\n\n".join(f"shasum -a 256 {name}\n{digest}" for digest, name in mac)
+        blocks.append(
+            "macOS\n\n"
+            "To download and run:\n\n"
+            "```sh\n"
+            f"{curls}\n"
+            f"chmod +x {names}\n"
+            f"./{studio}\n"
+            "```\n\n"
+            "To compare the hash:\n\n"
+            "```sh\n"
+            f"{hashes}\n"
+            "```\n"
+        )
+    if windows:
+        curls = "\n".join(f"curl.exe -fsSL -O {base}/{name}" for _digest, name in windows)
+        studio = next(name for _digest, name in windows if name.startswith("curbpack-studio"))
+        hashes = "\n\n".join(
+            f"Get-FileHash -Algorithm SHA256 .\\{name}\n{digest}" for digest, name in windows
+        )
+        blocks.append(
+            "Windows\n\n"
+            "To download and run:\n\n"
+            "```powershell\n"
+            f"{curls}\n"
+            f".\\{studio}\n"
+            "```\n\n"
+            "To compare the hash:\n\n"
+            "```powershell\n"
+            f"{hashes}\n"
+            "```\n"
+        )
+    return (
+        "\n".join(blocks)
+        + "\nThe process prints a local URL. Open it. The usual one is http://127.0.0.1:8770.\n"
+    )
 
 
 def _gh(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -68,12 +143,16 @@ def choose_tag(requested: str, created_at: str, taken) -> str:
     return f"{base}.{number}"
 
 
-def _tag_exists(tag: str) -> bool:
+def _repository() -> str:
     repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
-    if not repo:
-        viewed = _gh(["repo", "view", "--json", "nameWithOwner"])
-        repo = json.loads(viewed.stdout)["nameWithOwner"]
-    completed = _gh(["api", f"repos/{repo}/git/ref/tags/{tag}"], check=False)
+    if repo:
+        return repo
+    viewed = _gh(["repo", "view", "--json", "nameWithOwner"])
+    return json.loads(viewed.stdout)["nameWithOwner"]
+
+
+def _tag_exists(tag: str) -> bool:
+    completed = _gh(["api", f"repos/{_repository()}/git/ref/tags/{tag}"], check=False)
     return completed.returncode == 0
 
 
@@ -157,12 +236,11 @@ def main(argv: list[str] | None = None) -> int:
             files.extend(
                 path for path in destination.iterdir() if path.is_file() and path.name != "SHA256SUMS"
             )
-        notes = (
-            "These files are the binaries smoke-tested in CI run "
-            f"{run_id} at {sha}. This release did not rebuild them.\n\n"
-            + "\n".join(lines)
-            + "\n"
-        )
+        try:
+            notes = binary_notes(lines, _repository(), tag)
+        except ValueError as exc:
+            print(f"[FAIL] {exc}", flush=True)
+            return 1
         _gh(
             ["release", "create", tag, "--target", sha, "--title", tag, "--notes", notes]
             + [str(path) for path in files]
