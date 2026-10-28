@@ -47,16 +47,16 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 ### SETUP
 
-- Repository state: R1 via `SUT=curbpack-studio ./setup.sh R1 --commit` under `external_test/curbpack-studio`.
+- Repository state: R1 via `SUT=curbpack ./setup.sh R1 --commit` under `external_test/curbpack`.
 - Claims: the seven carried claim files from that fixture.
-- Packs: `$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs`.
+- Packs: `$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs`.
 
 ### TEST STEPS
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `python3 -m checks --repo "$REFERENCE_PRODUCT_ROOT" --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs" --out "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing `curbpack.json` and copying the seven claims) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
+| 1    | `python3 -m checks --repo "$REFERENCE_PRODUCT_ROOT" --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" --out "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing `curbpack.json` and copying the seven claims) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
 | 2    | Process exit code | `0`. |
 
 When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carried run), this row is not re-executed.

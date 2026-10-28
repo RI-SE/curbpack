@@ -7,5 +7,5 @@
 # The pin holds the scripts that create the R states. Bump it in the same
 # Studio change that adopts a new product commit.
 
-commit 7e6e0a0524132c18d60a5984fa30f749199ce46d
+commit 0261b4477e2a8c3cc853e83dea7a591c24cce1c1
 url https://github.com/RI-SE/cyberready-test-product.git

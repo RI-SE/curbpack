@@ -20,7 +20,7 @@ _pv_r1_setup() {
 		echo "$_id SETUP 2"
 		return 1
 	fi
-	_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	_setup_status=$?
 	printf '%s\n' "$_setup_output"
 	if [ "$_setup_status" -ne 0 ] ||

@@ -19,7 +19,7 @@ _dt_r1_setup() {
 		echo "$_id SETUP 2"
 		return 1
 	fi
-	_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	_setup_status=$?
 	printf '%s\n' "$_setup_output"
 	if [ "$_setup_status" -ne 0 ] ||
@@ -110,7 +110,7 @@ dt_003() {
 	# setup.sh R2 refuses a dirty tree; PF-01 files are untracked until removed.
 	remove_pf01
 
-	dt_003_r2_output=$(./external_test/curbpack-studio/setup.sh R2 --commit)
+	dt_003_r2_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R2 --commit)
 	dt_003_r2_status=$?
 	printf '%s\n' "$dt_003_r2_output"
 	if [ "$dt_003_r2_status" -ne 0 ] ||
@@ -189,7 +189,7 @@ dt_004() {
 	done
 	remove_pf01
 
-	dt_004_r2_output=$(./external_test/curbpack-studio/setup.sh R2 --commit)
+	dt_004_r2_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R2 --commit)
 	dt_004_r2_status=$?
 	printf '%s\n' "$dt_004_r2_output"
 	if [ "$dt_004_r2_status" -ne 0 ] ||

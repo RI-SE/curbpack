@@ -33,7 +33,7 @@ class CurbcheckCatalogueTest(unittest.TestCase):
             self.assertEqual(len(rows), 1, case_id)
         ev = (SUITES / "EV.md").read_text(encoding="utf-8")
         self.assertIn("## EV-002 —", ev)
-        self.assertIn("SUT=curbpack-studio ./setup.sh R1 --commit", ev)
+        self.assertIn("SUT=curbpack ./setup.sh R1 --commit", ev)
         self.assertIn("R2 via Studio fixture `setup.sh`", ev)
 
     def test_code_review_procedure_is_the_full_text(self):

@@ -4,7 +4,7 @@
 
 install_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	_fixture=$_product/external_test/curbpack-studio
+	_fixture=$_product/external_test/curbpack
 	printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$_product/curbpack.json"
 	mkdir -p "$_product/claims"
 	for _cid in \
@@ -197,7 +197,7 @@ remove_pf01() {
 # Exit status is curbcheck's. Usage: run_curbcheck_json [extra curbcheck args…]
 run_curbcheck_json() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	_packs=${CURBCHECK_PACKS:-$_product/external_test/curbpack-studio/packs}
+	_packs=${CURBCHECK_PACKS:-$_product/external_test/curbpack/packs}
 	_out=${CURBCHECK_OUT:-$_product/.curbpack/run-result.json}
 	mkdir -p "$(dirname "$_out")"
 	curbcheck --repo "$_product" --packs "$_packs" --out "$_out" "$@" >&2

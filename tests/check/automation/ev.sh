@@ -20,7 +20,7 @@ ev_001() {
 		return 1
 	fi
 	# SETUP 3
-	ev_001_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_001_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_001_setup_status=$?
 	printf '%s\n' "$ev_001_setup_output"
 	if [ "$ev_001_setup_status" -ne 0 ] ||
@@ -83,7 +83,7 @@ ev_002() {
 		return 1
 	fi
 	# SETUP 3
-	ev_002_setup_output=$(./external_test/curbpack-studio/setup.sh R2 --commit)
+	ev_002_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R2 --commit)
 	ev_002_setup_status=$?
 	printf '%s\n' "$ev_002_setup_output"
 	if [ "$ev_002_setup_status" -ne 0 ] ||
@@ -148,7 +148,7 @@ ev_003() {
 		return 1
 	fi
 	# SETUP 3
-	ev_003_setup_output=$(./external_test/curbpack-studio/setup.sh R3 --commit)
+	ev_003_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R3 --commit)
 	ev_003_setup_status=$?
 	printf '%s\n' "$ev_003_setup_output"
 	if [ "$ev_003_setup_status" -ne 0 ] ||
@@ -211,7 +211,7 @@ ev_004() {
 		return 1
 	fi
 	# SETUP 3 — R1 then make required SECURITY.md present but unreadable.
-	ev_004_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_004_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_004_setup_status=$?
 	printf '%s\n' "$ev_004_setup_output"
 	if [ "$ev_004_setup_status" -ne 0 ]; then
@@ -274,7 +274,7 @@ ev_005() {
 		return 1
 	fi
 	# SETUP 3 — R1 good tree; skip replaces curbpack --diff skipped_rules.
-	ev_005_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_005_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_005_setup_status=$?
 	printf '%s\n' "$ev_005_setup_output"
 	if [ "$ev_005_setup_status" -ne 0 ]; then
@@ -329,7 +329,7 @@ ev_006() {
 		return 1
 	fi
 	# SETUP 3
-	ev_006_setup_output=$(./external_test/curbpack-studio/setup.sh R4 --commit)
+	ev_006_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R4 --commit)
 	ev_006_setup_status=$?
 	printf '%s\n' "$ev_006_setup_output"
 	if [ "$ev_006_setup_status" -ne 0 ] ||
@@ -403,7 +403,7 @@ ev_007_a() {
 		return 1
 	fi
 	# SETUP 3
-	ev_007_a_setup_output=$(./external_test/curbpack-studio/setup.sh R2 --commit)
+	ev_007_a_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R2 --commit)
 	ev_007_a_setup_status=$?
 	printf '%s\n' "$ev_007_a_setup_output"
 	if [ "$ev_007_a_setup_status" -ne 0 ] ||
@@ -460,7 +460,7 @@ ev_007_b() {
 		return 1
 	fi
 	# SETUP 3
-	ev_007_b_setup_output=$(./external_test/curbpack-studio/setup.sh R3 --commit)
+	ev_007_b_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R3 --commit)
 	ev_007_b_setup_status=$?
 	printf '%s\n' "$ev_007_b_setup_output"
 	if [ "$ev_007_b_setup_status" -ne 0 ] ||
@@ -518,7 +518,7 @@ ev_007_c() {
 		return 1
 	fi
 	# SETUP 3
-	ev_007_c_setup_output=$(./external_test/curbpack-studio/setup.sh R4 --commit)
+	ev_007_c_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R4 --commit)
 	ev_007_c_setup_status=$?
 	printf '%s\n' "$ev_007_c_setup_output"
 	if [ "$ev_007_c_setup_status" -ne 0 ] ||
@@ -575,7 +575,7 @@ ev_007_d() {
 		echo "EV-007-D SETUP 2"
 		return 1
 	fi
-	ev_007_d_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_007_d_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_007_d_setup_status=$?
 	printf '%s\n' "$ev_007_d_setup_output"
 	if [ "$ev_007_d_setup_status" -ne 0 ]; then
@@ -627,7 +627,7 @@ ev_007_e() {
 		echo "EV-007-E SETUP 2"
 		return 1
 	fi
-	ev_007_e_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_007_e_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_007_e_setup_status=$?
 	printf '%s\n' "$ev_007_e_setup_output"
 	if [ "$ev_007_e_setup_status" -ne 0 ]; then
@@ -679,7 +679,7 @@ ev_007_f() {
 		echo "EV-007-F SETUP 2"
 		return 1
 	fi
-	ev_007_f_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_007_f_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_007_f_setup_status=$?
 	printf '%s\n' "$ev_007_f_setup_output"
 	if [ "$ev_007_f_setup_status" -ne 0 ] ||
@@ -732,7 +732,7 @@ ev_007_g() {
 		echo "EV-007-G SETUP 2"
 		return 1
 	fi
-	ev_007_g_setup_output=$(./external_test/curbpack-studio/setup.sh R6 --commit)
+	ev_007_g_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R6 --commit)
 	ev_007_g_setup_status=$?
 	printf '%s\n' "$ev_007_g_setup_output"
 	if [ "$ev_007_g_setup_status" -ne 0 ] ||
@@ -789,7 +789,7 @@ ev_007_h() {
 		echo "EV-007-H SETUP 2"
 		return 1
 	fi
-	ev_007_h_setup_output=$(./external_test/curbpack-studio/setup.sh R7 --commit)
+	ev_007_h_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R7 --commit)
 	ev_007_h_setup_status=$?
 	printf '%s\n' "$ev_007_h_setup_output"
 	if [ "$ev_007_h_setup_status" -ne 0 ] ||
@@ -846,7 +846,7 @@ ev_008_a() {
 		echo "EV-008-A SETUP 2"
 		return 1
 	fi
-	ev_008_a_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_008_a_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_008_a_setup_status=$?
 	printf '%s\n' "$ev_008_a_setup_output"
 	if [ "$ev_008_a_setup_status" -ne 0 ]; then
@@ -899,7 +899,7 @@ ev_008_b() {
 		echo "EV-008-B SETUP 2"
 		return 1
 	fi
-	ev_008_b_setup_output=$(./external_test/curbpack-studio/setup.sh R1 --commit)
+	ev_008_b_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R1 --commit)
 	ev_008_b_setup_status=$?
 	printf '%s\n' "$ev_008_b_setup_output"
 	if [ "$ev_008_b_setup_status" -ne 0 ]; then
@@ -962,7 +962,7 @@ ev_009() {
 		return 1
 	fi
 	# SETUP 3
-	ev_009_setup_output=$(./external_test/curbpack-studio/setup.sh R5 --commit)
+	ev_009_setup_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R5 --commit)
 	ev_009_setup_status=$?
 	printf '%s\n' "$ev_009_setup_output"
 	if [ "$ev_009_setup_status" -ne 0 ] ||

@@ -40,7 +40,7 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 ### SETUP
 
-- R1 via Studio fixture; seven claims; packs from `external_test/curbpack-studio/packs`.
+- R1 via Studio fixture; seven claims; packs from `external_test/curbpack/packs`.
 
 ### TEST STEPS
 

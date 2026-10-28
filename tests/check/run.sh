@@ -20,17 +20,17 @@ CONFIRM_TMP_WIPE=1 DEVELOPER_MODE="$developer_mode" \
 . "$root/tmp/verification-run.sh"
 
 product=$REFERENCE_PRODUCT_ROOT
-fixture=$product/external_test/curbpack-studio
+fixture=$product/external_test/curbpack
 if [ ! -d "$fixture/packs" ] || [ ! -d "$fixture/claims" ]; then
-	echo "error: pin is missing external_test/curbpack-studio packs/claims" >&2
+	echo "error: pin is missing external_test/curbpack packs/claims" >&2
 	exit 1
 fi
 
 (
 	cd "$fixture"
-	SUT=curbpack-studio ./setup.sh R1 --commit
+	SUT=curbpack ./setup.sh R1 --commit
 )
-if ! git -C "$product" diff --quiet -- external_test/curbpack-studio/states/R1.sh; then
+if ! git -C "$product" diff --quiet -- external_test/curbpack/states/R1.sh; then
 	echo "error: states/R1.sh changed inside the clone" >&2
 	exit 1
 fi

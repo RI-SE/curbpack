@@ -265,7 +265,7 @@ execute_function() {
 export CURBPACK_ROOT="${CURBPACK_ROOT:-$repo_root}"
 export STUDIO_ROOT="${STUDIO_ROOT:-$repo_root}"
 # Packs for curbcheck: fixture on the clone, or explicit override.
-export CURBCHECK_PACKS="${CURBCHECK_PACKS:-${REFERENCE_PRODUCT_ROOT:+$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs}}"
+export CURBCHECK_PACKS="${CURBCHECK_PACKS:-${REFERENCE_PRODUCT_ROOT:+$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs}}"
 export CURBPACK_PACKS_DIR="${CURBPACK_PACKS_DIR:-$CURBCHECK_PACKS}"
 # Put the current curbcheck CLI on PATH (python3 -m checks with suite-compatible flags).
 export PATH="$repo_root/scripts/bin:$PATH"
