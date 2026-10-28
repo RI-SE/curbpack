@@ -3,13 +3,13 @@
 A carried case uses repository state R1 and pack input PF-01. The runner is:
 
 ```sh
-python3 -m checks \
+curbcheck \
   --repo <prepared-repo> \
-  --packs <prepared-repo>/external_test/curbpack-studio/packs \
+  --packs <prepared-repo>/external_test/curbpack/packs \
   --out <prepared-repo>/run-result.json
 ```
 
-`--packs` is the Studio fixture directory on the clone. The pack ids live in `curbpack.json`. The runner reads that file and `<prepared-repo>/claims/`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
+`--packs` overrides `<curbpack>/packs` and points at the Studio fixture on the clone. `--out` overrides `<curbpack>/run-result.json`. The pack ids live in `curbpack.json`. The runner reads that file and `<prepared-repo>/curbpack/claims/`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
 
 ## Prepare a verification run
 
@@ -31,8 +31,8 @@ On the clone, after the source:
 1. Apply R1 with the Studio fixture. The script file is not edited.
 
    ```sh
-   cd "$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio"
-   SUT=curbpack-studio ./setup.sh R1 --commit
+   cd "$REFERENCE_PRODUCT_ROOT/external_test/curbpack"
+   SUT=curbpack ./setup.sh R1 --commit
    ```
 
 2. Write `$REFERENCE_PRODUCT_ROOT/curbpack.json`:
@@ -41,7 +41,7 @@ On the clone, after the source:
    {"packs":["cra-baseline","house-policy","medtech-iec62304"]}
    ```
 
-3. Copy only these files from `external_test/curbpack-studio/claims/` into `$REFERENCE_PRODUCT_ROOT/claims/`:
+3. Copy only these files from `external_test/curbpack/claims/` into `$REFERENCE_PRODUCT_ROOT/curbpack/claims/`:
 
    - `CRA-ANNEX-VII-MANUAL.json`
    - `CRA-ANNEX-VII-RISK.json`
@@ -69,7 +69,7 @@ Definitions: [0. Controlled repository content](0_controlled_repo_setup.md).
 | R6 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Owner <owner@example.com>` dated `2022-01-01T00:00:00Z` | not run |
 | R7 | R1 plus `docs/review-log.md` and `docs/owned-policy.md` committed as `Wrong Author <wrong@example.com>` dated `2026-09-13T12:00:00Z` | not run |
 
-The Studio script is `external_test/curbpack-studio/setup.sh <id> --commit`, which runs `external_test/curbpack-studio/states/<id>.sh`. Those state files stay byte-identical to `external_test/curbpack/states/`. This suite does not replace them.
+The Studio script is `external_test/curbpack/setup.sh <id> --commit`, which runs `external_test/curbpack/states/<id>.sh`. This suite does not replace them.
 
 R8 and R9 are defined in `../ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md). This suite does not run them.
 
@@ -77,7 +77,7 @@ R8 and R9 are defined in `../ctam/docs/testing/procedures.md`. They are in [outs
 
 Definitions: [1. Pack inputs](1_pack_template_instantiation.md).
 
-PF-01 is the pack set above, loaded from `external_test/curbpack-studio/packs` on the clone. PF-02 through PF-17 keep their product effects and are not carried cases. The selector remains `external_test/curbpack-studio/mutate_pack.sh <PF-id>`. This suite does not replace that script.
+PF-01 is the pack set above, loaded from `external_test/curbpack/packs` on the clone. PF-02 through PF-17 keep their product effects and are not carried cases. The selector remains `external_test/curbpack/mutate_pack.sh <PF-id>`. This suite does not replace that script.
 
 PF-18 and PF-19 are defined in `../ctam/docs/testing/procedures.md`. They are in [outside.md](../outside.md).
 
@@ -100,4 +100,4 @@ These do not redefine R or PF.
 
 ## TST-01 archive record
 
-TST-01 prepared a tree outside the Studio work tree with `git archive` of `dee885ffb421e4646fea07fbb4a629616c09efc6` and packs from `docs/reference/test-packs`. That record is not this command. After REF-01 the carried run uses the clone, `external_test/curbpack-studio`, and the steps above.
+TST-01 prepared a tree outside the Studio work tree with `git archive` of `dee885ffb421e4646fea07fbb4a629616c09efc6` and packs from `docs/reference/test-packs`. That record is not this command. After REF-01 the carried run uses the clone, `external_test/curbpack`, and the steps above.

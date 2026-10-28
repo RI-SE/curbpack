@@ -2,7 +2,7 @@
 
 Copy this file outside this repository if a review is assigned. Do not check a filled copy into this repository.
 
-This template is not a carried case. Filling it is not a pass of `python3 -m checks`.
+This template is not a carried case. Filling it is not a pass of `curbcheck`.
 
 | Field | Value |
 | --- | --- |

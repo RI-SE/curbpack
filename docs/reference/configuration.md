@@ -6,7 +6,7 @@ This page describes the current configuration file, how pack ids and requirement
 
 ## `curbpack.json`
 
-The file is a JSON object. Check accepts `packs`, `requirements`, `exclude_requirements`, and `hunt`. Any other key is rejected, and no result is written. Write the file at the repository root.
+The file is a JSON object. Check accepts `packs`, `requirements`, `exclude_requirements`, `search_hints`, and `curbpack`. Any other key is rejected, and no result is written. The key `hunt` is rejected. Write the file at the repository root. `.curbpack.json` is not this file.
 
 ### Fields
 
@@ -15,13 +15,14 @@ The file is a JSON object. Check accepts `packs`, `requirements`, `exclude_requi
 | `packs` | `array<string>` | No | Pack ids selected for the repository. A non-empty list of non-empty strings. The version is `version` on the local `pack.json`. |
 | `requirements` | `array<string>` | Yes | Only these requirement ids. Each id belongs to a selected pack. A non-empty list of non-empty strings. |
 | `exclude_requirements` | `array<string>` | Yes | Requirement ids removed from the selected packs. A non-empty list of non-empty strings. |
-| `hunt` | `object` | Yes | Shared discovery scope, the same for every selected pack. See [`hunt`](#hunt). |
+| `search_hints` | `object` | Yes | Shared discovery scope, the same for every selected pack. See [`search_hints`](#search_hints). |
+| `curbpack` | `string` | Yes | Path relative to the repository. Packs, Claims, the run result, and the review report live under it. When the key is absent, the directory is `curbpack`. |
 
 Use either `requirements` or `exclude_requirements`. A file that sets both is rejected, and check writes no result.
 
 `packs` does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached the packs directory. Check does not fetch one.
 
-### `hunt`
+### `search_hints`
 
 | Field | JSON type | Optional | Behavior |
 | --- | --- | --- | --- |
@@ -29,7 +30,7 @@ Use either `requirements` or `exclude_requirements`. A file that sets both is re
 | `exclude_path_globs` | `array<string>` | Yes | Path globs Discovery's file search skips. |
 | `prefer_path_globs` | `array<string>` | Yes | Path globs that order a match ahead of other matches. |
 
-Check validates `hunt` and leaves it in the file. The run does not walk its globs or its `sources`. Discovery's file search applies `exclude_path_globs` and `prefer_path_globs`. A prefer glob only orders a path that already matched a requirement path hint or concept. That search does not read `source` or `args`.
+Check validates `search_hints` and leaves it in the file. The run does not walk its globs or its `sources`. Discovery's file search applies `exclude_path_globs` and `prefer_path_globs`. A prefer glob only orders a path that already matched a requirement path hint or concept. That search does not read `source` or `args`.
 
 ### Example
 
@@ -50,11 +51,12 @@ To evaluate every requirement in those packs except named ids, add `exclude_requ
 {
   "packs": ["house-policy", "cra-baseline"],
   "exclude_requirements": ["CRA-ART14-PATH"],
-  "hunt": {
+  "search_hints": {
     "sources": [{ "source": "documents" }],
     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
     "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
-  }
+  },
+  "curbpack": "curbpack"
 }
 ```
 
@@ -62,20 +64,9 @@ To evaluate every requirement in those packs except named ids, add `exclude_requ
 
 For the check path, active pack ids are the `packs` array in `curbpack.json`.
 
-The directory those ids are loaded from is:
+`curbcheck` loads each id from `<repo>/<curbpack>/packs/<pack-id>/pack.json`. `curbpack` is the relative directory in the file. When the key is absent, that directory is `curbpack`.
 
-1. the `--packs` path when the run is `python3 -m checks` (the flag is required);
-2. `<workspace>/packs` when the run is the Studio Check page.
-
-For example:
-
-```bash
-python3 -m checks --repo /path/to/product \
-  --packs /path/to/packs \
-  --out /path/to/product/.curbpack/run-result.json
-```
-
-`--packs` is that directory for this invocation. The ids stay the `packs` entry in `curbpack.json`. The flag is a single directory path.
+`--packs` is an optional override. It is the directory that directly contains `<pack-id>/pack.json`, so an explicit path does not gain another `packs/` segment. `--out` is an optional override of the dated run file under `<repo>/<curbpack>/reports/`. Neither flag is a second configuration.
 
 ### Requirement selection
 
@@ -91,7 +82,7 @@ An id in `requirements` that is not in the loaded packs stops the run before a r
 For pack id `<pack-id>`, Curbpack looks for:
 
 ```text
-<directory>/<pack-id>/pack.json
+<repo>/<curbpack>/packs/<pack-id>/pack.json
 ```
 
 and every other `*.json` file in that directory. Those files are the Requirements. The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory.
@@ -129,11 +120,12 @@ Paths in the product repository:
 | Purpose | Path |
 | --- | --- |
 | Configuration | `curbpack.json` |
-| Claims | `claims/*.json` |
-| Run result | `.curbpack/run-result.json` |
-| Review report | `docs/reports/review-report.json` |
+| Packs | `<curbpack>/packs/<pack-id>/pack.json` |
+| Claims | `<curbpack>/claims/*.json` |
+| Check run | `<curbpack>/reports/run-<YYYYMMDDTHHMMSSZ>.json` |
+| Review report | `<curbpack>/reports/review-<YYYYMMDDTHHMMSSZ>.json` |
 
-Claims are the `*.json` files directly inside `claims/`, in filename order. Files in subdirectories are not loaded. `.curbpack/` is temporary working data. The run result path above is the path the Studio Check page writes; `python3 -m checks` writes the file given as `--out`. The review report path is the conventional product-repo report. Its location is fixed in the review compiler.
+Claims are the `*.json` files directly inside `<curbpack>/claims/`, in filename order. Files in subdirectories are not loaded. The pilot rule is one new file per Check run under `<curbpack>/reports/`. The current `curbcheck` command still writes `<curbpack>/run-result.json` unless `--out` names another file. Studio does not do this yet. SYS-03 is the change.
 
 Paths in the Studio workspace:
 

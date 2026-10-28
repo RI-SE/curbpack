@@ -37,12 +37,12 @@ curbcheck                       # evaluates configured Checks in Claim files
 | Layer                    | Owner                        | Mutable after sign?      | Role                                                |
 | ------------------------ | ---------------------------- | ------------------------ | --------------------------------------------------- |
 | **Pack + requirements**  | Expert / pack publisher      | No (new version instead) | **What** must hold, including `discovery_hints`. A local working copy is a separate payload. It is a draft until it is approved and sealed. |
-| **Repo `curbpack.json`** | Product repo                 | Yes                      | Packs + shared `hunt` scope (all packs)             |
+| **Repo `curbpack.json`** | Product repo                 | Yes                      | Packs, the `curbpack` directory, and shared `search_hints` |
 | **Claims**               | Product repo / human reviewer | Yes (repo-owned; editing invalidates the seal) | Evidence, human rationale and zero or more configured Checks |
 | **Check definitions**    | curbcheck (or plugins)       | Tool release             | **How** to evaluate `args`                            |
 
 
-**v2** splits pack, claim, and check; repo `curbpack.json` holds shared hunt.
+**v2** splits pack, claim, and check; repo `curbpack.json` holds the `curbpack` directory and shared `search_hints`.
 
 The product team chooses a published collection by pack id. The version they are using is `version` on the local `pack.json` for that id. That file is what Curbpack already loads (embedded pack, or a directory such as an air-gapped import). A content hash checks those bytes. It is not the version number.
 
@@ -180,9 +180,15 @@ A requirement originates from **one** legal or policy instrument, the same one a
 
 Visible at repo root as **`curbpack.json`**.
 
-Owns: which published collections apply, requirement include/exclude, and **shared hunt scope** (same for all packs).
+Owns the configuration Studio and curbcheck need for this repository: which collections apply, requirement include/exclude, shared search scope, and the directory that holds Packs, Claims, the run, and the report. The file name is `curbpack.json` at the repository root. `.curbpack.json` is not this file.
 
 `packs` lists pack ids. It does not list versions. The version the team is using is `version` on the local `pack.json` for that id, the file Curbpack loads for the id. Keeping that file (in git, or in the air-gapped pack directory) is what makes the choice reproducible without a network. A newer publication is visible only when its `pack.json` has reached the environment. Nothing fetches it on its own. Compare that file's `version` with the version the team is already using, and with `origin.version` on each local requirement. Those are different facts.
+
+`curbpack` is a path relative to the repository. When it is absent, the directory is `curbpack`. From that directory:
+
+- Packs are `<curbpack>/packs/<pack-id>/pack.json`. An existing Requirement file sits beside that `pack.json`.
+- Claims are `<curbpack>/claims/<claim-id>.json`
+- Reports are `<curbpack>/reports/`. Check writes `run-<YYYYMMDDTHHMMSSZ>.json`, one new file per run. Review writes `review-<YYYYMMDDTHHMMSSZ>.json`. A later file does not replace an earlier one.
 
 ```json
 {
@@ -190,16 +196,17 @@ Owns: which published collections apply, requirement include/exclude, and **shar
   "exclude_requirements": [
     "CRA-ART14-PATH"
   ],
-  "hunt": {
+  "search_hints": {
     "sources": [{ "source": "documents" }],
     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
     "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
-  }
+  },
+  "curbpack": "curbpack"
 }
 ```
 
 Semantics: evaluate **all** requirements with `pack_id` in `packs`, minus `exclude_requirements`.
-Hunt merge: repo `hunt`, then that requirement's `discovery_hints` (§2.7).
+Search merge: repo `search_hints`, then that requirement's `discovery_hints` (§2.7). The key `hunt` is not accepted.
 
 **Alternative (explicit include):**
 
@@ -210,7 +217,7 @@ Hunt merge: repo `hunt`, then that requirement's `discovery_hints` (§2.7).
     "HOUSE-SECURITY-REPORTING",
     "HOUSE-SECURITY-TXT"
   ],
-  "hunt": {
+  "search_hints": {
     "sources": [
       { "source": "documents" },
       { "source": "git" }
@@ -541,7 +548,7 @@ One object, stored on the requirement. Not a separate file, not a separate seal,
 
 The publisher's hints are inside the publisher's signature. A product team may change the hints, or any other part of the requirement. That edit is a draft until it is approved and sealed. RISE's signature still verifies only RISE's published bytes.
 
-`source` here is how material is reached. It is not `requirement.source`, which names the legal instrument. `documents`, `git`, ClearCase, and DOORS are source ids. `args` carries whatever that id needs, and is omitted when it needs nothing. The model does not fix a list of ids, and it does not assume markdown files or Git. A requirement that sets `sources` uses that list. Otherwise the repo `hunt` list is used.
+`source` here is how material is reached. It is not `requirement.source`, which names the legal instrument. `documents`, `git`, ClearCase, and DOORS are source ids. `args` carries whatever that id needs, and is omitted when it needs nothing. The model does not fix a list of ids, and it does not assume markdown files or Git. A requirement that sets `sources` uses that list. Otherwise the repo `search_hints` list is used.
 
 The PoC implements one reach: files in the working tree now, matched by `path_hints` or by `concepts` in the file text. It reads neither the discovery source id nor source `args`. It does not search Git history, commit messages, or older blobs. `expected_evidence` is stored and the PoC does not match on it. That is the PoC's limit. `check` does not read hunt output. Discovery suggestions are not reviewed Claims. When a suggestion is saved as a Claim, that Claim uses its own `source` + `args` to identify the actual evidence; these are distinct from the Requirement's discovery source list.
 
@@ -1345,7 +1352,7 @@ The `package.json` source reference is illustrative. The `dep_ban` implementatio
 ### Cold start
 
 1. **Requirements** - extract or import reviewed Requirements and use the agreed signed Requirement Pack. The previous product name `curbpack-extract` is legacy terminology, not a new subsystem or data format.
-2. **Discovery within Claims** - for a selected product repository and Requirement, use `hunt` + `discovery_hints` to find potential evidence. A human may also add a finding by selecting a source and its `args` and writing a rationale. Retrieval findings and assessment scores are suggestions, not approved Claims.
+2. **Discovery within Claims** - for a selected product repository and Requirement, use `search_hints` + `discovery_hints` to find potential evidence. A human may also add a finding by selecting a source and its `args` and writing a rationale. Retrieval findings and assessment scores are suggestions, not approved Claims.
 3. **Researcher work** - the human inspects the real evidence, maintains a Claim (possibly with `checks: []`), chooses registered Checks, and sets each Check's schema-validated `args`. Useful/Poor feedback and AI scores remain operational work data, not Claim fields.
 4. **Publish and test** - select Claims whose `checks[]` is non-empty and valid. Publish/export those **same Claim JSON objects**, including unsigned ones; do not require signing and do not create a second runtime format. `curbcheck` can test the same eligible set locally. It writes one run result with an outcome for every Check under every evaluated Claim (§3).
 5. **Review and sign Claims** - after the human has inspected the evidence and its configured Checks, they may approve each Claim by signing it. A Check pass alone never signs or approves anything.

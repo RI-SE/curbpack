@@ -37,11 +37,12 @@ Studio reads `curbpack.json`, without a leading dot. A file named `.curbpack.jso
 {
   "packs": ["house-policy", "cra-baseline"],
   "exclude_requirements": ["CRA-ART14-PATH"],
-  "hunt": {
+  "search_hints": {
     "sources": [{ "source": "documents" }],
     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
     "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
-  }
+  },
+  "curbpack": "curbpack"
 }
 ```
 
@@ -49,7 +50,7 @@ Studio reads `curbpack.json`, without a leading dot. A file named `.curbpack.jso
 
 `exclude_requirements` removes those ids from the selected Packs. The alternative is a `requirements` list, which includes only those ids. One file uses one of those styles, not both.
 
-`hunt` is the shared search scope for Discovery. It is merged with each Requirement's `discovery_hints`. Check does not read the hints.
+`search_hints` is the shared search scope for Discovery. It is merged with each Requirement's `discovery_hints`. Check does not read the hints. `curbpack` is the directory, relative to the repository, that holds `packs/`, `claims/`, `run-result.json`, and `reports/`. When it is absent, that directory is `curbpack`.
 
 Putting two ids in `packs` selects both Packs. It does not merge their Requirements and it does not let one Pack override the other's fields. Studio does not apply `extends`, `overlays`, or `overlay`.
 

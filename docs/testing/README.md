@@ -31,14 +31,16 @@ That prints `Verification run configuration: OK`, deletes the clone, and clones 
 
 ## Run the carried checks
 
-After the source above, the mechanical steps are in [procedures/README.md](procedures/README.md). In short: apply R1 with the Studio fixture `setup.sh`, write `curbpack.json`, copy the seven claim files from the fixture's `claims/`, and run:
+After the source above, the mechanical steps are in [procedures/README.md](procedures/README.md). In short: apply R1 with the Studio fixture `setup.sh`, write `curbpack.json` without a `curbpack` key, copy the seven claim files from the fixture's `claims/` into `$REFERENCE_PRODUCT_ROOT/curbpack/claims/`, and run:
 
 ```sh
-python3 -m checks \
+curbcheck \
   --repo "$REFERENCE_PRODUCT_ROOT" \
-  --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack-studio/packs" \
+  --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" \
   --out "$REFERENCE_PRODUCT_ROOT/run-result.json"
 ```
+
+`--packs` and `--out` override `<curbpack>/packs` and `<curbpack>/run-result.json`. This carried run keeps the packs in the fixture and writes the result at the product root.
 
 Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. Manual rows are in [tests/check/manual.md](../../tests/check/manual.md). They are not a pass.
 

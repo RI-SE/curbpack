@@ -1,12 +1,12 @@
 # Verification strategy
 
-This suite verifies seven carried claims against one prepared repository. The runner is `python3 -m checks` with `--repo`, `--packs` pointing at the clone's `external_test/curbpack-studio/packs`, and `--out`, as [README.md](README.md) states. It reads `curbpack.json`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
+This suite verifies seven carried claims against one prepared repository. The runner is `curbcheck` with `--repo`, `--packs` pointing at the clone's `external_test/curbpack/packs`, and `--out`, as [README.md](README.md) states. Those two flags override the directory in `curbpack.json`. It reads `curbpack.json`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
 
 Start every verification assignment with [Test setup](procedures/README.md): `make start-verification-run`, then `source tmp/verification-run.sh`. Do not start in a suite file.
 
 ## System under test
 
-The system under test is that runner and the Packs v2 packs it loads from the Studio fixture on the reference-product clone. The reference product is test input: the Glucose Log tree at the commit in `tests/cyberready-test-product.pin`, after R1, plus the `curbpack.json` and `claims/` files the procedure adds.
+The system under test is that runner and the Packs v2 packs it loads from the Studio fixture on the reference-product clone. The reference product is test input: the Glucose Log tree at the commit in `tests/cyberready-test-product.pin`, after R1, plus the `curbpack.json` and `curbpack/claims/` files the procedure adds.
 
 A passing check is not a legal conformity determination.
 
@@ -14,7 +14,7 @@ A passing check is not a legal conformity determination.
 
 [R1](procedures/0_controlled_repo_setup.md) is the product content for every carried case. [R2](procedures/0_controlled_repo_setup.md) through [R7](procedures/0_controlled_repo_setup.md) keep the product effects in that file. This suite does not run them.
 
-[PF-01](procedures/1_pack_template_instantiation.md) is pack ids `cra-baseline`, `house-policy`, and `medtech-iec62304` from `external_test/curbpack-studio/packs`. PF-02 through PF-17 keep the product effects in that file. This suite does not run them.
+[PF-01](procedures/1_pack_template_instantiation.md) is pack ids `cra-baseline`, `house-policy`, and `medtech-iec62304` from `external_test/curbpack/packs`. PF-02 through PF-17 keep the product effects in that file. This suite does not run them.
 
 R8, R9, PF-18, and PF-19 stay defined in `../ctam/docs/testing/procedures.md`. They are listed in [outside.md](outside.md). This suite does not run them.
 

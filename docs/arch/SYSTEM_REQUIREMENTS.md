@@ -64,7 +64,7 @@ A curbcheck row quotes the requirement. A row that is not a curbcheck requiremen
 | MUST-72 | not a curbcheck requirement | `trust-import`, `review-sign`, `Last tabletop:`, `confirm-*`, `attest`, and `pin-bump` are actions a human takes. curbcheck does not perform them. It is not a Check. |
 | MUST-73 | not a curbcheck requirement | Real authority is a credential or a repository decision the agent does not control. It is not a Check. |
 | MUST-74 | not a curbcheck requirement | `/rollback` and rollback guidance are instructions to an agent. curbcheck does not edit, revert, or deploy. It is not a Check. |
-| MUST-80 | not a curbcheck requirement | A Go standard-library evaluator, with optional OpenSSH as a separate adapter, is an implementation constraint. curbcheck starts as `python3 -m checks`. It is not a Check. |
+| MUST-80 | not a curbcheck requirement | A Go standard-library evaluator, with optional OpenSSH as a separate adapter, is an implementation constraint. The command is `curbcheck`. It is not a Check. |
 | <span style="color:#b00020">MUST-81</span> | <span style="color:#b00020">not implemented</span> | `scan`, `check`, evidence production, and `review` work with no server, no database, no account, and no network. |
 | MUST-82 | not a curbcheck requirement | A versioned schema and a checked-in example for a format that leaves a repository or an organization are format documentation. They are not a Check. |
 | MUST-83 | not a curbcheck requirement | Reproducible release binaries, checksums, least-privilege workflows, and immutable release references are release process. They are not a Check. |

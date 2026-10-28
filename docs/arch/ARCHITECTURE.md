@@ -335,7 +335,7 @@ Packs v2 objects are the interface. A subsystem reads the object the previous wr
 | Compare / Consolidator / Editor | Updated Requirements in selected working directory | Local acceptance or publisher-signing operation, respecting `origin` | Original comparison sources remain unchanged; consolidation does not leave redundant published Requirements. |
 | Requirements seal / pack seal | Requirement and `pack.json` | Discovery, checks | Verified signing does not itself publish or commit. Discovery and checks load the Pack directory selected by `curbpack.json`. |
 | Discovery | Candidate list on the Discover job; Useful/Poor, checks, and added findings in workspace feedback | Researcher pages, then explicit Claim creation | The job and the feedback file are not Claims. Create writes a new Claim and does not overwrite an existing one. An unsigned Claim can be evaluated. |
-| Claims Editor | Claim file | Check runner | `python -m checks` reads the directory and does not call discovery. |
+| Claims Editor | Claim file | Check runner | `curbcheck` reads `<curbpack>/claims` and does not call discovery. |
 | Check runner | Run result file | Compile | Compile loads that file and does not call the runner. |
 | Compile | Review report file | Final review | A reviewer can open the file with `load_report`. Signing it does not run checks. A later completed report lists every unsigned Claim and every Claim whose signature does not verify, with Requirement ids, in an appendix. That appendix does not change check results and is not implemented in the researcher workflow. |
 | Final review | `decision` and `signed` on that report | A later reader | The Requirement, Claim, and pack files are unchanged. |
