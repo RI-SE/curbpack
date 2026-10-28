@@ -1,7 +1,7 @@
 {
   "section": "VII",
-  "text_source": "/Users/DanielFl/Documents/aProjects/aslak/curbpack-studio/requirements/extract/data/annex_vii.txt",
-  "xml_source": "/Users/DanielFl/Documents/aProjects/aslak/curbpack-studio/requirements/extract/data/official_xml/cra/L_202402847EN.007501.fmx.xml",
+  "text_source": "requirements/extract/data/annex_vii.txt",
+  "xml_source": "requirements/extract/data/official_xml/cra/L_202402847EN.007501.fmx.xml",
   "text_count": 13,
   "xml_count": 13,
   "structural": {

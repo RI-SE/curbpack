@@ -13,6 +13,10 @@ class CraViiCompareTest(unittest.TestCase):
         self.assertEqual(report["structural"]["text_only_loci"], [])
         self.assertEqual(report["structural"]["xml_only_loci"], [])
         self.assertEqual(len(report["structural"]["shared_loci"]), 13)
+        self.assertEqual(report["text_source"], "requirements/extract/data/annex_vii.txt")
+        self.assertTrue(
+            report["xml_source"].startswith("requirements/extract/data/official_xml/")
+        )
 
     def test_classification_counts_after_number_leak_fix(self):
         report = compare_annex_vii()

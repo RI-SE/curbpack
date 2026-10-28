@@ -17,6 +17,15 @@ ANNEX_VII_TXT = DATA / "annex_vii.txt"
 COMPARE_DIR = OFFICIAL_XML / "compare"
 
 
+def _display_path(path: Path | str) -> str:
+    candidate = Path(path)
+    root = install_root()
+    try:
+        return candidate.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return candidate.as_posix()
+
+
 def compare_annex_vii() -> dict:
     text_provisions = [
         {"locus": item["locus"], "law_text": item["law_text"]}
@@ -54,8 +63,8 @@ def compare_annex_vii() -> dict:
             pass
     report = {
         "section": "VII",
-        "text_source": str(ANNEX_VII_TXT),
-        "xml_source": xml_result["file"],
+        "text_source": _display_path(ANNEX_VII_TXT),
+        "xml_source": _display_path(xml_result["file"]),
         "text_count": len(text_provisions),
         "xml_count": len(xml_provisions),
         "structural": structural,
