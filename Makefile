@@ -5,11 +5,13 @@ PYTHON ?= python3
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help start test ci-tests package start-verification-run test-curbcheck
+PORT ?= 8770
+.PHONY: help start stop test ci-tests package start-verification-run test-curbcheck
 export ONLY
 
 help:
 	@echo "make start                   Start the local application"
+	@echo "make stop                    Stop the process listening on port $(PORT)"
 	@echo "make test                    Run the Studio functional tests"
 	@echo "make start-verification-run  Clone the pin and fill tmp/verification-run.sh"
 	@echo "                             DEVELOPER_MODE=TRUE allows a dirty Studio tree"
@@ -20,6 +22,9 @@ help:
 
 start:
 	$(PYTHON) -m app
+
+stop:
+	$(PYTHON) scripts/stop_app.py --port $(PORT)
 
 test:
 	@$(PYTHON) scripts/ci/checks/tests.py
