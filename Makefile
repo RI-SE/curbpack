@@ -12,7 +12,9 @@ help:
 	@echo "make start                   Start the local application"
 	@echo "make test                    Run the Studio functional tests"
 	@echo "make start-verification-run  Clone the pin and fill tmp/verification-run.sh"
+	@echo "                             DEVELOPER_MODE=TRUE allows a dirty Studio tree"
 	@echo "make test-curbcheck          Source that run, apply R1, run curbcheck"
+	@echo "                             Reuses DEVELOPER_MODE from env or the filled run"
 	@echo "make ci-tests                Run mandatory CI checks. ONLY=name runs one check"
 	@echo "make package                 Build and smoke-test a binary for this operating system"
 

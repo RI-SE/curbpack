@@ -9,6 +9,8 @@
 #
 # That checks Studio HEAD is still the recorded commit, deletes
 # tmp/cyberready-test-product, clones it again, and checks out the pin.
+# With DEVELOPER_MODE=TRUE the Studio HEAD lock is skipped so a dirty or
+# moved Studio checkout can keep iterating; the product pin is still restored.
 # It does not export CURBPACK_PACKS_DIR. It does not put a curbpack binary
 # on PATH. It does not start the Studio application.
 
@@ -17,12 +19,14 @@ REFERENCE_PRODUCT_COMMIT=""
 AS_OF_DATE=""
 STUDIO_ROOT=""
 REFERENCE_PRODUCT_ROOT=""
+DEVELOPER_MODE=""
 
 export STUDIO_COMMIT
 export REFERENCE_PRODUCT_COMMIT
 export AS_OF_DATE
 export STUDIO_ROOT
 export REFERENCE_PRODUCT_ROOT
+export DEVELOPER_MODE
 
 if [ -z "$STUDIO_COMMIT" ]; then
 	echo "error: STUDIO_COMMIT is empty" >&2
@@ -53,10 +57,24 @@ if ! studio_head=$(git -C "$STUDIO_ROOT" rev-parse HEAD); then
 	echo "error: could not read HEAD from STUDIO_ROOT: $STUDIO_ROOT" >&2
 	return 1 2>/dev/null || exit 1
 fi
-if [ "$studio_head" != "$STUDIO_COMMIT" ]; then
-	echo "error: Studio repo is at $studio_head, but the baseline states $STUDIO_COMMIT" >&2
-	return 1 2>/dev/null || exit 1
-fi
+case "${DEVELOPER_MODE:-}" in
+	TRUE | true | 1 | yes | YES)
+		if [ "$studio_head" != "$STUDIO_COMMIT" ]; then
+			echo "DEVELOPER_MODE: Studio HEAD is $studio_head (baseline recorded $STUDIO_COMMIT); lock skipped"
+		fi
+		studio_status=$(git -C "$STUDIO_ROOT" status --porcelain)
+		if [ -n "$studio_status" ]; then
+			echo "DEVELOPER_MODE: Studio working tree is dirty"
+		fi
+		;;
+	*)
+		if [ "$studio_head" != "$STUDIO_COMMIT" ]; then
+			echo "error: Studio repo is at $studio_head, but the baseline states $STUDIO_COMMIT" >&2
+			echo "hint: DEVELOPER_MODE=TRUE make start-verification-run" >&2
+			return 1 2>/dev/null || exit 1
+		fi
+		;;
+esac
 
 studio_root=$(git -C "$STUDIO_ROOT" rev-parse --show-toplevel)
 expected_product_root=$studio_root/tmp/cyberready-test-product
@@ -120,4 +138,5 @@ printf '%-25s %s\n' \
 	"Studio commit:" "$STUDIO_COMMIT" \
 	"Reference-product root:" "$REFERENCE_PRODUCT_ROOT" \
 	"Reference-product commit:" "$REFERENCE_PRODUCT_COMMIT" \
-	"As-of date:" "$AS_OF_DATE"
+	"As-of date:" "$AS_OF_DATE" \
+	"Developer mode:" "${DEVELOPER_MODE:-}"

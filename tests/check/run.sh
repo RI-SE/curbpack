@@ -6,7 +6,16 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 
-CONFIRM_TMP_WIPE=1 "$root/scripts/start-verification-run.sh" --yes
+# start-verification-run wipes tmp/. Keep developer mode from the environment
+# or from an already-filled run (after DEVELOPER_MODE=TRUE make start-verification-run).
+developer_mode=${DEVELOPER_MODE:-}
+if [ -z "$developer_mode" ] && [ -f "$root/tmp/verification-run.sh" ]; then
+	developer_mode=$(
+		sed -n 's/^DEVELOPER_MODE="\(.*\)"$/\1/p' "$root/tmp/verification-run.sh" | head -n 1
+	)
+fi
+CONFIRM_TMP_WIPE=1 DEVELOPER_MODE="$developer_mode" \
+	"$root/scripts/start-verification-run.sh" --yes
 # shellcheck disable=SC1091
 . "$root/tmp/verification-run.sh"
 

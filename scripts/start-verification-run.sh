@@ -5,6 +5,11 @@
 # Does not check out another Studio commit. Does not build a binary.
 # Does not export CURBPACK_PACKS_DIR.
 #
+# DEVELOPER_MODE=TRUE uses the current Studio HEAD and working tree as-is,
+# including local changes. It never checks out/reset/cleans Studio. When the
+# filled tmp/verification-run.sh is sourced, that mode also skips the Studio
+# HEAD==baseline lock so a dirty or moved Studio checkout can keep iterating.
+#
 # Non-interactive wipe: CONFIRM_TMP_WIPE=1 or --yes.
 set -eu
 
@@ -16,6 +21,10 @@ out=$tmp/verification-run.sh
 product=$tmp/cyberready-test-product
 pin=$root/tests/cyberready-test-product.pin
 confirm_wipe=0
+developer_mode=0
+case "${DEVELOPER_MODE:-}" in
+	TRUE | true | 1 | yes | YES) developer_mode=1 ;;
+esac
 for arg in "$@"; do
 	case "$arg" in
 		--yes | -y) confirm_wipe=1 ;;
@@ -47,6 +56,22 @@ REFERENCE_PRODUCT_COMMIT=$pin_commit
 AS_OF_DATE=$(date +%F)
 STUDIO_ROOT=$root
 REFERENCE_PRODUCT_ROOT=$product
+studio_status=$(git status --porcelain)
+if [ "$developer_mode" -eq 1 ]; then
+	if [ -n "$studio_status" ]; then
+		echo "DEVELOPER_MODE: Studio working tree is dirty; recording HEAD $STUDIO_COMMIT as-is"
+	else
+		echo "DEVELOPER_MODE: Studio HEAD $STUDIO_COMMIT (clean)"
+	fi
+elif [ -n "$studio_status" ]; then
+	tracked_dirty=$(printf '%s\n' "$studio_status" | grep -vE '^\?\?' || true)
+	if [ -n "$tracked_dirty" ]; then
+		echo "error: Studio has tracked local changes; a verification run needs those files to match $STUDIO_COMMIT" >&2
+		echo "Commit them, stash them, or: DEVELOPER_MODE=TRUE make start-verification-run" >&2
+		printf '%s\n' "$tracked_dirty" >&2
+		exit 2
+	fi
+fi
 
 if [ -e "$tmp" ]; then
 	if [ "$confirm_wipe" -eq 1 ]; then
@@ -87,8 +112,14 @@ fi
 REFERENCE_PRODUCT_COMMIT=$(git -C "$product" rev-parse --verify "${REFERENCE_PRODUCT_COMMIT}^{commit}")
 git -C "$product" -c advice.detachedHead=false checkout --quiet "$REFERENCE_PRODUCT_COMMIT"
 
+if [ "$developer_mode" -eq 1 ]; then
+	DEVELOPER_MODE_VALUE=TRUE
+else
+	DEVELOPER_MODE_VALUE=
+fi
+
 cp "$template" "$out"
-python3 - "$out" "$STUDIO_COMMIT" "$REFERENCE_PRODUCT_COMMIT" "$AS_OF_DATE" "$STUDIO_ROOT" "$REFERENCE_PRODUCT_ROOT" <<'PY'
+python3 - "$out" "$STUDIO_COMMIT" "$REFERENCE_PRODUCT_COMMIT" "$AS_OF_DATE" "$STUDIO_ROOT" "$REFERENCE_PRODUCT_ROOT" "$DEVELOPER_MODE_VALUE" <<'PY'
 import json
 import pathlib
 import sys
@@ -101,6 +132,7 @@ keys = (
     "AS_OF_DATE",
     "STUDIO_ROOT",
     "REFERENCE_PRODUCT_ROOT",
+    "DEVELOPER_MODE",
 )
 for key, raw in zip(keys, sys.argv[2:]):
     needle = f'{key}=""'
@@ -118,6 +150,7 @@ printf '%-28s %s\n' \
 	"Reference-product root:" "$REFERENCE_PRODUCT_ROOT" \
 	"Reference-product commit:" "$REFERENCE_PRODUCT_COMMIT" \
 	"As-of date:" "$AS_OF_DATE" \
+	"Developer mode:" "${DEVELOPER_MODE_VALUE:-off}" \
 	"Filled file:" "$out"
 echo
 echo "source tmp/verification-run.sh"
