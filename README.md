@@ -8,7 +8,7 @@ Curbpack checks a software repository against selected requirements and prepares
 This repository is the Curbpack source. It contains two programs:
 
 - **Curbpack Studio** is the local application. It is where a person extracts Requirements into a Pack, looks for evidence, writes Claims, and reviews a run.
-- **curbcheck** is the check program. Studio's Check page runs it, and a shell or CI job can run the same program with `python3 -m checks`.
+- **curbcheck** is the check program. Studio's Check page runs it, and a shell or CI job runs the same program with `curbcheck`.
 
 [Documentation](docs/README.md) · [Getting Started](docs/user-guides/getting-started.md) · [Install](docs/user-guides/install.md)
 
@@ -66,7 +66,7 @@ flowchart LR
 
 Discovery can suggest candidate files. Extract can propose unsigned Requirements. Neither of those is an approval, and neither is a check result. Signing a Requirement, signing a Claim, and signing a review report are three separate acts.
 
-A passing check means the selected questions passed for the repository state that was evaluated. It is not certification, CE marking, or a conformity assessment.
+A passing check means the selected questions passed for the repository state that was evaluated. A person still decides what that means.
 
 ## A simple example
 
@@ -79,46 +79,38 @@ The team updates the product evidence and runs the check again. A reviewer still
 | You are | Start here |
 | --- | --- |
 | **New user** | [Install](docs/user-guides/install.md) · [Getting Started](docs/user-guides/getting-started.md) |
-| **Builder / product team** | [Developer guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md) |
 | **Buyer / reviewer** | [Reviewer guide](docs/user-guides/reviewers.md) |
 | **Authority / auditor** | [Reviewer guide](docs/user-guides/reviewers.md) |
 | **Pack author** | [Pack author guide](docs/user-guides/pack-developers.md) |
+| **Builder / product team** | [Developer guide](docs/user-guides/developers.md) · [CI/CD](docs/user-guides/ci-cd.md) |
 | **Curbpack contributor** | [Development](docs/development/README.md) · [Testing curbcheck](docs/testing/README.md) · [CONTRIBUTING.md](CONTRIBUTING.md) |
-
-The CI/CD guide is how a product pipeline runs curbcheck. Curbpack's own tests are `make test` and `make ci-tests`.
 
 ## Try it
 
-From a source checkout, after `python3 -m pip install -r requirements.txt`:
+Download the program for your computer from the [latest release](https://github.com/RI-SE/curbpack/releases) and run it. Windows x64 is `curbpack-studio-windows-x64.exe`. macOS ARM64 is `curbpack-studio-macos-arm64`. The same release has `curbcheck` beside it. The process prints a local URL. The usual one is `http://127.0.0.1:8770`. Details, checksums, and Linux are in [Install](docs/user-guides/install.md).
 
-```bash
-make start
-```
-
-Studio listens on `http://127.0.0.1:8770` unless you pass another port. The [Getting Started walkthrough](docs/user-guides/getting-started.md) uses a disposable reference product: select a Pack, write a Claim, break one piece of evidence, and run the check again.
-
-The same check from a shell, with Studio and the packs kept outside the product tree:
-
-```bash
-python3 -m checks \
-  --repo /path/to/product \
-  --packs /path/to/packs \
-  --out /path/to/product/.curbpack/run-result.json
-```
-
-Exit 0 means at least one check ran and every Claim and every check passed. Any other outcome is exit 1. A usage error is exit 2. In CI, fail the job on a non-zero status. Fix the product or the Claim, then let the job check the new revision. Human confirmation stays a human action.
-
-`make package` builds the two programs for the machine it is run on: `curbpack-studio-<host>` is Curbpack Studio, and `curbcheck-<host>` is curbcheck. macOS ARM64 and Windows x64 are the hosted builds. A source checkout on any platform still uses `python3 -m checks`.
+[Getting started](docs/user-guides/getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, and Review.
 
 ## For contributors
 
 | Command | What it does |
 | --- | --- |
 | `make start` | Start Curbpack Studio |
+| `make stop` | Stop the process listening on port 8770 |
 | `make test` | Studio functional tests. Does not run the curbcheck catalogue |
 | `make test-curbcheck` | Clone the pinned product, apply R1, run the carried checks, then report the catalogue |
 | `make ci-tests` | The checks GitHub Actions runs. `ONLY=name` runs one |
 | `make package` | Build and smoke-test both programs for this host |
+
+From a checkout, after `python3 -m pip install -r requirements.txt`, `make start` runs Studio. The same check from a shell is `curbcheck`. With the packs kept outside the product tree, pass `--packs`:
+
+```bash
+curbcheck --repo /path/to/product --packs /path/to/packs
+```
+
+With no `--packs` and no `--out`, the command uses `<curbpack>/packs` and `<curbpack>/run-result.json` from `curbpack.json`.
+
+Exit 0 means at least one check ran and every Claim and every check passed. Any other outcome is exit 1. A usage error is exit 2. The CI/CD guide is how a product pipeline runs that same check. `make test` and `make ci-tests` test this repository.
 
 Persistent Pack, Requirement, Claim, signature, and result fields are [Packs v2](docs/reference/packs2.md). Architecture is [docs/arch/ARCHITECTURE.md](docs/arch/ARCHITECTURE.md). Stories are under [docs/agile/](docs/agile/README.md).
 

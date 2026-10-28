@@ -141,13 +141,10 @@ To carry a provision forward, publish the Requirement in the Pack that owns it, 
 
 ## 8. Where Check finds the Pack
 
-Check takes the packs root as `--packs`, a directory of `<pack-id>/pack.json`:
+`curbcheck` loads packs from `<curbpack>/packs/<pack-id>/pack.json`. `--packs` replaces that directory. The value is the directory of `<pack-id>/pack.json`:
 
 ```sh
-python3 -m checks \
-  --repo /path/to/product \
-  --packs /path/to/packs \
-  --out /path/to/product/.curbpack/run-result.json
+curbcheck --repo /path/to/product --packs /path/to/packs
 ```
 
 The browser does the same thing with the workspace you started: `packs/` and `product/`. The Pack open in Pack Editor is not that selection. The cover says so on the Check link.
@@ -209,7 +206,7 @@ product curbpack.json names the Pack id
         ↓
 Discovery, then save a Claim with checks[]
         ↓
-python3 -m checks --repo ... --packs ... --out ...
+curbcheck --repo ...
         ↓
 read the rows, change the product or the Claim, run again
 ```
