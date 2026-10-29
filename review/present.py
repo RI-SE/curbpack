@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from common.canonical import version_digest
 
 UNRESOLVED = "Unresolved Claims"
@@ -54,6 +56,46 @@ def seal_forces_open(reading: dict | None) -> bool:
     return seal_label(reading) == INVALID_SEAL
 
 
+def path_adapter(check: str, args: dict) -> dict:
+    """Pilot path contract for exist, contents, and dep_ban only. No HTML."""
+    if check == "exist":
+        paths = args.get("paths")
+        if isinstance(paths, list):
+            return {"paths": [item for item in paths if isinstance(item, str)]}
+        return {"paths": []}
+    if check == "contents":
+        if isinstance(args.get("path"), str):
+            return {"paths": [args["path"]]}
+        paths = args.get("paths")
+        if isinstance(paths, list):
+            return {"paths": [item for item in paths if isinstance(item, str)]}
+        return {"paths": []}
+    if check == "dep_ban":
+        package = args.get("package")
+        banned = args.get("banned_versions")
+        if isinstance(package, str) and isinstance(banned, list):
+            return {
+                "dep_ban": {
+                    "package": package,
+                    "banned_versions": [item for item in banned if isinstance(item, str)],
+                }
+            }
+    return {}
+
+
+def path_state(repo: Path, relative: str) -> str:
+    if not relative or relative.startswith("/") or ".." in Path(relative).parts:
+        return "invalid"
+    try:
+        target = (repo / relative).resolve()
+        target.relative_to(repo.resolve())
+    except ValueError:
+        return "invalid"
+    if target.is_file():
+        return "present"
+    return "missing"
+
+
 def present_raw_run(
     *,
     run_result: dict,
@@ -62,6 +104,7 @@ def present_raw_run(
     claim_readings: dict,
     requirement_readings: dict,
     expanded: set[str] | None,
+    repo: Path | None = None,
 ) -> dict:
     grouped: dict[str, list[dict]] = {}
     order: list[str] = []
@@ -71,7 +114,7 @@ def present_raw_run(
             continue
         claim_id = str(row.get("id") or "")
         current = claims_by_id.get(claim_id)
-        item = _claim_item(row, current, claim_readings.get(claim_id))
+        item = _claim_item(row, current, claim_readings.get(claim_id), repo=repo)
         if current is None:
             unresolved.append(item)
             continue
@@ -121,6 +164,7 @@ def present_compiled_report(
     requirement_readings: dict,
     expanded: set[str] | None,
     report_reading: dict | None = None,
+    repo: Path | None = None,
 ) -> dict:
     run_result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
     embedded_claims = {
@@ -142,7 +186,7 @@ def present_compiled_report(
         claim_id = str(row.get("id") or "")
         embedded = embedded_claims.get(claim_id)
         current = current_claims_by_id.get(claim_id)
-        item = _claim_item(row, current, claim_readings.get(claim_id), embedded=embedded)
+        item = _claim_item(row, current, claim_readings.get(claim_id), embedded=embedded, repo=repo)
         if embedded is None:
             unresolved.append(item)
             continue
@@ -190,7 +234,14 @@ def present_compiled_report(
     }
 
 
-def _claim_item(row: dict, current: dict | None, reading: dict | None, *, embedded: dict | None = None) -> dict:
+def _claim_item(
+    row: dict,
+    current: dict | None,
+    reading: dict | None,
+    *,
+    embedded: dict | None = None,
+    repo: Path | None = None,
+) -> dict:
     changed = False
     sentences: list[str] = []
     if current is not None:
@@ -215,15 +266,24 @@ def _claim_item(row: dict, current: dict | None, reading: dict | None, *, embedd
     for check in row.get("checks") or []:
         if not isinstance(check, dict):
             continue
-        checks.append(
-            {
-                "index": check.get("index"),
-                "check": str(check.get("check") or ""),
-                "args": check.get("args") if isinstance(check.get("args"), dict) else {},
-                "status": str(check.get("status") or ""),
-                "detail": str(check.get("detail") or ""),
-            }
-        )
+        args = check.get("args") if isinstance(check.get("args"), dict) else {}
+        name = str(check.get("check") or "")
+        adapted = path_adapter(name, args)
+        paths = []
+        for relative in adapted.get("paths") or []:
+            state = path_state(repo, relative) if repo is not None else "missing"
+            paths.append({"path": relative, "state": state})
+        entry = {
+            "index": check.get("index"),
+            "check": name,
+            "args": args,
+            "status": str(check.get("status") or ""),
+            "detail": str(check.get("detail") or ""),
+            "paths": paths,
+        }
+        if "dep_ban" in adapted:
+            entry["dep_ban"] = adapted["dep_ban"]
+        checks.append(entry)
     return {
         "id": str(row.get("id") or ""),
         "status": str(row.get("status") or ""),
@@ -270,6 +330,9 @@ def _attention(claims: list[dict], seal: dict | None = None) -> bool:
         for check in claim.get("checks") or []:
             if check.get("status") in {"fail", "skipped"}:
                 return True
+            for path in check.get("paths") or []:
+                if isinstance(path, dict) and path.get("state") == "missing":
+                    return True
     return False
 
 

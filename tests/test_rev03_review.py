@@ -650,6 +650,239 @@ class ReviewSealSummaryTest(unittest.TestCase):
             self.assertNotIn("approval", page.lower())
 
 
+class ReviewPathAdapterTest(unittest.TestCase):
+    def test_exist_and_contents_paths_are_selectable_and_open_in_the_file_dialog(self):
+        """REV-03 scenarios 16 and 24. REV-R08."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            (repo / "docs").mkdir()
+            (repo / "docs" / "one.md").write_text("one body\n", encoding="utf-8")
+            (repo / "docs" / "two.md").write_text("two body\n", encoding="utf-8")
+            (repo / "docs" / "three.md").write_text("three body\n", encoding="utf-8")
+            probes = [{"kind": "placeholder"}]
+            claim = build_claim(
+                claim_id="paths-note",
+                requirement_id="REQ-SHARED",
+                source="documents",
+                args={"paths": ["docs/one.md", "docs/two.md"]},
+                checks=[
+                    {"check": "exist", "args": {"paths": ["docs/one.md", "docs/two.md"]}},
+                    {"check": "contents", "args": {"path": "docs/three.md", "probes": probes}},
+                    {
+                        "check": "contents",
+                        "args": {"paths": ["docs/one.md", "docs/two.md"], "probes": probes},
+                    },
+                ],
+                description="The file is the reviewed evidence.",
+            )
+            write_claim(repo / "kept" / "claims", claim)
+            run = {
+                "tool": "curbcheck",
+                "tool_version": "0.0.1a",
+                "commit": "abc123",
+                "worktree": "clean",
+                "packs": [{"id": "cra-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+                "claims": [
+                    {
+                        "id": "paths-note",
+                        "digest": version_digest(claim),
+                        "status": "pass",
+                        "checks": [
+                            {
+                                "index": 0,
+                                "check": "exist",
+                                "args": {"paths": ["docs/one.md", "docs/two.md"]},
+                                "status": "pass",
+                            },
+                            {
+                                "index": 1,
+                                "check": "contents",
+                                "args": {"path": "docs/three.md", "probes": probes},
+                                "status": "pass",
+                            },
+                            {
+                                "index": 2,
+                                "check": "contents",
+                                "args": {"paths": ["docs/one.md", "docs/two.md"], "probes": probes},
+                                "status": "pass",
+                            },
+                        ],
+                    }
+                ],
+            }
+            run_path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
+            write_json(run_path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                opened = _get(
+                    base
+                    + "/review?repo=alpha&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                    + "&expanded=REQ-SHARED&file="
+                    + urllib.parse.quote("docs/one.md", safe="")
+                )
+                closed = _get(
+                    base
+                    + "/review?repo=alpha&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                    + "&expanded=REQ-SHARED"
+                )
+            plain = page.replace("&amp;", "&")
+            self.assertIn('data-path="docs/one.md"', page)
+            self.assertIn('data-path-state="present"', page)
+            self.assertIn("file=docs%2Fone.md", plain)
+            self.assertIn("file=docs%2Ftwo.md", plain)
+            self.assertIn("file=docs%2Fthree.md", plain)
+            self.assertIn("placeholder", page)
+            self.assertIn("one body", opened)
+            self.assertIn('data-file-dialog="docs/one.md"', opened)
+            self.assertNotIn("one body", closed)
+            self.assertNotIn('data-file-dialog=', closed)
+            self.assertIn("expanded=REQ-SHARED", closed.replace("&amp;", "&"))
+            self.assertIn(str(run_path.resolve()), closed)
+
+    def test_missing_path_opens_an_all_pass_requirement_and_keeps_recorded_status(self):
+        """REV-03 scenario 24 missing path. REV-R08."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("gone-note", "REQ-SHARED", "gone.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            (repo / "gone.md").unlink()
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path)
+            group = _details(page, "REQ-SHARED")
+            self.assertIn(" open", group[: group.index(">") + 1])
+            self.assertIn('data-path-state="missing"', page)
+            self.assertIn("gone.md", page)
+            self.assertIn('data-status="pass"', group)
+
+    def test_dep_ban_and_unknown_checks_have_no_file_links(self):
+        """REV-03 scenarios 25 and 26. REV-R08."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = build_claim(
+                claim_id="mixed-note",
+                requirement_id="REQ-SHARED",
+                source="documents",
+                args={"package": "left-pad"},
+                checks=[
+                    {
+                        "check": "dep_ban",
+                        "args": {"package": "left-pad", "banned_versions": ["1.0.0", "2.0.0"]},
+                    },
+                    {
+                        "check": "npm_dep_ban",
+                        "args": {"package": "evil", "banned_versions": ["9.9.9"]},
+                    },
+                    {
+                        "check": "manifest_dep_ban",
+                        "args": {"package": "also-evil", "banned_versions": ["0.0.1"]},
+                    },
+                ],
+                description="The file is the reviewed evidence.",
+            )
+            write_claim(repo / "kept" / "claims", claim)
+            run = {
+                "tool": "curbcheck",
+                "tool_version": "0.0.1a",
+                "commit": "abc123",
+                "worktree": "clean",
+                "packs": [{"id": "cra-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+                "claims": [
+                    {
+                        "id": "mixed-note",
+                        "digest": version_digest(claim),
+                        "status": "pass",
+                        "checks": [
+                            {
+                                "index": 0,
+                                "check": "dep_ban",
+                                "args": {"package": "left-pad", "banned_versions": ["1.0.0", "2.0.0"]},
+                                "status": "pass",
+                            },
+                            {
+                                "index": 1,
+                                "check": "npm_dep_ban",
+                                "args": {"package": "evil", "banned_versions": ["9.9.9"]},
+                                "status": "pass",
+                            },
+                            {
+                                "index": 2,
+                                "check": "manifest_dep_ban",
+                                "args": {"package": "also-evil", "banned_versions": ["0.0.1"]},
+                                "status": "pass",
+                            },
+                            {
+                                "index": 3,
+                                "check": "mystery",
+                                "args": {"path": "guessed.md", "paths": ["also-guessed.md"]},
+                                "status": "fail",
+                                "detail": "custom detail",
+                            },
+                        ],
+                    }
+                ],
+            }
+            run_path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
+            write_json(run_path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+            plain = page.replace("&amp;", "&")
+            self.assertIn('data-dep-ban="left-pad"', page)
+            self.assertIn("1.0.0", page)
+            self.assertIn("2.0.0", page)
+            mystery = plain.split('data-check="mystery"', 1)[1].split("</li>", 1)[0]
+            self.assertNotIn("file=", mystery)
+            self.assertNotIn("file=guessed.md", plain)
+            self.assertNotIn("file=also-guessed.md", plain)
+            self.assertNotIn('data-path="guessed.md"', page)
+            self.assertIn("npm_dep_ban", page)
+            self.assertIn("manifest_dep_ban", page)
+            self.assertIn("mystery", page)
+            self.assertIn("custom detail", page)
+            self.assertIn("guessed.md", mystery)
+
+    def test_file_outside_the_repository_is_invalid_and_unread(self):
+        """REV-03 scenario 24 confinement. REV-R08."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workspace, repo = _workspace("Alpha", root / "alpha")
+            _pack(repo, "REQ-SHARED")
+            (repo / "inside.md").write_text("inside body\n", encoding="utf-8")
+            outside = root / "outside.md"
+            outside.write_text("SECRET_OUTSIDE_MARKER\n", encoding="utf-8")
+            claim = _exist_claim("inside-note", "REQ-SHARED", "inside.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _get(
+                    base
+                    + "/review?repo=alpha&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                    + "&expanded=REQ-SHARED&file="
+                    + urllib.parse.quote(str(outside.resolve()), safe="")
+                )
+                traversal = _get(
+                    base
+                    + "/review?repo=alpha&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                    + "&expanded=REQ-SHARED&file="
+                    + urllib.parse.quote("../outside.md", safe="")
+                )
+            self.assertIn('data-file-state="invalid"', page)
+            self.assertNotIn("SECRET_OUTSIDE_MARKER", page)
+            self.assertIn('data-file-state="invalid"', traversal)
+            self.assertNotIn("SECRET_OUTSIDE_MARKER", traversal)
+            self.assertIn(str(run_path.resolve()), page)
+            self.assertIn('data-requirement="REQ-SHARED"', page)
+
+
 class ReviewCompiledReportTest(unittest.TestCase):
     def test_compiled_report_keeps_historical_grouping_when_the_claim_moved(self):
         """REV-03 scenario 6 and 10. REV-R06."""
@@ -984,7 +1217,28 @@ def _pack(repo: Path, requirement_id: str) -> None:
     (repo / "signed" / "reports").mkdir(parents=True, exist_ok=True)
 
 
+def _ensure_evidence(repo: Path, claims: list[dict]) -> None:
+    for claim in claims:
+        for check in claim.get("checks") or []:
+            if not isinstance(check, dict):
+                continue
+            args = check.get("args") if isinstance(check.get("args"), dict) else {}
+            paths: list[str] = []
+            if isinstance(args.get("path"), str):
+                paths.append(args["path"])
+            if isinstance(args.get("paths"), list):
+                paths.extend(item for item in args["paths"] if isinstance(item, str))
+            for relative in paths:
+                if Path(relative).is_absolute() or ".." in Path(relative).parts:
+                    continue
+                target = repo / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.is_file():
+                    target.write_text(f"{relative}\n", encoding="utf-8")
+
+
 def _matching_run(repo: Path, claims: list[dict], *, commit: str = "abc123", worktree: str = "clean") -> Path:
+    _ensure_evidence(repo, claims)
     rows = []
     for claim in claims:
         check = claim["checks"][0]
@@ -1041,6 +1295,7 @@ def _compiled(
     status: str = "pass",
     statuses: dict | None = None,
 ) -> dict:
+    _ensure_evidence(repo, claims)
     rows = []
     for claim in claims:
         if check_rows is not None and len(claims) == 1:

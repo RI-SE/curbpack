@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 5 — IMPL-START |
-| Last completed task | Task 4 |
-| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile` — Ran 35 tests, OK. |
+| Current task | Task 6 — IMPL-START |
+| Last completed task | Task 5 |
+| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review` — Ran 29 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/REV-03.md`. |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 5 RED: path adapter and file dialog. `python3 -m unittest tests.test_rev03_review`. |
+| **Exact next action** | Task 6 RED: Edit the matched Check, and Re-Discover. `python3 -m unittest tests.test_rev03_review`. |
 
 ## Requirements and acceptance mapping
 
@@ -35,7 +35,7 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | REV-R05 | REV-03 scenarios 10a, 21, 22 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 for the embedded run |
 | REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | Task 3 verified |
 | REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | Task 4 verified |
-| REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | DRAFT |
+| REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | Task 5 verified |
 | REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R10 | REV-03 scenarios 33, 34, 35, 35a | `tests/test_rev03_review.py` | DRAFT |
 
@@ -141,10 +141,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Validation:** `python3 -m unittest tests.test_rev03_review`
 **Stop if:** the adapter would treat `npm_dep_ban` / `manifest_dep_ban` as `dep_ban`, or would scrape arbitrary strings for paths. Those aliases stay unknown Checks for this story.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 6 — Edit the matched Check, and Re-Discover
 
@@ -200,3 +200,6 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 4 RED/GREEN:** D2 labels on existing readings; Git-before-Unsigned for Requirements and reports; claim seal facts stay in the closed header. Validation — Ran 35 tests, OK.
 - **2026-10-29 / Task 4 review:** Issues Found (`73d0e6f5`). Important: scenario 19 stubbed `git_commit_signature`. Fixed with a real SSH-signed commit fixture (`_ssh_signed_commit`); author `Author Name`, `%GS` `CLAIM-KEY`, run header commit stays `abc123`.
 - **2026-10-29 / Task 4 re-review:** Approved (`cab6bd75`). No Critical or Important. Minor, not applied: parse Git status from reason substrings; page tests for Claim `Invalid seal` and Git `U` closed all-pass. `python3 -m unittest tests.test_rev03_review tests.test_review_compile` — Ran 35 tests, OK.
+- **2026-10-29 / Task 5 RED/GREEN:** Pilot path adapter for `exist`/`contents`/`dep_ban`, confined `file=` dialog, missing path opens all-pass. Validation — Ran 29 tests, OK.
+- **2026-10-29 / Task 5 review:** Issues Found (`a9479f03`). Important fixed: closed fixtures create evidence files; contents probes stay beside path links.
+- **2026-10-29 / Task 5 re-review:** Approved (`156180dd`). No Critical or Important. Minor, not applied: Close href / report file dialog assertion; alias and symlink assertions; resolve-then-reject for `..`. `python3 -m unittest tests.test_rev03_review` — Ran 29 tests, OK.
