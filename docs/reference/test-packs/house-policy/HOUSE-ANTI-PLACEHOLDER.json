@@ -12,7 +12,7 @@
   "references": [
     {
       "nr": 1,
-      "locator": "HOUSE-ANTI-PLACEHOLDER",
+      "locator": "Security docs",
       "law_text": "No placeholder patterns in required security docs."
     }
   ]

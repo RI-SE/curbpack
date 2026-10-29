@@ -1,5 +1,7 @@
 # curbcheck
 
+> **Update pending — [CHK-07](../agile/epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md).** Authoritative path and created-file contract: [workspace.md](workspace.md). Until CHK-07 lands, parts of this page still describe the old layout (`curbpack` key; `--packs` as a **directory**). Target contract: always read `curbpack.json` fields `packs_dir` / `claims_dir` / `results_dir`; stdout text by default; `-j`/`--json` and `-o`/`--out` for JSON; `curbcheck --defaults` (and the same Python function) emit the created-file JSON; `--packs` / `--requirements` are optional comma-separated **id** filters for debug narrowing, not directories.
+
 `curbcheck` evaluates the Claims in a product repository and writes one run result. The process exit code is the result a person or a CI job uses. The JSON file is the result a later review reads.
 
 There is one repository command. It does not scan, init, heal, export, attest, or prepare a release. Pack choice lives in the product's `curbpack.json`. The question a Check asks lives in that Claim's `checks[]`. The data contract is [Packs v2](packs2.md) §2.3–§2.5, §3.1, and §4. This page is how you start the program and how you read what it prints.

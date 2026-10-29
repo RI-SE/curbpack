@@ -1,5 +1,7 @@
 # Outputs reference
 
+> **Stale path contract:** this page's `<curbpack>` paths and `docs/reports/review-report.json` location are superseded by [workspace.md](workspace.md) §2–§3 (`results_dir`/`run-result_<UTC>.json`, `reports_dir`/`review-report_<UTC>.json`). Treat workspace.md as authoritative until this page is updated.
+
 ## Scope
 
 * Output artifacts, schemas, and documented production points only.

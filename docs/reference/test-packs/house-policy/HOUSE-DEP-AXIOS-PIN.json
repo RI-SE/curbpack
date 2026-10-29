@@ -12,7 +12,7 @@
   "references": [
     {
       "nr": 1,
-      "locator": "HOUSE-DEP-AXIOS-PIN",
+      "locator": "Dependencies",
       "law_text": "No banned axios versions in dependencies or devDependencies."
     }
   ]
