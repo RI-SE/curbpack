@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import secrets
+import time
 import traceback
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,7 +24,6 @@ from checks.run import (
     process_exit_code,
     reports_dir,
     results_dir,
-    run_pack_directories,
     run_and_write,
 )
 from claims.bind import (
@@ -52,7 +52,6 @@ from common.store import (
     load_requirement,
     load_run_result,
     save_requirement,
-    save_run_result,
 )
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
@@ -62,7 +61,7 @@ from discovery.jobs import reviewable_targets
 from discovery.jobs import request_abort as abort_discover_job
 from discovery.jobs import start_discover_job
 from discovery.browse import list_directories
-from discovery.door import created_curbpack, open_paths, open_repo_id, set_open_repo
+from discovery.door import created_curbpack, open_paths, open_repo_id, save_directory_fields, set_open_repo
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import (
     candidate_for_path,
@@ -870,29 +869,33 @@ def make_handler(ws: Workspace):
                 self._redirect("/scaffold?wrote=1")
                 return
             if path == "/check":
-                repo_id = (form.get("repo_id") or [""])[0].strip()
+                repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
+                if repo_id:
+                    set_open_repo(ws.root, repo_id)
                 action = (form.get("action") or [""])[0].strip()
-                if repo_id and action in {"save", "check"}:
+                if repo_id and action == "save":
+                    save_directory_fields(
+                        _registered_repo_path(ws, repo_id),
+                        packs_dir=(form.get("packs_dir") or [""])[0],
+                        claims_dir=(form.get("claims_dir") or [""])[0],
+                        results_dir=(form.get("results_dir") or [""])[0],
+                        reports_dir=(form.get("reports_dir") or [""])[0],
+                    )
+                    self._redirect(f"/check?repo={quote(repo_id, safe='')}&saved=1")
+                    return
+                if repo_id and action == "check":
                     repo = _registered_repo_path(ws, repo_id)
-                    pack_ids = [item.strip() for item in form.get("pack") or [] if item.strip()]
-                    if action == "save":
-                        _write_curbpack(repo, pack_ids)
-                        self._redirect(f"/check?repo={quote(repo_id, safe='')}&read=yes&saved=1")
-                        return
-                    directories = []
-                    for pack_id in pack_ids:
-                        directory = _pack_directory_for_check(ws.root, pack_id)
-                        if directory is None:
-                            raise ModelError("check", "pack", f"a copy of {pack_id} in this workspace")
-                        directories.append(directory)
-                    result, code = run_pack_directories(repo, directories)
-                    save_run_result(repo / ".curbpack" / "run-result.json", result)
+                    from common.validate import validate_curbpack_config
+
+                    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+                    out = _new_run_result_path(results_dir(repo, config))
+                    result, code = run_and_write(repo, None, out)
                     self._redirect(
-                        f"/check?repo={quote(repo_id, safe='')}&read=yes&exit={code}&rows={len(result['claims'])}"
+                        f"/check?repo={quote(repo_id, safe='')}&exit={code}"
+                        f"&result={quote(str(out.resolve()), safe='')}"
                     )
                     return
-                result, code = run_and_write(ws.repo, ws.packs, ws.run_path)
-                self._redirect(f"/check?exit={code}&rows={len(result['claims'])}")
+                self._redirect(f"/check?repo={quote(repo_id, safe='')}" if repo_id else "/check")
                 return
             if path == "/review/compile":
                 if not _sync_open_repo(ws, form):
@@ -2452,54 +2455,90 @@ def _check_message(query: dict) -> str:
     return ""
 
 
+def _confined_run_result_path(results_folder: str, requested: str) -> str:
+    if not results_folder:
+        return ""
+    folder = Path(results_folder).resolve()
+    wanted = (requested or "").strip()
+    if wanted:
+        path = Path(wanted).resolve()
+        try:
+            path.relative_to(folder)
+        except ValueError:
+            return ""
+        if path.is_file() and path.name.startswith("run-result_") and path.name.endswith(".json"):
+            return str(path)
+        return ""
+    dated = sorted(folder.glob("run-result_*.json"))
+    if dated:
+        return str(dated[-1].resolve())
+    return ""
+
+
+def _new_run_result_path(folder: Path) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    while True:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        path = folder / f"run-result_{stamp}.json"
+        if not path.exists():
+            return path
+        time.sleep(1)
+
+
 def _check_editor_model(ws: Workspace, query: dict) -> dict:
     repos = _listed_repos(ws)
     repo_id = _sync_open_repo(ws, query)
     if repo_id and not any(row.get("id") == repo_id for row in repos):
         raise ModelError("check", "repo", f"a registered repository, not {repo_id}")
-    choice = (query.get("read") or [""])[0].strip()
-    config: dict = {}
-    ask = False
+    fields = _door_path_fields(ws, repo_id) if repo_id else {}
+    packs: list[dict] = []
+    selection = ""
+    values = {key: "" for key in ("packs_dir", "claims_dir", "results_dir", "reports_dir")}
     if repo_id:
-        path = _registered_repo_path(ws, repo_id) / "curbpack.json"
-        if path.is_file():
-            loaded = read_json(path)
-            config = loaded if isinstance(loaded, dict) else {}
-            ask = choice not in {"yes", "no"}
-    named = [item for item in config.get("packs") or [] if isinstance(item, str)] if choice == "yes" else []
-    known = list_pack_ids(ws.root) if repo_id else []
-    pack_ids = sorted(set(known) | (set(named) if choice == "yes" else set())) if repo_id else []
-    packs = []
-    for pack_id in pack_ids:
-        directory = _pack_directory_for_check(ws.root, pack_id)
-        version = ""
-        copy = "No copy in this workspace"
-        if directory is not None:
-            meta = _pack_meta_for_check(directory)
-            version = str(meta.get("version") or "")
-            copy = _copy_label(directory)
-        packs.append(
-            {
-                "id": pack_id,
-                "copy": copy,
-                "version": version,
-                "included": pack_id in named,
-                "directory": directory,
-            }
-        )
-    claims = _repo_claims(ws, repo_id, packs)
-    for pack in packs:
-        pack_id = pack["id"]
-        pack["claims"] = sum(1 for claim in claims if claim.get("pack_id") == pack_id)
-        pack.pop("directory", None)
-    kept = {key: config[key] for key in ("search_hints", "exclude_requirements", "requirements", "curbpack") if key in config}
+        repo = _registered_repo_path(ws, repo_id)
+        config_path = repo / "curbpack.json"
+        if config_path.is_file():
+            from common.validate import validate_curbpack_config
+
+            config = validate_curbpack_config(read_json(config_path))
+            for key in values:
+                values[key] = str(config.get(key) or "")
+            packs_root = packs_dir(repo, config)
+            for pack_id in config["packs"]:
+                try:
+                    pack_dir = _pack_version_dir(packs_root, pack_id)
+                    present = True
+                except ModelError:
+                    pack_dir = packs_root / pack_id
+                    present = False
+                packs.append(
+                    {
+                        "id": pack_id,
+                        "present": present,
+                        "pack_dir": str(pack_dir.resolve()),
+                    }
+                )
+            if "exclude_requirements" in config:
+                selection = "exclude_requirements " + ", ".join(config["exclude_requirements"])
+            elif "requirements" in config:
+                selection = "requirements " + ", ".join(config["requirements"])
+    result_path = _confined_run_result_path(fields.get("results_dir") or "", (query.get("result") or [""])[0])
     return {
         "repos": repos,
         "repo_id": repo_id,
-        "ask_read": ask,
+        "ask_read": False,
         "packs": packs,
-        "claims": claims,
-        "kept": kept,
+        "selection": selection,
+        "curbpack_file": fields.get("curbpack_file") or "",
+        "directory": fields.get("directory") or "",
+        "claims_dir": fields.get("claims_dir") or "",
+        "results_dir": fields.get("results_dir") or "",
+        "reports_dir": fields.get("reports_dir") or "",
+        "packs_dir_value": values["packs_dir"],
+        "claims_dir_value": values["claims_dir"],
+        "results_dir_value": values["results_dir"],
+        "reports_dir_value": values["reports_dir"],
+        "run_result_path": result_path,
     }
 
 
@@ -2536,16 +2575,18 @@ def _repo_claims(ws: Workspace, repo_id: str, packs: list[dict]) -> list[dict]:
 
 
 def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None, int | None]:
-    repo_id = str(editor.get("repo_id") or "")
-    if not repo_id:
+    path_text = str(editor.get("run_result_path") or "").strip()
+    if not path_text:
         return None, None
-    if repo_id and (query.get("exit") or [""])[0] != "":
-        path = _registered_repo_path(ws, repo_id) / ".curbpack" / "run-result.json"
-        if path.is_file():
-            result = load_run_result(path)
-            return result, int((query.get("exit") or ["1"])[0] or "1")
-    info = snapshot(ws.root)
-    return info["run_result"], info["run_exit"]
+    path = Path(path_text)
+    if not path.is_file():
+        return None, None
+    result = load_run_result(path)
+    if (query.get("exit") or [""])[0] != "":
+        return result, int((query.get("exit") or ["1"])[0] or "1")
+    from checks.run import process_exit_code
+
+    return result, process_exit_code(result)
 
 
 def _registered_repo_path(ws: Workspace, repo_id: str) -> Path:
