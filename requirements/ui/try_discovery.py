@@ -49,9 +49,18 @@ def dialog_html(model: dict) -> str:
     error_html = f'<p class="err">{html.escape(str(error))}</p>' if error else ""
     job = model.get("try_job")
     job_html = _job_dialog(job, plain_id) if job else ""
-    next_href = html.escape(
-        f"/requirements/requirement/{quote(plain_id, safe='')}?try_open=1"
-    )
+    next_href = f"/requirements/requirement/{quote(plain_id, safe='')}?try_open=1"
+    bound_repo = str(model.get("repo_id") or "")
+    bound_pack = str(model.get("bound_pack") or "")
+    if bound_repo and bound_pack:
+        next_href += f"&repo={quote(bound_repo, safe='')}&pack={quote(bound_pack, safe='')}"
+    next_href = html.escape(next_href)
+    bound_fields = ""
+    if bound_repo and bound_pack:
+        bound_fields = (
+            f'<input type="hidden" name="repo" value="{html.escape(bound_repo)}">'
+            f'<input type="hidden" name="pack" value="{html.escape(bound_pack)}">'
+        )
     title = f"Discovery test run for {plain_id}" if plain_id else "Discovery test run"
     return f"""
 <dialog id="try-discovery-dialog" class="try-discovery"{open_flag}>
@@ -63,6 +72,7 @@ def dialog_html(model: dict) -> str:
 {_law_box(model)}
 {error_html}
 <form method="post" action="/requirements/requirement/{requirement_id}/try-discovery">
+{bound_fields}
 {repo_field}
 <label>Assess up to
 <input type="number" name="assess_limit" value="{html.escape(str(model.get('try_assess_limit') or 5))}"
