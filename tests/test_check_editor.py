@@ -75,6 +75,12 @@ class CheckEditorTest(unittest.TestCase):
                 self.assertEqual(read_json(repo / "curbpack.json")["reports_dir"], "kept/reports")
                 self.assertEqual(read_json(repo / "curbpack.json")["packs"], ["cra-baseline"])
                 self.assertIn("kept/reports", saved)
+                ran = _post(base + "/check", {"action": "check", "repo_id": "widget"})
+                results = sorted((repo / ".curbpack").glob("run-result_*.json"))
+                self.assertEqual(len(results), 1)
+                self.assertRegex(results[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
+                self.assertIn(str(results[0].resolve()), ran)
+                self.assertFalse((repo / ".curbpack" / "run-result.json").exists())
             finally:
                 httpd.shutdown()
                 httpd.server_close()
