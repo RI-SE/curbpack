@@ -46,8 +46,26 @@ def _parse_sums(sum_texts: list[str]) -> list[tuple[str, str]]:
     return parsed
 
 
+def _mac_hash_check(entries: list[tuple[str, str]]) -> str:
+    lines = "\n".join(f"{digest}  {name}" for digest, name in entries)
+    return f"shasum -a 256 -c <<'EOF'\n{lines}\nEOF"
+
+
+def _windows_hash_check(entries: list[tuple[str, str]]) -> str:
+    quoted = ",\n".join(f"  '{digest}  {name}'" for digest, name in entries)
+    return (
+        "@(\n"
+        f"{quoted}\n"
+        ") | ForEach-Object {\n"
+        "  $digest, $name = $_ -split '  ', 2\n"
+        "  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $name).Hash.ToLowerInvariant()\n"
+        '  if ($actual -eq $digest) { "${name}: OK" } else { "${name}: FAILED" }\n'
+        "}"
+    )
+
+
 def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
-    """Release text: curl to run, and a separate hash command if you want to compare."""
+    """Release text: curl to run, and a hash check that prints OK."""
     if not repo or "/" not in repo or " " in repo or " " in tag or not tag:
         raise ValueError("publish needs a repository and a tag")
     parsed = _parse_sums(sum_texts)
@@ -59,7 +77,6 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
         curls = "\n".join(f"curl -fsSL -O {base}/{name}" for _digest, name in mac)
         names = " ".join(name for _digest, name in mac)
         studio = next(name for _digest, name in mac if name.startswith("curbpack-studio"))
-        hashes = "\n\n".join(f"shasum -a 256 {name}\n{digest}" for digest, name in mac)
         blocks.append(
             "macOS\n\n"
             "To download and run:\n\n"
@@ -68,17 +85,14 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
             f"chmod +x {names}\n"
             f"./{studio}\n"
             "```\n\n"
-            "To compare the hash:\n\n"
+            "To check the hash:\n\n"
             "```sh\n"
-            f"{hashes}\n"
+            f"{_mac_hash_check(mac)}\n"
             "```\n"
         )
     if windows:
         curls = "\n".join(f"curl.exe -fsSL -O {base}/{name}" for _digest, name in windows)
         studio = next(name for _digest, name in windows if name.startswith("curbpack-studio"))
-        hashes = "\n\n".join(
-            f"Get-FileHash -Algorithm SHA256 .\\{name}\n{digest}" for digest, name in windows
-        )
         blocks.append(
             "Windows\n\n"
             "To download and run:\n\n"
@@ -86,9 +100,9 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
             f"{curls}\n"
             f".\\{studio}\n"
             "```\n\n"
-            "To compare the hash:\n\n"
+            "To check the hash:\n\n"
             "```powershell\n"
-            f"{hashes}\n"
+            f"{_windows_hash_check(windows)}\n"
             "```\n"
         )
     return (
