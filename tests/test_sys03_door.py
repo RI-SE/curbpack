@@ -446,6 +446,10 @@ class DoorUiTest(unittest.TestCase):
                 self.assertIn("Choose a repo", review)
                 self.assertIn("No repository is chosen", review)
                 self.assertNotIn("hidden-claim", review)
+                studio = _get(base + "/studio")
+                self.assertIn("Choose a repo", studio)
+                self.assertIn("No repository is chosen", studio)
+                self.assertNotIn("hidden-claim", studio)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -951,6 +955,142 @@ class ReviewIoTest(unittest.TestCase):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+
+
+class StudioConfigTest(unittest.TestCase):
+    def test_studio_page_creates_and_edits_curbpack_studio_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            repo = workspace / "widget"
+            product = workspace / "product"
+            product.mkdir()
+            write_json(product / "curbpack.json", created_curbpack())
+            _register(workspace, "Widget", repo)
+            write_json(repo / "curbpack.json", created_curbpack())
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            studio_file = repo / "curbpack-studio.json"
+            try:
+                empty = _get(base + "/studio")
+                self.assertIn("No repository is chosen", empty)
+                self.assertFalse(studio_file.exists())
+                page = _get(base + "/studio?repo=widget")
+                self.assertEqual(open_repo_id(workspace), "widget")
+                self.assertIn("curbpack-studio.json", page)
+                self.assertIn("Packs directory", page)
+                self.assertIn("Claims directory", page)
+                self.assertIn("Save", page)
+                self.assertIn("Cancel", page)
+                self.assertIn('name="bind_host"', page)
+                self.assertIn("127.0.0.1", page)
+                self.assertIn("8770", page)
+                self.assertIn("qwen3-coder:30b", page)
+                self.assertIn(".curbpack/tmp", page)
+                self.assertIn(".curbpack/extract", page)
+                self.assertIn("$CURBPACK_MODEL_API_KEY", page)
+                self.assertFalse(studio_file.exists())
+                cancelled_create = _post(base + "/studio", {"repo_id": "widget", "action": "cancel"})
+                self.assertIn("curbpack-studio.json", cancelled_create)
+                self.assertFalse(studio_file.exists())
+                try:
+                    _post(
+                        base + "/studio",
+                        {
+                            "repo_id": "widget",
+                            "action": "save",
+                            "bind_host": "127.0.0.1",
+                            "bind_port": "8770",
+                            "model_endpoint": "http://127.0.0.1:11434",
+                            "model_api_key": "$CURBPACK_MODEL_API_KEY",
+                            "model_name": "qwen3-coder:30b",
+                            "model_temperature": "0.2",
+                            "prompt_interpret": "",
+                            "prompt_discovery_hints": "",
+                            "path_temp_dir": "/tmp/studio-out",
+                            "path_extract_work_dir": ".curbpack/extract",
+                            "path_keys_file": "",
+                        },
+                    )
+                    self.fail("absolute studio paths must be rejected")
+                except urllib.error.HTTPError as exc:
+                    self.assertEqual(exc.code, 400)
+                self.assertFalse(studio_file.exists())
+                saved = _post(
+                    base + "/studio",
+                    {
+                        "repo_id": "widget",
+                        "action": "save",
+                        "bind_host": "127.0.0.1",
+                        "bind_port": "8770",
+                        "model_endpoint": "http://127.0.0.1:11434",
+                        "model_api_key": "$CURBPACK_MODEL_API_KEY",
+                        "model_name": "qwen3-coder:30b",
+                        "model_temperature": "0.2",
+                        "prompt_interpret": "",
+                        "prompt_discovery_hints": "",
+                        "path_temp_dir": ".curbpack/tmp",
+                        "path_extract_work_dir": ".curbpack/extract",
+                        "path_keys_file": "",
+                    },
+                )
+                self.assertTrue(studio_file.is_file())
+                written = read_json(studio_file)
+                self.assertEqual(written["bind"], {"host": "127.0.0.1", "port": 8770})
+                self.assertEqual(written["model"]["name"], "qwen3-coder:30b")
+                self.assertEqual(written["model"]["api_key"], "$CURBPACK_MODEL_API_KEY")
+                self.assertIsNone(written["prompts"]["interpret"])
+                self.assertEqual(written["paths"]["temp_dir"], ".curbpack/tmp")
+                self.assertIsNone(written["paths"]["keys_file"])
+                self.assertIn(".curbpack/tmp", saved)
+                before = studio_file.read_bytes()
+                editing = _get(base + "/studio?repo=widget")
+                self.assertIn("qwen3-coder:30b", editing)
+                self.assertIn(".curbpack/tmp", editing)
+                cancelled = _post(base + "/studio", {"repo_id": "widget", "action": "cancel"})
+                self.assertEqual(studio_file.read_bytes(), before)
+                self.assertIn("qwen3-coder:30b", cancelled)
+                updated = _post(
+                    base + "/studio",
+                    {
+                        "repo_id": "widget",
+                        "action": "save",
+                        "bind_host": "127.0.0.1",
+                        "bind_port": "8771",
+                        "model_endpoint": "http://127.0.0.1:11434",
+                        "model_api_key": "$CURBPACK_MODEL_API_KEY",
+                        "model_name": "qwen3-coder:30b",
+                        "model_temperature": "0.2",
+                        "prompt_interpret": "",
+                        "prompt_discovery_hints": "",
+                        "path_temp_dir": "scratch/tmp",
+                        "path_extract_work_dir": ".curbpack/extract",
+                        "path_keys_file": "",
+                    },
+                )
+                self.assertEqual(read_json(studio_file)["bind"]["port"], 8771)
+                self.assertEqual(read_json(studio_file)["paths"]["temp_dir"], "scratch/tmp")
+                self.assertIn("scratch/tmp", updated)
+                (repo / ".env").write_text("CURBPACK_MODEL_API_KEY=secret-from-env\n", encoding="utf-8")
+                from discovery.studio import load_studio_config
+
+                loaded = load_studio_config(repo)
+                self.assertEqual(loaded["model"]["api_key"], "secret-from-env")
+                self.assertEqual(loaded["bind"]["port"], 8771)
+                studio_file.write_text(
+                    studio_file.read_text(encoding="utf-8").replace(
+                        "$CURBPACK_MODEL_API_KEY", "$MISSING_STUDIO_KEY"
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaises(ModelError) as caught:
+                    load_studio_config(repo)
+                self.assertIn("MISSING_STUDIO_KEY", str(caught.exception))
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            self.assertFalse((product / "curbpack-studio.json").exists())
 
 
 def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:
