@@ -45,6 +45,7 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertIn("Pack Sources", catalog)
                 self.assertIn("Choose a repo", catalog)
                 self.assertNotIn("id=\"add-open\"", catalog)
+                self.assertNotIn("cra-xml", catalog)
                 self.assertNotIn("Content of the technical documentation", catalog)
                 self.assertNotIn("Inventory units", catalog)
                 self.assertNotIn("Extract selected section", catalog)

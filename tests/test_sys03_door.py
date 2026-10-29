@@ -392,6 +392,40 @@ def _post(url: str, fields: dict) -> str:
 
 
 class DoorUiTest(unittest.TestCase):
+    def test_start_empty_then_save_lists_bundled_adapters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                empty = _get(base + "/requirements")
+                self.assertNotIn("cra-xml", empty)
+                started = _post(base + "/requirements/start-empty", {"folder": "product"})
+                self.assertNotIn("cra-xml", started)
+                self.assertFalse((workspace / "product" / "curbpack.json").exists())
+                fields = created_curbpack()
+                saved = _post(
+                    base + "/requirements/curbpack",
+                    {
+                        "repo": "product",
+                        "action": "save",
+                        "packs": "",
+                        "packs_dir": fields["packs_dir"],
+                        "claims_dir": fields["claims_dir"],
+                        "results_dir": fields["results_dir"],
+                        "reports_dir": fields["reports_dir"],
+                        "unsigned_requirements": fields["unsigned_requirements"],
+                        "search_hints": json.dumps(fields["search_hints"]),
+                    },
+                )
+                self.assertIn("cra-xml", saved)
+                self.assertIn('id="add-open"', saved)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
     def test_product_views_are_empty_until_a_repository_is_open(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
