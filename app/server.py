@@ -1144,6 +1144,10 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
         "claims_dir": fields.get("claims_dir") or "",
         "results_dir": fields.get("results_dir") or "",
         "reports_dir": fields.get("reports_dir") or "",
+        "packs_dir_value": fields.get("packs_dir_value") or "",
+        "claims_dir_value": fields.get("claims_dir_value") or "",
+        "results_dir_value": fields.get("results_dir_value") or "",
+        "reports_dir_value": fields.get("reports_dir_value") or "",
     }
 
 
@@ -1574,6 +1578,10 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         "claims_dir": "",
         "results_dir": "",
         "reports_dir": "",
+        "packs_dir_value": "",
+        "claims_dir_value": "",
+        "results_dir_value": "",
+        "reports_dir_value": "",
     }
     opened = open_paths(ws.root)
     if not opened:
@@ -1586,6 +1594,14 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         fields["results_dir"] = str(opened["results_dir"])
     if opened.get("reports_dir") is not None:
         fields["reports_dir"] = str(opened["reports_dir"])
+    if config_path.is_file():
+        from common.validate import validate_curbpack_config
+
+        config = validate_curbpack_config(read_json(config_path))
+        fields["packs_dir_value"] = str(config["packs_dir"])
+        fields["claims_dir_value"] = str(config["claims_dir"])
+        fields["results_dir_value"] = str(config["results_dir"])
+        fields["reports_dir_value"] = str(config["reports_dir"])
     return fields
 
 
@@ -3492,6 +3508,10 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "claims_dir": door.get("claims_dir") or "",
         "results_dir": door.get("results_dir") or "",
         "reports_dir": door.get("reports_dir") or "",
+        "packs_dir_value": door.get("packs_dir_value") or "",
+        "claims_dir_value": door.get("claims_dir_value") or "",
+        "results_dir_value": door.get("results_dir_value") or "",
+        "reports_dir_value": door.get("reports_dir_value") or "",
         "source_id": _query_value(query, "source_id"),
         "timestamp": _query_value(query, "timestamp"),
     }

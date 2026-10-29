@@ -563,10 +563,10 @@ The file is not signed. A green check row is not a legal conclusion.</p>
 
 _PATH_FIELDS = (
     ("config", "Current Configuration", "curbpack_file"),
-    ("packs", "Packs directory", "directory"),
-    ("claims", "Claims directory", "claims_dir"),
-    ("results", "Results directory", "results_dir"),
-    ("reports", "Reports directory", "reports_dir"),
+    ("packs", "Packs directory", "packs_dir_value"),
+    ("claims", "Claims directory", "claims_dir_value"),
+    ("results", "Results directory", "results_dir_value"),
+    ("reports", "Reports directory", "reports_dir_value"),
 )
 
 
