@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (CHK-08 decided; “kör den” after CHK-07 closed — proceed Task 1–4; OPEN-1–OPEN-5 as this plan) |
-| Current task | Task 3 — Review compile reads that run |
-| Last completed task | Task 2 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk08_studio tests.test_chk07_curbcheck.DefaultsFactoryTest tests.test_sys03_door.StudioConfigTest` — Ran 6 tests, OK |
+| Current task | Task 4 — Inventory retarget remaining tests |
+| Last completed task | Task 3 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk08_studio tests.test_sys03_door.ReviewIoTest tests.test_review_report_kept tests.test_ui_smoke` — Ran 7 tests, OK |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/CHK-08.md`. |
 | Requirements | Story CHK-R01–CHK-R04 in `CHK-08-studio-check-review-curbcheck.md`. No new `docs/req/` row. Legacy `docs/req/checks.md` CHK-R01–CHK-R17 are CHK-05/CHK-06. CHK-07 story-local CHK-R01–CHK-R06 are the CLI contract. |
 | Packs v2 | `docs/reference/workspace.md` owns path fields and dated names (§2.2, §2.3, §3). `docs/reference/packs2.md` §3.1 owns the run-result object. This plan edits neither. |
 | Blockers | None |
-| Exact next action | Task 3 IMPL-START: CHK-R03 tests that Review compile reads the Check run and writes dated `reports_dir`. |
+| Exact next action | Task 4 IMPL-START: retarget `tests/test_e2e_annex_vii.py`; inventory assertion that listed Studio tests do not pass a packs-directory `packs_root`. |
 
 ## Requirements and acceptance mapping
 
@@ -30,7 +30,7 @@ Requirements live in the story. This table only maps each id to its acceptance t
 | --- | --- | --- | --- |
 | CHK-R01 | CHK-08 | `tests/test_chk08_studio.py` (Check POST → dated `results_dir` file, page shows path, `packs_root=None`); regression `tests.test_sys03_door.CheckIoTest` | VERIFIED |
 | CHK-R02 | CHK-08 | `tests/test_chk08_studio.py` (blank body is `created_curbpack`; door is the same function); regression `tests.test_chk07_curbcheck.DefaultsFactoryTest` | VERIFIED |
-| CHK-R03 | CHK-08 | `tests/test_chk08_studio.py` (compile reads that run, dated `reports_dir`, not workspace `product/`); regression `tests.test_sys03_door.ReviewIoTest` | Task 3 |
+| CHK-R03 | CHK-08 | `tests/test_chk08_studio.py` (compile reads that run, dated `reports_dir`, not workspace `product/`); regression `tests.test_sys03_door.ReviewIoTest` | VERIFIED |
 | CHK-R04 | CHK-08 | Inventory below retargeted; listed suites green without a packs-directory `packs_root` | Task 4 |
 
 ### CHK-R04 inventory (this plan)
@@ -97,10 +97,10 @@ Out of this story (do not retarget here): `tests/test_m4_checks.py` (CHK-07 curb
 **Validation:** `python3 -m unittest tests.test_chk08_studio tests.test_sys03_door.ReviewIoTest tests.test_review_report_kept tests.test_ui_smoke`
 **Stop if:** compile would need a new `curbpack.json` field or would redesign the Review page.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 4 — Inventory: retarget remaining Studio Check/Review / related e2e tests
 
@@ -131,6 +131,7 @@ Proposals below are this plan’s intended implementation. They are not a new Pa
 
 ## Work log
 
+- **2026-10-29 / Task 3:** CHK-R03. Already present: compile reads `results_dir` dated run and writes dated `reports_dir`; no `product/` fallback. New test PASSed on first run. No production diff. Command: `python3 -m unittest tests.test_chk08_studio tests.test_sys03_door.ReviewIoTest tests.test_review_report_kept tests.test_ui_smoke` — Ran 7 tests, OK. Review (`20658ac8`) no Critical/Important. Minors: import grouping (fixed); compare `report["run_result"]` to the Check file (added); confined `?result=` not used by Compile POST (recorded, no change).
 - **2026-10-29 / Task 2:** CHK-R02. Already present: door is `checks.defaults.created_curbpack`; create dialog fields come from that function; no second created-file dict in `app/server.py` / `discovery/door.py`. New test PASSed on first run. No production diff. Command: `python3 -m unittest tests.test_chk08_studio tests.test_chk07_curbcheck.DefaultsFactoryTest tests.test_sys03_door.StudioConfigTest` — Ran 6 tests, OK. Review (`8d37836f`) no Critical/Important. Minor: unsigned_requirements HTML was tautological; tightened to `value="reject" selected`. Left `requirements/ui/pages.py` `or "reject"` (WIP, display fallback).
 - **2026-10-29 / Task 1:** CHK-R01. Already present: Check POST `run_and_write(repo, None, dated path)`; new tests PASSed on first run (not a setup error). GREEN refactor: share `checks.run.new_run_result_path`; delete `_new_run_result_path`. Command: `python3 -m unittest tests.test_chk08_studio tests.test_check_editor tests.test_sys03_door.CheckIoTest` — Ran 3 tests, OK. Review (`40e33488`) no Critical/Important. Minors: decoy claim was `HIDDEN-REQ` (fixed to `CRA-PURPOSE`); unused `_get` (dropped).
 - **2026-10-29 / Task 0:** Inspected HEAD `c03cd85`. Dirty WIP left uncommitted (see Summary). Check POST already `run_and_write(repo, None, _new_run_result_path(results_dir))`; Review compile already dated `reports_dir`; door is the defaults function. Baseline: sandbox 25 tests / 4 `git init` errors; unsandboxed 7 Check/Review HTTP tests OK. Expanded story GWT. Drafted this plan from `plan/TEMPLATE.md`. Independent plan review (`51b21d07`) Approved, no Issues. Advisory folded: Check-run assertion in `test_check_editor.py` (not a thin pointer); decoy is workspace `product/` sibling; e2e later reads use the versioned copy; do not land unversioned `pack.json` fallback; do not edit architecture docs; leave `test_m4_checks.py` out.
