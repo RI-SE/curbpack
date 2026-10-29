@@ -15,10 +15,9 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verify import verify_directory
 
-ARTIFACTS = ("curbpack-studio-macos-arm64", "curbpack-studio-windows-x64")
 SOURCE_NOTE = (
     "This release is source only. "
-    "The requirement for standalone Windows x64 and macOS ARM64 binaries is not met. "
+    "Standalone Windows x64, macOS ARM64 and Linux x64 binaries are not included. "
     "A checkout of this tag starts with `make start`."
 )
 
@@ -39,7 +38,8 @@ def _parse_sums(sum_texts: list[str]) -> list[tuple[str, str]]:
         raise ValueError("publish sums name a file more than once")
     mac = [name for _digest, name in parsed if "macos" in name]
     windows = [name for _digest, name in parsed if "windows" in name]
-    if len(mac) + len(windows) != len(parsed):
+    linux = [name for _digest, name in parsed if "linux" in name]
+    if len(mac) + len(windows) + len(linux) != len(parsed):
         raise ValueError("publish sums name a file this note cannot check")
     if not parsed:
         raise ValueError("publish sums name no binary")
@@ -72,18 +72,20 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
     base = f"https://github.com/{repo}/releases/download/{quote(tag, safe='')}"
     mac = [(digest, name) for digest, name in parsed if "macos" in name]
     windows = [(digest, name) for digest, name in parsed if "windows" in name]
+    linux = [(digest, name) for digest, name in parsed if "linux" in name]
     blocks = []
     if mac:
         curls = "\n".join(f"curl -fsSL -O {base}/{name}" for _digest, name in mac)
         names = " ".join(name for _digest, name in mac)
-        studio = next(name for _digest, name in mac if name.startswith("curbpack-studio"))
+        studio = next((name for _digest, name in mac if name.startswith("curbpack-studio")), None)
+        command = studio or mac[0][1] + " --help"
         blocks.append(
             "macOS\n\n"
             "To download and run:\n\n"
             "```sh\n"
             f"{curls}\n"
             f"chmod +x {names}\n"
-            f"./{studio}\n"
+            f"./{command}\n"
             "```\n\n"
             "To check the hash:\n\n"
             "```sh\n"
@@ -92,23 +94,43 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
         )
     if windows:
         curls = "\n".join(f"curl.exe -fsSL -O {base}/{name}" for _digest, name in windows)
-        studio = next(name for _digest, name in windows if name.startswith("curbpack-studio"))
+        studio = next((name for _digest, name in windows if name.startswith("curbpack-studio")), None)
+        command = studio or windows[0][1] + " --help"
         blocks.append(
             "Windows\n\n"
             "To download and run:\n\n"
             "```powershell\n"
             f"{curls}\n"
-            f".\\{studio}\n"
+            f".\\{command}\n"
             "```\n\n"
             "To check the hash:\n\n"
             "```powershell\n"
             f"{_windows_hash_check(windows)}\n"
             "```\n"
         )
-    return (
-        "\n".join(blocks)
-        + "\nThe process prints a local URL. Open it. The usual one is http://127.0.0.1:8770.\n"
-    )
+    if linux:
+        curls = "\n".join(f"curl -fsSL -O {base}/{name}" for _digest, name in linux)
+        names = " ".join(name for _digest, name in linux)
+        studio = next((name for _digest, name in linux if name.startswith("curbpack-studio")), None)
+        command = studio or linux[0][1] + " --help"
+        sums = "\n".join(f"{digest}  {name}" for digest, name in linux)
+        blocks.append(
+            "Linux x64\n\n"
+            "To download and run:\n\n"
+            "```sh\n"
+            f"{curls}\n"
+            f"chmod +x {names}\n"
+            f"./{command}\n"
+            "```\n\n"
+            "To check the hash:\n\n"
+            "```sh\n"
+            f"sha256sum -c <<'EOF'\n{sums}\nEOF\n"
+            "```\n"
+        )
+    notes = "\n".join(blocks)
+    if any(name.startswith("curbpack-studio") for _digest, name in parsed):
+        notes += "\nThe process prints a local URL. Open it. The usual one is http://127.0.0.1:8770.\n"
+    return notes
 
 
 def _gh(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -239,7 +261,18 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(tmp)
         files: list[Path] = []
         lines = []
-        for name in ARTIFACTS:
+        listed = _gh([
+            "api", f"repos/{_repository()}/actions/runs/{run_id}/artifacts",
+            "--paginate", "--jq", ".artifacts[].name",
+        ])
+        artifacts = sorted(
+            name for name in listed.stdout.splitlines()
+            if name.startswith(("curbpack-studio-", "curbcheck-"))
+        )
+        if not artifacts:
+            print("[FAIL] publish found no package artifacts", flush=True)
+            return 1
+        for name in artifacts:
             destination = root / name
             destination.mkdir()
             _gh(["run", "download", run_id, "-n", name, "-D", str(destination)])
@@ -255,9 +288,11 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(f"[FAIL] {exc}", flush=True)
             return 1
+        sums = root / "SHA256SUMS"
+        sums.write_text("\n".join(lines) + "\n", encoding="utf-8")
         _gh(
             ["release", "create", tag, "--target", sha, "--title", tag, "--notes", notes]
-            + [str(path) for path in files]
+            + [str(path) for path in files] + [str(sums)]
         )
     print(f"[PASS] publish {tag} {sha}", flush=True)
     return 0

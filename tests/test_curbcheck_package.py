@@ -340,11 +340,14 @@ class PackageSmokeFixtureTest(unittest.TestCase):
 
 class PackageArgsTest(unittest.TestCase):
     def test_names_and_argv_keep_studio_and_curbcheck_apart(self):
-        from package import curbcheck_args, curbcheck_name, studio_args, studio_name
+        from package_curbcheck import curbcheck_args, curbcheck_name
+        from package_studio import studio_args, studio_name
         self.assertEqual(studio_name("macos-arm64"), "curbpack-studio-macos-arm64")
         self.assertEqual(curbcheck_name("macos-arm64"), "curbcheck-macos-arm64")
         self.assertEqual(studio_name("windows-x64"), "curbpack-studio-windows-x64.exe")
         self.assertEqual(curbcheck_name("windows-x64"), "curbcheck-windows-x64.exe")
+        self.assertEqual(studio_name("linux-x64"), "curbpack-studio-linux-x64")
+        self.assertEqual(curbcheck_name("linux-x64"), "curbcheck-linux-x64")
         studio = studio_args("curbpack-studio-macos-arm64")
         checker = curbcheck_args("curbcheck-macos-arm64")
         studio_text = " ".join(part.replace("\\", "/") for part in studio)
@@ -357,7 +360,7 @@ class PackageArgsTest(unittest.TestCase):
         self.assertNotIn("checks/bin", checker_text)
 
     def test_sums_name_every_packaged_file(self):
-        from package import write_sums
+        from package_common import write_sums
 
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
@@ -365,7 +368,7 @@ class PackageArgsTest(unittest.TestCase):
             checker = directory / "curbcheck-macos-arm64"
             studio.write_bytes(b"studio")
             checker.write_bytes(b"curbcheck")
-            with patch("package.DIST", directory):
+            with patch("package_common.DIST", directory):
                 sums = write_sums([studio, checker])
             text = sums.read_text(encoding="utf-8")
             expected = []
@@ -390,3 +393,52 @@ class PackageArgsTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+
+
+class IndependentPackageTest(unittest.TestCase):
+    def test_each_package_builds_and_smokes_only_its_own_binary(self):
+        import package_curbcheck
+        import package_studio
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def build(args, filename, dist):
+                binary = dist / filename
+                binary.write_bytes(filename.encode())
+                return binary
+
+            with patch.dict(sys.modules, {"PyInstaller": object()}), patch(
+                "package_common._build", side_effect=build
+            ) as builder, patch("smoke.smoke", return_value=0) as studio_smoke, patch(
+                "smoke.smoke_curbcheck", return_value=0
+            ) as checker_smoke, patch.object(package_studio, "DIST", root / "studio"), patch.object(
+                package_curbcheck, "DIST", root / "curbcheck"
+            ):
+                self.assertEqual(package_curbcheck.main(), 0)
+                studio_smoke.assert_not_called()
+                checker_smoke.assert_called_once()
+                self.assertEqual(package_studio.main(), 0)
+                studio_smoke.assert_called_once()
+                self.assertEqual(builder.call_count, 2)
+
+            studio_sums = (root / "studio" / "SHA256SUMS").read_text()
+            checker_sums = (root / "curbcheck" / "SHA256SUMS").read_text()
+            self.assertIn("curbpack-studio-", studio_sums)
+            self.assertNotIn("curbcheck-", studio_sums)
+            self.assertIn("curbcheck-", checker_sums)
+            self.assertNotIn("curbpack-studio-", checker_sums)
+
+    def test_failed_smoke_does_not_write_checksums(self):
+        import package_common
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dist = Path(tmp)
+            binary = dist / "curbcheck-linux-x64"
+            binary.write_bytes(b"broken")
+            with patch.dict(sys.modules, {"PyInstaller": object()}), patch(
+                "package_common._build", return_value=binary
+            ):
+                code = package_common.package_binary(binary.name, [], dist, lambda _binary: 1)
+            self.assertEqual(code, 1)
+            self.assertFalse((dist / "SHA256SUMS").exists())

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import subprocess
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 
@@ -57,6 +60,32 @@ class ReleasePublishTest(unittest.TestCase):
         self.assertIn("To download and run:", notes)
         self.assertIn("To check the hash:", notes)
         self.assertNotIn("To compare the hash:", notes)
+
+    def test_linux_release_has_download_run_and_checksum_instructions(self):
+        digest = "c" * 64
+        notes = module.binary_notes(
+            [f"{digest}  curbpack-studio-linux-x64\n{digest}  curbcheck-linux-x64\n"],
+            "RI-SE/curbpack",
+            "test-linux",
+        )
+        base = "https://github.com/RI-SE/curbpack/releases/download/test-linux"
+        self.assertIn("Linux x64", notes)
+        self.assertIn(f"curl -fsSL -O {base}/curbcheck-linux-x64", notes)
+        self.assertIn(f"curl -fsSL -O {base}/curbpack-studio-linux-x64", notes)
+        self.assertIn("chmod +x curbpack-studio-linux-x64 curbcheck-linux-x64", notes)
+        self.assertIn("./curbpack-studio-linux-x64", notes)
+        self.assertIn(f"sha256sum -c <<'EOF'\n{digest}  curbpack-studio-linux-x64\n", notes)
+        self.assertIn(f"{digest}  curbcheck-linux-x64\nEOF", notes)
+
+    def test_checker_only_release_does_not_require_studio(self):
+        for host in ("macos-arm64", "windows-x64.exe", "linux-x64"):
+            with self.subTest(host=host):
+                name = f"curbcheck-{host}"
+                notes = module.binary_notes([f"{'d' * 64}  {name}\n"], "RI-SE/curbpack", "test")
+                self.assertIn(f"/{name}", notes)
+                self.assertIn(f"{name} --help", notes)
+                self.assertNotIn("curbpack-studio", notes)
+                self.assertNotIn("local URL", notes)
 
     def test_binary_notes_match_the_release_page(self):
         notes = module.binary_notes(
@@ -138,3 +167,39 @@ The process prints a local URL. Open it. The usual one is http://127.0.0.1:8770.
         self.assertIn("7", message)
         self.assertIn("in_progress", message)
         self.assertIn("https://example.test/run/7", message)
+
+
+class IndependentReleaseTest(unittest.TestCase):
+    def test_publish_uses_the_packages_present_in_the_successful_run(self):
+        for filename in ("curbcheck-linux-x64", "curbpack-studio-macos-arm64"):
+            with self.subTest(filename=filename):
+                record = {
+                    "workflowName": "CI", "headSha": "a" * 40,
+                    "conclusion": "success", "jobs": [{"name": "tests", "conclusion": "success"}],
+                }
+                calls = []
+                def gh(args, **kwargs):
+                    calls.append(args)
+                    if args[0] == "api":
+                        return subprocess.CompletedProcess(args, 0, stdout=filename + "\nother-artifact\n")
+                    if args[:2] == ["run", "download"]:
+                        self.assertEqual(args[args.index("-n") + 1], filename)
+                        dest = Path(args[args.index("-D") + 1])
+                        (dest / filename).write_bytes(b"tested binary")
+                        digest = hashlib.sha256(b"tested binary").hexdigest()
+                        (dest / "SHA256SUMS").write_text(f"{digest}  {filename}\n")
+                    if args[:2] == ["release", "create"]:
+                        sums = Path(args[-1])
+                        self.assertEqual(sums.name, "SHA256SUMS")
+                        self.assertIn(filename, sums.read_text())
+                        self.assertEqual(Path(args[-2]).name, filename)
+                    return subprocess.CompletedProcess(args, 0, stdout="")
+
+                with patch.object(module, "_run_record", return_value=record), patch.object(
+                    module, "_repository", return_value="RI-SE/curbpack"
+                ), patch.object(module, "_tag_exists", return_value=False), patch.object(
+                    module, "_gh", side_effect=gh
+                ):
+                    self.assertEqual(module.main(["--run-id", "7", "--tag", "test"]), 0)
+                self.assertEqual(sum(args[:2] == ["run", "download"] for args in calls), 1)
+                self.assertEqual(sum(args[:2] == ["release", "create"] for args in calls), 1)

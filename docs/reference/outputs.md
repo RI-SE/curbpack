@@ -1,6 +1,6 @@
 # Outputs reference
 
-This page owns the run-result and review-report JSON structures and their interpretation. It describes the current output. Changes to these output contracts belong here. Pack, Requirement, Claim, Check, and signature definitions remain in [Packs v2](packs2.md). Directory configuration and filename policy are defined in [Workspace](workspace.md) §2–§3. CLI arguments, terminal output, and exit codes are defined in [curbcheck](curbcheck-cli.md).
+This page owns the run-result and review-report JSON structures and their interpretation. It describes the current output. Changes to these output contracts belong here. Pack, Requirement, Claim, Check, and signature definitions remain in [Packs v2](packs2.md). Directory configuration and filename policy are defined in [Workspace](workspace.md) §2–§3. The Check-tool response and Pack export/publication layouts are also described below. CLI arguments, terminal output, and exit codes are defined in [curbcheck](curbcheck-cli.md).
 
 ## Primary artifacts
 
@@ -117,6 +117,10 @@ Unknown report keys are rejected. A report may contain a run with failed or skip
 
 Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
 
+### Verified compilation
+
+The Compile function was checked against `run-result_20261029T135239Z.json` and the test product's current Claim and Requirement files. The generated report contained 13 Claims, 13 Requirements, and 13 appendix entries. Its embedded `run_result` was unchanged. It had no `decision` or `signed` field and passed report validation after writing and reloading. This check used an empty certificate trust map; the appendix is not a verification against a configured Studio trust store. The generated report was temporary, outside the product repository.
+
 ## Review PDF
 
 ```sh
@@ -128,6 +132,43 @@ Install runtime dependencies from `requirements.txt` first. The output parent di
 The PDF presents the saved JSON report in monochrome: run metadata and outcome counts, loaded Packs, Requirements with source passages, their Claims and Check results, recorded signature gaps, reviewer decision, and signature metadata. Everything is visible without buttons or expanding sections. It uses the embedded historical objects and does not open product evidence or run Checks. The input JSON is unchanged.
 
 The PDF is a readable companion to the original report. It does not independently verify signatures, and the JSON signature does not cover the PDF bytes. Keep the original JSON for verification. Implementation: `compile/pdf.py`; ownership: [Compile architecture](../../compile/ARCHITECTURE.md).
+
+## Check-tool response
+
+The runner invokes each registry command as:
+
+```text
+<command> <check-id> --repo <path> --args <JSON object>
+```
+
+The tool writes one JSON object to stdout:
+
+```json
+{"status": "pass"}
+```
+
+or:
+
+```json
+{"status": "fail", "detail": "SECURITY.md is absent"}
+```
+
+These responses have no Claim id, digest, index, or copied arguments. The runner adds that context in the [Check result](#check-results). `skipped` is produced by the runner for a skipped Claim, rather than by these tool handlers.
+
+The shipped tool wrapper exits 0 after writing either response; argument-parser errors exit 2. The runner accepts a pass only with both `status: pass` and process exit 0. A failed response with a non-empty `detail` is preserved. An unavailable command, invalid JSON, or other unusable response becomes a failed Check. The implementation is `checks/toolmain.py` and `checks/dispatch.py`. Repository-level exit codes are defined in the CLI reference.
+
+## Pack export and publication
+
+These outputs contain Pack and Requirement objects defined in Packs v2; they do not introduce another JSON schema.
+
+| Action | Current output | Meaning |
+| --- | --- | --- |
+| Export Pack | `<destination>/<pack-id>/pack.json` and the working copy's other top-level `*.json` files | Copies the file bytes unchanged. Does not publish a release or require all Requirements to be signed. The destination directory must already exist. |
+| Publish release | `<workspace>/published/<pack-id>/<version>/pack.json` and the working copy's other top-level `*.json` files | Requires verifiable Requirement signatures and Pack seal, and refuses an existing release version. |
+
+Export refuses an existing `<destination>/<pack-id>` unless overwrite is explicitly selected. Overwrite replaces that directory rather than merging files. Subdirectories are not copied by these operations. The implementation is `requirements/workspace.py` (`export_pack` and `publish_pack`).
+
+The export directory currently has no version segment. The product Pack-tree contract is `<packs_dir>/<pack-id>/<pack-version>/` (Workspace §2); Export does not itself install the directory into that layout. Neither operation creates a run result or review report.
 
 ## Production and review
 

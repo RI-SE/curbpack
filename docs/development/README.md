@@ -54,13 +54,20 @@ Read the [system and subsystem architecture](../arch/README.md) before changing 
 
 ## Build the programs
 
-On macOS ARM64 or Windows x64:
+On Linux x64, macOS ARM64 or Windows x64:
 
 ```sh
-make package
+make package-curbcheck
+make package-studio
 ```
 
-This builds the Studio binary and a separate curbcheck binary for the current host, then smoke-tests both. See [Install](../user-guides/install.md) for artifact names and checksum commands. Linux uses the source checkout.
+Each command builds and smoke-tests only its own program, using a separate script under `scripts/build/` and output directory under `dist/`. `make package` runs both. The CI jobs and platform matrices are separate too. See [Install](../user-guides/install.md) for released artifacts and checksum commands; build support does not mean a binary has already been published.
+
+## Product CI integration
+
+The root [`action.yml`](../../action.yml) provides `uses: RI-SE/curbpack@<release-tag>` for GitHub Actions. It downloads the released checker, verifies its checksum, runs it against the product checkout, and retains the JSON result even when Checks fail. Its shell script is [`scripts/ci/curbcheck-action.sh`](../../scripts/ci/curbcheck-action.sh). Product workflow examples for GitHub, GitLab and Jenkins are in [CI/CD](../user-guides/ci-cd.md).
+
+`curbcheck` supplies Check outcomes and a process exit status. The product team's own policies determine how those outcomes affect release decisions, approvals and publishing. Curbpack does not prescribe or execute the product's release process. The legacy Action's `prepare-release` step generated review material; it is not part of this Action. This repository's release workflow publishes Curbpack itself and is separate from any product release process.
 
 ## Maintainer notes
 

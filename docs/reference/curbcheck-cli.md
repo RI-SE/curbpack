@@ -8,7 +8,7 @@ A source checkout and a packaged binary take the same arguments. Skip is the `--
 
 ## Start
 
-The command is `curbcheck`. In a source checkout that is `scripts/bin/curbcheck`, which starts the checks module. A packaged build is the `curbcheck-<host>` file from `make package`. Both take the same arguments.
+The command is `curbcheck`. In a source checkout that is `scripts/bin/curbcheck`, which starts the checks module. A packaged build is the `curbcheck-<host>` file from `make package-curbcheck`. Both take the same arguments.
 
 ```bash
 curbcheck --repo /path/to/product
@@ -30,12 +30,13 @@ prints the created-file `curbpack.json` object and exits 0. No repository is req
 
 `-j` / `--json` also writes `{results_dir}/run-result_<YYYYMMDDTHHMMSSZ>.json`. `-o PATH` / `--out PATH` also writes that JSON object to `PATH`. `--packs` and `--requirements` are optional comma-separated **id** lists of what this run checks, not directories.
 
-`make package` on the matching host also writes a single file:
+`make package-curbcheck` builds and smoke-tests the checker alone on the matching host. `make package-studio` builds Studio separately; `make package` runs both. Each package has its own output directory and `SHA256SUMS`:
 
 | Host | File |
 | --- | --- |
-| macOS ARM64 | `dist/curbcheck-macos-arm64` |
-| Windows x64 | `dist/curbcheck-windows-x64.exe` |
+| macOS ARM64 | `dist/curbcheck/curbcheck-macos-arm64` |
+| Windows x64 | `dist/curbcheck/curbcheck-windows-x64.exe` |
+| Linux x64 | `dist/curbcheck/curbcheck-linux-x64` |
 
 Run that file with the same arguments. Git is the `git` already on the machine. The Studio application file is a different program and does not contain the check tools.
 

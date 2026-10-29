@@ -1,0 +1,26 @@
+name: Curbcheck
+description: Run a released curbcheck binary on the product checkout and retain its JSON result.
+
+inputs:
+  release:
+    description: Release tag to download. Omit when the action itself is pinned to that release tag. Required when using a commit SHA or a local action.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Check product
+      id: check
+      shell: bash
+      env:
+        CURBCHECK_RELEASE: ${{ inputs.release || github.action_ref }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/ci/curbcheck-action.sh"
+    - name: Save run result
+      if: ${{ always() && steps.check.outputs.result != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: curbcheck-result
+        path: ${{ steps.check.outputs.result }}
+        if-no-files-found: warn
