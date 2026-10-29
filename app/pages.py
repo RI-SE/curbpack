@@ -640,9 +640,12 @@ def _curbpack_editor(editor: dict) -> str:
         f"<p>Selection <code>{html.escape(selection)}</code></p>" if selection else ""
     )
     result_path = str(editor.get("run_result_path") or "")
-    result_html = (
-        f"<p>Run result <code>{html.escape(result_path)}</code></p>" if result_path else ""
-    )
+    result_html = ""
+    if result_path:
+        result_html = f"<p>Run result <code>{html.escape(result_path)}</code></p>"
+        if repo_id:
+            href = f"/review?repo={quote(repo_id, safe='')}&result={quote(result_path, safe='')}"
+            result_html += f'<p><a href="{html.escape(href)}">Review this run</a></p>'
     return f"""
 <div class="card discover-wrap">
 {selection_html}
@@ -722,11 +725,15 @@ def review_page(
                 f"requirement <code>{html.escape(item.get('requirement_id', ''))}</code> "
                 f"{html.escape(item.get('reason', ''))}</li>"
             )
-        appendix_html = (
-            "<h2>Signature appendix</h2><ul>" + "".join(appendix) + "</ul>"
-            if appendix
-            else "<h2>Signature appendix</h2><p class=\"muted\">No unsigned or unverifiable Claims in this run.</p>"
-        )
+        if not saved:
+            appendix_html = ""
+        elif appendix:
+            appendix_html = "<h2>Signature appendix</h2><ul>" + "".join(appendix) + "</ul>"
+        else:
+            appendix_html = (
+                "<h2>Signature appendix</h2>"
+                '<p class="muted">No unsigned or unverifiable Claims in this run.</p>'
+            )
         dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
         reading_html = _reading(reading) if saved else "<p>not saved</p>"
         body_report = f"""
@@ -744,7 +751,7 @@ def review_page(
     panel = repo_config_panel(
         door,
         action="/review",
-        show=("config", "results", "reports"),
+        show=("config", "packs", "claims", "results", "reports"),
     )
     repo_id = str(door.get("repo_id") or "")
     report_value = str((door or {}).get("report_path") or "")
@@ -774,9 +781,16 @@ def review_page(
         )
     compile_form = ""
     if repo_id:
+        selected_result = str(door.get("selected_result") or "")
+        result_input = ""
+        if selected_result:
+            result_input = (
+                f'<input type="hidden" name="result" value="{html.escape(selected_result)}">'
+            )
         compile_form = f"""
 <form method="post" action="/review/compile">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+{result_input}
 <p class="actions"><button type="submit">Compile</button></p>
 </form>
 """
@@ -790,6 +804,7 @@ def review_page(
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
 {panel}
 {chrome}
+{_review_lists(door)}
 {_flash(message, error)}
 <div class="card">{body_report}</div>
 {compile_form}
@@ -798,6 +813,34 @@ def review_page(
 {dialogs}
 """
     return page("Review", body)
+
+
+def _review_lists(door: dict) -> str:
+    if not str(door.get("repo_id") or ""):
+        return ""
+    repo = quote(str(door.get("repo_id") or ""), safe="")
+
+    def rows(entries: list, kind: str, label: str, key: str) -> str:
+        parts = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            href = f"/review?repo={repo}&{key}={quote(str(entry.get('path') or ''), safe='')}"
+            parts.append(
+                f'<li data-kind="{kind}"><a href="{html.escape(href)}">'
+                f"{html.escape(label)} {html.escape(str(entry.get('name') or ''))}</a></li>"
+            )
+        return "".join(parts)
+
+    notice = str(door.get("results_notice") or "")
+    notice_html = f"<p>{html.escape(notice)}</p>" if notice else ""
+    return (
+        "<h2>Run results</h2>"
+        f'<ul data-list="run-results">{rows(door.get("run_results") or [], "run-result", "Run result", "result")}</ul>'
+        f"{notice_html}"
+        "<h2>Review reports</h2>"
+        f'<ul data-list="review-reports">{rows(door.get("review_reports") or [], "review-report", "Review report", "report")}</ul>'
+    )
 
 
 def _review_report_line(door: dict) -> str:
@@ -909,7 +952,7 @@ def _review_claim_row(row: dict, claim: dict, claims_href: str) -> str:
     claim_id = str(row.get("id") or "")
     status = str(row.get("status") or "")
     checks = _review_checks(row)
-    if status not in {"fail", "skipped"}:
+    if status not in {"fail", "skipped"} or not claim:
         return (
             f'<li data-claim="{html.escape(claim_id)}" data-status="{html.escape(status)}">'
             f"<code>{html.escape(claim_id)}</code> {html.escape(status)} "

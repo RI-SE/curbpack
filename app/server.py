@@ -229,42 +229,96 @@ def _review_message(query: dict) -> str:
 def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     query = query or {}
     repo_id = _sync_open_repo(ws, query)
+    empty = {"run_results": [], "review_reports": [], "results_notice": "", "selected_result": "", "selected_report": ""}
     if not repo_id:
-        return None, None, "No repository is chosen.", False, False, None, []
+        return None, None, "No repository is chosen.", False, False, None, [], empty
     from common.validate import validate_curbpack_config
 
     repo = _registered_repo_path(ws, repo_id)
     config_path = repo / "curbpack.json"
     if not config_path.is_file():
-        return None, None, "", False, False, None, []
-    config = validate_curbpack_config(read_json(config_path))
-    report_path = _confined_review_report_path(
-        str(reports_dir(repo, config).resolve()),
-        (query.get("report") or [""])[0],
-    )
-    run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
-    if report_path:
-        report = load_report(Path(report_path))
+        return None, None, "curbpack.json is missing.", False, False, None, [], empty
+    try:
+        loaded_config = read_json(config_path)
+    except ValueError as exc:
+        raise ModelError("curbpack.json", "json", f"readable JSON ({exc})") from exc
+    config = validate_curbpack_config(loaded_config)
+    results_folder = results_dir(repo, config)
+    reports_folder = reports_dir(repo, config)
+    extra = dict(empty)
+    errors: list[str] = []
+    if not results_folder.is_dir():
+        errors.append(f"Results directory {config['results_dir']} cannot be used.")
+    else:
+        extra["run_results"] = _dated_entries(results_folder, "run-result")
+        if not extra["run_results"]:
+            extra["results_notice"] = "There is no run result."
+    if not reports_folder.is_dir():
+        errors.append(f"Reports directory {config['reports_dir']} cannot be used.")
+    else:
+        extra["review_reports"] = _dated_entries(reports_folder, "review-report")
+    requested_report = (query.get("report") or [""])[0]
+    requested_result = (query.get("result") or [""])[0]
+    if requested_report.strip():
+        status, chosen = _requested_dated(reports_folder, requested_report, "review-report")
+        if status != "ok":
+            errors.append(f"{chosen} is not a review report in the Reports directory.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        try:
+            report = load_report(Path(chosen))
+        except (ModelError, ValueError):
+            errors.append(f"{Path(chosen).name} is not a readable review report.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        extra["selected_report"] = chosen
         reading = read_report_signature(report, trust_store(ws.keys))
-        same = None
-        if run_path:
-            same = same_run(report, load_run_result(Path(run_path)))
-        return report, reading, "", True, True, same, _unchecked_for_repo(repo, config, report)
-    if not run_path:
-        return None, None, "", False, False, None, []
-    _packs, requirements = _report_sources_for_repo(repo, config)
-    if not _packs:
-        return None, None, "", False, False, None, []
-    folder = repo_claims_dir(repo)
-    claims = load_claims(folder) if folder.is_dir() else []
-    report = compile_report(
-        run_result=load_run_result(Path(run_path)),
-        requirements=requirements,
-        claims=claims,
-        trust=trust_store(ws.keys),
-        repo=repo,
-    )
-    return report, None, "", False, False, True, _unchecked_for_repo(repo, config, report)
+        same = _same_as_latest_run(results_folder, report)
+        return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
+    if requested_result.strip():
+        status, chosen = _requested_dated(results_folder, requested_result, "run-result")
+        if status != "ok":
+            errors.append(f"{chosen} is not a run result in the Results directory.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        try:
+            loaded = load_run_result(Path(chosen))
+        except (ModelError, ValueError):
+            errors.append(f"{Path(chosen).name} is not a readable run result.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        extra["selected_result"] = chosen
+        report = {"run_result": loaded, "claims": [], "appendix": []}
+        return report, None, " ".join(errors), False, False, None, [], extra
+    return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _dated_entries(folder: Path, prefix: str) -> list[dict]:
+    rows = []
+    for path in sorted(folder.glob(f"{prefix}_*.json")):
+        if path.is_file():
+            rows.append({"name": path.name, "path": str(path.resolve())})
+    return rows
+
+
+def _requested_dated(folder: Path, requested: str, prefix: str) -> tuple[str, str]:
+    wanted = requested.strip()
+    path = Path(wanted).resolve()
+    try:
+        path.relative_to(folder.resolve())
+    except ValueError:
+        return "outside", wanted
+    if path.is_file() and path.name.startswith(prefix + "_") and path.name.endswith(".json"):
+        return "ok", str(path)
+    return "missing", str(path)
+
+
+def _same_as_latest_run(results_folder: Path, report: dict):
+    if not results_folder.is_dir():
+        return None
+    dated = [path for path in sorted(results_folder.glob("run-result_*.json")) if path.is_file()]
+    if not dated:
+        return None
+    try:
+        return same_run(report, load_run_result(dated[-1]))
+    except (ModelError, ValueError):
+        return None
 
 
 def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
@@ -545,13 +599,21 @@ def make_handler(ws: Workspace):
                     editor=editor,
                 )
             if path == "/review":
-                report, reading, error, saved, report_exists, same, unchecked = _review_view(ws, query)
-                door = _door_chrome(ws, query)
-                if door.get("reports_dir"):
-                    door["report_path"] = _confined_review_report_path(
-                        str(door["reports_dir"]),
-                        (query.get("report") or [""])[0],
+                try:
+                    report, reading, error, saved, report_exists, same, unchecked, extra = _review_view(ws, query)
+                    door = _door_chrome(ws, query)
+                except (ModelError, ValueError) as exc:
+                    if "curbpack.json" not in str(exc):
+                        raise
+                    return pages.review_page(
+                        None,
+                        None,
+                        error=str(exc),
+                        door={"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)},
                     )
+                door.update(extra)
+                if extra.get("selected_report"):
+                    door["report_path"] = extra["selected_report"]
                 return pages.review_page(
                     report,
                     reading,
@@ -922,8 +984,11 @@ def make_handler(ws: Workspace):
 
                 repo = _registered_repo_path(ws, repo_id)
                 config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
-                if not run_path:
+                requested = (form.get("result") or [""])[0]
+                if not requested.strip():
+                    raise ModelError("review", "compile", "a selected run result")
+                status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+                if status != "ok":
                     raise ModelError(
                         "review",
                         "compile",
