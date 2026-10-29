@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 import threading
 import unittest
+import urllib.parse
 import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -103,7 +104,8 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             try:
                 page = _get(
                     base
-                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z"
+                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z&report="
+                    + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
             finally:
                 httpd.shutdown()

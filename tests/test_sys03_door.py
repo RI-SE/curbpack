@@ -961,18 +961,26 @@ class ReviewIoTest(unittest.TestCase):
                 page = _get(base + "/review?repo=widget")
                 self.assertEqual(open_repo_id(workspace), "widget")
                 self.assertIn("Current Configuration", page)
-                self.assertNotIn("tree/packs", page)
-                self.assertNotIn("kept/claims", page)
+                self.assertIn('value="tree/packs"', page)
+                self.assertIn('value="kept/claims"', page)
                 self.assertIn('value="runs/out"', page)
                 self.assertIn('value="signed/reports"', page)
                 self.assertNotIn("sneak-claim", page)
                 _post(base + "/check", {"repo_id": "widget", "action": "check"})
+                run = next((repo / "runs" / "out").glob("run-result_*.json"))
                 previewed = _get(base + "/review?repo=widget")
-                self.assertIn("claim-readme", previewed)
-                self.assertIn("not saved", previewed)
-                self.assertNotIn("sneak-claim", previewed)
+                self.assertNotIn("claim-readme", previewed)
                 self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
-                compiled = _post(base + "/review/compile", {"repo_id": "widget"})
+                opened = _get(
+                    base + "/review?repo=widget&result=" + urllib.parse.quote(str(run.resolve()), safe="")
+                )
+                self.assertIn("claim-readme", opened)
+                self.assertIn("not saved", opened)
+                self.assertNotIn("sneak-claim", opened)
+                compiled = _post(
+                    base + "/review/compile",
+                    {"repo_id": "widget", "result": str(run.resolve())},
+                )
                 reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
                 self.assertEqual(len(reports), 1)
                 self.assertRegex(reports[0].name, r"^review-report_\d{8}T\d{6}Z\.json$")
@@ -987,10 +995,13 @@ class ReviewIoTest(unittest.TestCase):
                 outsider = workspace / "review-report_20990101T000000Z.json"
                 outsider.write_bytes(first)
                 sneak = _get(base + "/review?report=" + urllib.parse.quote(str(outsider.resolve())))
-                self.assertIn("claim-readme", sneak)
-                self.assertIn(str(reports[0].resolve()), sneak)
-                self.assertNotIn(str(outsider.resolve()), sneak)
-                compiled_again = _post(base + "/review/compile", {"repo_id": "widget"})
+                self.assertIn(str(outsider.resolve()), sneak)
+                self.assertIn("review report", sneak)
+                self.assertNotIn("claim-readme", sneak)
+                compiled_again = _post(
+                    base + "/review/compile",
+                    {"repo_id": "widget", "result": str(run.resolve())},
+                )
                 reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
                 self.assertEqual(len(reports), 2)
                 self.assertEqual(reports[0].read_bytes(), first)

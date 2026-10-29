@@ -57,7 +57,11 @@ class CheckKeepsSignedReportTest(unittest.TestCase):
                 reading = read_report_signature(read_json(report_path), trust_store(ws.keys))
                 self.assertTrue(reading["verifiable"])
                 self.assertEqual(reading["who"], "Ada Reviewer")
-                review = _get(base + "/review")
+                review = _get(
+                    base
+                    + "/review?repo=sample-product&report="
+                    + urllib.parse.quote(str(report_path.resolve()), safe="")
+                )
                 self.assertIn("I read this run", review)
             finally:
                 httpd.shutdown()
@@ -79,7 +83,15 @@ class CompileReplacesOnlyAfterConfirmationTest(unittest.TestCase):
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
-                _post(base + "/review/compile", {"repo_id": "sample-product"})
+                _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "sample-product",
+                        "result": str(
+                            (results_dir(ws.repo, config) / "run-result_20261021T120000Z.json").resolve()
+                        ),
+                    },
+                )
                 _post(base + "/review", {"decision": "I read the first run. I am not saying the product meets CRA."})
                 _post(base + "/review/sign", {"name": "Ada Reviewer"})
                 first = sorted(reports.glob("review-report_*.json"))[0]
@@ -94,7 +106,11 @@ class CompileReplacesOnlyAfterConfirmationTest(unittest.TestCase):
                 self.assertIn("older run", review)
                 self.assertIn("I read the first run", review)
                 self.assertIn("verifiable yes", review.lower())
-                replaced = _post(base + "/review/compile", {"repo_id": "sample-product"})
+                later_run = sorted(results_dir(ws.repo, config).glob("run-result_*.json"))[-1]
+                replaced = _post(
+                    base + "/review/compile",
+                    {"repo_id": "sample-product", "result": str(later_run.resolve())},
+                )
                 later = sorted(reports.glob("review-report_*.json"))
                 self.assertEqual(len(later), 2)
                 self.assertEqual(later[0].read_bytes(), signed)

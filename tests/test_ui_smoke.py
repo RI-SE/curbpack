@@ -76,7 +76,12 @@ class UiSmokeTest(unittest.TestCase):
                 self.assertIn("claim-risk", check)
                 self.assertIn("fail", check)
                 self.assertIn("not a legal conclusion", check)
-                review = _get(base + "/review")
+                run = next((root / "product").rglob("run-result_*.json"))
+                review = _get(
+                    base
+                    + "/review?repo=sample-product&result="
+                    + urllib.parse.quote(str(run.resolve()), safe="")
+                )
                 self.assertIn("not saved", review)
                 self.assertIn("Compile writes the report", review)
                 self.assertIn("no field for a conclusion that the product meets CRA", review)
@@ -93,7 +98,10 @@ class UiSmokeTest(unittest.TestCase):
                 except urllib.error.HTTPError as exc:
                     self.assertEqual(exc.code, 400)
                 self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
-                compiled = _post(base + "/review/compile", {"repo_id": "sample-product"})
+                compiled = _post(
+                    base + "/review/compile",
+                    {"repo_id": "sample-product", "result": str(run.resolve())},
+                )
                 reports = sorted(reports_dir.glob("review-report_*.json"))
                 self.assertEqual(len(reports), 1)
                 self.assertNotIn("Compile writes the report", compiled)

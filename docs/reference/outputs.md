@@ -176,8 +176,8 @@ The export directory currently has no version segment. The product Pack-tree con
 | --- | --- |
 | `curbcheck` | Prints a text summary. `-j` adds a new dated JSON file under `results_dir`; `-o PATH` writes the same object to that path. Both flags may be used together. |
 | Check page | Writes a new dated run-result JSON under the selected product's `results_dir`. Leaves existing review reports in place. |
-| Compile | Reads the current dated run result under `results_dir` and writes a new dated report under `reports_dir`. Does not re-run Checks or overwrite the previous dated report. |
-| Open Review | Reads the selected report, or the latest dated report when none is selected. Opening the page does not write a report. |
+| Compile | Reads the posted run-result path and writes a new dated report under `reports_dir`. Writes nothing when that path is absent. Does not re-run Checks or overwrite the previous dated report. |
+| Open Review | Lists the dated run results and review reports, and opens only the requested document. Opening the page does not write a report. |
 | Save decision | Updates the selected report's `decision` and removes that report's `signed` block. Embedded Claim and Requirement signatures remain. |
 | review-sign | Requires a saved decision and signs that same report. |
 

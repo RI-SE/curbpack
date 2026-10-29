@@ -187,7 +187,10 @@ class ReviewCompileTest(unittest.TestCase):
                 _post(base + "/check", {"repo_id": "widget", "action": "check"})
                 runs = sorted((repo / "runs" / "out").glob("run-result_*.json"))
                 self.assertEqual(len(runs), 1)
-                compiled = _post(base + "/review/compile", {"repo_id": "widget"})
+                compiled = _post(
+                    base + "/review/compile",
+                    {"repo_id": "widget", "result": str(runs[0].resolve())},
+                )
                 reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
                 self.assertEqual(len(reports), 1)
                 self.assertRegex(reports[0].name, r"^review-report_\d{8}T\d{6}Z\.json$")
@@ -199,7 +202,10 @@ class ReviewCompileTest(unittest.TestCase):
                 self.assertNotIn("sneak-claim", json.dumps(report))
                 self.assertFalse((product / "docs" / "reports").exists())
                 self.assertFalse((product / ".curbpack" / "review-report.json").exists())
-                compiled_again = _post(base + "/review/compile", {"repo_id": "widget"})
+                compiled_again = _post(
+                    base + "/review/compile",
+                    {"repo_id": "widget", "result": str(runs[0].resolve())},
+                )
                 reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
                 self.assertEqual(len(reports), 2)
                 self.assertEqual(reports[0].read_bytes(), first)
