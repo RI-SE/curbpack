@@ -61,7 +61,16 @@ from discovery.jobs import reviewable_targets
 from discovery.jobs import request_abort as abort_discover_job
 from discovery.jobs import start_discover_job
 from discovery.browse import list_directories
-from discovery.door import created_curbpack, open_paths, open_repo_id, save_directory_fields, set_open_repo
+from discovery.door import (
+    claim_file_relative,
+    created_curbpack,
+    open_paths,
+    open_repo_id,
+    repo_claims_dir,
+    repo_pack_requirements,
+    save_directory_fields,
+    set_open_repo,
+)
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import (
     candidate_for_path,
@@ -803,7 +812,7 @@ def make_handler(ws: Workspace):
                 self._redirect("/requirement?sealed=1")
                 return
             if path == "/claims":
-                known = _selected_requirement_ids(ws)
+                known = list(_claims_lookup(ws, form))
                 requirement_id = require_requirement_id(
                     (form.get("requirement_id") or [""])[0],
                     known,
@@ -823,7 +832,7 @@ def make_handler(ws: Workspace):
                     description=(form.get("description") or [""])[0].strip(),
                     severity=(form.get("severity") or [""])[0].strip() or None,
                 )
-                claims_dir = _claims_repo(ws, form) / "claims"
+                claims_dir = _claims_directory(ws, form)
                 destination = claims_dir / f"{claim['id']}.json"
                 if destination.is_file():
                     raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
@@ -832,23 +841,23 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/claims/") and path.endswith("/retire"):
                 claim_id = path[len("/claims/") : -len("/retire")]
-                retire_claim(_claims_repo(ws, form) / "claims", claim_id)
+                retire_claim(_claims_directory(ws, form), claim_id)
                 self._redirect(_claims_redirect(form, "retired=1"))
                 return
             if path.startswith("/claims/") and path.endswith("/sign"):
                 claim_id = path[len("/claims/") : -len("/sign")]
-                claim = read_claim(_claims_repo(ws, form) / "claims" / f"{claim_id}.json")
+                claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
                 name = (form.get("name") or [""])[0].strip()
                 private, _public = load_or_create_key(ws.keys, name)
                 sealed = sign_claim(claim, name=name, private_key=private, at=_now())
-                write_claim(_claims_repo(ws, form) / "claims", sealed)
+                write_claim(_claims_directory(ws, form), sealed)
                 self._redirect(
                     _claims_redirect(form, f"signed=1&requirement_id={claim.get('requirement_id', '')}")
                 )
                 return
             if path.startswith("/claims/"):
                 claim_id = path[len("/claims/") :]
-                claim = read_claim(_claims_repo(ws, form) / "claims" / f"{claim_id}.json")
+                claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
                 had_signed = isinstance(claim.get("signed"), dict)
                 updated = rebind_from_fields(
                     claim,
@@ -858,7 +867,7 @@ def make_handler(ws: Workspace):
                     severity=(form.get("severity") or [""])[0],
                     description=(form.get("description") or [""])[0],
                 )
-                write_claim(_claims_repo(ws, form) / "claims", updated)
+                write_claim(_claims_directory(ws, form), updated)
                 flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
                 self._redirect(
                     _claims_redirect(form, f"{flag}&requirement_id={updated.get('requirement_id', '')}")
@@ -1042,6 +1051,7 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
     repos = _listed_repos(ws)
     repo_id = _sync_open_repo(ws, query)
     repo = find_repo({"repos": repos}, repo_id) if repo_id else None
+    fields = _door_path_fields(ws, repo_id) if repo_id else {}
     return {
         "mode": "product" if product else "pilot",
         "repo_id": str((repo or {}).get("id") or ""),
@@ -1052,6 +1062,11 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
         "job": job,
         "error": (query.get("error") or [""])[0],
         "workspace_root": str(ws.root.resolve()),
+        "curbpack_file": fields.get("curbpack_file") or "",
+        "directory": fields.get("directory") or "",
+        "claims_dir": fields.get("claims_dir") or "",
+        "results_dir": fields.get("results_dir") or "",
+        "reports_dir": fields.get("reports_dir") or "",
     }
 
 
@@ -1145,20 +1160,18 @@ def _copy_choices(root: Path, pack_id: str) -> list[dict]:
 
 def _copy_claim_counts(root: Path, repo: Path | None, pack_id: str, ref: str) -> tuple[int, int, int]:
     """Requirement count, claim count, and requirements that have no claim."""
-    try:
-        directory = resolve_copy_ref(root, pack_id, ref)
-        _pack, requirements = load_working_copy(directory)
-    except ModelError:
-        return 0, 0, 0
-    ids = {
-        item["id"]
-        for item in requirements
-        if isinstance(item, dict) and isinstance(item.get("id"), str)
-    }
     if repo is None:
-        return len(ids), 0, len(ids)
-    claims_dir = repo / "claims"
-    claims = read_claims(claims_dir) if claims_dir.is_dir() else []
+        return 0, 0, 0
+    try:
+        offered = repo_pack_requirements(repo, pack_id)
+        ids = {item["id"] for item in offered}
+    except ModelError:
+        ids = set()
+    try:
+        folder = repo_claims_dir(repo)
+        claims = read_claims(folder) if folder.is_dir() else []
+    except ModelError:
+        claims = []
     claim_count = sum(
         1
         for claim in claims
@@ -1189,13 +1202,12 @@ def _start_discover(ws: Workspace, form: dict) -> str:
         raise ModelError("discover", "pack_id", "a pack id on the source")
     if not timestamp:
         raise ModelError("discover", "timestamp", "a working copy or published release")
-    directory = resolve_copy_ref(ws.root, pack_id, timestamp)
-    _pack, requirements = load_working_copy(directory)
+    resolve_copy_ref(ws.root, pack_id, timestamp)
     repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
-    config_path = repo / "curbpack.json"
-    config = read_json(config_path) if config_path.is_file() else {}
-    if not isinstance(config, dict):
-        config = {}
+    requirements = repo_pack_requirements(repo, pack_id)
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
     hunt = {"search_hints": config.get("search_hints") or {}}
     title = f"Discover — {row.get('name') or repo_id} / {source.get('name') or source_id} {source.get('section_id') or ''}"
     raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
@@ -3188,21 +3200,34 @@ def _claims_repo(ws: Workspace, bag: dict) -> Path:
     return resolve_repo_path(ws.root, str(row.get("path") or ""))
 
 
+def _claims_directory(ws: Workspace, bag: dict) -> Path:
+    return repo_claims_dir(_claims_repo(ws, bag))
+
+
 def _claims_lookup(ws: Workspace, bag: dict) -> dict[str, dict]:
     source_id = _query_value(bag, "source_id")
     timestamp = _query_value(bag, "timestamp")
+    repo = _claims_repo(ws, bag)
     if source_id and timestamp:
         source = next((item for item in _registered_sources(ws) if item.get("source_id") == source_id), None)
         if source is None:
             raise ModelError("discover", "source_id", f"a registered source, not {source_id}")
-        directory = select_working_copy(ws.root, source["pack_id"], timestamp)
-        _pack, requirements = load_working_copy(directory)
-        return {
-            item["id"]: item
-            for item in requirements
-            if isinstance(item, dict) and isinstance(item.get("id"), str)
-        }
-    return _requirement_lookup(ws)
+        pack_id = source.get("pack_id")
+        if not isinstance(pack_id, str) or not pack_id:
+            raise ModelError("discover", "pack_id", "a pack id on the source")
+        resolve_copy_ref(ws.root, pack_id, timestamp)
+        return {item["id"]: item for item in repo_pack_requirements(repo, pack_id)}
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    lookup: dict[str, dict] = {}
+    for pack_id in config["packs"]:
+        try:
+            for item in repo_pack_requirements(repo, pack_id):
+                lookup[item["id"]] = item
+        except ModelError:
+            continue
+    return lookup
 
 
 def _claims_model(ws: Workspace, query: dict) -> dict:
@@ -3210,7 +3235,7 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
     known_ids = list(lookup)
     trust = trust_store(ws.keys)
     repo = _claims_repo(ws, query)
-    claims_dir = repo / "claims"
+    claims_dir = repo_claims_dir(repo)
     rows = []
     from common.store import load_claims
 
@@ -3221,7 +3246,7 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
     for claim in claims:
         requirement_id = str(claim.get("requirement_id") or "")
         requirement = lookup.get(requirement_id)
-        relative = f"claims/{claim['id']}.json"
+        relative = claim_file_relative(repo, claims_dir, claim["id"])
         rows.append(
             {
                 "claim": claim,

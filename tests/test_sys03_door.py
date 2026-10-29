@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import copy
 import json
+import re
+import shutil
 import tempfile
+import time
 import threading
 import unittest
 import urllib.error
@@ -23,6 +26,7 @@ from common.validate import validate_curbpack_config
 from discovery.door import created_curbpack, open_paths, open_repo_id, save_directory_fields, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
+from requirements.workspace import create_extraction_copy, mark_selected
 
 
 CREATED_SEARCH_HINTS = {
@@ -701,6 +705,173 @@ class CheckIoTest(unittest.TestCase):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+
+
+class DiscoverIoTest(unittest.TestCase):
+    def test_discover_reads_and_saves_through_curbpack_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            product = workspace / "product"
+            repo = workspace / "widget"
+            product.mkdir()
+            write_json(product / "curbpack.json", created_curbpack(packs=["hidden-pack"]))
+            write_claim(
+                product / "claims",
+                _exist_claim("sneak-product", "SNEAK-REQ", "docs/risk-a.md"),
+            )
+            _register(workspace, "Widget", repo)
+            pack = draft_pack()
+            pack["id"] = "cra-xml-baseline"
+            stamp = "2026-10-14T080000Z"
+            copy = create_extraction_copy(workspace, pack["id"], pack, at=stamp)
+            save_requirement(copy, _discover_requirement("REQ-A", "VII.3", "*risk-a*"), published=False)
+            save_requirement(copy, _discover_requirement("REQ-COPY", "VII.9", "*copy-only*"), published=False)
+            mark_selected(workspace, pack["id"], stamp)
+            pack_dir = repo / "tree" / "packs" / pack["id"] / pack["version"]
+            save_pack(pack_dir, pack)
+            save_requirement(pack_dir, _discover_requirement("REQ-A", "VII.3", "*risk-a*"), published=False)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "risk-a.md").write_text("# Risk A\nrisk assessment\n", encoding="utf-8")
+            write_claim(
+                repo / "claims",
+                _exist_claim("sneak-repo", "SNEAK-REQ", "docs/risk-a.md"),
+            )
+            write_claim(
+                repo / "kept" / "claims",
+                _exist_claim("claim-kept", "REQ-A", "docs/risk-a.md"),
+            )
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(
+                    packs=["cra-xml-baseline"],
+                    packs_dir="tree/packs",
+                    claims_dir="kept/claims",
+                    results_dir="runs/out",
+                    reports_dir="signed/reports",
+                ),
+            )
+            workspace_obj = Workspace(workspace)
+            workspace_obj.discover_complete = lambda _prompt, _settings: (
+                '{"score": 0.9, "rank": "High", "why": "Names the risk.", "excerpt": "risk assessment"}'
+            )
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(workspace_obj))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            query = "repo=widget&source=cra-xml-vii&timestamp=2026-10-14T080000Z"
+            try:
+                page = _get(base + "/discover?repo=widget")
+                self.assertEqual(open_repo_id(workspace), "widget")
+                self.assertIn("tree/packs", page)
+                self.assertIn("kept/claims", page)
+                self.assertNotIn("hidden-pack", page)
+                self.assertNotIn("sneak-product", page)
+                self.assertRegex(page, r'class="req-link"[^>]*>1</a>')
+                self.assertRegex(page, r'class="claims-link"[^>]*>1</a>')
+                overview = _get(base + "/discover/claims?" + query)
+                self.assertIn("REQ-A", overview)
+                self.assertNotIn("REQ-COPY", overview)
+                self.assertNotIn("sneak-repo", overview)
+                started = _post(
+                    base + "/discover/run",
+                    {
+                        "repo_id": "widget",
+                        "source_id": "cra-xml-vii",
+                        "timestamp": "2026-10-14T080000Z",
+                        "assess_limit": "5",
+                    },
+                )
+                found = re.search(r'data-poll="/discover/jobs/([^"]+)"', started)
+                self.assertIsNotNone(found)
+                job = json.loads(_get(base + "/discover/jobs/" + found.group(1)))
+                for _ in range(100):
+                    if job.get("status") != "running":
+                        break
+                    job = json.loads(_get(base + "/discover/jobs/" + found.group(1)))
+                    if job.get("status") == "running":
+                        time.sleep(0.05)
+                self.assertEqual(job["status"], "done")
+                _post(
+                    base + "/discover/feedback/checks",
+                    {
+                        "repo_id": "widget",
+                        "source_id": "cra-xml-vii",
+                        "timestamp": "2026-10-14T080000Z",
+                        "requirement_id": "REQ-A",
+                        "path": "docs/risk-a.md",
+                        "check": "exist",
+                    },
+                )
+                saved = sorted((repo / "kept" / "claims").glob("*.json"))
+                self.assertTrue(any(read_json(path)["id"] != "claim-kept" for path in saved))
+                self.assertEqual(list((repo / "claims").glob("*.json")), [repo / "claims" / "sneak-repo.json"])
+                self.assertFalse((product / "curbpack" / "claims").exists())
+                with self.assertRaises(urllib.error.HTTPError):
+                    _post(
+                        base + "/claims",
+                        {
+                            "repo_id": "widget",
+                            "id": "claim-copy",
+                            "requirement_id": "REQ-COPY",
+                            "source": "documents",
+                            "description": "Working-copy only.",
+                            "args": json.dumps({"path": "docs/risk-a.md"}),
+                            "checks": json.dumps(
+                                [{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}]
+                            ),
+                        },
+                    )
+                self.assertFalse((repo / "kept" / "claims" / "claim-copy.json").exists())
+                shutil.rmtree(pack_dir)
+                with self.assertRaises(urllib.error.HTTPError):
+                    _get(base + "/discover/claims?" + query)
+                (repo / "curbpack.json").unlink()
+                with self.assertRaises(urllib.error.HTTPError):
+                    _post(
+                        base + "/discover/run",
+                        {
+                            "repo_id": "widget",
+                            "source_id": "cra-xml-vii",
+                            "timestamp": "2026-10-14T080000Z",
+                        },
+                    )
+                with self.assertRaises(urllib.error.HTTPError):
+                    _post(
+                        base + "/discover/feedback/checks",
+                        {
+                            "repo_id": "widget",
+                            "source_id": "cra-xml-vii",
+                            "timestamp": "2026-10-14T080000Z",
+                            "requirement_id": "REQ-A",
+                            "path": "docs/risk-a.md",
+                            "check": "exist",
+                        },
+                    )
+                self.assertEqual(list((repo / "claims").glob("*.json")), [repo / "claims" / "sneak-repo.json"])
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+
+def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:
+    return {
+        "id": requirement_id,
+        "pack_id": "cra-xml-baseline",
+        "source": {
+            "framework": "EU",
+            "instrument": "CRA",
+            "identifier": "CELEX:32024R2847",
+            "language": "en",
+            "url": "https://example.invalid/cra",
+        },
+        "references": [{"nr": 1, "locator": locator, "law_text": f"law passage for {requirement_id}"}],
+        "discovery_hints": {
+            "concepts": ["risk"],
+            "path_hints": [hint],
+            "sources": [{"source": "documents"}],
+            "expected_evidence": ["process description"],
+        },
+    }
 
 
 if __name__ == "__main__":

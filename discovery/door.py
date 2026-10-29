@@ -99,6 +99,37 @@ def open_paths(workspace: Path) -> dict | None:
     return result
 
 
+def repo_claims_dir(repo: Path) -> Path:
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        raise ModelError("curbpack.json", "claims_dir", "a curbpack.json in the chosen repository")
+    return claims_dir(repo, validate_curbpack_config(read_json(path)))
+
+
+def claim_file_relative(repo: Path, folder: Path, claim_id: str) -> str:
+    path = (folder / f"{claim_id}.json").resolve()
+    try:
+        return path.relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        return path.name
+
+
+def repo_pack_requirements(repo: Path, pack_id: str) -> list[dict]:
+    """Requirements from packs_dir for a pack named in curbpack.json."""
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        raise ModelError("curbpack.json", "packs_dir", "a curbpack.json in the chosen repository")
+    config = validate_curbpack_config(read_json(path))
+    if pack_id not in config["packs"]:
+        return []
+    from checks.run import _pack_version_dir
+    from common.store import load_pack_directory
+
+    directory = _pack_version_dir(packs_dir(repo, config), pack_id)
+    _pack, requirements = load_pack_directory(directory)
+    return [item for item in requirements if isinstance(item, dict) and isinstance(item.get("id"), str)]
+
+
 def save_directory_fields(repo: Path, **fields: str) -> None:
     unknown = sorted(set(fields) - set(_PATH_FIELDS))
     if unknown:

@@ -196,7 +196,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
                 description="Old motivation.",
             )
-            write_claim(root / "product" / "claims", claim)
+            write_claim(root / "product" / "curbpack" / "claims", claim)
             workspace = Workspace(root)
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(workspace))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -213,7 +213,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             try:
                 _post(base + "/discover/repos", {"name": "sample-product", "path": str(root / "product")})
                 _post(base + "/discover/feedback/motivation", {**form, "choice": "keep"})
-                kept = read_json(root / "product" / "claims" / "REQ-A-docs__risk-a.md.json")
+                kept = read_json(root / "product" / "curbpack" / "claims" / "REQ-A-docs__risk-a.md.json")
                 self.assertEqual(kept["description"], "Old motivation.")
                 self.assertNotIn("signed", kept)
                 feedback = load_feedback(root, "sample-product", "cra-xml-vii", "2026-10-14T080000Z")
@@ -222,24 +222,24 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                     "New sentence.",
                 )
                 _post(base + "/discover/feedback/motivation", {**form, "choice": "take"})
-                taken = read_json(root / "product" / "claims" / "REQ-A-docs__risk-a.md.json")
+                taken = read_json(root / "product" / "curbpack" / "claims" / "REQ-A-docs__risk-a.md.json")
                 self.assertEqual(taken["description"], "New sentence.")
                 self.assertEqual(taken["checks"], claim["checks"])
                 private, _public = generate_keypair()
                 sealed = sign_claim(taken, name="QA", private_key=private, at="2026-10-14T08:00:00Z")
-                write_claim(root / "product" / "claims", sealed)
+                write_claim(root / "product" / "curbpack" / "claims", sealed)
                 _post(
                     base + "/discover/feedback/motivation",
                     {**form, "choice": "take", "why": "Newer sentence."},
                 )
-                still = read_json(root / "product" / "claims" / "REQ-A-docs__risk-a.md.json")
+                still = read_json(root / "product" / "curbpack" / "claims" / "REQ-A-docs__risk-a.md.json")
                 self.assertEqual(still["description"], "New sentence.")
                 self.assertIn("signed", still)
                 _post(
                     base + "/discover/feedback/motivation",
                     {**form, "choice": "take", "why": "Newer sentence.", "unsign": "1"},
                 )
-                unsigned = read_json(root / "product" / "claims" / "REQ-A-docs__risk-a.md.json")
+                unsigned = read_json(root / "product" / "curbpack" / "claims" / "REQ-A-docs__risk-a.md.json")
                 self.assertEqual(unsigned["description"], "Newer sentence.")
                 self.assertNotIn("signed", unsigned)
             finally:
@@ -325,7 +325,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 )
                 voted = _get(base + "/discover/claims/REQ-A?" + query)
                 self.assertIn("useful", voted)
-                self.assertFalse((root / "product" / "claims").exists())
+                self.assertFalse((root / "product" / "curbpack" / "claims").exists())
                 rejected = _post(
                     base + "/discover/feedback/checks",
                     {
@@ -341,7 +341,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 )
                 self.assertIn('class="invalid"', rejected)
                 self.assertIn('class="save-check"', rejected)
-                self.assertFalse((root / "product" / "claims").exists())
+                self.assertFalse((root / "product" / "curbpack" / "claims").exists())
                 _post(
                     base + "/discover/feedback/checks",
                     {
@@ -355,7 +355,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 )
                 saved = _get(base + "/discover/claims/REQ-A?" + query)
                 self.assertIn("File is present", saved)
-                claim_files = list((root / "product" / "claims").glob("*.json"))
+                claim_files = list((root / "product" / "curbpack" / "claims").glob("*.json"))
                 self.assertEqual(len(claim_files), 1)
                 claim = read_json(claim_files[0])
                 self.assertEqual(claim["requirement_id"], "REQ-A")
@@ -403,7 +403,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 self.assertIn("docs/risk-b.md", added)
                 self.assertIn("Added by hand.", added)
                 self.assertIn('data-reopen="1"', added)
-                self.assertEqual(len(list((root / "product" / "claims").glob("*.json"))), 1)
+                self.assertEqual(len(list((root / "product" / "curbpack" / "claims").glob("*.json"))), 1)
                 with self.assertRaises(urllib.error.HTTPError):
                     _get(base + "/discover/claims?repo=sample-product&source=cra-xml-vii&timestamp=not-a-copy")
                 with self.assertRaises(urllib.error.HTTPError):
