@@ -209,6 +209,31 @@ class ReviewCompileTest(unittest.TestCase):
                 httpd.server_close()
 
 
+class InventoryTest(unittest.TestCase):
+    def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):
+        root = Path(__file__).resolve().parents[1]
+        listed = (
+            "tests/test_check_editor.py",
+            "tests/test_sys03_door.py",
+            "tests/test_review_report_kept.py",
+            "tests/test_review_replace_flow.py",
+            "tests/test_review_discover_again.py",
+            "tests/test_review_coverage_ui.py",
+            "tests/test_review_compile.py",
+            "tests/test_review_coverage.py",
+            "tests/test_ui_smoke.py",
+            "tests/test_e2e_annex_vii.py",
+            "tests/test_chk08_studio.py",
+        )
+        leftovers = []
+        for rel in listed:
+            text = (root / rel).read_text(encoding="utf-8")
+            for line_no, line in enumerate(text.splitlines(), 1):
+                if "run_and_write(" in line and ", None" not in line:
+                    leftovers.append(f"{rel}:{line_no}:{line.strip()}")
+        self.assertEqual(leftovers, [])
+
+
 class DefaultsTest(unittest.TestCase):
     def test_blank_curbpack_body_is_the_checks_defaults_function(self):
         from checks.defaults import created_curbpack as factory
