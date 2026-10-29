@@ -853,6 +853,106 @@ class DiscoverIoTest(unittest.TestCase):
                 httpd.server_close()
 
 
+class ReviewIoTest(unittest.TestCase):
+    def test_review_compiles_the_open_repository_run_into_dated_reports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            product = workspace / "product"
+            repo = workspace / "widget"
+            product.mkdir()
+            write_json(product / "curbpack.json", created_curbpack(packs=["hidden-pack"]))
+            write_json(
+                product / ".curbpack" / "run-result.json",
+                {
+                    "tool": "curbcheck",
+                    "tool_version": "0.0.1a",
+                    "packs": [{"id": "hidden-pack", "version": "0.1.0", "digest": "aaa"}],
+                    "claims": [
+                        {
+                            "id": "sneak-claim",
+                            "digest": "bbb",
+                            "status": "pass",
+                            "checks": [
+                                {
+                                    "index": 0,
+                                    "check": "exist",
+                                    "args": {"paths": ["README.md"]},
+                                    "status": "pass",
+                                }
+                            ],
+                        }
+                    ],
+                },
+            )
+            write_claim(product / "claims", _exist_claim("sneak-claim", "CRA-PURPOSE", "README.md"))
+            _register(workspace, "Widget", repo)
+            pack_dir = repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"]
+            save_pack(pack_dir, draft_pack())
+            save_requirement(pack_dir, _requirement("CRA-PURPOSE"))
+            (repo / "README.md").write_text("hello from widget\n", encoding="utf-8")
+            write_claim(
+                repo / "kept" / "claims",
+                _exist_claim("claim-readme", "CRA-PURPOSE", "README.md"),
+            )
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(
+                    packs=["cra-baseline"],
+                    packs_dir="tree/packs",
+                    claims_dir="kept/claims",
+                    results_dir="runs/out",
+                    reports_dir="signed/reports",
+                ),
+            )
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                empty = _get(base + "/review")
+                self.assertIn("No repository is chosen", empty)
+                self.assertNotIn("sneak-claim", empty)
+                page = _get(base + "/review?repo=widget")
+                self.assertEqual(open_repo_id(workspace), "widget")
+                self.assertIn("tree/packs", page)
+                self.assertIn("kept/claims", page)
+                self.assertIn("runs/out", page)
+                self.assertIn("signed/reports", page)
+                self.assertNotIn("sneak-claim", page)
+                _post(base + "/check", {"repo_id": "widget", "action": "check"})
+                previewed = _get(base + "/review?repo=widget")
+                self.assertIn("claim-readme", previewed)
+                self.assertIn("not saved", previewed)
+                self.assertNotIn("sneak-claim", previewed)
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                compiled = _post(base + "/review/compile", {"repo_id": "widget"})
+                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
+                self.assertEqual(len(reports), 1)
+                self.assertRegex(reports[0].name, r"^review-report_\d{8}T\d{6}Z\.json$")
+                self.assertIn(str(reports[0].resolve()), compiled)
+                self.assertIn('name="report"', compiled)
+                first = reports[0].read_bytes()
+                report = json.loads(first.decode("utf-8"))
+                self.assertEqual([row["id"] for row in report["claims"]], ["claim-readme"])
+                self.assertNotIn("sneak-claim", json.dumps(report))
+                self.assertFalse((product / "docs" / "reports").exists())
+                self.assertFalse((product / ".curbpack" / "review-report.json").exists())
+                outsider = workspace / "review-report_20990101T000000Z.json"
+                outsider.write_bytes(first)
+                sneak = _get(base + "/review?report=" + urllib.parse.quote(str(outsider.resolve())))
+                self.assertIn("claim-readme", sneak)
+                self.assertIn(str(reports[0].resolve()), sneak)
+                self.assertNotIn(str(outsider.resolve()), sneak)
+                compiled_again = _post(base + "/review/compile", {"repo_id": "widget"})
+                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
+                self.assertEqual(len(reports), 2)
+                self.assertEqual(reports[0].read_bytes(), first)
+                self.assertIn(str(reports[1].resolve()), compiled_again)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+
 def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:
     return {
         "id": requirement_id,

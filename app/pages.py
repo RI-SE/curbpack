@@ -691,20 +691,24 @@ def review_page(
 {appendix_html}
 <pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>
 """
-    confirm = ""
-    if report_exists:
-        confirm = (
-            '<label><input type="checkbox" name="confirm" value="yes"> '
-            "Replace the saved report. The previous decision is not copied.</label>"
-        )
+    picker = _product_repo_picker(door or {}, "/review")
+    repo_id = str((door or {}).get("repo_id") or "")
+    report_value = str((door or {}).get("report_path") or "")
+    hidden = ""
+    if repo_id:
+        hidden += f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
+    if report_value:
+        hidden += f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
     if saved:
         decision_forms = f"""
 <form method="post" action="/review">
+{hidden}
 <label>Decision</label>
 <textarea name="decision">{html.escape(decision)}</textarea>
 <button type="submit">Save decision</button>
 </form>
 <form method="post" action="/review/sign">
+{hidden}
 <label>Signer name</label>
 <input type="text" name="name" placeholder="External Reviewer">
 <button type="submit">review-sign</button>
@@ -714,15 +718,24 @@ def review_page(
         decision_forms = (
             '<p class="muted">Compile writes the report. Save decision and review-sign need that file.</p>'
         )
-    picker = _product_repo_picker(door or {}, "/review")
     compile_form = ""
-    if not str((door or {}).get("repo_id") or ""):
+    if repo_id:
+        compile_form = f"""
+<form method="post" action="/review/compile">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<p class="actions"><button type="submit">Compile</button></p>
+</form>
+"""
+    if not repo_id and report is None:
         body_report = "<p>No repository is chosen.</p>"
         decision_forms = ""
+        compile_form = ""
+    chrome = _review_path_chrome(door or {})
     body = f"""
 <h1>Review</h1>
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
 {picker}
+{chrome}
 {_flash(message, error)}
 <div class="card">{body_report}</div>
 {compile_form}
@@ -731,6 +744,33 @@ def review_page(
 {dialogs}
 """
     return page("Review", body)
+
+
+def _review_path_chrome(door: dict) -> str:
+    if not str(door.get("repo_id") or ""):
+        return ""
+    parts = []
+    if door.get("curbpack_file"):
+        parts.append(f"<p>curbpack.json <code>{html.escape(str(door.get('curbpack_file') or ''))}</code></p>")
+    if door.get("directory"):
+        parts.append(
+            f'<p class="muted">Packs directory <code>{html.escape(str(door.get("directory") or ""))}</code>.</p>'
+        )
+    if door.get("claims_dir"):
+        parts.append(
+            f'<p class="muted">Claims directory <code>{html.escape(str(door.get("claims_dir") or ""))}</code>.</p>'
+        )
+    if door.get("results_dir"):
+        parts.append(
+            f'<p class="muted">Results directory <code>{html.escape(str(door.get("results_dir") or ""))}</code>.</p>'
+        )
+    if door.get("reports_dir"):
+        parts.append(
+            f'<p class="muted">Reports directory <code>{html.escape(str(door.get("reports_dir") or ""))}</code>.</p>'
+        )
+    if door.get("report_path"):
+        parts.append(f"<p>Review report <code>{html.escape(str(door.get('report_path') or ''))}</code></p>")
+    return "".join(parts)
 
 
 def _claims_href(discovery: dict) -> str:

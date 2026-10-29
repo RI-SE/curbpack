@@ -239,7 +239,14 @@ class CompileReportTest(unittest.TestCase):
             )
             self.assertEqual(report["run_result"]["packs"][0]["version"], "0.1.0")
             self.assertNotIn("meets_cra", report)
-            page = review_page(report, None, saved=True, report_exists=True, same_run_value=True).decode()
+            page = review_page(
+                report,
+                None,
+                saved=True,
+                report_exists=True,
+                same_run_value=True,
+                door={"repo_id": "widget"},
+            ).decode()
             self.assertIn('data-claim="claim-pass" data-status="pass"', page)
             self.assertIn('data-claim="claim-miss" data-status="fail"', page)
             self.assertIn('data-claim="claim-skip" data-status="skipped"', page)
@@ -262,13 +269,16 @@ class ReviewPageTest(unittest.TestCase):
             report_exists=True,
             same_run_value=False,
             unchecked=["REQ-B"],
+            door={"repo_id": "widget", "report_path": "/tmp/signed/reports/review-report_20261021T120000Z.json"},
         ).decode()
         self.assertIn("same run: no", page)
         self.assertIn("older run", page)
         self.assertIn("not verification of that commit", page)
         self.assertIn("These selected Requirements were not checked", page)
         self.assertIn("REQ-B", page)
-        self.assertIn('name="confirm"', page)
+        self.assertIn('name="report"', page)
+        self.assertIn("review-report_20261021T120000Z.json", page)
+        self.assertNotIn('name="confirm"', page)
         self.assertIn("no field for a conclusion that the product meets CRA", page)
         preview = review_page(
             report,
@@ -276,6 +286,7 @@ class ReviewPageTest(unittest.TestCase):
             saved=False,
             report_exists=False,
             same_run_value=True,
+            door={"repo_id": "widget"},
         ).decode()
         self.assertIn("not saved", preview)
         self.assertIn('data-same-run="yes"', preview)

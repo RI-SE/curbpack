@@ -11,10 +11,13 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from checks.run import reports_dir
 from claims.bind import build_claim, read_claim, write_claim
 from claims.ui.coverage import REPLACEMENT_UNCHECKED
 from common.jsonio import read_json
 from common.keystore import trust_store
+from common.validate import validate_curbpack_config
+from discovery.door import set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from review.compile import read_report_signature
 from tests.test_claims_binding_ui import _seed_two_requirements
@@ -32,7 +35,7 @@ class ReplaceThenReviewTest(unittest.TestCase):
             root = Path(tmp)
             _seed_two_requirements(root)
             product = root / "product"
-            _publish_pack_for_check(root)
+            claims_dir = product / "curbpack" / "claims"
             old = build_claim(
                 claim_id="claim-old",
                 requirement_id="REQ-A",
@@ -49,15 +52,16 @@ class ReplaceThenReviewTest(unittest.TestCase):
                 ],
                 description="The first note was the evidence.",
             )
-            write_claim(product / "claims", old)
+            write_claim(claims_dir, old)
             save_repos(root, add_repo(root, load_repos(root), name="sample-product", path=str(product)))
+            set_open_repo(root, "sample-product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 _post(base + "/claims/claim-old/sign", {**CONTEXT, "name": "Ada Reviewer"})
-                old_bytes = (product / "claims" / "claim-old.json").read_bytes()
+                old_bytes = (claims_dir / "claim-old.json").read_bytes()
                 _post(
                     base + "/discover/feedback/add",
                     {**CONTEXT, "requirement_id": "REQ-A", "path": "docs/risk-b.md", "rationale": "A replacement note."},
@@ -66,25 +70,25 @@ class ReplaceThenReviewTest(unittest.TestCase):
                     base + "/discover/feedback/checks",
                     {**CONTEXT, "requirement_id": "REQ-A", "path": "docs/risk-b.md", "check": "exist"},
                 )
-                self.assertEqual((product / "claims" / "claim-old.json").read_bytes(), old_bytes)
-                created = [path.name for path in (product / "claims").glob("*.json")]
+                self.assertEqual((claims_dir / "claim-old.json").read_bytes(), old_bytes)
+                created = [path.name for path in claims_dir.glob("*.json")]
                 self.assertEqual(len(created), 2)
                 editor = _get(base + "/claims?" + urllib.parse.urlencode(CONTEXT))
                 self.assertIn("claim-old", editor)
                 self.assertIn(REPLACEMENT_UNCHECKED, editor)
                 _post(base + "/claims/claim-old/retire", CONTEXT)
-                self.assertFalse((product / "claims" / "claim-old.json").is_file())
-                self.assertEqual(len(list((product / "claims").glob("*.json"))), 1)
-                checked = _post(base + "/check", {})
+                self.assertFalse((claims_dir / "claim-old.json").is_file())
+                self.assertEqual(len(list(claims_dir.glob("*.json"))), 1)
+                checked = _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
                 self.assertIn("pass", checked)
                 self.assertNotIn("claim-old", checked)
-                replacement = next((product / "claims").glob("*.json"))
+                replacement = next(claims_dir.glob("*.json"))
                 signed = _post(
                     base + f"/claims/{replacement.stem}/sign",
                     {**CONTEXT, "name": "Ada Reviewer"},
                 )
                 self.assertIn("Signed", signed)
-                _post(base + "/review/compile", {})
+                _post(base + "/review/compile", {"repo_id": "sample-product"})
                 decided = _post(
                     base + "/review",
                     {"decision": "I read the replacement run. I am not saying the product meets CRA."},
@@ -97,20 +101,16 @@ class ReplaceThenReviewTest(unittest.TestCase):
                 httpd.server_close()
             claim = read_claim(replacement)
             self.assertEqual(claim["signed"]["name"], "Ada Reviewer")
-            report = read_json(product / "docs" / "reports" / "review-report.json")
+            config = validate_curbpack_config(read_json(product / "curbpack.json"))
+            reports = sorted(reports_dir(product, config).glob("review-report_*.json"))
+            self.assertEqual(len(reports), 1)
+            report = read_json(reports[0])
             self.assertFalse((product / ".curbpack" / "review-report.json").exists())
+            self.assertFalse((product / "docs" / "reports" / "review-report.json").exists())
             reading = read_report_signature(report, trust_store(root / "keys"))
             self.assertTrue(reading["verifiable"])
             self.assertEqual(reading["who"], "Ada Reviewer")
             self.assertNotIn("claim-old", [row.get("id") for row in report["run_result"]["claims"]])
-
-
-def _publish_pack_for_check(root: Path) -> None:
-    source = root / "cra-xml-baseline" / "2026-10-14T080000Z"
-    destination = root / "packs" / "cra-xml-baseline"
-    destination.mkdir(parents=True)
-    for path in source.glob("*.json"):
-        (destination / path.name).write_bytes(path.read_bytes())
 
 
 def _get(url: str) -> str:

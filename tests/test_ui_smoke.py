@@ -72,16 +72,18 @@ class UiSmokeTest(unittest.TestCase):
                         ),
                     },
                 )
-                check = _post(base + "/check", {})
+                check = _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
                 self.assertIn("claim-risk", check)
                 self.assertIn("fail", check)
                 self.assertIn("not a legal conclusion", check)
                 review = _get(base + "/review")
                 self.assertIn("not saved", review)
+                self.assertIn("Compile writes the report", review)
                 self.assertIn("no field for a conclusion that the product meets CRA", review)
                 self.assertIn("not verification of that commit", review)
-                report_path = root / "product" / "docs" / "reports" / "review-report.json"
-                self.assertFalse(report_path.is_file())
+                self.assertIn("claim-risk", review)
+                reports_dir = root / "product" / "curbpack" / "reports"
+                self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
                 try:
                     _post(
                         base + "/review",
@@ -90,11 +92,16 @@ class UiSmokeTest(unittest.TestCase):
                     self.fail("saving a decision must wait until Compile writes the file")
                 except urllib.error.HTTPError as exc:
                     self.assertEqual(exc.code, 400)
-                self.assertFalse(report_path.is_file())
-                compiled = _post(base + "/review/compile", {})
-                self.assertTrue(report_path.is_file())
+                self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
+                compiled = _post(base + "/review/compile", {"repo_id": "sample-product"})
+                reports = sorted(reports_dir.glob("review-report_*.json"))
+                self.assertEqual(len(reports), 1)
+                self.assertNotIn("Compile writes the report", compiled)
                 self.assertNotIn("not saved", compiled)
+                self.assertIn("no field for a conclusion that the product meets CRA", compiled)
+                self.assertIn("not verification of that commit", compiled)
                 self.assertFalse((root / "product" / ".curbpack" / "review-report.json").exists())
+                self.assertFalse((root / "product" / "docs" / "reports" / "review-report.json").exists())
                 saved = _post(
                     base + "/review",
                     {"decision": "The stub is not an assessment. I am not saying the product meets CRA."},
