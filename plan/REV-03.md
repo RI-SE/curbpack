@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 4 — not started |
-| Last completed task | Task 3 |
-| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept` — Ran 32 tests, OK. |
+| Current task | Task 5 — IMPL-START |
+| Last completed task | Task 4 |
+| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile` — Ran 35 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/REV-03.md`. |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 4 RED: seal summaries. `python3 -m unittest tests.test_rev03_review`. |
+| **Exact next action** | Task 5 RED: path adapter and file dialog. `python3 -m unittest tests.test_rev03_review`. |
 
 ## Requirements and acceptance mapping
 
@@ -34,7 +34,7 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | REV-R04 | REV-03 scenarios 12, 13, 14, 15, 16 | `tests/test_rev03_review.py` | Task 2 verified; scenarios 12–14 also Task 3; scenario 16 in Tasks 5 and 6 |
 | REV-R05 | REV-03 scenarios 10a, 21, 22 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 for the embedded run |
 | REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | Task 3 verified |
-| REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | DRAFT |
+| REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | Task 4 verified |
 | REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R10 | REV-03 scenarios 33, 34, 35, 35a | `tests/test_rev03_review.py` | DRAFT |
@@ -128,10 +128,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Validation:** `python3 -m unittest tests.test_rev03_review tests.test_review_compile`
 **Stop if:** the test needs a new reason string inside `common/signing.py` or `review/gitseal.py`.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 5 — path adapter and file dialog
 
@@ -197,3 +197,6 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 3 REVIEW-START:** Independent review of the uncommitted diff. No commit yet.
 - **2026-10-29 / Task 3 review:** Issues Found (`1f7e4ea3`). Important fixed: appendix restored on compiled report; Requirement move includes `Claim changed since Check` when digest differs.
 - **2026-10-29 / Task 3 re-review:** Approved (`43d4a70f`). No Critical or Important. Minor, not applied: current Claim path isolation; appendix reason assertion.
+- **2026-10-29 / Task 4 RED/GREEN:** D2 labels on existing readings; Git-before-Unsigned for Requirements and reports; claim seal facts stay in the closed header. Validation — Ran 35 tests, OK.
+- **2026-10-29 / Task 4 review:** Issues Found (`73d0e6f5`). Important: scenario 19 stubbed `git_commit_signature`. Fixed with a real SSH-signed commit fixture (`_ssh_signed_commit`); author `Author Name`, `%GS` `CLAIM-KEY`, run header commit stays `abc123`.
+- **2026-10-29 / Task 4 re-review:** Approved (`cab6bd75`). No Critical or Important. Minor, not applied: parse Git status from reason substrings; page tests for Claim `Invalid seal` and Git `U` closed all-pass. `python3 -m unittest tests.test_rev03_review tests.test_review_compile` — Ran 35 tests, OK.

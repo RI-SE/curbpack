@@ -451,6 +451,205 @@ class ReviewGroupingTest(unittest.TestCase):
             self.assertIn(NO_CRA_FIELD, page)
 
 
+class ReviewSealSummaryTest(unittest.TestCase):
+    def test_seal_label_mapping(self):
+        """REV-03 scenarios 17–20 and D2. REV-R07."""
+        from review.present import seal_label
+
+        self.assertEqual(
+            seal_label({"verifiable": False, "reason": "No signed block and no signed Git commit. The object is unsigned."}),
+            "Unsigned",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "verifiable": False,
+                    "reason": "The certificate for name is not available. Verification does not fetch it.",
+                }
+            ),
+            "Verification unavailable",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "verifiable": False,
+                    "reason": "The certificate does not verify the signature, or name is not the identity on that certificate.",
+                }
+            ),
+            "Invalid seal",
+        )
+        self.assertNotEqual(
+            seal_label(
+                {
+                    "verifiable": False,
+                    "reason": "The certificate does not verify the signature, or name is not the identity on that certificate.",
+                }
+            ),
+            "Untrusted signer",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "verifiable": False,
+                    "reason": "The current bytes are not the digest that was signed, or the certificate does not verify the signature.",
+                }
+            ),
+            "Invalid seal",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "what": "Git commit",
+                    "verifiable": False,
+                    "reason": "Git reports signature status U, which is not a good signature.",
+                }
+            ),
+            "Untrusted signer",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "what": "Git commit",
+                    "verifiable": False,
+                    "reason": "Git reports signature status B, which is not a good signature.",
+                }
+            ),
+            "Invalid seal",
+        )
+        self.assertEqual(
+            seal_label(
+                {
+                    "what": "Git commit",
+                    "verifiable": False,
+                    "reason": "Git reports signature status E, which is not a good signature.",
+                }
+            ),
+            "Verification unavailable",
+        )
+        self.assertEqual(seal_label({"verifiable": True}), "")
+
+    def test_unsigned_stays_closed_and_invalid_seal_opens(self):
+        """REV-03 scenarios 18 and 20. REV-R07."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("same-note", "REQ-SHARED", "same.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path)
+            summary = _summary(page, "REQ-SHARED")
+            self.assertIn("Unsigned", summary)
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
+            pack_dir = repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"]
+            requirement = _requirement("REQ-SHARED")
+            from common.keystore import load_or_create_key
+            from common.signing import sign_object
+
+            private, _public = load_or_create_key(Workspace(workspace).keys, "Ada Reviewer")
+            sealed = sign_object(requirement, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+            sealed["signed"]["signature"] = "YWJj"
+            save_requirement(pack_dir, sealed)
+            with _serve(workspace) as base:
+                opened = _open_run(base, "alpha", run_path)
+            self.assertIn(" open", _details(opened, "REQ-SHARED")[: _details(opened, "REQ-SHARED").index(">") + 1])
+            self.assertIn("Invalid seal", _summary(opened, "REQ-SHARED"))
+            self.assertNotIn("Untrusted signer", _summary(opened, "REQ-SHARED"))
+            self.assertIn("verifiable", _summary(opened, "REQ-SHARED"))
+
+    def test_missing_signed_block_uses_a_git_seal_before_unsigned(self):
+        """REV-03 scenario 19. REV-R07."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("same-note", "REQ-SHARED", "same.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            report = _compiled(repo, [claim], decision="Still the decision.")
+            report.pop("signed", None)
+            report_path = repo / "signed" / "reports" / "review-report_20260101T000050Z.json"
+            write_report(report_path, report)
+            req_rel = f"tree/packs/cra-baseline/{draft_pack()['version']}/REQ-SHARED.json"
+            claim_rel = "kept/claims/same-note.json"
+            report_rel = str(report_path.relative_to(repo))
+            reading = _ssh_signed_commit(repo, req_rel, claim_rel, report_rel)
+            self.assertEqual(reading["who"], "CLAIM-KEY")
+            self.assertTrue(reading["verifiable"])
+            self.assertNotEqual(reading["who"], "Author Name")
+            with _serve(workspace) as base:
+                raw = _open_run(base, "alpha", run_path)
+                sealed_report = _open_report(base, "alpha", report_path)
+            summary = _summary(raw, "REQ-SHARED")
+            self.assertIn("who CLAIM-KEY", summary)
+            self.assertIn("Git commit", summary)
+            self.assertIn("verifiable yes", summary)
+            self.assertIn(reading["version"], summary)
+            self.assertNotIn("who Author Name", summary)
+            self.assertNotIn("who abc123", summary)
+            self.assertNotIn('data-seal-label="Unsigned"', summary)
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', raw))
+            report_outside = sealed_report.split("<details", 1)[0]
+            self.assertIn("who CLAIM-KEY", report_outside)
+            self.assertIn("Git commit", report_outside)
+            self.assertIn("verifiable yes", report_outside)
+            self.assertIn(reading["version"], report_outside)
+            self.assertNotIn("who Author Name", report_outside)
+            self.assertNotIn('data-report-seal="Unsigned"', sealed_report)
+            self.assertIn("Still the decision.", sealed_report)
+
+    def test_claim_seal_facts_stay_visible_on_a_closed_group(self):
+        """REV-03 scenarios 17 and 18 for a Claim. REV-R07."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("same-note", "REQ-SHARED", "same.md")
+            from common.keystore import load_or_create_key
+            from common.signing import sign_object
+
+            private, _public = load_or_create_key(Workspace(workspace).keys, "Ada Reviewer")
+            sealed = sign_object(claim, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+            write_claim(repo / "kept" / "claims", sealed)
+            _matching_run(repo, [sealed])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path)
+            summary = _summary(page, "REQ-SHARED")
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
+            self.assertIn("Ada Reviewer", summary)
+            self.assertIn("claim", summary)
+            self.assertIn("verifiable", summary)
+            self.assertIn("same-note", summary)
+
+    def test_report_invalid_seal_opens_every_requirement(self):
+        """REV-03 scenario 36. REV-R07."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-A")
+            _pack(repo, "REQ-B")
+            a = _exist_claim("a-note", "REQ-A", "a.md")
+            b = _exist_claim("b-note", "REQ-B", "b.md")
+            write_claim(repo / "kept" / "claims", a)
+            write_claim(repo / "kept" / "claims", b)
+            report = _compiled(repo, [a, b], decision="Still the decision.")
+            from common.keystore import load_or_create_key
+            from review.compile import sign_report
+
+            private, _public = load_or_create_key(Workspace(workspace).keys, "Ada Reviewer")
+            sealed = sign_report(report, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+            sealed["signed"]["signature"] = "YWJj"
+            path = repo / "signed" / "reports" / "review-report_20260101T000040Z.json"
+            write_report(path, sealed)
+            with _serve(workspace) as base:
+                page = _open_report(base, "alpha", path)
+            self.assertIn(" open", _details(page, "REQ-A")[: _details(page, "REQ-A").index(">") + 1])
+            self.assertIn(" open", _details(page, "REQ-B")[: _details(page, "REQ-B").index(">") + 1])
+            self.assertIn('data-report-seal="Invalid seal"', page)
+            self.assertIn("Still the decision.", page)
+            self.assertNotIn("approval", page.lower())
+
+
 class ReviewCompiledReportTest(unittest.TestCase):
     def test_compiled_report_keeps_historical_grouping_when_the_claim_moved(self):
         """REV-03 scenario 6 and 10. REV-R06."""
@@ -608,6 +807,62 @@ class ReviewCompiledReportTest(unittest.TestCase):
             self.assertIn("Ada Reviewer", page)
             self.assertIn("I read this. I am not saying the product meets CRA.", page)
             self.assertNotIn("approval", page.lower())
+
+
+def _ssh_signed_commit(repo: Path, *relative_paths: str) -> dict:
+    """Commit paths with an SSH Git signature. Author differs from signing key (%GS)."""
+    import os
+    import subprocess
+
+    from review.gitseal import git_commit_signature
+
+    signer = "CLAIM-KEY"
+    author = "Author Name"
+    key_dir = repo / ".ssh-fixture"
+    key_dir.mkdir(parents=True, exist_ok=True)
+    key = key_dir / "signing_key"
+    if not key.is_file():
+        subprocess.run(
+            ["ssh-keygen", "-t", "ed25519", "-f", str(key), "-N", "", "-C", signer],
+            check=True,
+            capture_output=True,
+        )
+    allowed = key_dir / "allowed_signers"
+    allowed.write_text(
+        f'{signer} namespaces="git" {key.with_suffix(".pub").read_text(encoding="utf-8")}',
+        encoding="utf-8",
+    )
+    if not (repo / ".git").is_dir():
+        subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    for name, value in {
+        "user.name": author,
+        "user.email": "author@example.com",
+        "gpg.format": "ssh",
+        "user.signingkey": str(key.resolve()),
+        "commit.gpgsign": "true",
+        "gpg.ssh.allowedSignersFile": str(allowed.resolve()),
+    }.items():
+        subprocess.run(["git", "config", name, value], cwd=repo, check=True)
+    for relative in relative_paths:
+        subprocess.run(["git", "add", "--", relative], cwd=repo, check=True)
+    env = os.environ.copy()
+    env["GIT_AUTHOR_NAME"] = author
+    env["GIT_COMMITTER_NAME"] = author
+    env["GIT_AUTHOR_EMAIL"] = "author@example.com"
+    env["GIT_COMMITTER_EMAIL"] = "author@example.com"
+    env["GIT_AUTHOR_DATE"] = "2026-10-21T12:00:00+00:00"
+    env["GIT_COMMITTER_DATE"] = "2026-10-21T12:00:00+00:00"
+    subprocess.run(
+        ["git", "commit", "-S", "-m", "signed seal"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    reading = git_commit_signature(repo, relative_paths[0])
+    if reading is None:
+        raise AssertionError(f"expected a Git seal reading for {relative_paths[0]!r}")
+    return reading
 
 
 def _workspace(name: str, repo: Path) -> tuple[Path, Path]:

@@ -270,9 +270,15 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             errors.append(f"{Path(chosen).name} is not a readable review report.")
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_report"] = chosen
-        reading = read_report_signature(report, trust_store(ws.keys))
+        try:
+            report_rel = str(Path(chosen).resolve().relative_to(repo.resolve()))
+        except ValueError:
+            report_rel = Path(chosen).name
+        reading = read_report_signature(
+            report, trust_store(ws.keys), repo=repo, relative=report_rel
+        )
         same = _same_as_latest_run(results_folder, report)
-        extra["presentation"] = _report_presentation(ws, repo, config, report, query)
+        extra["presentation"] = _report_presentation(ws, repo, config, report, query, reading)
         return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
     if requested_result.strip():
         status, chosen = _requested_dated(results_folder, requested_result, "run-result")
@@ -349,10 +355,24 @@ def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict,
             continue
         relative = claim_file_relative(repo, folder, claim_id)
         claim_readings[claim_id] = read_claim_signature(claim, trust, repo=repo, relative=relative)
-    requirement_readings = {
-        requirement_id: read_signature(requirement, trust, what="requirement")
-        for requirement_id, requirement in requirements_by_id.items()
-    }
+    requirement_readings = {}
+    root = packs_dir(repo, config)
+    for requirement_id, requirement in requirements_by_id.items():
+        if isinstance(requirement.get("signed"), dict):
+            requirement_readings[requirement_id] = read_signature(requirement, trust, what="requirement")
+            continue
+        relative = None
+        try:
+            directory = _pack_version_dir(root, str(requirement.get("pack_id") or ""))
+            relative = str((directory / f"{requirement_id}.json").resolve().relative_to(repo.resolve()))
+        except (ModelError, ValueError):
+            relative = None
+        from review.gitseal import git_commit_signature
+
+        git_reading = git_commit_signature(repo, relative) if relative else None
+        requirement_readings[requirement_id] = git_reading or read_signature(
+            requirement, trust, what="requirement"
+        )
     return present_raw_run(
         run_result=run_result,
         claims_by_id=claims_by_id,
@@ -363,7 +383,14 @@ def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict,
     )
 
 
-def _report_presentation(ws: Workspace, repo: Path, config: dict, report: dict, query: dict) -> dict:
+def _report_presentation(
+    ws: Workspace,
+    repo: Path,
+    config: dict,
+    report: dict,
+    query: dict,
+    report_reading: dict,
+) -> dict:
     from common.signing import read_signature
     from review.gitseal import read_claim_signature
     from review.present import present_compiled_report
@@ -388,6 +415,7 @@ def _report_presentation(ws: Workspace, repo: Path, config: dict, report: dict, 
         claim_readings=claim_readings,
         requirement_readings=requirement_readings,
         expanded=_expanded_query(query),
+        report_reading=report_reading,
     )
 
 
