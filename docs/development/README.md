@@ -1,6 +1,6 @@
 # Development
 
-How to work in a Studio checkout. Product teams using Studio on their own repository start in [Install](../user-guides/install.md) and the [developer guide](../user-guides/developers.md).
+How to work in a Studio checkout. Product teams using Studio on their own repository start in [Install](../user-guides/install.md) and the [developer guide](../user-guides/developers.md). Dependencies, `make start`, the workspace, and the command list are in [Changing this repository](../user-guides/developers.md#10-changing-this-repository).
 
 ## Two test targets
 

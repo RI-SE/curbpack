@@ -2,9 +2,9 @@
 
 | Guide | What it shows |
 | --- | --- |
-| [Install](install.md) | Start Curbpack Studio from the downloaded program. A source checkout is the other way. |
+| [Install](install.md) | Start Curbpack Studio from the downloaded program. |
 | [Getting started](getting-started.md) | The cover: Pack Editor, Discovery & Claims, Check, and Review. |
-| [Developer guide](developers.md) | A product repository: select a Pack, bind Claims, run Check, compile, sign. |
+| [Developer guide](developers.md) | A product repository: select a Pack, bind Claims, run Check, compile, sign. A checkout of this repository is section 10. |
 | [CI/CD](ci-cd.md) | The same Check in a pipeline. Studio's own GitHub workflows are a separate pipeline. |
 | [Reviewers](reviewers.md) | The report at `docs/reports/review-report.json`, and how to read a row. |
 | [Troubleshooting](troubleshooting.md) | Startup, Git, packaging, and a green run that watched the wrong file. |

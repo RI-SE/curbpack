@@ -38,9 +38,9 @@ The activities can be repeated independently. A product change is a new Check ru
 
 ### [Packs](packs.md)
 
-A Pack is a versioned collection of Requirements. `pack.json` is metadata. The Requirement files sit beside it.
+A Pack is a versioned collection of Requirements. `pack.json` is metadata only. Requirement files sit in the same version directory, `<packs_dir>/<pack-id>/<pack-version>/`.
 
-A publisher extracts, reviews, signs and can publish an immutable release. A product selects Pack ids in `curbpack.json`. Check loads those Pack directories. The Pack open in Pack Editor is not automatically the Pack Check evaluates.
+A product selects Pack ids in `curbpack.json`. Check loads `<packs_dir>/<pack-id>/<pack-version>/pack.json` and the Requirement files beside it. A local working copy is a separate payload. Check loads the `pack.json` already present for the selected id.
 
 ### Requirements
 
@@ -60,9 +60,9 @@ Evidence is product material the Claim points at: a document, a manifest, or ano
 
 ### Results and review material
 
-The run result is one JSON object for the run that happened. The usual path is `<product-repo>/.curbpack/run-result.json`.
+The run result is one JSON object for the run that happened. When it is written to disk, the file is `<results_dir>/run-result_<UTC>.json`, one new file per run. The created-file default for `results_dir` is `.curbpack`.
 
-Compile copies that result, the Requirement files and the Claim files the rows name, into one report. The server writes `<product-repo>/docs/reports/review-report.json`.
+Compile copies that run result into one review report at `<reports_dir>/review-report_<UTC>.json`. The created-file default for `reports_dir` is `curbpack/reports`. The report carries `run_result`, `requirements`, `claims`, and `appendix`. When a person has recorded them, it also carries `decision` and `signed`.
 
 ## Principles
 
@@ -88,7 +88,7 @@ Material created by Extract or Discovery does not become evidence of human work 
 
 A run result belongs to the Pack ids, each Pack's `version`, the pack-directory digest, the Claim digests, the Check arguments, and the Git `commit` and `worktree` when Git has a HEAD.
 
-The same inputs should produce the same observation. A dirty worktree can still pass. The Check page then states that the result is not verification of that commit's content. A later run does not rewrite an earlier signed report by itself. When both the saved report and a run result are loaded, the review page says `same run: yes` or `same run: no. This saved report is an older run.` Compiling over an existing file requires the checkbox that the previous decision is not copied.
+The same inputs should produce the same observation. A dirty worktree can still pass. The Check page then states that the result is not verification of that commit's content. A later run writes a new run-result file and does not rewrite an earlier review report. A later compile writes a new `review-report_<UTC>.json` and leaves the earlier report in place. When both a saved report and a run result are loaded, the review page says `same run: yes` or `same run: no. This saved report is an older run.`
 
 ### Evaluation stays local
 
@@ -98,5 +98,6 @@ The pilot is a local single-user application on `127.0.0.1:8770`. Discovery and 
 
 * [Packs](packs.md)
 * [Evidence](evidence.md)
-* [Packs v2 product flow](../reference/packs2.md)
+* [Packs v2](../reference/packs2.md) — Pack, Requirement, Claim, Check, signing, and run-result fields
+* [Workspace](../reference/workspace.md) — `curbpack.json` keys, created-file values, and on-disk paths
 * [Architecture: data and responsibility](../arch/ARCHITECTURE.md)
