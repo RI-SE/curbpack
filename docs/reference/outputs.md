@@ -9,6 +9,7 @@ This page owns the run-result and review-report JSON structures and their interp
 | Run result | `<results_dir>/run-result_<YYYYMMDDTHHMMSSZ>.json` | Check page, or `curbcheck -j` / `--json` |
 | Explicit run result | The path passed to `-o` / `--out` | `curbcheck` |
 | Review report | `<reports_dir>/review-report_<YYYYMMDDTHHMMSSZ>.json` | Compile on `/review` |
+| Review PDF | Explicit `--out` path | `compile-pdf.py` from a saved review report |
 
 `results_dir` and `reports_dir` come from the product's `curbpack.json`. Created-file defaults are `.curbpack` and `curbpack/reports`. A run-result JSON file is written by the CLI only when `-j` or `-o` is requested. Without those flags the CLI prints a text summary. The Check page writes a new dated run-result file. Compile writes a new dated review-report file.
 
@@ -115,6 +116,18 @@ Compile copies an existing run result into one JSON object together with the Req
 Unknown report keys are rejected. A report may contain a run with failed or skipped Checks. Producing the report does not turn that run into a pass.
 
 Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
+
+## Review PDF
+
+```sh
+python3 compile-pdf.py --report /path/to/review-report.json --out /path/to/review-report.pdf
+```
+
+Install runtime dependencies from `requirements.txt` first. The output parent directory must exist. Exit 0 means the PDF was written, 1 means rendering or input failed, and 2 means invalid command-line arguments. An existing output is refused and left unchanged.
+
+The PDF presents the saved JSON report in monochrome: run metadata and outcome counts, loaded Packs, Requirements with source passages, their Claims and Check results, recorded signature gaps, reviewer decision, and signature metadata. Everything is visible without buttons or expanding sections. It uses the embedded historical objects and does not open product evidence or run Checks. The input JSON is unchanged.
+
+The PDF is a readable companion to the original report. It does not independently verify signatures, and the JSON signature does not cover the PDF bytes. Keep the original JSON for verification. Implementation: `compile/pdf.py`; ownership: [Compile architecture](../../compile/ARCHITECTURE.md).
 
 ## Production and review
 
