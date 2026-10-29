@@ -245,12 +245,13 @@ class ToolReentryTest(unittest.TestCase):
         buf = io.StringIO()
         with redirect_stdout(buf):
             code = main(["--repo", str(repo)])
-        out = directory / "run-result.json"
+        text = buf.getvalue()
         self.assertEqual(code, 0)
-        loaded = json.loads(out.read_text(encoding="utf-8"))
-        self.assertEqual([row["id"] for row in loaded["claims"]], ["claim-risk"])
-        self.assertEqual(loaded["claims"][0]["status"], "pass")
-        self.assertIn(f"wrote {out}", buf.getvalue())
+        self.assertIn("pass    claim-risk", text)
+        self.assertNotIn("claim-old-root", text)
+        self.assertNotIn("wrote ", text)
+        self.assertFalse((directory / "run-result.json").exists())
+        self.assertFalse((repo / ".curbpack" / "run-result.json").exists())
 
     def test_no_arguments_use_the_current_directory(self):
         tmp, repo = _repo_with_file()
@@ -268,10 +269,10 @@ class ToolReentryTest(unittest.TestCase):
                 code = main(None)
         finally:
             os.chdir(previous)
-        out = repo / ".curbpack" / "run-result.json"
         self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["claims"][0]["status"], "pass")
-        self.assertIn(f"wrote {out.resolve()}", buf.getvalue())
+        self.assertIn("pass    claim-risk", buf.getvalue())
+        self.assertNotIn("wrote ", buf.getvalue())
+        self.assertFalse((repo / ".curbpack" / "run-result.json").exists())
 
     def test_repo_is_required_away_from_a_product_directory(self):
         tmp = tempfile.TemporaryDirectory()

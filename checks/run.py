@@ -6,6 +6,8 @@ import copy
 import json
 import os
 import subprocess
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from checks.dispatch import run_check_tool
@@ -49,6 +51,17 @@ def git_snapshot(repo: Path) -> dict | None:
         return None
     worktree = "dirty" if status.stdout.strip() else "clean"
     return {"commit": head.stdout.strip(), "worktree": worktree}
+
+
+def new_run_result_path(folder: Path) -> Path:
+    """`<folder>/run-result_<YYYYMMDDTHHMMSSZ>.json`, never an existing file."""
+    folder.mkdir(parents=True, exist_ok=True)
+    while True:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        path = folder / f"run-result_{stamp}.json"
+        if not path.exists():
+            return path
+        time.sleep(1)
 
 
 def process_exit_code(result: dict) -> int:

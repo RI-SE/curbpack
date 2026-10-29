@@ -1,4 +1,4 @@
-"""Run curbcheck on a product repo and write one run result.
+"""Run curbcheck on a product repo and print a text summary.
 
 A packaged build is one file. When that file is started with argv0 set to a
 registered command, it runs that command. A source checkout still starts the
@@ -14,10 +14,11 @@ from pathlib import Path
 
 from checks.commands import contents_handle, exist_handle, git_handle, node_handle
 from checks.defaults import created_curbpack
-from checks.run import packs_dir, results_dir, run_and_write
+from checks.run import new_run_result_path, packs_dir, results_dir, run_repository
 from checks.schema import load_registry
 from checks.toolmain import main as tool_main
 from common.jsonio import dump_text
+from common.store import save_run_result
 
 _HANDLERS = {
     "curbcheck-exist": exist_handle,
@@ -50,7 +51,9 @@ def _tool(command: str, argv: list[str]) -> int:
 
 
 def _cli(argv: list[str] | None) -> int:
-    parser = argparse.ArgumentParser(description="Evaluate claims and write a Packs v2 run result.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate claims and print a text summary. Write JSON only with -j/--json or -o/--out."
+    )
     parser.add_argument(
         "--defaults",
         action="store_true",
@@ -67,9 +70,17 @@ def _cli(argv: list[str] | None) -> int:
         help="Directory that contains <pack-id>/<pack-version>/pack.json. Default: packs_dir from curbpack.json.",
     )
     parser.add_argument(
+        "-j",
+        "--json",
+        action="store_true",
+        dest="write_json",
+        help="Also write {results_dir}/run-result_<UTC>.json.",
+    )
+    parser.add_argument(
+        "-o",
         "--out",
         type=Path,
-        help="Run result file. Default: <results_dir>/run-result.json from curbpack.json.",
+        help="Also write the run-result JSON object to PATH.",
     )
     parser.add_argument("--skip", action="append", default=[], help="claim-id=reason")
     args = parser.parse_args(argv)
@@ -84,7 +95,6 @@ def _cli(argv: list[str] | None) -> int:
         else:
             parser.error("--repo is required when the current directory has no curbpack.json")
     packs = args.packs if args.packs is not None else packs_dir(repo)
-    out = args.out if args.out is not None else results_dir(repo) / "run-result.json"
     skip = {}
     for item in args.skip:
         if "=" not in item:
@@ -92,8 +102,14 @@ def _cli(argv: list[str] | None) -> int:
             return 2
         claim_id, reason = item.split("=", 1)
         skip[claim_id] = reason
-    result, code = run_and_write(repo, packs, out, skip=skip or None)
-    print(f"wrote {out}")
+    result, code = run_repository(repo, packs, skip=skip or None)
+    if args.write_json:
+        dated = new_run_result_path(results_dir(repo))
+        save_run_result(dated, result)
+        print(f"wrote {dated}")
+    if args.out is not None:
+        save_run_result(args.out, result)
+        print(f"wrote {args.out}")
     print(f"claims {len(result['claims'])} exit {code}")
     if result.get("worktree") == "dirty":
         print("worktree dirty: this result is not verification of that commit's exact content")

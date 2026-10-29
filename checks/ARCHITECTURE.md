@@ -54,7 +54,7 @@ The JSON is `packs2.md` §3.1. `validate_run_result` is the check. `save_run_res
 
 One result per executed Claim, including passes. `digest` is `version_digest` of that whole Claim. Claim `status` is `fail` if any Check fails, otherwise `skipped` if any Check is skipped, otherwise `pass`. Each configured Check has `index`, `check`, `args`, `status`, and `detail` when required. `detail` is omitted on `pass`, required on `fail` and `skipped`. A `pattern` probe fails when the expression matches.
 
-The output path is an argument. `curbcheck` writes `<results_dir>/run-result.json` when `--out` is omitted. Dated `run-result_<UTC>.json` names are CHK-07. A failed run leaves the previous file in place. A run does not write or delete the review report.
+The output path is an argument. `curbcheck` prints a text summary on stdout. It writes `{results_dir}/run-result_<YYYYMMDDTHHMMSSZ>.json` only with `-j`/`--json`, and writes `PATH` only with `-o`/`--out PATH`. A failed run leaves the previous file in place. A run does not write or delete the review report.
 
 ## Checks this build runs
 

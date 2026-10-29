@@ -11,6 +11,10 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from checks.__main__ import main
+from claims.bind import build_claim, write_claim
+from common.store import save_pack, save_requirement
+from requirements.editing import apply_edits
+from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 
 
 CREATED_SEARCH_HINTS = {
@@ -63,3 +67,146 @@ class DefaultsFactoryTest(unittest.TestCase):
 
         self.assertIs(door_created, created_curbpack)
         self.assertEqual(door_created(), created_curbpack())
+
+
+def _requirement():
+    source = dict(extract_annex_vii_risk()["source"])
+    source["edition"] = "2024-11-20"
+    return apply_edits(extract_annex_vii_risk(), {"source": source})
+
+
+def _passing_repo() -> tuple[tempfile.TemporaryDirectory, Path]:
+    tmp = tempfile.TemporaryDirectory()
+    repo = Path(tmp.name)
+    (repo / "docs").mkdir()
+    (repo / "docs" / "a.md").write_text("hello\n", encoding="utf-8")
+    pack_dir = repo / "curbpack" / "packs" / "cra-baseline" / "0.1.0"
+    save_pack(pack_dir, draft_pack())
+    save_requirement(pack_dir, _requirement())
+    from checks.defaults import created_curbpack
+
+    (repo / "curbpack.json").write_text(
+        json.dumps(created_curbpack(packs=["cra-baseline"])) + "\n", encoding="utf-8"
+    )
+    write_claim(
+        repo / "curbpack" / "claims",
+        build_claim(
+            claim_id="claim-risk",
+            requirement_id="CRA-ANNEX-VII-RISK",
+            source="documents",
+            args={"path": "docs/a.md"},
+            checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
+            severity="high",
+            description="The file is the reviewed evidence.",
+        ),
+    )
+    return tmp, repo
+
+
+def _run_results(repo: Path) -> list[Path]:
+    return sorted(repo.rglob("run-result*.json"))
+
+
+class OutputChannelsTest(unittest.TestCase):
+    def test_stdout_only_writes_no_run_result_file(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo)])
+        text = buf.getvalue()
+        self.assertEqual(code, 0)
+        self.assertIn("claims 1 exit 0", text)
+        self.assertIn("pass    claim-risk", text)
+        self.assertNotIn("wrote ", text)
+        self.assertEqual(_run_results(repo), [])
+
+    def test_json_flag_writes_a_dated_file_under_results_dir(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo), "-j"])
+        dated = _run_results(repo)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(dated), 1)
+        self.assertEqual(dated[0].parent, repo / ".curbpack")
+        self.assertRegex(dated[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
+        loaded = json.loads(dated[0].read_text(encoding="utf-8"))
+        self.assertEqual(loaded["claims"][0]["status"], "pass")
+        self.assertIn("claims 1 exit 0", buf.getvalue())
+        self.assertIn(f"wrote {dated[0]}", buf.getvalue())
+
+    def test_second_json_run_leaves_the_first_file(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            main(["--repo", str(repo), "--json"])
+        first = _run_results(repo)
+        self.assertEqual(len(first), 1)
+        before = first[0].read_bytes()
+        import time
+
+        time.sleep(1)
+        with redirect_stdout(buf):
+            main(["--repo", str(repo), "--json"])
+        dated = _run_results(repo)
+        self.assertEqual(len(dated), 2)
+        self.assertEqual(first[0].read_bytes(), before)
+        self.assertIn("claims 1 exit 0", buf.getvalue())
+        self.assertIn("pass    claim-risk", buf.getvalue())
+
+    def test_out_writes_the_run_result_to_path(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        out = Path(tmp.name) / "chosen" / "result.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo), "-o", str(out)])
+        self.assertEqual(code, 0)
+        self.assertEqual(_run_results(repo), [])
+        loaded = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(loaded["claims"][0]["id"], "claim-risk")
+        self.assertIn(f"wrote {out}", buf.getvalue())
+        self.assertIn("claims 1 exit 0", buf.getvalue())
+
+    def test_json_and_out_write_both_files(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        out = Path(tmp.name) / "also.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            main(["--repo", str(repo), "-j", "--out", str(out)])
+        dated = [path for path in _run_results(repo) if path != out]
+        self.assertEqual(len(dated), 1)
+        self.assertTrue(out.is_file())
+        self.assertEqual(
+            json.loads(dated[0].read_text(encoding="utf-8"))["claims"][0]["id"],
+            json.loads(out.read_text(encoding="utf-8"))["claims"][0]["id"],
+        )
+        text = buf.getvalue()
+        self.assertIn(f"wrote {dated[0]}", text)
+        self.assertIn(f"wrote {out}", text)
+        self.assertIn("claims 1 exit 0", text)
+
+    def test_missing_curbpack_json_writes_nothing(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name)
+        with self.assertRaises(FileNotFoundError):
+            main(["--repo", str(repo), "-j", "-o", str(repo / "out.json")])
+        self.assertEqual(_run_results(repo), [])
+        self.assertFalse((repo / "out.json").exists())
+
+    def test_invalid_curbpack_json_writes_nothing(self):
+        from common.errors import ModelError
+
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        (repo / "curbpack.json").write_text("{}\n", encoding="utf-8")
+        out = repo / "out.json"
+        with self.assertRaises(ModelError):
+            main(["--repo", str(repo), "-o", str(out)])
+        self.assertEqual(_run_results(repo), [])
+        self.assertFalse(out.exists())
