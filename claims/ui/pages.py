@@ -72,7 +72,7 @@ def _section_table(model: dict, pilot: bool) -> str:
 def _repo_picker(model: dict, pilot: bool) -> str:
     repo_id = str(model.get("repo_id") or "")
     action = "/discover" if pilot else "/discover/repo"
-    options = []
+    options = ['<option value="">Choose a repo</option>']
     for repo in list(model.get("repos") or []):
         if not isinstance(repo, dict):
             continue
@@ -82,8 +82,6 @@ def _repo_picker(model: dict, pilot: bool) -> str:
         options.append(
             f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
         )
-    if not options:
-        options.append('<option value="">No repo</option>')
     return (
         f'<form method="get" class="repo-picker" action="{action}">'
         '<label>Repo <select name="repo" id="discover-repo" onchange="this.form.submit()">'

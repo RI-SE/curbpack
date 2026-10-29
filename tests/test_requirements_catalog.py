@@ -13,6 +13,10 @@ from pathlib import Path
 
 from app.server import Workspace, make_handler
 from common.errors import ModelError
+from common.jsonio import read_json, write_json
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
+from requirements.extract.pipeline import draft_pack
 from requirements.catalog import (
     add_document,
     add_section,
@@ -85,22 +89,30 @@ class RequirementsCatalogTest(unittest.TestCase):
     def test_add_via_http(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            repo = root / "product"
+            repo.mkdir()
+            catalog_path = root / "registered_sources.json"
+            write_json(repo / "curbpack.json", created_curbpack(packs=[]))
+            save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+            set_open_repo(root, "product")
+            before_catalog = catalog_path.read_bytes() if catalog_path.is_file() else None
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 before = _get(base + "/requirements")
-                self.assertIn("Packs", before)
+                self.assertIn("Pack Sources", before)
                 self.assertIn('id="add-open"', before)
                 self.assertIn("Official name", before)
                 self.assertNotIn("Section<select", before)
                 data = urllib.parse.urlencode(
                     {
+                        "repo": "product",
                         "adapter_id": "cra-xml",
                         "name": "CRA Annex V",
                         "official_name": "EU declaration of conformity",
-                        "url": "https://example.test/v",
+                        "url": "https://publications.europa.eu/resource/celex/32024R2847",
                     }
                 ).encode("utf-8")
                 request = urllib.request.Request(
@@ -108,10 +120,22 @@ class RequirementsCatalogTest(unittest.TestCase):
                 )
                 with urllib.request.urlopen(request) as response:
                     page = response.read().decode("utf-8")
-                self.assertIn("Document added", page)
+                self.assertIn("Pack added", page)
                 self.assertIn("CRA Annex V", page)
                 self.assertIn("EU declaration of conformity", page)
                 self.assertIn('data-document="cra-annex-v"', page)
+                pack_file = (
+                    repo / "curbpack" / "packs" / "cra-annex-v" / draft_pack()["version"] / "pack.json"
+                )
+                self.assertTrue(pack_file.is_file())
+                self.assertEqual(read_json(repo / "curbpack.json")["packs"], ["cra-annex-v"])
+                catalog = read_json(catalog_path) if catalog_path.is_file() else {"documents": []}
+                self.assertNotIn(
+                    "cra-annex-v",
+                    [row.get("id") for row in catalog.get("documents") or []],
+                )
+                if before_catalog is not None:
+                    self.assertEqual(catalog_path.read_bytes(), before_catalog)
                 editor = _get(base + "/requirements?document=cra-annex-vii")
                 self.assertIn("Pack Editor", editor)
                 self.assertIn("Add section", editor)
@@ -119,8 +143,15 @@ class RequirementsCatalogTest(unittest.TestCase):
                 self.assertNotIn('"id": "V"', editor)
                 self.assertNotIn("Cannot be extracted", editor)
                 self.assertNotIn('data-adapter="nis"', editor)
+                added_editor = _get(base + "/requirements?document=cra-annex-v")
+                self.assertIn("Pack Editor", added_editor)
+                self.assertIn("CRA Annex V", added_editor)
                 blocked = urllib.parse.urlencode(
-                    {"document_id": "cra-annex-v", "section_id": "V"}
+                    {
+                        "document_id": "cra-annex-v",
+                        "section_id": "V",
+                        "repo": "product",
+                    }
                 ).encode("utf-8")
                 refused = urllib.request.Request(
                     base + "/requirements/catalog", data=blocked, method="POST"

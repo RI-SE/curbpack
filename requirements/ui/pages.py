@@ -10,28 +10,78 @@ from app.pages import page
 
 def documents_page(model: dict) -> bytes:
     rows = [_document_row(document) for document in model.get("documents") or []]
-    table = (
-        "<table><thead><tr>"
-        "<th>Document name</th><th>Official name</th><th>Adapter</th><th>URL</th><th>Actions</th>"
-        "</tr></thead><tbody>"
-        + "".join(rows)
-        + "</tbody></table>"
-        if rows
-        else '<p class="muted">No packs yet. Click Add.</p>'
-    )
+    repo_id = str(model.get("repo_id") or "")
+    file_absent = bool(model.get("file_absent"))
+    if not repo_id:
+        table = '<p class="muted">Choose a repo to work with.</p>'
+    elif file_absent:
+        table = '<p class="muted">This repository has no curbpack.json.</p>'
+    elif rows:
+        table = (
+            "<table><thead><tr>"
+            "<th>Document name</th><th>Official name</th><th>Adapter</th><th>URL</th><th>Actions</th>"
+            "</tr></thead><tbody>"
+            + "".join(rows)
+            + "</tbody></table>"
+        )
+    else:
+        table = '<p class="muted">No packs yet. Click Add.</p>'
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
+    curbpack_file = str(model.get("curbpack_file") or "")
+    file_line = (
+        f"<p>curbpack.json <code>{html.escape(curbpack_file)}</code></p>"
+        if repo_id and not file_absent and curbpack_file
+        else ""
+    )
+    directory = str(model.get("directory") or "")
+    directory_line = (
+        f"<p class=\"muted\">Packs directory <code>{html.escape(directory)}</code>.</p>"
+        if directory
+        else ""
+    )
+    claims_directory = str(model.get("claims_dir") or "")
+    claims_dir_line = (
+        f"<p class=\"muted\">Claims directory <code>{html.escape(claims_directory)}</code>.</p>"
+        if claims_directory
+        else ""
+    )
+    claims_line = (
+        '<p class="muted">No Claims.</p>' if model.get("no_claims") else ""
+    )
+    create = ""
+    if repo_id and file_absent:
+        create = (
+            '<p class="actions">'
+            '<button type="button" id="curbpack-open">Create curbpack.json</button>'
+            "</p>"
+        )
+    elif repo_id and not file_absent:
+        create = (
+            '<p class="actions">'
+            f'<a class="details" href="/requirements?repo={html.escape(repo_id)}&amp;curbpack=edit">'
+            "Edit curbpack.json</a></p>"
+        )
+    add = _add_toolbar() if repo_id and not file_absent else ""
+    dialog = _document_add_dialog(model.get("adapters") or [], repo_id) if add else ""
+    config_dialog = _curbpack_dialog(model) if repo_id else ""
     body = f"""
 <h1>Pack Sources</h1>
-<p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
-A pack is the requirements from all sections of one law document (typically a URL) — that
-document is the pack source. Here you extract and refine requirements from the source, then
-export the selected working copy as a Pack directory.</p>
+<p class="muted">Choose the repository to work with. Pack Sources then reads the Packs named in that
+repository's curbpack.json.</p>
+{_repo_picker(model)}
+{_start_empty_form(show=not repo_id)}
+{create}
+{file_line}
+{directory_line}
+{claims_dir_line}
+{claims_line}
 {_baselines_note(str(model.get("workspace_root") or ""))}
-{_add_toolbar()}
+{add}
 {flash}
 <div class="card">{table}</div>
-{_document_add_dialog(model.get("adapters") or [])}
+{dialog}
+{config_dialog}
 """
     if model.get("job"):
         body += job_fragment(model["job"]).decode("utf-8")
@@ -111,35 +161,89 @@ def export_page(model: dict) -> bytes:
 
 
 def catalog_page(model: dict) -> bytes:
+    if not str(model.get("repo_id") or ""):
+        body = f"""
+<p class="muted"><a href="/requirements">Pack Sources</a></p>
+<h1>Pack Editor</h1>
+<p class="muted">Choose a repo to work with.</p>
+{_repo_picker(model)}
+"""
+        return page("Pack Editor", body)
     document = model.get("document") or {}
     name = str(document.get("name") or "")
     rows = [_source_row(source) for source in model.get("sources") or []]
-    table = (
-        "<table><thead><tr>"
-        "<th>Adapter</th><th>Section</th><th>URL</th>"
-        "<th>Signed</th><th>Unsigned</th><th>Actions</th>"
-        "</tr></thead><tbody>"
-        + "".join(rows)
-        + "</tbody></table>"
-        if rows
-        else '<p class="muted">No sections yet. Click Add.</p>'
-    )
+    if rows:
+        table = (
+            "<table><thead><tr>"
+            "<th>Adapter</th><th>Section</th><th>URL</th>"
+            "<th>Signed</th><th>Unsigned</th><th>Actions</th>"
+            "</tr></thead><tbody>"
+            + "".join(rows)
+            + "</tbody></table>"
+        )
+    else:
+        table = '<p class="muted">No sections yet. Click Add.</p>'
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
+    repo = str(model.get("repo_id") or "")
+    back = "/requirements" + (f"?repo={html.escape(repo)}" if repo else "")
+    toolbar = _add_toolbar()
+    dialog = _section_add_dialog(model.get("adapters") or [], document)
+    directory = str(model.get("directory") or "")
+    claims_directory = str(model.get("claims_dir") or "")
+    path_chrome = ""
+    if directory:
+        path_chrome += f'<p class="muted">Packs directory <code>{html.escape(directory)}</code>.</p>'
+    if claims_directory:
+        path_chrome += f'<p class="muted">Claims directory <code>{html.escape(claims_directory)}</code>.</p>'
     body = f"""
-<p class="muted"><a href="/requirements">Pack Sources</a></p>
+<p class="muted"><a href="{back}">Pack Sources</a></p>
 <h1>Pack Editor</h1>
+{_repo_picker(model)}
+{path_chrome}
 <p class="muted">Sections of <strong>{html.escape(name)}</strong>.
-<strong>Extract</strong> writes a separate copy. If you are already editing a working copy, you choose which fields to bring in. Fields you leave out stay as they are.
+<strong>Extract</strong>, when available, does not overwrite your current Requirement automatically. You choose which updates to keep. Fields you leave out stay as they are.
 Humans must review, <strong>Edit</strong>, and <strong>Sign</strong> each Requirement.</p>
-{_add_toolbar()}
+{toolbar}
 {flash}
 <div class="card">{table}</div>
-{_section_add_dialog(model.get("adapters") or [], document)}
+{dialog}
 """
     if model.get("job"):
         body += job_fragment(model["job"], document_id=str(document.get("id") or "")).decode("utf-8")
     return page("Pack Editor", body)
+
+
+def _repo_picker(model: dict) -> str:
+    repo_id = str(model.get("repo_id") or "")
+    options = ['<option value="">Choose a repo</option>']
+    for repo in model.get("repos") or []:
+        if not isinstance(repo, dict):
+            continue
+        row_id = str(repo.get("id") or "")
+        name = str(repo.get("name") or row_id)
+        selected = " selected" if row_id == repo_id else ""
+        options.append(
+            f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
+        )
+    return (
+        '<form method="get" class="repo-picker" action="/requirements">'
+        '<label>Repo <select name="repo" onchange="this.form.submit()">'
+        + "".join(options)
+        + "</select></label></form>"
+    )
+
+
+def _start_empty_form(*, show: bool) -> str:
+    if not show:
+        return ""
+    return """
+<form method="post" action="/requirements/start-empty">
+<label>Working folder <input name="folder" required autocomplete="off"></label>
+<button type="submit">Start empty</button>
+</form>
+<p class="muted">Start empty registers that folder and opens it. Save writes curbpack.json.</p>
+"""
 
 
 def _add_toolbar() -> str:
@@ -156,26 +260,39 @@ def _document_row(document: dict) -> str:
     official = str(document.get("official_name") or "")
     adapter_id = str(document.get("adapter_id") or "")
     url = str(document.get("url") or "")
-    url_cell = (
+    pack_dir = str(document.get("pack_dir") or "")
+    link = (
         f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{html.escape(url)}</a>'
         if url
         else '<span class="muted">—</span>'
     )
+    where = f'<div class="muted">{html.escape(pack_dir)}</div>' if pack_dir else ""
+    if document.get("missing"):
+        link = '<span class="muted">missing</span>'
+    url_cell = link + where
+    actions = ""
+    if not document.get("missing"):
+        repo = str(document.get("repo_id") or "")
+        repo_field = (
+            f'<input type="hidden" name="repo" value="{html.escape(repo)}">' if repo else ""
+        )
+        actions = (
+            '<form method="get" action="/requirements">'
+            f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
+            f"{repo_field}"
+            '<button type="submit">Sections</button></form>'
+            '<form method="get" action="/requirements/export">'
+            f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
+            '<button type="submit">Export Pack</button></form>'
+            f"{_signature_badge(document) if 'all_signed' in document else ''}"
+        )
     return (
         f'<tr data-document="{html.escape(doc_id)}" data-adapter="{html.escape(adapter_id)}">'
         f"<td>{html.escape(name)}</td>"
         f'<td class="muted">{html.escape(official)}</td>'
         f"<td><code>{html.escape(adapter_id)}</code></td>"
         f"<td>{url_cell}</td>"
-        '<td class="actions">'
-        '<form method="get" action="/requirements">'
-        f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
-        '<button type="submit">Sections</button></form>'
-        '<form method="get" action="/requirements/export">'
-        f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
-        '<button type="submit">Export Pack</button></form>'
-        f"{_signature_badge(document)}"
-        "</td></tr>"
+        f'<td class="actions">{actions}</td></tr>'
     )
 
 
@@ -190,7 +307,58 @@ def _signature_badge(document: dict) -> str:
     )
 
 
-def _document_add_dialog(adapters: list) -> str:
+def _curbpack_dialog(model: dict) -> str:
+    fields = model.get("curbpack_fields") or {}
+    repo_id = html.escape(str(model.get("repo_id") or ""))
+    packs = ",".join(str(item) for item in fields.get("packs") or [] if isinstance(item, str))
+    exclude = ",".join(
+        str(item) for item in fields.get("exclude_requirements") or [] if isinstance(item, str)
+    )
+    hints = json.dumps(fields.get("search_hints") or {}, indent=2, ensure_ascii=False)
+    unsigned = str(fields.get("unsigned_requirements") or "reject")
+    reject_sel = " selected" if unsigned == "reject" else ""
+    commit_sel = " selected" if unsigned == "signed_commit" else ""
+    opened = " open" if model.get("show_curbpack_dialog") else ""
+    return f"""
+<dialog id="curbpack-dialog"{opened}>
+<div class="head"><h2>curbpack.json</h2>
+<button type="button" id="curbpack-cancel" class="secondary">Cancel</button></div>
+<div class="body">
+<form method="post" action="/requirements/curbpack" id="curbpack-form">
+<input type="hidden" name="repo" value="{repo_id}">
+<input type="hidden" name="action" value="save">
+<label>Packs <input type="text" name="packs" value="{html.escape(packs)}" autocomplete="off"></label>
+<label>Exclude requirements <input type="text" name="exclude_requirements" value="{html.escape(exclude)}" autocomplete="off"></label>
+<label>packs_dir <input type="text" name="packs_dir" value="{html.escape(str(fields.get("packs_dir") or ""))}" required autocomplete="off"></label>
+<label>claims_dir <input type="text" name="claims_dir" value="{html.escape(str(fields.get("claims_dir") or ""))}" required autocomplete="off"></label>
+<label>results_dir <input type="text" name="results_dir" value="{html.escape(str(fields.get("results_dir") or ""))}" required autocomplete="off"></label>
+<label>reports_dir <input type="text" name="reports_dir" value="{html.escape(str(fields.get("reports_dir") or ""))}" required autocomplete="off"></label>
+<label>unsigned_requirements <select name="unsigned_requirements">
+<option value="reject"{reject_sel}>reject</option>
+<option value="signed_commit"{commit_sel}>signed_commit</option>
+</select></label>
+<label>search_hints <textarea name="search_hints" required>{html.escape(hints)}</textarea></label>
+<p class="actions">
+<button type="button" id="curbpack-cancel-footer" class="secondary">Cancel</button>
+<button type="submit">Save</button>
+</p>
+</form>
+</div>
+</dialog>
+<script>
+(function () {{
+  const dialog = document.getElementById("curbpack-dialog");
+  function closeDialog() {{ dialog.close(); }}
+  const openBtn = document.getElementById("curbpack-open");
+  if (openBtn) openBtn.addEventListener("click", () => dialog.showModal());
+  document.getElementById("curbpack-cancel").addEventListener("click", closeDialog);
+  document.getElementById("curbpack-cancel-footer").addEventListener("click", closeDialog);
+}})();
+</script>
+"""
+
+
+def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
     options = []
     for item in adapters:
         adapter_id = str(item.get("id") or "")
@@ -205,6 +373,7 @@ def _document_add_dialog(adapters: list) -> str:
 <button type="button" id="add-cancel" class="secondary">Cancel</button></div>
 <div class="body">
 <form method="post" action="/requirements/documents" id="add-form">
+<input type="hidden" name="repo" value="{html.escape(repo_id)}">
 <label>Adapter<select name="adapter_id" id="add-adapter" required>{"".join(options)}</select></label>
 <p class="muted">The adapter cannot be changed later. Add another document to use a different adapter.</p>
 <label>Document name<input type="text" name="name" id="add-name" required autocomplete="off"></label>
@@ -268,6 +437,7 @@ def _section_add_dialog(adapters: list, document: dict) -> str:
 <div class="body">
 <form method="post" action="/requirements/catalog" id="add-form">
 <input type="hidden" name="document_id" value="{html.escape(doc_id)}">
+<input type="hidden" name="repo" value="{html.escape(str(document.get("repo_id") or ""))}">
 <p>Document <strong>{html.escape(doc_name)}</strong></p>
 <label>Adapter<select name="adapter_id" id="add-adapter" required>{"".join(options)}</select></label>
 <label>Section<select name="section_id" id="add-section" required></select></label>
@@ -326,16 +496,43 @@ def _section_add_dialog(adapters: list, document: dict) -> str:
 
 
 
+def _bound_pack_fields(model: dict) -> str:
+    repo = str(model.get("repo_id") or "")
+    pack = str(model.get("bound_pack") or "")
+    if not repo or not pack:
+        return ""
+    return (
+        f'<input type="hidden" name="repo" value="{html.escape(repo)}">'
+        f'<input type="hidden" name="pack" value="{html.escape(pack)}">'
+    )
+
+
+def _pack_edit_form(model: dict) -> str:
+    repo = str(model.get("edit_repo") or "")
+    pack = str(model.get("edit_pack") or "")
+    if not repo or not pack:
+        return ""
+    return (
+        '<form method="get" action="/requirements/copy">'
+        f'<input type="hidden" name="repo" value="{html.escape(repo)}">'
+        f'<input type="hidden" name="pack" value="{html.escape(pack)}">'
+        '<button type="submit">Edit</button></form>'
+    )
+
+
 def _source_row(source: dict) -> str:
     adapter_id = str(source.get("adapter_id") or source.get("id") or "")
     source_id = str(source.get("source_id") or source.get("id") or adapter_id)
     section_id = str(source.get("section_id") or "")
     url = str(source.get("url") or "")
-    url_cell = (
+    pack_dir = str(source.get("pack_dir") or "")
+    link = (
         f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{html.escape(url)}</a>'
         if url
         else '<span class="muted">—</span>'
     )
+    where = f'<div class="muted">{html.escape(pack_dir)}</div>' if pack_dir else ""
+    url_cell = link + where
     section_ready = source.get("section_ready")
     if section_ready is True:
         section_status = ""
@@ -346,7 +543,36 @@ def _source_row(source: dict) -> str:
     copies = list(source.get("copies") or [])
     form_id = f"source-{html.escape(source_id)}"
     chosen = next((copy for copy in copies if copy.get("chosen")), None)
-    if chosen is not None:
+    edit_repo = str(source.get("edit_repo") or "")
+    edit_pack = str(source.get("edit_pack") or "")
+    edit_requirement = str(source.get("edit_requirement") or "")
+    edit_section = str(source.get("edit_section") or "")
+    if edit_section and edit_repo and edit_pack:
+        hidden_copy = ""
+        actions = (
+            '<form method="get" action="/requirements/copy">'
+            f'<input type="hidden" name="repo" value="{html.escape(edit_repo)}">'
+            f'<input type="hidden" name="pack" value="{html.escape(edit_pack)}">'
+            f'<input type="hidden" name="section" value="{html.escape(edit_section)}">'
+            '<button type="submit">Edit</button></form>'
+        )
+    elif edit_requirement and edit_repo and edit_pack:
+        hidden_copy = ""
+        actions = (
+            f'<form method="get" action="/requirements/requirement/{html.escape(edit_requirement)}">'
+            f'<input type="hidden" name="repo" value="{html.escape(edit_repo)}">'
+            f'<input type="hidden" name="pack" value="{html.escape(edit_pack)}">'
+            '<button type="submit">Edit</button></form>'
+        )
+    elif edit_repo and edit_pack:
+        hidden_copy = ""
+        actions = (
+            '<form method="get" action="/requirements/copy">'
+            f'<input type="hidden" name="repo" value="{html.escape(edit_repo)}">'
+            f'<input type="hidden" name="pack" value="{html.escape(edit_pack)}">'
+            '<button type="submit">Edit</button></form>'
+        )
+    elif chosen is not None:
         stamp = html.escape(str(chosen.get("timestamp") or ""))
         hidden_copy = (
             f'<input type="hidden" name="timestamp" form="{form_id}" value="{stamp}">'
@@ -366,7 +592,7 @@ def _source_row(source: dict) -> str:
         signed_cell = f"<td>{int(signed_count)}</td>"
         unsigned_cell = f"<td>{int(unsigned_count or 0)}</td>"
     document_id = str(source.get("document_id") or "")
-    if section_ready is False:
+    if source.get("extract_enabled") is False or section_ready is False:
         extract = '<button type="button" disabled>Extract</button>'
     else:
         hidden_document = (
@@ -374,11 +600,18 @@ def _source_row(source: dict) -> str:
             if document_id
             else ""
         )
+        repo_id = str(source.get("repo_id") or "")
+        hidden_repo = (
+            f'<input type="hidden" name="repo" value="{html.escape(repo_id)}">'
+            if repo_id
+            else ""
+        )
         extract = (
             '<form method="post" action="/requirements/extract">'
             f'<input type="hidden" name="adapter_id" value="{html.escape(adapter_id)}">'
             f'<input type="hidden" name="section_id" value="{html.escape(section_id)}">'
             f"{hidden_document}"
+            f"{hidden_repo}"
             '<button type="submit">Extract</button></form>'
         )
     return (
@@ -489,6 +722,9 @@ def _sections_crumb(model: dict) -> str:
     if not document_id or not name:
         return ""
     href = "/requirements?document=" + document_id
+    repo = str(model.get("repo_id") or "").strip()
+    if repo:
+        href += "&repo=" + repo
     return f' · <a href="{html.escape(href)}">{html.escape(name)}</a>'
 
 
@@ -521,8 +757,9 @@ def copy_page(model: dict) -> bytes:
         if read_only:
             id_cell = f"<code>{html.escape(requirement_id)}</code>"
         else:
+            query = html.escape(str(model.get("requirement_query") or ""))
             id_cell = (
-                f'<a href="/requirements/requirement/{html.escape(requirement_id)}">'
+                f'<a href="/requirements/requirement/{html.escape(requirement_id)}{query}">'
                 f"<code>{html.escape(requirement_id)}</code></a>"
             )
         rows.append(
@@ -549,7 +786,8 @@ def copy_page(model: dict) -> bytes:
             "It is not a publication check.</p>"
             f"{_coverage_detail_html(coverage)}</details>"
         )
-    kind = "Published" if read_only else "Working"
+    path = str(model.get("pack_dir") or "")
+    path_line = f'<p class="muted"><code>{html.escape(path)}</code></p>' if path else ""
     actions = (
         '<p class="muted"><a href="/requirements/compare">Compare</a></p>'
         if read_only
@@ -561,10 +799,9 @@ def copy_page(model: dict) -> bytes:
     )
     body = f"""
 <p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}
- · <code>{html.escape(str(model.get("adapter_id") or ""))}</code>
- · {html.escape(kind)}
- · <code>{html.escape(str(model.get("timestamp") or ""))}</code></p>
+ · <code>{html.escape(str(model.get("adapter_id") or ""))}</code></p>
 <h1>Requirements</h1>
+{path_line}
 {_flash(str(model.get("message") or ""))}
 <div class="card">{listed}</div>
 {coverage_html}
@@ -1205,6 +1442,8 @@ if (fields) {
         "try_error": model.get("try_error") or "",
         "try_job": model.get("try_job"),
         "workspace_root": model.get("workspace_root") or "",
+        "repo_id": model.get("repo_id") or "",
+        "bound_pack": model.get("bound_pack") or "",
         "law_passages": [
             {"locator": ref.get("locator"), "law_text": ref.get("law_text")}
             for ref in (requirement.get("references") or [])
@@ -1213,7 +1452,7 @@ if (fields) {
     }
     body = f"""
 <p class="muted"><a href="/requirements">Pack Sources</a>
- · <a href="/requirements/copy">Requirements list</a></p>
+ · <a href="{html.escape(str(model.get("list_href") or "/requirements/copy"))}">Requirements list</a></p>
 <div class="req-head">
 <h1>{html.escape(str(requirement.get("id")))}</h1>
 {status}
@@ -1228,6 +1467,7 @@ if (fields) {
 {_source_fields(source, invalid)}
 {_hint_fields(hints)}
 <input type="hidden" name="expected_digest" value="{html.escape(str(model.get("expected_digest") or ""))}">
+{_bound_pack_fields(model)}
 </fieldset>
 <p class="actions editor-actions">
 <button type="submit" id="save-req" disabled>Save</button>
@@ -1635,6 +1875,7 @@ def _sign_dialog(requirement: dict, model: dict) -> str:
         '<div class="body">'
         f'<form method="post" action="/requirements/requirement/{html.escape(str(requirement.get("id")))}/sign">'
         f'<input type="hidden" name="expected_digest" value="{html.escape(str(model.get("expected_digest") or ""))}">'
+        f"{_bound_pack_fields(model)}"
         '<label>Name<input type="text" name="name" required></label>'
         f'<p><button type="submit">{action}</button></p></form>'
         "</div></dialog>"

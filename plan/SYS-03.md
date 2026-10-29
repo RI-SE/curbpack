@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (SYS-R01–R09 walkthrough OK; proceed Task 1–8; CHK-07/08 out of this plan) |
-| Current task | Task 3 — IMPL-START |
-| Last completed task | Task 2 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door` — Ran 10 tests, OK. |
+| Current task | Task 4 — next |
+| Last completed task | Task 3 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_cover_navigation tests.test_requirements_ui tests.test_requirements_export tests.test_requirements_catalog` — Ran 45 tests, OK. |
 | Last checkpoint commit | Task 2 local commit |
 | Requirements | Story SYS-R01–SYS-R09 in `SYS-03-one-repo-door.md` (R01 rewritten 2026-10-29 walkthrough; R09 Studio config page). No new `docs/req/` row. |
 | Packs v2 | `docs/reference/workspace.md` and `docs/reference/packs2.md` are both law. This plan edits neither. Workspace §2 owns `curbpack.json` keys, which of them are required, and the on-disk paths. Packs v2 §2.3 owns selection and the `search_hints` merge; §3.1 owns the run-result object. Allowed keys: `packs`, `requirements` XOR `exclude_requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`. `search_hints` and `unsigned_requirements` are required. The single key `curbpack`, and a `temp`/`tmp` key, are rejected. |
 | Blockers | None |
-| **Exact next action** | Task 3: door UI empty views, curbpack.json Save/Cancel dialog, versioned Add pack, claims_dir empty message. |
+| **Exact next action** | Task 4: Check I/O to results_dir dated run-result files. |
 
 ## Requirements and acceptance mapping
 
@@ -28,13 +28,13 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 
 | Requirement ID | Story | Test / observed evidence | Status |
 | --- | --- | --- | --- |
-| SYS-R01 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R02 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R03 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
+| SYS-R01 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
+| SYS-R02 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
+| SYS-R03 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
 | SYS-R04 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 | SYS-R05 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 | SYS-R06 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
+| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 3 (Check/Review/Discover path I/O still Tasks 4–6) |
 | SYS-R08 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 | SYS-R09 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 
@@ -86,10 +86,10 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Existing tests:** `tests/test_cover_navigation.py`, `tests/test_requirements_ui.py`, and the Pack Editor list assertions in `tests/test_requirements_export.py` open a registered repo and set `open-repo.json` before GET `/requirements`. The Pack they assert is `<packs_dir>/<id>/<version>/pack.json` listed in that repo's `curbpack.json` `packs`, not a row that exists only in `registered_sources.json`. Cover-page links and `/requirements/requirement/<id>` assertions that are not the Pack list stay. Extract landing beside `pack.json` is Task 7, not this task.
 **Stop if:** the row can be shown only by reading `registered_sources.json`, or Add needs a new field on `pack.json` or `curbpack.json` for the adapter. Record that stop. Do not add the field.
 
-- [ ] RED observed for the intended behavior.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior.
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 4 — Check runs that repository
 
@@ -168,3 +168,4 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 - **2026-10-29 / Task 0:** Plan APPROVED by danielfl. `open-repo.json` is Studio workspace state for SYS-R07 (not a product file). Task 1 IMPL-START.
 - **2026-10-29 / Task 1:** `validate_curbpack_config` requires workspace.md §2.2 keys and rejects `curbpack`. Resolvers `packs_dir`/`claims_dir`/`results_dir`/`reports_dir`. `run_repository` loads `<packs_dir>/<id>/<version>/pack.json` and `claims_dir`; unselected Claims omitted (`checks/ARCHITECTURE.md` updated). `_write_curbpack` preserves the four path fields. CLI default out is `<results_dir>/run-result.json`. `curbpack_directory`/`claim_catalog` left for Studio WIP (Task 3+). Review Important: `_write_curbpack` test + architecture omit-unselected; re-review Approved (`2f52e822`). Command: `python3 -m unittest tests.test_sys03_door tests.test_curbcheck_package tests.test_m4_checks` — Ran 28 tests, OK. Minor left: leftover helpers.
 - **2026-10-29 / Task 2:** `discovery/door.py` stores `open-repo.json` as `{"id": ...}` only. `open_repo_id` works with no curbpack.json. Extra keys / empty / unknown id mean not open. `save_directory_fields` validates relative dirs. First review Important: write-side tests; re-review Approved (`ed5a41af`). `python3 -m unittest tests.test_sys03_door` — Ran 10 tests, OK.
+- **2026-10-29 / Task 3:** Door UI. Empty Pack Sources / Pack Editor / Discover / Check / Review without open repo. `curbpack.json` Save/Cancel dialog (Requirements-dialog style). Start empty registers+opens, does not write the file. Add writes `<packs_dir>/<id>/<version>/pack.json` (`version` from `draft_pack` only). Empty `claims_dir` says No Claims. Paths shown. Pack Editor prefers the open repo's packs_dir row. Review Compile hidden until Task 6 and POST compile does not write the workspace product. First review Important (`45f1f31a`): Pack Editor catalog-first, missing claims_dir chrome, adapter drop, Review workspace preview, old `curbpack_directory` lookup, section-V test removed. Re-review Important leftovers (`372c0f7b`): adapter_id+non-adapter URL still accepted; Compile still wrote workspace — both closed in this step. No third review. Minor left: comma-separated packs field (CHK-07 checkboxes), three pickers, `created_curbpack` until CHK-07. Command: `python3 -m unittest tests.test_sys03_door tests.test_cover_navigation tests.test_requirements_ui tests.test_requirements_export tests.test_requirements_catalog` — Ran 45 tests, OK.

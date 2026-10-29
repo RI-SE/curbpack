@@ -17,6 +17,11 @@ from unittest.mock import patch
 
 from app.server import Workspace, make_handler
 from common.canonical import version_digest
+from common.jsonio import write_json
+from common.store import save_pack
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
+from requirements.extract.pipeline import draft_pack
 from common.errors import ModelError
 from requirements.editing import apply_edits, assign_reference_numbers, save_working_requirement
 from requirements.extract.adapter import ADAPTERS, load_adapter
@@ -84,18 +89,34 @@ class RequirementsUiTest(unittest.TestCase):
             save_working_requirement(
                 created["copy"], edited, expected_digest=version_digest(point3)
             )
+            repo = root / "product"
+            repo.mkdir()
+            write_json(repo / "curbpack.json", created_curbpack(packs=["house-policy"]))
+            save_pack(
+                repo / "curbpack" / "packs" / "house-policy" / draft_pack()["version"],
+                {
+                    "id": "house-policy",
+                    "name": "House Policy",
+                    "version": draft_pack()["version"],
+                    "source": {
+                        "instrument": "Content of the technical documentation",
+                        "url": "https://publications.europa.eu/resource/celex/32024R2847",
+                    },
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+            set_open_repo(root, "product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 catalog = _get(base + "/requirements")
-                self.assertIn("Packs", catalog)
+                self.assertIn("Pack Sources", catalog)
                 self.assertIn("id=\"add-open\"", catalog)
                 self.assertIn("Official name", catalog)
                 self.assertIn("Content of the technical documentation", catalog)
-                self.assertIn('data-adapter="cra-xml"', catalog)
-                self.assertIn('data-adapter="nis"', catalog)
+                self.assertIn("House Policy", catalog)
                 sections = _get(base + "/requirements?document=cra-annex-vii")
                 self.assertIn("Pack Editor", sections)
                 self.assertIn("2026-10-13T090000Z", sections)
@@ -372,3 +393,152 @@ def _post(url: str, form: dict) -> str:
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8")
         raise AssertionError(f"{exc.code} {body}") from exc
+
+
+_NIS_URL = "https://publications.europa.eu/resource/celex/32022L2555"
+
+
+class RepoPackSectionsTest(unittest.TestCase):
+    def test_pack_without_requirements_enables_extract_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            version = draft_pack()["version"]
+            fresh = repo / "curbpack" / "packs" / "fresh-nis" / version
+            kept = repo / "curbpack" / "packs" / "kept-nis" / version
+            house = repo / "curbpack" / "packs" / "house-policy" / version
+            fresh.mkdir(parents=True)
+            kept.mkdir(parents=True)
+            house.mkdir(parents=True)
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["fresh-nis", "kept-nis", "house-policy"]),
+            )
+            write_json(
+                fresh / "pack.json",
+                {
+                    "id": "fresh-nis",
+                    "name": "Fresh NIS",
+                    "version": "0.1.0",
+                    "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
+                },
+            )
+            write_json(
+                kept / "pack.json",
+                {
+                    "id": "kept-nis",
+                    "name": "Kept NIS",
+                    "version": "0.1.0",
+                    "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
+                },
+            )
+            requirement = {
+                "id": "NIS-ART1",
+                "pack_id": "kept-nis",
+                "source": {
+                    "framework": "EU",
+                    "instrument": "NIS2",
+                    "identifier": "CELEX:32022L2555",
+                    "language": "en",
+                    "url": _NIS_URL,
+                },
+                "references": [
+                    {"nr": 1, "locator": "Art.1", "law_text": "This Directive lays down measures."}
+                ],
+            }
+            write_json(kept / "NIS-ART1.json", requirement)
+            write_json(
+                house / "pack.json",
+                {
+                    "id": "house-policy",
+                    "name": "House Policy Example",
+                    "version": "0.1.0",
+                },
+            )
+            write_json(
+                house / "HOUSE-SECURITY-MD.json",
+                {
+                    "id": "HOUSE-SECURITY-MD",
+                    "pack_id": "house-policy",
+                    "source": {
+                        "framework": "internal",
+                        "instrument": "House Policy Example",
+                        "identifier": "HOUSE-SECURITY-MD",
+                        "language": "en",
+                        "url": "packs/house-policy/pack.json",
+                    },
+                    "references": [
+                        {
+                            "nr": 1,
+                            "locator": "Security docs",
+                            "law_text": "SECURITY.md present with a Security header.",
+                        }
+                    ],
+                },
+            )
+            save_repos(
+                root,
+                add_repo(root, load_repos(root), name="Fixture product", path=str(repo)),
+            )
+            set_open_repo(root, "fixture-product")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                fresh_page = _get(
+                    base + "/requirements?document=fresh-nis&repo=fixture-product"
+                )
+                self.assertIn('id="add-open"', fresh_page)
+                self.assertIn("No sections yet. Click Add.", fresh_page)
+                self.assertNotIn(">Extract</button>", fresh_page)
+                added = _post(
+                    base + "/requirements/catalog",
+                    {
+                        "document_id": "fresh-nis",
+                        "repo": "fixture-product",
+                        "adapter_id": "nis",
+                        "section_id": "Art.1",
+                    },
+                )
+                self.assertIn(">Extract</button>", added)
+                self.assertIn('disabled>Edit</button>', added)
+                self.assertEqual(list(fresh.glob("*.json")), [fresh / "pack.json"])
+                kept_page = _get(
+                    base + "/requirements?document=kept-nis&repo=fixture-product"
+                )
+                self.assertIn("Art.1", kept_page)
+                self.assertIn('action="/requirements/requirement/NIS-ART1"', kept_page)
+                self.assertIn('name="pack" value="kept-nis"', kept_page)
+                self.assertIn(">Extract</button>", kept_page)
+                house_page = _get(
+                    base + "/requirements?document=house-policy&repo=fixture-product"
+                )
+                self.assertIn("<code>manual</code>", house_page)
+                self.assertIn("Security docs", house_page)
+                self.assertNotIn("No sections yet. Click Add.", house_page)
+                self.assertNotIn("HOUSE-SECURITY-MD", house_page)
+                self.assertIn('disabled>Extract</button>', house_page)
+                self.assertIn('name="section" value="Security docs"', house_page)
+                self.assertIn('id="add-open"', house_page)
+                listed = _get(
+                    base + "/requirements/copy?repo=fixture-product&pack=kept-nis"
+                )
+                self.assertIn("NIS-ART1", listed)
+                self.assertIn("This Directive lays down measures.", _get(
+                    base + "/requirements/requirement/NIS-ART1?repo=fixture-product&pack=kept-nis"
+                ))
+                _post(
+                    base + "/requirements/requirement/NIS-ART1",
+                    {
+                        "repo": "fixture-product",
+                        "pack": "kept-nis",
+                        "present": "note",
+                        "note": "Reviewed in the pack.",
+                        "expected_digest": version_digest(requirement),
+                    },
+                )
+                saved = json.loads((kept / "NIS-ART1.json").read_text(encoding="utf-8"))
+                self.assertEqual(saved["note"], "Reviewed in the pack.")
+            finally:
+                httpd.shutdown()
