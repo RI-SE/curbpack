@@ -5,6 +5,8 @@ REV-R01 is scenarios 1, 2, and 38. REV-R02 is scenarios 3, 4, 5, 37a, 39, 40, 41
 
 from __future__ import annotations
 
+import html
+import re
 import tempfile
 import threading
 import unittest
@@ -22,7 +24,7 @@ from common.store import save_pack, save_requirement
 from discovery.door import created_curbpack
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
-from review.compile import compile_report, record_decision, write_report
+from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, compile_report, record_decision, worktree_sentence, write_report
 
 
 class ReviewDocumentListsTest(unittest.TestCase):
@@ -255,6 +257,200 @@ class ReviewDocumentListsTest(unittest.TestCase):
                 self.assertEqual(_files(repo), before)
 
 
+class ReviewGroupingTest(unittest.TestCase):
+    def test_two_claims_share_one_requirement_and_a_passing_group_starts_closed(self):
+        """REV-03 scenarios 8, 9, and 12. REV-R03 and REV-R04."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            left = _exist_claim("left-note", "REQ-SHARED", "left.md")
+            right = _exist_claim("right-note", "REQ-SHARED", "right.md")
+            write_claim(repo / "kept" / "claims", left)
+            write_claim(repo / "kept" / "claims", right)
+            run = _matching_run(repo, [left, right], commit="abc123", worktree="clean")
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            before = _files(repo)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            self.assertEqual(page.count('data-requirement="REQ-SHARED"'), 1)
+            self.assertIn("left-note", page)
+            self.assertIn("right-note", page)
+            self.assertNotIn('data-requirement="left-note"', page)
+            self.assertNotIn('data-requirement="right-note"', page)
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
+            summary = _summary(page, "REQ-SHARED")
+            self.assertIn("REQ-SHARED", summary)
+            self.assertIn("verifiable", summary)
+            self.assertIn("Result pass", summary)
+            self.assertTrue(summary.startswith("<summary><a "))
+            self.assertTrue(summary.endswith("</a>"))
+            closed_href = urllib.parse.unquote(html.unescape(re.search(r'href="([^"]+)"', summary).group(1)))
+            self.assertIn("expanded=REQ-SHARED", closed_href)
+            self.assertEqual(_files(repo), before)
+
+    def test_unresolved_claims_stay_expanded_without_an_invented_requirement(self):
+        """REV-03 scenarios 11 and 11a. REV-R03."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            stray = _exist_claim("stray-note", "NOT-A-REQ", "stray.md")
+            write_claim(repo / "kept" / "claims", stray)
+            run = _matching_run(repo, [stray])
+            missing = _run("claim-missing")
+            missing["claims"][0]["status"] = "fail"
+            missing["claims"][0]["checks"][0]["status"] = "fail"
+            missing["claims"][0]["checks"][0]["detail"] = "kept detail"
+            run["claims"].append(missing["claims"][0])
+            write_json(next((repo / "runs" / "out").glob("run-result_*.json")), run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", next((repo / "runs" / "out").glob("run-result_*.json")))
+            group = _details(page, "Unresolved Claims")
+            self.assertIn(" open", group[: group.index(">") + 1])
+            self.assertIn("kept detail", group)
+            self.assertIn("NOT-A-REQ", group)
+            self.assertNotIn('data-requirement="NOT-A-REQ"', page)
+            self.assertNotIn('data-requirement="claim-missing"', page)
+            self.assertNotIn("the repository passes", page)
+
+    def test_fail_opens_and_skipped_stays_distinct(self):
+        """REV-03 scenarios 13 and 14. REV-R04."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-FAIL")
+            _pack(repo, "REQ-SKIP")
+            failed = _exist_claim("failed-note", "REQ-FAIL", "bad.md")
+            skipped = _exist_claim("skipped-note", "REQ-SKIP", "later.md")
+            write_claim(repo / "kept" / "claims", failed)
+            write_claim(repo / "kept" / "claims", skipped)
+            run = _matching_run(repo, [failed, skipped])
+            run["claims"][0]["checks"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["detail"] = "broke here"
+            run["claims"][1]["status"] = "skipped"
+            run["claims"][1]["checks"][0]["status"] = "skipped"
+            run["claims"][1]["checks"][0]["detail"] = "left out"
+            write_json(next((repo / "runs" / "out").glob("run-result_*.json")), run)
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            failed_group = _details(page, "REQ-FAIL")
+            self.assertIn(" open", failed_group[: failed_group.index(">") + 1])
+            self.assertIn("pill-bad", failed_group)
+            self.assertIn('data-status="fail" class="pill-bad"', failed_group)
+            self.assertIn('<span data-status="pass">pass</span>', failed_group)
+            self.assertIn("broke here", failed_group)
+            skipped_group = _details(page, "REQ-SKIP")
+            self.assertIn(" open", skipped_group[: skipped_group.index(">") + 1])
+            self.assertIn("left out", skipped_group)
+            self.assertNotIn("pill-bad", skipped_group)
+            self.assertNotIn("pill-ok", skipped_group)
+            self.assertIn("skipped", skipped_group)
+            self.assertNotIn("Result pass", _summary(page, "REQ-SKIP"))
+
+    def test_expanded_query_closes_a_failed_requirement_and_writes_nothing(self):
+        """REV-03 scenario 15. REV-R04. Scenario 16 is later."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-FAIL")
+            failed = _exist_claim("failed-note", "REQ-FAIL", "bad.md")
+            write_claim(repo / "kept" / "claims", failed)
+            run = _matching_run(repo, [failed])
+            run["claims"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["detail"] = "broke here"
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(path, run)
+            before = _files(repo)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+                self.assertIn("expanded=", page)
+                open_href = urllib.parse.unquote(
+                    html.unescape(re.search(r'data-requirement="REQ-FAIL" open><summary><a href="([^"]+)"', page).group(1))
+                )
+                self.assertTrue(open_href.endswith("expanded=") or "expanded=&" in open_href)
+                self.assertNotIn("REQ-FAIL", open_href.split("expanded=", 1)[1])
+                closed = _open_run(base, "alpha", path, expanded="")
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-FAIL"[^>]*\bopen\b', closed))
+            self.assertEqual(_files(repo), before)
+
+    def test_digest_match_and_change_keep_the_recorded_result(self):
+        """REV-03 scenarios 10a, 21, and 22. REV-R05."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SAME")
+            _pack(repo, "REQ-MOVED")
+            same = _exist_claim("same-note", "REQ-SAME", "same.md")
+            moved = _exist_claim("moved-note", "REQ-MOVED", "moved.md")
+            write_claim(repo / "kept" / "claims", same)
+            write_claim(repo / "kept" / "claims", moved)
+            run = _matching_run(repo, [same, moved])
+            run["claims"][1]["digest"] = "different-digest"
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            same_group = _details(page, "REQ-SAME")
+            self.assertIn("The Claim is unchanged since the Check run.", same_group)
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SAME"[^>]*\bopen\b', page))
+            moved_group = _details(page, "REQ-MOVED")
+            self.assertIn(" open", moved_group[: moved_group.index(">") + 1])
+            self.assertIn("Claim changed since Check", moved_group)
+            self.assertIn("A new curbcheck run is required.", moved_group)
+            self.assertIn(
+                "The previous Requirement relationship cannot be established from the raw run result.",
+                moved_group,
+            )
+            self.assertIn('data-status="pass"', moved_group)
+
+    def test_open_claim_shows_every_recorded_check_and_the_run_header(self):
+        """REV-03 scenarios 7 and 23. REV-R03 and REV-R04."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("checked-note", "REQ-SHARED", "one.md")
+            write_claim(repo / "kept" / "claims", claim)
+            run = _matching_run(repo, [claim], commit="abc123", worktree="dirty")
+            run["claims"][0]["checks"] = [
+                {
+                    "index": 0,
+                    "check": "exist",
+                    "args": {"paths": ["one.md", "two.md"]},
+                    "status": "pass",
+                },
+                {
+                    "index": 1,
+                    "check": "contents",
+                    "args": {"path": "one.md"},
+                    "status": "fail",
+                    "detail": "short file",
+                },
+            ]
+            run["claims"][0]["status"] = "fail"
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            group = _details(page, "REQ-SHARED")
+            self.assertIn("exist", group)
+            self.assertIn("contents", group)
+            self.assertIn("one.md", group)
+            self.assertIn("two.md", group)
+            self.assertIn("short file", group)
+            self.assertIn('data-check="exist"', group)
+            self.assertIn('data-check="contents"', group)
+            header = page[page.index('data-run-header'): page.index("</section>", page.index("data-run-header"))]
+            self.assertIn("curbcheck", header)
+            self.assertIn("0.0.1a", header)
+            self.assertIn("abc123", header)
+            self.assertIn("dirty", header)
+            self.assertIn("cra-baseline", header)
+            self.assertIn(draft_pack()["version"], header)
+            self.assertIn(html.escape(worktree_sentence(run)), page)
+            self.assertNotIn('data-check="worktree"', page)
+            self.assertNotIn('data-status="dirty"', group)
+            self.assertIn(NOT_A_LEGAL_CONCLUSION, page)
+            self.assertIn(NO_CRA_FIELD, page)
+
+
 def _workspace(name: str, repo: Path) -> tuple[Path, Path]:
     workspace = repo.parent
     _register(workspace, name, repo)
@@ -354,6 +550,75 @@ def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
         checks=[{"check": "exist", "args": {"paths": [path]}}],
         description="The file is the reviewed evidence.",
     )
+
+
+def _pack(repo: Path, requirement_id: str) -> None:
+    pack_dir = repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"]
+    if not (pack_dir / "pack.json").is_file():
+        save_pack(pack_dir, draft_pack())
+    save_requirement(pack_dir, _requirement(requirement_id))
+    _config(
+        repo,
+        packs=["cra-baseline"],
+        packs_dir="tree/packs",
+        claims_dir="kept/claims",
+        results_dir="runs/out",
+        reports_dir="signed/reports",
+    )
+
+
+def _matching_run(repo: Path, claims: list[dict], *, commit: str = "abc123", worktree: str = "clean") -> Path:
+    rows = []
+    for claim in claims:
+        check = claim["checks"][0]
+        rows.append(
+            {
+                "id": claim["id"],
+                "digest": version_digest(claim),
+                "status": "pass",
+                "checks": [
+                    {
+                        "index": 0,
+                        "check": check["check"],
+                        "args": check["args"],
+                        "status": "pass",
+                    }
+                ],
+            }
+        )
+    run = {
+        "tool": "curbcheck",
+        "tool_version": "0.0.1a",
+        "commit": commit,
+        "worktree": worktree,
+        "packs": [{"id": "cra-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+        "claims": rows,
+    }
+    path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
+    write_json(path, run)
+    return run
+
+
+def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None) -> str:
+    url = base + "/review?repo=" + repo_id + "&result=" + urllib.parse.quote(str(path.resolve()), safe="")
+    if expanded is not None:
+        url += "&expanded=" + urllib.parse.quote(expanded, safe="")
+    return _get(url)
+
+
+def _details(page: str, requirement_id: str) -> str:
+    marker = f'data-requirement="{requirement_id}"'
+    attr = page.index(marker)
+    start = page.rindex("<details", 0, attr)
+    end = page.index("</details>", start)
+    return page[start:end]
+
+
+def _summary(page: str, requirement_id: str) -> str:
+    group = _details(page, requirement_id)
+    start = group.index("<summary>")
+    end = group.index("</summary>")
+    return group[start:end]
 
 
 def _files(root: Path) -> list[str]:

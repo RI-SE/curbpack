@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 2 — not started |
-| Last completed task | Task 1 |
-| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_sys03_door tests.test_review_compile tests.test_review_report_kept tests.test_review_discover_again tests.test_ui_smoke tests.test_chk08_studio tests.test_review_replace_flow` — Ran 46 tests, OK. |
+| Current task | Task 3 — not started |
+| Last completed task | Task 2 |
+| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_ui_smoke` — Ran 18 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/REV-03.md`. |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 2 RED: `python3 -m unittest tests.test_rev03_review`. REV-R03, REV-R04 except scenario 16, and REV-R05. File: `tests/test_rev03_review.py`, then `review/present.py`. |
+| **Exact next action** | Task 3 RED: `python3 -m unittest tests.test_rev03_review`. REV-R06 and D6. |
 
 ## Requirements and acceptance mapping
 
@@ -30,9 +30,9 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | --- | --- | --- | --- |
 | REV-R01 | REV-03 scenarios 1, 2, 38 | `tests/test_rev03_review.py` | Task 1 verified |
 | REV-R02 | REV-03 scenarios 3, 4, 5, 37a, 39, 40, 41, 42 | `tests/test_rev03_review.py` | Task 1 verified |
-| REV-R03 | REV-03 scenarios 7, 8, 9, 11, 11a, 23 | `tests/test_rev03_review.py` | Task 2; Task 3 when the run result is embedded |
-| REV-R04 | REV-03 scenarios 12, 13, 14, 15, 16 | `tests/test_rev03_review.py` | Task 2; scenarios 12–14 also Task 3; scenario 16 in Tasks 5 and 6 |
-| REV-R05 | REV-03 scenarios 10a, 21, 22 | `tests/test_rev03_review.py` | Task 2 and Task 3 |
+| REV-R03 | REV-03 scenarios 7, 8, 9, 11, 11a, 23 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 when the run result is embedded |
+| REV-R04 | REV-03 scenarios 12, 13, 14, 15, 16 | `tests/test_rev03_review.py` | Task 2 verified; scenarios 12–14 also Task 3; scenario 16 in Tasks 5 and 6 |
+| REV-R05 | REV-03 scenarios 10a, 21, 22 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 for the embedded run |
 | REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | DRAFT |
@@ -102,10 +102,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Stop if:** grouping needs a Requirement id derived from the Claim id string, or GET starts writing a report.
 **Note:** The header seal summary in this task is the existing reading, visible while the body is closed. D2's short labels and the invalid-seal expansion rule are Task 4. Until then an all-pass Requirement stays closed when its only seal condition is an unsigned reading (scenario 20: `Unsigned` does not by itself force expansion). Missing-path expansion is Task 5. A changed Requirement on a compiled report is Task 3.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 3 — open a compiled report without regrouping it
 
@@ -185,3 +185,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 1 REVIEW-START:** Independent review of the uncommitted diff. No commit yet.
 - **2026-10-29 / Task 1 review:** Independent review Issues Found (`69127475`). No Critical. Important, fixed in this step: a raw run result no longer renders the signature-appendix sentence or empty Requirement and source lines; `docs/reference/outputs.md` Compile and Open Review rows now say compile reads the posted path and Review opens only the requested document. `docs/reference/stable-contracts.md` at `0ae6ad6` is already an index and has no "latest report" row, so this step does not edit it. `review/ARCHITECTURE.md` stays unchanged by this step. Minor, not applied: an unselected Review card still says "No run result to compile."; the unusable-directory tests match the configured path string.
 - **2026-10-29 / Task 1 re-review:** Approved (`168ada6d`). No Critical or Important findings. Minor, not applied: the same two notes, plus `docs/user-guides/developers.md` still describes compiling the latest run and opening the latest report. That guide is outside this step. `python3 -m unittest tests.test_rev03_review tests.test_sys03_door tests.test_review_compile tests.test_review_report_kept tests.test_review_discover_again tests.test_ui_smoke tests.test_chk08_studio tests.test_review_replace_flow` — Ran 46 tests, OK.
+- **2026-10-29 / Task 2 RED:** `python3 -m unittest tests.test_rev03_review.ReviewGroupingTest` — Ran 6 tests, FAILED (failures=2, errors=4). The page had no Requirement groups and no `expanded` link.
+- **2026-10-29 / Task 2 GREEN:** `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_ui_smoke` — Ran 18 tests, OK.
+- **2026-10-29 / Task 2 REVIEW-START:** Independent review of the uncommitted diff. No commit yet.
+- **2026-10-29 / Task 2 review:** Independent review Issues Found (`32cc09be`). No Critical. Important, fixed before the re-review: a failed Check uses `pill-bad` even when the Claim status is pass; the Requirement id, seal, and result summary are one `expanded` link.
+- **2026-10-29 / Task 2 re-review:** Issues Found (`3e36edbc`). No Critical. One Important remains: `<summary>` can still toggle locally outside the anchor. No third review. After that report, the summary marker is hidden and only the anchor receives the click. `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_ui_smoke` — Ran 18 tests, OK. The fix is uncommitted and not re-reviewed. Task 2 is BLOCKED. Task 3 has not started.
+- **2026-10-29 / Task 2 REVIEW-START:** Maintainer authorized a new review round for the header hit-target fix. No commit yet.
+- **2026-10-29 / Task 2 review:** New independent review Approved (`e5b959cc`). No Critical or Important findings. Minor, not applied: keyboard activation of `<summary>` can still toggle `open` locally; the hit-target CSS is not asserted by a test. Outside sandbox validation — Ran 18 tests, OK.
