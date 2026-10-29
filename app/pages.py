@@ -826,12 +826,19 @@ def _review_groups(presentation: dict, door: dict) -> str:
         for pack in header.get("packs") or []
         if isinstance(pack, dict)
     )
+    report_label = str(presentation.get("report_seal_label") or "")
+    report_label_html = (
+        f'<p data-report-seal="{html.escape(report_label)}">{html.escape(report_label)}</p>'
+        if report_label
+        else ""
+    )
     header_html = (
         '<section data-run-header>'
         f"<p>{html.escape(str(header.get('tool') or ''))} {html.escape(str(header.get('tool_version') or ''))}</p>"
         f"<p>commit {html.escape(str(header.get('commit') or ''))}</p>"
         f"<p>worktree {html.escape(str(header.get('worktree') or ''))}</p>"
         f"<p>{packs}</p>"
+        f"{report_label_html}"
         "</section>"
     )
     groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
@@ -851,11 +858,10 @@ def _review_groups(presentation: dict, door: dict) -> str:
             nxt = sorted(set(open_ids) | {group_id})
         href = f"/review?repo={repo}&{document}&expanded={quote(','.join(nxt), safe='')}"
         open_attr = " open" if group.get("open") else ""
+        label = str(group.get("seal_label") or "")
+        label_html = f' <span data-seal-label="{html.escape(label)}">{html.escape(label)}</span>' if label else ""
         seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
-        summary = (
-            f'<a href="{html.escape(href)}">{html.escape(group_id)}'
-            f"{seal} {html.escape(str(group.get('result_summary') or ''))}</a>"
-        )
+        claim_header = []
         claims_html = []
         for claim in group.get("claims") or []:
             if not isinstance(claim, dict):
@@ -884,12 +890,27 @@ def _review_groups(presentation: dict, door: dict) -> str:
             )
             requirement_id = str(claim.get("requirement_id") or "")
             requirement_html = f"<p>{html.escape(requirement_id)}</p>" if requirement_id else ""
+            claim_label = str(claim.get("seal_label") or "")
+            claim_label_html = (
+                f' <span data-claim-seal="{html.escape(claim_label)}">{html.escape(claim_label)}</span>'
+                if claim_label
+                else ""
+            )
+            claim_facts = _seal_line(claim.get("seal")) if isinstance(claim.get("seal"), dict) else ""
+            claim_header.append(
+                f' claim {html.escape(str(claim.get("id") or ""))}{claim_label_html}{claim_facts}'
+            )
             claims_html.append(
                 f'<li data-claim="{html.escape(str(claim.get("id") or ""))}">'
                 f"<code>{html.escape(str(claim.get('id') or ''))}</code> "
                 f'<span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>'
                 f"{requirement_html}{sentences}<ul>{''.join(checks)}</ul></li>"
             )
+        summary = (
+            f'<a href="{html.escape(href)}">{html.escape(group_id)}'
+            f"{label_html}{seal}{''.join(claim_header)} "
+            f"{html.escape(str(group.get('result_summary') or ''))}</a>"
+        )
         parts.append(
             f'<details class="requirement" data-requirement="{html.escape(group_id)}"{open_attr}>'
             f"<summary>{summary}</summary>"

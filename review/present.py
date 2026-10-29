@@ -12,6 +12,46 @@ PREVIOUS_UNKNOWN = (
     "The previous Requirement relationship cannot be established from the raw run result."
 )
 RELATIONSHIP_CHANGED = "The current relationship changed."
+UNSIGNED = "Unsigned"
+VERIFICATION_UNAVAILABLE = "Verification unavailable"
+UNTRUSTED_SIGNER = "Untrusted signer"
+INVALID_SEAL = "Invalid seal"
+CERT_IDENTITY = (
+    "The certificate does not verify the signature, or name is not the identity on that certificate."
+)
+CERT_UNAVAILABLE = "The certificate for name is not available"
+NO_SIGNED = "No signed block and no signed Git commit"
+BYTES_CHANGED = "The current bytes are not the digest that was signed"
+
+
+def seal_label(reading: dict | None) -> str:
+    if not isinstance(reading, dict):
+        return ""
+    if reading.get("verifiable"):
+        return ""
+    reason = str(reading.get("reason") or "")
+    what = str(reading.get("what") or "")
+    if reason == CERT_IDENTITY:
+        return INVALID_SEAL
+    if reason.startswith(BYTES_CHANGED):
+        return INVALID_SEAL
+    if reason.startswith(CERT_UNAVAILABLE):
+        return VERIFICATION_UNAVAILABLE
+    if reason.startswith(NO_SIGNED):
+        return UNSIGNED
+    if what == "Git commit":
+        if "signature status U," in reason:
+            return UNTRUSTED_SIGNER
+        if "signature status B," in reason:
+            return INVALID_SEAL
+        if "signature status E," in reason:
+            return VERIFICATION_UNAVAILABLE
+        return ""
+    return ""
+
+
+def seal_forces_open(reading: dict | None) -> bool:
+    return seal_label(reading) == INVALID_SEAL
 
 
 def present_raw_run(
@@ -80,6 +120,7 @@ def present_compiled_report(
     claim_readings: dict,
     requirement_readings: dict,
     expanded: set[str] | None,
+    report_reading: dict | None = None,
 ) -> dict:
     run_result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
     embedded_claims = {
@@ -114,6 +155,7 @@ def present_compiled_report(
             grouped[requirement_id] = []
             order.append(requirement_id)
         grouped[requirement_id].append(item)
+    force_open = seal_forces_open(report_reading)
     groups = []
     for requirement_id in order:
         claims = grouped[requirement_id]
@@ -123,10 +165,13 @@ def present_compiled_report(
                 claims,
                 requirement_readings.get(requirement_id),
                 expanded,
+                force_open=force_open,
             )
         )
     if unresolved:
-        groups.append(_group(UNRESOLVED, unresolved, None, expanded, initially_open=True))
+        groups.append(
+            _group(UNRESOLVED, unresolved, None, expanded, initially_open=True, force_open=force_open)
+        )
     packs = []
     for pack in run_result.get("packs") or []:
         if isinstance(pack, dict):
@@ -141,6 +186,7 @@ def present_compiled_report(
         },
         "groups": groups,
         "decision": str(report.get("decision") or ""),
+        "report_seal_label": seal_label(report_reading),
     }
 
 
@@ -185,27 +231,41 @@ def _claim_item(row: dict, current: dict | None, reading: dict | None, *, embedd
         "requirement_id": "",
         "sentences": sentences,
         "seal": reading,
+        "seal_label": seal_label(reading),
         "checks": checks,
     }
 
 
-def _group(group_id: str, claims: list[dict], seal: dict | None, expanded: set[str] | None, initially_open: bool = False) -> dict:
+def _group(
+    group_id: str,
+    claims: list[dict],
+    seal: dict | None,
+    expanded: set[str] | None,
+    initially_open: bool = False,
+    *,
+    force_open: bool = False,
+) -> dict:
     if expanded is None:
-        opened = initially_open or _attention(claims)
+        opened = initially_open or force_open or _attention(claims, seal)
     else:
         opened = group_id in expanded
     return {
         "id": group_id,
         "open": opened,
         "seal": seal,
+        "seal_label": seal_label(seal),
         "result_summary": "Result " + _result_summary(claims),
         "claims": claims,
     }
 
 
-def _attention(claims: list[dict]) -> bool:
+def _attention(claims: list[dict], seal: dict | None = None) -> bool:
+    if seal_forces_open(seal):
+        return True
     for claim in claims:
         if claim.get("changed") or claim.get("status") in {"fail", "skipped"}:
+            return True
+        if seal_forces_open(claim.get("seal")):
             return True
         for check in claim.get("checks") or []:
             if check.get("status") in {"fail", "skipped"}:
