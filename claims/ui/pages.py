@@ -6,7 +6,7 @@ import html
 import json
 from urllib.parse import quote
 
-from app.pages import page, progress_dialog
+from app.pages import page, progress_dialog, repo_config_panel
 
 
 def discover_page(model: dict) -> bytes:
@@ -19,8 +19,7 @@ def discover_page(model: dict) -> bytes:
         intro = (
             "<p class=\"muted\">This page is the pilot. It lists every section from the Pack editor. "
             "Pick a repository, then a working copy or a published release. "
-            "Hunt settings come from the repository's <code>curbpack.json</code>. "
-            f'<a href="/discover/repo{repo_query}">The selected repo</a> uses the copy already chosen there.</p>'
+            "Claim Discovery settings come from the repository's <code>curbpack.json</code>.</p>"
         )
     else:
         name = html.escape(str(model.get("repo_name") or "the selected repo"))
@@ -30,11 +29,23 @@ def discover_page(model: dict) -> bytes:
             "The copy is the one already chosen in the Pack editor. "
             f'<a href="/discover{repo_query}">Pilot</a>.</p>'
         )
+    add_repo = (
+        '<p class="actions"><button type="button" id="add-repo-open">Add repo</button></p>'
+        if pilot
+        else ""
+    )
+    panel = repo_config_panel(
+        model,
+        action="/discover" if pilot else "/discover/repo",
+        show=("config", "packs", "claims"),
+        beside=add_repo,
+    )
     body = f"""
 <h1>Discovery &amp; Claims</h1>
 {intro}
 {flash}
-<div class="card discover-wrap">{_repo_picker(model, pilot)}{_path_chrome(model)}{_section_table(model, pilot)}</div>
+{panel}
+<div class="card discover-wrap">{_section_table(model, pilot)}</div>
 """
     if pilot:
         body += _add_repo_dialog(str(model.get("workspace_root") or ""))
@@ -42,30 +53,6 @@ def discover_page(model: dict) -> bytes:
     if model.get("job"):
         body += _job_dialog(model["job"])
     return page("Discovery & Claims", body)
-
-
-def _path_chrome(model: dict) -> str:
-    if not str(model.get("repo_id") or ""):
-        return ""
-    curbpack_file = str(model.get("curbpack_file") or "")
-    packs = str(model.get("directory") or "")
-    claims = str(model.get("claims_dir") or "")
-    results = str(model.get("results_dir") or "")
-    reports = str(model.get("reports_dir") or "")
-    if not (curbpack_file or packs or claims):
-        return ""
-    parts = []
-    if curbpack_file:
-        parts.append(f"<p>curbpack.json <code>{html.escape(curbpack_file)}</code></p>")
-    if packs:
-        parts.append(f'<p class="muted">Packs directory <code>{html.escape(packs)}</code>.</p>')
-    if claims:
-        parts.append(f'<p class="muted">Claims directory <code>{html.escape(claims)}</code>.</p>')
-    if results:
-        parts.append(f'<p class="muted">Results directory <code>{html.escape(results)}</code>.</p>')
-    if reports:
-        parts.append(f'<p class="muted">Reports directory <code>{html.escape(reports)}</code>.</p>')
-    return "".join(parts)
 
 
 def _section_table(model: dict, pilot: bool) -> str:
@@ -77,10 +64,6 @@ def _section_table(model: dict, pilot: bool) -> str:
         rows.extend(_section_row(repo_id, section, reviewable, pilot) for section in sections)
     elif not pilot:
         rows.append('<tr><td colspan="8" class="muted">No sections for the packs in curbpack.json.</td></tr>')
-    if pilot:
-        rows.append(
-            '<tr><td colspan="8"><button type="button" id="add-repo-open">Add repo</button></td></tr>'
-        )
     return (
         "<table><thead><tr>"
         "<th>Pack</th><th>Section</th><th>Copy</th>"
@@ -90,27 +73,6 @@ def _section_table(model: dict, pilot: bool) -> str:
         "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>"
-    )
-
-
-def _repo_picker(model: dict, pilot: bool) -> str:
-    repo_id = str(model.get("repo_id") or "")
-    action = "/discover" if pilot else "/discover/repo"
-    options = ['<option value="">Choose a repo</option>']
-    for repo in list(model.get("repos") or []):
-        if not isinstance(repo, dict):
-            continue
-        row_id = str(repo.get("id") or "")
-        name = str(repo.get("name") or row_id)
-        selected = " selected" if row_id == repo_id else ""
-        options.append(
-            f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
-        )
-    return (
-        f'<form method="get" class="repo-picker" action="{action}">'
-        '<label>Repo <select name="repo" id="discover-repo" onchange="this.form.submit()">'
-        + "".join(options)
-        + "</select></label></form>"
     )
 
 

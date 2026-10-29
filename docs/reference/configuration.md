@@ -33,7 +33,7 @@ Selection mode is exactly one of: `exclude_requirements`, or `requirements`, or 
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory: `<claims_dir>/<claim-id>.json`. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
-| `unsigned_requirements` | yes | `"reject"` | `"reject"` \| `"signed_commit"`. Behaviour: later epic. |
+| `unsigned_requirements` | yes | `"report"` | Accepted values and intended behaviour: [Workspace](workspace.md) §2.4. |
 
 `packs` lists pack ids. It does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached `packs_dir`. Nothing fetches one.
 
@@ -121,12 +121,7 @@ With the created file:
 
 ### `unsigned_requirements` (later epic)
 
-| Value | Intended curbcheck behaviour |
-|-------|------------------------------|
-| `reject` | A requirement whose JSON `signed` does not verify is reported unsigned. |
-| `signed_commit` | Same report, unless that requirement file is covered by a signed commit (allowed-signers). |
-
-Studio import still verifies seals when bringing a published pack into `packs_dir`.
+Accepted values, the created-file value, and the intended behaviour are [Workspace](workspace.md) §2.4.
 
 ### What the run reads
 

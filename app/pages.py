@@ -91,6 +91,14 @@ select{font:inherit;max-width:18rem;padding:.35rem .4rem;border:1px solid #cbd5e
 a.edit-review{display:inline-block;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;padding:.45rem .75rem;font-weight:600}
 a.edit-review:hover{background:#15803d;color:#fff}
 a.edit-review[hidden]{display:none}
+.repo-row{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;margin:0 0 .75rem}
+.repo-row .repo-picker{margin:0}
+.repo-row .repo-picker label{display:flex;align-items:center;gap:.5rem;margin:0}
+.repo-row .actions{margin:0}
+.config-panel{background:transparent;border:1px solid #cbd5e1;border-radius:10px;padding:.85rem 1rem;margin:.25rem 0 .75rem}
+.config-panel .repo-row{margin-bottom:.35rem}
+.config-panel label{margin:.45rem 0 0}
+.config-panel input[readonly]{background:#fff;color:var(--ink);cursor:text}
 .discover-wrap .repo-picker{margin:0 0 .75rem}
 .discover-wrap table{width:100%}
 .discover-wrap .path-cell{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -286,7 +294,6 @@ check regularly → review the result and fix what failed.</p>
 <p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
 <p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
 <p><a href="/review">Review — compile and sign review</a></p>
-<p><a href="/studio">Studio config — curbpack-studio.json</a></p>
 <p>{html.escape(str(model.get("report_line") or "No review report."))}</p>
 </div>
 <details class="card">
@@ -428,11 +435,17 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
         if not blocks
         else ""
     )
+    panel = repo_config_panel(
+        model,
+        action="/claims",
+        show=("config", "packs", "claims"),
+    )
     body = f"""
 <h1>Claim editor</h1>
 <p class="muted">Edit, sign, or retire Claims already in the product repo.
 New Claims come from <a href="/discover">Discovery &amp; Claims</a>.
 Editing a sealed Claim clears its seal.</p>
+{panel}
 {_flash(message, error)}
 {''.join(blocks) or empty}
 """
@@ -529,16 +542,58 @@ def check_page(
             + "</table>"
         )
         shown = git + f"<p>exit {exit_code}</p>" + table
+    door = editor or {}
+    panel = repo_config_panel(
+        door,
+        action="/check",
+        show=("config", "packs", "claims", "results", "reports"),
+    )
     body = f"""
 <h1>Check</h1>
 <p class="muted">Choose a repo. Check reads that repository's <code>curbpack.json</code>.
 The file is not signed. A green check row is not a legal conclusion.</p>
+{panel}
 {_flash(message, error)}
-{_curbpack_editor(editor or {})}
+{_curbpack_editor(door)}
 <h2>Report</h2>
 <div class="card">{shown}</div>
 """
     return page("Check", body)
+
+
+_PATH_FIELDS = (
+    ("config", "Current Configuration", "curbpack_file"),
+    ("packs", "Packs directory", "directory"),
+    ("claims", "Claims directory", "claims_dir"),
+    ("results", "Results directory", "results_dir"),
+    ("reports", "Reports directory", "reports_dir"),
+)
+
+
+def repo_config_panel(model: dict, *, action: str, show: tuple[str, ...] = (), beside: str = "") -> str:
+    """Repo picker plus the path fields named in show.
+
+    show is a subset of config, packs, claims, results, reports.
+    """
+    wanted = set(show)
+    fields = []
+    for key, label, source in _PATH_FIELDS:
+        if key not in wanted:
+            continue
+        value = str(model.get(source) or "")
+        if not value:
+            continue
+        fields.append(
+            f"<label>{html.escape(label)} "
+            f'<input type="text" readonly value="{html.escape(value)}"></label>'
+        )
+    picker = _product_repo_picker(model, action)
+    return (
+        '<section class="config-panel">'
+        f'<div class="repo-row">{picker}{beside}</div>'
+        f'{"".join(fields)}'
+        "</section>"
+    )
 
 
 def _product_repo_picker(model: dict, action: str) -> str:
@@ -563,9 +618,8 @@ def _product_repo_picker(model: dict, action: str) -> str:
 
 def _curbpack_editor(editor: dict) -> str:
     repo_id = str(editor.get("repo_id") or "")
-    picker = _product_repo_picker(editor, "/check")
     if not repo_id:
-        return f'<div class="card discover-wrap">{picker}<p class="muted">Choose a repo to work with.</p></div>'
+        return '<div class="card discover-wrap"><p class="muted">Choose a repo to work with.</p></div>'
     rows = []
     for pack in editor.get("packs") or []:
         if not isinstance(pack, dict):
@@ -591,12 +645,6 @@ def _curbpack_editor(editor: dict) -> str:
     )
     return f"""
 <div class="card discover-wrap">
-{picker}
-<p>curbpack.json <code>{html.escape(str(editor.get("curbpack_file") or ""))}</code></p>
-<p class="muted">Packs directory <code>{html.escape(str(editor.get("directory") or ""))}</code>.</p>
-<p class="muted">Claims directory <code>{html.escape(str(editor.get("claims_dir") or ""))}</code>.</p>
-<p class="muted">Results directory <code>{html.escape(str(editor.get("results_dir") or ""))}</code>.</p>
-<p class="muted">Reports directory <code>{html.escape(str(editor.get("reports_dir") or ""))}</code>.</p>
 {selection_html}
 {result_html}
 <table><thead><tr><th>Pack</th><th>Status</th><th>Path</th></tr></thead><tbody>
@@ -692,8 +740,13 @@ def review_page(
 {appendix_html}
 <pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>
 """
-    picker = _product_repo_picker(door or {}, "/review")
-    repo_id = str((door or {}).get("repo_id") or "")
+    door = door or {}
+    panel = repo_config_panel(
+        door,
+        action="/review",
+        show=("config", "results", "reports"),
+    )
+    repo_id = str(door.get("repo_id") or "")
     report_value = str((door or {}).get("report_path") or "")
     hidden = ""
     if repo_id:
@@ -731,11 +784,11 @@ def review_page(
         body_report = "<p>No repository is chosen.</p>"
         decision_forms = ""
         compile_form = ""
-    chrome = _review_path_chrome(door or {})
+    chrome = _review_report_line(door)
     body = f"""
 <h1>Review</h1>
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
-{picker}
+{panel}
 {chrome}
 {_flash(message, error)}
 <div class="card">{body_report}</div>
@@ -745,6 +798,12 @@ def review_page(
 {dialogs}
 """
     return page("Review", body)
+
+
+def _review_report_line(door: dict) -> str:
+    if not str(door.get("repo_id") or "") or not door.get("report_path"):
+        return ""
+    return f"<p>Review report <code>{html.escape(str(door.get('report_path') or ''))}</code></p>"
 
 
 def _review_path_chrome(door: dict) -> str:
