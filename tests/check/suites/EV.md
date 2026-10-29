@@ -49,14 +49,14 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 
 - Repository state: R1 via `SUT=curbpack ./setup.sh R1 --commit` under `external_test/curbpack`.
 - Claims: the seven carried claim files from that fixture.
-- Packs: `$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs`.
+- Packs: fixture packs copied into `$REFERENCE_PRODUCT_ROOT/curbpack/packs/<id>/<version>/`.
 
 ### TEST STEPS
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `curbcheck --repo "$REFERENCE_PRODUCT_ROOT" --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" --out "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing `curbpack.json` and copying the seven claims into `curbpack/claims`) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
+| 1    | `curbcheck --repo "$REFERENCE_PRODUCT_ROOT" -o "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing a complete §2.2 `curbpack.json`, copying fixture packs into `curbpack/packs/<id>/<version>/`, and copying the seven claims into `curbpack/claims`) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
 | 2    | Process exit code | `0`. |
 
 When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carried run), this row is not re-executed.
@@ -90,7 +90,7 @@ When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carrie
 
 - Repository state: R3 via Studio fixture `setup.sh`.
 - Claims: Packs v2 `MD-SW-CLASS` (translated from curbpack `medtech-iec62304` `annex_file`).
-- Packs: `$CURBPACK_ROOT/docs/reference/test-packs`.
+- Packs: Studio `docs/reference/test-packs` copied into the product `curbpack/packs/<id>/<version>/`.
 
 ### TEST STEPS
 

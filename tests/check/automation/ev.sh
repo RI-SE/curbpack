@@ -42,7 +42,7 @@ ev_001() {
 	# PF-01 after SETUP 4 (docs/testing/procedures).
 	install_pf01
 
-	# TEST STEPS 1 — argv: --repo/--packs/--out; JSON is the run-result file.
+	# TEST STEPS 1 — argv: --repo -o; JSON is the run-result file.
 	ev_001_check_output=$(run_curbcheck_json)
 	ev_001_check_status=$?
 	printf '%s\n' "$ev_001_check_output"

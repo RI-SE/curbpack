@@ -1,6 +1,6 @@
 # Carried cases
 
-Repository state [R1](0_controlled_repo_setup.md). Pack input [PF-01](1_pack_template_instantiation.md): pack ids `cra-baseline`, `house-policy`, and `medtech-iec62304` from `--packs docs/reference/test-packs`.
+Repository state [R1](0_controlled_repo_setup.md). Pack input [PF-01](1_pack_template_instantiation.md): pack ids `cra-baseline`, `house-policy`, and `medtech-iec62304` from `curbpack.json` `packs`, loaded under that file's `packs_dir`.
 
 Each id below is a carried case. The expected status is `pass`. The suite process exits 0 when every carried case is `pass`.
 

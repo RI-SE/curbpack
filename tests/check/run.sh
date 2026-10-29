@@ -35,7 +35,39 @@ if ! git -C "$product" diff --quiet -- external_test/curbpack/states/R1.sh; then
 	exit 1
 fi
 
-printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$product/curbpack.json"
+python3 - "$fixture/packs" "$product/curbpack/packs" cra-baseline house-policy medtech-iec62304 <<'PY'
+import json, shutil, sys
+from pathlib import Path
+
+src, dest = Path(sys.argv[1]), Path(sys.argv[2])
+for pack_id in sys.argv[3:]:
+    root = src / pack_id
+    direct = root / "pack.json"
+    if direct.is_file():
+        pack = json.loads(direct.read_text(encoding="utf-8"))
+        source_dir = root
+    else:
+        found = sorted(path.parent for path in root.glob("*/pack.json") if path.is_file())
+        if len(found) != 1:
+            raise SystemExit(f"need one version directory under {root}")
+        pack = json.loads((found[0] / "pack.json").read_text(encoding="utf-8"))
+        source_dir = found[0]
+    target = dest / pack_id / pack["version"]
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(source_dir, target)
+PY
+PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" python3 - "$product" <<'PY'
+from pathlib import Path
+import sys
+from checks.defaults import created_curbpack
+from common.jsonio import write_json
+
+write_json(
+    Path(sys.argv[1]) / "curbpack.json",
+    created_curbpack(packs=["cra-baseline", "house-policy", "medtech-iec62304"]),
+)
+PY
 mkdir -p "$product/curbpack/claims"
 for id in \
 	CRA-ANNEX-VII-MANUAL \
@@ -51,7 +83,7 @@ done
 
 out=$product/run-result.json
 set +e
-checks_out=$("$root/scripts/bin/curbcheck" --repo "$product" --packs "$fixture/packs" --out "$out")
+checks_out=$("$root/scripts/bin/curbcheck" --repo "$product" -o "$out")
 checks_code=$?
 set -e
 printf '%s\n' "$checks_out"

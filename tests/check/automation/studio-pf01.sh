@@ -2,10 +2,62 @@
 # PF-01 product input for Packs v2 (docs/testing/procedures/README.md).
 # Call after R-state SETUP when porcelain must still prove the state alone.
 
+_write_curbpack() {
+	_product=$1
+	_partial=$2
+	_packs_dir=${3-}
+	PYTHONPATH="${CURBPACK_ROOT:?}${PYTHONPATH:+:$PYTHONPATH}" python3 - "$_product" "$_partial" "$_packs_dir" <<'PY'
+from pathlib import Path
+import json, sys
+from checks.defaults import created_curbpack
+from common.jsonio import write_json
+
+product = Path(sys.argv[1])
+kwargs = json.loads(sys.argv[2])
+if sys.argv[3]:
+    kwargs["packs_dir"] = sys.argv[3]
+write_json(product / "curbpack.json", created_curbpack(**kwargs))
+PY
+}
+
+_install_versioned_packs() {
+	_src=$1
+	_dest=$2
+	shift 2
+	python3 - "$_src" "$_dest" "$@" <<'PY'
+import json, shutil, sys
+from pathlib import Path
+
+src, dest = Path(sys.argv[1]), Path(sys.argv[2])
+for pack_id in sys.argv[3:]:
+    root = src / pack_id
+    direct = root / "pack.json"
+    if direct.is_file():
+        pack = json.loads(direct.read_text(encoding="utf-8"))
+        source_dir = root
+    else:
+        found = sorted(path.parent for path in root.glob("*/pack.json") if path.is_file())
+        if len(found) != 1:
+            raise SystemExit(f"need one version directory under {root}")
+        pack = json.loads((found[0] / "pack.json").read_text(encoding="utf-8"))
+        source_dir = found[0]
+    target = dest / pack_id / pack["version"]
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(source_dir, target)
+PY
+}
+
+_install_studio_packs() {
+	_product=${REFERENCE_PRODUCT_ROOT:?}
+	_install_versioned_packs "${CURBPACK_ROOT:?}/docs/reference/test-packs" "$_product/curbpack/packs" "$@"
+}
+
 install_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_fixture=$_product/external_test/curbpack
-	printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$_product/curbpack.json"
+	_install_versioned_packs "$_fixture/packs" "$_product/curbpack/packs" cra-baseline house-policy medtech-iec62304
+	_write_curbpack "$_product" '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}'
 	mkdir -p "$_product/curbpack/claims"
 	for _cid in \
 		CRA-ANNEX-VII-MANUAL \
@@ -25,7 +77,8 @@ install_pf01() {
 install_house_claims() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
-	printf '%s\n' '{"packs":["house-policy"]}' >"$_product/curbpack.json"
+	_install_studio_packs house-policy
+	_write_curbpack "$_product" '{"packs":["house-policy"]}'
 	mkdir -p "$_product/curbpack/claims"
 	for _cid in HOUSE-ANTI-PLACEHOLDER HOUSE-SECURITY-MD HOUSE-SECURITY-TXT
 	do
@@ -34,22 +87,23 @@ install_house_claims() {
 }
 
 run_house_curbcheck_json() {
-	CURBCHECK_PACKS="${CURBPACK_ROOT:?}/docs/reference/test-packs" run_curbcheck_json "$@"
+	run_curbcheck_json "$@"
 }
 
 # MD-SW-CLASS translated from curbpack medtech-iec62304 annex_file rule.
 # Requirement lives in Studio docs/reference/test-packs (clone fixture pack is
-# metadata-only). Packs root must be that Studio tree.
+# metadata-only). Copy that Studio tree into the product packs_dir.
 install_md_sw_class() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
-	printf '%s\n' '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}' >"$_product/curbpack.json"
+	_install_studio_packs cra-baseline house-policy medtech-iec62304
+	_write_curbpack "$_product" '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}'
 	mkdir -p "$_product/curbpack/claims"
 	cp "$_claims/MD-SW-CLASS.json" "$_product/curbpack/claims/MD-SW-CLASS.json"
 }
 
 run_studio_packs_curbcheck_json() {
-	CURBCHECK_PACKS="${CURBPACK_ROOT:?}/docs/reference/test-packs" run_curbcheck_json "$@"
+	run_curbcheck_json "$@"
 }
 
 install_claim() {
@@ -57,7 +111,10 @@ install_claim() {
 	_cid=$1
 	_packs_json=$2
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
-	printf '%s\n' "$_packs_json" >"$_product/curbpack.json"
+	_write_curbpack "$_product" "$_packs_json"
+	_ids=$(python3 -c "import json,sys; print(' '.join(json.loads(sys.argv[1]).get('packs') or []))" "$_packs_json")
+	# shellcheck disable=SC2086
+	_install_studio_packs $_ids
 	mkdir -p "$_product/curbpack/claims"
 	# Drop other claims so this case observes one row.
 	rm -f "$_product/curbpack/claims"/*.json
@@ -113,7 +170,8 @@ install_ev008_rule_order_claims() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	_order=$1
-	printf '%s\n' '{"packs":["ev-008-order"]}' >"$_product/curbpack.json"
+	_install_studio_packs ev-008-order
+	_write_curbpack "$_product" '{"packs":["ev-008-order"]}'
 	mkdir -p "$_product/curbpack/claims"
 	find "$_product/curbpack/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
 	case $_order in
@@ -139,7 +197,8 @@ install_ev008_file_order_claim() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	_claims=${CURBPACK_ROOT:?}/docs/reference/test-packs/claims
 	_order=$1
-	printf '%s\n' '{"packs":["ev-008-order"]}' >"$_product/curbpack.json"
+	_install_studio_packs ev-008-order
+	_write_curbpack "$_product" '{"packs":["ev-008-order"]}'
 	mkdir -p "$_product/curbpack/claims"
 	find "$_product/curbpack/claims" -maxdepth 1 -type f -name '*.json' -exec rm -f {} +
 	cp "$_claims/EV008-BOTH-PATHS.json" "$_product/curbpack/claims/EV008-BOTH-PATHS.json"
@@ -179,7 +238,7 @@ install_house_secret_paths() {
 # Commit PF-01 files so Git reports a clean worktree (PV-001).
 commit_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	git -C "$_product" add curbpack.json curbpack/claims
+	git -C "$_product" add curbpack.json curbpack/claims curbpack/packs
 	git -C "$_product" \
 		-c user.email=curbpack-test@example.com \
 		-c user.name=curbpack-test \
@@ -190,17 +249,16 @@ commit_pf01() {
 remove_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
 	rm -f "$_product/curbpack.json"
-	rm -rf "$_product/curbpack/claims"
+	rm -rf "$_product/curbpack/claims" "$_product/curbpack/packs"
 }
 
 # Run curbcheck; print only the Packs v2 run-result JSON on stdout (summary goes to stderr).
 # Exit status is curbcheck's. Usage: run_curbcheck_json [extra curbcheck args…]
 run_curbcheck_json() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	_packs=${CURBCHECK_PACKS:-$_product/external_test/curbpack/packs}
 	_out=${CURBCHECK_OUT:-$_product/.curbpack/run-result.json}
 	mkdir -p "$(dirname "$_out")"
-	curbcheck --repo "$_product" --packs "$_packs" --out "$_out" "$@" >&2
+	curbcheck --repo "$_product" -o "$_out" "$@" >&2
 	_code=$?
 	cat "$_out"
 	return "$_code"

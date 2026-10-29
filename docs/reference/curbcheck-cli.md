@@ -1,12 +1,10 @@
 # curbcheck
 
-> **Update pending — [CHK-07](../agile/epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md).** Authoritative path and created-file contract: [workspace.md](workspace.md). Until CHK-07 lands, parts of this page still describe the old layout (`curbpack` key; `--packs` as a **directory**). Target contract: always read `curbpack.json` fields `packs_dir` / `claims_dir` / `results_dir`; stdout text by default; `-j`/`--json` and `-o`/`--out` for JSON; `curbcheck --defaults` (and the same Python function) emit the created-file JSON; `--packs` / `--requirements` are optional comma-separated **id** filters for debug narrowing, not directories.
+`curbcheck` evaluates the Claims in a product repository. The process exit code is the result a person or a CI job uses. Stdout is the text summary. JSON is written only when requested with `-j`/`--json` or `-o`/`--out`. Path locations are the string fields in the product's `curbpack.json` ([workspace.md](workspace.md) §2). The Check page in Curbpack Studio calls the same runner.
 
-`curbcheck` evaluates the Claims in a product repository and writes one run result. The process exit code is the result a person or a CI job uses. The JSON file is the result a later review reads.
+There is one repository command. It does not scan, init, heal, export, attest, or prepare a release. Pack choice lives in `curbpack.json`. The question a Check asks lives in that Claim's `checks[]`. The data contract is [Packs v2](packs2.md) §2.3–§2.5, §3.1, and §4. This page is how you start the program and how you read what it prints.
 
-There is one repository command. It does not scan, init, heal, export, attest, or prepare a release. Pack choice lives in the product's `curbpack.json`. The question a Check asks lives in that Claim's `checks[]`. The data contract is [Packs v2](packs2.md) §2.3–§2.5, §3.1, and §4. This page is how you start the program and how you read what it prints.
-
-A source checkout and a packaged binary take the same arguments. The Check page in Curbpack Studio calls the same runner. Skip is the `--skip` flag; that page has no skip control.
+A source checkout and a packaged binary take the same arguments. Skip is the `--skip` flag; the Check page has no skip control. Created-file defaults for a new `curbpack.json` come from `curbcheck --defaults` and the same Python function Studio calls.
 
 ## Start
 
@@ -22,9 +20,15 @@ When the current directory contains `curbpack.json`, the repository argument can
 curbcheck
 ```
 
-That reads `<repo>/curbpack.json`, loads packs from `<repo>/<curbpack>/packs`, loads claims from `<repo>/<curbpack>/claims`, and writes `<repo>/<curbpack>/run-result.json`. `curbpack` is the relative directory in the file. When the key is absent, that directory is `curbpack`.
+That reads `<repo>/curbpack.json` and uses its `packs_dir`, `claims_dir`, and `results_dir`. Packs load from `<packs_dir>/<pack-id>/<pack-version>/pack.json`. Claims load from `<claims_dir>/*.json`. With neither `-j` nor `-o`, stdout is the summary and no run-result file is written.
 
-`--packs` replaces the packs directory. The value is the directory that directly contains `<pack-id>/pack.json`. `--out` replaces the run result file.
+```bash
+curbcheck --defaults
+```
+
+prints the created-file `curbpack.json` object and exits 0. No repository is required.
+
+`-j` / `--json` also writes `{results_dir}/run-result_<YYYYMMDDTHHMMSSZ>.json`. `-o PATH` / `--out PATH` also writes that JSON object to `PATH`. `--packs` and `--requirements` are optional comma-separated **id** lists of what this run checks, not directories.
 
 `make package` on the matching host also writes a single file:
 
@@ -41,42 +45,51 @@ Run that file with the same arguments. Git is the `git` already on the machine. 
 
 | Flag | Required | Meaning |
 | --- | --- | --- |
+| `--defaults` | no | Print the created-file `curbpack.json` object on stdout and exit 0. No repository. No run-result file. |
 | `--repo` | when `./curbpack.json` is absent | Product repository. The process reads `<repo>/curbpack.json`. |
-| `--packs` | no | Directory whose children are pack directories. Each selected id is `<packs>/<pack-id>/pack.json`. Default: `<repo>/<curbpack>/packs`. This is a path, not a comma-separated list of ids. |
-| `--out` | no | File that receives the run result. Default: `<repo>/<curbpack>/run-result.json`. Parent directories are created. The file is replaced in one step after the result has been validated. |
+| `--packs` | no | Comma-separated pack ids for this run. Default: the `packs` array in `curbpack.json`. Pack files still load under that file's `packs_dir`. A value that contains `/` or `\` exits 2. |
+| `--requirements` | no | Comma-separated requirement ids for this run. Default: the file's `requirements` / `exclude_requirements` selection. Claim files still load under `claims_dir`. A value that contains `/` or `\` exits 2. |
+| `-j` / `--json` | no | Also write `{results_dir}/run-result_<YYYYMMDDTHHMMSSZ>.json`. New file per run. |
+| `-o` / `--out PATH` | no | Also write the run-result JSON object to `PATH` (relative or absolute). Parent directories are created. |
 | `--skip` | no | `claim-id=reason`. Repeat the flag to skip more than one Claim. See [Skip](#skip). |
 
-`--repo`, `--packs`, and `--out` are paths. `--repo` is required when the current directory has no `curbpack.json`. `--skip` without an `=` exits 2 and writes nothing:
+`--repo` is a path. `--packs` and `--requirements` are id lists. `--repo` is required when the current directory has no `curbpack.json`. `--skip` without an `=` exits 2 and writes nothing:
 
 ```text
 skip needs claim-id=reason, got 'nope'
 ```
 
-There is no global `--as-of`, `--packs id,id`, `--json`, `--heal`, or `--diff`. `git_fresh` carries its own `as_of` inside the Claim. The run result file is the JSON; stdout is a short summary.
+There is no global `--as-of`, `--heal`, or `--diff`. `git_fresh` carries its own `as_of` inside the Claim. Stdout is always the text summary. JSON is opt-in with `-j` and/or `-o`.
 
 ## What the run reads
 
-`curbpack.json` sits at the repository root. The runner validates `packs`, `requirements`, `exclude_requirements`, `search_hints`, and `curbpack` when they are present. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
+`curbpack.json` sits at the repository root. The runner validates the required workspace.md §2.2 fields (`packs`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`) plus optional `requirements` or `exclude_requirements`. The single key `curbpack` is rejected. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope, unless `--packs` / `--requirements` overlay that selection for this run without writing the file. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
 
-`packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way.
+`packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way. `unsigned_requirements` is required; its enforcement is a later epic.
 
 ```json
 {
-  "packs": ["house-policy", "cra-baseline"]
+  "packs": ["house-policy", "cra-baseline"],
+  "search_hints": { "sources": [{ "source": "documents" }, { "source": "git" }] },
+  "packs_dir": "curbpack/packs",
+  "claims_dir": "curbpack/claims",
+  "results_dir": ".curbpack",
+  "reports_dir": "curbpack/reports",
+  "unsigned_requirements": "reject"
 }
 ```
 
-For each id, the runner loads `<packs>/<id>/pack.json` and the Requirement JSON files beside it (every `*.json` in that directory except `pack.json`). With no `--packs`, `<packs>` is `<repo>/<curbpack>/packs`. The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory. It does not fetch a newer pack, and it does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`.
+For each selected pack id, the runner loads `<packs_dir>/<id>/<pack-version>/pack.json` and the Requirement JSON files beside it (every `*.json` in that version directory except `pack.json`). The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory. It does not fetch a newer pack, and it does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`.
 
-Claims are the `*.json` files directly inside `<repo>/<curbpack>/claims/`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection stops the run before a result is written. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
+Claims are the `*.json` files directly inside `claims_dir`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection is omitted; selected Claims still run. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
 
 The runner does not read `discovery_hints`, `note`, `remediation_hint`, or the Claim `description` to decide pass or fail. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
 
 ## What the run prints
 
-After a result has been written, stdout is one summary. Claim status is padded to seven characters. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one.
+Stdout is always the text summary, including when no JSON file is written. Claim status is padded to seven characters. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one. A `wrote {path}` line is printed only for each JSON file this run actually wrote.
 
-A passing Claim:
+A passing Claim with `-o /path/to/run.json`:
 
 ```text
 wrote /path/to/run.json
@@ -104,7 +117,7 @@ When the repository is a Git checkout with a commit and `git status --porcelain`
 worktree dirty: this result is not verification of that commit's exact content
 ```
 
-The snapshot is taken before `--out` is written. A dirty tree can still exit 0 when every executed Check passed. A later run records `dirty` again if Git sees the result file, or any other change, inside the repository.
+The snapshot is taken before any JSON file is written. A dirty tree can still exit 0 when every executed Check passed. A later run records `dirty` again if Git sees a result file, or any other change, inside the repository.
 
 ## The result file
 
@@ -138,7 +151,7 @@ One JSON object, Packs v2 §3.1. `tool` is `curbcheck`. The exit code is not a f
 
 Claim status is `fail` if any Check failed, otherwise `skipped` if any Check was skipped, otherwise `pass`. Each Check result has `index`, `check`, the `args` that were configured, and `status`. `detail` is omitted on `pass` and required on `fail` and `skipped`. These are mechanical outcomes. They are not a legal conclusion about the product.
 
-A finished run replaces `--out`, including a run that exits 1 because a Check failed or was skipped, and including a run whose `claims` array is empty. An empty array is a real result and is not a successful verification.
+When `-j` or `-o` is set, a finished run writes that JSON, including a run that exits 1 because a Check failed or was skipped, and including a run whose `claims` array is empty. An empty array is a real result and is not a successful verification. Without those flags, nothing is written.
 
 ## Exit codes
 
@@ -146,7 +159,7 @@ A finished run replaces `--out`, including a run that exits 1 because a Check fa
 | --- | --- |
 | 0 | At least one Check ran, and every Claim row and every Check is `pass`. A dirty worktree does not change this. |
 | 1 | A Check failed or was skipped, or no Check ran. Also the process status when the run stops with an exception before writing. The summary line then shows `exit 1`, or the exception text is the whole error. |
-| 2 | The arguments could not be parsed, or a `--skip` value has no `=`. Nothing is written. |
+| 2 | The arguments could not be parsed, a `--skip` value has no `=`, or `--packs` / `--requirements` contains `/` or `\\`. Nothing is written. |
 
 Exit 0 is the repository gate. A Check tool's own process often exits 0 even when its JSON says `fail`; that code belongs to the tool, and CI should use the repository command.
 
@@ -154,6 +167,7 @@ Exit 0 is the repository gate. A Check tool's own process often exits 0 even whe
 
 ```bash
 curbcheck --repo /path/to/product \
+  -o /path/to/run.json \
   --skip HOUSE-SECURITY-MD='not this build'
 ```
 
@@ -318,7 +332,7 @@ These stop with an exception on stderr and exit 1. The run result file is left a
 | `requirements` and `exclude_requirements` are both set | `ModelError` on `curbpack.json` |
 | A `requirements` id is not in the loaded packs | `ModelError` naming that id |
 | A selected pack directory has no `pack.json` | `ModelError` naming the directory it expected |
-| A Claim's `requirement_id` is not selected | `ModelError` on that Claim |
+| A Claim's `requirement_id` is not selected | That Claim is omitted; the run continues |
 | `--skip` has an `=` and the reason is empty | `ModelError` asking for a reason |
 
 A Check that fails validation, or whose tool is missing, does not belong in this list. That Check is a `fail` row, and the result file is written.

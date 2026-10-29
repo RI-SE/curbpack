@@ -5,7 +5,7 @@ Copy this file outside this repository for a run you keep. Do not check a filled
 | Field | Value |
 | --- | --- |
 | Date | |
-| Argv | `curbcheck --repo <prepared-repo> --packs docs/reference/test-packs --out <prepared-repo>/run-result.json` |
+| Argv | `curbcheck --repo <prepared-repo> -o <prepared-repo>/run-result.json` |
 | Reference-product commit | `dee885ffb421e4646fea07fbb4a629616c09efc6` |
 | Repository state | R1 |
 | Pack input | PF-01 |

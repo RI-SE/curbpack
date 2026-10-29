@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (CHK-07 decided in walkthrough; “kör vidare med curbcheck” after SYS-03 Task 7 — proceed Task 1–5; OPEN-1–OPEN-6 as this plan) |
-| Current task | Task 5 — IMPL-START |
-| Last completed task | Task 4 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk07_curbcheck.DefaultsFactoryTest.test_studio_calls_the_same_defaults_function tests.test_sys03_door.StudioConfigTest` — Ran 2 tests, OK. Broader `tests.test_sys03_door` has a pre-existing failure from unrelated dirty `common/validate.py`, not this step. |
+| Current task | Close story |
+| Last completed task | Task 5 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_catalogue tests.test_curbcheck_package tests.test_m4_checks` — Ran 39 tests, OK |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/CHK-07.md`. |
 | Requirements | Story CHK-R01–CHK-R06 in `CHK-07-curbcheck-workspace.md`. No new `docs/req/` row. Legacy `docs/req/checks.md` CHK-R01–CHK-R17 are CHK-05/CHK-06 Check-execution requirements, not this CLI contract. |
 | Packs v2 | `docs/reference/workspace.md` owns path fields, created-file values, and CLI channels (§2.2, §2.3, §3). `docs/reference/packs2.md` §2.3 owns pack/requirement selection; §3.1 owns the run-result object. This plan edits neither. |
 | Blockers | None |
-| Exact next action | Task 5: rewrite curbcheck-cli.md and retarget the CHK-R06 inventory. Write the RED doc/inventory test first. |
+| Exact next action | Move `plan/CHK-07.md` to `impl/CHK-07.md` and run `python3 scripts/check_story_plan.py CHK-07 --phase done`. |
 
 ## Requirements and acceptance mapping
 
@@ -32,8 +32,8 @@ Requirements live in the story. This table only maps each id to its acceptance t
 | CHK-R02 | CHK-07 | `tests/test_chk07_curbcheck.py` (stdout only; `-j` dated file; `-o PATH`) | Task 2 |
 | CHK-R03 | CHK-07 | `tests/test_chk07_curbcheck.py` (`created_curbpack()` + `curbcheck --defaults`) | Task 1 + Task 4 |
 | CHK-R04 | CHK-07 | `tests/test_chk07_curbcheck.py` (id-list `--packs`/`--requirements`; `/` or `\` exits 2) | Task 3 |
-| CHK-R05 | CHK-07 | `docs/reference/curbcheck-cli.md` describes R01–R04; pending banner gone | DRAFT |
-| CHK-R06 | CHK-07 | Inventory below retargeted; `tests.test_curbcheck_package` / catalogue / listed suite argv green without a packs-directory `--packs` | DRAFT |
+| CHK-R05 | CHK-07 | `docs/reference/curbcheck-cli.md` describes R01–R04; pending banner gone | Task 5 |
+| CHK-R06 | CHK-07 | Inventory below retargeted; `tests.test_curbcheck_package` / catalogue / listed suite argv green without a packs-directory `--packs` | Task 5 |
 
 ### CHK-R06 inventory (this plan)
 
@@ -137,10 +137,10 @@ Out of this story (do not retarget here): Studio Check/Review (`app/server.py`, 
 **Validation:** `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_curbcheck_catalogue`
 **Stop if:** a copied `curbpack check` procedure in FS/PK would have to be rewritten as if it were this program, or installing Studio packs would need a `curbpack.json` path that is absolute or contains `..`.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ## Open decisions
 
@@ -160,6 +160,7 @@ Proposals below are this plan’s intended implementation. They are not a new Pa
 
 ## Work log
 
+- **2026-10-29 / Task 5:** CHK-R05 + CHK-R06. RED: `CliDocsTest` failed on the pending banner and directory `--packs` argv. GREEN: rewrote `curbcheck-cli.md`; retargeted listed `docs/testing/` and `tests/check/` argv; carried PF-01 copies fixture packs into `curbpack/packs/<id>/<version>/`; Studio test-packs use the same helper; `run_curbcheck_json` is `-o` only. Command: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_catalogue tests.test_curbcheck_package tests.test_m4_checks` — Ran 39 tests, OK. First review Important (`b8314f1f`): unversioned fixture as `packs_dir`; weak inventory regex. Fixed; re-review (`6c37faa8`) no Critical/Important. Minors: leftover `run.sh` copy duplication, inventory test does not lock §2.2 construction. `make test-curbcheck` not run in this step.
 - **2026-10-29 / Task 4:** CHK-R03 caller clause. Already present: `discovery.door.created_curbpack is checks.defaults.created_curbpack`; `app/server.py` and `demo_setup.py` import that function, no second created-file literal. Command: `python3 -m unittest tests.test_chk07_curbcheck.DefaultsFactoryTest.test_studio_calls_the_same_defaults_function tests.test_sys03_door.StudioConfigTest` — Ran 2 tests, OK. No production diff. Independent review of Task 1 (`218c3e76`) already covered the call-through; no second review of an empty diff.
 - **2026-10-29 / Task 3:** CHK-R04 + remainder of CHK-R01 (CLI never takes a packs directory). RED: `--packs cra-baseline` was treated as a Path (`cra-baseline/cra-baseline`); `--requirements` unrecognized; path `--packs` still exited 0. GREEN: `_id_list` rejects `/`, `\\`, and empty tokens (exit 2); `run_repository` / `run_and_write` take keyword-only `pack_ids` / `requirement_ids` overlays; CLI always passes `packs_root=None`. Command: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_m4_checks` — Ran 34 tests, OK. First review Important (`e5792d1a`): comma-separated success argv missing; house-policy fixture had the wrong `pack_id`. Fixed; re-review (`3bb6d6f6`) no Critical/Important. Minors left: package test name leftover, no OPEN-6 empty-token test, `--requirements` does not prove OPEN-3 exclude replacement.
 - **2026-10-29 / Task 2:** CHK-R02 + CHK-R01 stop-before-write. RED: stdout-only tests failed because the CLI still wrote `run-result.json` and printed `wrote`; `-j`/`-o` were unrecognized. GREEN: `_cli` runs `run_repository`, writes only with `-j` (dated `results_dir` file) or `-o PATH`; both write both. `new_run_result_path` in `checks/run.py`. Command: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_m4_checks` — Ran 30 tests, OK. Review (`bd045bdc`) no Critical/Important. Minor fixed: captured stdout on the two leaky tests; parser description no longer says it always writes JSON. `app/server.py` dated helper untouched.
