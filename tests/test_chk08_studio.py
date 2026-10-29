@@ -20,6 +20,11 @@ from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
 
 
+def _get(url: str) -> str:
+    with urllib.request.urlopen(url, timeout=30) as response:
+        return response.read().decode()
+
+
 def _post(url: str, form: dict) -> str:
     data = urllib.parse.urlencode(form, doseq=True).encode()
     request = urllib.request.Request(url, data=data)
@@ -114,6 +119,42 @@ class CheckRunTest(unittest.TestCase):
                 self.assertEqual(len(results), 2)
                 self.assertEqual(results[0].read_bytes(), first)
                 self.assertIn(str(results[1].resolve()), ran_again)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+
+class DefaultsTest(unittest.TestCase):
+    def test_blank_curbpack_body_is_the_checks_defaults_function(self):
+        from checks.defaults import created_curbpack as factory
+        from discovery.door import created_curbpack as door_created
+
+        self.assertIs(door_created, factory)
+        self.assertIs(created_curbpack, factory)
+        fields = factory()
+        self.assertEqual(fields["packs_dir"], "curbpack/packs")
+        self.assertEqual(fields["claims_dir"], "curbpack/claims")
+        self.assertEqual(fields["results_dir"], ".curbpack")
+        self.assertEqual(fields["reports_dir"], "curbpack/reports")
+        self.assertEqual(fields["unsigned_requirements"], "reject")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            repo = workspace / "widget"
+            _register(workspace, "Widget", repo)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/requirements?repo=widget")
+                self.assertIn('name="packs_dir"', page)
+                self.assertIn(f'value="{fields["packs_dir"]}"', page)
+                self.assertIn(f'value="{fields["claims_dir"]}"', page)
+                self.assertIn(f'value="{fields["results_dir"]}"', page)
+                self.assertIn(f'value="{fields["reports_dir"]}"', page)
+                self.assertIn(f'value="{fields["unsigned_requirements"]}" selected', page)
+                self.assertFalse((repo / "curbpack.json").exists())
             finally:
                 httpd.shutdown()
                 httpd.server_close()
