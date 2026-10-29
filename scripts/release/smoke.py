@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -24,6 +25,38 @@ def _free_port() -> int:
 def _get(url: str) -> str:
     with urllib.request.urlopen(url, timeout=2) as response:
         return response.read().decode("utf-8", errors="replace")
+
+
+def _post(url: str, fields: dict) -> str:
+    data = urllib.parse.urlencode(fields).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST")
+    with urllib.request.urlopen(request, timeout=5) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def _pack_sources_with_adapters(base: str) -> str:
+    """Start empty, save curbpack.json, then return Pack Sources with the Add dialog."""
+    started = _post(f"{base}/requirements/start-empty", {"folder": "product"})
+    if "cra-xml" in started:
+        return started
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from checks.defaults import created_curbpack
+
+    fields = created_curbpack()
+    return _post(
+        f"{base}/requirements/curbpack",
+        {
+            "repo": "product",
+            "action": "save",
+            "packs": "",
+            "packs_dir": fields["packs_dir"],
+            "claims_dir": fields["claims_dir"],
+            "results_dir": fields["results_dir"],
+            "reports_dir": fields["reports_dir"],
+            "unsigned_requirements": fields["unsigned_requirements"],
+            "search_hints": json.dumps(fields["search_hints"]),
+        },
+    )
 
 
 def smoke(binary: Path) -> int:
@@ -73,7 +106,12 @@ def smoke(binary: Path) -> int:
             if "jsondiffpatch" not in vendor:
                 print("[FAIL] smoke did not read the bundled UI resource", flush=True)
                 return 1
-            requirements = _get(f"http://127.0.0.1:{port}/requirements")
+            try:
+                requirements = _pack_sources_with_adapters(f"http://127.0.0.1:{port}")
+            except Exception as exc:
+                print(exc, flush=True)
+                print("[FAIL] smoke did not read the bundled adapters", flush=True)
+                return 1
             if "cra-xml" not in requirements:
                 print("[FAIL] smoke did not read the bundled adapters", flush=True)
                 return 1
