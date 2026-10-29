@@ -34,7 +34,7 @@ def discover_page(model: dict) -> bytes:
 <h1>Discovery &amp; Claims</h1>
 {intro}
 {flash}
-<div class="card discover-wrap">{_repo_picker(model, pilot)}{_section_table(model, pilot)}</div>
+<div class="card discover-wrap">{_repo_picker(model, pilot)}{_path_chrome(model)}{_section_table(model, pilot)}</div>
 """
     if pilot:
         body += _add_repo_dialog(str(model.get("workspace_root") or ""))
@@ -42,6 +42,30 @@ def discover_page(model: dict) -> bytes:
     if model.get("job"):
         body += _job_dialog(model["job"])
     return page("Discovery & Claims", body)
+
+
+def _path_chrome(model: dict) -> str:
+    if not str(model.get("repo_id") or ""):
+        return ""
+    curbpack_file = str(model.get("curbpack_file") or "")
+    packs = str(model.get("directory") or "")
+    claims = str(model.get("claims_dir") or "")
+    results = str(model.get("results_dir") or "")
+    reports = str(model.get("reports_dir") or "")
+    if not (curbpack_file or packs or claims):
+        return ""
+    parts = []
+    if curbpack_file:
+        parts.append(f"<p>curbpack.json <code>{html.escape(curbpack_file)}</code></p>")
+    if packs:
+        parts.append(f'<p class="muted">Packs directory <code>{html.escape(packs)}</code>.</p>')
+    if claims:
+        parts.append(f'<p class="muted">Claims directory <code>{html.escape(claims)}</code>.</p>')
+    if results:
+        parts.append(f'<p class="muted">Results directory <code>{html.escape(results)}</code>.</p>')
+    if reports:
+        parts.append(f'<p class="muted">Reports directory <code>{html.escape(reports)}</code>.</p>')
+    return "".join(parts)
 
 
 def _section_table(model: dict, pilot: bool) -> str:

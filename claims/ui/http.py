@@ -11,9 +11,10 @@ from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
 from discovery.jobs import latest_job
 from discovery.present import overview_rows, signing_label
+from discovery.door import repo_claims_dir, repo_pack_requirements
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
-from requirements.workspace import load_working_copy, resolve_copy_ref
+from requirements.workspace import resolve_copy_ref
 
 
 def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict) -> bytes | None:
@@ -26,6 +27,7 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
             context["claims"],
             repo=context["repo"],
             trust=trust,
+            claims_dir=context["claims_dir"],
         )
         gap = _one(query, "gap") == "1"
         if gap:
@@ -128,7 +130,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         model["notice"] = str(exc)
         return researcher.requirement_page(model)
     outcomes = create_configured_claims(
-        context["repo"] / "claims",
+        context["claims_dir"],
         requirement_id=requirement_id,
         known_ids=known,
         source=source,
@@ -136,7 +138,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         checks=checks,
         description=description,
     )
-    context["claims"] = read_claims(context["repo"] / "claims")
+    context["claims"] = read_claims(context["claims_dir"])
     model = _with_signing(context, requirement, form, trust)
     model["outcomes"] = outcomes
     return researcher.requirement_page(model)
@@ -155,14 +157,13 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
     pack_id = source.get("pack_id")
     if not isinstance(pack_id, str) or not pack_id:
         raise ModelError("discover", "pack_id", "a pack id on the source")
-    directory = resolve_copy_ref(root, pack_id, timestamp)
-    _pack, requirements = load_working_copy(directory)
-    requirements = [item for item in requirements if isinstance(item, dict) and isinstance(item.get("id"), str)]
+    resolve_copy_ref(root, pack_id, timestamp)
     repo = resolve_repo_path(root, str(row.get("path") or ""))
     job = latest_job(root / "jobs", repo_id=repo_id, source_id=source_id, timestamp=timestamp)
     feedback = load_feedback(root, repo_id, source_id, timestamp)
-    claims_dir = repo / "claims"
-    claims = read_claims(claims_dir) if claims_dir.is_dir() else []
+    folder = repo_claims_dir(repo)
+    requirements = repo_pack_requirements(repo, pack_id)
+    claims = read_claims(folder) if folder.is_dir() else []
     return {
         "repo_id": repo_id,
         "repo_name": str(row.get("name") or repo_id),
@@ -171,6 +172,7 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
         "section_id": str(source.get("section_id") or ""),
         "timestamp": timestamp,
         "repo": repo,
+        "claims_dir": folder,
         "requirements": requirements,
         "job": job,
         "feedback": feedback,
@@ -182,12 +184,18 @@ def _requirement(context: dict, requirement_id: str) -> dict:
     for item in context["requirements"]:
         if item.get("id") == requirement_id:
             return item
-    raise ModelError("discover", "requirement_id", f"an id in this working copy, not {requirement_id}")
+    raise ModelError("discover", "requirement_id", f"an id in this pack, not {requirement_id}")
 
 
 def _with_signing(context: dict, requirement: dict, bag: dict, trust: dict) -> dict:
     model = _requirement_model(context, requirement, bag)
-    model["signing"] = signing_label(context["claims"], requirement["id"], context["repo"], trust)
+    model["signing"] = signing_label(
+        context["claims"],
+        requirement["id"],
+        context["repo"],
+        trust,
+        claims_dir=context["claims_dir"],
+    )
     return model
 
 
@@ -371,7 +379,7 @@ def _choose_motivation(root: Path, context: dict, requirement_id: str, file_path
         return
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
         return
-    write_claim(context["repo"] / "claims", rebind(claim, description=why))
+    write_claim(context["claims_dir"], rebind(claim, description=why))
 
 
 def _claim_for_path(claims: list, requirement_id: str, path: str) -> dict | None:
@@ -407,7 +415,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
     source = _claim_source(requirement, form)
     known = [item["id"] for item in context["requirements"]]
     claim_id = suggest_claim_id(requirement_id, file_path)
-    directory = context["repo"] / "claims"
+    directory = context["claims_dir"]
     destination = directory / f"{claim_id}.json"
     if destination.is_file():
         existing = read_claim(destination)

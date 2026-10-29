@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import shutil
+import tempfile
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-import tempfile
 
 from app.server import Workspace, make_handler
 from claims.bind import build_claim, write_claim
 from common.jsonio import write_json
 from common.store import save_requirement
+from discovery.door import created_curbpack
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 from requirements.workspace import create_extraction_copy, mark_selected
 
@@ -41,7 +43,9 @@ class DiscoverLayoutTest(unittest.TestCase):
     def test_pilot_lists_sections_and_product_view_hides_choices(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cra = create_extraction_copy(root, "cra-xml-baseline", _pack("cra-xml-baseline"), at="2026-10-13T090000Z")
+            cra_pack = _pack("cra-xml-baseline")
+            nis_pack = _pack("nis2-baseline")
+            cra = create_extraction_copy(root, "cra-xml-baseline", cra_pack, at="2026-10-13T090000Z")
             create_extraction_copy(root, "cra-xml-baseline", _pack("cra-xml-baseline"), at="2026-10-13T143000Z")
             save_requirement(cra, _requirement("REQ-A", "cra-xml-baseline"), published=False)
             save_requirement(cra, _requirement("REQ-B", "cra-xml-baseline"), published=False)
@@ -50,14 +54,19 @@ class DiscoverLayoutTest(unittest.TestCase):
             published.mkdir(parents=True)
             for path in cra.glob("*.json"):
                 (published / path.name).write_bytes(path.read_bytes())
-            nis = create_extraction_copy(root, "nis2-baseline", _pack("nis2-baseline"), at="2026-10-13T100000Z")
+            nis = create_extraction_copy(root, "nis2-baseline", nis_pack, at="2026-10-13T100000Z")
             save_requirement(nis, _requirement("REQ-N", "nis2-baseline"), published=False)
 
             repo = root / "product"
             repo.mkdir()
-            write_json(repo / "curbpack.json", {"packs": ["cra-xml-baseline", "nis2-baseline"], "search_hints": {}})
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["cra-xml-baseline", "nis2-baseline"]),
+            )
+            shutil.copytree(cra, repo / "curbpack" / "packs" / "cra-xml-baseline" / cra_pack["version"])
+            shutil.copytree(nis, repo / "curbpack" / "packs" / "nis2-baseline" / nis_pack["version"])
             write_claim(
-                repo / "claims",
+                repo / "curbpack" / "claims",
                 build_claim(
                     claim_id="claim-a",
                     requirement_id="REQ-A",

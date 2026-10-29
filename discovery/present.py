@@ -6,6 +6,7 @@ from pathlib import Path
 
 from claims.bind import read_claim_seal, suggest_claim_id
 from discovery.assess import shows_support
+from discovery.door import claim_file_relative
 
 
 def overview_rows(
@@ -16,6 +17,7 @@ def overview_rows(
     *,
     repo: Path | None,
     trust: dict[str, bytes],
+    claims_dir: Path | None = None,
 ) -> list[dict]:
     by_requirement = {}
     if isinstance(job, dict):
@@ -50,7 +52,7 @@ def overview_rows(
                 "useful": sum(1 for item in findings if item.get("vote") == "useful"),
                 "poor": sum(1 for item in findings if item.get("vote") == "poor"),
                 "claims": len(owned),
-                "signing": _signing(owned, repo, trust),
+                "signing": _signing(owned, repo, trust, claims_dir),
             }
         )
     return rows
@@ -117,18 +119,28 @@ def signing_label(
     requirement_id: str,
     repo: Path | None,
     trust: dict[str, bytes],
+    claims_dir: Path | None = None,
 ) -> str:
     """Seal reading for the Claims of one Requirement. Empty when there are none."""
     owned = [claim for claim in claims if isinstance(claim, dict) and claim.get("requirement_id") == requirement_id]
-    return _signing(owned, repo, trust)
+    return _signing(owned, repo, trust, claims_dir)
 
 
-def _signing(claims: list[dict], repo: Path | None, trust: dict[str, bytes]) -> str:
+def _signing(
+    claims: list[dict],
+    repo: Path | None,
+    trust: dict[str, bytes],
+    claims_dir: Path | None = None,
+) -> str:
     if not claims:
         return ""
     labels = []
     for claim in claims:
-        relative = f"claims/{claim.get('id')}.json"
+        claim_id = str(claim.get("id") or "")
+        if repo is not None and claims_dir is not None and claim_id:
+            relative = claim_file_relative(repo, claims_dir, claim_id)
+        else:
+            relative = f"claims/{claim_id}.json"
         reading = read_claim_seal(claim, trust, repo=repo, relative=relative)
         if reading.get("verifiable"):
             labels.append("verifiable")

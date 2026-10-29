@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import tempfile
 import threading
 import time
@@ -15,6 +16,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from discovery.door import created_curbpack
 from claims.bind import (
     build_claim,
     exist_args_for_path,
@@ -25,7 +27,7 @@ from claims.bind import (
     write_claim,
 )
 from common.errors import ModelError
-from common.jsonio import read_json
+from common.jsonio import read_json, write_json
 from common.signing import generate_keypair
 from common.store import load_claim, save_requirement
 from requirements.extract.pipeline import draft_pack
@@ -89,14 +91,14 @@ class ClaimsBindingUiTest(unittest.TestCase):
             thread.start()
             base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
             try:
-                discover = _get(base + "/discover")
-                self.assertIn(">Pack</th>", discover)
-                self.assertIn("CRA Annex VII", discover)
-                self.assertIn("2026-10-14T080000Z", discover)
                 _post(
                     base + "/discover/repos",
                     {"name": "sample-product", "path": str(root / "product")},
                 )
+                discover = _get(base + "/discover?repo=sample-product")
+                self.assertIn(">Pack</th>", discover)
+                self.assertIn("CRA Annex VII", discover)
+                self.assertIn("2026-10-14T080000Z", discover)
                 requirement_file = root / "cra-xml-baseline" / "2026-10-14T080000Z" / "REQ-A.json"
                 before = requirement_file.read_bytes()
                 started = _post(
@@ -129,7 +131,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 )
                 self.assertNotIn("CRA-ANNEX-VII-RISK", finished)
                 self.assertEqual(requirement_file.read_bytes(), before)
-                self.assertFalse((root / "product" / "claims").exists())
+                self.assertFalse((root / "product" / "curbpack" / "claims").exists())
 
                 claims_empty = _get(base + "/claims")
                 self.assertIn("Claim editor", claims_empty)
@@ -137,7 +139,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 self.assertNotIn("New claim", claims_empty)
 
                 _post(base + "/claims", _new_claim("claim-from-a", "REQ-A", "docs/risk-a.md", "Evidence for A."))
-                saved_a = read_json(root / "product" / "claims" / "claim-from-a.json")
+                saved_a = read_json(root / "product" / "curbpack" / "claims" / "claim-from-a.json")
                 self.assertEqual(saved_a["requirement_id"], "REQ-A")
                 self.assertEqual(saved_a["source"], "documents")
                 self.assertEqual(saved_a["args"], {"path": "docs/risk-a.md"})
@@ -145,7 +147,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 self.assertNotIn("signed", saved_a)
 
                 _post(base + "/claims", _new_claim("claim-from-b", "REQ-B", "docs/risk-b.md", "Evidence for B."))
-                saved_b = read_json(root / "product" / "claims" / "claim-from-b.json")
+                saved_b = read_json(root / "product" / "curbpack" / "claims" / "claim-from-b.json")
                 self.assertEqual(saved_b["requirement_id"], "REQ-B")
                 self.assertEqual(saved_b["args"], {"path": "docs/risk-b.md"})
                 self.assertNotEqual(saved_b["requirement_id"], saved_a["requirement_id"])
@@ -158,9 +160,9 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 with self.assertRaises(urllib.error.HTTPError) as caught:
                     _post(base + "/claims", _new_claim("claim-bad", "CRA-ANNEX-VII-RISK", "docs/risk-a.md", "Nope."))
                 self.assertEqual(caught.exception.code, 400)
-                self.assertFalse((root / "product" / "claims" / "claim-bad.json").exists())
+                self.assertFalse((root / "product" / "curbpack" / "claims" / "claim-bad.json").exists())
                 self.assertEqual(
-                    read_json(root / "product" / "claims" / "claim-from-a.json")["requirement_id"],
+                    read_json(root / "product" / "curbpack" / "claims" / "claim-from-a.json")["requirement_id"],
                     "REQ-A",
                 )
             finally:
@@ -184,7 +186,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                     base + "/claims",
                     _new_claim("claim-direct", "REQ-A", "docs/direct.md", "direct", severity="medium"),
                 )
-                draft = read_json(root / "product" / "claims" / "claim-direct.json")
+                draft = read_json(root / "product" / "curbpack" / "claims" / "claim-direct.json")
                 self.assertEqual(draft["requirement_id"], "REQ-A")
                 self.assertNotIn("signed", draft)
 
@@ -195,7 +197,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 _post(base + "/claims/claim-direct/sign", {"name": "Pilot Reviewer"})
                 sealed_page = _get(base + "/claims")
                 self.assertIn("Signed · verifiable", sealed_page)
-                sealed = load_claim(root / "product" / "claims" / "claim-direct.json")
+                sealed = load_claim(root / "product" / "curbpack" / "claims" / "claim-direct.json")
                 self.assertIn("signed", sealed)
 
                 same_save = _post(
@@ -203,7 +205,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                     _edit_claim("docs/direct.md", "direct", severity="medium"),
                 )
                 self.assertIn("Claim saved", same_save)
-                still = load_claim(root / "product" / "claims" / "claim-direct.json")
+                still = load_claim(root / "product" / "curbpack" / "claims" / "claim-direct.json")
                 self.assertIn("signed", still)
 
                 cleared = _post(
@@ -212,7 +214,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 )
                 self.assertIn("Previous seal cleared", cleared)
                 self.assertIn("Unsigned draft", cleared)
-                after = load_claim(root / "product" / "claims" / "claim-direct.json")
+                after = load_claim(root / "product" / "curbpack" / "claims" / "claim-direct.json")
                 self.assertNotIn("signed", after)
                 self.assertEqual(after["requirement_id"], "REQ-A")
                 self.assertEqual(after["args"], {"path": "docs/moved.md"})
@@ -292,20 +294,8 @@ def _seed_two_requirements(root: Path) -> None:
     mark_selected(root, pack_id, stamp)
     product = root / "product"
     product.mkdir(parents=True)
-    (product / "curbpack.json").write_text(
-        json.dumps(
-            {
-                "packs": [pack_id],
-                "search_hints": {
-                    "exclude_path_globs": ["**/node_modules/**"],
-                    "prefer_path_globs": ["**/docs/**"],
-                },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    write_json(product / "curbpack.json", created_curbpack(packs=[pack_id]))
+    shutil.copytree(copy, product / "curbpack" / "packs" / pack_id / pack["version"])
     (product / "docs").mkdir()
     (product / "docs" / "risk-a.md").write_text("# Risk A\nrisk assessment\n", encoding="utf-8")
     (product / "docs" / "risk-b.md").write_text("# Risk B\nrisk assessment\n", encoding="utf-8")
