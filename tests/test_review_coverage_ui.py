@@ -14,6 +14,7 @@ from checks.run import build_run_result
 from claims.bind import build_claim, write_claim
 from common.jsonio import write_json
 from common.store import save_run_result
+from discovery.door import set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from tests.test_claims_binding_ui import _seed_two_requirements
 
@@ -50,10 +51,10 @@ class ReviewCoverageUiTest(unittest.TestCase):
                 ],
                 description="The other note was supposed to contain a phrase.",
             )
-            write_claim(product / "claims", passed)
-            write_claim(product / "claims", failed)
+            write_claim(product / "curbpack" / "claims", passed)
+            write_claim(product / "curbpack" / "claims", failed)
             save_run_result(
-                product / ".curbpack" / "run-result.json",
+                product / ".curbpack" / "run-result_20261014T080000Z.json",
                 build_run_result(
                     product,
                     [passed, failed],
@@ -78,6 +79,7 @@ class ReviewCoverageUiTest(unittest.TestCase):
                 },
             )
             save_repos(root, add_repo(root, load_repos(root), name="sample-product", path=str(product)))
+            set_open_repo(root, "sample-product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()

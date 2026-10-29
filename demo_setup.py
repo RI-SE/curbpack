@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 
 from common.errors import ModelError
+from common.jsonio import write_json
 from common.store import save_pack, save_requirement
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 from requirements.editing import apply_edits
 
@@ -27,23 +29,17 @@ def prepare_demo(root: Path) -> None:
             "remediation_hint": "The file should be the product's own assessment, not a placeholder.",
         },
     )
-    save_pack(pack_dir, draft_pack())
+    pack = draft_pack()
+    save_pack(pack_dir, pack)
     save_requirement(pack_dir, requirement)
     repo.mkdir(parents=True)
-    (repo / "curbpack.json").write_text(
-        json.dumps(
-            {
-                "packs": ["cra-baseline"],
-                "search_hints": {
-                    "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
-                    "prefer_path_globs": ["**/README*", "**/docs/**"],
-                },
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    hints = created_curbpack()["search_hints"]
+    hints["exclude_path_globs"] = ["**/node_modules/**", "*FUTURE_*"]
+    hints["prefer_path_globs"] = ["**/README*", "**/docs/**"]
+    write_json(repo / "curbpack.json", created_curbpack(packs=["cra-baseline"], search_hints=hints))
+    version_dir = repo / "curbpack" / "packs" / "cra-baseline" / pack["version"]
+    save_pack(version_dir, pack)
+    save_requirement(version_dir, requirement)
     (repo / "README.md").write_text("# sample-product\n\nA demonstration product.\n", encoding="utf-8")
     (repo / "marketing.md").write_text("The brochure mentions cybersecurity risk.\n", encoding="utf-8")
     (repo / "docs").mkdir()
@@ -54,6 +50,8 @@ def prepare_demo(root: Path) -> None:
     _git(repo, "init", "-b", "main")
     _git(repo, "add", "-A")
     _git(repo, "-c", "user.email=poc2@example.com", "-c", "user.name=PoC2", "commit", "-m", "sample product")
+    save_repos(root, add_repo(root, load_repos(root), name="sample-product", path=str(repo)))
+    set_open_repo(root, "sample-product")
 
 
 def _git(repo: Path, *args: str) -> None:

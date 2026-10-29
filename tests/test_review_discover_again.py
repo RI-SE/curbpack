@@ -10,8 +10,11 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from checks.run import reports_dir
 from claims.bind import build_claim
 from common.canonical import version_digest
+from common.jsonio import read_json
+from common.validate import validate_curbpack_config
 from demo_setup import prepare_demo
 from review.compile import compile_report, record_decision, write_report
 
@@ -86,11 +89,13 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
                 requirements=[_requirement("R1")],
                 claims=[old, ok],
             )
+            config = validate_curbpack_config(read_json(ws.repo / "curbpack.json"))
+            report_path = reports_dir(ws.repo, config) / "review-report_20261021T120000Z.json"
             write_report(
-                ws.report_path,
+                report_path,
                 record_decision(report, "I read this run. I am not saying the product meets CRA."),
             )
-            before_bytes = ws.report_path.read_bytes()
+            before_bytes = report_path.read_bytes()
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(ws))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
@@ -103,7 +108,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
-            self.assertEqual(ws.report_path.read_bytes(), before_bytes)
+            self.assertEqual(report_path.read_bytes(), before_bytes)
 
         before, _sep, rest = page.partition("<dialog ")
         dialog, _end, after = rest.partition("</dialog>")

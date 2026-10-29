@@ -3313,7 +3313,7 @@ def serve(root: Path, host: str = "127.0.0.1", port: int = 8770) -> None:
             format="%(levelname)s %(name)s: %(message)s",
         )
     httpd = ThreadingHTTPServer((host, port), make_handler(Workspace(root)))
-    print(f"PoC2 demo at http://{host}:{httpd.server_address[1]}/", flush=True)
+    print(f"Curbpack Studio at http://{host}:{httpd.server_address[1]}/", flush=True)
     httpd.serve_forever()
 
 

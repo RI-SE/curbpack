@@ -14,11 +14,22 @@ REPLACEMENT_UNCHECKED = "The replacement has not passed Checks yet."
 
 
 def load_run(repo: Path) -> dict | None:
-    path = repo / ".curbpack" / "run-result.json"
-    if not path.is_file():
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
         return None
     try:
-        return load_run_result(path)
+        from checks.run import results_dir
+        from common.jsonio import read_json
+        from common.validate import validate_curbpack_config
+
+        folder = results_dir(repo, validate_curbpack_config(read_json(config_path)))
+    except (ModelError, OSError, ValueError):
+        return None
+    dated = sorted(folder.glob("run-result_*.json"))
+    if not dated:
+        return None
+    try:
+        return load_run_result(dated[-1])
     except (ModelError, OSError, ValueError):
         return None
 

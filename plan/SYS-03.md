@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (SYS-R01–R09 walkthrough OK; proceed Task 1–8; CHK-07/08 out of this plan) |
-| Current task | Task 6 — Review I/O → reports_dir |
-| Last completed task | Task 5 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_discover_claims_ui tests.test_discover_layout tests.test_claims_binding_ui` — Ran 26 tests, OK. |
+| Current task | Task 7 — IMPL-START |
+| Last completed task | Task 6 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again tests.test_review_compile tests.test_review_coverage_ui` — Ran 31 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/SYS-03.md`. |
 | Requirements | Story SYS-R01–SYS-R09 in `SYS-03-one-repo-door.md` (R01 rewritten 2026-10-29 walkthrough; R09 Studio config page). No new `docs/req/` row. |
 | Packs v2 | `docs/reference/workspace.md` and `docs/reference/packs2.md` are both law. This plan edits neither. Workspace §2 owns `curbpack.json` keys, which of them are required, and the on-disk paths. Packs v2 §2.3 owns selection and the `search_hints` merge; §3.1 owns the run-result object. Allowed keys: `packs`, `requirements` XOR `exclude_requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`. `search_hints` and `unsigned_requirements` are required. The single key `curbpack`, and a `temp`/`tmp` key, are rejected. |
 | Blockers | None |
-| **Exact next action** | Task 6: Review I/O to reports_dir dated review-report files. |
+| **Exact next action** | Task 7: Studio config page for curbpack-studio.json. |
 
 ## Requirements and acceptance mapping
 
@@ -33,8 +33,8 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 | SYS-R03 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
 | SYS-R04 | SYS-03 | `tests/test_sys03_door.py` | Task 5 |
 | SYS-R05 | SYS-03 | `tests/test_sys03_door.py` | Task 4 |
-| SYS-R06 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 5 (Review path I/O still Task 6) |
+| SYS-R06 | SYS-03 | `tests/test_sys03_door.py` | Task 6 |
+| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 6 (Studio config page still Task 7) |
 | SYS-R08 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 | SYS-R09 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 
@@ -122,13 +122,13 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Requirements:** SYS-R06, SYS-R07 for `/review`.
 **Files:** `app/server.py` `preview_report`, report write, and `_review_view`, `claims/ui/coverage.py` `load_run` (Discover-from-review greying still reads `<repo>/.curbpack/run-result.json` after Task 5), `tests/test_sys03_door.py`, `tests/test_ui_smoke.py`, `tests/test_review_report_kept.py`, `tests/test_review_replace_flow.py`, `tests/test_review_discover_again.py`.
 **Test first:** POST `repo_id` on `/review` writes `open-repo.json`. GET `/review` names that repository and `packs_dir`. The repository has `<results_dir>/run-result_<UTC>.json`, `<packs_dir>/<pack-id>/<pack-version>/pack.json`, and a Claim in `claims_dir`. `<workspace>/product/` has a different run and a different Claim. Compile reads that dated run-result file and `claims_dir`. The report file is `<reports_dir>/review-report_<UTC>.json`. A second compile writes a second report file and leaves the first in place. It does not contain the workspace Claim and it is not written under `product/docs/reports/` or `product/.curbpack/`. With no open repo, GET `/review` says none is chosen and does not compile `product/`. `tests/test_ui_smoke.py`, `tests/test_review_report_kept.py`, `tests/test_review_replace_flow.py`, and `tests/test_review_discover_again.py` are updated in this task: register the product in `product_repos.json`, set `open-repo.json` to that id, put the Pack at `<packs_dir>/cra-baseline/<version>/`, put Claims in `claims_dir`, expect the run at `<results_dir>/run-result_<UTC>.json`, and expect the report at `<reports_dir>/review-report_<UTC>.json`. A later run or compile does not replace the earlier file. `prepare_demo` today writes `product/.curbpack/run-result.json` and `workspace/packs/cra-baseline`; setting `open-repo.json` alone does not make those tests pass, so the fixtures move. Keep the assertions that a failed Claim stays visible and that Discover-again opens one Requirement. `tests/test_review_compile.py` calls `compile_report` directly and is not this task's evidence.
-**Validation:** `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again`
+**Validation:** `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again tests.test_review_compile tests.test_review_coverage_ui`
 **Stop if:** pointing the report at `reports_dir`, or the run at `results_dir`, requires a new `curbpack.json` field beyond those two.
 
-- [ ] RED observed for the intended behavior.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior.
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 7 — Studio config page (`curbpack-studio.json`)
 
@@ -171,3 +171,4 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 - **2026-10-29 / Task 3:** Door UI. Empty Pack Sources / Pack Editor / Discover / Check / Review without open repo. `curbpack.json` Save/Cancel dialog (Requirements-dialog style). Start empty registers+opens, does not write the file. Add writes `<packs_dir>/<id>/<version>/pack.json` (`version` from `draft_pack` only). Empty `claims_dir` says No Claims. Paths shown. Pack Editor prefers the open repo's packs_dir row. Review Compile hidden until Task 6 and POST compile does not write the workspace product. First review Important (`45f1f31a`): Pack Editor catalog-first, missing claims_dir chrome, adapter drop, Review workspace preview, old `curbpack_directory` lookup, section-V test removed. Re-review Important leftovers (`372c0f7b`): adapter_id+non-adapter URL still accepted; Compile still wrote workspace — both closed in this step. No third review. Minor left: comma-separated packs field (CHK-07 checkboxes), three pickers, `created_curbpack` until CHK-07. Command: `python3 -m unittest tests.test_sys03_door tests.test_cover_navigation tests.test_requirements_ui tests.test_requirements_export tests.test_requirements_catalog` — Ran 45 tests, OK.
 - **2026-10-29 / Task 4:** Check I/O. POST `/check` opens the chosen repo, saves the four path fields without rewriting `packs`, and writes `<results_dir>/run-result_<UTC>.json` via `run_and_write`. A second run leaves the first file unchanged. GET `/check` does not fall back to workspace `product/`. `?result=` is confined to that repo's `results_dir`. First review Important: `?result=` confinement + include-list HTTP case. Re-review Important leftover (`4a846ca2`): outsider named `foreign-run-result_…` never reached the directory bound — closed by writing a valid `run-result_*.json` outside `results_dir`. No third review. Minor left: unused `_repo_claims` / `_pack_directory_for_check` helpers, leftover `ask_read`, same-second `time.sleep(1)` in `_new_run_result_path`. Command: `python3 -m unittest tests.test_sys03_door tests.test_check_editor tests.test_m4_checks` — Ran 21 tests, OK.
 - **2026-10-29 / Task 5:** Discover I/O. Requirements from `packs_dir` for packs named in the open repo's `curbpack.json`; Claims read/write `<claims_dir>/<id>.json`. Working-copy timestamp stays as Discover job identity only. First review Important (`42019176`): working-copy fallback, `repo/claims` default, Claim-editor lookup, git-seal relative path. Re-review Important leftovers (`1281d823`): Claim POST still used working-copy ids — closed via `_claims_lookup`; silent empty Discover run without `curbpack.json` — closed (`repo_pack_requirements` raises, `_start_discover` validates the file). Coverage `load_run` of `<repo>/.curbpack/run-result.json` deferred to Task 6 (recorded on that task). No third review. Command: `python3 -m unittest tests.test_sys03_door tests.test_discover_claims_ui tests.test_discover_layout tests.test_claims_binding_ui` — Ran 26 tests, OK.
+- **2026-10-29 / Task 6:** Review I/O. Compile writes `<reports_dir>/review-report_<UTC>.json`; a second compile leaves the first file. GET `/review` with no saved report previews the latest `results_dir` run and does not write. Discover-from-review greying `load_run` reads dated `results_dir` files. `prepare_demo` registers `sample-product`, copies the pack into `packs_dir`, and sets `open-repo.json`. First review Important (`cf7cf3c1`): missing preview after Check; `tests.test_review_coverage_ui` still wrote `product/claims` and undated `run-result.json`. Re-review Approved (`25708dae`). No third review. Minor left: confirm-class names in `test_review_report_kept.py`; Cover/`Workspace.run_path` still `docs/reports/review-report.json`; unused `report_exists` on `review_page`. Command: `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again tests.test_review_compile tests.test_review_coverage_ui` — Ran 31 tests, OK.
