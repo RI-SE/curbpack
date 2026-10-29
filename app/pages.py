@@ -743,12 +743,14 @@ def review_page(
             listed = _review_groups(door["presentation"], door) + appendix_html
         else:
             listed = f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>"
+        file_dialog = _review_file_dialog(door or {})
         body_report = f"""
 {reading_html}
 {same_html}
 <p>{html.escape(note)}</p>
 <ul>{limits}</ul>
 {unchecked_html}
+{file_dialog}
 {listed}
 """
     door = door or {}
@@ -877,12 +879,44 @@ def _review_groups(presentation: dict, door: dict) -> str:
                 args = check.get("args") if isinstance(check.get("args"), dict) else {}
                 check_status = str(check.get("status") or "")
                 check_class = ' class="pill-bad"' if check_status == "fail" else ""
+                path_bits = []
+                for entry in check.get("paths") or []:
+                    if not isinstance(entry, dict):
+                        continue
+                    rel = str(entry.get("path") or "")
+                    state = str(entry.get("state") or "")
+                    if state == "present":
+                        file_href = (
+                            f"/review?repo={repo}&{document}"
+                            f"&expanded={quote(','.join(open_ids), safe='')}"
+                            f"&file={quote(rel, safe='')}"
+                        )
+                        path_bits.append(
+                            f'<a data-path="{html.escape(rel)}" data-path-state="present" '
+                            f'href="{html.escape(file_href)}">{html.escape(rel)}</a>'
+                        )
+                    else:
+                        path_bits.append(
+                            f'<span data-path="{html.escape(rel)}" '
+                            f'data-path-state="{html.escape(state)}">{html.escape(rel)} ({html.escape(state)})</span>'
+                        )
+                dep = check.get("dep_ban") if isinstance(check.get("dep_ban"), dict) else None
+                if dep is not None:
+                    banned = ", ".join(
+                        html.escape(str(item)) for item in (dep.get("banned_versions") or [])
+                    )
+                    path_bits.append(
+                        f'<span data-dep-ban="{html.escape(str(dep.get("package") or ""))}">'
+                        f'package {html.escape(str(dep.get("package") or ""))} '
+                        f"banned_versions {banned}</span>"
+                    )
+                path_html = (" " + " ".join(path_bits)) if path_bits else ""
                 checks.append(
                     "<li "
                     f'data-check="{html.escape(str(check.get("check") or ""))}" '
                     f'data-status="{html.escape(check_status)}"{check_class}>'
                     f"{html.escape(str(check.get('index')))}: {html.escape(str(check.get('check') or ''))} "
-                    f"{html.escape(check_status)}{detail_html} "
+                    f"{html.escape(check_status)}{detail_html}{path_html} "
                     f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></li>"
                 )
             sentences = "".join(
@@ -932,6 +966,40 @@ def _seal_line(reading: dict) -> str:
         f" verifiable {verified}"
         f" version {html.escape(str(reading.get('version') or ''))}"
         f"{reason_html}"
+    )
+
+
+def _review_file_dialog(door: dict) -> str:
+    view = door.get("file_view")
+    if not isinstance(view, dict):
+        return ""
+    rel = str(view.get("path") or "")
+    state = str(view.get("state") or "")
+    repo = quote(str(door.get("repo_id") or ""), safe="")
+    selected_result = quote(str(door.get("selected_result") or ""), safe="")
+    selected_report = quote(str(door.get("selected_report") or ""), safe="")
+    document = f"report={selected_report}" if selected_report else f"result={selected_result}"
+    groups = door.get("presentation", {}).get("groups") if isinstance(door.get("presentation"), dict) else []
+    open_ids = [
+        str(group.get("id") or "")
+        for group in (groups or [])
+        if isinstance(group, dict) and group.get("open")
+    ]
+    close_href = (
+        f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
+    )
+    if state != "present":
+        return (
+            f'<div class="card" data-file-dialog="{html.escape(rel)}" '
+            f'data-file-state="{html.escape(state)}">'
+            f"<p>Path {html.escape(rel)} is {html.escape(state)}.</p>"
+            f'<p><a href="{html.escape(close_href)}">Close file</a></p></div>'
+        )
+    return (
+        f'<div class="card" data-file-dialog="{html.escape(rel)}" data-file-state="present">'
+        f"<p>{html.escape(rel)}</p>"
+        f"<pre>{html.escape(str(view.get('text') or ''))}</pre>"
+        f'<p><a href="{html.escape(close_href)}">Close file</a></p></div>'
     )
 
 

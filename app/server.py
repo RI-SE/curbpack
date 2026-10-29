@@ -279,6 +279,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         )
         same = _same_as_latest_run(results_folder, report)
         extra["presentation"] = _report_presentation(ws, repo, config, report, query, reading)
+        extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
     if requested_result.strip():
         status, chosen = _requested_dated(results_folder, requested_result, "run-result")
@@ -293,8 +294,29 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["selected_result"] = chosen
         report = {"run_result": loaded, "claims": [], "appendix": []}
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
+        extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra
     return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _review_file_view(repo: Path, requested: str) -> dict | None:
+    wanted = requested.strip()
+    if not wanted:
+        return None
+    if Path(wanted).is_absolute() or ".." in Path(wanted).parts:
+        return {"path": wanted, "state": "invalid", "text": ""}
+    try:
+        path = (repo / wanted).resolve()
+        path.relative_to(repo.resolve())
+    except ValueError:
+        return {"path": wanted, "state": "invalid", "text": ""}
+    if not path.is_file():
+        return {"path": wanted, "state": "missing", "text": ""}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = path.read_bytes().decode("utf-8", errors="replace")
+    return {"path": wanted, "state": "present", "text": text}
 
 
 def _dated_entries(folder: Path, prefix: str) -> list[dict]:
@@ -380,6 +402,7 @@ def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict,
         claim_readings=claim_readings,
         requirement_readings=requirement_readings,
         expanded=_expanded_query(query),
+        repo=repo,
     )
 
 
@@ -416,6 +439,7 @@ def _report_presentation(
         requirement_readings=requirement_readings,
         expanded=_expanded_query(query),
         report_reading=report_reading,
+        repo=repo,
     )
 
 
