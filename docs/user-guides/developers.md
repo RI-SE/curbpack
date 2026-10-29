@@ -1,8 +1,13 @@
 # Using Studio in a product repository
 
-This guide is for people working in a real product repository.
+This guide has two audiences.
 
-[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, and Review. This page is the longer procedure on a real product repository. For how to start the application, see [Install](install.md).
+| You are | Read |
+| --- | --- |
+| Working in a product repository | Sections 1–9 |
+| Changing this repository, or starting Studio on Linux | [Section 10](#10-changing-this-repository) |
+
+[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, and Review. Sections 1–9 are the longer procedure on a real product repository. For the downloaded program, see [Install](install.md).
 
 You can rerun Discovery, Claim edits, or Check without repeating Extract.
 
@@ -129,3 +134,55 @@ A failed row can stay on the review page while you open Discovery for that Requi
 ## 9. Next: run the Check where the repository changes
 
 Continue with [CI/CD](ci-cd.md). The Check you automate is `curbcheck`.
+
+## 10. Changing this repository
+
+Use this section to change Curbpack, or to start Studio on Linux, where no packaged file is built. Sections 1–9 are the procedure on a product repository. The commands here do not certify that repository.
+
+Studio's Python dependency is `cryptography`, listed in `requirements.txt`.
+
+macOS or Linux:
+
+```sh
+python3 -m pip install -r requirements.txt
+make start
+```
+
+Windows:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m app
+```
+
+`make start` runs `python3 -m app`, or `python -m app` on Windows. `make stop` stops the process listening on port 8770. A checkout uses `data/workspace` inside the repository. Open the URL printed at startup. The usual one is `http://127.0.0.1:8770`.
+
+For a disposable workspace:
+
+```sh
+python3 -m app --workspace /absolute/path/to/disposable-workspace
+```
+
+On a checkout, curbcheck is `scripts/bin/curbcheck`. It takes the same arguments as the packaged file. With no `--packs` and no `--out`, the command uses `<curbpack>/packs` and `<curbpack>/run-result.json` from `curbpack.json`. When the Packs are outside the product tree, pass `--packs`. Exit codes are in [curbcheck](../reference/curbcheck-cli.md) and [CI/CD](ci-cd.md).
+
+`make package`, on macOS ARM64 or Windows x64, builds the Studio file and the curbcheck file for that computer and smoke-tests both. The names and the checksum command are in [Install](install.md).
+
+The cover's **Developer** section is for this checkout: Claim editor, Scaffold, a sample requirement editor, and **Prepare sample workspace**. Prepare builds a small demo workspace. It does not become the Pack Check uses unless you select it.
+
+| Command | What it does |
+| --- | --- |
+| `make start` | Start Curbpack Studio |
+| `make stop` | Stop the process listening on port 8770 |
+| `make test` | Studio functional tests |
+| `make test-curbcheck` | Clone the pinned product, apply R1, run the carried checks, then report the catalogue |
+| `make ci-tests` | Run the checks used by GitHub Actions. `ONLY=name` runs one. The registered name is `tests` |
+| `make package` | Build and smoke-test both programs for this computer |
+
+The steps for `make test-curbcheck` are in [Development](../development/README.md) and [Testing curbcheck](../testing/README.md).
+
+| Subject | Document |
+| --- | --- |
+| Persistent Pack, Requirement, Claim, signature, and result fields | [Packs v2](../reference/packs2.md) |
+| System structure | [Architecture](../arch/ARCHITECTURE.md) |
+| Implementation stories | [Agile](../agile/README.md) |
+| Contribution | [CONTRIBUTING.md](../../CONTRIBUTING.md) |

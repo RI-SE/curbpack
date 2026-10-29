@@ -1,64 +1,178 @@
 # Getting started
 
-Start Curbpack Studio with [Install](install.md) and open the URL the program prints. The usual one is `http://127.0.0.1:8770`.
+Start Curbpack Studio with [Install](install.md) and open the local URL printed by the program.
 
-The cover is the pilot. Four links, in the order you use them the first time:
+This walkthrough uses the Curbpack reference product. It is deliberately prepared so that you can first see a passing Check, then remove known evidence and see the same Check fail. The reference product has previously been used for this purpose: `SECURITY.md` is part of its expected evidence, and removing it changes the corresponding result.
 
-1. **Pack Editor** turns a source into Requirements.
-2. **Discovery & Claims** finds candidate files and saves the Claims a person accepts.
-3. **Check** runs curbcheck against the packs named for that repository.
-4. **Review** compiles that run, records a decision, and can sign the report.
+You will use the same repository in Studio and from the command line so that the relationship between Packs, Requirements, Claims, evidence, and Checks is concrete before you try Curbpack on your own product.
 
-You can come back to any of them. A later Check does not require a new Extract.
+## 1. Clone the reference product
 
-A green row is what the questions on that Claim observed. A person still decides what that means.
+Clone the reference product and enter the repository:
 
-## 1. Pack Editor
+```bash
+git clone git@github.com:RI-SE/cyberready-test-product.git
+cd cyberready-test-product
+```
 
-Open **Pack Editor**. Pack Sources starts by choosing the repository to work with.
+Before changing anything, take a quick look through the repository.
 
-**Start empty** asks for a working folder. Studio writes a new `curbpack.json` in that folder, and the file points at the folder. Otherwise Pack Sources reads the Packs named in that repository's `curbpack.json`.
+Find:
 
-Each row's URL cell shows the document URL and, under it, the pack directory from that file. That is where the Pack is written. **Sections** opens one document. **Add** adds a Pack into that folder. Adding a Pack does not extract it. Importing a Pack later is that same write, as if the extraction had already been accepted.
+- `curbpack.json`, which selects the Packs used for this product;
+- the Pack data selected for the product;
+- the Claims belonging to the product;
+- `SECURITY.md`, which is evidence used by one of the Claims.
 
-**Extract** writes a separate working copy. If you are already editing a copy, you choose which fields to bring in. Fields you leave out stay as they are. A failed extract does not replace Requirements you already accepted.
+Do not edit anything yet. The point of the first run is to establish the known baseline.
 
-Each Requirement still needs a person. **Edit** and **Sign** are that review. Signing a Requirement is not a check of a product, and it is not the signature on a review report.
+## 2. Open the repository in Curbpack Studio
 
-## 2. Discovery & Claims
+Open the Curbpack Studio cover page and choose the cloned `cyberready-test-product` repository.
 
-Open **Discovery & Claims**.
+The cover links the four activities you will use:
 
-Pick a repository, then the working copy or the published release. The table is one row per section: how many Requirements, how many Claims, and how many Requirements have no Claim.
+1. **Pack Editor** — inspect the Packs and Requirements.
+2. **Discovery & Claims** — inspect how product evidence is connected to Requirements.
+3. **Check** — evaluate the Checks defined by the Claims.
+4. **Review** — compile the run for human review.
 
-Open a section to see candidate files. **Useful** and **Poor** mark a finding. That mark is not stored on the Claim, and a candidate is not a check result.
+You do not need to create or extract a new Pack for this walkthrough. The reference product is already prepared.
 
-A discovery sentence can differ from the motivation already saved on a Claim. Keep the saved motivation, or take the new sentence. Taking it replaces the motivation and removes the Claim signature.
+## 3. Inspect the Packs and Requirements
 
-The Claim you save, with its checks, is what Check will run.
+Open **Pack Editor**.
 
-## 3. Check
+Use it to inspect the Packs selected for the reference product and open some of their Requirements.
 
-Open **Check**.
+At this stage, concentrate on the relationship rather than the file format:
 
-Choose the repository, tick the packs it uses, and **Save**. That writes `curbpack.json` into the repository. The file is not signed. A file named `.curbpack.json` is not the selection.
+```text
+Pack
+  -> Requirement
+```
 
-**Check** runs curbcheck. The report lists each Claim and each check: status and, when it did not pass, a detail. No rows is not a successful verification.
+A Requirement describes what must be fulfilled. The Pack makes a reusable set of Requirements available to products.
 
-Read a failed row as "these arguments did not hold." The next step is the file and the question, and whether the product or the Claim should change. The page does not write a fix for you.
+Return to the Studio cover page when you have seen where the Requirements come from.
 
-## 4. Review
+## 4. Inspect the Claims and evidence
 
-Open **Review**.
+Open **Discovery & Claims** for the same repository.
 
-**Compile** writes one report from the run that just happened, including the Requirements and Claims that run named. Compile does not run the checks again.
+Look at how Requirements have Claims in the product repository. Open the Claim that uses `SECURITY.md` as evidence and inspect its configured Checks.
 
-**Save decision** stores the reviewer's own words. **review-sign** seals that report, including that sentence. The signature is not the Requirement seal and not the Claim seal.
+The important relationship is now:
 
-The page says there is no field for a conclusion that the product meets a regulation.
+```text
+Requirement
+  -> Claim
+      -> evidence
+      -> Checks
+```
 
-## 5. After the first pass
+Discovery may suggest candidate evidence, but the saved Claim is the product team's maintained assertion about the evidence and the Checks to perform.
 
-Change the product, or change a Claim, and run **Check** again. The previous report stays the record of the earlier run. Compiling a replacement asks you to confirm that the previous decision is not copied.
+Do not change the Claim yet.
 
-The same four pages are the work on your own repository. The longer procedure for a real product tree, including what to do with one failed row, is the [developer guide](developers.md).
+## 5. Run the baseline Check
+
+Open **Check** and run the prepared Check against the reference product.
+
+The first run should show the prepared baseline. Read a few rows and identify:
+
+- the Claim being evaluated;
+- the Check that was performed;
+- the evidence it refers to;
+- the result.
+
+A green row means that the configured Check passed for the repository state that was evaluated. It does not mean that Curbpack has decided that the product is compliant.
+
+## 6. Run the same Check from the command line
+
+From the cloned reference-product repository, run the command-line Check against the same product configuration:
+
+```bash
+curbcheck --repo .
+```
+
+Compare the command-line result with the Check you just ran in Studio. Studio and the command line are two ways of running the same checking model against the product repository.
+
+## 7. Remove known evidence
+
+Now make one deliberate product change. Move `SECURITY.md` out of the way without deleting it permanently:
+
+```bash
+mv SECURITY.md SECURITY.md.bak
+```
+
+Nothing about the Requirement or Claim has changed. Only the product evidence has changed. This exact kind of reference-product exercise has previously been used to demonstrate the evidence relationship.
+
+Run **Check** again in Studio.
+
+Find the row associated with the missing `SECURITY.md` evidence. Compare it with the baseline result from the previous run.
+
+Then run the command-line Check again:
+
+```bash
+curbcheck --repo .
+```
+
+The useful observation is not merely that something became red. Follow the failed row back through the model:
+
+```text
+Requirement
+  -> Claim
+      -> SECURITY.md
+          -> Check
+              -> fail
+```
+
+The Check tells you which configured technical condition no longer held. A person still decides what needs to be done about it.
+
+## 8. Restore the evidence
+
+Restore the file:
+
+```bash
+mv SECURITY.md.bak SECURITY.md
+```
+
+Run the Check once more:
+
+```bash
+curbcheck --repo .
+```
+
+The affected result should return to its prepared baseline state. The earlier reference-product exercise describes the same restore-and-rerun behaviour.
+
+You have now exercised the central Curbpack loop:
+
+```text
+known product state
+        -> Check
+        -> change evidence
+        -> Check again
+        -> inspect the changed result
+        -> restore or update the product
+        -> Check again
+```
+
+## 9. Review the run
+
+Return to Studio and open **Review**.
+
+Compile the run into review material and inspect how the Requirement, Claim, and Check result are presented together.
+
+The automated result stops at what the Check observed. Review is where a person records what that result means in context.
+
+## 10. What to try next
+
+At this point you have used a controlled repository where the expected relationship between Requirements, Claims, and evidence is already known. The reference product was created specifically to make that relationship testable and demonstrable.
+
+Next, either:
+
+- explore another Requirement and trace it to its Claims and evidence; or
+- follow the [Developer guide](developers.md) to configure Curbpack for one of your own product repositories.
+
+To create or maintain reusable Requirements, see [Create a Requirements Pack](pack-developers.md).
