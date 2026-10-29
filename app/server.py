@@ -1927,7 +1927,20 @@ def _write_curbpack(repo: Path, pack_ids: list[str]) -> None:
         loaded = read_json(path)
         if isinstance(loaded, dict):
             current = loaded
-    document = {key: current[key] for key in ("search_hints", "exclude_requirements", "requirements", "curbpack") if key in current}
+    document = {
+        key: current[key]
+        for key in (
+            "search_hints",
+            "exclude_requirements",
+            "requirements",
+            "packs_dir",
+            "claims_dir",
+            "results_dir",
+            "reports_dir",
+            "unsigned_requirements",
+        )
+        if key in current
+    }
     document["packs"] = pack_ids
     from common.validate import validate_curbpack_config
 

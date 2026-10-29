@@ -11,16 +11,16 @@
 
 | Field | Value |
 | --- | --- |
-| Plan status | DRAFT |
-| Approved by | Pending re-approval after scope narrow: I/O binding only; preserve approved app behaviour |
-| Current task | Task 0 — walkthrough / re-approve narrowed story |
-| Last completed task | None |
-| Last verified tests | Not run for this plan revision (docs-only). Baseline observed on the dirty worktree: `python3 -m unittest tests.test_curbcheck_package tests.test_m4_checks tests.test_e2e_annex_vii tests.test_requirements_export tests.test_review_report_kept` — Ran 48 tests, 1 failure, 5 errors (pre-existing, unrelated in-progress edits; see Summary / Baseline). |
-| Last checkpoint commit | None. This plan is uncommitted. |
+| Plan status | APPROVED |
+| Approved by | danielfl, 2026-10-29 (SYS-R01–R09 walkthrough OK; proceed Task 1–8; CHK-07/08 out of this plan) |
+| Current task | Task 2 — IMPL-START |
+| Last completed task | Task 1 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_curbcheck_package tests.test_m4_checks` — Ran 28 tests, OK. |
+| Last checkpoint commit | recorded after git commit for Task 1 |
 | Requirements | Story SYS-R01–SYS-R09 in `SYS-03-one-repo-door.md` (R01 rewritten 2026-10-29 walkthrough; R09 Studio config page). No new `docs/req/` row. |
 | Packs v2 | `docs/reference/workspace.md` and `docs/reference/packs2.md` are both law. This plan edits neither. Workspace §2 owns `curbpack.json` keys, which of them are required, and the on-disk paths. Packs v2 §2.3 owns selection and the `search_hints` merge; §3.1 owns the run-result object. Allowed keys: `packs`, `requirements` XOR `exclude_requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`. `search_hints` and `unsigned_requirements` are required. The single key `curbpack`, and a `temp`/`tmp` key, are rejected. |
 | Blockers | None |
-| **Exact next action** | Maintainer confirms narrowed SYS-03 (I/O via the two JSON files; do not gut existing UX). Then re-approve plan. No product code until then. |
+| **Exact next action** | Task 2: add discovery/door.py and tests so Studio workspace file open-repo.json stores only the chosen product-repo id. |
 
 ## Requirements and acceptance mapping
 
@@ -47,7 +47,7 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Acceptance / stop:** human approval recorded. No product code in this task.
 
 - [x] Independent plan review completed. First pass Issues Found (`4efa6824`); fixes applied; re-review Approved (`241fee1a`).
-- [ ] Plan re-approved after walkthrough (prior 2026-10-29 approval superseded while SYS-R01/R09 change).
+- [x] Plan re-approved after walkthrough (danielfl, 2026-10-29).
 
 ### Task 1 — `curbpack.json` resolves `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`
 
@@ -58,10 +58,10 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Note:** Other suites still build `curbpack.json` fixtures without the four path fields; they may fail after this task until Tasks 3–6 retarget them. That mid-sequence breakage is expected — do not treat it as a new Task 1 defect when running a broader `make test`.
 **Stop if:** a test or a resolver would need a key, a path, or a selection rule that is not in workspace §2 or packs2 §2.3. Record the step. Do not invent the value.
 
-- [ ] RED observed for the intended behavior.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior.
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 2 — Remember which repository is open
 
@@ -165,3 +165,5 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 - **2026-10-29 / walkthrough:** Scope narrowed: SYS-03 is I/O binding to `curbpack.json` / `curbpack-studio.json` only. Approved app behaviour (Discover choose/diff/etc.) must not be removed. Story rewritten; plan Goal/Task 5 updated.
 - **2026-10-29 / walkthrough:** Maintainer OK on SYS-R01–SYS-R09. Added R07: each view shows the concrete paths in use. General directory/pack-compare tool deferred — idea parked in DECISIONS under EP-09 (or EP-11 if version-lifecycle).
 - **2026-10-29 / walkthrough:** Maintainer: separate story CHK-07 — curbcheck uses `curbpack.json` path fields, owns defaults factory + CLI docs rewrite. SYS-03 create dialog consumes that API; until CHK-07, write §2.2 values directly. `curbcheck-cli.md` marked pending CHK-07 (`--packs`/`--requirements` = id filters, not dirs).
+- **2026-10-29 / Task 0:** Plan APPROVED by danielfl. `open-repo.json` is Studio workspace state for SYS-R07 (not a product file). Task 1 IMPL-START.
+- **2026-10-29 / Task 1:** `validate_curbpack_config` requires workspace.md §2.2 keys and rejects `curbpack`. Resolvers `packs_dir`/`claims_dir`/`results_dir`/`reports_dir`. `run_repository` loads `<packs_dir>/<id>/<version>/pack.json` and `claims_dir`; unselected Claims omitted (`checks/ARCHITECTURE.md` updated). `_write_curbpack` preserves the four path fields. CLI default out is `<results_dir>/run-result.json`. `curbpack_directory`/`claim_catalog` left for Studio WIP (Task 3+). Review Important: `_write_curbpack` test + architecture omit-unselected; re-review Approved (`2f52e822`). Command: `python3 -m unittest tests.test_sys03_door tests.test_curbcheck_package tests.test_m4_checks` — Ran 28 tests, OK. Minor left: leftover helpers.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import tempfile
@@ -188,14 +189,25 @@ class CheckBehaviorTest(unittest.TestCase):
         requirement = _requirement()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            pack_dir = root / "packs" / "cra-baseline"
+            pack_dir = root / "packs" / "cra-baseline" / "0.1.0"
             repo = root / "product"
             repo.mkdir()
             save_pack(pack_dir, draft_pack())
             save_requirement(pack_dir, requirement)
             write_stub(repo, "docs/annex-vii/risk_assessment.md")
             (repo / "curbpack.json").write_text(
-                '{"packs":["cra-baseline"],"search_hints":{"exclude_path_globs":["*FUTURE_*"]}}\n',
+                json.dumps(
+                    {
+                        "packs": ["cra-baseline"],
+                        "search_hints": {"exclude_path_globs": ["*FUTURE_*"]},
+                        "packs_dir": "curbpack/packs",
+                        "claims_dir": "curbpack/claims",
+                        "results_dir": ".curbpack",
+                        "reports_dir": "curbpack/reports",
+                        "unsigned_requirements": "reject",
+                    }
+                )
+                + "\n",
                 encoding="utf-8",
             )
             from claims.bind import write_claim

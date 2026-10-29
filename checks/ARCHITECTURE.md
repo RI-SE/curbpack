@@ -21,7 +21,7 @@ The runner evaluates Claim files that the repo selects and writes one run result
 | `validate_check_args(check, args)` | Check id and args. | Raises `CheckError` or `ModelError`. Claims Editor calls this before it writes a Claim. |
 | `run_claim(repo, claim)` | Product repo and one Claim. | One row. |
 | `build_run_result(repo, claims, packs, *, skip=None)` | Claims, the pack rows below, and an optional map of claim id to skip reason. | A value `validate_run_result` accepts. |
-| `run_repository(repo, packs_root=None, *, skip=None)` | Product repo. `packs_root`, when passed, is the directory that contains `<pack-id>/pack.json`. When it is omitted, packs load from `<repo>/<curbpack>/packs`. | The result and `process_exit_code`. Writes nothing. |
+| `run_repository(repo, packs_root=None, *, skip=None)` | Product repo. `packs_root`, when passed, is the packs tree (`<pack-id>/<pack-version>/pack.json`). When omitted, that tree is `packs_dir` from `curbpack.json`. Claims load from `claims_dir`. | The result and `process_exit_code`. Writes nothing. |
 | `run_and_write(repo, packs_root, out, *, skip=None)` | Those, plus the output path. | Writes that path only after the result validates. Returns the result and the exit code. |
 | `process_exit_code(result)` | A run result. | `0` or `1`. |
 | `git_snapshot(repo)` | A directory. | `commit` and `worktree`, or absent when Git has no HEAD. |
@@ -34,13 +34,13 @@ The runner does not read `discovery_hints`, `note`, `remediation_hint`, or Claim
 
 ## What the runner loads
 
-`curbpack.json` selects packs and requirements (`packs2.md` §2.3). `curbpack` in that file is a path relative to the repo. When the key is absent, the directory is `curbpack`. `run_repository` loads each `<packs-root>/<id>/pack.json` and the Requirement files beside it. The packs root from the file is `<curbpack>/packs`. An explicit `packs_root` is already that directory, so it does not gain another `packs/` segment.
+`curbpack.json` selects packs and requirements (`packs2.md` §2.3) and names the directories (`workspace.md` §2.2). `run_repository` loads each `<packs_dir>/<pack-id>/<pack-version>/pack.json` and the Requirement files beside it. An explicit `packs_root` is already that packs tree, so it does not gain another `packs/` segment.
 
-Each `packs` entry on the result is that pack's `id`, its `version`, and `pack_directory_digest` of that directory. `version` is the hand-set label. A missing pack directory, or a `requirements` id that is not in the loaded files, raises `ModelError` and writes nothing.
+Each `packs` entry on the result is that pack's `id`, its `version`, and `pack_directory_digest` of that directory. `version` is the hand-set label. A missing pack version directory, more than one version directory for that id, or a `requirements` id that is not in the loaded files, raises `ModelError` and writes nothing.
 
 Selected ids are `requirements` when that key is set, otherwise every loaded id minus `exclude_requirements`. Both keys together are already rejected by `validate_curbpack_config`.
 
-Every Claim file directly under `<repo>/<curbpack>/claims/` is loaded. A Claim whose `requirement_id` is not selected raises `ModelError` and writes nothing. A Claim with `checks: []` is omitted. A selected Requirement with no executed Claim produces no row. The runner does not invent a row for it.
+Every Claim file directly under `claims_dir` is loaded. A Claim whose `requirement_id` is not selected is omitted; selected Claims still run. A Claim with `checks: []` is omitted. A selected Requirement with no executed Claim produces no row. The runner does not invent a row for it.
 
 `skip` is a map the caller builds for this run. A listed id marks every configured Check `skipped` and `run_claim` is not called. The reason is stripped and stored as each Check's `detail`. An empty reason raises `ModelError` and writes nothing.
 
@@ -54,7 +54,7 @@ The JSON is `packs2.md` §3.1. `validate_run_result` is the check. `save_run_res
 
 One result per executed Claim, including passes. `digest` is `version_digest` of that whole Claim. Claim `status` is `fail` if any Check fails, otherwise `skipped` if any Check is skipped, otherwise `pass`. Each configured Check has `index`, `check`, `args`, `status`, and `detail` when required. `detail` is omitted on `pass`, required on `fail` and `skipped`. A `pattern` probe fails when the expression matches.
 
-The output path is an argument. `curbcheck` writes `<repo>/<curbpack>/run-result.json` when `--out` is omitted. The Studio Check page still writes `<product-repo>/.curbpack/run-result.json`. That directory is temporary working data, not the durable review report, and the file is not inside the pack directory. A failed run leaves the previous file in place. A run does not write or delete the review report.
+The output path is an argument. `curbcheck` writes `<results_dir>/run-result.json` when `--out` is omitted. Dated `run-result_<UTC>.json` names are CHK-07. A failed run leaves the previous file in place. A run does not write or delete the review report.
 
 ## Checks this build runs
 
@@ -102,7 +102,7 @@ Direct calls, no UI. `tests/test_m4_checks.py` already covers the `exist` and `c
 
 1. A missing file is `fail` on `exist` and on `contents`. The `contents` detail says the file is absent and does not mention a header.
 2. A short file, or a file missing a header named in `args`, is `fail` on `contents`. A file that meets every probe is `pass` with no `detail`.
-3. Two Checks on one Claim produce one row with two indexed Check results. A second Claim for other evidence produces a second row. A Claim with no Checks is omitted. A Claim whose Requirement is not selected raises, and no result file is written.
+3. Two Checks on one Claim produce one row with two indexed Check results. A second Claim for other evidence produces a second row. A Claim with no Checks is omitted. A Claim whose Requirement is not selected is omitted; selected Claims still produce rows.
 4. `skip` with a reason writes `skipped` and does not read the file. An empty reason raises and does not write. A skip id that is not a Claim in this run raises and does not write. A result whose only row is `skipped` exits 1. A result with no rows exits 1.
 5. `fresh` and `owned` are registered and produce a non-passing Check result because their commands are absent. `dep_ban` (and aliases) run as subcommands of `curbcheck-node` and pass or fail on the Node manifest pin. An unknown id is rejected by `validate_check_args`.
 6. A Git repo records `commit` and `worktree`. A dirty tree can still exit 0 when every row is `pass`. A directory that is not a Git checkout omits both keys.
