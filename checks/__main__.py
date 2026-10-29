@@ -13,9 +13,11 @@ import sys
 from pathlib import Path
 
 from checks.commands import contents_handle, exist_handle, git_handle, node_handle
+from checks.defaults import created_curbpack
 from checks.run import packs_dir, results_dir, run_and_write
 from checks.schema import load_registry
 from checks.toolmain import main as tool_main
+from common.jsonio import dump_text
 
 _HANDLERS = {
     "curbcheck-exist": exist_handle,
@@ -50,6 +52,11 @@ def _tool(command: str, argv: list[str]) -> int:
 def _cli(argv: list[str] | None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate claims and write a Packs v2 run result.")
     parser.add_argument(
+        "--defaults",
+        action="store_true",
+        help="Print the created-file curbpack.json object and exit. No repository is required.",
+    )
+    parser.add_argument(
         "--repo",
         type=Path,
         help="Product repository. Defaults to the current directory when it contains curbpack.json.",
@@ -66,6 +73,9 @@ def _cli(argv: list[str] | None) -> int:
     )
     parser.add_argument("--skip", action="append", default=[], help="claim-id=reason")
     args = parser.parse_args(argv)
+    if args.defaults:
+        sys.stdout.write(dump_text(created_curbpack()))
+        return 0
     repo = args.repo
     if repo is None:
         cwd = Path.cwd()
