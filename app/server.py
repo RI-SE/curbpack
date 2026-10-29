@@ -617,14 +617,22 @@ def make_handler(ws: Workspace):
                 repo_id = (form.get("repo") or [""])[0].strip()
                 if not repo_id:
                     raise ModelError("pack", "repo", "a chosen repository")
-                _add_pack_to_repo(
-                    ws,
-                    repo_id,
+                pack_fields = dict(
                     name=(form.get("name") or [""])[0],
                     official_name=(form.get("official_name") or [""])[0],
                     url=(form.get("url") or [""])[0],
                     adapter_id=(form.get("adapter_id") or [""])[0],
                 )
+                if (form.get("action") or [""])[0].strip() == "update":
+                    _update_pack_info(
+                        ws,
+                        repo_id,
+                        (form.get("pack") or [""])[0],
+                        **pack_fields,
+                    )
+                    self._redirect(f"/requirements?repo={quote(repo_id)}&updated=1")
+                    return
+                _add_pack_to_repo(ws, repo_id, **pack_fields)
                 self._redirect(f"/requirements?repo={quote(repo_id)}&added=1")
                 return
             if path == "/requirements/catalog":
@@ -1028,6 +1036,8 @@ def _pack_for_adapter(adapter: dict) -> dict:
 def _catalog_message(query: dict, *, added: str) -> str:
     if (query.get("added") or [""])[0]:
         return added
+    if (query.get("updated") or [""])[0]:
+        return "Pack info saved."
     if (query.get("extracted") or [""])[0]:
         return "Extraction finished."
     if (query.get("brought") or [""])[0]:
@@ -1655,6 +1665,8 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
                             "id": pack_id,
                             "name": pack_id,
                             "missing": True,
+                            "adapter_id": "manual",
+                            "extract_enabled": False,
                             "pack_dir": str((packs_root / pack_id).resolve()),
                             "repo_id": repo_id,
                         }
@@ -1667,12 +1679,16 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
                     source = {}
                 if not isinstance(pack, dict):
                     pack = {}
+                url = str(source.get("url") or "")
+                adapter = _adapter_for_url(url)
                 documents.append(
                     {
                         "id": pack_id,
                         "name": str(pack.get("name") or pack_id),
                         "official_name": str(source.get("instrument") or ""),
-                        "url": str(source.get("url") or ""),
+                        "url": url,
+                        "adapter_id": str(adapter.get("id") or "") if adapter else "manual",
+                        "extract_enabled": adapter is not None,
                         "pack_dir": str(pack_dir.resolve()),
                         "repo_id": repo_id,
                     }
@@ -1691,6 +1707,7 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
         "curbpack_fields": config if config else created_curbpack(),
         "show_curbpack_dialog": file_absent or (query.get("curbpack") or [""])[0] == "edit",
         "adapters": list_formex_adapter_choices(),
+        "edit_adapters": _edit_adapter_choices(),
         "workspace_root": str(ws.root.resolve()),
         "job": _catalog_job(ws, query),
         "message": _catalog_message(query, added="Pack added."),
@@ -1771,6 +1788,49 @@ def _add_pack_to_repo(
     _write_curbpack(repo, packs)
 
 
+def _update_pack_info(
+    ws: Workspace,
+    repo_id: str,
+    pack_id: str,
+    *,
+    name: str,
+    official_name: str,
+    url: str,
+    adapter_id: str = "",
+) -> None:
+    """Write name and source on an existing pack.json. Does not add a field for the adapter."""
+    from common.validate import validate_pack
+
+    located = _locate_repo_pack(ws, (pack_id or "").strip(), repo_id)
+    if located is None:
+        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+    _chosen, pack_dir, pack = located
+    wanted = (adapter_id or "").strip()
+    cleaned_url = "" if wanted == "manual" else url.strip()
+    inferred = _adapter_for_url(cleaned_url) if cleaned_url else None
+    if wanted and wanted != "manual" and (
+        inferred is None or str(inferred.get("id") or "") != wanted
+    ):
+        raise ModelError("pack", "adapter", "the adapter that matches this URL")
+    if name.strip():
+        pack["name"] = name.strip()
+    source = dict(pack["source"]) if isinstance(pack.get("source"), dict) else {}
+    official = official_name.strip()
+    if official:
+        source["instrument"] = official
+    else:
+        source.pop("instrument", None)
+    if cleaned_url:
+        source["url"] = cleaned_url
+    else:
+        source.pop("url", None)
+    if source:
+        pack["source"] = source
+    else:
+        pack.pop("source", None)
+    write_json(pack_dir / "pack.json", validate_pack(pack))
+
+
 def _signature_counts(root: Path, pack_id: str, trust: dict) -> tuple[int | None, int | None]:
     """Signed and unsigned requirements in the chosen working copy. None when there are none."""
     if not pack_id:
@@ -1846,6 +1906,26 @@ def _locate_repo_pack(ws: Workspace, pack_id: str, repo_id: str = "") -> tuple[s
     if not isinstance(pack, dict):
         return None
     return chosen, pack_dir, pack
+
+
+def _edit_adapter_choices() -> list[dict]:
+    """Adapters a pack row can switch to. Manual Content is added by the dialog."""
+    rows = []
+    for item in list_adapters():
+        if str(item.get("id") or "") == "manual":
+            continue
+        legal = item.get("source") if isinstance(item.get("source"), dict) else {}
+        url = str(legal.get("url") or "")
+        if not url:
+            continue
+        rows.append(
+            {
+                "id": item.get("id"),
+                "instrument": str(legal.get("instrument") or item.get("id") or ""),
+                "url": url,
+            }
+        )
+    return rows
 
 
 def _adapter_for_url(url: str) -> dict | None:
@@ -2052,33 +2132,26 @@ def _repo_pack_sections_model(ws: Workspace, query: dict, pack_id: str) -> dict:
                 continue
             shown.add(section_id)
             extractable = section_id in ready_ids
-            members = [
-                item
-                for item in requirements
-                if isinstance(item, dict) and _requirement_in_section(item, section_id, section_ids)
-            ]
-            row = {
-                "adapter_id": str(adapter.get("id") or ""),
-                "source_id": f"{adapter.get('id')}-{section_id}",
-                "section_id": section_id,
-                "url": url,
-                "extract_enabled": extractable,
-                "section_ready": True if extractable else False,
-                "source_format": adapter.get("source_format") or "",
-                "document_id": pack_id,
-                "pack_dir": str(pack_dir.resolve()),
-                "copies": [],
-                "repo_id": found_repo,
-                "edit_repo": found_repo,
-                "edit_pack": pack_id,
-                "signed_count": None,
-                "unsigned_count": None,
-            }
-            if len(members) == 1:
-                row["edit_requirement"] = str(members[0].get("id") or "")
-            else:
-                row["edit_section"] = section_id
-            sources.append(row)
+            sources.append(
+                {
+                    "adapter_id": str(adapter.get("id") or ""),
+                    "source_id": f"{adapter.get('id')}-{section_id}",
+                    "section_id": section_id,
+                    "url": url,
+                    "extract_enabled": extractable,
+                    "section_ready": True if extractable else False,
+                    "source_format": adapter.get("source_format") or "",
+                    "document_id": pack_id,
+                    "pack_dir": str(pack_dir.resolve()),
+                    "copies": [],
+                    "repo_id": found_repo,
+                    "edit_repo": found_repo,
+                    "edit_pack": pack_id,
+                    "edit_section": section_id,
+                    "signed_count": None,
+                    "unsigned_count": None,
+                }
+            )
     catalog = ensure_catalog(ws.root)
     for row in catalog.get("sources") or []:
         if not isinstance(row, dict) or row.get("document_id") != pack_id:
@@ -3304,7 +3377,7 @@ def _query_value(bag: dict, key: str) -> str:
 
 
 def _claims_repo(ws: Workspace, bag: dict) -> Path:
-    repo_id = _query_value(bag, "repo_id")
+    repo_id = _query_value(bag, "repo_id") or _query_value(bag, "repo") or (open_repo_id(ws.root) or "")
     if not repo_id:
         return ws.repo
     row = find_repo(load_repos(ws.root), repo_id)
@@ -3330,9 +3403,12 @@ def _claims_lookup(ws: Workspace, bag: dict) -> dict[str, dict]:
             raise ModelError("discover", "pack_id", "a pack id on the source")
         resolve_copy_ref(ws.root, pack_id, timestamp)
         return {item["id"]: item for item in repo_pack_requirements(repo, pack_id)}
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
+        return {}
     from common.validate import validate_curbpack_config
 
-    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    config = validate_curbpack_config(read_json(config_path))
     lookup: dict[str, dict] = {}
     for pack_id in config["packs"]:
         try:
@@ -3344,35 +3420,38 @@ def _claims_lookup(ws: Workspace, bag: dict) -> dict[str, dict]:
 
 
 def _claims_model(ws: Workspace, query: dict) -> dict:
+    door = _door_chrome(ws, query)
     lookup = _claims_lookup(ws, query)
     known_ids = list(lookup)
     trust = trust_store(ws.keys)
     repo = _claims_repo(ws, query)
-    claims_dir = repo_claims_dir(repo)
     rows = []
     from common.store import load_claims
 
-    claims = load_claims(claims_dir) if claims_dir.is_dir() else []
+    config_path = repo / "curbpack.json"
+    claims_dir = repo_claims_dir(repo) if config_path.is_file() else None
+    claims = load_claims(claims_dir) if claims_dir is not None and claims_dir.is_dir() else []
     from claims.ui.coverage import load_run, retire_warning
 
     run_result = load_run(repo)
-    for claim in claims:
-        requirement_id = str(claim.get("requirement_id") or "")
-        requirement = lookup.get(requirement_id)
-        relative = claim_file_relative(repo, claims_dir, claim["id"])
-        rows.append(
-            {
-                "claim": claim,
-                "passages": law_passages(requirement) if requirement else [],
-                "reading": read_claim_seal(
-                    claim,
-                    trust,
-                    repo=repo if claims_dir.is_dir() else None,
-                    relative=relative,
-                ),
-                "retire_warning": retire_warning(claim, claims, run_result),
-            }
-        )
+    if claims_dir is not None:
+        for claim in claims:
+            requirement_id = str(claim.get("requirement_id") or "")
+            requirement = lookup.get(requirement_id)
+            relative = claim_file_relative(repo, claims_dir, claim["id"])
+            rows.append(
+                {
+                    "claim": claim,
+                    "passages": law_passages(requirement) if requirement else [],
+                    "reading": read_claim_seal(
+                        claim,
+                        trust,
+                        repo=repo if claims_dir.is_dir() else None,
+                        relative=relative,
+                    ),
+                    "retire_warning": retire_warning(claim, claims, run_result),
+                }
+            )
     prefill_requirement_id = (query.get("requirement_id") or [""])[0].strip()
     prefill_path = (query.get("path") or [""])[0].strip()
     prefill_passages: list[str] = []
@@ -3406,7 +3485,13 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "prefill_path": prefill_path,
         "prefill_source": prefill_source,
         "prefill_passages": prefill_passages,
-        "repo_id": _query_value(query, "repo_id"),
+        "repos": door.get("repos") or [],
+        "repo_id": str(door.get("repo_id") or ""),
+        "curbpack_file": door.get("curbpack_file") or "",
+        "directory": door.get("directory") or "",
+        "claims_dir": door.get("claims_dir") or "",
+        "results_dir": door.get("results_dir") or "",
+        "reports_dir": door.get("reports_dir") or "",
         "source_id": _query_value(query, "source_id"),
         "timestamp": _query_value(query, "timestamp"),
     }

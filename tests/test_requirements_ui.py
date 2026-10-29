@@ -508,7 +508,9 @@ class RepoPackSectionsTest(unittest.TestCase):
                     base + "/requirements?document=kept-nis&repo=fixture-product"
                 )
                 self.assertIn("Art.1", kept_page)
-                self.assertIn('action="/requirements/requirement/NIS-ART1"', kept_page)
+                self.assertIn('action="/requirements/copy"', kept_page)
+                self.assertIn('name="section" value="Art.1"', kept_page)
+                self.assertNotIn('action="/requirements/requirement/NIS-ART1"', kept_page)
                 self.assertIn('name="pack" value="kept-nis"', kept_page)
                 self.assertIn(">Extract</button>", kept_page)
                 house_page = _get(
@@ -542,3 +544,78 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertEqual(saved["note"], "Reviewed in the pack.")
             finally:
                 httpd.shutdown()
+                httpd.server_close()
+
+    def test_pack_row_shows_url_or_manual_content_and_edit_saves_pack_info(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            packs = repo / "curbpack" / "packs"
+            house = packs / "house-policy"
+            cra = packs / "cra-baseline"
+            house.mkdir(parents=True)
+            cra.mkdir(parents=True)
+            cra_url = "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R2847"
+            xml_url = "https://publications.europa.eu/resource/celex/32024R2847"
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["house-policy", "cra-baseline"]),
+            )
+            write_json(
+                house / "pack.json",
+                {"id": "house-policy", "name": "House Policy Example", "version": "0.1.0"},
+            )
+            write_json(
+                cra / "pack.json",
+                {
+                    "id": "cra-baseline",
+                    "name": "CRA Annex VII",
+                    "version": "0.1.0",
+                    "source": {"framework": "EU", "instrument": "CRA", "url": cra_url},
+                },
+            )
+            save_repos(
+                root,
+                add_repo(root, load_repos(root), name="Fixture product", path=str(repo)),
+            )
+            set_open_repo(root, "fixture-product")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/requirements?repo=fixture-product")
+                self.assertIn('class="config-panel"', page)
+                self.assertIn('readonly', page)
+                self.assertIn("Edit configuration", page)
+                self.assertIn("Current Configuration", page)
+                self.assertNotIn("Current Pack Dir", page)
+                self.assertNotIn("Claims directory", page)
+                self.assertNotIn("Baselines", page)
+                self.assertIn("Manual Content", page)
+                self.assertIn(cra_url, page)
+                self.assertIn(">Edit</button>", page)
+                self.assertIn(">Sections</button>", page)
+                self.assertIn('id="edit-pack-confirm"', page)
+                self.assertIn("Update the pack info?", page)
+                updated = _post(
+                    base + "/requirements/documents",
+                    {
+                        "repo": "fixture-product",
+                        "action": "update",
+                        "pack": "house-policy",
+                        "adapter_id": "cra-xml",
+                        "name": "House Policy Example",
+                        "official_name": "CRA",
+                        "url": xml_url,
+                    },
+                )
+                saved = json.loads((house / "pack.json").read_text(encoding="utf-8"))
+                self.assertEqual(saved["source"]["url"], xml_url)
+                self.assertEqual(saved["source"]["instrument"], "CRA")
+                self.assertEqual(saved["id"], "house-policy")
+                self.assertIn(xml_url, updated)
+                self.assertIn("Pack info saved.", updated)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()

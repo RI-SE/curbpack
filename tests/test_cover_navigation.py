@@ -32,6 +32,7 @@ class CoverNavigationTest(unittest.TestCase):
                 cover = _get(base + "/")
                 self.assertIn("Curbpack Studio", cover)
                 self.assertIn('href="/requirements"', cover)
+                self.assertNotIn('href="/studio"', cover)
                 self.assertNotIn('href="/requirements/copy"', cover)
                 self.assertIn("Developer", cover)
                 self.assertIn("Discovery &amp; Claims", cover)

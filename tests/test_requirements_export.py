@@ -369,10 +369,8 @@ class ExportPageTest(unittest.TestCase):
         self.assertIn('type="submit">Export Pack</button>', page)
         self.assertNotIn('type="button">Publish</button>', page)
         self.assertNotIn("publish them as a pack", page)
-        self.assertIn("Git history is separate from Export.", page)
-        self.assertIn("docs/reference/packs2.md", page)
-        self.assertIn("requirements/ARCHITECTURE.md", page)
-        self.assertIn("installation-specific", page)
+        self.assertNotIn("Baselines", page)
+        self.assertNotIn("Git history is separate from Export.", page)
         self.assertNotIn("published/", page)
 
     def test_export_page_names_the_selected_copy_and_unsigned_readings(self):

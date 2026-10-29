@@ -59,7 +59,7 @@ Selection is one mode. `exclude_requirements` removes those ids from the selecte
 
 `search_hints` is the shared discovery scope. Search uses that object, then the Requirement's `discovery_hints`. The key `hunt` is not accepted. Check does not read the hints.
 
-The four directory fields are each required. Created-file values are `curbpack/packs`, `curbpack/claims`, `.curbpack`, and `curbpack/reports`. A Claim file is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`. `unsigned_requirements` is required and is `"reject"` or `"signed_commit"`; Workspace §2.4 describes the intended behaviour.
+The four directory fields are each required. Created-file values are `curbpack/packs`, `curbpack/claims`, `.curbpack`, and `curbpack/reports`. A Claim file is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`. `unsigned_requirements` is required. Accepted values and intended behaviour are Workspace §2.4.
 
 Putting two ids in `packs` selects both Packs. Each Requirement stays in its own Pack through `pack_id`.
 

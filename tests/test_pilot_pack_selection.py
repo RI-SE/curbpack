@@ -193,7 +193,8 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn("Section", discover)
                 self.assertIn(">Copy</th>", discover)
                 self.assertIn("Add repo", discover)
-                self.assertIn("CRA Annex VII", discover)
+                self.assertIn("Choose a repo", discover)
+                self.assertNotIn("CRA Annex VII", discover)
                 self.assertNotIn("matched_by", discover)
                 self.assertNotIn("docs/risk-assessment.md", discover)
 

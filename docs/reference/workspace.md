@@ -47,7 +47,7 @@ Accepted keys are only those in §2.2.
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
-| `unsigned_requirements` | yes | `"reject"` | `"reject"` \| `"signed_commit"`. Behaviour: later epic. |
+| `unsigned_requirements` | yes | `"reject"` | `"report"`, `"reject"`, or `"signed_commit"`. Behaviour: §2.4, later epic. |
 
 **Dialog → file:** packs and requirements as checkboxes. Ticked packs → `packs`. Unticked requirements → `exclude_requirements`.
 
@@ -80,7 +80,7 @@ Accepted keys are only those in §2.2.
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
   "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "unsigned_requirements": "report"
 }
 ```
 
@@ -96,6 +96,8 @@ With that file:
 `"results_dir": "artifacts/check"` → run under `<repo>/artifacts/check/…`. Same contract.
 
 ### 2.4 `unsigned_requirements` (later epic)
+
+Accepted values are `report`, `reject`, and `signed_commit`. A created file uses `reject`. Intended curbcheck behaviour where it is already written:
 
 | Value | Intended curbcheck behaviour |
 |-------|------------------------------|

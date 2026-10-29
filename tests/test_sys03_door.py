@@ -127,7 +127,7 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             "results_dir": "a relative directory",
             "reports_dir": "a relative directory",
             "search_hints": "object",
-            "unsigned_requirements": '"reject" or "signed_commit"',
+            "unsigned_requirements": '"report", "reject" or "signed_commit"',
             "packs": "non-empty list of strings",
         }
         for field, expected in cases.items():
@@ -508,8 +508,14 @@ class DoorUiTest(unittest.TestCase):
                 self.assertEqual(written["unsigned_requirements"], "reject")
                 self.assertIn("No Claims", saved)
                 self.assertIn("No packs yet", saved)
-                self.assertIn("Packs directory", saved)
-                self.assertIn("Claims directory", saved)
+                self.assertNotIn("Current Pack Dir", saved)
+                self.assertIn("Current Configuration", saved)
+                self.assertNotIn("Claims directory", saved)
+                self.assertNotIn("Baselines", saved)
+                self.assertIn('class="config-panel"', saved)
+                self.assertIn('readonly', saved)
+                self.assertIn("Edit configuration", saved)
+                self.assertIn('id="curbpack-dialog"', saved)
                 listed_missing = _post(
                     base + "/requirements/curbpack",
                     {
@@ -526,7 +532,9 @@ class DoorUiTest(unittest.TestCase):
                 )
                 self.assertEqual((repo_b / "curbpack.json").read_bytes(), before_b)
                 self.assertIn("ghost-pack", listed_missing)
-                self.assertIn("missing", listed_missing)
+                self.assertIn("Manual Content", listed_missing)
+                self.assertIn(">Edit</button>", listed_missing)
+                self.assertIn(">Sections</button>", listed_missing)
                 self.assertIn("present-pack", listed_missing)
                 with self.assertRaises(urllib.error.HTTPError) as rejected:
                     _post(
@@ -918,8 +926,9 @@ class ReviewIoTest(unittest.TestCase):
                 self.assertNotIn("sneak-claim", empty)
                 page = _get(base + "/review?repo=widget")
                 self.assertEqual(open_repo_id(workspace), "widget")
-                self.assertIn("tree/packs", page)
-                self.assertIn("kept/claims", page)
+                self.assertIn("Current Configuration", page)
+                self.assertNotIn("tree/packs", page)
+                self.assertNotIn("kept/claims", page)
                 self.assertIn("runs/out", page)
                 self.assertIn("signed/reports", page)
                 self.assertNotIn("sneak-claim", page)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import json
 
-from app.pages import page
+from app.pages import page, repo_config_panel
 
 
 def documents_page(model: dict) -> bytes:
@@ -28,24 +28,6 @@ def documents_page(model: dict) -> bytes:
         table = '<p class="muted">No packs yet. Click Add.</p>'
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
-    curbpack_file = str(model.get("curbpack_file") or "")
-    file_line = (
-        f"<p>curbpack.json <code>{html.escape(curbpack_file)}</code></p>"
-        if repo_id and not file_absent and curbpack_file
-        else ""
-    )
-    directory = str(model.get("directory") or "")
-    directory_line = (
-        f"<p class=\"muted\">Packs directory <code>{html.escape(directory)}</code>.</p>"
-        if directory
-        else ""
-    )
-    claims_directory = str(model.get("claims_dir") or "")
-    claims_dir_line = (
-        f"<p class=\"muted\">Claims directory <code>{html.escape(claims_directory)}</code>.</p>"
-        if claims_directory
-        else ""
-    )
     claims_line = (
         '<p class="muted">No Claims.</p>' if model.get("no_claims") else ""
     )
@@ -59,55 +41,36 @@ def documents_page(model: dict) -> bytes:
     elif repo_id and not file_absent:
         create = (
             '<p class="actions">'
-            f'<a class="details" href="/requirements?repo={html.escape(repo_id)}&amp;curbpack=edit">'
-            "Edit curbpack.json</a></p>"
+            '<button type="button" class="secondary" id="curbpack-open">Edit configuration</button>'
+            "</p>"
         )
+    show = ("config",) if repo_id and not file_absent and model.get("curbpack_file") else ()
+    config_panel = repo_config_panel(model, action="/requirements", show=show, beside=create)
     add = _add_toolbar() if repo_id and not file_absent else ""
     dialog = _document_add_dialog(model.get("adapters") or [], repo_id) if add else ""
+    edit_dialog = (
+        _document_edit_dialog(model.get("edit_adapters") or model.get("adapters") or [], repo_id)
+        if add
+        else ""
+    )
     config_dialog = _curbpack_dialog(model) if repo_id else ""
     body = f"""
 <h1>Pack Sources</h1>
 <p class="muted">Choose the repository to work with. Pack Sources then reads the Packs named in that
 repository's curbpack.json.</p>
-{_repo_picker(model)}
+{config_panel}
 {_start_empty_form(show=not repo_id)}
-{create}
-{file_line}
-{directory_line}
-{claims_dir_line}
 {claims_line}
-{_baselines_note(str(model.get("workspace_root") or ""))}
 {add}
 {flash}
 <div class="card">{table}</div>
 {dialog}
+{edit_dialog}
 {config_dialog}
 """
     if model.get("job"):
         body += job_fragment(model["job"]).decode("utf-8")
     return page("Pack Sources", body)
-
-
-def _baselines_note(workspace_root: str) -> str:
-    """Baselines are Git history. The absolute workspace root is not the portable layout."""
-    del workspace_root
-    return """
-<details class="card">
-<summary>Baselines (Git — UI later)</summary>
-<p class="muted">A baseline is a Git commit of this installation's workspace.
-Git history is separate from Export. Export copies the selected working copy
-to a directory you choose. The Pack file layout is
-<code>docs/reference/packs2.md</code>. How Studio stores working copies is
-described in <code>requirements/ARCHITECTURE.md</code>.</p>
-<p>Git commands below are an installation-specific example. They are not a portable layout.</p>
-<pre><code>git status
-git add &lt;pack-id&gt;/&lt;timestamp&gt;
-git commit -m "Baseline: &lt;pack-id&gt; at &lt;timestamp&gt;"
-git log --oneline -- &lt;pack-id&gt;</code></pre>
-<p class="muted">Restoring a revision recovers Packs v2 files. It does not change pack id, timestamp
-selection, <code>pack.version</code>, <code>origin</code>, or signatures by itself.</p>
-</details>
-"""
 
 
 def export_page(model: dict) -> bytes:
@@ -166,7 +129,7 @@ def catalog_page(model: dict) -> bytes:
 <p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Pack Editor</h1>
 <p class="muted">Choose a repo to work with.</p>
-{_repo_picker(model)}
+{repo_config_panel(model, action="/requirements")}
 """
         return page("Pack Editor", body)
     document = model.get("document") or {}
@@ -187,24 +150,15 @@ def catalog_page(model: dict) -> bytes:
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
     repo = str(model.get("repo_id") or "")
     back = "/requirements" + (f"?repo={html.escape(repo)}" if repo else "")
-    toolbar = _add_toolbar()
+    add = '<p class="actions"><button type="button" id="add-open">Add</button></p>'
     dialog = _section_add_dialog(model.get("adapters") or [], document)
-    directory = str(model.get("directory") or "")
-    claims_directory = str(model.get("claims_dir") or "")
-    path_chrome = ""
-    if directory:
-        path_chrome += f'<p class="muted">Packs directory <code>{html.escape(directory)}</code>.</p>'
-    if claims_directory:
-        path_chrome += f'<p class="muted">Claims directory <code>{html.escape(claims_directory)}</code>.</p>'
     body = f"""
 <p class="muted"><a href="{back}">Pack Sources</a></p>
 <h1>Pack Editor</h1>
-{_repo_picker(model)}
-{path_chrome}
+{repo_config_panel(model, action="/requirements", beside=add)}
 <p class="muted">Sections of <strong>{html.escape(name)}</strong>.
 <strong>Extract</strong>, when available, does not overwrite your current Requirement automatically. You choose which updates to keep. Fields you leave out stay as they are.
 Humans must review, <strong>Edit</strong>, and <strong>Sign</strong> each Requirement.</p>
-{toolbar}
 {flash}
 <div class="card">{table}</div>
 {dialog}
@@ -212,26 +166,6 @@ Humans must review, <strong>Edit</strong>, and <strong>Sign</strong> each Requir
     if model.get("job"):
         body += job_fragment(model["job"], document_id=str(document.get("id") or "")).decode("utf-8")
     return page("Pack Editor", body)
-
-
-def _repo_picker(model: dict) -> str:
-    repo_id = str(model.get("repo_id") or "")
-    options = ['<option value="">Choose a repo</option>']
-    for repo in model.get("repos") or []:
-        if not isinstance(repo, dict):
-            continue
-        row_id = str(repo.get("id") or "")
-        name = str(repo.get("name") or row_id)
-        selected = " selected" if row_id == repo_id else ""
-        options.append(
-            f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
-        )
-    return (
-        '<form method="get" class="repo-picker" action="/requirements">'
-        '<label>Repo <select name="repo" onchange="this.form.submit()">'
-        + "".join(options)
-        + "</select></label></form>"
-    )
 
 
 def _start_empty_form(*, show: bool) -> str:
@@ -261,26 +195,34 @@ def _document_row(document: dict) -> str:
     adapter_id = str(document.get("adapter_id") or "")
     url = str(document.get("url") or "")
     pack_dir = str(document.get("pack_dir") or "")
-    link = (
-        f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{html.escape(url)}</a>'
-        if url
-        else '<span class="muted">—</span>'
-    )
-    where = f'<div class="muted">{html.escape(pack_dir)}</div>' if pack_dir else ""
-    if document.get("missing"):
-        link = '<span class="muted">missing</span>'
-    url_cell = link + where
-    actions = ""
-    if not document.get("missing"):
-        repo = str(document.get("repo_id") or "")
-        repo_field = (
-            f'<input type="hidden" name="repo" value="{html.escape(repo)}">' if repo else ""
+    if url:
+        link = (
+            f'<a href="{html.escape(url)}" target="_blank" rel="noopener">{html.escape(url)}</a>'
         )
-        actions = (
-            '<form method="get" action="/requirements">'
-            f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
-            f"{repo_field}"
-            '<button type="submit">Sections</button></form>'
+    else:
+        link = '<span class="muted">Manual Content</span>'
+    where = f'<div class="muted">{html.escape(pack_dir)}</div>' if pack_dir else ""
+    url_cell = link + where
+    repo = str(document.get("repo_id") or "")
+    repo_field = (
+        f'<input type="hidden" name="repo" value="{html.escape(repo)}">' if repo else ""
+    )
+    actions = (
+        '<button type="button" class="pack-edit"'
+        f' data-id="{html.escape(doc_id)}"'
+        f' data-name="{html.escape(name)}"'
+        f' data-official="{html.escape(official)}"'
+        f' data-url="{html.escape(url)}"'
+        f' data-adapter="{html.escape(adapter_id or "manual")}"'
+        f' data-extract="{"1" if document.get("extract_enabled") else "0"}"'
+        ">Edit</button>"
+        '<form method="get" action="/requirements">'
+        f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
+        f"{repo_field}"
+        '<button type="submit">Sections</button></form>'
+    )
+    if not document.get("missing"):
+        actions += (
             '<form method="get" action="/requirements/export">'
             f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
             '<button type="submit">Export Pack</button></form>'
@@ -318,9 +260,9 @@ def _curbpack_dialog(model: dict) -> str:
     unsigned = str(fields.get("unsigned_requirements") or "reject")
     reject_sel = " selected" if unsigned == "reject" else ""
     commit_sel = " selected" if unsigned == "signed_commit" else ""
-    opened = " open" if model.get("show_curbpack_dialog") else ""
+    show = "1" if model.get("show_curbpack_dialog") else ""
     return f"""
-<dialog id="curbpack-dialog"{opened}>
+<dialog id="curbpack-dialog" data-show="{show}">
 <div class="head"><h2>curbpack.json</h2>
 <button type="button" id="curbpack-cancel" class="secondary">Cancel</button></div>
 <div class="body">
@@ -351,6 +293,7 @@ def _curbpack_dialog(model: dict) -> str:
   function closeDialog() {{ dialog.close(); }}
   const openBtn = document.getElementById("curbpack-open");
   if (openBtn) openBtn.addEventListener("click", () => dialog.showModal());
+  if (dialog.dataset.show === "1") dialog.showModal();
   document.getElementById("curbpack-cancel").addEventListener("click", closeDialog);
   document.getElementById("curbpack-cancel-footer").addEventListener("click", closeDialog);
 }})();
@@ -375,7 +318,7 @@ def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
 <form method="post" action="/requirements/documents" id="add-form">
 <input type="hidden" name="repo" value="{html.escape(repo_id)}">
 <label>Adapter<select name="adapter_id" id="add-adapter" required>{"".join(options)}</select></label>
-<p class="muted">The adapter cannot be changed later. Add another document to use a different adapter.</p>
+<p class="muted">Edit on the pack row can change the adapter later.</p>
 <label>Document name<input type="text" name="name" id="add-name" required autocomplete="off"></label>
 <label>Official name<input type="text" name="official_name" id="add-official" autocomplete="off"></label>
 <label>URL<input type="text" name="url" id="add-url" required autocomplete="off"></label>
@@ -414,6 +357,128 @@ def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
   adapterEl.addEventListener("change", fillFromAdapter);
   nameEl.addEventListener("input", () => {{ nameEl.dataset.touched = "1"; }});
   fillFromAdapter();
+}})();
+</script>
+"""
+
+
+def _document_edit_dialog(adapters: list, repo_id: str) -> str:
+    """Edit one pack row. Saving a URL that turns Extract on asks before writing pack.json."""
+    options = ['<option value="manual">Manual Content</option>']
+    choices = [{"id": "manual", "instrument": "Manual Content", "url": ""}]
+    for item in adapters:
+        adapter_id = str(item.get("id") or "")
+        instrument = str(item.get("instrument") or adapter_id)
+        url = str(item.get("url") or "")
+        options.append(
+            f'<option value="{html.escape(adapter_id)}">'
+            f"{html.escape(instrument)} ({html.escape(adapter_id)})</option>"
+        )
+        choices.append(
+            {"id": adapter_id, "instrument": instrument, "url": url}
+        )
+    return f"""
+<dialog id="edit-pack-dialog">
+<div class="head"><h2>Edit pack</h2>
+<button type="button" id="edit-pack-cancel" class="secondary">Cancel</button></div>
+<div class="body">
+<form method="post" action="/requirements/documents" id="edit-pack-form">
+<input type="hidden" name="repo" value="{html.escape(repo_id)}">
+<input type="hidden" name="action" value="update">
+<input type="hidden" name="pack" id="edit-pack-id" value="">
+<label>Adapter<select name="adapter_id" id="edit-adapter" required>{"".join(options)}</select></label>
+<label>Document name<input type="text" name="name" id="edit-name" required autocomplete="off"></label>
+<label>Official name<input type="text" name="official_name" id="edit-official" autocomplete="off"></label>
+<label>URL<input type="text" name="url" id="edit-url" autocomplete="off"></label>
+<p class="actions">
+<button type="button" id="edit-pack-cancel-footer" class="secondary">Cancel</button>
+<button type="submit" id="edit-pack-save">Save</button>
+</p>
+</form>
+</div>
+</dialog>
+<dialog id="edit-pack-confirm">
+<div class="head"><h2>Update the pack info?</h2>
+<button type="button" id="edit-pack-confirm-cancel" class="secondary">Cancel</button></div>
+<div class="body">
+<p>This URL turns Extract on. Save the pack info?</p>
+<p class="actions">
+<button type="button" id="edit-pack-confirm-cancel-footer" class="secondary">Cancel</button>
+<button type="button" id="edit-pack-confirm-ok">OK</button>
+</p>
+</div>
+</dialog>
+<script type="application/json" id="edit-adapters">{json.dumps(choices)}</script>
+<script>
+(function () {{
+  const adapters = JSON.parse(document.getElementById("edit-adapters").textContent || "[]");
+  const dialog = document.getElementById("edit-pack-dialog");
+  const confirmDialog = document.getElementById("edit-pack-confirm");
+  const form = document.getElementById("edit-pack-form");
+  const adapterEl = document.getElementById("edit-adapter");
+  const nameEl = document.getElementById("edit-name");
+  const officialEl = document.getElementById("edit-official");
+  const urlEl = document.getElementById("edit-url");
+  const idEl = document.getElementById("edit-pack-id");
+  let initial = {{adapter: "", url: "", name: "", official: ""}};
+  function currentAdapter() {{
+    return adapters.find((item) => item.id === adapterEl.value) || null;
+  }}
+  function extractOn() {{
+    const url = urlEl.value.trim();
+    if (!url || adapterEl.value === "manual") return false;
+    return adapters.some((item) => item.id !== "manual" && item.url && item.url === url);
+  }}
+  function rowChanged() {{
+    return adapterEl.value !== initial.adapter
+      || urlEl.value.trim() !== initial.url
+      || nameEl.value.trim() !== initial.name
+      || officialEl.value.trim() !== initial.official;
+  }}
+  function closeEdit() {{ dialog.close(); }}
+  function closeConfirm() {{ confirmDialog.close(); }}
+  document.querySelectorAll(".pack-edit").forEach((button) => {{
+    button.addEventListener("click", () => {{
+      idEl.value = button.dataset.id || "";
+      nameEl.value = button.dataset.name || "";
+      officialEl.value = button.dataset.official || "";
+      urlEl.value = button.dataset.url || "";
+      const adapterId = button.dataset.adapter || "manual";
+      adapterEl.value = adapters.some((item) => item.id === adapterId) ? adapterId : "manual";
+      initial = {{
+        adapter: adapterEl.value,
+        url: urlEl.value.trim(),
+        name: nameEl.value.trim(),
+        official: officialEl.value.trim(),
+      }};
+      form.dataset.confirmed = "";
+      dialog.showModal();
+    }});
+  }});
+  adapterEl.addEventListener("change", () => {{
+    const adapter = currentAdapter();
+    if (!adapter) return;
+    urlEl.value = adapter.url || "";
+    if (!officialEl.value.trim() && adapter.instrument && adapter.id !== "manual") {{
+      officialEl.value = adapter.instrument;
+    }}
+  }});
+  document.getElementById("edit-pack-cancel").addEventListener("click", closeEdit);
+  document.getElementById("edit-pack-cancel-footer").addEventListener("click", closeEdit);
+  form.addEventListener("submit", (event) => {{
+    if (form.dataset.confirmed === "1") return;
+    if (rowChanged() && extractOn()) {{
+      event.preventDefault();
+      confirmDialog.showModal();
+    }}
+  }});
+  document.getElementById("edit-pack-confirm-cancel").addEventListener("click", closeConfirm);
+  document.getElementById("edit-pack-confirm-cancel-footer").addEventListener("click", closeConfirm);
+  document.getElementById("edit-pack-confirm-ok").addEventListener("click", () => {{
+    form.dataset.confirmed = "1";
+    confirmDialog.close();
+    form.requestSubmit();
+  }});
 }})();
 </script>
 """
@@ -788,15 +853,6 @@ def copy_page(model: dict) -> bytes:
         )
     path = str(model.get("pack_dir") or "")
     path_line = f'<p class="muted"><code>{html.escape(path)}</code></p>' if path else ""
-    actions = (
-        '<p class="muted"><a href="/requirements/compare">Compare</a></p>'
-        if read_only
-        else """<p class="muted">
-<a href="/requirements/compare">Compare</a>
- · <a href="/requirements/consolidate">Consolidate</a>
- · <a href="/requirements/publish">Publish</a>
-</p>"""
-    )
     body = f"""
 <p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}
  · <code>{html.escape(str(model.get("adapter_id") or ""))}</code></p>
@@ -805,7 +861,6 @@ def copy_page(model: dict) -> bytes:
 {_flash(str(model.get("message") or ""))}
 <div class="card">{listed}</div>
 {coverage_html}
-{actions}
 """
     return page("Requirements", body)
 
