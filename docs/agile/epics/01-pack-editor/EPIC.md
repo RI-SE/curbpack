@@ -8,7 +8,11 @@ The pilot must work **before EP-02 (modularizing Studio)**. This epic is about f
 
 ## User journey
 
-1. Open one repository. Its `curbpack.json` names the Pack ids, and a packs root locates those Packs. Authoring uses a root inside that repository. A product repository may point the root at an exported packs directory. [SYS-03](stories/SYS-03-one-repo-door.md) is that door.
+1. Pack Sources starts by choosing the repository to work with. [SYS-03](stories/SYS-03-one-repo-door.md) is that door.
+   - Starting empty means naming a working folder. Studio writes a new `curbpack.json` in that folder, and the file points at that folder.
+   - Otherwise Pack Sources reads the Packs named in that repository's `curbpack.json`, and those rows are the work.
+   - Each row shows the document URL and, in that same cell, the pack directory from `curbpack.json`, so it is visible where the Pack is written.
+   - The person can add a Pack. Importing a Pack is later, and it is the same write as accepting an extraction.
 2. Edit the Pack's existing source list; extract, compare, edit and sign Requirements without losing source references. Export the selected Pack with PE-11. That export is not a published release.
 3. Stay on the repository SYS-03 opened. Claims associate Requirements with evidence in that repository's `claims/`. The packs root locates the Pack files.
 4. Run the configured Checks against that evidence and inspect PASS, FAIL and justified SKIP outcomes.
@@ -28,6 +32,8 @@ Preserve existing functioning user flows. Document and verify what the imported 
 | CHK-03 | Understand PASS, FAIL and SKIP outcomes |
 | CHK-04 | Trace each result to the checked evidence and revision |
 | CHK-06 | Ship curbcheck as its own program |
+| CHK-07 | `curbcheck` uses `curbpack.json` path fields; owns `--defaults` / created-file shape; id-list flags; update `curbcheck-cli.md` + existing curbcheck tests |
+| CHK-08 | Studio Check and Review call the post–CHK-07 curbcheck API (after CHK-07) |
 | REV-01 | Compile a report from a specific Check run |
 | REV-02 | Review and sign a report without confusing different runs |
 | DOC-04 | One authoritative Packs v2 model and matching JSON Schemas |
