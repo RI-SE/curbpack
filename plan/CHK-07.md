@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (CHK-07 decided in walkthrough; “kör vidare med curbcheck” after SYS-03 Task 7 — proceed Task 1–5; OPEN-1–OPEN-6 as this plan) |
-| Current task | Task 2 — IMPL-START |
-| Last completed task | Task 1 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk07_curbcheck tests.test_sys03_door tests.test_curbcheck_package` — Ran 32 tests, OK |
+| Current task | Task 3 — IMPL-START |
+| Last completed task | Task 2 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_m4_checks` — Ran 30 tests, OK |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/CHK-07.md`. |
 | Requirements | Story CHK-R01–CHK-R06 in `CHK-07-curbcheck-workspace.md`. No new `docs/req/` row. Legacy `docs/req/checks.md` CHK-R01–CHK-R17 are CHK-05/CHK-06 Check-execution requirements, not this CLI contract. |
 | Packs v2 | `docs/reference/workspace.md` owns path fields, created-file values, and CLI channels (§2.2, §2.3, §3). `docs/reference/packs2.md` §2.3 owns pack/requirement selection; §3.1 owns the run-result object. This plan edits neither. |
 | Blockers | None |
-| Exact next action | Task 2: stdout / `-j` / `-o` output channels. Write the RED tests first. |
+| Exact next action | Task 3: `--packs` / `--requirements` as id lists. Write the RED tests first. |
 
 ## Requirements and acceptance mapping
 
@@ -28,8 +28,8 @@ Requirements live in the story. This table only maps each id to its acceptance t
 
 | Requirement ID | Story | Test / observed evidence | Status |
 | --- | --- | --- | --- |
-| CHK-R01 | CHK-07 | `tests/test_chk07_curbcheck.py` (load from `packs_dir`/`claims_dir`; missing/invalid file writes nothing) | DRAFT |
-| CHK-R02 | CHK-07 | `tests/test_chk07_curbcheck.py` (stdout only; `-j` dated file; `-o PATH`) | DRAFT |
+| CHK-R01 | CHK-07 | `tests/test_chk07_curbcheck.py` (load from `packs_dir`/`claims_dir`; missing/invalid file writes nothing) | Task 2 (stop-before-write); Task 3 (no directory `--packs`) |
+| CHK-R02 | CHK-07 | `tests/test_chk07_curbcheck.py` (stdout only; `-j` dated file; `-o PATH`) | Task 2 |
 | CHK-R03 | CHK-07 | `tests/test_chk07_curbcheck.py` (`created_curbpack()` + `curbcheck --defaults`) | Task 1 |
 | CHK-R04 | CHK-07 | `tests/test_chk07_curbcheck.py` (id-list `--packs`/`--requirements`; `/` or `\` exits 2) | DRAFT |
 | CHK-R05 | CHK-07 | `docs/reference/curbcheck-cli.md` describes R01–R04; pending banner gone | DRAFT |
@@ -91,10 +91,10 @@ Out of this story (do not retarget here): Studio Check/Review (`app/server.py`, 
 **Validation:** `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_m4_checks`
 **Stop if:** JSON-on-stdout would be required, or a dated name other than `run-result_<YYYYMMDDTHHMMSSZ>.json` would be invented.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 3 — `--packs` / `--requirements` are id lists
 
@@ -160,5 +160,6 @@ Proposals below are this plan’s intended implementation. They are not a new Pa
 
 ## Work log
 
+- **2026-10-29 / Task 2:** CHK-R02 + CHK-R01 stop-before-write. RED: stdout-only tests failed because the CLI still wrote `run-result.json` and printed `wrote`; `-j`/`-o` were unrecognized. GREEN: `_cli` runs `run_repository`, writes only with `-j` (dated `results_dir` file) or `-o PATH`; both write both. `new_run_result_path` in `checks/run.py`. Command: `python3 -m unittest tests.test_chk07_curbcheck tests.test_curbcheck_package tests.test_m4_checks` — Ran 30 tests, OK. Review (`bd045bdc`) no Critical/Important. Minor fixed: captured stdout on the two leaky tests; parser description no longer says it always writes JSON. `app/server.py` dated helper untouched.
 - **2026-10-29 / Task 1:** CHK-R03. RED: `python3 -m unittest tests.test_chk07_curbcheck` — Ran 3 tests, 3 errors (`No module named 'checks.defaults'`). GREEN: `checks/defaults.py` `created_curbpack`; `discovery.door.created_curbpack` is that function; `curbcheck --defaults` prints `dump_text` of it and exits 0 before repo resolution. Command: `python3 -m unittest tests.test_chk07_curbcheck tests.test_sys03_door tests.test_curbcheck_package` — Ran 32 tests, OK. First review (`218c3e76`) no Critical/Important. Minor: dropped unused `CREATED_SEARCH_HINTS` re-export from door. Task 4 caller clause is already satisfied by the `assertIs` check.
 - **2026-10-29 / Task 0:** Inspected `checks/__main__.py` `_cli` (`--packs` Path, always `run_and_write` to undated `results_dir/run-result.json`, no `--defaults`/`-j`/`--requirements`). `run_repository` already resolves `packs_dir`/`claims_dir` from `curbpack.json`. `created_curbpack` is in `discovery/door.py`. Baseline `python3 -m unittest tests.test_curbcheck_package tests.test_curbcheck_catalogue tests.test_m4_checks` — Ran 23 tests, OK. Drafted this plan from `plan/TEMPLATE.md`. Unrelated WIP left uncommitted. First plan review Issues Found (`4008c220`): Task 3 named non-existent `test_cli_skip`. Fixed to `test_skip_stores_the_reason`. Added `docs/testing/procedures/cases.md` and `docs/testing/generated_test_record_template.md` to the CHK-R06 inventory. Folded advisory notes: keyword-only overlays, `--defaults` from a directory without `curbpack.json`, clock for two `-j` stamps. Re-review Issues Found (`bf9235f5`): Task 5 had no recipe for Studio `docs/reference/test-packs` (outside the product repo, unversioned `<id>/pack.json`). Fixed: copy into `$REFERENCE_PRODUCT_ROOT/curbpack/packs/<id>/<version>/`; `run_and_write` forwards overlays; ARCHITECTURE CLI sentence moves to Task 2; `docs/development/cli.md` / `ci.md` recorded out of scope. No third review.
