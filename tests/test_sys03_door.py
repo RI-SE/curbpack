@@ -5,17 +5,22 @@ from __future__ import annotations
 import copy
 import json
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.parse
+import urllib.request
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from app.server import _write_curbpack
+from app.server import Workspace, _write_curbpack, make_handler
 from claims.bind import build_claim, write_claim
 from checks.run import claims_dir, packs_dir, reports_dir, results_dir, run_and_write, run_repository
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from common.store import save_pack, save_requirement
 from common.validate import validate_curbpack_config
-from discovery.door import open_paths, open_repo_id, save_directory_fields, set_open_repo
+from discovery.door import created_curbpack, open_paths, open_repo_id, save_directory_fields, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
 
@@ -355,6 +360,209 @@ class OpenRepoMemoryTest(unittest.TestCase):
             with self.assertRaises(ModelError):
                 save_directory_fields(repo_a, claims_dir="claims/../out")
             self.assertEqual((repo_a / "curbpack.json").read_bytes(), after_ok)
+
+
+def _register(workspace: Path, name: str, repo: Path) -> str:
+    repo.mkdir(parents=True, exist_ok=True)
+    save_repos(workspace, add_repo(workspace, load_repos(workspace), name=name, path=str(repo)))
+    return name.strip().lower().replace(" ", "-")
+
+
+def _pack_json(pack_id: str, name: str, **source) -> dict:
+    pack = {"id": pack_id, "name": name, "version": draft_pack()["version"]}
+    if source:
+        pack["source"] = source
+    return pack
+
+
+def _get(url: str) -> str:
+    with urllib.request.urlopen(url) as response:
+        return response.read().decode("utf-8")
+
+
+def _post(url: str, fields: dict) -> str:
+    data = urllib.parse.urlencode(fields).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST")
+    with urllib.request.urlopen(request) as response:
+        return response.read().decode("utf-8")
+
+
+class DoorUiTest(unittest.TestCase):
+    def test_product_views_are_empty_until_a_repository_is_open(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            product = workspace / "product"
+            product.mkdir()
+            write_json(product / "curbpack.json", created_curbpack(packs=["hidden-pack"]))
+            write_json(
+                product / "curbpack" / "packs" / "hidden-pack" / "0.1.0" / "pack.json",
+                _pack_json("hidden-pack", "Hidden Pack"),
+            )
+            write_json(
+                product / ".curbpack" / "run-result.json",
+                {"claims": [{"id": "hidden-claim", "status": "pass"}]},
+            )
+            write_json(
+                workspace / "registered_sources.json",
+                {
+                    "documents": [
+                        {
+                            "id": "catalog-only",
+                            "name": "Catalog Only",
+                            "official_name": "Not a door pack",
+                            "url": "https://example.test/catalog",
+                            "adapter_id": "cra-xml",
+                        }
+                    ],
+                    "sources": [],
+                },
+            )
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                sources = _get(base + "/requirements")
+                self.assertIn("Choose a repo", sources)
+                self.assertNotIn("Hidden Pack", sources)
+                self.assertNotIn("Catalog Only", sources)
+                self.assertNotIn('id="add-open"', sources)
+                editor = _get(base + "/requirements?document=hidden-pack")
+                self.assertIn("Choose a repo", editor)
+                self.assertNotIn("Hidden Pack", editor)
+                discover = _get(base + "/discover")
+                self.assertIn("Choose a repo", discover)
+                self.assertNotIn("Catalog Only", discover)
+                self.assertNotIn("Hidden Pack", discover)
+                check = _get(base + "/check")
+                self.assertIn("Choose a repo", check)
+                self.assertNotIn("hidden-claim", check)
+                self.assertNotIn("Hidden Pack", check)
+                review = _get(base + "/review")
+                self.assertIn("Choose a repo", review)
+                self.assertIn("No repository is chosen", review)
+                self.assertNotIn("hidden-claim", review)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_curbpack_dialog_save_and_cancel_and_versioned_add(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            repo_a = workspace / "alpha"
+            repo_b = workspace / "beta"
+            _register(workspace, "Alpha", repo_a)
+            _register(workspace, "Beta", repo_b)
+            write_json(repo_b / "curbpack.json", created_curbpack(packs_dir="b-packs"))
+            before_b = (repo_b / "curbpack.json").read_bytes()
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                empty = _get(base + "/requirements?repo=alpha")
+                self.assertIn("curbpack.json", empty)
+                self.assertIn('id="curbpack-dialog"', empty)
+                self.assertIn('name="packs_dir"', empty)
+                self.assertIn('name="claims_dir"', empty)
+                self.assertIn('name="results_dir"', empty)
+                self.assertIn('name="reports_dir"', empty)
+                self.assertIn('name="unsigned_requirements"', empty)
+                self.assertIn('name="search_hints"', empty)
+                self.assertIn("Save", empty)
+                self.assertIn("Cancel", empty)
+                self.assertIn('<div class="head">', empty)
+                self.assertIn('<div class="body">', empty)
+                self.assertNotIn('id="add-open"', empty)
+                self.assertFalse((repo_a / "curbpack.json").exists())
+                fields = created_curbpack()
+                saved = _post(
+                    base + "/requirements/curbpack",
+                    {
+                        "repo": "alpha",
+                        "action": "save",
+                        "packs": "",
+                        "packs_dir": fields["packs_dir"],
+                        "claims_dir": fields["claims_dir"],
+                        "results_dir": fields["results_dir"],
+                        "reports_dir": fields["reports_dir"],
+                        "unsigned_requirements": fields["unsigned_requirements"],
+                        "search_hints": json.dumps(fields["search_hints"]),
+                    },
+                )
+                written = read_json(repo_a / "curbpack.json")
+                validate_curbpack_config(written)
+                self.assertEqual(written["packs"], [])
+                self.assertEqual(written["packs_dir"], "curbpack/packs")
+                self.assertEqual(written["claims_dir"], "curbpack/claims")
+                self.assertEqual(written["results_dir"], ".curbpack")
+                self.assertEqual(written["reports_dir"], "curbpack/reports")
+                self.assertEqual(written["unsigned_requirements"], "reject")
+                self.assertIn("No Claims", saved)
+                self.assertIn("No packs yet", saved)
+                self.assertIn("Packs directory", saved)
+                self.assertIn("Claims directory", saved)
+                listed_missing = _post(
+                    base + "/requirements/curbpack",
+                    {
+                        "repo": "alpha",
+                        "action": "save",
+                        "packs": "present-pack,ghost-pack",
+                        "packs_dir": "tree/packs",
+                        "claims_dir": "kept/claims",
+                        "results_dir": fields["results_dir"],
+                        "reports_dir": fields["reports_dir"],
+                        "unsigned_requirements": fields["unsigned_requirements"],
+                        "search_hints": json.dumps(fields["search_hints"]),
+                    },
+                )
+                self.assertEqual((repo_b / "curbpack.json").read_bytes(), before_b)
+                self.assertIn("ghost-pack", listed_missing)
+                self.assertIn("missing", listed_missing)
+                self.assertIn("present-pack", listed_missing)
+                with self.assertRaises(urllib.error.HTTPError) as rejected:
+                    _post(
+                        base + "/requirements/documents",
+                        {
+                            "repo": "alpha",
+                            "adapter_id": "cra-xml",
+                            "name": "Bad Adapter",
+                            "official_name": "House",
+                            "url": "https://example.test/present",
+                        },
+                    )
+                self.assertEqual(rejected.exception.code, 400)
+                self.assertIn("matches this URL", rejected.exception.read().decode("utf-8"))
+                added = _post(
+                    base + "/requirements/documents",
+                    {
+                        "repo": "alpha",
+                        "name": "Present Pack",
+                        "official_name": "House",
+                        "url": "https://example.test/present",
+                    },
+                )
+                pack_file = repo_a / "tree" / "packs" / "present-pack" / draft_pack()["version"] / "pack.json"
+                self.assertTrue(pack_file.is_file())
+                pack = read_json(pack_file)
+                self.assertEqual(pack["id"], "present-pack")
+                self.assertEqual(pack["version"], draft_pack()["version"])
+                self.assertNotEqual(pack["id"], draft_pack()["id"])
+                self.assertEqual(read_json(repo_a / "curbpack.json")["packs"], ["present-pack", "ghost-pack"])
+                self.assertIn("Present Pack", added)
+                self.assertIn("House", added)
+                self.assertIn('data-document="present-pack"', added)
+                self.assertIn("ghost-pack", added)
+                edit = _get(base + "/requirements?curbpack=edit")
+                self.assertIn('value="tree/packs"', edit)
+                self.assertIn('value="kept/claims"', edit)
+                before_edit = (repo_a / "curbpack.json").read_bytes()
+                _get(base + "/requirements?curbpack=edit")
+                self.assertEqual((repo_a / "curbpack.json").read_bytes(), before_edit)
+                self.assertEqual((repo_b / "curbpack.json").read_bytes(), before_b)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
 
 
 if __name__ == "__main__":

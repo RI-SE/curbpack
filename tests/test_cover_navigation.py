@@ -11,6 +11,11 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from common.jsonio import write_json
+from common.store import save_pack
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
+from requirements.extract.pipeline import draft_pack
 from requirements.ui.pages import job_fragment
 from requirements.workspace import create_extraction_copy, mark_selected
 
@@ -36,33 +41,16 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertLess(cover.index('href="/discover"'), cover.index("Developer"))
                 self.assertGreater(cover.index('href="/claims"'), cover.index("Developer"))
                 catalog = _get(base + "/requirements")
-                self.assertIn("Packs", catalog)
-                self.assertIn("id=\"add-open\"", catalog)
-                self.assertIn("Official name", catalog)
-                self.assertIn("Content of the technical documentation", catalog)
-                self.assertIn('data-adapter="cra-xml"', catalog)
-                self.assertIn('data-adapter="nis"', catalog)
-                self.assertIn("https://publications.europa.eu/resource/celex/32024R2847", catalog)
-                self.assertIn("https://publications.europa.eu/resource/celex/32022L2555", catalog)
-                self.assertIn('type="submit">Sections</button>', catalog)
-                self.assertNotIn("disabled>Edit", catalog)
-                self.assertIn('class="sign-bad" disabled', catalog)
-                self.assertIn(">unsigned</button>", catalog)
-                self.assertIn('type="submit">Export Pack</button>', catalog)
-                self.assertNotIn('type="button">Publish</button>', catalog)
-                self.assertNotIn(">Extract</button>", catalog)
-                editor = _get(base + "/requirements?document=cra-annex-vii")
-                self.assertIn("Pack Editor", editor)
-                self.assertIn(">Signed</th>", editor)
-                self.assertIn(">Unsigned</th>", editor)
-                self.assertNotIn("Working copy", editor)
-                self.assertNotIn('value="publish"', editor)
-                self.assertIn("Extract", editor)
-                self.assertIn("disabled>Edit", editor)
-                self.assertNotIn('data-adapter="nis"', editor)
-                self.assertNotIn("medtech", catalog)
+                self.assertIn("Pack Sources", catalog)
+                self.assertIn("Choose a repo", catalog)
+                self.assertNotIn("id=\"add-open\"", catalog)
+                self.assertNotIn("Content of the technical documentation", catalog)
                 self.assertNotIn("Inventory units", catalog)
                 self.assertNotIn("Extract selected section", catalog)
+                editor = _get(base + "/requirements?document=cra-annex-vii")
+                self.assertIn("Pack Editor", editor)
+                self.assertIn("Choose a repo", editor)
+                self.assertNotIn("Working copy", editor)
                 for path in (
                     "/claims",
                     "/scaffold",
@@ -95,6 +83,21 @@ class CoverNavigationTest(unittest.TestCase):
                 encoding="utf-8",
             )
             before = catalog_path.read_bytes()
+            repo = root / "product"
+            repo.mkdir()
+            write_json(repo / "curbpack.json", created_curbpack(packs=["house"]))
+            pack_dir = repo / "curbpack" / "packs" / "house" / draft_pack()["version"]
+            save_pack(
+                pack_dir,
+                {
+                    "id": "house",
+                    "name": "House Rules",
+                    "version": draft_pack()["version"],
+                    "source": {"instrument": "House", "url": "https://example.test/house"},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+            set_open_repo(root, "product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
@@ -110,7 +113,10 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertIn("House Rules", listed)
                 self.assertEqual(catalog_path.read_bytes(), before)
                 self.assertFalse((root / "selection.json").exists())
-                self.assertEqual(list(root.rglob("pack.json")), [])
+                self.assertEqual(
+                    list(root.rglob("pack.json")),
+                    [pack_dir / "pack.json"],
+                )
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -132,6 +138,11 @@ class CoverNavigationTest(unittest.TestCase):
                 at="2026-10-27T065647Z",
             )
             mark_selected(root, "cra-xml-baseline", copy.name)
+            repo = root / "product"
+            repo.mkdir()
+            write_json(repo / "curbpack.json", created_curbpack(packs=[]))
+            save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+            set_open_repo(root, "product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()

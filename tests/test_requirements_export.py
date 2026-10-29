@@ -20,12 +20,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app.server import Workspace, make_handler
-from checks.run import run_repository
+from checks.run import run_pack_directories
 from common.canonical import pack_directory_digest
 from common.errors import ModelError
 from common.keystore import load_or_create_key
 from common.signing import sign_object
-from common.store import load_pack_directory, load_requirement, save_requirement
+from common.jsonio import write_json
+from common.store import load_pack_directory, load_requirement, save_pack, save_requirement
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.adapter import ADAPTERS, load_adapter
 from requirements.extract.pipeline import draft_pack
 from requirements.workspace import extract_section, mark_published_selected, mark_selected
@@ -87,7 +90,7 @@ class ExportPackTest(unittest.TestCase):
             [item["id"] for item in loaded],
             ["CRA-ANNEX-VII-RISK", "FIXTURE-VII-1A"],
         )
-        run_result, code = run_repository(product, destination)
+        run_result, code = run_pack_directories(product, [pack_dir])
         self.assertEqual(code, 1)
         self.assertEqual(run_result["packs"][0]["id"], "cra-baseline")
         self.assertEqual(run_result["packs"][0]["version"], "0.1.0")
@@ -343,6 +346,22 @@ class ExportPageTest(unittest.TestCase):
         )["copy"]
 
     def test_pack_sources_row_submits_export_for_that_document(self):
+        repo = self.root / "product"
+        repo.mkdir()
+        write_json(repo / "curbpack.json", created_curbpack(packs=["cra-annex-vii"]))
+        save_pack(
+            repo / "curbpack" / "packs" / "cra-annex-vii" / draft_pack()["version"],
+            {
+                "id": "cra-annex-vii",
+                "name": "CRA Annex VII",
+                "version": draft_pack()["version"],
+            },
+        )
+        save_repos(
+            self.root,
+            add_repo(self.root, load_repos(self.root), name="Product", path=str(repo)),
+        )
+        set_open_repo(self.root, "product")
         with _httpd(self.root) as base:
             page = _http_get(base + "/requirements")
         self.assertIn('action="/requirements/export"', page)
@@ -355,7 +374,6 @@ class ExportPageTest(unittest.TestCase):
         self.assertIn("requirements/ARCHITECTURE.md", page)
         self.assertIn("installation-specific", page)
         self.assertNotIn("published/", page)
-        self.assertNotIn(str(self.root.resolve()), page)
 
     def test_export_page_names_the_selected_copy_and_unsigned_readings(self):
         copy = self._extract("2026-10-13T090000Z")

@@ -540,10 +540,10 @@ The file is not signed. A green check row is not a legal conclusion.</p>
     return page("Check", body)
 
 
-def _curbpack_editor(editor: dict) -> str:
-    repo_id = str(editor.get("repo_id") or "")
+def _product_repo_picker(model: dict, action: str) -> str:
+    repo_id = str(model.get("repo_id") or "")
     options = ['<option value="">Choose a repo</option>']
-    for repo in editor.get("repos") or []:
+    for repo in model.get("repos") or []:
         if not isinstance(repo, dict):
             continue
         row_id = str(repo.get("id") or "")
@@ -552,14 +552,19 @@ def _curbpack_editor(editor: dict) -> str:
         options.append(
             f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
         )
-    picker = (
-        '<form method="get" class="repo-picker" action="/check">'
+    return (
+        f'<form method="get" class="repo-picker" action="{html.escape(action)}">'
         '<label>Repo <select name="repo" onchange="this.form.submit()">'
         + "".join(options)
         + "</select></label></form>"
     )
+
+
+def _curbpack_editor(editor: dict) -> str:
+    repo_id = str(editor.get("repo_id") or "")
+    picker = _product_repo_picker(editor, "/check")
     if not repo_id:
-        return f'<div class="card discover-wrap">{picker}<p class="muted">Choose a repo to edit its curbpack.json.</p></div>'
+        return f'<div class="card discover-wrap">{picker}<p class="muted">Choose a repo to work with.</p></div>'
     ask = ""
     if editor.get("ask_read"):
         ask = (
@@ -663,6 +668,7 @@ def review_page(
     report_exists: bool = False,
     same_run_value: bool | None = None,
     unchecked: list[str] | None = None,
+    door: dict | None = None,
 ) -> bytes:
     dialogs = ""
     decision = ""
@@ -749,15 +755,18 @@ def review_page(
         decision_forms = (
             '<p class="muted">Compile writes the report. Save decision and review-sign need that file.</p>'
         )
+    picker = _product_repo_picker(door or {}, "/review")
+    compile_form = ""
+    if not str((door or {}).get("repo_id") or ""):
+        body_report = "<p>No repository is chosen.</p>"
+        decision_forms = ""
     body = f"""
 <h1>Review</h1>
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
+{picker}
 {_flash(message, error)}
 <div class="card">{body_report}</div>
-<form method="post" action="/review/compile">
-{confirm}
-<button type="submit">Compile</button>
-</form>
+{compile_form}
 <p><a href="/check">Run checks</a></p>
 {decision_forms}
 {dialogs}

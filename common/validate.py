@@ -121,8 +121,8 @@ def _validate_source(source: object, object_name: str, *, require_edition: bool)
         _nonempty_str(source, f"{object_name}.source", "edition", required=True)
 
 
-def _string_list(value: object, object_name: str, field: str) -> None:
-    if not isinstance(value, list) or not value:
+def _string_list(value: object, object_name: str, field: str, *, allow_empty: bool = False) -> None:
+    if not isinstance(value, list) or (not value and not allow_empty):
         _expect(object_name, field, "non-empty list of strings")
     for index, item in enumerate(value):
         if not isinstance(item, str) or not item.strip():
@@ -325,7 +325,7 @@ UNSIGNED_REQUIREMENTS_VALUES = {"reject", "signed_commit"}
 def validate_curbpack_config(obj: object) -> dict:
     config = _require_dict(obj, "curbpack.json")
     _reject_unknown(config, "curbpack.json", CURBPACK_CONFIG_FIELDS)
-    _string_list(config.get("packs"), "curbpack.json", "packs")
+    _string_list(config.get("packs"), "curbpack.json", "packs", allow_empty=True)
     if "exclude_requirements" in config and "requirements" in config:
         _expect("curbpack.json", "requirements", "absent when exclude_requirements is set")
     if "exclude_requirements" in config:

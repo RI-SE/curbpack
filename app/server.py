@@ -16,7 +16,16 @@ from urllib.parse import parse_qs, quote, urlparse
 _LOG = logging.getLogger("poc2.app")
 
 from app import pages
-from checks.run import process_exit_code, run_pack_directories, run_and_write
+from checks.run import (
+    _pack_version_dir,
+    claims_dir,
+    packs_dir,
+    process_exit_code,
+    reports_dir,
+    results_dir,
+    run_pack_directories,
+    run_and_write,
+)
 from claims.bind import (
     build_claim,
     exist_args_for_path,
@@ -53,6 +62,7 @@ from discovery.jobs import reviewable_targets
 from discovery.jobs import request_abort as abort_discover_job
 from discovery.jobs import start_discover_job
 from discovery.browse import list_directories
+from discovery.door import created_curbpack, open_paths, open_repo_id, set_open_repo
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import (
     candidate_for_path,
@@ -85,6 +95,8 @@ from requirements.catalog import (
     find_document,
     list_formex_adapter_choices,
     load_catalog,
+    make_document_id,
+    make_id,
     save_catalog,
 )
 from requirements.compare import apply_extraction_choices, apply_transfer, compare_copies, extraction_review
@@ -218,35 +230,10 @@ def _review_message(query: dict) -> str:
     return ""
 
 
-def _review_view(ws: Workspace) -> tuple:
-    report_exists = ws.report_path.is_file()
-    report = None
-    error = ""
-    reading = None
-    if report_exists:
-        try:
-            report = load_report(ws.report_path)
-        except (ModelError, ValueError, OSError) as exc:
-            error = str(exc)
-    else:
-        try:
-            report = preview_report(ws)
-        except ModelError as exc:
-            error = str(exc)
-    saved = report_exists and isinstance(report, dict)
-    if saved:
-        reading = read_report_signature(
-            report,
-            trust_store(ws.keys),
-            repo=ws.repo,
-            relative=_report_relative(ws),
-        )
-    run = _loaded_run(ws)
-    same = same_run(report, run) if isinstance(report, dict) and isinstance(run, dict) else None
-    unchecked = (
-        unchecked_requirement_ids(_selected_ids_for_review(ws), report) if isinstance(report, dict) else []
-    )
-    return report, reading, error, saved, report_exists, same, unchecked
+def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
+    if not _sync_open_repo(ws, query):
+        return None, None, "No repository is chosen.", False, False, None, []
+    return None, None, "", False, False, None, []
 
 
 def _loaded_run(ws: Workspace) -> dict | None:
@@ -470,10 +457,12 @@ def make_handler(ws: Workspace):
 
         def do_POST(self) -> None:
             parsed = urlparse(self.path)
+            form: dict = {}
             try:
-                self._post(parsed.path, self._form())
+                form = self._form()
+                self._post(parsed.path, form)
             except ModelError as exc:
-                target = _requirement_editor_for_error(exc)
+                target = _requirement_editor_for_error(exc, form)
                 if target:
                     self._redirect(target)
                     return
@@ -557,7 +546,7 @@ def make_handler(ws: Workspace):
                     editor=editor,
                 )
             if path == "/review":
-                report, reading, error, saved, report_exists, same, unchecked = _review_view(ws)
+                report, reading, error, saved, report_exists, same, unchecked = _review_view(ws, query)
                 return pages.review_page(
                     report,
                     reading,
@@ -572,6 +561,7 @@ def make_handler(ws: Workspace):
                     report_exists=report_exists,
                     same_run_value=same,
                     unchecked=unchecked,
+                    door=_door_chrome(ws, query),
                 )
             return pages.page("Not found", "<p>Unknown page.</p>")
 
@@ -603,28 +593,51 @@ def make_handler(ws: Workspace):
                 _load_adapter(adapter_id)
                 self._redirect(f"/requirements/inspect?adapter={adapter_id}")
                 return
+            if path == "/requirements/start-empty":
+                repo_id = _start_empty_folder(ws, (form.get("folder") or [""])[0])
+                self._redirect(f"/requirements?repo={quote(repo_id)}")
+                return
+            if path == "/requirements/curbpack":
+                repo_id = (form.get("repo") or [""])[0].strip()
+                if not repo_id:
+                    raise ModelError("curbpack.json", "repo", "a chosen repository")
+                set_open_repo(ws.root, repo_id)
+                if (form.get("action") or [""])[0].strip() == "save":
+                    _save_curbpack_form(_registered_repo_path(ws, repo_id), form)
+                self._redirect(f"/requirements?repo={quote(repo_id)}")
+                return
             if path == "/requirements/documents":
-                catalog = ensure_catalog(ws.root)
-                add_document(
-                    catalog,
+                repo_id = (form.get("repo") or [""])[0].strip()
+                if not repo_id:
+                    raise ModelError("pack", "repo", "a chosen repository")
+                _add_pack_to_repo(
+                    ws,
+                    repo_id,
                     name=(form.get("name") or [""])[0],
                     official_name=(form.get("official_name") or [""])[0],
                     url=(form.get("url") or [""])[0],
                     adapter_id=(form.get("adapter_id") or [""])[0],
                 )
-                save_catalog(ws.root, catalog)
-                self._redirect("/requirements?added=1")
+                self._redirect(f"/requirements?repo={quote(repo_id)}&added=1")
                 return
             if path == "/requirements/catalog":
                 catalog = ensure_catalog(ws.root)
                 document_id = (form.get("document_id") or [""])[0].strip()
-                add_section(
-                    catalog,
-                    document_id=document_id,
-                    section_id=(form.get("section_id") or [""])[0],
-                )
-                save_catalog(ws.root, catalog)
-                self._redirect(f"/requirements?document={document_id}&added=1")
+                section_id = (form.get("section_id") or [""])[0]
+                repo_id = (form.get("repo") or [""])[0].strip()
+                if find_document(catalog, document_id) is None:
+                    _add_pack_section(ws, document_id, repo_id, section_id)
+                else:
+                    add_section(
+                        catalog,
+                        document_id=document_id,
+                        section_id=section_id,
+                    )
+                    save_catalog(ws.root, catalog)
+                located = f"document={quote(document_id, safe='')}&added=1"
+                if repo_id:
+                    located += f"&repo={quote(repo_id, safe='')}"
+                self._redirect(f"/requirements?{located}")
                 return
             if path == "/requirements/select":
                 adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
@@ -676,6 +689,9 @@ def make_handler(ws: Workspace):
                 )
                 document_id = (form.get("document_id") or [""])[0].strip()
                 located = f"document={document_id}&" if document_id else ""
+                repo_id = (form.get("repo") or [""])[0].strip()
+                if repo_id:
+                    located += f"repo={quote(repo_id, safe='')}&"
                 self._redirect(f"/requirements?{located}job={job_id}&adapter={adapter_id}")
                 return
             if path.startswith("/requirements/jobs/") and path.endswith("/abort"):
@@ -688,21 +704,25 @@ def make_handler(ws: Workspace):
             if path.startswith("/requirements/requirement/") and path.endswith("/sign"):
                 requirement_id = path[len("/requirements/requirement/") : -len("/sign")]
                 _sign_requirement(ws, requirement_id, form)
-                self._redirect(f"/requirements/requirement/{requirement_id}?signed=1")
+                extra = _pack_query(form)
+                suffix = f"?{extra}&signed=1" if extra else "?signed=1"
+                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
                 return
             if path.startswith("/requirements/requirement/") and path.endswith("/try-discovery"):
                 requirement_id = path[
                     len("/requirements/requirement/") : -len("/try-discovery")
                 ]
                 job_id = _run_try_discovery(ws, requirement_id, form)
-                self._redirect(
-                    f"/requirements/requirement/{requirement_id}?try_job={job_id}"
-                )
+                extra = _pack_query(form)
+                suffix = f"?{extra}&try_job={job_id}" if extra else f"?try_job={job_id}"
+                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
                 return
             if path.startswith("/requirements/requirement/"):
                 requirement_id = path[len("/requirements/requirement/") :]
                 _save_requirement_form(ws, requirement_id, form)
-                self._redirect(f"/requirements/requirement/{requirement_id}?saved=1")
+                extra = _pack_query(form)
+                suffix = f"?{extra}&saved=1" if extra else "?saved=1"
+                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
                 return
             if path == "/requirements/seal":
                 _seal_selected(ws, form)
@@ -875,16 +895,13 @@ def make_handler(ws: Workspace):
                 self._redirect(f"/check?exit={code}&rows={len(result['claims'])}")
                 return
             if path == "/review/compile":
-                preview = preview_report(ws)
-                if preview is None:
-                    raise ModelError("review report", "run_result", "a run result to compile")
-                replace_saved_report(
-                    ws.report_path,
-                    preview,
-                    confirm=(form.get("confirm") or [""])[0] == "yes",
+                if not _sync_open_repo(ws, form):
+                    raise ModelError("review", "repo", "a chosen repository")
+                raise ModelError(
+                    "review",
+                    "compile",
+                    "a run-result file under that repository's results_dir",
                 )
-                self._redirect("/review?compiled=1")
-                return
             if path == "/review":
                 save_report_decision(ws.report_path, (form.get("decision") or [""])[0])
                 self._redirect("/review?saved=1")
@@ -1019,39 +1036,20 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
     job_id = (query.get("job") or [""])[0]
     if job_id:
         job = read_discover_job(ws.root / "jobs", job_id)
-    repos = load_repos(ws.root).get("repos") or []
-    requested = (query.get("repo") or [""])[0].strip()
-    repo = _selected_discover_repo(ws, repos, requested)
+    repos = _listed_repos(ws)
+    repo_id = _sync_open_repo(ws, query)
+    repo = find_repo({"repos": repos}, repo_id) if repo_id else None
     return {
         "mode": "product" if product else "pilot",
         "repo_id": str((repo or {}).get("id") or ""),
         "repo_name": str((repo or {}).get("name") or ""),
         "repos": repos,
-        "sections": _discover_sections(ws, repo, product=product),
+        "sections": _discover_sections(ws, repo, product=product) if repo else [],
         "reviewable": reviewable_targets(ws.root),
         "job": job,
         "error": (query.get("error") or [""])[0],
         "workspace_root": str(ws.root.resolve()),
     }
-
-
-def _selected_discover_repo(ws: Workspace, repos: list, requested: str) -> dict | None:
-    if requested:
-        return find_repo({"repos": repos}, requested)
-    product = ws.repo.resolve()
-    for row in repos:
-        if not isinstance(row, dict):
-            continue
-        try:
-            path = resolve_repo_path(ws.root, str(row.get("path") or ""))
-        except ModelError:
-            continue
-        if path == product:
-            return row
-    for row in repos:
-        if isinstance(row, dict) and row.get("id"):
-            return row
-    return None
 
 
 def _discover_sections(ws: Workspace, repo: dict | None, *, product: bool) -> list[dict]:
@@ -1429,24 +1427,243 @@ def _export_selected(handler, ws: Workspace, form: dict) -> None:
     )
 
 
+def _sync_open_repo(ws: Workspace, query: dict | None = None, repo_id: str = "") -> str:
+    chosen = (repo_id or "").strip()
+    if not chosen and query:
+        chosen = (query.get("repo") or query.get("repo_id") or [""])[0].strip()
+    if chosen:
+        set_open_repo(ws.root, chosen)
+    return open_repo_id(ws.root) or ""
+
+
+def _listed_repos(ws: Workspace) -> list[dict]:
+    return [
+        row
+        for row in (load_repos(ws.root).get("repos") or [])
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    ]
+
+
+def _door_chrome(ws: Workspace, query: dict | None = None) -> dict:
+    return {"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)}
+
+
+def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
+    if not repo_id:
+        return {}
+    repo = _registered_repo_path(ws, repo_id)
+    config_path = repo / "curbpack.json"
+    fields = {
+        "curbpack_file": str(config_path.resolve()) if config_path.is_file() else str(config_path),
+        "directory": "",
+        "claims_dir": "",
+        "results_dir": "",
+        "reports_dir": "",
+    }
+    opened = open_paths(ws.root)
+    if not opened:
+        return fields
+    if opened.get("packs_dir") is not None:
+        fields["directory"] = str(opened["packs_dir"])
+    if opened.get("claims_dir") is not None:
+        fields["claims_dir"] = str(opened["claims_dir"])
+    if opened.get("results_dir") is not None:
+        fields["results_dir"] = str(opened["results_dir"])
+    if opened.get("reports_dir") is not None:
+        fields["reports_dir"] = str(opened["reports_dir"])
+    return fields
+
+
+def _save_curbpack_form(repo: Path, form: dict) -> None:
+    from common.validate import validate_curbpack_config
+
+    packs = [
+        item.strip()
+        for item in ((form.get("packs") or [""])[0]).split(",")
+        if item.strip()
+    ]
+    exclude = [
+        item.strip()
+        for item in ((form.get("exclude_requirements") or [""])[0]).split(",")
+        if item.strip()
+    ]
+    hints_raw = (form.get("search_hints") or [""])[0]
+    try:
+        hints = json.loads(hints_raw) if hints_raw.strip() else created_curbpack()["search_hints"]
+    except json.JSONDecodeError:
+        raise ModelError("curbpack.json", "search_hints", "JSON object")
+    document: dict = {
+        "packs": packs,
+        "search_hints": hints,
+        "packs_dir": (form.get("packs_dir") or [""])[0].strip(),
+        "claims_dir": (form.get("claims_dir") or [""])[0].strip(),
+        "results_dir": (form.get("results_dir") or [""])[0].strip(),
+        "reports_dir": (form.get("reports_dir") or [""])[0].strip(),
+        "unsigned_requirements": (form.get("unsigned_requirements") or [""])[0].strip(),
+    }
+    path = repo / "curbpack.json"
+    if path.is_file():
+        loaded = read_json(path)
+        if isinstance(loaded, dict) and "requirements" in loaded and not exclude:
+            document["requirements"] = loaded["requirements"]
+    if exclude:
+        document["exclude_requirements"] = exclude
+        document.pop("requirements", None)
+    write_json(path, validate_curbpack_config(document))
+
+
 def _documents_model(ws: Workspace, query: dict) -> dict:
-    catalog = ensure_catalog(ws.root)
-    adapters = {item["id"]: item for item in _formex_sources()}
-    trust = trust_store(ws.keys)
-    documents = []
-    for document in catalog.get("documents") or []:
-        adapter = adapters.get(str(document.get("adapter_id") or ""))
-        pack_id = adapter.get("pack_id") if isinstance(adapter, dict) else None
-        signed, title = _signature_mark(ws.root, pack_id if isinstance(pack_id, str) else "", trust)
-        documents.append({**document, "all_signed": signed, "signature_title": title})
+    repos = [
+        row
+        for row in (load_repos(ws.root).get("repos") or [])
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    ]
+    repo_id = _sync_open_repo(ws, query)
+    documents: list[dict] = []
+    curbpack_file = ""
+    directory = ""
+    claims_directory = ""
+    file_absent = False
+    no_claims = False
+    config: dict = {}
+    if repo_id:
+        repo = _registered_repo_path(ws, repo_id)
+        config_path = repo / "curbpack.json"
+        curbpack_file = str(config_path.resolve()) if config_path.is_file() else str(config_path)
+        if not config_path.is_file():
+            file_absent = True
+        else:
+            from common.validate import validate_curbpack_config
+
+            config = validate_curbpack_config(read_json(config_path))
+            packs_root = packs_dir(repo, config)
+            directory = str(packs_root.resolve())
+            claims_root = claims_dir(repo, config)
+            claims_directory = str(claims_root.resolve())
+            no_claims = not claims_root.is_dir() or not any(claims_root.glob("*.json"))
+            for pack_id in config["packs"]:
+                try:
+                    pack_dir = _pack_version_dir(packs_root, pack_id)
+                except ModelError:
+                    documents.append(
+                        {
+                            "id": pack_id,
+                            "name": pack_id,
+                            "missing": True,
+                            "pack_dir": str((packs_root / pack_id).resolve()),
+                            "repo_id": repo_id,
+                        }
+                    )
+                    continue
+                pack_file = pack_dir / "pack.json"
+                pack = read_json(pack_file)
+                source = pack.get("source") if isinstance(pack, dict) else {}
+                if not isinstance(source, dict):
+                    source = {}
+                if not isinstance(pack, dict):
+                    pack = {}
+                documents.append(
+                    {
+                        "id": pack_id,
+                        "name": str(pack.get("name") or pack_id),
+                        "official_name": str(source.get("instrument") or ""),
+                        "url": str(source.get("url") or ""),
+                        "pack_dir": str(pack_dir.resolve()),
+                        "repo_id": repo_id,
+                    }
+                )
     return {
         "documents": documents,
+        "repos": repos,
+        "repo_id": repo_id,
+        "curbpack_file": curbpack_file,
+        "directory": directory,
+        "claims_dir": claims_directory,
+        "results_dir": str(results_dir(_registered_repo_path(ws, repo_id), config)) if repo_id and config else "",
+        "reports_dir": str(reports_dir(_registered_repo_path(ws, repo_id), config)) if repo_id and config else "",
+        "file_absent": file_absent,
+        "no_claims": no_claims,
+        "curbpack_fields": config if config else created_curbpack(),
+        "show_curbpack_dialog": file_absent or (query.get("curbpack") or [""])[0] == "edit",
         "adapters": list_formex_adapter_choices(),
         "workspace_root": str(ws.root.resolve()),
         "job": _catalog_job(ws, query),
-        "message": _catalog_message(query, added="Document added."),
+        "message": _catalog_message(query, added="Pack added."),
         "error": (query.get("error") or [""])[0],
     }
+
+
+def _start_empty_folder(ws: Workspace, folder: str) -> str:
+    raw = (folder or "").strip()
+    if not raw:
+        raise ModelError("curbpack.json", "folder", "a working folder")
+    resolved = resolve_repo_path(ws.root, raw)
+    resolved.mkdir(parents=True, exist_ok=True)
+    target = resolved / "curbpack.json"
+    data = load_repos(ws.root)
+    name = resolved.name or "repo"
+    try:
+        data = add_repo(ws.root, data, name=name, path=str(resolved))
+        save_repos(ws.root, data)
+        repo_id = str((data.get("repos") or [])[-1].get("id") or "")
+    except ModelError:
+        repo_id = ""
+        for row in data.get("repos") or []:
+            if resolve_repo_path(ws.root, str(row.get("path") or "")) == resolved:
+                repo_id = str(row.get("id") or "")
+                break
+        if not repo_id:
+            raise
+    if target.exists() and not target.is_file():
+        raise ModelError("curbpack.json", "folder", "a working folder")
+    set_open_repo(ws.root, repo_id)
+    return repo_id
+
+
+def _add_pack_to_repo(
+    ws: Workspace,
+    repo_id: str,
+    *,
+    name: str,
+    official_name: str,
+    url: str,
+    adapter_id: str = "",
+) -> None:
+    from common.validate import validate_pack
+
+    repo = _registered_repo_path(ws, repo_id)
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
+        raise ModelError("curbpack.json", "repo", "a curbpack.json in the chosen repository")
+    raw = read_json(config_path)
+    config = raw if isinstance(raw, dict) else {}
+    pack_id = make_document_id(name)
+    from common.validate import validate_curbpack_config
+    from requirements.extract.pipeline import draft_pack
+
+    checked = validate_curbpack_config(config)
+    wanted = (adapter_id or "").strip()
+    inferred = _adapter_for_url(url.strip()) if url.strip() else None
+    if wanted and (inferred is None or str(inferred.get("id") or "") != wanted):
+        raise ModelError("pack", "adapter", "the adapter that matches this URL")
+    pack_dir = packs_dir(repo, checked) / pack_id / draft_pack()["version"]
+    if (pack_dir / "pack.json").is_file():
+        raise ModelError("pack", "id", f"a new pack, not existing {pack_id}")
+    pack: dict = {"id": pack_id, "name": name.strip(), "version": draft_pack()["version"]}
+    source = {}
+    if official_name.strip():
+        source["instrument"] = official_name.strip()
+    if url.strip():
+        source["url"] = url.strip()
+    if source:
+        pack["source"] = source
+    checked_pack = validate_pack(pack)
+    pack_dir.mkdir(parents=True, exist_ok=True)
+    write_json(pack_dir / "pack.json", checked_pack)
+    packs = [item for item in config.get("packs") or [] if isinstance(item, str)]
+    if pack_id not in packs:
+        packs.append(pack_id)
+    _write_curbpack(repo, packs)
 
 
 def _signature_counts(root: Path, pack_id: str, trust: dict) -> tuple[int | None, int | None]:
@@ -1486,11 +1703,349 @@ def _signature_mark(root: Path, pack_id: str, trust: dict) -> tuple[bool, str]:
     return True, "All requirements in the selected working copy are signed."
 
 
+def _pack_query(params: dict) -> str:
+    repo = (params.get("repo") or [""])[0].strip()
+    pack = (params.get("pack") or [""])[0].strip()
+    if not repo or not pack:
+        return ""
+    return f"repo={quote(repo, safe='')}&pack={quote(pack, safe='')}"
+
+
+def _locate_repo_pack(ws: Workspace, pack_id: str, repo_id: str = "") -> tuple[str, Path, dict] | None:
+    """Pack named in a registered repo's curbpack.json, with its pack.json."""
+    if not pack_id:
+        return None
+    chosen = (repo_id or "").strip() or open_repo_id(ws.root) or ""
+    if not chosen:
+        return None
+    row = find_repo(load_repos(ws.root), chosen)
+    if row is None:
+        raise ModelError("pack", "repo", f"a registered repository, not {chosen}")
+    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
+        return None
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(config_path))
+    if pack_id not in config["packs"]:
+        return None
+    try:
+        pack_dir = _pack_version_dir(packs_dir(repo, config), pack_id)
+    except ModelError:
+        return None
+    pack_file = pack_dir / "pack.json"
+    if not pack_file.is_file():
+        return None
+    pack = read_json(pack_file)
+    if not isinstance(pack, dict):
+        return None
+    return chosen, pack_dir, pack
+
+
+def _adapter_for_url(url: str) -> dict | None:
+    wanted = (url or "").strip()
+    if not wanted:
+        return None
+    matches = []
+    for item in list_adapters():
+        source = item.get("source") if isinstance(item.get("source"), dict) else {}
+        if str(source.get("url") or "").strip() == wanted:
+            matches.append(item)
+    if not matches:
+        return None
+    formex = [item for item in matches if item.get("source_format") == "formex"]
+    return (formex or matches)[0]
+
+
+def _requirement_locators(requirement: dict) -> list[str]:
+    return [
+        str(ref.get("locator"))
+        for ref in requirement.get("references") or []
+        if isinstance(ref, dict) and ref.get("locator")
+    ]
+
+
+def _requirement_section(requirement: dict) -> str:
+    locators = _requirement_locators(requirement)
+    return locators[0] if locators else ""
+
+
+def _adapter_section_ids(adapter: dict) -> list[str]:
+    return [
+        str(section.get("id"))
+        for section in adapter.get("sections") or []
+        if isinstance(section, dict) and section.get("id")
+    ]
+
+
+def _locator_section(locator: str, section_ids: list[str]) -> str:
+    """Adapter section that contains this locator. `VII.3` belongs to `VII`."""
+    best = ""
+    for section_id in section_ids:
+        if locator == section_id or locator.startswith(section_id + ".") or locator.startswith(section_id + "("):
+            if len(section_id) > len(best):
+                best = section_id
+    return best
+
+
+def _sections_with_requirements(requirements: list[dict], section_ids: list[str]) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            continue
+        for locator in _requirement_locators(requirement):
+            section_id = _locator_section(locator, section_ids)
+            if not section_id or section_id in seen:
+                continue
+            seen.add(section_id)
+            found.append(section_id)
+    return found
+
+
+def _requirement_in_section(requirement: dict, section: str, section_ids: list[str]) -> bool:
+    locators = _requirement_locators(requirement)
+    if not section_ids:
+        return section in locators
+    return any(_locator_section(locator, section_ids) == section for locator in locators)
+
+
+def _sections_named_by_locators(requirements: list[dict]) -> list[str]:
+    """Section names written in locator when the pack has no adapter."""
+    names = []
+    seen = set()
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            continue
+        section_id = _requirement_section(requirement)
+        if not section_id or section_id in seen:
+            continue
+        seen.add(section_id)
+        names.append(section_id)
+    return sorted(names)
+
+
+def _pack_has_requirements(pack_dir: Path) -> bool:
+    return any(path.name != "pack.json" for path in pack_dir.glob("*.json"))
+
+
+def _add_pack_section(ws: Workspace, pack_id: str, repo_id: str, section_id: str) -> None:
+    """Remember a section on this Pack. Does not write a Requirement."""
+    section_id = (section_id or "").strip()
+    if not section_id:
+        raise ModelError("pack", "section_id", "a section id")
+    located = _locate_repo_pack(ws, pack_id, repo_id)
+    if located is None:
+        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+    _repo_id, _pack_dir, pack = located
+    source = pack.get("source") if isinstance(pack.get("source"), dict) else {}
+    url = str(source.get("url") or "")
+    adapter = _adapter_for_url(url)
+    if adapter is None:
+        raise ModelError("pack", "adapter", "an adapter for this pack")
+    match = next(
+        (
+            item
+            for item in adapter.get("sections") or []
+            if isinstance(item, dict)
+            and item.get("id") == section_id
+            and item.get("ready") is True
+            and item.get("in_scope") is True
+        ),
+        None,
+    )
+    if match is None:
+        raise ModelError("pack", "section_id", "a section that can be extracted")
+    catalog = ensure_catalog(ws.root)
+    for row in catalog.get("sources") or []:
+        if (
+            isinstance(row, dict)
+            and row.get("document_id") == pack_id
+            and row.get("section_id") == section_id
+        ):
+            return
+    catalog.setdefault("sources", []).append(
+        {
+            "id": make_id(str(adapter.get("id") or ""), section_id),
+            "document_id": pack_id,
+            "name": str(pack.get("name") or pack_id),
+            "official_name": str(match.get("title") or ""),
+            "url": url,
+            "adapter_id": adapter.get("id"),
+            "section_id": section_id,
+        }
+    )
+    save_catalog(ws.root, catalog)
+
+
+def _repo_pack_sections_model(ws: Workspace, query: dict, pack_id: str) -> dict:
+    """Sections of a pack named in curbpack.json. Not a registered_sources document."""
+    repo_id = (query.get("repo") or [""])[0].strip()
+    located = _locate_repo_pack(ws, pack_id, repo_id)
+    if located is None:
+        raise ModelError("catalog", "document", f"a known document, not {pack_id}")
+    found_repo, pack_dir, pack = located
+    source = pack.get("source") if isinstance(pack.get("source"), dict) else {}
+    url = str(source.get("url") or "")
+    adapter = _adapter_for_url(url)
+    if adapter is None:
+        _adapter_dir, adapter = _load_adapter("manual")
+    has_requirements = _pack_has_requirements(pack_dir)
+    document = {
+        "id": pack_id,
+        "name": str(pack.get("name") or pack_id),
+        "official_name": str(source.get("instrument") or ""),
+        "url": url,
+        "adapter_id": str(adapter.get("id") or ""),
+        "repo_id": found_repo,
+    }
+    ready_sections = [
+        section
+        for section in adapter.get("sections") or []
+        if isinstance(section, dict)
+        and section.get("ready") is True
+        and section.get("in_scope") is True
+    ]
+    ready_ids = {str(section.get("id") or "") for section in ready_sections}
+    manual = adapter.get("id") == "manual"
+    shown: set[str] = set()
+    sources: list[dict] = []
+    requirements: list[dict] = []
+    if has_requirements:
+        _loaded, requirements = load_pack_directory(pack_dir)
+    if manual:
+        for section_id in _sections_named_by_locators(requirements):
+            if section_id in shown:
+                continue
+            shown.add(section_id)
+            extractable = section_id in ready_ids
+            sources.append(
+                {
+                    "adapter_id": str(adapter.get("id") or ""),
+                    "source_id": make_id("section", section_id),
+                    "section_id": section_id,
+                    "url": url,
+                    "extract_enabled": extractable,
+                    "section_ready": True if extractable else None,
+                    "source_format": adapter.get("source_format") or "",
+                    "document_id": pack_id,
+                    "pack_dir": str(pack_dir.resolve()),
+                    "copies": [],
+                    "repo_id": found_repo,
+                    "edit_repo": found_repo,
+                    "edit_pack": pack_id,
+                    "edit_section": section_id,
+                    "signed_count": None,
+                    "unsigned_count": None,
+                }
+            )
+    else:
+        section_ids = _adapter_section_ids(adapter)
+        for section_id in _sections_with_requirements(requirements, section_ids):
+            if section_id in shown:
+                continue
+            shown.add(section_id)
+            extractable = section_id in ready_ids
+            members = [
+                item
+                for item in requirements
+                if isinstance(item, dict) and _requirement_in_section(item, section_id, section_ids)
+            ]
+            row = {
+                "adapter_id": str(adapter.get("id") or ""),
+                "source_id": f"{adapter.get('id')}-{section_id}",
+                "section_id": section_id,
+                "url": url,
+                "extract_enabled": extractable,
+                "section_ready": True if extractable else False,
+                "source_format": adapter.get("source_format") or "",
+                "document_id": pack_id,
+                "pack_dir": str(pack_dir.resolve()),
+                "copies": [],
+                "repo_id": found_repo,
+                "edit_repo": found_repo,
+                "edit_pack": pack_id,
+                "signed_count": None,
+                "unsigned_count": None,
+            }
+            if len(members) == 1:
+                row["edit_requirement"] = str(members[0].get("id") or "")
+            else:
+                row["edit_section"] = section_id
+            sources.append(row)
+    catalog = ensure_catalog(ws.root)
+    for row in catalog.get("sources") or []:
+        if not isinstance(row, dict) or row.get("document_id") != pack_id:
+            continue
+        section_id = str(row.get("section_id") or "")
+        if not section_id or section_id in shown or section_id not in ready_ids:
+            continue
+        shown.add(section_id)
+        sources.append(
+            {
+                "adapter_id": str((adapter or {}).get("id") or ""),
+                "source_id": str(row.get("id") or section_id),
+                "section_id": section_id,
+                "url": str(row.get("url") or url),
+                "section_ready": True,
+                "source_format": (adapter or {}).get("source_format") or "",
+                "document_id": pack_id,
+                "pack_dir": str(pack_dir.resolve()),
+                "copies": [],
+                "repo_id": found_repo,
+                "signed_count": None,
+                "unsigned_count": None,
+            }
+        )
+    legal = adapter.get("source") if isinstance(adapter, dict) and isinstance(adapter.get("source"), dict) else {}
+    adapters = []
+    if adapter is not None:
+        adapters.append(
+            {
+                "id": adapter.get("id"),
+                "instrument": legal.get("instrument") or adapter.get("id"),
+                "url": url,
+                "sections": [
+                    section for section in ready_sections if str(section.get("id") or "") not in shown
+                ],
+            }
+        )
+    return {
+        "document": document,
+        "sources": sources,
+        "adapters": adapters,
+        "repos": _listed_repos(ws),
+        "repo_id": found_repo,
+        "repo_pack": True,
+        "edit_repo": "",
+        "edit_pack": "",
+        "job": _catalog_job(ws, query),
+        "message": _catalog_message(query, added="Section added."),
+        "error": (query.get("error") or [""])[0],
+        **_door_path_fields(ws, found_repo),
+    }
+
+
 def _catalog_model(ws: Workspace, query: dict, document_id: str) -> dict:
+    repo_id = _sync_open_repo(ws, query)
+    if not repo_id:
+        return {
+            "document": {},
+            "sources": [],
+            "adapters": [],
+            "repos": _listed_repos(ws),
+            "repo_id": "",
+            "job": None,
+            "message": "",
+            "error": "",
+        }
+    if _locate_repo_pack(ws, document_id, repo_id) is not None:
+        return _repo_pack_sections_model(ws, query, document_id)
     catalog = ensure_catalog(ws.root)
     document = find_document(catalog, document_id)
     if document is None:
-        raise ModelError("catalog", "document", f"a known document, not {document_id}")
+        return _repo_pack_sections_model(ws, query, document_id)
     adapter_id = str(document.get("adapter_id") or "")
     adapters = []
     for item in list_formex_adapter_choices():
@@ -1509,13 +2064,29 @@ def _catalog_model(ws: Workspace, query: dict, document_id: str) -> dict:
     sources = [
         row for row in _registered_sources(ws) if row.get("document_id") == document_id
     ]
+    pack_id = ""
+    for item in _formex_sources():
+        if item.get("id") == adapter_id:
+            pack_id = str(item.get("pack_id") or "")
+            break
+    pack_dir = ""
+    if pack_id:
+        chosen = selected_copy(ws.root, pack_id)
+        pack_dir = _shown_pack_dir(ws, pack_id, chosen)
+    for row in sources:
+        row["pack_dir"] = pack_dir
+    document = dict(document)
+    document["repo_id"] = repo_id
     return {
         "document": document,
         "sources": sources,
         "adapters": adapters,
+        "repos": _listed_repos(ws),
+        "repo_id": repo_id,
         "job": _catalog_job(ws, query),
         "message": _catalog_message(query, added="Section added."),
         "error": (query.get("error") or [""])[0],
+        **_door_path_fields(ws, repo_id),
     }
 
 
@@ -1635,7 +2206,65 @@ def _copy_document(root: Path, adapter_id: str) -> dict:
     }
 
 
+def _curbpack_pack_dir(ws: Workspace, pack_id: str) -> str:
+    """Versioned pack directory from the open repo's packs_dir."""
+    located = _locate_repo_pack(ws, pack_id)
+    if located is None:
+        return ""
+    return str(located[1].resolve())
+
+
+def _shown_pack_dir(ws: Workspace, pack_id: str, fallback: Path | None) -> str:
+    found = _curbpack_pack_dir(ws, pack_id)
+    if found:
+        return found
+    if fallback is not None:
+        return str(fallback.resolve())
+    return ""
+
+
+def _repo_pack_copy_model(ws: Workspace, query: dict, pack_id: str) -> dict:
+    repo_id = (query.get("repo") or [""])[0].strip()
+    located = _locate_repo_pack(ws, pack_id, repo_id)
+    if located is None:
+        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+    found_repo, pack_dir, _listed = located
+    pack, requirements = load_pack_directory(pack_dir)
+    section = (query.get("section") or [""])[0].strip()
+    if section:
+        source = pack.get("source") if isinstance(pack.get("source"), dict) else {}
+        matched = _adapter_for_url(str(source.get("url") or ""))
+        section_ids = _adapter_section_ids(matched) if matched else []
+        requirements = [
+            item
+            for item in requirements
+            if isinstance(item, dict) and _requirement_in_section(item, section, section_ids)
+        ]
+    trust = trust_store(ws.keys)
+    query_string = _pack_query({"repo": [found_repo], "pack": [pack_id]})
+    if section:
+        query_string = f"{query_string}&section={quote(section, safe='')}"
+    return {
+        "adapter_id": "",
+        "timestamp": pack_id,
+        "pack_dir": str(pack_dir.resolve()),
+        "pack_kind": "pack",
+        "read_only": False,
+        "requirements": _requirement_rows(pack_dir, requirements, trust),
+        "coverage_detail": None,
+        "message": "",
+        "document_id": pack_id,
+        "document_name": str(pack.get("name") or pack_id),
+        "repo_id": found_repo,
+        "pack_id": pack_id,
+        "requirement_query": f"?{query_string}",
+    }
+
+
 def _copy_model(ws: Workspace, _query: dict) -> dict:
+    pack_id = (_query.get("pack") or [""])[0].strip()
+    if pack_id:
+        return _repo_pack_copy_model(ws, _query, pack_id)
     selection = read_selection(ws.root)
     if selection and isinstance(selection.get("pack_id"), str):
         _sync_adapter_for_pack(ws, selection["pack_id"])
@@ -1658,6 +2287,7 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
     return {
         "adapter_id": adapter_id,
         "timestamp": directory.name,
+        "pack_dir": _shown_pack_dir(ws, str(adapter.get("pack_id") or ""), directory),
         "pack_kind": kind,
         "read_only": kind == "published",
         "requirements": _requirement_rows(directory, requirements, trust),
@@ -1691,7 +2321,7 @@ def _publication_model(ws: Workspace, query: dict) -> dict:
 
 
 def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
-    directory, pack, requirement = _selected_requirement(ws, requirement_id)
+    directory, pack, requirement = _open_requirement(ws, requirement_id, query)
     if requirement is None or directory is None or pack is None:
         return {"requirement": None}
     trust = trust_store(ws.keys)
@@ -1733,11 +2363,18 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
             for name in (query.get("invalid") or [])
             if str(name).strip()
         ],
+        "repo_id": (query.get("repo") or [""])[0].strip(),
+        "bound_pack": (query.get("pack") or [""])[0].strip(),
+        "list_href": (
+            "/requirements/copy?" + _pack_query(query)
+            if _pack_query(query)
+            else "/requirements/copy"
+        ),
     }
 
 
 def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
-    directory, _pack, requirement = _selected_requirement(ws, requirement_id)
+    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
     if requirement is None or directory is None:
         raise ModelError("try discovery", "requirement", "a requirement in the selected working copy")
     repo_id = (form.get("repo_id") or [""])[0].strip()
@@ -1816,12 +2453,8 @@ def _check_message(query: dict) -> str:
 
 
 def _check_editor_model(ws: Workspace, query: dict) -> dict:
-    repos = [
-        row
-        for row in (load_repos(ws.root).get("repos") or [])
-        if isinstance(row, dict) and isinstance(row.get("id"), str)
-    ]
-    repo_id = (query.get("repo") or [""])[0].strip()
+    repos = _listed_repos(ws)
+    repo_id = _sync_open_repo(ws, query)
     if repo_id and not any(row.get("id") == repo_id for row in repos):
         raise ModelError("check", "repo", f"a registered repository, not {repo_id}")
     choice = (query.get("read") or [""])[0].strip()
@@ -1834,8 +2467,8 @@ def _check_editor_model(ws: Workspace, query: dict) -> dict:
             config = loaded if isinstance(loaded, dict) else {}
             ask = choice not in {"yes", "no"}
     named = [item for item in config.get("packs") or [] if isinstance(item, str)] if choice == "yes" else []
-    known = list_pack_ids(ws.root)
-    pack_ids = sorted(set(known) | (set(named) if choice == "yes" else set()))
+    known = list_pack_ids(ws.root) if repo_id else []
+    pack_ids = sorted(set(known) | (set(named) if choice == "yes" else set())) if repo_id else []
     packs = []
     for pack_id in pack_ids:
         directory = _pack_directory_for_check(ws.root, pack_id)
@@ -1904,6 +2537,8 @@ def _repo_claims(ws: Workspace, repo_id: str, packs: list[dict]) -> list[dict]:
 
 def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None, int | None]:
     repo_id = str(editor.get("repo_id") or "")
+    if not repo_id:
+        return None, None
     if repo_id and (query.get("exit") or [""])[0] != "":
         path = _registered_repo_path(ws, repo_id) / ".curbpack" / "run-result.json"
         if path.is_file():
@@ -1993,8 +2628,23 @@ def _selected_requirement(ws: Workspace, requirement_id: str):
     return directory, pack, match
 
 
+def _open_requirement(ws: Workspace, requirement_id: str, params: dict):
+    """Requirement in the named repo pack, or the selected working copy."""
+    pack_id = (params.get("pack") or [""])[0].strip()
+    if not pack_id:
+        return _selected_requirement(ws, requirement_id)
+    repo_id = (params.get("repo") or [""])[0].strip()
+    located = _locate_repo_pack(ws, pack_id, repo_id)
+    if located is None:
+        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+    _repo_id, pack_dir, _listed = located
+    pack, requirements = load_pack_directory(pack_dir)
+    match = next((item for item in requirements if item["id"] == requirement_id), None)
+    return pack_dir, pack, match
+
+
 def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> None:
-    directory, _pack, requirement = _selected_requirement(ws, requirement_id)
+    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
     if directory is None or requirement is None:
         raise ModelError("requirement", "id", "a requirement in the selected working copy")
     edited = apply_edits(requirement, _edits_from_form(requirement, form))
@@ -2067,7 +2717,7 @@ def _edits_from_form(requirement: dict, form: dict) -> dict:
 
 
 def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> None:
-    directory, _pack, requirement = _selected_requirement(ws, requirement_id)
+    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
     if directory is None or requirement is None:
         raise ModelError("requirement", "id", "a requirement in the selected working copy")
     name = (form.get("name") or [""])[0].strip()
@@ -2342,7 +2992,7 @@ def _safe_local_next(raw: str) -> str:
     return value
 
 
-def _requirement_editor_for_error(exc: ModelError) -> str:
+def _requirement_editor_for_error(exc: ModelError, form: dict | None = None) -> str:
     """Send publish/sign field errors back to the Requirement editor with highlights."""
     object_name = str(exc.object_name or "")
     if not object_name.startswith("requirement "):
@@ -2376,6 +3026,9 @@ def _requirement_editor_for_error(exc: ModelError) -> str:
     params = [f"error={quote(message, safe='')}"]
     if field in form_fields:
         params.append(f"invalid={quote(field, safe='')}")
+    extra = _pack_query(form or {})
+    if extra:
+        params.append(extra)
     return f"/requirements/requirement/{quote(requirement_id, safe='')}?{'&'.join(params)}"
 
 
