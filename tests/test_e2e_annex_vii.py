@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -11,8 +12,10 @@ from pathlib import Path
 from checks.run import process_exit_code, run_and_write
 from claims.bind import build_claim, rebind, write_claim
 from common.canonical import version_digest
+from common.jsonio import write_json
 from common.signing import generate_keypair, read_signature
 from common.store import load_claim, load_requirement, save_pack, save_requirement
+from discovery.door import created_curbpack
 from discovery.search import discover_candidates
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 from requirements.editing import apply_edits, publish_requirement, seal_pack_directory, working_copy
@@ -79,26 +82,23 @@ class AnnexViiScenarioTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            pack = draft_pack()
             pack_dir = root / "packs" / "cra-baseline"
             repo = root / "sample-product"
             repo.mkdir()
-            save_pack(pack_dir, draft_pack())
+            save_pack(pack_dir, pack)
             save_requirement(pack_dir, published)
             seal_pack_directory(pack_dir, name="Ada Jurist", private_key=jurist_private, at="2026-10-12T09:30:00Z")
             reloaded = load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)
             self.assertEqual(reloaded, published)
-
-            (repo / "curbpack.json").write_text(
-                json.dumps(
-                    {
-                        "packs": ["cra-baseline"],
-                        "search_hints": {
-                            "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
-                            "prefer_path_globs": ["**/README*", "**/docs/**"],
-                        },
-                    }
-                ),
-                encoding="utf-8",
+            version_dir = repo / "curbpack" / "packs" / "cra-baseline" / pack["version"]
+            shutil.copytree(pack_dir, version_dir)
+            hints = created_curbpack()["search_hints"]
+            hints["exclude_path_globs"] = ["**/node_modules/**", "*FUTURE_*"]
+            hints["prefer_path_globs"] = ["**/README*", "**/docs/**"]
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["cra-baseline"], search_hints=hints),
             )
             (repo / "README.md").write_text("sample-product readme\n", encoding="utf-8")
             (repo / "marketing.md").write_text("A cybersecurity risk is mentioned here.\n", encoding="utf-8")
@@ -160,7 +160,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
 
             _git(repo, "init", "-b", "main")
             _commit(repo, "bind the stub")
-            failed, failed_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            failed, failed_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(failed_code, 1)
             by_id = {row["id"]: row for row in failed["claims"]}
             self.assertEqual(by_id["claim-risk"]["checks"][0]["status"], "pass")
@@ -173,7 +173,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             stub.write_text(_good(repo), encoding="utf-8")
             self.assertFalse(is_stub(stub))
             _commit(repo, "write the assessment")
-            passed, passed_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            passed, passed_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(passed_code, 0)
             self.assertTrue(all(row["status"] == "pass" for row in passed["claims"]))
             self.assertTrue(all(item["status"] == "pass" for row in passed["claims"] for item in row["checks"]))
@@ -181,7 +181,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             target = repo / "docs" / "security" / "risk_assessment.md"
             target.parent.mkdir(parents=True)
             stub.rename(target)
-            moved, moved_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            moved, moved_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(moved_code, 1)
             moved_row = {row["id"]: row for row in moved["claims"]}["claim-risk"]
             self.assertEqual(moved_row["status"], "fail")
@@ -201,13 +201,13 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 ],
             )
             write_claim(repo / "curbpack" / "claims", risk)
-            self.assertEqual(version_digest(load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
+            self.assertEqual(version_digest(load_requirement(version_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
             _commit(repo, "point claims at the new path")
-            restored, restored_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            restored, restored_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(restored_code, 0)
 
             target.write_text(_good(repo, header="## Risks we accept"), encoding="utf-8")
-            renamed, _ = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            renamed, _ = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             renamed_row = next(row for row in renamed["claims"] if row["id"] == "claim-risk")
             self.assertEqual(renamed_row["status"], "fail")
             self.assertEqual(renamed_row["checks"][0]["status"], "pass")
@@ -225,14 +225,14 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 ],
             )
             write_claim(repo / "curbpack" / "claims", risk)
-            self.assertEqual(version_digest(load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
+            self.assertEqual(version_digest(load_requirement(version_dir / "CRA-ANNEX-VII-RISK.json", published=True)), published_digest)
             _commit(repo, "follow the header the team uses")
-            green, green_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            green, green_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(green_code, 0)
 
             report = compile_report(
                 run_result=green,
-                requirements=[load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json", published=True)],
+                requirements=[load_requirement(version_dir / "CRA-ANNEX-VII-RISK.json", published=True)],
                 claims=[load_claim(repo / "curbpack" / "claims" / "claim-risk.json")],
             )
             self.assertEqual(report["run_result"], green)
@@ -277,7 +277,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             self.assertNotEqual(claim_reading.get("who"), "PoC2")
 
             target.write_text(target.read_text(encoding="utf-8") + "\nUncommitted sentence.\n", encoding="utf-8")
-            dirty, dirty_code = run_and_write(repo, root / "packs", repo / ".curbpack" / "run-result.json")
+            dirty, dirty_code = run_and_write(repo, None, repo / ".curbpack" / "run-result.json")
             self.assertEqual(dirty["worktree"], "dirty")
             self.assertEqual(dirty_code, 0)
             dirty_report = compile_report(
