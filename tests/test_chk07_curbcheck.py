@@ -326,6 +326,7 @@ class CliDocsTest(unittest.TestCase):
             ROOT / "tests/check/automation/studio-pf01.sh",
             ROOT / "tests/check/suites/EV.md",
             ROOT / "tests/check/automation/ev.sh",
+            ROOT / "scripts/release/smoke.py",
         ]
         for path in paths:
             text = path.read_text(encoding="utf-8")

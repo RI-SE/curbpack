@@ -307,6 +307,37 @@ class ToolReentryTest(unittest.TestCase):
         self.assertFalse((repo / "external_test" / "curbpack" / "run-result.json").exists())
 
 
+class PackageSmokeFixtureTest(unittest.TestCase):
+    def test_smoke_script_does_not_pass_packs_as_a_path(self):
+        text = (ROOT / "scripts" / "release" / "smoke.py").read_text(encoding="utf-8")
+        self.assertNotIn('"--packs"', text)
+
+    def test_smoke_fixture_writes_a_run_result_from_curbpack_json(self):
+        sys.path.insert(0, str(ROOT / "scripts" / "release"))
+        from smoke import _fill_curbcheck_repo
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name) / "product"
+        repo.mkdir()
+        _fill_curbcheck_repo(repo)
+        out = repo / "run-result.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(["--repo", str(repo), "--out", str(out)])
+        self.assertTrue(out.is_file(), buf.getvalue())
+        self.assertEqual(code, 1)
+        result = json.loads(out.read_text(encoding="utf-8"))
+        by_id = {row["id"]: row["status"] for row in result["claims"]}
+        self.assertEqual(by_id["claim-exist"], "pass")
+        self.assertEqual(by_id["claim-contents"], "pass")
+        self.assertEqual(by_id["claim-fresh"], "pass")
+        self.assertEqual(by_id["claim-author"], "pass")
+        self.assertEqual(by_id["claim-signed"], "fail")
+        self.assertEqual(by_id["claim-signer"], "fail")
+        self.assertEqual(by_id["claim-dep"], "fail")
+
+
 class PackageArgsTest(unittest.TestCase):
     def test_names_and_argv_keep_studio_and_curbcheck_apart(self):
         from package import curbcheck_args, curbcheck_name, studio_args, studio_name

@@ -137,20 +137,19 @@ def _git(repo: Path, *args: str, when: str | None = None) -> None:
     subprocess.run(["git", "-C", str(repo), *args], check=True, env=env, capture_output=True, text=True)
 
 
-def _curbcheck_repo(root: Path) -> tuple[Path, Path]:
+def _curbcheck_repo(root: Path) -> Path:
     """A temp product whose exist, contents, git_fresh, and git_author claims can pass."""
     sys.path.insert(0, str(root))
     repo = Path(tempfile.mkdtemp(prefix="curbcheck-smoke-"))
-    packs = repo.parent / f"{repo.name}-packs"
     try:
-        return _fill_curbcheck_repo(repo, packs)
+        return _fill_curbcheck_repo(repo)
     except Exception:
         shutil.rmtree(repo, ignore_errors=True)
-        shutil.rmtree(packs, ignore_errors=True)
         raise
 
 
-def _fill_curbcheck_repo(repo: Path, packs: Path) -> tuple[Path, Path]:
+def _fill_curbcheck_repo(repo: Path) -> Path:
+    from checks.defaults import created_curbpack
     from claims.bind import build_claim, write_claim
     from common.store import save_pack, save_requirement
     from requirements.editing import apply_edits
@@ -170,13 +169,17 @@ def _fill_curbcheck_repo(repo: Path, packs: Path) -> tuple[Path, Path]:
     _git(repo, "config", "commit.gpgsign", "false")
     _git(repo, "add", "docs/a.md", "package.json")
     _git(repo, "commit", "-m", "add doc", when=when)
-    pack_dir = packs / "cra-baseline"
+    pack = draft_pack()
+    pack_dir = repo / "curbpack" / "packs" / "cra-baseline" / pack["version"]
     source = dict(extract_annex_vii_risk()["source"])
     source["edition"] = "2024-11-20"
     requirement = apply_edits(extract_annex_vii_risk(), {"source": source})
-    save_pack(pack_dir, draft_pack())
+    save_pack(pack_dir, pack)
     save_requirement(pack_dir, requirement)
-    (repo / "curbpack.json").write_text('{"packs":["cra-baseline"]}\n', encoding="utf-8")
+    (repo / "curbpack.json").write_text(
+        json.dumps(created_curbpack(packs=["cra-baseline"])) + "\n",
+        encoding="utf-8",
+    )
     claims = [
         ("claim-exist", [{"check": "exist", "args": {"paths": ["docs/a.md"]}}]),
         (
@@ -211,7 +214,7 @@ def _fill_curbcheck_repo(repo: Path, packs: Path) -> tuple[Path, Path]:
     ]
     for claim_id, checks in claims:
         write_claim(
-            repo / "claims",
+            repo / "curbpack" / "claims",
             build_claim(
                 claim_id=claim_id,
                 requirement_id="CRA-ANNEX-VII-RISK",
@@ -222,11 +225,11 @@ def _fill_curbcheck_repo(repo: Path, packs: Path) -> tuple[Path, Path]:
                 description="The file is the reviewed evidence.",
             ),
         )
-    return repo, packs
+    return repo
 
 
-def _run_curbcheck(binary: Path, repo: Path, packs: Path, out: Path, skip: str | None = None) -> subprocess.CompletedProcess:
-    argv = [str(binary), "--repo", str(repo), "--packs", str(packs), "--out", str(out)]
+def _run_curbcheck(binary: Path, repo: Path, out: Path, skip: str | None = None) -> subprocess.CompletedProcess:
+    argv = [str(binary), "--repo", str(repo), "--out", str(out)]
     if skip is not None:
         argv.extend(["--skip", skip])
     return subprocess.run(argv, capture_output=True, text=True, timeout=120)
@@ -238,11 +241,10 @@ def smoke_curbcheck(binary: Path) -> int:
         return 1
     root = Path(__file__).resolve().parents[2]
     repo = None
-    packs = None
     try:
-        repo, packs = _curbcheck_repo(root)
+        repo = _curbcheck_repo(root)
         out = repo / "run-result.json"
-        completed = _run_curbcheck(binary, repo, packs, out)
+        completed = _run_curbcheck(binary, repo, out)
         if not out.is_file():
             print(completed.stdout, flush=True)
             print(completed.stderr, flush=True)
@@ -275,7 +277,7 @@ def smoke_curbcheck(binary: Path) -> int:
         if "banned pin" not in dep:
             print(f"[FAIL] smoke curbcheck dep_ban detail was {dep!r}", flush=True)
             return 1
-        skipped = _run_curbcheck(binary, repo, packs, out, skip="claim-exist=not this build")
+        skipped = _run_curbcheck(binary, repo, out, skip="claim-exist=not this build")
         if skipped.returncode != 1:
             print(skipped.stdout, flush=True)
             print("[FAIL] smoke curbcheck skip did not exit 1", flush=True)
@@ -290,8 +292,6 @@ def smoke_curbcheck(binary: Path) -> int:
     finally:
         if repo is not None:
             shutil.rmtree(repo, ignore_errors=True)
-        if packs is not None:
-            shutil.rmtree(packs, ignore_errors=True)
 
 
 def main() -> int:
