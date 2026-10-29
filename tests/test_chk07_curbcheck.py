@@ -7,7 +7,7 @@ import json
 import os
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from checks.__main__ import main
@@ -209,4 +209,87 @@ class OutputChannelsTest(unittest.TestCase):
         with self.assertRaises(ModelError):
             main(["--repo", str(repo), "-o", str(out)])
         self.assertEqual(_run_results(repo), [])
+        self.assertFalse(out.exists())
+
+
+class IdListFlagsTest(unittest.TestCase):
+    def test_packs_flag_checks_those_ids_from_packs_dir(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        extra = dict(draft_pack())
+        extra["id"] = "house-policy"
+        extra_dir = repo / "curbpack" / "packs" / "house-policy" / "0.1.0"
+        save_pack(extra_dir, extra)
+        house_req = dict(_requirement())
+        house_req["id"] = "HOUSE-REQ"
+        house_req["pack_id"] = "house-policy"
+        save_requirement(extra_dir, house_req)
+        config_path = repo / "curbpack.json"
+        before = config_path.read_bytes()
+        out = repo / "out.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(
+                ["--repo", str(repo), "--packs", "cra-baseline,house-policy", "-o", str(out)]
+            )
+        self.assertEqual(code, 0)
+        loaded = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual([row["id"] for row in loaded["packs"]], ["cra-baseline", "house-policy"])
+        self.assertEqual([row["id"] for row in loaded["claims"]], ["claim-risk"])
+        self.assertEqual(config_path.read_bytes(), before)
+
+    def test_requirements_flag_checks_those_ids_from_claims_dir(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        other = dict(_requirement())
+        other["id"] = "OTHER-REQ"
+        save_requirement(repo / "curbpack" / "packs" / "cra-baseline" / "0.1.0", other)
+        write_claim(
+            repo / "curbpack" / "claims",
+            build_claim(
+                claim_id="claim-other",
+                requirement_id="OTHER-REQ",
+                source="documents",
+                args={"path": "docs/a.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
+                severity="high",
+                description="The other requirement.",
+            ),
+        )
+        out = repo / "out.json"
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = main(
+                [
+                    "--repo",
+                    str(repo),
+                    "--requirements",
+                    "CRA-ANNEX-VII-RISK,OTHER-REQ",
+                    "-o",
+                    str(out),
+                ]
+            )
+        self.assertEqual(code, 0)
+        loaded = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual([row["id"] for row in loaded["claims"]], ["claim-other", "claim-risk"])
+        self.assertTrue((repo / "curbpack" / "claims" / "claim-other.json").is_file())
+        self.assertTrue((repo / "curbpack" / "claims" / "claim-risk.json").is_file())
+
+    def test_packs_path_exits_2_and_writes_nothing(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        out = repo / "out.json"
+        with redirect_stderr(io.StringIO()):
+            code = main(["--repo", str(repo), "--packs", str(repo / "curbpack" / "packs"), "-o", str(out)])
+        self.assertEqual(code, 2)
+        self.assertFalse(out.exists())
+        self.assertEqual(_run_results(repo), [])
+
+    def test_requirements_backslash_exits_2_and_writes_nothing(self):
+        tmp, repo = _passing_repo()
+        self.addCleanup(tmp.cleanup)
+        out = repo / "out.json"
+        with redirect_stderr(io.StringIO()):
+            code = main(["--repo", str(repo), "--requirements", r"CRA\ANNEX", "-o", str(out)])
+        self.assertEqual(code, 2)
         self.assertFalse(out.exists())

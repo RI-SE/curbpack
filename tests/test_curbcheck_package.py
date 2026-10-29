@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -197,7 +197,7 @@ class ToolReentryTest(unittest.TestCase):
     def test_skip_stores_the_reason(self):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
-        pack_dir = Path(tmp.name) / "packs" / "cra-baseline" / "0.1.0"
+        pack_dir = repo / "curbpack" / "packs" / "cra-baseline" / "0.1.0"
         save_pack(pack_dir, draft_pack())
         save_requirement(pack_dir, _requirement())
         _write_curbpack(repo)
@@ -217,7 +217,7 @@ class ToolReentryTest(unittest.TestCase):
         buf = io.StringIO()
         with redirect_stdout(buf):
             code = main(
-                ["--repo", str(repo), "--packs", str(Path(tmp.name) / "packs"), "--out", str(out), "--skip", "claim-risk=not this build"]
+                ["--repo", str(repo), "--out", str(out), "--skip", "claim-risk=not this build"]
             )
         self.assertEqual(code, 1)
         loaded = json.loads(out.read_text(encoding="utf-8"))
@@ -300,13 +300,11 @@ class ToolReentryTest(unittest.TestCase):
         )
         write_claim(repo / "external_test" / "curbpack" / "claims", _running_claim())
         out = Path(tmp.name) / "chosen-result.json"
-        buf = io.StringIO()
-        with redirect_stdout(buf):
+        with redirect_stderr(io.StringIO()):
             code = main(["--repo", str(repo), "--packs", str(override), "--out", str(out)])
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["packs"][0]["id"], "cra-baseline")
+        self.assertEqual(code, 2)
+        self.assertFalse(out.exists())
         self.assertFalse((repo / "external_test" / "curbpack" / "run-result.json").exists())
-        self.assertFalse((override / "packs").exists())
 
 
 class PackageArgsTest(unittest.TestCase):
