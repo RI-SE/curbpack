@@ -530,7 +530,7 @@ def check_page(
         shown = git + f"<p>exit {exit_code}</p>" + table
     body = f"""
 <h1>Check</h1>
-<p class="muted">Choose a repo, tick the packs it uses, and save <code>curbpack.json</code> into that repo.
+<p class="muted">Choose a repo. Check reads that repository's <code>curbpack.json</code>.
 The file is not signed. A green check row is not a legal conclusion.</p>
 {_flash(message, error)}
 {_curbpack_editor(editor or {})}
@@ -565,94 +565,53 @@ def _curbpack_editor(editor: dict) -> str:
     picker = _product_repo_picker(editor, "/check")
     if not repo_id:
         return f'<div class="card discover-wrap">{picker}<p class="muted">Choose a repo to work with.</p></div>'
-    ask = ""
-    if editor.get("ask_read"):
-        ask = (
-            '<p class="muted">This repo has a curbpack.json. Read it and tick the packs it names?</p>'
-            '<p class="actions">'
-            f'<a class="details" href="/check?repo={html.escape(quote(repo_id))}&read=yes">Read it</a>'
-            f'<a class="details" href="/check?repo={html.escape(quote(repo_id))}&read=no">Start empty</a>'
-            "</p>"
-        )
     rows = []
     for pack in editor.get("packs") or []:
         if not isinstance(pack, dict):
             continue
         pack_id = str(pack.get("id") or "")
-        checked = " checked" if pack.get("included") else ""
+        state = "present" if pack.get("present") else "missing"
         rows.append(
             "<tr>"
             f"<td><code>{html.escape(pack_id)}</code></td>"
-            f"<td>{html.escape(str(pack.get('copy') or ''))}</td>"
-            f"<td><code>{html.escape(str(pack.get('version') or ''))}</code></td>"
-            f'<td class="num">{int(pack.get("claims") or 0)}</td>'
-            f'<td><input type="checkbox" name="pack" value="{html.escape(pack_id)}"{checked}></td>'
+            f"<td>{html.escape(state)}</td>"
+            f"<td><code>{html.escape(str(pack.get('pack_dir') or ''))}</code></td>"
             "</tr>"
         )
     if not rows:
-        rows.append('<tr><td colspan="5" class="muted">No packs in this workspace.</td></tr>')
-    claim_rows = []
-    for claim in editor.get("claims") or []:
-        if not isinstance(claim, dict):
-            continue
-        claim_rows.append(
-            "<tr>"
-            f"<td><code>{html.escape(str(claim.get('id') or ''))}</code></td>"
-            f"<td><code>{html.escape(str(claim.get('pack_id') or ''))}</code></td>"
-            f"<td><code>{html.escape(str(claim.get('requirement_id') or ''))}</code></td>"
-            f"<td><code>{html.escape(str(claim.get('path') or ''))}</code></td>"
-            f'<td class="num">{int(claim.get("checks") or 0)}</td>'
-            "</tr>"
-        )
-    if claim_rows:
-        claim_table = (
-            "<h2>Claims in this repo</h2><table><thead><tr>"
-            "<th>Claim</th><th>Pack</th><th>Requirement</th><th>Evidence</th>"
-            '<th class="num"># Checks</th>'
-            "</tr></thead><tbody>"
-            + "".join(claim_rows)
-            + "</tbody></table>"
-        )
-    else:
-        claim_table = '<p class="muted">No claims in this repo.</p>'
-    kept = html.escape(json.dumps(editor.get("kept") or {}, ensure_ascii=False))
+        rows.append('<tr><td colspan="3" class="muted">No packs named in curbpack.json.</td></tr>')
+    selection = str(editor.get("selection") or "")
+    selection_html = (
+        f"<p>Selection <code>{html.escape(selection)}</code></p>" if selection else ""
+    )
+    result_path = str(editor.get("run_result_path") or "")
+    result_html = (
+        f"<p>Run result <code>{html.escape(result_path)}</code></p>" if result_path else ""
+    )
     return f"""
 <div class="card discover-wrap">
 {picker}
-{ask}
-<form method="post" action="/check" id="curbpack-editor" data-kept="{kept}">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<table><thead><tr>
-<th>Pack</th><th>Copy</th><th>Version</th><th class="num"># Claims</th><th>Include</th>
-</tr></thead><tbody>
+<p>curbpack.json <code>{html.escape(str(editor.get("curbpack_file") or ""))}</code></p>
+<p class="muted">Packs directory <code>{html.escape(str(editor.get("directory") or ""))}</code>.</p>
+<p class="muted">Claims directory <code>{html.escape(str(editor.get("claims_dir") or ""))}</code>.</p>
+<p class="muted">Results directory <code>{html.escape(str(editor.get("results_dir") or ""))}</code>.</p>
+<p class="muted">Reports directory <code>{html.escape(str(editor.get("reports_dir") or ""))}</code>.</p>
+{selection_html}
+{result_html}
+<table><thead><tr><th>Pack</th><th>Status</th><th>Path</th></tr></thead><tbody>
 {"".join(rows)}
 </tbody></table>
-{claim_table}
+<form method="post" action="/check">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<label>packs_dir <input type="text" name="packs_dir" value="{html.escape(str(editor.get("packs_dir_value") or ""))}"></label>
+<label>claims_dir <input type="text" name="claims_dir" value="{html.escape(str(editor.get("claims_dir_value") or ""))}"></label>
+<label>results_dir <input type="text" name="results_dir" value="{html.escape(str(editor.get("results_dir_value") or ""))}"></label>
+<label>reports_dir <input type="text" name="reports_dir" value="{html.escape(str(editor.get("reports_dir_value") or ""))}"></label>
 <p class="actions">
 <button type="submit" name="action" value="save">Save</button>
 <button type="submit" name="action" value="check">Check</button>
-<button type="button" id="export-open" class="secondary">Export</button>
 </p>
 </form>
-<dialog id="export-curbpack">
-<div class="head"><h2>curbpack.json</h2>
-<button type="button" class="secondary" id="export-close">Close</button></div>
-<div class="body">
-<textarea id="export-body" readonly></textarea>
-</div>
-</dialog>
-<script>
-const editor = document.getElementById("curbpack-editor");
-const dialog = document.getElementById("export-curbpack");
-document.getElementById("export-open").addEventListener("click", () => {{
-  const kept = JSON.parse(editor.dataset.kept || "{{}}");
-  const packs = [...editor.querySelectorAll('input[name="pack"]:checked')].map((box) => box.value);
-  const payload = {{packs, ...kept}};
-  document.getElementById("export-body").value = JSON.stringify(payload, null, 2);
-  dialog.showModal();
-}});
-document.getElementById("export-close").addEventListener("click", () => dialog.close());
-</script>
 </div>
 """
 

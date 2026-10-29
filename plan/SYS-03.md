@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (SYS-R01–R09 walkthrough OK; proceed Task 1–8; CHK-07/08 out of this plan) |
-| Current task | Task 4 — next |
-| Last completed task | Task 3 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_cover_navigation tests.test_requirements_ui tests.test_requirements_export tests.test_requirements_catalog` — Ran 45 tests, OK. |
-| Last checkpoint commit | Task 2 local commit |
+| Current task | Task 5 — Discover I/O → packs_dir / claims_dir |
+| Last completed task | Task 4 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_check_editor tests.test_m4_checks` — Ran 21 tests, OK. |
+| Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/SYS-03.md`. |
 | Requirements | Story SYS-R01–SYS-R09 in `SYS-03-one-repo-door.md` (R01 rewritten 2026-10-29 walkthrough; R09 Studio config page). No new `docs/req/` row. |
 | Packs v2 | `docs/reference/workspace.md` and `docs/reference/packs2.md` are both law. This plan edits neither. Workspace §2 owns `curbpack.json` keys, which of them are required, and the on-disk paths. Packs v2 §2.3 owns selection and the `search_hints` merge; §3.1 owns the run-result object. Allowed keys: `packs`, `requirements` XOR `exclude_requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`. `search_hints` and `unsigned_requirements` are required. The single key `curbpack`, and a `temp`/`tmp` key, are rejected. |
 | Blockers | None |
-| **Exact next action** | Task 4: Check I/O to results_dir dated run-result files. |
+| **Exact next action** | Task 5: Discover I/O to packs_dir / claims_dir. |
 
 ## Requirements and acceptance mapping
 
@@ -32,9 +32,9 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 | SYS-R02 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
 | SYS-R03 | SYS-03 | `tests/test_sys03_door.py` | Task 3 |
 | SYS-R04 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R05 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
+| SYS-R05 | SYS-03 | `tests/test_sys03_door.py` | Task 4 |
 | SYS-R06 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 3 (Check/Review/Discover path I/O still Tasks 4–6) |
+| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 4 (Review/Discover path I/O still Tasks 5–6) |
 | SYS-R08 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 | SYS-R09 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
 
@@ -99,10 +99,10 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Validation:** `python3 -m unittest tests.test_sys03_door tests.test_check_editor tests.test_m4_checks`
 **Stop if:** honoring `exclude_requirements`/`requirements` or skipping an unselected Claim needs a new `curbpack.json` field.
 
-- [ ] RED observed for the intended behavior.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior.
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 5 — Discover I/O → `packs_dir` / `claims_dir`
 
@@ -169,3 +169,4 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 - **2026-10-29 / Task 1:** `validate_curbpack_config` requires workspace.md §2.2 keys and rejects `curbpack`. Resolvers `packs_dir`/`claims_dir`/`results_dir`/`reports_dir`. `run_repository` loads `<packs_dir>/<id>/<version>/pack.json` and `claims_dir`; unselected Claims omitted (`checks/ARCHITECTURE.md` updated). `_write_curbpack` preserves the four path fields. CLI default out is `<results_dir>/run-result.json`. `curbpack_directory`/`claim_catalog` left for Studio WIP (Task 3+). Review Important: `_write_curbpack` test + architecture omit-unselected; re-review Approved (`2f52e822`). Command: `python3 -m unittest tests.test_sys03_door tests.test_curbcheck_package tests.test_m4_checks` — Ran 28 tests, OK. Minor left: leftover helpers.
 - **2026-10-29 / Task 2:** `discovery/door.py` stores `open-repo.json` as `{"id": ...}` only. `open_repo_id` works with no curbpack.json. Extra keys / empty / unknown id mean not open. `save_directory_fields` validates relative dirs. First review Important: write-side tests; re-review Approved (`ed5a41af`). `python3 -m unittest tests.test_sys03_door` — Ran 10 tests, OK.
 - **2026-10-29 / Task 3:** Door UI. Empty Pack Sources / Pack Editor / Discover / Check / Review without open repo. `curbpack.json` Save/Cancel dialog (Requirements-dialog style). Start empty registers+opens, does not write the file. Add writes `<packs_dir>/<id>/<version>/pack.json` (`version` from `draft_pack` only). Empty `claims_dir` says No Claims. Paths shown. Pack Editor prefers the open repo's packs_dir row. Review Compile hidden until Task 6 and POST compile does not write the workspace product. First review Important (`45f1f31a`): Pack Editor catalog-first, missing claims_dir chrome, adapter drop, Review workspace preview, old `curbpack_directory` lookup, section-V test removed. Re-review Important leftovers (`372c0f7b`): adapter_id+non-adapter URL still accepted; Compile still wrote workspace — both closed in this step. No third review. Minor left: comma-separated packs field (CHK-07 checkboxes), three pickers, `created_curbpack` until CHK-07. Command: `python3 -m unittest tests.test_sys03_door tests.test_cover_navigation tests.test_requirements_ui tests.test_requirements_export tests.test_requirements_catalog` — Ran 45 tests, OK.
+- **2026-10-29 / Task 4:** Check I/O. POST `/check` opens the chosen repo, saves the four path fields without rewriting `packs`, and writes `<results_dir>/run-result_<UTC>.json` via `run_and_write`. A second run leaves the first file unchanged. GET `/check` does not fall back to workspace `product/`. `?result=` is confined to that repo's `results_dir`. First review Important: `?result=` confinement + include-list HTTP case. Re-review Important leftover (`4a846ca2`): outsider named `foreign-run-result_…` never reached the directory bound — closed by writing a valid `run-result_*.json` outside `results_dir`. No third review. Minor left: unused `_repo_claims` / `_pack_directory_for_check` helpers, leftover `ask_read`, same-second `time.sleep(1)` in `_new_run_result_path`. Command: `python3 -m unittest tests.test_sys03_door tests.test_check_editor tests.test_m4_checks` — Ran 21 tests, OK.

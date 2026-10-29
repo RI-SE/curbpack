@@ -1,4 +1,4 @@
-"""The Check page edits a repo's curbpack.json and can run that selection."""
+"""The Check page shows the open repo's curbpack.json paths and can save them."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
-from claims.bind import build_claim, write_claim
 from common.jsonio import read_json, write_json
-from common.store import save_requirement
-from discovery.repos import save_repos
-from requirements.workspace import create_extraction_copy
+from common.store import save_pack
+from discovery.door import created_curbpack
+from discovery.repos import add_repo, load_repos, save_repos
+from requirements.extract.pipeline import draft_pack
 
 
 def _get(url: str) -> str:
@@ -31,103 +31,54 @@ def _post(url: str, form: dict) -> str:
 
 
 class CheckEditorTest(unittest.TestCase):
-    def test_reading_a_repo_file_ticks_its_packs_and_save_writes_them(self):
+    def test_check_shows_named_packs_and_saves_directory_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "ws"
             root.mkdir()
-            cra = create_extraction_copy(
-                root,
-                "cra-xml-baseline",
-                {"id": "cra-xml-baseline", "name": "CRA", "version": "0.1.0"},
-                at="2026-10-27T065647Z",
-            )
-            save_requirement(
-                cra,
-                {
-                    "id": "REQ-PURPOSE",
-                    "pack_id": "cra-xml-baseline",
-                    "source": {
-                        "framework": "EU",
-                        "instrument": "CRA",
-                        "identifier": "CELEX:32024R2847",
-                        "language": "en",
-                        "url": "https://example.invalid/cra",
-                    },
-                    "references": [
-                        {"nr": 1, "locator": "VII.1(a)", "law_text": "its intended purpose"}
-                    ],
-                },
-            )
-            create_extraction_copy(
-                root,
-                "nis2-baseline",
-                {"id": "nis2-baseline", "name": "NIS2", "version": "0.2.0"},
-                at="2026-10-27T065647Z",
-            )
             repo = Path(tmp) / "widget"
             repo.mkdir()
             write_json(
                 repo / "curbpack.json",
-                {"packs": ["cra-xml-baseline"], "search_hints": {"exclude_path_globs": ["*.png"]}},
+                created_curbpack(packs=["cra-baseline"], reports_dir="signed/reports"),
             )
-            write_claim(
-                repo / "claims",
-                build_claim(
-                    claim_id="claim-readme",
-                    requirement_id="REQ-PURPOSE",
-                    source="documents",
-                    args={"path": "README.md"},
-                    checks=[
-                        {"check": "exist", "args": {"paths": ["README.md"]}},
-                        {
-                            "check": "contents",
-                            "args": {
-                                "path": "README.md",
-                                "probes": [{"kind": "size", "bytes": 20, "op": ">="}],
-                            },
-                        },
-                    ],
-                    description="The readme names the product purpose.",
-                ),
+            save_pack(
+                repo / "curbpack" / "packs" / "cra-baseline" / draft_pack()["version"],
+                draft_pack(),
             )
             save_repos(
                 root,
-                {"repos": [{"id": "widget", "name": "widget", "path": str(repo)}]},
+                add_repo(root, load_repos(root), name="Widget", path=str(repo)),
             )
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
-                asked = _get(base + "/check?repo=widget")
-                self.assertIn("Read it and tick the packs it names?", asked)
-                self.assertIn(">Include</th>", asked)
-                self.assertNotIn('value="cra-xml-baseline" checked', asked)
-                loaded = _get(base + "/check?repo=widget&read=yes")
-                self.assertIn('value="cra-xml-baseline" checked', loaded)
-                self.assertNotIn('value="nis2-baseline" checked', loaded)
-                self.assertIn("Working copy · 2026-10-27T065647Z", loaded)
-                self.assertIn("is not signed", loaded)
-                self.assertIn("># Claims</th>", loaded)
-                self.assertIn("<h2>Claims in this repo</h2>", loaded)
-                self.assertIn("claim-readme", loaded)
-                self.assertIn("README.md", loaded)
-                self.assertIn(
-                    "<td><code>cra-xml-baseline</code></td>"
-                    "<td>Working copy · 2026-10-27T065647Z</td>"
-                    "<td><code>0.1.0</code></td>"
-                    '<td class="num">1</td>',
-                    loaded,
-                )
+                page = _get(base + "/check?repo=widget")
+                self.assertNotIn("Read it and tick the packs it names?", page)
+                self.assertNotIn("Start empty", page)
+                self.assertIn("cra-baseline", page)
+                self.assertIn("present", page)
+                self.assertIn('name="packs_dir"', page)
+                self.assertIn('name="reports_dir"', page)
                 saved = _post(
                     base + "/check",
-                    {"action": "save", "repo_id": "widget", "pack": ["nis2-baseline"]},
+                    {
+                        "action": "save",
+                        "repo_id": "widget",
+                        "packs_dir": "curbpack/packs",
+                        "claims_dir": "curbpack/claims",
+                        "results_dir": ".curbpack",
+                        "reports_dir": "kept/reports",
+                    },
                 )
-                self.assertIn('value="nis2-baseline" checked', saved)
-                document = read_json(repo / "curbpack.json")
-                self.assertEqual(document["packs"], ["nis2-baseline"])
-                self.assertEqual(document["search_hints"]["exclude_path_globs"], ["*.png"])
-                self.assertIn('id="export-curbpack"', saved)
+                self.assertEqual(read_json(repo / "curbpack.json")["reports_dir"], "kept/reports")
+                self.assertEqual(read_json(repo / "curbpack.json")["packs"], ["cra-baseline"])
+                self.assertIn("kept/reports", saved)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+
+
+if __name__ == "__main__":
+    unittest.main()
