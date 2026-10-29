@@ -14,4 +14,4 @@
 
 [Outputs](outputs.md) defines the run result and the review report. Paths are Workspace §2–§3.
 
-[Stable contracts](stable-contracts.md) is the review report object Compile writes. An unknown key is rejected. The path is Workspace §2.
+[Stable contracts](stable-contracts.md) links to the output contracts without duplicating their definitions.

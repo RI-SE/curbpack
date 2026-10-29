@@ -6,7 +6,7 @@ endif
 
 .DEFAULT_GOAL := help
 PORT ?= 8770
-.PHONY: help start stop test ci-tests package start-verification-run test-curbcheck
+.PHONY: help start stop test ci-tests package package-studio package-curbcheck start-verification-run test-curbcheck
 export ONLY
 
 help:
@@ -18,7 +18,9 @@ help:
 	@echo "make test-curbcheck          Source that run, apply R1, run curbcheck"
 	@echo "                             Reuses DEVELOPER_MODE from env or the filled run"
 	@echo "make ci-tests                Run mandatory CI checks. ONLY=name runs one check"
-	@echo "make package                 Build and smoke-test a binary for this operating system"
+	@echo "make package                 Build and smoke-test both native packages"
+	@echo "make package-studio          Build and smoke-test Studio only"
+	@echo "make package-curbcheck       Build and smoke-test curbcheck only"
 
 start:
 	$(PYTHON) -m app
@@ -38,5 +40,10 @@ test-curbcheck:
 ci-tests:
 	@$(PYTHON) scripts/ci/run.py
 
-package:
-	$(PYTHON) scripts/build/package.py
+package: package-studio package-curbcheck
+
+package-studio:
+	$(PYTHON) scripts/build/package_studio.py
+
+package-curbcheck:
+	$(PYTHON) scripts/build/package_curbcheck.py

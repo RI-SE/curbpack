@@ -18,18 +18,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "build"))
 sys.path.insert(0, str(ROOT / "scripts" / "release"))
 
-from package import host_label  # noqa: E402
+from package_common import host_label  # noqa: E402
 from verify import verify_directory  # noqa: E402
 
 import common.paths as paths  # noqa: E402
 
 
 class HostPackageTest(unittest.TestCase):
-    def test_labels_the_two_pilot_hosts_and_refuses_to_cross_compile(self):
+    def test_labels_supported_build_hosts_and_refuses_to_cross_compile(self):
         self.assertEqual(host_label("Darwin", "arm64"), "macos-arm64")
         self.assertEqual(host_label("Windows", "AMD64"), "windows-x64")
+        self.assertEqual(host_label("Linux", "x86_64"), "linux-x64")
         with self.assertRaises(SystemExit) as caught:
-            host_label("Linux", "x86_64")
+            host_label("Linux", "aarch64")
         self.assertIn("is not", str(caught.exception))
         with self.assertRaises(SystemExit):
             host_label("Darwin", "x86_64")

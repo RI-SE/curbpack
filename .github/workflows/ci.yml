@@ -17,13 +17,15 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: make ci-tests
 
-  package:
-    name: package (${{ matrix.artifact }})
+  package-studio:
+    name: package-studio (${{ matrix.artifact }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-22.04
+            artifact: curbpack-studio-linux-x64
           - os: macos-14
             artifact: curbpack-studio-macos-arm64
           - os: windows-latest
@@ -40,12 +42,45 @@ jobs:
           echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
       - run: python -m pip install -r requirements-dev.txt pyinstaller
       - run: make ci-tests
-      - run: make package
+      - run: make package-studio
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
-            dist/curbpack-studio-*
-            dist/curbcheck-*
-            dist/SHA256SUMS
+            dist/studio/curbpack-studio-*
+            dist/studio/SHA256SUMS
+          if-no-files-found: error
+
+  package-curbcheck:
+    name: package-curbcheck (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact: curbcheck-linux-x64
+          - os: macos-14
+            artifact: curbcheck-macos-arm64
+          - os: windows-latest
+            artifact: curbcheck-windows-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install GNU make
+        if: runner.os == 'Windows'
+        run: |
+          choco install make -y
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
+      - run: python -m pip install -r requirements-dev.txt pyinstaller
+      - run: make ci-tests
+      - run: make package-curbcheck
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            dist/curbcheck/curbcheck-*
+            dist/curbcheck/SHA256SUMS
           if-no-files-found: error

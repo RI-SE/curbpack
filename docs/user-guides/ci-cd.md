@@ -1,57 +1,170 @@
 # CI/CD
 
-Run the same Check in CI that you run locally:
+A product pipeline downloads a pinned release of `curbcheck`, runs it against the product checkout, and uses its process exit status as the gate. It does not install Studio, clone the Studio source, or build the checker.
 
 ```sh
-curbcheck --repo "$PWD"
+curbcheck --repo "$PWD" --out ci-artifacts/run-result.json
 ```
 
-`--packs` replaces `<curbpack>/packs` when the Pack directories are outside that path. `--out` replaces `<curbpack>/run-result.json`.
+The product must already contain `curbpack.json`, the Packs under its configured `packs_dir`, and the Claims under its configured `claims_dir`. The checker does not fetch Packs. `--packs` and `--requirements` select comma-separated ids; they do not set directories. JSON is written only with `-j` or `--out`. See [curbcheck](../reference/curbcheck-cli.md) for the CLI and [Outputs](../reference/outputs.md#run-result) for the JSON contract.
 
-Use the process exit status as the job result. Exit 0 means at least one Check ran and every Claim and every Check passed. Any other outcome, including a run with no rows, is exit 1. Usage errors from the argument parser are exit 2, including a `--skip` value without `claim-id=reason`. The exit code is not a field in the JSON.
+## Before using the examples
 
-## 1. What belongs in the pipeline
+The examples below use Linux x64, Ubuntu 22.04 or newer with glibc, Git, curl, CA certificates, and GNU `sha256sum`. No Python installation is needed to run the packaged checker. Alpine/musl and Linux ARM64 are not targets of these examples.
 
-* Run `curbcheck` on the product repository.
-* If it exits 0, the pipeline continues.
-* If it exits non-zero, the pipeline fails. Someone reads the rows, changes the product or the Claim, and pushes a revision to be checked again.
-* Scaffold, Extract, and signing are not CI steps.
-* A review decision and review-sign stay outside CI.
+Replace `REPLACE_WITH_RELEASE_TAG` with a specific tag from [Curbpack releases](https://github.com/RI-SE/curbpack/releases) containing **both** `curbcheck-linux-x64` and `SHA256SUMS`. Use the same tag for the binary and its checksum file. The release `2026-10-28a-test-release` contains macOS and Windows binaries, not Linux. Linux build support has been added to the build workflow; the examples require a release that actually publishes that binary. A missing asset makes the download step fail.
 
-A failing Check is not a legal finding the pipeline is allowed to rewrite.
+Commit the pipeline configuration. For the GitLab and Jenkins examples, add this entry to the product's `.gitignore`:
 
-## 2. Generic pipeline
-
-```text
-checkout the product repository
-        ↓
-make the Studio tree, or a packaged build, available
-        ↓
-curbcheck --repo ...
-        ↓
-exit status is the CI result
+```gitignore
+/ci-artifacts/
 ```
 
-Any CI system that can run that process can host it. The packs root has to contain the Pack directories the product's `curbpack.json` names. The job does not fetch a newer Pack by itself.
+All examples download the executable into a temporary directory outside the product checkout. The GitHub Action also writes its result there. GitLab and Jenkins write their result to `ci-artifacts/`; ignoring that directory keeps repeated runs from making the product worktree dirty. Start from a clean checkout; Git history must include the commits your configured Git Checks need. The GitHub and GitLab examples request full history. Configure the Jenkins SCM checkout without shallow cloning.
 
-`--skip claim-id=reason` marks that Claim skipped and stores the reason as the detail. Do not use an empty reason. Do not use skip to hide a missing file.
+Each example verifies the downloaded binary against that release's checksum file before executing it. Artifact retention is configured to run even when a Check fails. A startup, download, or argument error can stop the job before any result JSON exists; the job log then contains the failure.
 
-## 3. GitHub Actions
+## GitHub Actions
 
-Call `curbcheck` from a step and fail the step on a non-zero status. Depending on Studio does not add SARIF upload, a pull-request comment, or a second report format.
+The root [`action.yml`](../../action.yml) in this repository downloads and verifies `curbcheck`, runs it against the product checkout, and saves its JSON result as the `curbcheck-result` artifact even when a Check fails. Its only optional input is `release`; there are no heal, signing, release-preparation, SARIF, or PR-comment steps.
 
-Studio's own workflows are a different pipeline. `.github/workflows/ci.yml` runs Studio's tests on the Studio repository, then builds two files for that host: `curbpack-studio-<host>` is the application and `curbcheck-<host>` is the checker. A product job runs `curbcheck`, or the packaged `curbcheck-macos-arm64` on macOS ARM64, or `curbcheck-windows-x64.exe` on Windows x64. `--repo` names the product when the job is not already in that directory. `--packs` and `--out` stay optional. `.github/workflows/release.yml` publishes Studio artifacts when that workflow is authorized. Their existence does not mean a product Check ran, and it does not mean binaries were published for every operating system.
+Save this as `.github/workflows/curbcheck.yml` in the **product** repository:
 
-## 4. Results
+```yaml
+name: curbcheck
 
-Preserve the source commit of the product, the Pack id, `version`, directory digest, and the run-result file. A dirty runner workspace must not be described as a clean verification of the commit under test.
+on:
+  push:
+  pull_request:
 
-`make test` and `make ci-tests` belong to the Studio repository. They are how Studio itself is tested. They are not a Check of your product. A negative test that is specified to fail is a passing test when it fails as specified. The runner's exit status is the result that matters.
+permissions:
+  contents: read
 
-Release jobs for Studio are supposed to reuse the bytes that were tested. That rule is about Studio's own packages. It does not rebuild your product's evidence.
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: RI-SE/curbpack@REPLACE_WITH_RELEASE_TAG
+```
 
-## 5. Other CI systems
+Choose a release tag containing the new root `action.yml` as well as the Linux binary and `SHA256SUMS`. The Action downloads the binary from that same tag by default; the product does not need to repeat the download or artifact-upload steps. A non-zero checker exit fails the Action and the job. The product checkout is not changed.
 
-GitLab, Jenkins, Azure Pipelines, CircleCI and others use the same flow: checkout, run `curbcheck`, use the exit status.
+When pinning the Action to a commit SHA instead of a release tag, specify the release to download explicitly:
 
-Docker images, SBOM generation, artifact signing and vulnerability scanning of the Studio build are future scope described in `docs/agile/future_cicd.md`. They are not current product features, and they are not substitutes for a product Check.
+```yaml
+      - uses: RI-SE/curbpack@REPLACE_WITH_COMMIT_SHA
+        with:
+          release: REPLACE_WITH_RELEASE_TAG
+```
+
+The same `release` input is required when invoking the Action locally with `uses: ./`. This Action currently targets Linux x64 runners. Its result upload uses GitHub's [upload-artifact action](https://github.com/actions/upload-artifact).
+
+## GitLab CI
+
+Save as `.gitlab-ci.yml`, or add this job to the product's existing configuration. The `linux-x64` tag must match a Linux x64 runner in your GitLab installation using the Docker executor; change the tag to your runner's tag. `ubuntu:22.04` is the job environment, not a Curbpack Docker image.
+
+```yaml
+curbcheck:
+  stage: test
+  image: ubuntu:22.04
+  tags:
+    - linux-x64
+  variables:
+    GIT_DEPTH: "0"
+    CURBCHECK_RELEASE: REPLACE_WITH_RELEASE_TAG
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl git
+  script:
+    - |
+      set -eu
+      tool_dir="$(mktemp -d)"
+      base="https://github.com/RI-SE/curbpack/releases/download/$CURBCHECK_RELEASE"
+      curl -fsSL "$base/curbcheck-linux-x64" -o "$tool_dir/curbcheck-linux-x64"
+      curl -fsSL "$base/SHA256SUMS" -o "$tool_dir/SHA256SUMS"
+      (
+        cd "$tool_dir"
+        awk '$2 == "curbcheck-linux-x64" { print }' SHA256SUMS > curbcheck.sha256
+        test -s curbcheck.sha256
+        sha256sum -c curbcheck.sha256
+      )
+      chmod +x "$tool_dir/curbcheck-linux-x64"
+      "$tool_dir/curbcheck-linux-x64" --repo "$CI_PROJECT_DIR" --out "$CI_PROJECT_DIR/ci-artifacts/run-result.json"
+  artifacts:
+    when: always
+    paths:
+      - ci-artifacts/run-result.json
+```
+
+The checker is the final command in the script, so its non-zero exit fails the job. GitLab's [`artifacts:when: always`](https://docs.gitlab.com/ci/jobs/job_artifacts/#with-upload-conditions) retains the result on success or failure. If your pipeline defines custom stages, add `test` or put this job in an existing stage.
+
+## Jenkins
+
+Save as `Jenkinsfile` in the product repository and use a Pipeline from SCM or a Multibranch Pipeline. Assign the `linux-x64` label to an Ubuntu 22.04-or-newer x64 agent with Git, curl, CA certificates, and GNU `sha256sum` installed. Change the label to match your installation.
+
+```groovy
+pipeline {
+    agent { label 'linux-x64' }
+    options { skipDefaultCheckout(true) }
+    environment {
+        CURBCHECK_RELEASE = 'REPLACE_WITH_RELEASE_TAG'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                deleteDir()
+                checkout scm
+            }
+        }
+        stage('Check product') {
+            steps {
+                sh '''
+                    set -eu
+                    tool_dir="$(mktemp -d)"
+                    base="https://github.com/RI-SE/curbpack/releases/download/$CURBCHECK_RELEASE"
+                    curl -fsSL "$base/curbcheck-linux-x64" -o "$tool_dir/curbcheck-linux-x64"
+                    curl -fsSL "$base/SHA256SUMS" -o "$tool_dir/SHA256SUMS"
+                    (
+                        cd "$tool_dir"
+                        awk '$2 == "curbcheck-linux-x64" { print }' SHA256SUMS > curbcheck.sha256
+                        test -s curbcheck.sha256
+                        sha256sum -c curbcheck.sha256
+                    )
+                    chmod +x "$tool_dir/curbcheck-linux-x64"
+                    "$tool_dir/curbcheck-linux-x64" --repo "$WORKSPACE" --out "$WORKSPACE/ci-artifacts/run-result.json"
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'ci-artifacts/run-result.json', allowEmptyArchive: true
+        }
+    }
+}
+```
+
+The Checkout stage clears the allocated job workspace before checking out the product, preventing an old result from being archived after a later download failure. A non-zero checker exit fails the `sh` step and the build. Jenkins's [`post { always { ... } }`](https://www.jenkins.io/doc/book/pipeline/syntax/#post) runs [`archiveArtifacts`](https://www.jenkins.io/doc/pipeline/steps/core/#archiveartifacts-archive-the-artifacts) even after that failure.
+
+## Reading the outcome
+
+| Process exit | Meaning |
+| --- | --- |
+| `0` | At least one Check ran, and every evaluated Claim and every Check passed. |
+| `1` | A Check failed or was skipped, no Check ran, or execution stopped with an error. |
+| `2` | Invalid command-line arguments. |
+
+Use the repository command's exit status as the job result. Do not use `continue-on-error`, `allow_failure`, or `|| true` to turn a failed Check into a passing gate. `--skip claim-id=reason` records a skipped Claim and still exits non-zero.
+
+Retain the run result and the release tag used by the job. The result records the product commit and worktree state when available, loaded Pack ids, versions and directory digests, and the evaluated Claim digests. A dirty worktree can still exit 0; that is not verification of the commit's exact content. Exit 0 describes the executed Checks, not coverage of every Requirement or a legal compliance decision.
+
+Extract, Scaffold, signing, review decisions and review-sign stay outside this gate. A failure is investigated by a person; the pipeline does not rewrite the Claim or its evidence.
+
+## Building Curbpack itself
+
+The examples above belong to product repositories. Curbpack's own `.github/workflows/ci.yml` tests this repository and builds Studio and `curbcheck` in separate jobs. `make package-curbcheck` builds only the checker; `make package-studio` builds only Studio. `.github/workflows/release.yml` publishes the tested artifacts when authorized. `make test` and `make ci-tests` test Curbpack itself; they do not check a product.
+
+Curbpack Docker images, SBOM generation, artifact signing and vulnerability scanning of the Studio build remain future scope in [Future CI/CD](../agile/future_cicd.md).
