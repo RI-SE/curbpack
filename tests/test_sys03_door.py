@@ -12,9 +12,11 @@ from app.server import _write_curbpack
 from claims.bind import build_claim, write_claim
 from checks.run import claims_dir, packs_dir, reports_dir, results_dir, run_and_write, run_repository
 from common.errors import ModelError
-from common.jsonio import write_json
+from common.jsonio import read_json, write_json
 from common.store import save_pack, save_requirement
 from common.validate import validate_curbpack_config
+from discovery.door import open_paths, open_repo_id, save_directory_fields, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
 
 
@@ -237,6 +239,122 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             self.assertEqual(written["exclude_requirements"], ["OTHER-REQ"])
             self.assertNotIn("curbpack", written)
             validate_curbpack_config(written)
+
+
+class OpenRepoMemoryTest(unittest.TestCase):
+    def test_open_repo_json_stores_only_a_known_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            repo_a = workspace / "alpha"
+            repo_b = workspace / "beta"
+            repo_a.mkdir()
+            repo_b.mkdir()
+            write_json(repo_a / "curbpack.json", _config(packs_dir="a-packs", claims_dir="a-claims"))
+            write_json(repo_b / "curbpack.json", _config(packs_dir="b-packs", claims_dir="b-claims"))
+            before_a = (repo_a / "curbpack.json").read_bytes()
+            before_b = (repo_b / "curbpack.json").read_bytes()
+            save_repos(
+                workspace,
+                add_repo(
+                    workspace,
+                    add_repo(workspace, load_repos(workspace), name="Alpha", path=str(repo_a)),
+                    name="Beta",
+                    path=str(repo_b),
+                ),
+            )
+
+            self.assertIsNone(open_paths(workspace))
+            self.assertIsNone(open_repo_id(workspace))
+            with self.assertRaises(ModelError) as caught:
+                set_open_repo(workspace, "")
+            self.assertEqual(
+                str(caught.exception),
+                "open-repo.json: field id: expected an id already in product_repos.json",
+            )
+            self.assertFalse((workspace / "open-repo.json").exists())
+            with self.assertRaises(ModelError) as caught:
+                set_open_repo(workspace, "nope")
+            self.assertEqual(
+                str(caught.exception),
+                "open-repo.json: field id: expected an id already in product_repos.json",
+            )
+            self.assertFalse((workspace / "open-repo.json").exists())
+            set_open_repo(workspace, "alpha")
+            set_open_repo(workspace, "beta")
+
+            stored = read_json(workspace / "open-repo.json")
+            self.assertEqual(stored, {"id": "beta"})
+            self.assertEqual(open_repo_id(workspace), "beta")
+            self.assertFalse((repo_a / "open-repo.json").exists())
+            self.assertFalse((repo_b / "open-repo.json").exists())
+            self.assertFalse((workspace / "selection.json").exists())
+            self.assertFalse((repo_a / "selection.json").exists())
+            self.assertEqual((repo_a / "curbpack.json").read_bytes(), before_a)
+            self.assertEqual((repo_b / "curbpack.json").read_bytes(), before_b)
+
+            resolved = open_paths(workspace)
+            opened = repo_b.resolve()
+            self.assertEqual(resolved["id"], "beta")
+            self.assertEqual(resolved["path"], opened)
+            self.assertEqual(resolved["packs_dir"], opened / "b-packs")
+            self.assertEqual(resolved["claims_dir"], opened / "b-claims")
+            self.assertEqual(resolved["results_dir"], opened / ".curbpack")
+            self.assertEqual(resolved["reports_dir"], opened / "curbpack/reports")
+
+            (workspace / "open-repo.json").write_text("{}\n", encoding="utf-8")
+            self.assertIsNone(open_paths(workspace))
+            write_json(workspace / "open-repo.json", {"id": ""})
+            self.assertIsNone(open_paths(workspace))
+            write_json(workspace / "open-repo.json", {"id": "nope"})
+            self.assertIsNone(open_paths(workspace))
+            write_json(workspace / "open-repo.json", {"id": "beta", "packs_dir": "sneak"})
+            self.assertIsNone(open_paths(workspace))
+
+            empty = workspace / "gamma"
+            empty.mkdir()
+            save_repos(
+                workspace,
+                add_repo(workspace, load_repos(workspace), name="Gamma", path=str(empty)),
+            )
+            set_open_repo(workspace, "gamma")
+            self.assertEqual(open_repo_id(workspace), "gamma")
+            bare = open_paths(workspace)
+            self.assertEqual(bare["id"], "gamma")
+            self.assertEqual(bare["path"], empty.resolve())
+            self.assertIsNone(bare["packs_dir"])
+            self.assertIsNone(bare["claims_dir"])
+            self.assertIsNone(bare["results_dir"])
+            self.assertIsNone(bare["reports_dir"])
+
+    def test_saving_one_repo_path_field_leaves_the_other_file_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            repo_a = workspace / "alpha"
+            repo_b = workspace / "beta"
+            repo_a.mkdir()
+            repo_b.mkdir()
+            write_json(repo_a / "curbpack.json", _config(packs_dir="a-packs"))
+            write_json(repo_b / "curbpack.json", _config(packs_dir="b-packs"))
+            before_b = (repo_b / "curbpack.json").read_bytes()
+            save_repos(
+                workspace,
+                add_repo(
+                    workspace,
+                    add_repo(workspace, load_repos(workspace), name="Alpha", path=str(repo_a)),
+                    name="Beta",
+                    path=str(repo_b),
+                ),
+            )
+            set_open_repo(workspace, "alpha")
+            save_directory_fields(repo_a, packs_dir="other/packs")
+            self.assertEqual(read_json(repo_a / "curbpack.json")["packs_dir"], "other/packs")
+            self.assertEqual((repo_b / "curbpack.json").read_bytes(), before_b)
+            after_ok = (repo_a / "curbpack.json").read_bytes()
+            with self.assertRaises(ModelError):
+                save_directory_fields(repo_a, packs_dir="/tmp/packs")
+            with self.assertRaises(ModelError):
+                save_directory_fields(repo_a, claims_dir="claims/../out")
+            self.assertEqual((repo_a / "curbpack.json").read_bytes(), after_ok)
 
 
 if __name__ == "__main__":
