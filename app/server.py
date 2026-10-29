@@ -272,6 +272,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["selected_report"] = chosen
         reading = read_report_signature(report, trust_store(ws.keys))
         same = _same_as_latest_run(results_folder, report)
+        extra["presentation"] = _report_presentation(ws, repo, config, report, query)
         return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
     if requested_result.strip():
         status, chosen = _requested_dated(results_folder, requested_result, "run-result")
@@ -322,6 +323,12 @@ def _same_as_latest_run(results_folder: Path, report: dict):
         return None
 
 
+def _expanded_query(query: dict) -> set[str] | None:
+    if "expanded" in query:
+        return {part for part in (query.get("expanded") or [""])[0].split(",") if part}
+    return None
+
+
 def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict, query: dict) -> dict:
     from common.signing import read_signature
     from review.gitseal import read_claim_signature
@@ -346,17 +353,41 @@ def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict,
         requirement_id: read_signature(requirement, trust, what="requirement")
         for requirement_id, requirement in requirements_by_id.items()
     }
-    if "expanded" in query:
-        expanded = {part for part in (query.get("expanded") or [""])[0].split(",") if part}
-    else:
-        expanded = None
     return present_raw_run(
         run_result=run_result,
         claims_by_id=claims_by_id,
         requirements_by_id=requirements_by_id,
         claim_readings=claim_readings,
         requirement_readings=requirement_readings,
-        expanded=expanded,
+        expanded=_expanded_query(query),
+    )
+
+
+def _report_presentation(ws: Workspace, repo: Path, config: dict, report: dict, query: dict) -> dict:
+    from common.signing import read_signature
+    from review.gitseal import read_claim_signature
+    from review.present import present_compiled_report
+
+    folder = repo_claims_dir(repo)
+    current = load_claims(folder) if folder.is_dir() else []
+    current_by_id = {claim["id"]: claim for claim in current if isinstance(claim.get("id"), str)}
+    trust = trust_store(ws.keys)
+    claim_readings = {}
+    for claim in report.get("claims") or []:
+        if not isinstance(claim, dict) or not isinstance(claim.get("id"), str):
+            continue
+        claim_readings[claim["id"]] = read_claim_signature(claim, trust)
+    requirement_readings = {}
+    for requirement in report.get("requirements") or []:
+        if not isinstance(requirement, dict) or not isinstance(requirement.get("id"), str):
+            continue
+        requirement_readings[requirement["id"]] = read_signature(requirement, trust, what="requirement")
+    return present_compiled_report(
+        report=report,
+        current_claims_by_id=current_by_id,
+        claim_readings=claim_readings,
+        requirement_readings=requirement_readings,
+        expanded=_expanded_query(query),
     )
 
 

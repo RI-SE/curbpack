@@ -740,8 +740,7 @@ def review_page(
         dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
         reading_html = _reading(reading) if saved else "<p>not saved</p>"
         if door and door.get("presentation"):
-            grouped = _review_groups(door["presentation"], door)
-            listed = grouped
+            listed = _review_groups(door["presentation"], door) + appendix_html
         else:
             listed = f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>"
         body_report = f"""
@@ -838,7 +837,11 @@ def _review_groups(presentation: dict, door: dict) -> str:
     groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
     open_ids = [str(group.get("id") or "") for group in groups if group.get("open")]
     repo = quote(str(door.get("repo_id") or ""), safe="")
-    selected = quote(str(door.get("selected_result") or ""), safe="")
+    selected_result = quote(str(door.get("selected_result") or ""), safe="")
+    selected_report = quote(str(door.get("selected_report") or ""), safe="")
+    document = (
+        f"report={selected_report}" if selected_report else f"result={selected_result}"
+    )
     parts = []
     for group in groups:
         group_id = str(group.get("id") or "")
@@ -846,7 +849,7 @@ def _review_groups(presentation: dict, door: dict) -> str:
             nxt = [item for item in open_ids if item != group_id]
         else:
             nxt = sorted(set(open_ids) | {group_id})
-        href = f"/review?repo={repo}&result={selected}&expanded={quote(','.join(nxt), safe='')}"
+        href = f"/review?repo={repo}&{document}&expanded={quote(','.join(nxt), safe='')}"
         open_attr = " open" if group.get("open") else ""
         seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
         summary = (

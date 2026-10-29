@@ -451,6 +451,165 @@ class ReviewGroupingTest(unittest.TestCase):
             self.assertIn(NO_CRA_FIELD, page)
 
 
+class ReviewCompiledReportTest(unittest.TestCase):
+    def test_compiled_report_keeps_historical_grouping_when_the_claim_moved(self):
+        """REV-03 scenario 6 and 10. REV-R06."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "R-old")
+            _pack(repo, "R-new")
+            old = _exist_claim("moved-note", "R-old", "note.md")
+            current = _exist_claim("moved-note", "R-new", "note.md")
+            write_claim(repo / "kept" / "claims", current)
+            report = _compiled(repo, [old], decision="Decision for the old report.")
+            path = repo / "signed" / "reports" / "review-report_20260101T000000Z.json"
+            write_report(path, report)
+            claim_before = (repo / "kept" / "claims" / "moved-note.json").read_bytes()
+            report_before = path.read_bytes()
+            with _serve(workspace) as base:
+                page = _open_report(base, "alpha", path)
+            self.assertIn('data-requirement="R-old"', page)
+            self.assertNotIn('data-requirement="R-new"', page)
+            old_group = _details(page, "R-old")
+            self.assertIn(" open", old_group[: old_group.index(">") + 1])
+            self.assertIn("The current relationship changed.", old_group)
+            self.assertIn("Claim changed since Check", old_group)
+            self.assertIn("A new curbcheck run is required.", old_group)
+            self.assertIn("Decision for the old report.", page)
+            self.assertIn("note.md", old_group)
+            self.assertNotIn("R-new", old_group)
+            self.assertIn("Signature appendix", page)
+            self.assertIn("moved-note", page[page.index("Signature appendix") :])
+            self.assertIn("R-old", page[page.index("Signature appendix") :])
+            self.assertEqual((repo / "kept" / "claims" / "moved-note.json").read_bytes(), claim_before)
+            self.assertEqual(path.read_bytes(), report_before)
+
+    def test_compiled_report_shows_embedded_run_header_and_checks(self):
+        """REV-03 scenarios 7 and 23 for an embedded run. D6."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = build_claim(
+                claim_id="checked-note",
+                requirement_id="REQ-SHARED",
+                source="documents",
+                args={"path": "one.md"},
+                checks=[
+                    {"check": "exist", "args": {"paths": ["one.md", "two.md"]}},
+                    {
+                        "check": "exist",
+                        "args": {"paths": ["one.md"]},
+                    },
+                ],
+                description="The file is the reviewed evidence.",
+            )
+            write_claim(repo / "kept" / "claims", claim)
+            report = _compiled(
+                repo,
+                [claim],
+                commit="abc123",
+                worktree="dirty",
+                check_rows=[
+                    {
+                        "index": 0,
+                        "check": "exist",
+                        "args": {"paths": ["one.md", "two.md"]},
+                        "status": "pass",
+                    },
+                    {
+                        "index": 1,
+                        "check": "exist",
+                        "args": {"paths": ["one.md"]},
+                        "status": "fail",
+                        "detail": "short file",
+                    },
+                ],
+                status="fail",
+            )
+            path = repo / "signed" / "reports" / "review-report_20260101T000010Z.json"
+            write_report(path, report)
+            with _serve(workspace) as base:
+                page = _open_report(base, "alpha", path)
+            group = _details(page, "REQ-SHARED")
+            self.assertIn("one.md", group)
+            self.assertIn("two.md", group)
+            self.assertIn("short file", group)
+            header = page[page.index("data-run-header") : page.index("</section>", page.index("data-run-header"))]
+            self.assertIn("curbcheck", header)
+            self.assertIn("0.0.1a", header)
+            self.assertIn("abc123", header)
+            self.assertIn("dirty", header)
+            self.assertIn("cra-baseline", header)
+            self.assertIn(html.escape(worktree_sentence(report["run_result"])), page)
+            self.assertIn(NOT_A_LEGAL_CONCLUSION, page)
+            self.assertIn(NO_CRA_FIELD, page)
+
+    def test_compiled_digest_match_fail_skipped_and_expanded_override(self):
+        """REV-03 scenarios 12–14, 21, 22 for an embedded run, plus expanded override. D6."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-PASS")
+            _pack(repo, "REQ-FAIL")
+            _pack(repo, "REQ-SKIP")
+            _pack(repo, "REQ-MOVED")
+            same = _exist_claim("same-note", "REQ-PASS", "same.md")
+            failed = _exist_claim("failed-note", "REQ-FAIL", "bad.md")
+            skipped = _exist_claim("skipped-note", "REQ-SKIP", "later.md")
+            moved = _exist_claim("moved-note", "REQ-MOVED", "moved.md")
+            write_claim(repo / "kept" / "claims", same)
+            write_claim(repo / "kept" / "claims", failed)
+            write_claim(repo / "kept" / "claims", skipped)
+            write_claim(repo / "kept" / "claims", moved)
+            report = _compiled(
+                repo,
+                [same, failed, skipped, moved],
+                statuses={
+                    "failed-note": ("fail", "broke here"),
+                    "skipped-note": ("skipped", "left out"),
+                },
+            )
+            path = repo / "signed" / "reports" / "review-report_20260101T000020Z.json"
+            write_report(path, report)
+            changed = _exist_claim("moved-note", "REQ-MOVED", "moved.md")
+            changed["description"] = "The file changed after the run."
+            write_claim(repo / "kept" / "claims", changed)
+            with _serve(workspace) as base:
+                page = _open_report(base, "alpha", path)
+                closed = _open_report(base, "alpha", path, expanded="")
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-PASS"[^>]*\bopen\b', page))
+            self.assertIn("The Claim is unchanged since the Check run.", _details(page, "REQ-PASS"))
+            self.assertIn(" open", _details(page, "REQ-FAIL")[: _details(page, "REQ-FAIL").index(">") + 1])
+            self.assertIn("pill-bad", _details(page, "REQ-FAIL"))
+            self.assertIn(" open", _details(page, "REQ-SKIP")[: _details(page, "REQ-SKIP").index(">") + 1])
+            self.assertNotIn("pill-bad", _details(page, "REQ-SKIP"))
+            self.assertNotIn("pill-ok", _details(page, "REQ-SKIP"))
+            self.assertNotIn("Result pass", _summary(page, "REQ-SKIP"))
+            self.assertIn("Claim changed since Check", _details(page, "REQ-MOVED"))
+            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-FAIL"[^>]*\bopen\b', closed))
+
+    def test_signed_compiled_report_shows_seal_and_not_approval(self):
+        """REV-03 scenario 37. REV-R06."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("same-note", "REQ-SHARED", "same.md")
+            write_claim(repo / "kept" / "claims", claim)
+            report = _compiled(repo, [claim], decision="I read this. I am not saying the product meets CRA.")
+            from common.keystore import load_or_create_key
+            from review.compile import sign_report
+
+            private, _public = load_or_create_key(Workspace(workspace).keys, "Ada Reviewer")
+            sealed = sign_report(report, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+            path = repo / "signed" / "reports" / "review-report_20260101T000030Z.json"
+            write_report(path, sealed)
+            with _serve(workspace) as base:
+                page = _open_report(base, "alpha", path)
+            self.assertIn("verifiable", page.lower())
+            self.assertIn("Ada Reviewer", page)
+            self.assertIn("I read this. I am not saying the product meets CRA.", page)
+            self.assertNotIn("approval", page.lower())
+
+
 def _workspace(name: str, repo: Path) -> tuple[Path, Path]:
     workspace = repo.parent
     _register(workspace, name, repo)
@@ -565,6 +724,9 @@ def _pack(repo: Path, requirement_id: str) -> None:
         results_dir="runs/out",
         reports_dir="signed/reports",
     )
+    (repo / "kept" / "claims").mkdir(parents=True, exist_ok=True)
+    (repo / "runs" / "out").mkdir(parents=True, exist_ok=True)
+    (repo / "signed" / "reports").mkdir(parents=True, exist_ok=True)
 
 
 def _matching_run(repo: Path, claims: list[dict], *, commit: str = "abc123", worktree: str = "clean") -> Path:
@@ -604,6 +766,79 @@ def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None) 
     if expanded is not None:
         url += "&expanded=" + urllib.parse.quote(expanded, safe="")
     return _get(url)
+
+
+def _open_report(base: str, repo_id: str, path: Path, expanded: str | None = None) -> str:
+    url = base + "/review?repo=" + repo_id + "&report=" + urllib.parse.quote(str(path.resolve()), safe="")
+    if expanded is not None:
+        url += "&expanded=" + urllib.parse.quote(expanded, safe="")
+    return _get(url)
+
+
+def _compiled(
+    repo: Path,
+    claims: list[dict],
+    *,
+    decision: str = "",
+    commit: str = "abc123",
+    worktree: str = "clean",
+    check_rows: list[dict] | None = None,
+    status: str = "pass",
+    statuses: dict | None = None,
+) -> dict:
+    rows = []
+    for claim in claims:
+        if check_rows is not None and len(claims) == 1:
+            recorded = check_rows
+            claim_status = status
+        else:
+            recorded = []
+            claim_status = "pass"
+            override = (statuses or {}).get(claim["id"])
+            for index, check in enumerate(claim["checks"]):
+                row = {
+                    "index": index,
+                    "check": check["check"],
+                    "args": check["args"],
+                    "status": "pass",
+                }
+                if override:
+                    row["status"] = override[0]
+                    row["detail"] = override[1]
+                    claim_status = override[0]
+                recorded.append(row)
+        rows.append(
+            {
+                "id": claim["id"],
+                "digest": version_digest(claim),
+                "status": claim_status,
+                "checks": recorded,
+            }
+        )
+    run = {
+        "tool": "curbcheck",
+        "tool_version": "0.0.1a",
+        "commit": commit,
+        "worktree": worktree,
+        "packs": [{"id": "cra-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+        "claims": rows,
+    }
+    pack_dir = repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"]
+    requirements = []
+    for claim in claims:
+        requirements.append(_requirement(str(claim["requirement_id"])))
+    # Deduplicate by id while keeping first occurrence.
+    seen = set()
+    unique = []
+    for requirement in requirements:
+        if requirement["id"] in seen:
+            continue
+        seen.add(requirement["id"])
+        unique.append(requirement)
+    report = compile_report(run_result=run, requirements=unique, claims=claims, repo=repo)
+    if decision:
+        report = record_decision(report, decision)
+    return report
 
 
 def _details(page: str, requirement_id: str) -> str:

@@ -11,6 +11,7 @@ NEW_RUN = "A new curbcheck run is required."
 PREVIOUS_UNKNOWN = (
     "The previous Requirement relationship cannot be established from the raw run result."
 )
+RELATIONSHIP_CHANGED = "The current relationship changed."
 
 
 def present_raw_run(
@@ -72,12 +73,95 @@ def present_raw_run(
     }
 
 
-def _claim_item(row: dict, current: dict | None, reading: dict | None) -> dict:
+def present_compiled_report(
+    *,
+    report: dict,
+    current_claims_by_id: dict,
+    claim_readings: dict,
+    requirement_readings: dict,
+    expanded: set[str] | None,
+) -> dict:
+    run_result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
+    embedded_claims = {
+        claim["id"]: claim
+        for claim in (report.get("claims") or [])
+        if isinstance(claim, dict) and isinstance(claim.get("id"), str)
+    }
+    embedded_requirements = {
+        requirement["id"]: requirement
+        for requirement in (report.get("requirements") or [])
+        if isinstance(requirement, dict) and isinstance(requirement.get("id"), str)
+    }
+    grouped: dict[str, list[dict]] = {}
+    order: list[str] = []
+    unresolved: list[dict] = []
+    for row in run_result.get("claims") or []:
+        if not isinstance(row, dict):
+            continue
+        claim_id = str(row.get("id") or "")
+        embedded = embedded_claims.get(claim_id)
+        current = current_claims_by_id.get(claim_id)
+        item = _claim_item(row, current, claim_readings.get(claim_id), embedded=embedded)
+        if embedded is None:
+            unresolved.append(item)
+            continue
+        requirement_id = str(embedded.get("requirement_id") or "")
+        if requirement_id not in embedded_requirements:
+            item["requirement_id"] = requirement_id
+            unresolved.append(item)
+            continue
+        if requirement_id not in grouped:
+            grouped[requirement_id] = []
+            order.append(requirement_id)
+        grouped[requirement_id].append(item)
+    groups = []
+    for requirement_id in order:
+        claims = grouped[requirement_id]
+        groups.append(
+            _group(
+                requirement_id,
+                claims,
+                requirement_readings.get(requirement_id),
+                expanded,
+            )
+        )
+    if unresolved:
+        groups.append(_group(UNRESOLVED, unresolved, None, expanded, initially_open=True))
+    packs = []
+    for pack in run_result.get("packs") or []:
+        if isinstance(pack, dict):
+            packs.append({"id": str(pack.get("id") or ""), "version": str(pack.get("version") or "")})
+    return {
+        "header": {
+            "tool": str(run_result.get("tool") or ""),
+            "tool_version": str(run_result.get("tool_version") or ""),
+            "commit": str(run_result.get("commit") or ""),
+            "worktree": str(run_result.get("worktree") or ""),
+            "packs": packs,
+        },
+        "groups": groups,
+        "decision": str(report.get("decision") or ""),
+    }
+
+
+def _claim_item(row: dict, current: dict | None, reading: dict | None, *, embedded: dict | None = None) -> dict:
     changed = False
     sentences: list[str] = []
     if current is not None:
         changed = version_digest(current) != row.get("digest")
-        if changed:
+        if embedded is not None:
+            relationship = str(current.get("requirement_id") or "") != str(embedded.get("requirement_id") or "")
+            if relationship:
+                changed = True
+                sentences = [RELATIONSHIP_CHANGED]
+                if version_digest(current) != row.get("digest"):
+                    sentences.append(CHANGED)
+                sentences.append(NEW_RUN)
+            elif changed:
+                sentences = [CHANGED, NEW_RUN]
+            else:
+                sentences = [UNCHANGED]
+        elif changed:
             sentences = [CHANGED, NEW_RUN, PREVIOUS_UNKNOWN]
         else:
             sentences = [UNCHANGED]
