@@ -1,6 +1,6 @@
 # Install and start Curbpack Studio
 
-The first way to start is the program built for your computer. Download it and run it. A source checkout is for people changing this repository, and for Linux, which has no packaged file. That start is [Changing this repository](developers.md#10-changing-this-repository).
+The first way to start is the program built for your computer. Download it and run it. A source checkout is for people changing this repository, and for Linux, which has no packaged file. That start is [Run from a checkout](../development/README.md#run-from-a-checkout).
 
 ## 1. Download and start
 

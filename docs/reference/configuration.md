@@ -127,7 +127,7 @@ Accepted values, the created-file value, and the intended behaviour are [Workspa
 
 For each id in `packs`, load `<packs_dir>/<pack-id>/<pack-version>/pack.json` and the other `*.json` files in that version directory. Those files are the Requirements. The shape of `pack.json` is [Packs v2](packs2.md). The version the run records is `version` on that `pack.json`.
 
-Claims are `<claims_dir>/<claim-id>.json`. Run-result and review-report paths are the table above. Object shape of the run result: [Packs v2](packs2.md) §3.1. Output channels: [Workspace](workspace.md) §3. The command as shipped: [curbcheck](curbcheck-cli.md).
+Claims are `<claims_dir>/<claim-id>.json`. Run-result and review-report paths are the table above. Object shape of the run result: [Outputs — Run result](outputs.md#run-result). Output channels: [Workspace](workspace.md) §3. The command as shipped: [curbcheck](curbcheck-cli.md).
 
 | Channel | Behaviour (design; align `curbcheck-cli` later) |
 |---------|--------------------------------------------------|
