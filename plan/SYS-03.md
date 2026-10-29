@@ -13,14 +13,16 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | danielfl, 2026-10-29 (SYS-R01–R09 walkthrough OK; proceed Task 1–8; CHK-07/08 out of this plan) |
-| Current task | Task 7 — IMPL-START |
-| Last completed task | Task 6 |
-| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again tests.test_review_compile tests.test_review_coverage_ui` — Ran 31 tests, OK. |
+| Current task | Task 8 — IMPL-START |
+| Last completed task | Task 7 |
+| Last verified tests | 2026-10-29: `python3 -m unittest tests.test_sys03_door` — Ran 16 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/SYS-03.md`. |
 | Requirements | Story SYS-R01–SYS-R09 in `SYS-03-one-repo-door.md` (R01 rewritten 2026-10-29 walkthrough; R09 Studio config page). No new `docs/req/` row. |
 | Packs v2 | `docs/reference/workspace.md` and `docs/reference/packs2.md` are both law. This plan edits neither. Workspace §2 owns `curbpack.json` keys, which of them are required, and the on-disk paths. Packs v2 §2.3 owns selection and the `search_hints` merge; §3.1 owns the run-result object. Allowed keys: `packs`, `requirements` XOR `exclude_requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`. `search_hints` and `unsigned_requirements` are required. The single key `curbpack`, and a `temp`/`tmp` key, are rejected. |
 | Blockers | None |
-| **Exact next action** | Task 7: Studio config page for curbpack-studio.json. |
+| **Exact next action** | Task 8: Extract stays temporary until accept. |
+
+**Git collision, 2026-10-29, do not rewrite.** Another chat committed one intended line, the startup print in `app/server.py` (`PoC2 demo` → `Curbpack Studio at http://…/`), as `c3495e8` with the message "Identify the running server as Curbpack Studio." That commit also contains the Task 6 files that were dirty at the same moment: `app/pages.py`, `claims/ui/coverage.py`, `demo_setup.py`, `plan/SYS-03.md`, `tests/test_review_compile.py`, `tests/test_review_coverage_ui.py`, `tests/test_review_discover_again.py`, `tests/test_review_replace_flow.py`, `tests/test_review_report_kept.py`, `tests/test_sys03_door.py`, `tests/test_ui_smoke.py`. In `c3495e8`, `app/server.py` is only that print. `5ed92f3` ("Compile Review reports into dated files under reports_dir.") is the rest of `app/server.py` and its parent is `c3495e8`. Do not reset, rebase, or amend either commit; a reset of `c3495e8` drops `5ed92f3`. Leave the startup line. Do not put the other chat's uncommitted docs (`docs/concepts/`, `docs/user-guides/pack-developers.md`, and any other dirty `docs/`) into a SYS-03 commit. Before the next commit, `git status` and `git diff --cached`, and commit only this step.
 
 ## Requirements and acceptance mapping
 
@@ -34,9 +36,9 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 | SYS-R04 | SYS-03 | `tests/test_sys03_door.py` | Task 5 |
 | SYS-R05 | SYS-03 | `tests/test_sys03_door.py` | Task 4 |
 | SYS-R06 | SYS-03 | `tests/test_sys03_door.py` | Task 6 |
-| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 6 (Studio config page still Task 7) |
+| SYS-R07 | SYS-03 | `tests/test_sys03_door.py` | Task 7 |
 | SYS-R08 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
-| SYS-R09 | SYS-03 | `tests/test_sys03_door.py` | DRAFT |
+| SYS-R09 | SYS-03 | `tests/test_sys03_door.py` | Task 7 |
 
 ## Tasks
 
@@ -138,10 +140,10 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 **Validation:** `python3 -m unittest tests.test_sys03_door`
 **Stop if:** the page would invent keys outside workspace §4.2.
 
-- [ ] RED observed for the intended behavior.
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior.
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 8 — An extraction stays temporary; the Requirement view shows the Pack
 
@@ -172,3 +174,4 @@ Requirements live in the story (`docs/agile/epics/01-pack-editor/stories/SYS-03-
 - **2026-10-29 / Task 4:** Check I/O. POST `/check` opens the chosen repo, saves the four path fields without rewriting `packs`, and writes `<results_dir>/run-result_<UTC>.json` via `run_and_write`. A second run leaves the first file unchanged. GET `/check` does not fall back to workspace `product/`. `?result=` is confined to that repo's `results_dir`. First review Important: `?result=` confinement + include-list HTTP case. Re-review Important leftover (`4a846ca2`): outsider named `foreign-run-result_…` never reached the directory bound — closed by writing a valid `run-result_*.json` outside `results_dir`. No third review. Minor left: unused `_repo_claims` / `_pack_directory_for_check` helpers, leftover `ask_read`, same-second `time.sleep(1)` in `_new_run_result_path`. Command: `python3 -m unittest tests.test_sys03_door tests.test_check_editor tests.test_m4_checks` — Ran 21 tests, OK.
 - **2026-10-29 / Task 5:** Discover I/O. Requirements from `packs_dir` for packs named in the open repo's `curbpack.json`; Claims read/write `<claims_dir>/<id>.json`. Working-copy timestamp stays as Discover job identity only. First review Important (`42019176`): working-copy fallback, `repo/claims` default, Claim-editor lookup, git-seal relative path. Re-review Important leftovers (`1281d823`): Claim POST still used working-copy ids — closed via `_claims_lookup`; silent empty Discover run without `curbpack.json` — closed (`repo_pack_requirements` raises, `_start_discover` validates the file). Coverage `load_run` of `<repo>/.curbpack/run-result.json` deferred to Task 6 (recorded on that task). No third review. Command: `python3 -m unittest tests.test_sys03_door tests.test_discover_claims_ui tests.test_discover_layout tests.test_claims_binding_ui` — Ran 26 tests, OK.
 - **2026-10-29 / Task 6:** Review I/O. Compile writes `<reports_dir>/review-report_<UTC>.json`; a second compile leaves the first file. GET `/review` with no saved report previews the latest `results_dir` run and does not write. Discover-from-review greying `load_run` reads dated `results_dir` files. `prepare_demo` registers `sample-product`, copies the pack into `packs_dir`, and sets `open-repo.json`. First review Important (`cf7cf3c1`): missing preview after Check; `tests.test_review_coverage_ui` still wrote `product/claims` and undated `run-result.json`. Re-review Approved (`25708dae`). No third review. Minor left: confirm-class names in `test_review_report_kept.py`; Cover/`Workspace.run_path` still `docs/reports/review-report.json`; unused `report_exists` on `review_page`. Command: `python3 -m unittest tests.test_sys03_door tests.test_ui_smoke tests.test_review_report_kept tests.test_review_replace_flow tests.test_review_discover_again tests.test_review_compile tests.test_review_coverage_ui` — Ran 31 tests, OK.
+- **2026-10-29 / Task 7:** Studio config page `/studio`. Save/Cancel for `<repo>/curbpack-studio.json` with workspace.md §4.2 fields. Absent file is not written until Save. `load_studio_config` substitutes `$NAME` from `.env`; unknown name is an error. GET shows file placeholders, not secrets. First review Important (`853cbe4c`): missing curbpack.json path chrome; absolute `paths.*` accepted. Re-review Approved (`2d43c0fe`). No third review. Minor left: no port upper bound; invalid present JSON on GET is generic 400. Command: `python3 -m unittest tests.test_sys03_door` — Ran 16 tests, OK.

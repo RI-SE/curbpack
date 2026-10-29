@@ -71,6 +71,13 @@ from discovery.door import (
     save_directory_fields,
     set_open_repo,
 )
+from discovery.studio import (
+    created_studio_config,
+    editor_values,
+    save_studio_config,
+    studio_file,
+    studio_from_form,
+)
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import (
     candidate_for_path,
@@ -560,6 +567,8 @@ def make_handler(ws: Workspace):
                     unchecked=unchecked,
                     door=door,
                 )
+            if path == "/studio":
+                return pages.studio_page(_studio_model(ws, query), message=_studio_message(query))
             return pages.page("Not found", "<p>Unknown page.</p>")
 
         def _post(self, path: str, form: dict) -> None:
@@ -974,6 +983,17 @@ def make_handler(ws: Workspace):
                     f"/review?repo={quote(repo_id, safe='')}&signed=1"
                     f"&report={quote(report_path, safe='')}"
                 )
+                return
+            if path == "/studio":
+                repo_id = _sync_open_repo(ws, form)
+                if not repo_id:
+                    raise ModelError("studio", "repo", "a chosen repository")
+                action = (form.get("action") or [""])[0].strip()
+                if action == "save":
+                    save_studio_config(_registered_repo_path(ws, repo_id), studio_from_form(form))
+                    self._redirect(f"/studio?repo={quote(repo_id, safe='')}&saved=1")
+                    return
+                self._redirect(f"/studio?repo={quote(repo_id, safe='')}")
                 return
             raise ModelError("request", "path", "a known action")
 
@@ -1503,6 +1523,27 @@ def _listed_repos(ws: Workspace) -> list[dict]:
         for row in (load_repos(ws.root).get("repos") or [])
         if isinstance(row, dict) and isinstance(row.get("id"), str)
     ]
+
+
+def _studio_message(query: dict) -> str:
+    if (query.get("saved") or [""])[0]:
+        return "Saved curbpack-studio.json in the repo."
+    return ""
+
+
+def _studio_model(ws: Workspace, query: dict) -> dict:
+    door = _door_chrome(ws, query)
+    repo_id = str(door.get("repo_id") or "")
+    values = editor_values(created_studio_config())
+    present = False
+    path = ""
+    if repo_id:
+        repo = _registered_repo_path(ws, repo_id)
+        path = str(studio_file(repo).resolve())
+        if studio_file(repo).is_file():
+            present = True
+            values = editor_values(read_json(studio_file(repo)))
+    return {"door": door, "values": values, "present": present, "path": path}
 
 
 def _door_chrome(ws: Workspace, query: dict | None = None) -> dict:
