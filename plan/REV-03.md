@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 3 — not started |
-| Last completed task | Task 2 |
-| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_ui_smoke` — Ran 18 tests, OK. |
+| Current task | Task 4 — not started |
+| Last completed task | Task 3 |
+| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept` — Ran 32 tests, OK. |
 | Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/REV-03.md`. |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 3 RED: `python3 -m unittest tests.test_rev03_review`. REV-R06 and D6. |
+| **Exact next action** | Task 4 RED: seal summaries. `python3 -m unittest tests.test_rev03_review`. |
 
 ## Requirements and acceptance mapping
 
@@ -33,7 +33,7 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | REV-R03 | REV-03 scenarios 7, 8, 9, 11, 11a, 23 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 when the run result is embedded |
 | REV-R04 | REV-03 scenarios 12, 13, 14, 15, 16 | `tests/test_rev03_review.py` | Task 2 verified; scenarios 12–14 also Task 3; scenario 16 in Tasks 5 and 6 |
 | REV-R05 | REV-03 scenarios 10a, 21, 22 | `tests/test_rev03_review.py` | Task 2 verified; Task 3 for the embedded run |
-| REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | DRAFT |
+| REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | Task 3 verified |
 | REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | DRAFT |
 | REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | DRAFT |
@@ -115,10 +115,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Validation:** `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept`
 **Stop if:** the page would write the current Claim back into the report, or would add a report field for the changed relationship.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 4 — seal summaries
 
@@ -192,3 +192,8 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 2 re-review:** Issues Found (`3e36edbc`). No Critical. One Important remains: `<summary>` can still toggle locally outside the anchor. No third review. After that report, the summary marker is hidden and only the anchor receives the click. `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_ui_smoke` — Ran 18 tests, OK. The fix is uncommitted and not re-reviewed. Task 2 is BLOCKED. Task 3 has not started.
 - **2026-10-29 / Task 2 REVIEW-START:** Maintainer authorized a new review round for the header hit-target fix. No commit yet.
 - **2026-10-29 / Task 2 review:** New independent review Approved (`e5b959cc`). No Critical or Important findings. Minor, not applied: keyboard activation of `<summary>` can still toggle `open` locally; the hit-target CSS is not asserted by a test. Outside sandbox validation — Ran 18 tests, OK.
+- **2026-10-29 / Task 3 RED:** `python3 -m unittest tests.test_rev03_review.ReviewCompiledReportTest` — failed for flat Check results without historical R-old grouping.
+- **2026-10-29 / Task 3 GREEN:** `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept` — Ran 32 tests, OK.
+- **2026-10-29 / Task 3 REVIEW-START:** Independent review of the uncommitted diff. No commit yet.
+- **2026-10-29 / Task 3 review:** Issues Found (`1f7e4ea3`). Important fixed: appendix restored on compiled report; Requirement move includes `Claim changed since Check` when digest differs.
+- **2026-10-29 / Task 3 re-review:** Approved (`43d4a70f`). No Critical or Important. Minor, not applied: current Claim path isolation; appendix reason assertion.
