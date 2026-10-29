@@ -74,6 +74,9 @@ button.secondary:hover{background:#ecfdf5}
 .pill{display:inline-block;font-size:.75rem;border:1px solid var(--line);border-radius:999px;padding:.05rem .45rem;margin-left:.25rem}
 .pill-ok{background:#ecfdf5;color:#065f46}
 .pill-bad{background:#fef2f2;color:#991b1b}
+details.requirement > summary{list-style:none;pointer-events:none}
+details.requirement > summary::-webkit-details-marker{display:none}
+details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
 dialog{border:1px solid var(--line);border-radius:12px;padding:0;max-width:36rem;width:calc(100% - 2rem)}
 dialog.try-discovery{max-width:min(56rem,calc(100% - 2rem))}
 dialog.try-discovery .body{max-height:70vh;overflow:auto}
@@ -736,16 +739,18 @@ def review_page(
             )
         dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
         reading_html = _reading(reading) if saved else "<p>not saved</p>"
+        if door and door.get("presentation"):
+            grouped = _review_groups(door["presentation"], door)
+            listed = grouped
+        else:
+            listed = f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>"
         body_report = f"""
 {reading_html}
 {same_html}
 <p>{html.escape(note)}</p>
 <ul>{limits}</ul>
 {unchecked_html}
-<h2>Check results</h2>
-<ul>{''.join(rows)}</ul>
-{appendix_html}
-<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>
+{listed}
 """
     door = door or {}
     panel = repo_config_panel(
@@ -813,6 +818,97 @@ def review_page(
 {dialogs}
 """
     return page("Review", body)
+
+
+def _review_groups(presentation: dict, door: dict) -> str:
+    header = presentation.get("header") if isinstance(presentation.get("header"), dict) else {}
+    packs = " ".join(
+        f"{html.escape(str(pack.get('id') or ''))} {html.escape(str(pack.get('version') or ''))}"
+        for pack in header.get("packs") or []
+        if isinstance(pack, dict)
+    )
+    header_html = (
+        '<section data-run-header>'
+        f"<p>{html.escape(str(header.get('tool') or ''))} {html.escape(str(header.get('tool_version') or ''))}</p>"
+        f"<p>commit {html.escape(str(header.get('commit') or ''))}</p>"
+        f"<p>worktree {html.escape(str(header.get('worktree') or ''))}</p>"
+        f"<p>{packs}</p>"
+        "</section>"
+    )
+    groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
+    open_ids = [str(group.get("id") or "") for group in groups if group.get("open")]
+    repo = quote(str(door.get("repo_id") or ""), safe="")
+    selected = quote(str(door.get("selected_result") or ""), safe="")
+    parts = []
+    for group in groups:
+        group_id = str(group.get("id") or "")
+        if group.get("open"):
+            nxt = [item for item in open_ids if item != group_id]
+        else:
+            nxt = sorted(set(open_ids) | {group_id})
+        href = f"/review?repo={repo}&result={selected}&expanded={quote(','.join(nxt), safe='')}"
+        open_attr = " open" if group.get("open") else ""
+        seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
+        summary = (
+            f'<a href="{html.escape(href)}">{html.escape(group_id)}'
+            f"{seal} {html.escape(str(group.get('result_summary') or ''))}</a>"
+        )
+        claims_html = []
+        for claim in group.get("claims") or []:
+            if not isinstance(claim, dict):
+                continue
+            status = str(claim.get("status") or "")
+            klass = ' class="pill-bad"' if status == "fail" else ""
+            checks = []
+            for check in claim.get("checks") or []:
+                if not isinstance(check, dict):
+                    continue
+                detail = str(check.get("detail") or "")
+                detail_html = f" — {html.escape(detail)}" if detail else ""
+                args = check.get("args") if isinstance(check.get("args"), dict) else {}
+                check_status = str(check.get("status") or "")
+                check_class = ' class="pill-bad"' if check_status == "fail" else ""
+                checks.append(
+                    "<li "
+                    f'data-check="{html.escape(str(check.get("check") or ""))}" '
+                    f'data-status="{html.escape(check_status)}"{check_class}>'
+                    f"{html.escape(str(check.get('index')))}: {html.escape(str(check.get('check') or ''))} "
+                    f"{html.escape(check_status)}{detail_html} "
+                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></li>"
+                )
+            sentences = "".join(
+                f"<p>{html.escape(str(line))}</p>" for line in claim.get("sentences") or []
+            )
+            requirement_id = str(claim.get("requirement_id") or "")
+            requirement_html = f"<p>{html.escape(requirement_id)}</p>" if requirement_id else ""
+            claims_html.append(
+                f'<li data-claim="{html.escape(str(claim.get("id") or ""))}">'
+                f"<code>{html.escape(str(claim.get('id') or ''))}</code> "
+                f'<span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>'
+                f"{requirement_html}{sentences}<ul>{''.join(checks)}</ul></li>"
+            )
+        parts.append(
+            f'<details class="requirement" data-requirement="{html.escape(group_id)}"{open_attr}>'
+            f"<summary>{summary}</summary>"
+            f"<ul>{''.join(claims_html)}</ul></details>"
+        )
+    return header_html + "".join(parts)
+
+
+def _seal_line(reading: dict) -> str:
+    who = reading.get("who") or "—"
+    when = reading.get("when") or "—"
+    verified = "yes" if reading.get("verifiable") else "no"
+    reason = str(reading.get("reason") or "")
+    reason_html = f" {html.escape(reason)}" if reason else ""
+    return (
+        f" {html.escape(str(reading.get('what') or ''))}"
+        f" who {html.escape(str(who))}"
+        f" when {html.escape(str(when))}"
+        f" verifiable {verified}"
+        f" version {html.escape(str(reading.get('version') or ''))}"
+        f"{reason_html}"
+    )
 
 
 def _review_lists(door: dict) -> str:

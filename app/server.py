@@ -285,6 +285,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_result"] = chosen
         report = {"run_result": loaded, "claims": [], "appendix": []}
+        extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
         return report, None, " ".join(errors), False, False, None, [], extra
     return None, None, " ".join(errors), False, False, None, [], extra
 
@@ -319,6 +320,44 @@ def _same_as_latest_run(results_folder: Path, report: dict):
         return same_run(report, load_run_result(dated[-1]))
     except (ModelError, ValueError):
         return None
+
+
+def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict, query: dict) -> dict:
+    from common.signing import read_signature
+    from review.gitseal import read_claim_signature
+    from review.present import present_raw_run
+
+    folder = repo_claims_dir(repo)
+    claims = load_claims(folder) if folder.is_dir() else []
+    claims_by_id = {claim["id"]: claim for claim in claims if isinstance(claim.get("id"), str)}
+    _packs, requirements = _report_sources_for_repo(repo, config)
+    requirements_by_id = {
+        requirement["id"]: requirement for requirement in requirements if isinstance(requirement.get("id"), str)
+    }
+    trust = trust_store(ws.keys)
+    claim_readings = {}
+    for claim in claims:
+        claim_id = claim.get("id")
+        if not isinstance(claim_id, str):
+            continue
+        relative = claim_file_relative(repo, folder, claim_id)
+        claim_readings[claim_id] = read_claim_signature(claim, trust, repo=repo, relative=relative)
+    requirement_readings = {
+        requirement_id: read_signature(requirement, trust, what="requirement")
+        for requirement_id, requirement in requirements_by_id.items()
+    }
+    if "expanded" in query:
+        expanded = {part for part in (query.get("expanded") or [""])[0].split(",") if part}
+    else:
+        expanded = None
+    return present_raw_run(
+        run_result=run_result,
+        claims_by_id=claims_by_id,
+        requirements_by_id=requirements_by_id,
+        claim_readings=claim_readings,
+        requirement_readings=requirement_readings,
+        expanded=expanded,
+    )
 
 
 def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
@@ -434,7 +473,8 @@ def make_handler(ws: Workspace):
                 self._send_browse(parse_qs(parsed.query))
                 return
             try:
-                body = self._get(parsed.path, parse_qs(parsed.query))
+                query = parse_qs(parsed.query, keep_blank_values=(parsed.path == "/review"))
+                body = self._get(parsed.path, query)
                 self._send(200, body)
             except Exception as exc:
                 self._fail(exc)
