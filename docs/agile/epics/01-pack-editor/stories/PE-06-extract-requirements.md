@@ -8,4 +8,11 @@
 
 **Accept when:** Extract uses the selected Pack's adapter and the source's URL/section; the existing extraction view shows available/remaining sections where the adapter provides them and the run progress, output and errors; the result is a set of proposed Requirements with references to the actual regulatory text; extraction does not sign or publish; failure does not destroy existing accepted Requirements. The adapter describes how the regulatory document is divided into sections; the UI must not assume every regulation has the same structure.
 
+**Given** a section whose discovery proposal sets `expected_evidence` to an empty list  
+**When** Extract checks that proposal and assembles the Requirements  
+**Then** the section is not rejected  
+**And** each Requirement is written  
+**And** that `expected_evidence` is omitted  
+**And** Discovery returns no candidates when the Requirement then has neither `concepts` nor `path_hints`
+
 **Human review:** 2026-10-28, danielfl. **Extract** opens the extraction window. Abort is available. The run then offers a choice between a new definition and the existing one. The buttons after that choice are the open deviation on PE-08.
