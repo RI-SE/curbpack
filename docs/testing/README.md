@@ -1,6 +1,6 @@
 # Testing curbcheck
 
-This is curbcheck's verification. Studio's functional suite is `make test`; start there from [Development](../development/README.md).
+This is curbcheck's verification. For the local development loop and Studio's functional suite, see [Testing during development](../development/testing.md).
 
 Follow the documents in this order. Do not start in a suite file.
 

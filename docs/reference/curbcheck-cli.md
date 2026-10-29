@@ -2,7 +2,7 @@
 
 `curbcheck` evaluates the Claims in a product repository. The process exit code is the result a person or a CI job uses. Stdout is the text summary. JSON is written only when requested with `-j`/`--json` or `-o`/`--out`. Path locations are the string fields in the product's `curbpack.json` ([workspace.md](workspace.md) §2). The Check page in Curbpack Studio calls the same runner.
 
-There is one repository command. It does not scan, init, heal, export, attest, or prepare a release. Pack choice lives in `curbpack.json`. The question a Check asks lives in that Claim's `checks[]`. The data contract is [Packs v2](packs2.md) §2.3–§2.5, §3.1, and §4. This page is how you start the program and how you read what it prints.
+There is one repository command. It does not scan, init, heal, export, attest, or prepare a release. Pack choice lives in `curbpack.json`. The question a Check asks lives in that Claim's `checks[]`. The data contract is [Packs v2](packs2.md) §2.3–§2.5 and §4. The run-result JSON contract is [Outputs — Run result](outputs.md#run-result). This page is how you start the program and how you read what it prints.
 
 A source checkout and a packaged binary take the same arguments. Skip is the `--skip` flag; the Check page has no skip control. Created-file defaults for a new `curbpack.json` come from `curbcheck --defaults` and the same Python function Studio calls.
 
@@ -121,37 +121,9 @@ The snapshot is taken before any JSON file is written. A dirty tree can still ex
 
 ## The result file
 
-One JSON object, Packs v2 §3.1. `tool` is `curbcheck`. The exit code is not a field.
+The JSON structure, complete field descriptions, digest and status rules, and an observed output example are defined in [Outputs — Run result](outputs.md#run-result).
 
-```json
-{
-  "commit": "<HEAD, present only together with worktree>",
-  "worktree": "clean",
-  "packs": [
-    { "id": "house-policy", "version": "0.1.0", "digest": "<pack directory digest>" }
-  ],
-  "tool": "curbcheck",
-  "tool_version": "0.0.1a",
-  "claims": [
-    {
-      "id": "HOUSE-SECURITY-MD",
-      "digest": "<sha256 of the canonical Claim, without signed>",
-      "status": "pass",
-      "checks": [
-        { "index": 0, "check": "exist", "args": { "paths": ["SECURITY.md"] }, "status": "pass" }
-      ]
-    }
-  ]
-}
-```
-
-`commit` and `worktree` appear together when `git rev-parse HEAD` and `git status --porcelain` both succeed. `worktree` is `clean` or `dirty`. Both keys are omitted when the directory is not such a checkout, or when `git` cannot be run. A directory that is not a Git checkout is still evaluated.
-
-`digest` on a Claim row is the version digest of that whole Claim, with `signed` removed before hashing. Reordering `checks[]` changes the digest. A later reader must not attach this result to a newer Claim that reused the id.
-
-Claim status is `fail` if any Check failed, otherwise `skipped` if any Check was skipped, otherwise `pass`. Each Check result has `index`, `check`, the `args` that were configured, and `status`. `detail` is omitted on `pass` and required on `fail` and `skipped`. These are mechanical outcomes. They are not a legal conclusion about the product.
-
-When `-j` or `-o` is set, a finished run writes that JSON, including a run that exits 1 because a Check failed or was skipped, and including a run whose `claims` array is empty. An empty array is a real result and is not a successful verification. Without those flags, nothing is written.
+When `-j` or `-o` is set, a finished run writes that object, including a run that exits 1 because a Check failed or was skipped, and including a run whose `claims` array is empty. Without those flags, no result file is written. The exit code is not a JSON field.
 
 ## Exit codes
 
@@ -342,7 +314,8 @@ A Check that fails validation, or whose tool is missing, does not belong in this
 | Page | What it settles |
 | --- | --- |
 | [Configuration](configuration.md) | `curbpack.json`, pack selection, and repository paths |
-| [Packs v2](packs2.md) §3.1 and §4 | The result document and the Check argument contract |
+| [Outputs](outputs.md#run-result) | The result document |
+| [Packs v2](packs2.md) §4 | The Check argument contract |
 | `checks/ARCHITECTURE.md` | What the runner loads, and which sentences the current code follows |
 | `docs/user-guides/ci-cd.md` | Using this exit status as a job result |
 | `docs/testing/README.md` | `make test-curbcheck` on a prepared clone. That target is the suite, not an extra curbcheck command |

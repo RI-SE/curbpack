@@ -38,7 +38,7 @@ Any CI system that can run that process can host it. The packs root has to conta
 
 ## 3. GitHub Actions
 
-Call `curbcheck` from a step and fail the step on a non-zero status. Depending on Studio does not add SARIF upload, a pull-request comment, or a second report format. Copy-paste jobs for GitHub Actions, GitLab CI, and Jenkins are in [Check in CI](../development/ci.md).
+Call `curbcheck` from a step and fail the step on a non-zero status. Depending on Studio does not add SARIF upload, a pull-request comment, or a second report format.
 
 Studio's own workflows are a different pipeline. `.github/workflows/ci.yml` runs Studio's tests on the Studio repository, then builds two files for that host: `curbpack-studio-<host>` is the application and `curbcheck-<host>` is the checker. A product job runs `curbcheck`, or the packaged `curbcheck-macos-arm64` on macOS ARM64, or `curbcheck-windows-x64.exe` on Windows x64. `--repo` names the product when the job is not already in that directory. `--packs` and `--out` stay optional. `.github/workflows/release.yml` publishes Studio artifacts when that workflow is authorized. Their existence does not mean a product Check ran, and it does not mean binaries were published for every operating system.
 
@@ -52,6 +52,6 @@ Release jobs for Studio are supposed to reuse the bytes that were tested. That r
 
 ## 5. Other CI systems
 
-GitLab, Jenkins, Azure Pipelines, CircleCI and others use the same flow: checkout, run `curbcheck`, use the exit status. GitHub Actions, GitLab CI, and Jenkins examples are in [Check in CI](../development/ci.md).
+GitLab, Jenkins, Azure Pipelines, CircleCI and others use the same flow: checkout, run `curbcheck`, use the exit status.
 
 Docker images, SBOM generation, artifact signing and vulnerability scanning of the Studio build are future scope described in `docs/agile/future_cicd.md`. They are not current product features, and they are not substitutes for a product Check.

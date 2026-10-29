@@ -110,7 +110,7 @@ Studio import still verifies seals when bringing a published pack into `packs_di
 
 ## 3. What `curbcheck` produces
 
-Object shape: [Packs v2](packs2.md) §3.1. Path policy: this file.
+Object shape: [Outputs — Run result](outputs.md#run-result). Path policy: this file.
 
 | Channel | Behaviour (design; align `curbcheck-cli` later) |
 |---------|--------------------------------------------------|

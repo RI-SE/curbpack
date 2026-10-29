@@ -564,79 +564,9 @@ A Claim with `checks: []` is omitted from execution and from the published execu
 
 ### 3.1 Run result
 
-`curbcheck` writes **one result document**. CI, developer tools, `curbpack-compile` and `curbpack-review` read this result. Compile copies it into the evidence/review bundle; Review does not generate a second, competing run result.
+The run-result JSON structure, field meanings, status aggregation, and provenance rules are defined in [Outputs — Run result](outputs.md#run-result). That reference includes an example of the current checker output. Check arguments remain defined in §4; Claim and signature digests remain defined in §2.4 and §2.6.
 
-```json
-{
-  "commit": "<git HEAD, omitted when this run did not use git>",
-  "worktree": "clean",
-  "packs": [
-    {
-      "id": "cra-baseline",
-      "version": "1.0.0",
-      "digest": "<pack directory digest>"
-    }
-  ],
-  "tool": "curbcheck",
-  "tool_version": "<the build that ran>",
-  "claims": [
-    {
-      "id": "CRA-ANNEX-VII-RISK",
-      "digest": "<whole Claim version digest>",
-      "status": "fail",
-      "checks": [
-        {
-          "index": 0,
-          "check": "exist",
-          "args": {
-            "paths": [
-              "docs/annex-vii/risk_assessment.md"
-            ]
-          },
-          "status": "pass"
-        },
-        {
-          "index": 1,
-          "check": "contents",
-          "args": {
-            "path": "docs/annex-vii/risk_assessment.md",
-            "probes": [
-              {
-                "kind": "size",
-                "bytes": 200,
-                "op": ">="
-              },
-              {
-                "kind": "headers",
-                "headers": [
-                  "# Risk Assessment",
-                  "## Product Overview",
-                  "## Identified Risks"
-                ]
-              },
-              {
-                "kind": "token"
-              }
-            ]
-          },
-          "status": "fail",
-          "detail": "Required header ## Identified Risks not found"
-        }
-      ]
-    }
-  ]
-}
-```
-
-`commit` and `worktree` are present only when Git was used. `worktree` is `clean` or `dirty` according to uncommitted local changes. A dirty run is allowed, but it must not be presented as verification of the referenced commit's exact content. `packs[]` identifies loaded Requirement collections by `id`, their local `pack.version`, and directory digest. It does not report `origin.version`. `tool` and `tool_version` identify the checker build; Check types do not have independent version fields in the Claim format.
-
-There is **one result entry per executed Claim**, with a `checks[]` result for **each configured Check**, including passes. Each Check result includes `index`, `check`, the `args` used, `status`, and a `detail` when required. `index` disambiguates repeated Check ids and is interpreted only together with the Claim `id` and `digest`.
-
-Each Check status is `pass`, `fail`, or `skipped`. A missing required file is `fail`; unavailable/unsupported execution must be explicit and non-passing. `detail` is omitted for `pass`, required for `skipped`, and included for `fail` to explain the cause. `skipped` is never `pass`.
-
-The enclosing Claim status is **`fail` if any Check fails; otherwise `skipped` if any Check is skipped; otherwise `pass`**. No Claim with empty Checks is evaluated or reported as a passing Claim. Process exit is 0 only when at least one Check actually executed and every included Claim and Check passed. Otherwise it is nonzero; exit code is not a JSON field. These are mechanical Check outcomes, not legal compliance judgments.
-
-The run result references the Claim digests actually executed. A compiler or reviewer must not silently associate a result with a newer Claim carrying the same `id` but a different digest. If the exact Claim version cannot be retrieved, report the provenance gap rather than claiming that a changed Claim was checked. The later Review Report reports these outcomes and separately provides an appendix of **unsigned Claims** and **Claims with unverifiable signatures** within the reported/published Claim set, naming the related Requirement ids and Claim ids. Unpublished, unchecked researcher proposals are outside that report scope. Missing or invalid signatures must not be silently converted into failed Check outcomes. This appendix belongs to the review/reporting output, **not** the `curbcheck` run-result JSON.
+Compile copies that result into the Review Report. Review does not generate a second, competing run result. Output paths are defined in [Workspace](workspace.md) §2–§3; CLI flags and terminal output are defined in [curbcheck](curbcheck-cli.md).
 
 ---
 
