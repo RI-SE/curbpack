@@ -37,12 +37,12 @@ curbcheck                       # evaluates configured Checks in Claim files
 | Layer                    | Owner                        | Mutable after sign?      | Role                                                |
 | ------------------------ | ---------------------------- | ------------------------ | --------------------------------------------------- |
 | **Pack + requirements**  | Expert / pack publisher      | No (new version instead) | **What** must hold, including `discovery_hints`. A local working copy is a separate payload. It is a draft until it is approved and sealed. |
-| **Repo `curbpack.json`** | Product repo                 | Yes                      | Packs, the `curbpack` directory, and shared `search_hints` |
+| **Repo `curbpack.json`** | Product repo                 | Yes                      | Pack selection, shared `search_hints`, and the path fields (`packs_dir`, `claims_dir`, `results_dir`, `reports_dir`) — see [workspace.md](workspace.md) §2 |
 | **Claims**               | Product repo / human reviewer | Yes (repo-owned; editing invalidates the seal) | Evidence, human rationale and zero or more configured Checks |
 | **Check definitions**    | curbcheck (or plugins)       | Tool release             | **How** to evaluate `args`                            |
 
 
-**v2** splits pack, claim, and check; repo `curbpack.json` holds the `curbpack` directory and shared `search_hints`.
+**v2** splits pack, claim, and check; repo `curbpack.json` holds pack/requirement selection and shared `search_hints`. Where those files live on disk — `packs_dir`, `claims_dir`, `results_dir`, `reports_dir` — is [workspace.md](workspace.md) §2, not this file.
 
 The product team chooses a published collection by pack id. The version they are using is `version` on the local `pack.json` for that id. That file is what Curbpack already loads (embedded pack, or a directory such as an air-gapped import). A content hash checks those bytes. It is not the version number.
 
@@ -178,17 +178,13 @@ A requirement originates from **one** legal or policy instrument, the same one a
 
 ### 2.3 Repo config (`curbpack.json`)
 
-Visible at repo root as **`curbpack.json`**.
+Visible at repo root as **`curbpack.json`**. Full field list, required keys, created-file values and the on-disk path contract are [workspace.md](workspace.md) §2; this section keeps only the selection/search semantics this document's object shapes need.
 
-Owns the configuration Studio and curbcheck need for this repository: which collections apply, requirement include/exclude, shared search scope, and the directory that holds Packs, Claims, the run, and the report. The file name is `curbpack.json` at the repository root. `.curbpack.json` is not this file.
+Owns the configuration Studio and curbcheck need for this repository: which collections apply, requirement include/exclude, shared search scope, and the path fields — `packs_dir`, `claims_dir`, `results_dir`, `reports_dir` — that locate Packs, Claims, the run result and the review report. The file name is `curbpack.json` at the repository root. `.curbpack.json` is not this file. There is no single `curbpack` directory key; each of the four directories above is its own required field.
 
 `packs` lists pack ids. It does not list versions. The version the team is using is `version` on the local `pack.json` for that id, the file Curbpack loads for the id. Keeping that file (in git, or in the air-gapped pack directory) is what makes the choice reproducible without a network. A newer publication is visible only when its `pack.json` has reached the environment. Nothing fetches it on its own. Compare that file's `version` with the version the team is already using, and with `origin.version` on each local requirement. Those are different facts.
 
-`curbpack` is a path relative to the repository. When it is absent, the directory is `curbpack`. From that directory:
-
-- Packs are `<curbpack>/packs/<pack-id>/pack.json`. An existing Requirement file sits beside that `pack.json`.
-- Claims are `<curbpack>/claims/<claim-id>.json`
-- Reports are `<curbpack>/reports/`. Check writes `run-<YYYYMMDDTHHMMSSZ>.json`, one new file per run. Review writes `review-<YYYYMMDDTHHMMSSZ>.json`. A later file does not replace an earlier one.
+On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with that pack's Requirement files as the other `*.json` files in that same version directory. A Claim is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`, one new file per run. A review report is `<reports_dir>/review-report_<UTC>.json`. Field meanings and the full created-file example, including the required `unsigned_requirements` key, are [workspace.md](workspace.md) §2.2–§2.3.
 
 ```json
 {
@@ -201,7 +197,11 @@ Owns the configuration Studio and curbcheck need for this repository: which coll
     "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
     "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
   },
-  "curbpack": "curbpack"
+  "packs_dir": "curbpack/packs",
+  "claims_dir": "curbpack/claims",
+  "results_dir": ".curbpack",
+  "reports_dir": "curbpack/reports",
+  "unsigned_requirements": "reject"
 }
 ```
 
@@ -227,7 +227,7 @@ Search merge: repo `search_hints`, then that requirement's `discovery_hints` (§
 }
 ```
 
-Semantics: only these requirement ids (each belongs to a selected pack). Use either exclude-style or include-style per repo.
+Semantics: only these requirement ids (each belongs to a selected pack). Use either exclude-style or include-style per repo. (Both examples above omit the required path fields for brevity; a real file carries all of them — [workspace.md](workspace.md) §2.2.)
 
 This file records the pack id, not the version. The version is on the local `pack.json`.
 

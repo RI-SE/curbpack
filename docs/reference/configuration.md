@@ -1,138 +1,210 @@
-# Configuration reference
+# Configuration
 
-Curbpack configuration is stored in `curbpack.json` at the root of the product repository.
+[Workspace](workspace.md) decides where product and Studio config live, which keys exist, and the on-disk paths. [Packs v2](packs2.md) §2.3 decides how `curbpack.json` selects packs and requirements, and how `search_hints` merges. This page repeats that contract. It does not add a key or a path.
 
-This page describes the current configuration file, how pack ids and requirement ids are selected, where pack definitions are loaded from, and the repository paths a run uses. The field contract is [Packs v2](packs2.md) §2.3. How a run is started and how its result is read is [curbcheck](curbcheck-cli.md).
+Two files sit at the product repository root.
+
+| File | Read by | Job |
+|------|---------|-----|
+| `curbpack.json` | `curbcheck`, Studio Check / Compile / Discover | Pack selection, requirement exclude/include, `search_hints`, directory paths for packs / claims / results / reports |
+| `curbpack-studio.json` | Studio | Bind address, model endpoint/name, `$ENV` secrets, prompt paths, temp/extract/keys |
+
+`.env` (gitignored) supplies values for `$NAME` placeholders in `curbpack-studio.json` at load time. An unknown `$NAME` is an error.
+
+`curbpack.json` is not JSON-sealed. It is covered by git (optionally signed commits). Studio import verifies the pack/requirement seal before writing into `packs_dir`. `.curbpack.json` is not `curbpack.json`.
 
 ## `curbpack.json`
 
-The file is a JSON object. Check accepts `packs`, `requirements`, `exclude_requirements`, `search_hints`, and `curbpack`. Any other key is rejected, and no result is written. The key `hunt` is rejected. Write the file at the repository root. `.curbpack.json` is not this file.
+Missing file: Studio asks whether to create one; `curbcheck` stops.
+
+A created file lists every key below with concrete values. Readers use the file as written. A missing required key is rejected, and so is an unknown key, before a run file is written. The key `hunt` is not accepted. Accepted keys are only the fields in the table.
+
+Selection mode is exactly one of: `exclude_requirements`, or `requirements`, or neither (all requirements in `packs`). A file that sets both `requirements` and `exclude_requirements` is rejected.
 
 ### Fields
 
-| Field | JSON type | Optional | Behavior |
-| --- | --- | --- | --- |
-| `packs` | `array<string>` | No | Pack ids selected for the repository. A non-empty list of non-empty strings. The version is `version` on the local `pack.json`. |
-| `requirements` | `array<string>` | Yes | Only these requirement ids. Each id belongs to a selected pack. A non-empty list of non-empty strings. |
-| `exclude_requirements` | `array<string>` | Yes | Requirement ids removed from the selected packs. A non-empty list of non-empty strings. |
-| `search_hints` | `object` | Yes | Shared discovery scope, the same for every selected pack. See [`search_hints`](#search_hints). |
-| `curbpack` | `string` | Yes | Path relative to the repository. Packs, Claims, the run result, and the review report live under it. When the key is absent, the directory is `curbpack`. |
+| Field | Required | Created-file value | Meaning |
+|-------|----------|--------------------|---------|
+| `packs` | yes | pack ids ticked in the dialog | Pack ids. On disk: `<packs_dir>/<pack-id>/<pack-version>/`. That directory's `pack.json` carries the same `id` and `version`. |
+| `exclude_requirements` | no | requirement ids left unticked in the dialog | Removed from the selected packs. |
+| `requirements` | no | omitted; hand/CLI only | Only these requirement ids. Each id belongs to a selected pack. |
+| `search_hints` | yes | see example | Shared discovery scope. |
+| `packs_dir` | yes | `"curbpack/packs"` | Relative to the repo. Pack tree: `<packs_dir>/<pack-id>/<pack-version>/pack.json` plus requirement `*.json` in that version directory. |
+| `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory: `<claims_dir>/<claim-id>.json`. |
+| `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
+| `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
+| `unsigned_requirements` | yes | `"reject"` | `"reject"` \| `"signed_commit"`. Behaviour: later epic. |
 
-Use either `requirements` or `exclude_requirements`. A file that sets both is rejected, and check writes no result.
+`packs` lists pack ids. It does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached `packs_dir`. Nothing fetches one.
 
-`packs` does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached the packs directory. Check does not fetch one.
+Each of `packs_dir`, `claims_dir`, `results_dir`, and `reports_dir` is its own required field. Docs and code resolve those strings. There is no single `curbpack` directory key, and temp is not a field of this file.
+
+**Dialog → file:** packs and requirements as checkboxes. Ticked packs → `packs`. Unticked requirements → `exclude_requirements`.
 
 ### `search_hints`
 
-| Field | JSON type | Optional | Behavior |
-| --- | --- | --- | --- |
-| `sources` | `array<object>` | Yes | Each item is an object with `source` (non-empty string) and an optional `args` object. |
-| `exclude_path_globs` | `array<string>` | Yes | Path globs Discovery's file search skips. |
-| `prefer_path_globs` | `array<string>` | Yes | Path globs that order a match ahead of other matches. |
+The object is the one [Packs v2](packs2.md) §2.3 uses: `sources`, `exclude_path_globs`, and `prefer_path_globs`.
 
-Check validates `search_hints` and leaves it in the file. The run does not walk its globs or its `sources`. Discovery's file search applies `exclude_path_globs` and `prefer_path_globs`. A prefer glob only orders a path that already matched a requirement path hint or concept. That search does not read `source` or `args`.
+Search merge: the repository `search_hints`, then that requirement's `discovery_hints` ([Packs v2](packs2.md) §2.7). A requirement that sets `sources` uses that list. Otherwise the repository `search_hints` list is used.
 
-### Example
-
-```json
-{
-  "packs": [
-    "house-policy",
-    "medtech-iec62304"
-  ]
-}
-```
-
-The `packs` entry identifies the packs that check evaluates.
-
-To evaluate every requirement in those packs except named ids, add `exclude_requirements`. To evaluate only named ids, add `requirements` and leave `exclude_requirements` out:
+### Example (created / checked-in)
 
 ```json
 {
   "packs": ["house-policy", "cra-baseline"],
-  "exclude_requirements": ["CRA-ART14-PATH"],
+  "exclude_requirements": [
+    "CRA-ART14-PATH"
+  ],
   "search_hints": {
-    "sources": [{ "source": "documents" }],
-    "exclude_path_globs": ["**/node_modules/**", "*FUTURE_*"],
-    "prefer_path_globs": ["**/docs/**", "**/SECURITY*", "**/README*"]
+    "sources": [
+      { "source": "documents" },
+      { "source": "git" }
+    ],
+    "exclude_path_globs": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/build/**"
+    ],
+    "prefer_path_globs": [
+      "**/docs/**",
+      "**/SECURITY*",
+      "**/README*"
+    ]
   },
-  "curbpack": "curbpack"
+  "packs_dir": "curbpack/packs",
+  "claims_dir": "curbpack/claims",
+  "results_dir": ".curbpack",
+  "reports_dir": "curbpack/reports",
+  "unsigned_requirements": "reject"
 }
 ```
 
-## Pack selection
+Semantics: evaluate all requirements whose pack is in `packs`, minus `exclude_requirements`.
 
-For the check path, active pack ids are the `packs` array in `curbpack.json`.
+Explicit include, hand/CLI only. A real file still carries every required key:
 
-`curbcheck` loads each id from `<repo>/<curbpack>/packs/<pack-id>/pack.json`. `curbpack` is the relative directory in the file. When the key is absent, that directory is `curbpack`.
-
-`--packs` is an optional override. It is the directory that directly contains `<pack-id>/pack.json`, so an explicit path does not gain another `packs/` segment. `--out` is an optional override of the dated run file under `<repo>/<curbpack>/reports/`. Neither flag is a second configuration.
-
-### Requirement selection
-
-Requirement ids in scope are resolved from the same file:
-
-1. when `requirements` is set, only those ids, and each id must be present in the loaded packs;
-2. otherwise every requirement loaded from the selected packs, minus `exclude_requirements` when that key is set.
-
-An id in `requirements` that is not in the loaded packs stops the run before a result is written. An id in `exclude_requirements` that is absent from the loaded packs leaves the selection unchanged. Check and the Studio Check page use this selection.
-
-## Pack sources
-
-For pack id `<pack-id>`, Curbpack looks for:
-
-```text
-<repo>/<curbpack>/packs/<pack-id>/pack.json
+```json
+{
+  "packs": ["house-policy"],
+  "requirements": [
+    "HOUSE-SECURITY-REPORTING",
+    "HOUSE-SECURITY-TXT"
+  ],
+  "search_hints": {
+    "sources": [
+      { "source": "documents" },
+      { "source": "git" }
+    ],
+    "exclude_path_globs": ["**/node_modules/**"]
+  },
+  "packs_dir": "curbpack/packs",
+  "claims_dir": "curbpack/claims",
+  "results_dir": ".curbpack",
+  "reports_dir": "curbpack/reports",
+  "unsigned_requirements": "reject"
+}
 ```
 
-and every other `*.json` file in that directory. Those files are the Requirements. The result records that pack's `id`, the `version` string from `pack.json`, and a digest of the pack directory.
+Semantics: only these requirement ids. Each belongs to a selected pack.
 
-A missing `pack.json`, or a pack or requirement file that does not validate, stops the run before a result is written.
+With the created file:
 
-The structure of `pack.json` is documented in [Packs v2](packs2.md).
+| Kind | Path |
+|------|------|
+| Pack | `<repo>/curbpack/packs/cra-baseline/1.0.0/pack.json` |
+| Claim | `<repo>/curbpack/claims/claim-house-security-md.json` |
+| Run result (JSON requested) | `<repo>/.curbpack/run-result_<YYYYMMDDTHHMMSSZ>.json` |
+| Review report | `<repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json` |
 
-## Runtime configuration
+`"results_dir": "artifacts/check"` writes the run under `<repo>/artifacts/check/…`. Same contract.
 
-### Pack loading and updates
+### `unsigned_requirements` (later epic)
 
-Pack bytes come from the directory in [Pack selection](#pack-selection). Check loads the `pack.json` and Requirement files already in that directory. A newer publication is the copy whose `pack.json` is already there.
+| Value | Intended curbcheck behaviour |
+|-------|------------------------------|
+| `reject` | A requirement whose JSON `signed` does not verify is reported unsigned. |
+| `signed_commit` | Same report, unless that requirement file is covered by a signed commit (allowed-signers). |
 
-`python3 -m app` accepts `--workspace`, `--host`, and `--port`. A source checkout defaults to `data/workspace` inside this repository, `127.0.0.1`, and `8770`. A frozen build defaults the workspace to `~/curbpack-studio/workspace`. The Check page reads `<workspace>/product` and `<workspace>/packs`.
+Studio import still verifies seals when bringing a published pack into `packs_dir`.
 
-### Human confirmation
+### What the run reads
 
-Confirmation is a signature on a Requirement, a Claim, or a review report. The key is the local key for the name that signs, stored at `<workspace>/keys/keys.json`.
+For each id in `packs`, load `<packs_dir>/<pack-id>/<pack-version>/pack.json` and the other `*.json` files in that version directory. Those files are the Requirements. The shape of `pack.json` is [Packs v2](packs2.md). The version the run records is `version` on that `pack.json`.
 
-### Attestation verification
+Claims are `<claims_dir>/<claim-id>.json`. Run-result and review-report paths are the table above. Object shape of the run result: [Packs v2](packs2.md) §3.1. Output channels: [Workspace](workspace.md) §3. The command as shipped: [curbcheck](curbcheck-cli.md).
 
-`git_signed` and `git_signer` take their trust input in that Check's arguments (`allowed_signers` or `openpgp`), as Packs v2 §4.1 describes.
+| Channel | Behaviour (design; align `curbcheck-cli` later) |
+|---------|--------------------------------------------------|
+| stdout | Human-readable summary (claim/check pass\|fail\|skipped, `detail` when present). |
+| `-j` / `--json` | Also write `{results_dir}/run-result_<UTC>.json`. New file per run. |
+| `-o` / `--out PATH` | Also write that JSON to `PATH` (relative or absolute). Parent dirs created when permitted. |
 
-Git snapshot and the Git Checks take `git` from `PATH`. The child environment drops `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`, `GIT_NAMESPACE`, `GIT_GLOB_PATHSPECS`, and `GIT_NOGLOB_PATHSPECS`, and sets `GIT_LITERAL_PATHSPECS=1`.
+`-o PATH` always writes the run-result JSON object. Compile copies the run-result object into the review report under `reports_dir` as `review-report_<UTC>.json`. Report fields: `run_result`, `requirements`, `claims`, `appendix`, and when recorded `decision` / `signed`.
 
-### Names that are unused
+## `curbpack-studio.json`
 
-`CURBPACK_PACKS_DIR`, `CURBPACK_PACKS_URL`, `CURBPACK_PACKS_SHA256`, `CURBPACK_ALLOW_CONFIRM`, `CURBPACK_EXPLAIN_ALLOW_CLOUD`, `CURBPACK_ALLOWED_SIGNERS`, `CURBPACK_SIGNER_ID`, `CURBPACK_AGENT_ID`, `CURBPACK_MODEL_HASH`, `CURBPACK_MANDATE_ID`, and `CURBPACK_SOCK` are unused. Pack selection, signing, and Check trust input are the settings in the sections above.
+While this file is absent, Studio keeps today's wiring (`127.0.0.1:8770`, Ollama `http://127.0.0.1:11434`, model `qwen3-coder:30b`, adapter prompts, workspace keys). When the file is present, Studio loads it after `$ENV` substitution from `.env`. CLI `--host`, `--port`, and `--workspace` override for that process.
 
-## Repository paths
+Studio may offer to create the file. The created values match today's:
 
-Paths in the product repository:
+```json
+{
+  "bind": {
+    "host": "127.0.0.1",
+    "port": 8770
+  },
+  "model": {
+    "endpoint": "http://127.0.0.1:11434",
+    "api_key": "$CURBPACK_MODEL_API_KEY",
+    "name": "qwen3-coder:30b",
+    "temperature": 0.2
+  },
+  "prompts": {
+    "interpret": null,
+    "discovery_hints": null
+  },
+  "paths": {
+    "temp_dir": ".curbpack/tmp",
+    "extract_work_dir": ".curbpack/extract",
+    "keys_file": null
+  }
+}
+```
 
-| Purpose | Path |
-| --- | --- |
-| Configuration | `curbpack.json` |
-| Packs | `<curbpack>/packs/<pack-id>/pack.json` |
-| Claims | `<curbpack>/claims/*.json` |
-| Check run | `<curbpack>/reports/run-<YYYYMMDDTHHMMSSZ>.json` |
-| Review report | `<curbpack>/reports/review-<YYYYMMDDTHHMMSSZ>.json` |
+| Block / field | Meaning |
+|---------------|---------|
+| `bind` | UI listen address. |
+| `model.endpoint` | Model HTTP base URL. |
+| `model.api_key` | `$NAME` from `.env`. |
+| `model.name` | Model id sent to the endpoint. |
+| `model.temperature` | Extract temperature. |
+| `prompts.*` | Repo-relative path, or `null` for the installation's adapter prompt files. Key present either way. |
+| `paths.temp_dir` | Scratch under the product repo. |
+| `paths.extract_work_dir` | Extract work trees. |
+| `paths.keys_file` | Signing keys JSON, or `null` for the pilot workspace `keys/keys.json`. |
 
-Claims are the `*.json` files directly inside `<curbpack>/claims/`, in filename order. Files in subdirectories are not loaded. The pilot rule is one new file per Check run under `<curbpack>/reports/`. The current `curbcheck` command still writes `<curbpack>/run-result.json` unless `--out` names another file. Studio does not do this yet. SYS-03 is the change.
+```env
+CURBPACK_MODEL_API_KEY=
+```
 
-Paths in the Studio workspace:
+Packs, claims, the run result, and the review report are the path fields in `curbpack.json`. Confirmation is a signature on a Requirement, a Claim, or a review report. `git_signed` and `git_signer` take their trust input in that Check's arguments (`allowed_signers` or `openpgp`), as [Packs v2](packs2.md) §4.1 describes.
 
-| Purpose | Path |
-| --- | --- |
-| Packs the Check page loads | `packs/<pack-id>/` |
-| Product repository the Check page reads | `product/` |
-| Signing keys | `keys/keys.json` |
+## Layout
 
-Individual commands may write the run result somewhere else. See [curbcheck](curbcheck-cli.md) for that file, and [Packs v2](packs2.md) §3.1 for its fields.
+```text
+<product-repo>/
+  curbpack.json
+  curbpack-studio.json
+  .env
+  curbpack/
+    packs/<pack-id>/<pack-version>/pack.json
+    claims/<claim-id>.json
+    reports/review-report_<UTC>.json
+  .curbpack/
+    run-result_<UTC>.json
+    tmp/
+    extract/
+```
+
+Authoritative paths are the strings in `curbpack.json` and `curbpack-studio.json`. The sketch matches the created-file defaults.

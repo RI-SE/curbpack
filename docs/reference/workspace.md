@@ -2,7 +2,7 @@
 
 **Status:** design intent — implementation follows. Pack / Requirement / Claim / run-result **shapes** stay in [Packs v2](packs2.md). This file owns **where** product and Studio config live, and which path fields Check/Compile read.
 
-Pilot: while `curbpack-studio.json` is absent, Studio keeps today's bind/model/prompt/keys wiring. `unsigned_requirements` behaviour and curbcheck `-j`/`-o` ship in a later epic / `curbcheck-cli` change; the keys and flags are named here so created files stay stable.
+Pilot: while `curbpack-studio.json` is absent, Studio keeps today's bind/model/prompt/keys wiring. `unsigned_requirements` behaviour ships in a later epic. Aligning `curbcheck` itself (path fields, `-j`/`-o`, `--defaults`, id-list filters) is [CHK-07](../agile/epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md); the keys and flags are named here so created files stay stable. Created-file JSON is owned by that same defaults factory — Studio must not keep a second copy.
 
 ---
 
@@ -218,5 +218,6 @@ Authoritative paths are the strings in `curbpack.json` and `curbpack-studio.json
 |-------|----------|
 | Pack, Requirement, Claim, Check args, run-result fields | [packs2.md](packs2.md) — still needs the on-disk `<pack-id>/<pack-version>/` layout and path-field pass |
 | curbcheck CLI as implemented | [curbcheck-cli.md](curbcheck-cli.md) |
-| Older path tables (point here on DOC pass) | [outputs.md](outputs.md), [configuration.md](configuration.md) |
+| `curbpack.json` as Check reads it | [configuration.md](configuration.md) |
+| Older path tables (point here on DOC pass) | [outputs.md](outputs.md) |
 | Door behaviour | [SYS-03](../agile/epics/01-pack-editor/stories/SYS-03-one-repo-door.md) — align story/plan to this file |

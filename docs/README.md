@@ -7,14 +7,19 @@ Start with the shortest path for what you need to do.
 The cover at `http://127.0.0.1:8770` links the activities. They do not have to be visited in one fixed order. A Check can run when the product repository, the selected Pack and the Claims already exist, without opening Extract first.
 
 ```text
-legal source
-    → Pack Editor: Extract, review, sign, seal
-    → product curbpack.json selects the Pack
+Pack Sources: choose a repository
+    → start empty writes curbpack.json in a working folder, pointing at that folder
+    → otherwise read the Packs named in that repository's curbpack.json
+    → the URL cell shows the document URL and the pack directory from that file
+    → add a Pack into that folder
+    → Extract, review, sign
     → Discovery shows candidates
     → a person writes a Claim and its checks[]
     → Run curbcheck writes one run result
     → Review compiles that result, records a decision, and signs the report
 ```
+
+Importing a Pack is the same write as accepting an extraction. It is not a second path.
 
 A passing Check is what those questions observed. A person still decides what that means.
 

@@ -15,9 +15,11 @@ A green row is what the questions on that Claim observed. A person still decides
 
 ## 1. Pack Editor
 
-Open **Pack Editor**.
+Open **Pack Editor**. Pack Sources starts by choosing the repository to work with.
 
-**Pack Sources** lists the documents. **Sections** opens one document. **Add** registers a section from its adapter. Registering a section does not extract it.
+**Start empty** asks for a working folder. Studio writes a new `curbpack.json` in that folder, and the file points at the folder. Otherwise Pack Sources reads the Packs named in that repository's `curbpack.json`.
+
+Each row's URL cell shows the document URL and, under it, the pack directory from that file. That is where the Pack is written. **Sections** opens one document. **Add** adds a Pack into that folder. Adding a Pack does not extract it. Importing a Pack later is that same write, as if the extraction had already been accepted.
 
 **Extract** writes a separate working copy. If you are already editing a copy, you choose which fields to bring in. Fields you leave out stay as they are. A failed extract does not replace Requirements you already accepted.
 

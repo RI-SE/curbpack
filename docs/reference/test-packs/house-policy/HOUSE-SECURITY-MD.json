@@ -12,7 +12,7 @@
   "references": [
     {
       "nr": 1,
-      "locator": "HOUSE-SECURITY-MD",
+      "locator": "Security docs",
       "law_text": "SECURITY.md present with Security header and substantive content."
     }
   ]

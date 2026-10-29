@@ -12,7 +12,7 @@
   "references": [
     {
       "nr": 1,
-      "locator": "HOUSE-SECURITY-TXT",
+      "locator": "Security docs",
       "law_text": "security.txt present for coordinated disclosure."
     }
   ]
