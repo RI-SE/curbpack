@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -15,6 +16,8 @@ from claims.bind import build_claim, write_claim
 from common.store import save_pack, save_requirement
 from requirements.editing import apply_edits
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 CREATED_SEARCH_HINTS = {
@@ -293,3 +296,40 @@ class IdListFlagsTest(unittest.TestCase):
             code = main(["--repo", str(repo), "--requirements", r"CRA\ANNEX", "-o", str(out)])
         self.assertEqual(code, 2)
         self.assertFalse(out.exists())
+
+
+class CliDocsTest(unittest.TestCase):
+    def test_curbcheck_cli_md_describes_the_new_contract(self):
+        text = (ROOT / "docs/reference/curbcheck-cli.md").read_text(encoding="utf-8")
+        self.assertNotIn("Update pending", text)
+        self.assertIn("packs_dir", text)
+        self.assertIn("claims_dir", text)
+        self.assertIn("results_dir", text)
+        self.assertIn("--defaults", text)
+        self.assertIn("-j", text)
+        self.assertIn("--json", text)
+        self.assertIn("-o", text)
+        self.assertIn("--out", text)
+        self.assertIn("comma-separated", text)
+        self.assertNotIn("Directory whose children are pack directories", text)
+        self.assertNotIn("This is a path, not a comma-separated list of ids", text)
+
+    def test_inventory_argv_does_not_pass_a_packs_directory(self):
+        paths = [
+            ROOT / "docs/testing/README.md",
+            ROOT / "docs/testing/strategy.md",
+            ROOT / "docs/testing/procedures/README.md",
+            ROOT / "docs/testing/procedures/1_pack_template_instantiation.md",
+            ROOT / "docs/testing/procedures/cases.md",
+            ROOT / "docs/testing/generated_test_record_template.md",
+            ROOT / "tests/check/run.sh",
+            ROOT / "tests/check/automation/studio-pf01.sh",
+            ROOT / "tests/check/suites/EV.md",
+            ROOT / "tests/check/automation/ev.sh",
+        ]
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
+            for match in re.finditer(r"--packs(?:\s+|=\s*)([^\s\\]+)", text):
+                token = match.group(1).strip("'\"")
+                if "/" in token or "\\" in token or token.startswith("$"):
+                    self.fail(f"{path} still passes --packs as a directory: {match.group(0)}")

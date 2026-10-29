@@ -5,11 +5,10 @@ A carried case uses repository state R1 and pack input PF-01. The runner is:
 ```sh
 curbcheck \
   --repo <prepared-repo> \
-  --packs <prepared-repo>/external_test/curbpack/packs \
-  --out <prepared-repo>/run-result.json
+  -o <prepared-repo>/run-result.json
 ```
 
-`--packs` overrides `<curbpack>/packs` and points at the Studio fixture on the clone. `--out` overrides `<curbpack>/run-result.json`. The pack ids live in `curbpack.json`. The runner reads that file and `<prepared-repo>/curbpack/claims/`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
+`curbpack.json` must include the workspace.md §2.2 path fields. Copy the selected fixture packs into `<prepared-repo>/curbpack/packs/<id>/<version>/` and leave `packs_dir` at the created-file value `curbpack/packs`. `-o` writes the run-result JSON. `--packs` is not a directory. The runner does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
 
 ## Prepare a verification run
 
@@ -37,9 +36,7 @@ On the clone, after the source:
 
 2. Write `$REFERENCE_PRODUCT_ROOT/curbpack.json`:
 
-   ```json
-   {"packs":["cra-baseline","house-policy","medtech-iec62304"]}
-   ```
+   A complete workspace.md §2.2 file with created-file path fields and packs `cra-baseline`, `house-policy`, `medtech-iec62304`. Copy those packs from the clone fixture into `curbpack/packs/<id>/<version>/`.
 
 3. Copy only these files from `external_test/curbpack/claims/` into `$REFERENCE_PRODUCT_ROOT/curbpack/claims/`:
 
@@ -51,7 +48,7 @@ On the clone, after the source:
    - `HOUSE-SECURITY-MD.json`
    - `HOUSE-SECURITY-TXT.json`
 
-4. From the Studio root, run the argv in the section above with `--repo` and `--packs` pointing at the clone.
+4. From the Studio root, run the argv in the section above with `--repo` pointing at the clone.
 
 Stdout `claims 7 exit 0` and no claim status `fail` is the pass. Manual rows are printed by `make test-curbcheck` and are not part of the count. The seven expected statuses are in [cases.md](cases.md).
 

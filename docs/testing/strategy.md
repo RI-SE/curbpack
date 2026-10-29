@@ -1,6 +1,6 @@
 # Verification strategy
 
-This suite verifies seven carried claims against one prepared repository. The runner is `curbcheck` with `--repo`, `--packs` pointing at the clone's `external_test/curbpack/packs`, and `--out`, as [README.md](README.md) states. Those two flags override the directory in `curbpack.json`. It reads `curbpack.json`. It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
+This suite verifies seven carried claims against one prepared repository. The runner is `curbcheck` with `--repo` and `-o`, as [README.md](README.md) states. Pack and claim directories come from `curbpack.json` (`packs_dir` / `claims_dir`). It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`. `--packs` is an optional comma-separated id list, not a directory.
 
 Start every verification assignment with [Test setup](procedures/README.md): `make start-verification-run`, then `source tmp/verification-run.sh`. Do not start in a suite file.
 

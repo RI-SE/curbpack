@@ -8,7 +8,7 @@ A PF-id is one prepared pack input. On the reference product the selector is:
 
 That script copies `external_test/curbpack/pf-fixtures/<PF-id>/` onto the checkout. This file does not replace that script. This suite does not edit it.
 
-The Studio runner does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`. For PF-01 it loads pack ids from `--packs docs/reference/test-packs` and the `packs` array in `curbpack.json`.
+The Studio runner does not read `CURBPACK_PACKS_DIR` or `.curbpack.json`. For PF-01 it loads pack ids from the `packs` array in `curbpack.json` and the pack files under that file's `packs_dir` (the clone fixture, or Studio `docs/reference/test-packs` copied into a product-relative versioned `packs_dir`).
 
 PF-18 and PF-19 are not in this file. Their product effects stay in `../ctam/docs/testing/procedures.md`. Both ids are in [outside.md](../outside.md).
 
@@ -16,7 +16,7 @@ PF-18 and PF-19 are not in this file. Their product effects stay in `../ctam/doc
 
 Pack ids `house-policy`, `cra-baseline`, and `medtech-iec62304`.
 
-The carried cases use this id. The files are `docs/reference/test-packs/<pack-id>/pack.json` and the requirement files next to it. Claim files for the seven carried cases are copied into the temporary repo's `claims/` directory. They are not inside the pack directory.
+The carried cases use this id. The files are `docs/reference/test-packs/<pack-id>/pack.json` and the requirement files next to it. Claim files for the seven carried cases are copied into the temporary repo's `curbpack/claims/` directory. They are not inside the pack directory.
 
 ## PF-02
 

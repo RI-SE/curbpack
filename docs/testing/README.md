@@ -36,11 +36,10 @@ After the source above, the mechanical steps are in [procedures/README.md](proce
 ```sh
 curbcheck \
   --repo "$REFERENCE_PRODUCT_ROOT" \
-  --packs "$REFERENCE_PRODUCT_ROOT/external_test/curbpack/packs" \
-  --out "$REFERENCE_PRODUCT_ROOT/run-result.json"
+  -o "$REFERENCE_PRODUCT_ROOT/run-result.json"
 ```
 
-`--packs` and `--out` override `<curbpack>/packs` and `<curbpack>/run-result.json`. This carried run keeps the packs in the fixture and writes the result at the product root.
+`curbpack.json` uses created-file `packs_dir` `curbpack/packs` and `claims_dir` `curbpack/claims`. The fixture packs are copied into that versioned tree. `-o` writes the run-result JSON. Do not pass `--packs` as a directory.
 
 Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. Manual rows are in [tests/check/manual.md](../../tests/check/manual.md). They are not a pass.
 

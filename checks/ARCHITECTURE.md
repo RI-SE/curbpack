@@ -21,8 +21,8 @@ The runner evaluates Claim files that the repo selects and writes one run result
 | `validate_check_args(check, args)` | Check id and args. | Raises `CheckError` or `ModelError`. Claims Editor calls this before it writes a Claim. |
 | `run_claim(repo, claim)` | Product repo and one Claim. | One row. |
 | `build_run_result(repo, claims, packs, *, skip=None)` | Claims, the pack rows below, and an optional map of claim id to skip reason. | A value `validate_run_result` accepts. |
-| `run_repository(repo, packs_root=None, *, skip=None)` | Product repo. `packs_root`, when passed, is the packs tree (`<pack-id>/<pack-version>/pack.json`). When omitted, that tree is `packs_dir` from `curbpack.json`. Claims load from `claims_dir`. | The result and `process_exit_code`. Writes nothing. |
-| `run_and_write(repo, packs_root, out, *, skip=None)` | Those, plus the output path. | Writes that path only after the result validates. Returns the result and the exit code. |
+| `run_repository(repo, packs_root=None, *, skip=None, pack_ids=None, requirement_ids=None)` | Product repo. `packs_root`, when passed, is the packs tree (`<pack-id>/<pack-version>/pack.json`). When omitted, that tree is `packs_dir` from `curbpack.json`. Claims load from `claims_dir`. `pack_ids` / `requirement_ids` overlay this run's selection without writing the file. | The result and `process_exit_code`. Writes nothing. |
+| `run_and_write(repo, packs_root, out, *, skip=None, pack_ids=None, requirement_ids=None)` | Those, plus the output path. Forwards the `run_repository` overlays. | Writes that path only after the result validates. Returns the result and the exit code. |
 | `process_exit_code(result)` | A run result. | `0` or `1`. |
 | `git_snapshot(repo)` | A directory. | `commit` and `worktree`, or absent when Git has no HEAD. |
 
