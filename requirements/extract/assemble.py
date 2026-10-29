@@ -45,6 +45,8 @@ def validate_hints_proposal(proposal: dict, loci: set[str]) -> dict:
     if locus not in loci:
         raise ModelError("hints proposal", "locus", f"one of the provisions, not {locus}")
     if "discovery_hints" in proposal:
+        _omit_unusable_expected_evidence(proposal)
+    if "discovery_hints" in proposal:
         _check_hints_shape(proposal["discovery_hints"])
     return proposal
 
@@ -164,6 +166,21 @@ def _build_requirement(provision: dict, proposal: dict, adapter: dict) -> dict:
         return validate_requirement(requirement, published=False)
     except ModelError as exc:
         return {"locus": locus, "reason": str(exc)}
+
+
+def _omit_unusable_expected_evidence(proposal: dict) -> None:
+    """Omit expected_evidence unless it is a non-empty list of strings."""
+    hints = proposal.get("discovery_hints")
+    if not isinstance(hints, dict) or "expected_evidence" not in hints:
+        return
+    value = hints["expected_evidence"]
+    if (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and item.strip() for item in value)
+    ):
+        return
+    del hints["expected_evidence"]
 
 
 def _check_hints_shape(hints: object) -> None:

@@ -8,7 +8,9 @@ import unittest
 from pathlib import Path
 
 from common.errors import ModelError
+from discovery.search import discover_candidates
 from requirements.extract.adapter import ADAPTERS, load_adapter
+from requirements.extract.assemble import assemble_requirements
 from requirements.extract.pipeline import draft_pack
 from requirements.workspace import extract_section
 
@@ -147,6 +149,67 @@ class HintsProducerTest(unittest.TestCase):
 
         with self.assertRaises(ModelError):
             self.discovery_hints(_provisions(), guidance=self.guidance, complete=complete)
+
+    def test_empty_expected_evidence_keeps_the_section_for_discovery(self):
+        # PE-06. An empty expected_evidence does not reject the section.
+        # The field is omitted. Discovery finds nothing when concepts and path_hints are gone.
+        def complete(_prompt: str, _settings: dict) -> str:
+            return _hints_payload(
+                [
+                    {
+                        "locus": "3",
+                        "discovery_hints": {
+                            "concepts": ["risk assessment"],
+                            "expected_evidence": [],
+                        },
+                    },
+                    {"locus": "1(a)", "discovery_hints": {"expected_evidence": []}},
+                ]
+            )
+
+        hints, _notes = self.discovery_hints(
+            _provisions(), guidance=self.guidance, complete=complete
+        )
+        by_locus = {row["locus"]: row for row in hints}
+        self.assertEqual(by_locus["3"]["discovery_hints"]["concepts"], ["risk assessment"])
+        self.assertNotIn("expected_evidence", by_locus["3"]["discovery_hints"])
+        bare_hints = by_locus["1(a)"]["discovery_hints"]
+        self.assertNotIn("expected_evidence", bare_hints)
+        self.assertNotIn("concepts", bare_hints)
+        self.assertNotIn("path_hints", bare_hints)
+
+        requirements, exclusions = assemble_requirements(
+            _provisions(),
+            [
+                {"locus": "3", "id": "CRA-ANNEX-VII-RISK", "locator": "VII.3"},
+                {"locus": "1(a)", "id": "FIXTURE-VII-1A", "locator": "VII.1(a)"},
+                *hints,
+            ],
+            adapter=load_adapter(ADAPTERS / "cra" / "adapter.json"),
+        )
+        self.assertEqual(exclusions, [])
+        by_id = {item["id"]: item for item in requirements}
+        self.assertEqual(
+            [item["id"] for item in requirements],
+            ["CRA-ANNEX-VII-RISK", "FIXTURE-VII-1A"],
+        )
+        self.assertNotIn("expected_evidence", by_id["CRA-ANNEX-VII-RISK"]["discovery_hints"])
+        bare = by_id["FIXTURE-VII-1A"]
+        written_hints = bare.get("discovery_hints") or {}
+        self.assertNotIn("expected_evidence", written_hints)
+        self.assertNotIn("concepts", written_hints)
+        self.assertNotIn("path_hints", written_hints)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            note = repo / "docs" / "note.md"
+            note.parent.mkdir()
+            note.write_text("risk assessment is written here\n", encoding="utf-8")
+            self.assertEqual(discover_candidates(repo, bare, {"search_hints": {}}), [])
+            found = discover_candidates(
+                repo, by_id["CRA-ANNEX-VII-RISK"], {"search_hints": {}}
+            )
+            self.assertEqual([item["path"] for item in found], ["docs/note.md"])
 
 
 class CraXmlGuidanceTest(unittest.TestCase):
