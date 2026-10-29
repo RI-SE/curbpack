@@ -48,10 +48,15 @@ class ReleasePublishTest(unittest.TestCase):
         self.assertNotIn("did not rebuild", notes)
         self.assertNotIn("SHA256SUMS", notes)
         self.assertIn(f"curl -fsSL -O {base}/curbpack-studio-macos-arm64", notes)
-        self.assertIn(f"shasum -a 256 curbpack-studio-macos-arm64\n{mac}", notes)
-        self.assertIn(f"Get-FileHash -Algorithm SHA256 .\\curbpack-studio-windows-x64.exe\n{win}", notes)
+        self.assertIn(f"shasum -a 256 -c <<'EOF'\n{mac}  curbpack-studio-macos-arm64\n", notes)
+        self.assertIn(
+            "Get-FileHash -Algorithm SHA256 -LiteralPath $name).Hash.ToLowerInvariant()",
+            notes,
+        )
+        self.assertIn(f"'{win}  curbpack-studio-windows-x64.exe'", notes)
         self.assertIn("To download and run:", notes)
-        self.assertIn("To compare the hash:", notes)
+        self.assertIn("To check the hash:", notes)
+        self.assertNotIn("To compare the hash:", notes)
 
     def test_binary_notes_match_the_release_page(self):
         notes = module.binary_notes(
@@ -78,14 +83,13 @@ chmod +x curbpack-studio-macos-arm64 curbcheck-macos-arm64
 ./curbpack-studio-macos-arm64
 ```
 
-To compare the hash:
+To check the hash:
 
 ```sh
-shasum -a 256 curbpack-studio-macos-arm64
-12ef3b913034a0006af99430c50537cec2ef5ec5060c90d4dd7ef4ed08ab94e2
-
-shasum -a 256 curbcheck-macos-arm64
-bccbbdabb2901a1e4cc62f3932a51bf8c982da6ddbff2e6bb9a4d9c7c7bbbae3
+shasum -a 256 -c <<'EOF'
+12ef3b913034a0006af99430c50537cec2ef5ec5060c90d4dd7ef4ed08ab94e2  curbpack-studio-macos-arm64
+bccbbdabb2901a1e4cc62f3932a51bf8c982da6ddbff2e6bb9a4d9c7c7bbbae3  curbcheck-macos-arm64
+EOF
 ```
 
 Windows
@@ -98,14 +102,17 @@ curl.exe -fsSL -O https://github.com/RI-SE/curbpack/releases/download/2026-10-28
 .\\curbpack-studio-windows-x64.exe
 ```
 
-To compare the hash:
+To check the hash:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\\curbpack-studio-windows-x64.exe
-27ff88e7e6e8bd52f83df4eb240cb0da8ad626dd67cd3c9a4654f99f80626142
-
-Get-FileHash -Algorithm SHA256 .\\curbcheck-windows-x64.exe
-a4b5f2159620db31a0fd44123eee96ea7184486fdb4b5330c561c0e08aa39bab
+@(
+  '27ff88e7e6e8bd52f83df4eb240cb0da8ad626dd67cd3c9a4654f99f80626142  curbpack-studio-windows-x64.exe',
+  'a4b5f2159620db31a0fd44123eee96ea7184486fdb4b5330c561c0e08aa39bab  curbcheck-windows-x64.exe'
+) | ForEach-Object {
+  $digest, $name = $_ -split '  ', 2
+  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $name).Hash.ToLowerInvariant()
+  if ($actual -eq $digest) { "${name}: OK" } else { "${name}: FAILED" }
+}
 ```
 
 The process prints a local URL. Open it. The usual one is http://127.0.0.1:8770.
