@@ -1,6 +1,6 @@
 # CHK-08 — Studio Check and Review talk to the new `curbcheck`
 
-**Status:** Decided 2026-10-29 by danielfl. GWT below. Implementation: `plan/CHK-08.md`.
+**Status:** Implemented. Evidence: `impl/CHK-08.md`. Decided 2026-10-29 by danielfl.
 
 **Epic:** [EP-01 Complete Functional Pilot](../EPIC.md)
 
