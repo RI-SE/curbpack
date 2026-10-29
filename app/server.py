@@ -139,11 +139,11 @@ from review.compile import (
     durable_report_path,
     load_report,
     read_report_signature,
-    replace_saved_report,
     same_run,
     save_report_decision,
     save_report_signature,
     unchecked_requirement_ids,
+    write_report,
 )
 from scaffold.stub import write_stub
 from workflow import snapshot
@@ -208,26 +208,6 @@ def edits_for_requirement(requirement: dict, form: dict) -> dict:
     }
 
 
-def preview_report(ws: Workspace) -> dict | None:
-    """Unsigned report for the current run. Does not write."""
-    if not ws.run_path.is_file():
-        return None
-    packs, requirements = _report_sources(ws)
-    if not packs:
-        return None
-    from common.store import load_claims, load_run_result
-
-    claims_dir = ws.repo / "claims"
-    claims = load_claims(claims_dir) if claims_dir.is_dir() else []
-    return compile_report(
-        run_result=load_run_result(ws.run_path),
-        requirements=requirements,
-        claims=claims,
-        trust=trust_store(ws.keys),
-        repo=ws.repo,
-    )
-
-
 def _review_message(query: dict) -> str:
     if (query.get("compiled") or [""])[0]:
         return "Report compiled."
@@ -239,83 +219,86 @@ def _review_message(query: dict) -> str:
 
 
 def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
-    if not _sync_open_repo(ws, query):
+    query = query or {}
+    repo_id = _sync_open_repo(ws, query)
+    if not repo_id:
         return None, None, "No repository is chosen.", False, False, None, []
-    return None, None, "", False, False, None, []
-
-
-def _loaded_run(ws: Workspace) -> dict | None:
-    if not ws.run_path.is_file():
-        return None
-    from common.store import load_run_result
-
-    try:
-        return load_run_result(ws.run_path)
-    except (ModelError, ValueError, OSError):
-        return None
-
-
-def _report_relative(ws: Workspace) -> str | None:
-    try:
-        return str(ws.report_path.relative_to(ws.repo))
-    except ValueError:
-        return None
-
-
-def _selected_ids_for_review(ws: Workspace) -> list[str]:
-    from checks.run import selected_requirement_ids
     from common.validate import validate_curbpack_config
 
-    config_path = ws.repo / "curbpack.json"
+    repo = _registered_repo_path(ws, repo_id)
+    config_path = repo / "curbpack.json"
     if not config_path.is_file():
-        return []
-    try:
-        config = validate_curbpack_config(read_json(config_path))
-    except (ModelError, ValueError):
-        return []
+        return None, None, "", False, False, None, []
+    config = validate_curbpack_config(read_json(config_path))
+    report_path = _confined_review_report_path(
+        str(reports_dir(repo, config).resolve()),
+        (query.get("report") or [""])[0],
+    )
+    run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
+    if report_path:
+        report = load_report(Path(report_path))
+        reading = read_report_signature(report, trust_store(ws.keys))
+        same = None
+        if run_path:
+            same = same_run(report, load_run_result(Path(run_path)))
+        return report, reading, "", True, True, same, _unchecked_for_repo(repo, config, report)
+    if not run_path:
+        return None, None, "", False, False, None, []
+    _packs, requirements = _report_sources_for_repo(repo, config)
+    if not _packs:
+        return None, None, "", False, False, None, []
+    folder = repo_claims_dir(repo)
+    claims = load_claims(folder) if folder.is_dir() else []
+    report = compile_report(
+        run_result=load_run_result(Path(run_path)),
+        requirements=requirements,
+        claims=claims,
+        trust=trust_store(ws.keys),
+        repo=repo,
+    )
+    return report, None, "", False, False, True, _unchecked_for_repo(repo, config, report)
+
+
+def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
+    from checks.run import selected_requirement_ids
+
     loaded = []
+    root = packs_dir(repo, config)
     for pack_id in config.get("packs") or []:
         if not isinstance(pack_id, str) or not pack_id:
             continue
-        directory = ws.packs / pack_id
-        if not (directory / "pack.json").is_file():
-            continue
         try:
-            pack, requirements = load_pack_directory(directory)
+            directory = _pack_version_dir(root, pack_id)
         except ModelError:
             continue
-        loaded.append((pack, requirements))
+        try:
+            loaded.append(load_pack_directory(directory))
+        except ModelError:
+            continue
     if not loaded:
         return []
     try:
-        return sorted(selected_requirement_ids(loaded, config))
+        selected = sorted(selected_requirement_ids(loaded, config))
     except ModelError:
         return []
+    return unchecked_requirement_ids(selected, report)
 
 
-def _report_sources(ws: Workspace) -> tuple[list[dict], list[dict]]:
-    """Packs named by the product, otherwise the demo pack when that file is present."""
-    config_path = ws.repo / "curbpack.json"
-    if config_path.is_file():
-        config = read_json(config_path)
-        pack_ids = config.get("packs") if isinstance(config, dict) else None
-        packs: list[dict] = []
-        requirements: list[dict] = []
-        if isinstance(pack_ids, list):
-            for pack_id in pack_ids:
-                if not isinstance(pack_id, str):
-                    continue
-                directory = ws.packs / pack_id
-                if not (directory / "pack.json").is_file():
-                    continue
-                pack, rows = load_pack_directory(directory)
-                packs.append(pack)
-                requirements.extend(rows)
-        if packs:
-            return packs, requirements
-    if ws.requirement_path().is_file() and (ws.pack / "pack.json").is_file():
-        return [load_pack(ws.pack / "pack.json")], [load_requirement(ws.requirement_path())]
-    return [], []
+def _report_sources_for_repo(repo: Path, config: dict) -> tuple[list[dict], list[dict]]:
+    packs: list[dict] = []
+    requirements: list[dict] = []
+    root = packs_dir(repo, config)
+    for pack_id in config.get("packs") or []:
+        if not isinstance(pack_id, str) or not pack_id:
+            continue
+        try:
+            directory = _pack_version_dir(root, pack_id)
+        except ModelError:
+            continue
+        pack, rows = load_pack_directory(directory)
+        packs.append(pack)
+        requirements.extend(rows)
+    return packs, requirements
 
 
 def _require_demo_requirement(ws: Workspace) -> Path:
@@ -555,6 +538,12 @@ def make_handler(ws: Workspace):
                 )
             if path == "/review":
                 report, reading, error, saved, report_exists, same, unchecked = _review_view(ws, query)
+                door = _door_chrome(ws, query)
+                if door.get("reports_dir"):
+                    door["report_path"] = _confined_review_report_path(
+                        str(door["reports_dir"]),
+                        (query.get("report") or [""])[0],
+                    )
                 return pages.review_page(
                     report,
                     reading,
@@ -569,7 +558,7 @@ def make_handler(ws: Workspace):
                     report_exists=report_exists,
                     same_run_value=same,
                     unchecked=unchecked,
-                    door=_door_chrome(ws, query),
+                    door=door,
                 )
             return pages.page("Not found", "<p>Unknown page.</p>")
 
@@ -907,27 +896,84 @@ def make_handler(ws: Workspace):
                 self._redirect(f"/check?repo={quote(repo_id, safe='')}" if repo_id else "/check")
                 return
             if path == "/review/compile":
-                if not _sync_open_repo(ws, form):
+                repo_id = _sync_open_repo(ws, form)
+                if not repo_id:
                     raise ModelError("review", "repo", "a chosen repository")
-                raise ModelError(
-                    "review",
-                    "compile",
-                    "a run-result file under that repository's results_dir",
+                from common.store import load_claims, load_run_result
+                from common.validate import validate_curbpack_config
+
+                repo = _registered_repo_path(ws, repo_id)
+                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+                run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
+                if not run_path:
+                    raise ModelError(
+                        "review",
+                        "compile",
+                        "a run-result file under that repository's results_dir",
+                    )
+                folder = repo_claims_dir(repo)
+                claims = load_claims(folder) if folder.is_dir() else []
+                _packs, requirements = _report_sources_for_repo(repo, config)
+                report = compile_report(
+                    run_result=load_run_result(Path(run_path)),
+                    requirements=requirements,
+                    claims=claims,
+                    trust=trust_store(ws.keys),
+                    repo=repo,
                 )
+                out = _new_review_report_path(reports_dir(repo, config))
+                write_report(out, report)
+                self._redirect(
+                    f"/review?repo={quote(repo_id, safe='')}&compiled=1"
+                    f"&report={quote(str(out.resolve()), safe='')}"
+                )
+                return
             if path == "/review":
-                save_report_decision(ws.report_path, (form.get("decision") or [""])[0])
-                self._redirect("/review?saved=1")
+                repo_id = _sync_open_repo(ws, form)
+                if not repo_id:
+                    raise ModelError("review", "repo", "a chosen repository")
+                from common.validate import validate_curbpack_config
+
+                repo = _registered_repo_path(ws, repo_id)
+                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+                report_path = _confined_review_report_path(
+                    str(reports_dir(repo, config).resolve()),
+                    (form.get("report") or [""])[0],
+                )
+                if not report_path:
+                    raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
+                save_report_decision(Path(report_path), (form.get("decision") or [""])[0])
+                self._redirect(
+                    f"/review?repo={quote(repo_id, safe='')}&saved=1"
+                    f"&report={quote(report_path, safe='')}"
+                )
                 return
             if path == "/review/sign":
+                repo_id = _sync_open_repo(ws, form)
+                if not repo_id:
+                    raise ModelError("review", "repo", "a chosen repository")
+                from common.validate import validate_curbpack_config
+
+                repo = _registered_repo_path(ws, repo_id)
+                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+                report_path = _confined_review_report_path(
+                    str(reports_dir(repo, config).resolve()),
+                    (form.get("report") or [""])[0],
+                )
+                if not report_path:
+                    raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
                 name = (form.get("name") or [""])[0].strip()
                 private, _public = load_or_create_key(ws.keys, name)
                 save_report_signature(
-                    ws.report_path,
+                    Path(report_path),
                     name=name,
                     private_key=private,
                     at=_now(),
                 )
-                self._redirect("/review?signed=1")
+                self._redirect(
+                    f"/review?repo={quote(repo_id, safe='')}&signed=1"
+                    f"&report={quote(report_path, safe='')}"
+                )
                 return
             raise ModelError("request", "path", "a known action")
 
@@ -1460,7 +1506,9 @@ def _listed_repos(ws: Workspace) -> list[dict]:
 
 
 def _door_chrome(ws: Workspace, query: dict | None = None) -> dict:
-    return {"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)}
+    repo_id = _sync_open_repo(ws, query)
+    fields = _door_path_fields(ws, repo_id) if repo_id else {}
+    return {"repos": _listed_repos(ws), "repo_id": repo_id, **fields}
 
 
 def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
@@ -2488,13 +2536,40 @@ def _confined_run_result_path(results_folder: str, requested: str) -> str:
 
 
 def _new_run_result_path(folder: Path) -> Path:
+    return _new_dated_json(folder, "run-result")
+
+
+def _new_review_report_path(folder: Path) -> Path:
+    return _new_dated_json(folder, "review-report")
+
+
+def _new_dated_json(folder: Path, prefix: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     while True:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = folder / f"run-result_{stamp}.json"
+        path = folder / f"{prefix}_{stamp}.json"
         if not path.exists():
             return path
         time.sleep(1)
+
+
+def _confined_review_report_path(reports_folder: str, requested: str) -> str:
+    if not reports_folder:
+        return ""
+    folder = Path(reports_folder).resolve()
+    wanted = (requested or "").strip()
+    if wanted:
+        path = Path(wanted).resolve()
+        try:
+            path.relative_to(folder)
+        except ValueError:
+            path = None
+        if path is not None and path.is_file() and path.name.startswith("review-report_") and path.name.endswith(".json"):
+            return str(path)
+    dated = sorted(folder.glob("review-report_*.json"))
+    if dated:
+        return str(dated[-1].resolve())
+    return ""
 
 
 def _check_editor_model(ws: Workspace, query: dict) -> dict:
