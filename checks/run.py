@@ -221,6 +221,9 @@ def claim_catalog(repo: Path, directory: Path) -> Path:
 def _pack_version_dir(packs_root: Path, pack_id: str) -> Path:
     root = packs_root / pack_id
     found = sorted(path.parent for path in root.glob("*/pack.json") if path.is_file())
+    direct = root / "pack.json"
+    if not found and direct.is_file():
+        return root
     if not found:
         raise ModelError("curbpack.json", "packs", f"a pack version directory under {root}")
     if len(found) > 1:
