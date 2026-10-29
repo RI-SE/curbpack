@@ -20,6 +20,7 @@ from app import pages
 from checks.run import (
     _pack_version_dir,
     claims_dir,
+    new_run_result_path,
     packs_dir,
     process_exit_code,
     reports_dir,
@@ -895,7 +896,7 @@ def make_handler(ws: Workspace):
                     from common.validate import validate_curbpack_config
 
                     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                    out = _new_run_result_path(results_dir(repo, config))
+                    out = new_run_result_path(results_dir(repo, config))
                     result, code = run_and_write(repo, None, out)
                     self._redirect(
                         f"/check?repo={quote(repo_id, safe='')}&exit={code}"
@@ -2574,10 +2575,6 @@ def _confined_run_result_path(results_folder: str, requested: str) -> str:
     if dated:
         return str(dated[-1].resolve())
     return ""
-
-
-def _new_run_result_path(folder: Path) -> Path:
-    return _new_dated_json(folder, "run-result")
 
 
 def _new_review_report_path(folder: Path) -> Path:
