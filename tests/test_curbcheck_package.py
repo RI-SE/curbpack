@@ -67,6 +67,20 @@ def _repo_with_file() -> tuple[tempfile.TemporaryDirectory, Path]:
     return tmp, repo
 
 
+def _write_curbpack(repo: Path, **overrides) -> None:
+    document = {
+        "packs": ["cra-baseline"],
+        "search_hints": {},
+        "packs_dir": "curbpack/packs",
+        "claims_dir": "curbpack/claims",
+        "results_dir": ".curbpack",
+        "reports_dir": "curbpack/reports",
+        "unsigned_requirements": "reject",
+    }
+    document.update(overrides)
+    (repo / "curbpack.json").write_text(json.dumps(document) + "\n", encoding="utf-8")
+
+
 class ToolReentryTest(unittest.TestCase):
     def test_a_frozen_parent_keeps_the_registered_argv_and_reenters_itself(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,10 +197,10 @@ class ToolReentryTest(unittest.TestCase):
     def test_skip_stores_the_reason(self):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
-        pack_dir = Path(tmp.name) / "packs" / "cra-baseline"
+        pack_dir = Path(tmp.name) / "packs" / "cra-baseline" / "0.1.0"
         save_pack(pack_dir, draft_pack())
         save_requirement(pack_dir, _requirement())
-        (repo / "curbpack.json").write_text('{"packs":["cra-baseline"]}\n', encoding="utf-8")
+        _write_curbpack(repo)
         write_claim(
             repo / "curbpack" / "claims",
             build_claim(
@@ -217,11 +231,14 @@ class ToolReentryTest(unittest.TestCase):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
         directory = repo / "external_test" / "curbpack"
-        save_pack(directory / "packs" / "cra-baseline", draft_pack())
-        save_requirement(directory / "packs" / "cra-baseline", _requirement())
-        (repo / "curbpack.json").write_text(
-            '{"packs":["cra-baseline"],"curbpack":"external_test/curbpack"}\n',
-            encoding="utf-8",
+        pack_dir = directory / "packs" / "cra-baseline" / "0.1.0"
+        save_pack(pack_dir, draft_pack())
+        save_requirement(pack_dir, _requirement())
+        _write_curbpack(
+            repo,
+            packs_dir="external_test/curbpack/packs",
+            claims_dir="external_test/curbpack/claims",
+            results_dir="external_test/curbpack",
         )
         write_claim(directory / "claims", _running_claim())
         write_claim(repo / "claims", _running_claim("claim-old-root"))
@@ -238,11 +255,11 @@ class ToolReentryTest(unittest.TestCase):
     def test_no_arguments_use_the_current_directory(self):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
-        directory = repo / "curbpack"
-        save_pack(directory / "packs" / "cra-baseline", draft_pack())
-        save_requirement(directory / "packs" / "cra-baseline", _requirement())
-        (repo / "curbpack.json").write_text('{"packs":["cra-baseline"]}\n', encoding="utf-8")
-        write_claim(directory / "claims", _running_claim())
+        pack_dir = repo / "curbpack" / "packs" / "cra-baseline" / "0.1.0"
+        save_pack(pack_dir, draft_pack())
+        save_requirement(pack_dir, _requirement())
+        _write_curbpack(repo)
+        write_claim(repo / "curbpack" / "claims", _running_claim())
         previous = Path.cwd()
         os.chdir(repo)
         try:
@@ -251,7 +268,7 @@ class ToolReentryTest(unittest.TestCase):
                 code = main(None)
         finally:
             os.chdir(previous)
-        out = directory / "run-result.json"
+        out = repo / ".curbpack" / "run-result.json"
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["claims"][0]["status"], "pass")
         self.assertIn(f"wrote {out.resolve()}", buf.getvalue())
@@ -272,11 +289,13 @@ class ToolReentryTest(unittest.TestCase):
         tmp, repo = _repo_with_file()
         self.addCleanup(tmp.cleanup)
         override = Path(tmp.name) / "elsewhere"
-        save_pack(override / "cra-baseline", draft_pack())
-        save_requirement(override / "cra-baseline", _requirement())
-        (repo / "curbpack.json").write_text(
-            '{"packs":["cra-baseline"],"curbpack":"external_test/curbpack"}\n',
-            encoding="utf-8",
+        save_pack(override / "cra-baseline" / "0.1.0", draft_pack())
+        save_requirement(override / "cra-baseline" / "0.1.0", _requirement())
+        _write_curbpack(
+            repo,
+            packs_dir="external_test/curbpack/packs",
+            claims_dir="external_test/curbpack/claims",
+            results_dir="external_test/curbpack",
         )
         write_claim(repo / "external_test" / "curbpack" / "claims", _running_claim())
         out = Path(tmp.name) / "chosen-result.json"

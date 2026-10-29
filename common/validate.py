@@ -307,13 +307,24 @@ def validate_claim(obj: object) -> dict:
     return claim
 
 
+CURBPACK_CONFIG_FIELDS = {
+    "packs",
+    "exclude_requirements",
+    "requirements",
+    "search_hints",
+    "packs_dir",
+    "claims_dir",
+    "results_dir",
+    "reports_dir",
+    "unsigned_requirements",
+}
+
+UNSIGNED_REQUIREMENTS_VALUES = {"reject", "signed_commit"}
+
+
 def validate_curbpack_config(obj: object) -> dict:
     config = _require_dict(obj, "curbpack.json")
-    _reject_unknown(
-        config,
-        "curbpack.json",
-        {"packs", "exclude_requirements", "requirements", "search_hints", "curbpack"},
-    )
+    _reject_unknown(config, "curbpack.json", CURBPACK_CONFIG_FIELDS)
     _string_list(config.get("packs"), "curbpack.json", "packs")
     if "exclude_requirements" in config and "requirements" in config:
         _expect("curbpack.json", "requirements", "absent when exclude_requirements is set")
@@ -321,18 +332,21 @@ def validate_curbpack_config(obj: object) -> dict:
         _string_list(config["exclude_requirements"], "curbpack.json", "exclude_requirements")
     if "requirements" in config:
         _string_list(config["requirements"], "curbpack.json", "requirements")
-    if "search_hints" in config:
-        _validate_search_hints(config["search_hints"])
-    if "curbpack" in config:
-        _relative_dir(config["curbpack"])
+    if "search_hints" not in config:
+        _expect("curbpack.json", "search_hints", "object")
+    _validate_search_hints(config["search_hints"])
+    for field in ("packs_dir", "claims_dir", "results_dir", "reports_dir"):
+        _relative_dir(config.get(field), field)
+    if config.get("unsigned_requirements") not in UNSIGNED_REQUIREMENTS_VALUES:
+        _expect("curbpack.json", "unsigned_requirements", '"reject" or "signed_commit"')
     return config
 
 
-def _relative_dir(value: object) -> None:
+def _relative_dir(value: object, field: str) -> None:
     if not isinstance(value, str) or not value.strip():
-        _expect("curbpack.json", "curbpack", "a relative directory")
+        _expect("curbpack.json", field, "a relative directory")
     if value.startswith(("/", "\\")) or ".." in value.split("/"):
-        _expect("curbpack.json", "curbpack", "a relative directory")
+        _expect("curbpack.json", field, "a relative directory")
 
 
 def _validate_search_hints(hints: object) -> None:

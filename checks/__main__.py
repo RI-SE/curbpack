@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from checks.commands import contents_handle, exist_handle, git_handle, node_handle
-from checks.run import curbpack_directory, run_and_write
+from checks.run import packs_dir, results_dir, run_and_write
 from checks.schema import load_registry
 from checks.toolmain import main as tool_main
 
@@ -57,12 +57,12 @@ def _cli(argv: list[str] | None) -> int:
     parser.add_argument(
         "--packs",
         type=Path,
-        help="Directory that contains <pack-id>/pack.json. Default: <repo>/<curbpack>/packs.",
+        help="Directory that contains <pack-id>/<pack-version>/pack.json. Default: packs_dir from curbpack.json.",
     )
     parser.add_argument(
         "--out",
         type=Path,
-        help="Run result file. Default: <repo>/<curbpack>/run-result.json.",
+        help="Run result file. Default: <results_dir>/run-result.json from curbpack.json.",
     )
     parser.add_argument("--skip", action="append", default=[], help="claim-id=reason")
     args = parser.parse_args(argv)
@@ -73,9 +73,8 @@ def _cli(argv: list[str] | None) -> int:
             repo = cwd
         else:
             parser.error("--repo is required when the current directory has no curbpack.json")
-    directory = curbpack_directory(repo)
-    packs = args.packs if args.packs is not None else directory / "packs"
-    out = args.out if args.out is not None else directory / "run-result.json"
+    packs = args.packs if args.packs is not None else packs_dir(repo)
+    out = args.out if args.out is not None else results_dir(repo) / "run-result.json"
     skip = {}
     for item in args.skip:
         if "=" not in item:

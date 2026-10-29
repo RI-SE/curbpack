@@ -168,23 +168,55 @@ def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip:
     return validate_run_result(result)
 
 
+def _loaded_config(repo: Path, config: dict | None) -> dict:
+    if config is None:
+        return validate_curbpack_config(read_json(repo / "curbpack.json"))
+    return config
+
+
+def packs_dir(repo: Path, config: dict | None = None) -> Path:
+    return repo / _loaded_config(repo, config)["packs_dir"]
+
+
+def claims_dir(repo: Path, config: dict | None = None) -> Path:
+    return repo / _loaded_config(repo, config)["claims_dir"]
+
+
+def results_dir(repo: Path, config: dict | None = None) -> Path:
+    return repo / _loaded_config(repo, config)["results_dir"]
+
+
+def reports_dir(repo: Path, config: dict | None = None) -> Path:
+    return repo / _loaded_config(repo, config)["reports_dir"]
+
+
 def curbpack_directory(repo: Path, config: dict | None = None) -> Path:
-    """Directory named by `curbpack` in `<repo>/curbpack.json`. Absent means `curbpack`."""
+    """Old Studio/CLI layout root. New I/O uses packs_dir/claims_dir/results_dir/reports_dir."""
     if config is None:
         config = validate_curbpack_config(read_json(repo / "curbpack.json"))
     return repo / (config.get("curbpack") or "curbpack")
 
 
 def claim_catalog(repo: Path, directory: Path) -> Path:
-    """`<directory>/claims` when that catalog exists. Otherwise `<repo>/claims`.
-
-    curbcheck writes the directory catalog. Studio still saves Claims beside the
-    repository until that page follows the same directory.
-    """
+    """`<directory>/claims` when that catalog exists. Otherwise `<repo>/claims`."""
     catalog = directory / "claims"
     if catalog.is_dir() or not (repo / "claims").is_dir():
         return catalog
     return repo / "claims"
+
+
+def _pack_version_dir(packs_root: Path, pack_id: str) -> Path:
+    root = packs_root / pack_id
+    found = sorted(path.parent for path in root.glob("*/pack.json") if path.is_file())
+    if not found:
+        raise ModelError("curbpack.json", "packs", f"a pack version directory under {root}")
+    if len(found) > 1:
+        raise ModelError(
+            "curbpack.json",
+            "packs",
+            f"exactly one pack version directory under {root}, not {len(found)}",
+        )
+    return found[0]
 
 
 def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict) -> set[str]:
@@ -200,31 +232,23 @@ def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict
 
 def run_repository(repo: Path, packs_root: Path | None = None, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-    directory = curbpack_directory(repo, config)
-    # An explicit packs_root is the directory that contains <pack-id>/pack.json.
-    # The path from the file is <curbpack>/packs, with no second packs/ segment.
     if packs_root is None:
-        packs_root = directory / "packs"
+        packs_root = packs_dir(repo, config)
     loaded = []
     pack_rows = []
     for pack_id in config["packs"]:
-        pack_dir = packs_root / pack_id
-        if not (pack_dir / "pack.json").is_file():
-            raise ModelError("curbpack.json", "packs", f"a pack directory at {pack_dir}")
+        pack_dir = _pack_version_dir(packs_root, pack_id)
         pack, requirements = load_pack_directory(pack_dir)
         loaded.append((pack, requirements))
         pack_rows.append(
             {"id": pack["id"], "version": pack["version"], "digest": pack_directory_digest(pack_dir)}
         )
     selected = selected_requirement_ids(loaded, config)
-    claims = load_claims(claim_catalog(repo, directory))
-    for claim in claims:
-        if claim["requirement_id"] not in selected:
-            raise ModelError(
-                f"claim {claim['id']}",
-                "requirement_id",
-                "a requirement selected in curbpack.json",
-            )
+    claims = [
+        claim
+        for claim in load_claims(claims_dir(repo, config))
+        if claim["requirement_id"] in selected
+    ]
     result = build_run_result(repo, claims, pack_rows, skip=skip)
     return result, process_exit_code(result)
 
