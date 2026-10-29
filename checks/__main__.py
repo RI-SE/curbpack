@@ -14,7 +14,7 @@ from pathlib import Path
 
 from checks.commands import contents_handle, exist_handle, git_handle, node_handle
 from checks.defaults import created_curbpack
-from checks.run import new_run_result_path, packs_dir, results_dir, run_repository
+from checks.run import new_run_result_path, results_dir, run_repository
 from checks.schema import load_registry
 from checks.toolmain import main as tool_main
 from common.jsonio import dump_text
@@ -38,6 +38,25 @@ def main(argv: list[str] | None = None) -> int:
     if command in _registered_commands():
         return _tool(command, raw[1:])
     return _cli(raw if argv is not None else raw[1:])
+
+
+_ID_LIST_ERROR = object()
+
+
+def _id_list(value: str | None):
+    if value is None:
+        return None
+    ids: list[str] = []
+    for part in value.split(","):
+        token = part.strip()
+        if not token or "/" in token or "\\" in token:
+            print(
+                f"expected a comma-separated list of ids, not a path, got {value!r}",
+                file=sys.stderr,
+            )
+            return _ID_LIST_ERROR
+        ids.append(token)
+    return ids
 
 
 def _tool(command: str, argv: list[str]) -> int:
@@ -66,8 +85,11 @@ def _cli(argv: list[str] | None) -> int:
     )
     parser.add_argument(
         "--packs",
-        type=Path,
-        help="Directory that contains <pack-id>/<pack-version>/pack.json. Default: packs_dir from curbpack.json.",
+        help="Comma-separated pack ids to check this run. Paths still come from curbpack.json.",
+    )
+    parser.add_argument(
+        "--requirements",
+        help="Comma-separated requirement ids to check this run. Paths still come from curbpack.json.",
     )
     parser.add_argument(
         "-j",
@@ -94,7 +116,12 @@ def _cli(argv: list[str] | None) -> int:
             repo = cwd
         else:
             parser.error("--repo is required when the current directory has no curbpack.json")
-    packs = args.packs if args.packs is not None else packs_dir(repo)
+    pack_ids = _id_list(args.packs)
+    if pack_ids is _ID_LIST_ERROR:
+        return 2
+    requirement_ids = _id_list(args.requirements)
+    if requirement_ids is _ID_LIST_ERROR:
+        return 2
     skip = {}
     for item in args.skip:
         if "=" not in item:
@@ -102,7 +129,13 @@ def _cli(argv: list[str] | None) -> int:
             return 2
         claim_id, reason = item.split("=", 1)
         skip[claim_id] = reason
-    result, code = run_repository(repo, packs, skip=skip or None)
+    result, code = run_repository(
+        repo,
+        None,
+        skip=skip or None,
+        pack_ids=pack_ids,
+        requirement_ids=requirement_ids,
+    )
     if args.write_json:
         dated = new_run_result_path(results_dir(repo))
         save_run_result(dated, result)

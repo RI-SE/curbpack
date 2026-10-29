@@ -243,8 +243,20 @@ def selected_requirement_ids(loaded: list[tuple[dict, list[dict]]], config: dict
     return present - excluded
 
 
-def run_repository(repo: Path, packs_root: Path | None = None, *, skip: dict[str, str] | None = None) -> tuple[dict, int]:
-    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+def run_repository(
+    repo: Path,
+    packs_root: Path | None = None,
+    *,
+    skip: dict[str, str] | None = None,
+    pack_ids: list[str] | None = None,
+    requirement_ids: list[str] | None = None,
+) -> tuple[dict, int]:
+    config = dict(validate_curbpack_config(read_json(repo / "curbpack.json")))
+    if pack_ids is not None:
+        config["packs"] = pack_ids
+    if requirement_ids is not None:
+        config.pop("exclude_requirements", None)
+        config["requirements"] = requirement_ids
     if packs_root is None:
         packs_root = packs_dir(repo, config)
     loaded = []
@@ -292,8 +304,16 @@ def run_pack_directories(
 
 
 def run_and_write(
-    repo: Path, packs_root: Path | None, out: Path, *, skip: dict[str, str] | None = None
+    repo: Path,
+    packs_root: Path | None,
+    out: Path,
+    *,
+    skip: dict[str, str] | None = None,
+    pack_ids: list[str] | None = None,
+    requirement_ids: list[str] | None = None,
 ) -> tuple[dict, int]:
-    result, code = run_repository(repo, packs_root, skip=skip)
+    result, code = run_repository(
+        repo, packs_root, skip=skip, pack_ids=pack_ids, requirement_ids=requirement_ids
+    )
     save_run_result(out, result)
     return result, code
