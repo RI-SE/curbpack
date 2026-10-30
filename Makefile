@@ -1,7 +1,9 @@
 ifeq ($(OS),Windows_NT)
-PYTHON ?= python
+PYTHON ?= $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,python)
 else
-PYTHON ?= python3
+# Use .venv only when it actually runs on this host (ignore a mounted foreign venv).
+VENV_PYTHON := $(shell if .venv/bin/python -c 'import sys' >/dev/null 2>&1; then echo .venv/bin/python; fi)
+PYTHON ?= $(if $(VENV_PYTHON),$(VENV_PYTHON),python3)
 endif
 
 .DEFAULT_GOAL := help

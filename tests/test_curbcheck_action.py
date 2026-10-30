@@ -92,16 +92,18 @@ class CurbcheckActionTest(unittest.TestCase):
     def test_checksum_verification_uses_shasum_when_sha256sum_is_absent(self):
         """macOS runners often lack GNU sha256sum; the action must use shasum instead."""
         shasum = shutil.which("shasum")
-        self.assertIsNotNone(shasum, "host needs shasum to exercise the fallback")
-        only_shasum = self.root / "only-shasum"
-        only_shasum.mkdir()
-        (only_shasum / "shasum").symlink_to(shasum)
-        path = [str(self.root / "bin"), str(only_shasum)]
-        for directory in os.environ["PATH"].split(os.pathsep):
-            if not directory or (Path(directory) / "sha256sum").exists():
-                continue
-            path.append(directory)
-        self.env["PATH"] = os.pathsep.join(path)
+        if shasum is None:
+            self.skipTest("shasum not available on this host")
+        tools = self.root / "tools"
+        tools.mkdir()
+        (tools / "shasum").symlink_to(shasum)
+        # Keep bash/awk/etc without pulling in a directory that also provides sha256sum
+        # (on Linux both live under /usr/bin; filtering that path removes bash).
+        for name in ("bash", "awk", "chmod", "mktemp", "mkdir", "rm", "cat", "cp"):
+            located = shutil.which(name)
+            self.assertIsNotNone(located, f"host needs {name} for the action fixture")
+            (tools / name).symlink_to(located)
+        self.env["PATH"] = os.pathsep.join([str(self.root / "bin"), str(tools)])
         completed = self.run_action()
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("result=", self.output.read_text())
