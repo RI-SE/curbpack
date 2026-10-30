@@ -35,6 +35,7 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertNotIn('href="/studio"', cover)
                 self.assertNotIn('href="/requirements/copy"', cover)
                 self.assertNotIn("Developer", cover)
+                self.assertNotIn("No review report.", cover)
                 self.assertNotIn('href="/scaffold"', cover)
                 self.assertNotIn('href="/claims"', cover)
                 self.assertIn("Discovery &amp; Claims", cover)
