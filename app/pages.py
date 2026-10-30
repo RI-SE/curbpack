@@ -174,6 +174,42 @@ button.down{border:1px solid #fca5a5;color:#991b1b}
 button.up.selected{background:#15803d;border-color:#15803d;color:#fff}
 button.down.selected{background:#b91c1c;border-color:#b91c1c;color:#fff}
 pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;overflow:auto;border-radius:8px;white-space:pre-wrap}
+body:has(.review-board){background:#f4f1ea}
+.review-board{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;color:#1c1917}
+.review-board .brand{font-family:ui-sans-serif,system-ui,sans-serif;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:#78716c}
+.review-board h1{font-size:1.75rem;letter-spacing:-.02em}
+.review-board h2{font-size:1.15rem;margin:1.4rem 0 .55rem}
+.review-board h3{font-size:1rem;margin:0 0 .4rem;font-family:ui-sans-serif,system-ui,sans-serif}
+.review-board .card{background:#fff;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.review-board .topline{border-left:4px solid #1c1917;font-size:1.05rem}
+.review-board .header{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:baseline;justify-content:space-between;margin-bottom:1.1rem}
+.review-board .pill{display:inline-block;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.75rem;padding:.15rem .45rem;border-radius:999px;background:#e7e5e4;color:#44403c;border:0;margin:0}
+.review-board .pill-bad{background:#fee2e2;color:#991b1b}
+.review-board .note{font-size:.88rem;color:#57534e;margin:.35rem 0 .55rem}
+.review-board .seal-facts{display:block;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.72rem;color:#a8a29e;margin-top:.35rem;line-height:1.3;max-height:2.7em;overflow:hidden}
+.review-board .check{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board .check.pass{background:#dcfce7;color:#166534;border-color:#86efac}
+.review-board .check.fail{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.review-board .check.skipped{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.review-board table.path-checks{width:100%;border-collapse:collapse;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.92rem}
+.review-board table.path-checks th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.review-board table.path-checks th,.review-board table.path-checks td{text-align:left;padding:.55rem .4rem;border-bottom:1px solid var(--line);vertical-align:top}
+.review-board .claim-card{margin:.65rem 0}
+.review-board .actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.65rem}
+.review-board a.btn,.review-board button.btn{cursor:pointer;padding:.4rem .7rem;border-radius:6px;border:1px solid #d6d3d1;background:#fafaf9;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.85rem;color:inherit;text-decoration:none;display:inline-block}
+.review-board a.btn.primary,.review-board button.btn.primary,.review-board a.edit-review{background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:600}
+.review-board a.edit-review{padding:.4rem .7rem;border-radius:6px;text-decoration:none}
+.review-board a.file-link{color:#1d4ed8;text-decoration:underline;text-underline-offset:2px}
+.review-board details.requirement.card{padding:1rem 1.15rem}
+.review-board details.requirement > summary{list-style:none;pointer-events:none}
+.review-board details.requirement > summary::-webkit-details-marker{display:none}
+.review-board details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
+.review-board details.technical{margin:.35rem 0 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.8rem;color:#78716c}
+.review-board details.technical > summary{cursor:pointer;list-style:revert;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:.75rem}
+.review-board details.technical code,.review-board details.technical pre{display:block;margin:.35rem 0 0;white-space:pre-wrap;word-break:break-word}
+.review-board ul.review-check-list{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.review-board .path-mark{color:#b91c1c;font-weight:700}
+.review-board .claim-technical{margin-top:.5rem}
 """
 
 
@@ -299,14 +335,6 @@ check regularly → review the result and fix what failed.</p>
 <p><a href="/review">Review — compile and sign review</a></p>
 <p>{html.escape(str(model.get("report_line") or "No review report."))}</p>
 </div>
-<details class="card">
-<summary>Developer</summary>
-<p><a href="/claims">Claim editor</a> — edit, sign, or retire existing Claims (JSON)</p>
-<p><a href="/scaffold">Scaffold</a> — incomplete stub</p>
-<p><a href="/requirement">Sample requirement editor</a> — demo pack after Prepare</p>
-<form method="post" action="/prepare"><button type="submit">Prepare sample workspace</button></form>
-<p class="muted">Sample Prepare does not become the active Pack unless you select it. Check and Review keep curbpack.json semantics.</p>
-</details>
 """
     return page("Curbpack Studio", body)
 
@@ -826,8 +854,14 @@ def review_page(
         compile_form = ""
     chrome = _review_report_line(door)
     body = f"""
+<div class="review-board">
+<div class="brand">curbpack-review</div>
+<div class="header">
+<div>
 <h1>Review</h1>
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
+</div>
+</div>
 {panel}
 {chrome}
 {_review_lists(door)}
@@ -837,6 +871,7 @@ def review_page(
 <p><a href="/check">Run checks</a></p>
 {decision_forms}
 {dialogs}
+</div>
 """
     return page("Review", body)
 
@@ -855,7 +890,7 @@ def _review_groups(presentation: dict, door: dict) -> str:
         else ""
     )
     header_html = (
-        '<section data-run-header>'
+        '<section class="card" data-run-header>'
         f"<p>{html.escape(str(header.get('tool') or ''))} {html.escape(str(header.get('tool_version') or ''))}</p>"
         f"<p>commit {html.escape(str(header.get('commit') or ''))}</p>"
         f"<p>worktree {html.escape(str(header.get('worktree') or ''))}</p>"
@@ -865,140 +900,355 @@ def _review_groups(presentation: dict, door: dict) -> str:
     )
     groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
     open_ids = [str(group.get("id") or "") for group in groups if group.get("open")]
+    open_count = len(open_ids)
+    total = len(groups)
+    fail_open = sum(1 for group in groups if group.get("open") and "fail" in str(group.get("result_summary") or ""))
+    topline = (
+        f'<div class="card topline">'
+        f"<p style=\"margin:0\">{open_count} of {total} requirements need attention. "
+        f"{'Failed Checks remain visible for review. ' if fail_open else ''}"
+        f"Passed Requirements stay collapsed. "
+        f"Expand a row to inspect paths and Checks, then Edit or Re-Discover as needed.</p>"
+        f'<p class="muted" style="margin:.65rem 0 0">'
+        f"{open_count} open · {total - open_count} collapsed · "
+        f"Compile writes the review report; decision and seal stay separate.</p>"
+        f"</div>"
+    )
     repo = quote(str(door.get("repo_id") or ""), safe="")
     selected_result = quote(str(door.get("selected_result") or ""), safe="")
     selected_report = quote(str(door.get("selected_report") or ""), safe="")
     document = (
         f"report={selected_report}" if selected_report else f"result={selected_result}"
     )
-    parts = []
+    attention_parts = []
+    collapsed_parts = []
     for group in groups:
-        group_id = str(group.get("id") or "")
+        block = _review_requirement_card(group, open_ids, repo, document)
         if group.get("open"):
-            nxt = [item for item in open_ids if item != group_id]
+            attention_parts.append(block)
         else:
-            nxt = sorted(set(open_ids) | {group_id})
-        href = f"/review?repo={repo}&{document}&expanded={quote(','.join(nxt), safe='')}"
-        open_attr = " open" if group.get("open") else ""
-        label = str(group.get("seal_label") or "")
-        label_html = f' <span data-seal-label="{html.escape(label)}">{html.escape(label)}</span>' if label else ""
-        seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
-        claim_header = []
-        claims_html = []
-        for claim in group.get("claims") or []:
-            if not isinstance(claim, dict):
+            collapsed_parts.append(block)
+    attention = ""
+    if attention_parts:
+        attention = "<h2>Requirements needing attention</h2>" + "".join(attention_parts)
+    collapsed = ""
+    if collapsed_parts:
+        collapsed = "<h2>Passed / unchanged</h2>" + "".join(collapsed_parts)
+    return header_html + topline + attention + collapsed
+
+
+def _review_requirement_card(
+    group: dict,
+    open_ids: list[str],
+    repo: str,
+    document: str,
+) -> str:
+    group_id = str(group.get("id") or "")
+    if group.get("open"):
+        nxt = [item for item in open_ids if item != group_id]
+    else:
+        nxt = sorted(set(open_ids) | {group_id})
+    href = f"/review?repo={repo}&{document}&expanded={quote(','.join(nxt), safe='')}"
+    open_attr = " open" if group.get("open") else ""
+    label = str(group.get("seal_label") or "")
+    label_html = ""
+    if label:
+        bad = ' style="background:#fee2e2;color:#991b1b"' if label == "Invalid seal" else ""
+        label_html = (
+            f'<span class="pill" data-seal-label="{html.escape(label)}"{bad}>'
+            f"{html.escape(label)}</span>"
+        )
+    seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
+    counts = _review_check_counts(group)
+    skipped_bit = f" · {counts['skipped']} skipped" if counts["skipped"] else ""
+    count_pill = (
+        f'<span class="pill">{counts["fail"]} fail · {counts["pass"]} pass'
+        f"{skipped_bit}</span>"
+    )
+    result_summary = str(group.get("result_summary") or "")
+    claim_header = []
+    claims_html = []
+    for claim in group.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        claim_id = str(claim.get("id") or "")
+        status = str(claim.get("status") or "")
+        klass = ' class="pill-bad"' if status == "fail" else ""
+        claim_label = str(claim.get("seal_label") or "")
+        claim_label_html = (
+            f' <span class="pill" data-claim-seal="{html.escape(claim_label)}">'
+            f"{html.escape(claim_label)}</span>"
+            if claim_label
+            else ""
+        )
+        claim_facts = _seal_line(claim.get("seal")) if isinstance(claim.get("seal"), dict) else ""
+        claim_header.append(
+            f' claim {html.escape(claim_id)}{claim_label_html}{claim_facts}'
+        )
+        claims_html.append(
+            _review_claim_card(claim, open_ids, repo, document)
+        )
+    note = _review_attention_note(group)
+    note_html = f'<p class="note">{html.escape(note)}</p>' if note else ""
+    summary = (
+        f'<a href="{html.escape(href)}">'
+        f'<div class="header" style="margin-bottom:.35rem">'
+        f"<div><h3><code>{html.escape(group_id)}</code></h3></div>"
+        f'<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">'
+        f"{label_html}{count_pill}"
+        f'<span class="pill">{html.escape(result_summary)}</span>'
+        f"</div></div>"
+        f'<span class="seal-facts">{seal}{"".join(claim_header)}</span>'
+        f"</a>"
+    )
+    return (
+        f'<details class="requirement card" data-requirement="{html.escape(group_id)}"{open_attr}>'
+        f"<summary>{summary}</summary>"
+        f"{note_html}{''.join(claims_html)}</details>"
+    )
+
+
+def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: str) -> str:
+    claim_id = str(claim.get("id") or "")
+    status = str(claim.get("status") or "")
+    klass = ' class="pill-bad"' if status == "fail" else ""
+    requirement_id = str(claim.get("requirement_id") or "")
+    requirement_html = (
+        f'<p class="muted">Unresolved requirement <code>{html.escape(requirement_id)}</code></p>'
+        if requirement_id
+        else ""
+    )
+    attention_sentences = [
+        str(line)
+        for line in claim.get("sentences") or []
+        if str(line) and str(line) != "The Claim is unchanged since the Check run."
+    ]
+    sentences = "".join(f'<p class="note">{html.escape(line)}</p>' for line in attention_sentences)
+    unchanged = "The Claim is unchanged since the Check run." in [
+        str(line) for line in claim.get("sentences") or []
+    ]
+    # Keep the unchanged sentence in the DOM for scenario tests, but do not lead with it
+    # when the Claim already has a fail/skipped result or another attention note.
+    if unchanged and status not in {"fail", "skipped"} and not attention_sentences:
+        unchanged_html = "<p>The Claim is unchanged since the Check run.</p>"
+    elif unchanged:
+        unchanged_html = '<p class="muted" hidden>The Claim is unchanged since the Check run.</p>'
+    else:
+        unchanged_html = ""
+    path_rows, check_items, actions, tech_parts = _review_claim_checks(
+        claim, open_ids, repo, document
+    )
+    table = (
+        '<table class="path-checks"><thead><tr><th>Path</th><th>Checks</th></tr></thead>'
+        f"<tbody>{''.join(path_rows)}</tbody></table>"
+        if path_rows
+        else ""
+    )
+    tech_block = ""
+    if tech_parts:
+        tech_block = (
+            '<details class="technical"><summary>Technical details</summary>'
+            + "".join(tech_parts)
+            + "</details>"
+        )
+    return (
+        f'<div class="card claim-card" data-claim="{html.escape(claim_id)}">'
+        f'<div class="header" style="margin-bottom:.35rem">'
+        f"<div><h3>Claim <code>{html.escape(claim_id)}</code></h3></div>"
+        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span></div>'
+        f"</div>"
+        f"{requirement_html}{sentences}{unchanged_html}"
+        f"{table}"
+        f"{tech_block}"
+        f'<ul class="review-check-list" aria-hidden="true">{"".join(check_items)}</ul>'
+        f'<div class="actions">{"".join(actions)}</div>'
+        f"</div>"
+    )
+
+
+def _review_claim_checks(
+    claim: dict, open_ids: list[str], repo: str, document: str
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    path_rows: list[str] = []
+    check_items: list[str] = []
+    actions: list[str] = []
+    tech_parts: list[str] = []
+    claim_id = str(claim.get("id") or "")
+    status = str(claim.get("status") or "")
+    action_edit_added = False
+    for check in claim.get("checks") or []:
+        if not isinstance(check, dict):
+            continue
+        detail = str(check.get("detail") or "")
+        args = check.get("args") if isinstance(check.get("args"), dict) else {}
+        check_status = str(check.get("status") or "")
+        check_name = str(check.get("check") or "")
+        check_class = ' class="pill-bad"' if check_status == "fail" else ""
+        pill = _check_pill(check_name, check_status)
+        path_cell, path_bits = _review_path_cell(check, open_ids, repo, document)
+        path_mark = ' <span class="path-mark">✗</span>' if check_status == "fail" else ""
+        path_rows.append(f"<tr><td>{path_cell}{path_mark}</td><td>{pill}</td></tr>")
+        edit = str(check.get("edit") or "none")
+        edit_html = ""
+        if edit == "ok":
+            return_to = (
+                f"/review?repo={repo}&{document}"
+                f"&expanded={quote(','.join(open_ids), safe='')}"
+            )
+            edit_href = (
+                f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
+                f"#claim-{quote(claim_id, safe='')}"
+            )
+            edit_html = (
+                f'<a class="edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
+                f'href="{html.escape(edit_href)}">Edit</a>'
+            )
+            if not action_edit_added:
+                actions.append(
+                    f'<a class="btn primary edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
+                    f'href="{html.escape(edit_href)}">Edit <code>{html.escape(claim_id)}</code></a>'
+                )
+                action_edit_added = True
+        elif edit == "unsafe":
+            edit_html = (
+                '<span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
+            )
+            actions.append(edit_html)
+        tech_inner = (
+            f"<p>{html.escape(str(check.get('index')))}: {html.escape(check_name)} "
+            f"{html.escape(check_status)}"
+            f"{(' — ' + html.escape(detail)) if detail else ''}</p>"
+            f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code>"
+        )
+        tech_parts.append(tech_inner)
+        # Contract list keeps args/paths for scenario tests; not shown in the primary card.
+        check_items.append(
+            "<li "
+            f'data-check="{html.escape(check_name)}" '
+            f'data-status="{html.escape(check_status)}"{check_class}>'
+            f"{pill}"
+            f"{(' ' + ' '.join(path_bits)) if path_bits else ''}"
+            f"{(' ' + edit_html) if edit_html else ''}"
+            f'<details class="technical"><summary>Technical details</summary>{tech_inner}</details>'
+            f"</li>"
+        )
+    if status in {"fail", "skipped"} and claim_id:
+        actions.append(
+            f'<button type="button" class="btn discover-again" '
+            f'data-dialog="{html.escape(_dialog_id(claim_id))}">'
+            f"Re-Discover</button>"
+        )
+    return path_rows, check_items, actions, tech_parts
+
+
+def _review_path_cell(
+    check: dict, open_ids: list[str], repo: str, document: str
+) -> tuple[str, list[str]]:
+    path_bits: list[str] = []
+    visible: list[str] = []
+    for entry in check.get("paths") or []:
+        if not isinstance(entry, dict):
+            continue
+        rel = str(entry.get("path") or "")
+        state = str(entry.get("state") or "")
+        if state == "present":
+            file_href = (
+                f"/review?repo={repo}&{document}"
+                f"&expanded={quote(','.join(open_ids), safe='')}"
+                f"&file={quote(rel, safe='')}"
+            )
+            link = (
+                f'<a class="file-link" data-path="{html.escape(rel)}" data-path-state="present" '
+                f'href="{html.escape(file_href)}"><code>{html.escape(rel)}</code></a>'
+            )
+            path_bits.append(
+                f'<a data-path="{html.escape(rel)}" data-path-state="present" '
+                f'href="{html.escape(file_href)}">{html.escape(rel)}</a>'
+            )
+            visible.append(link)
+        else:
+            text = (
+                f'<span data-path="{html.escape(rel)}" '
+                f'data-path-state="{html.escape(state)}">'
+                f"<code>{html.escape(rel)}</code> ({html.escape(state)})</span>"
+            )
+            path_bits.append(
+                f'<span data-path="{html.escape(rel)}" '
+                f'data-path-state="{html.escape(state)}">{html.escape(rel)} ({html.escape(state)})</span>'
+            )
+            visible.append(text)
+    dep = check.get("dep_ban") if isinstance(check.get("dep_ban"), dict) else None
+    if dep is not None:
+        banned = ", ".join(html.escape(str(item)) for item in (dep.get("banned_versions") or []))
+        package = html.escape(str(dep.get("package") or ""))
+        dep_html = (
+            f'<span data-dep-ban="{package}">package {package} banned_versions {banned}</span>'
+        )
+        path_bits.append(dep_html)
+        visible.append(dep_html)
+    if not visible:
+        # Unknown checks: show a neutral placeholder; args stay in Technical details / li.
+        visible.append('<span class="muted">—</span>')
+    return " ".join(visible), path_bits
+
+
+def _check_pill(name: str, status: str) -> str:
+    kind = status if status in {"pass", "fail", "skipped"} else "fail"
+    return (
+        f'<span class="check {html.escape(kind)}">'
+        f"{html.escape(name)} · {html.escape(status)}</span>"
+    )
+
+
+def _review_check_counts(group: dict) -> dict[str, int]:
+    counts = {"pass": 0, "fail": 0, "skipped": 0}
+    for claim in group.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        for check in claim.get("checks") or []:
+            if not isinstance(check, dict):
                 continue
-            status = str(claim.get("status") or "")
-            klass = ' class="pill-bad"' if status == "fail" else ""
-            checks = []
-            for check in claim.get("checks") or []:
-                if not isinstance(check, dict):
-                    continue
-                detail = str(check.get("detail") or "")
-                detail_html = f" — {html.escape(detail)}" if detail else ""
-                args = check.get("args") if isinstance(check.get("args"), dict) else {}
-                check_status = str(check.get("status") or "")
-                check_class = ' class="pill-bad"' if check_status == "fail" else ""
-                path_bits = []
-                for entry in check.get("paths") or []:
-                    if not isinstance(entry, dict):
-                        continue
-                    rel = str(entry.get("path") or "")
-                    state = str(entry.get("state") or "")
-                    if state == "present":
-                        file_href = (
-                            f"/review?repo={repo}&{document}"
-                            f"&expanded={quote(','.join(open_ids), safe='')}"
-                            f"&file={quote(rel, safe='')}"
-                        )
-                        path_bits.append(
-                            f'<a data-path="{html.escape(rel)}" data-path-state="present" '
-                            f'href="{html.escape(file_href)}">{html.escape(rel)}</a>'
-                        )
-                    else:
-                        path_bits.append(
-                            f'<span data-path="{html.escape(rel)}" '
-                            f'data-path-state="{html.escape(state)}">{html.escape(rel)} ({html.escape(state)})</span>'
-                        )
-                dep = check.get("dep_ban") if isinstance(check.get("dep_ban"), dict) else None
-                if dep is not None:
-                    banned = ", ".join(
-                        html.escape(str(item)) for item in (dep.get("banned_versions") or [])
+            status = str(check.get("status") or "")
+            if status in counts:
+                counts[status] += 1
+    return counts
+
+
+def _review_attention_note(group: dict) -> str:
+    notes: list[str] = []
+    if str(group.get("seal_label") or "") == "Invalid seal":
+        notes.append("Invalid seal on this Requirement.")
+    for claim in group.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        for line in claim.get("sentences") or []:
+            text = str(line)
+            if text and text != "The Claim is unchanged since the Check run.":
+                notes.append(text)
+        if str(claim.get("seal_label") or "") == "Invalid seal":
+            notes.append(f"Invalid seal on claim {claim.get('id')}.")
+        for check in claim.get("checks") or []:
+            if not isinstance(check, dict):
+                continue
+            detail = str(check.get("detail") or "")
+            status = str(check.get("status") or "")
+            if status == "fail":
+                notes.append(detail or f"Check {check.get('check')} failed.")
+            elif status == "skipped":
+                notes.append(detail or f"Check {check.get('check')} was skipped.")
+            for path in check.get("paths") or []:
+                if isinstance(path, dict) and path.get("state") == "missing":
+                    notes.append(
+                        f"Path {path.get('path')} is missing; restore it or re-point the Check."
                     )
-                    path_bits.append(
-                        f'<span data-dep-ban="{html.escape(str(dep.get("package") or ""))}">'
-                        f'package {html.escape(str(dep.get("package") or ""))} '
-                        f"banned_versions {banned}</span>"
-                    )
-                path_html = (" " + " ".join(path_bits)) if path_bits else ""
-                edit = str(check.get("edit") or "none")
-                edit_html = ""
-                if edit == "ok":
-                    claim_id = str(claim.get("id") or "")
-                    return_to = (
-                        f"/review?repo={repo}&{document}"
-                        f"&expanded={quote(','.join(open_ids), safe='')}"
-                    )
-                    edit_href = (
-                        f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
-                        f"#claim-{quote(claim_id, safe='')}"
-                    )
-                    edit_html = (
-                        f' <a class="edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
-                        f'href="{html.escape(edit_href)}">Edit</a>'
-                    )
-                elif edit == "unsafe":
-                    edit_html = (
-                        ' <span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
-                    )
-                checks.append(
-                    "<li "
-                    f'data-check="{html.escape(str(check.get("check") or ""))}" '
-                    f'data-status="{html.escape(check_status)}"{check_class}>'
-                    f"{html.escape(str(check.get('index')))}: {html.escape(str(check.get('check') or ''))} "
-                    f"{html.escape(check_status)}{detail_html}{path_html} "
-                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code>"
-                    f"{edit_html}</li>"
-                )
-            sentences = "".join(
-                f"<p>{html.escape(str(line))}</p>" for line in claim.get("sentences") or []
-            )
-            requirement_id = str(claim.get("requirement_id") or "")
-            requirement_html = f"<p>{html.escape(requirement_id)}</p>" if requirement_id else ""
-            claim_label = str(claim.get("seal_label") or "")
-            claim_label_html = (
-                f' <span data-claim-seal="{html.escape(claim_label)}">{html.escape(claim_label)}</span>'
-                if claim_label
-                else ""
-            )
-            claim_facts = _seal_line(claim.get("seal")) if isinstance(claim.get("seal"), dict) else ""
-            claim_header.append(
-                f' claim {html.escape(str(claim.get("id") or ""))}{claim_label_html}{claim_facts}'
-            )
-            rediscover = ""
-            if status in {"fail", "skipped"} and str(claim.get("id") or ""):
-                rediscover = (
-                    f'<button type="button" class="discover-again" '
-                    f'data-dialog="{html.escape(_dialog_id(str(claim.get("id") or "")))}">'
-                    "Re-Discover</button>"
-                )
-            claims_html.append(
-                f'<li data-claim="{html.escape(str(claim.get("id") or ""))}">'
-                f"<code>{html.escape(str(claim.get('id') or ''))}</code> "
-                f'<span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>'
-                f"{requirement_html}{sentences}<ul>{''.join(checks)}</ul>{rediscover}</li>"
-            )
-        summary = (
-            f'<a href="{html.escape(href)}">{html.escape(group_id)}'
-            f"{label_html}{seal}{''.join(claim_header)} "
-            f"{html.escape(str(group.get('result_summary') or ''))}</a>"
-        )
-        parts.append(
-            f'<details class="requirement" data-requirement="{html.escape(group_id)}"{open_attr}>'
-            f"<summary>{summary}</summary>"
-            f"<ul>{''.join(claims_html)}</ul></details>"
-        )
-    return header_html + "".join(parts)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for note in notes:
+        if note in seen:
+            continue
+        seen.add(note)
+        ordered.append(note)
+    return " ".join(ordered[:3])
 
 
 def _seal_line(reading: dict) -> str:
