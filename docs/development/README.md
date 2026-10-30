@@ -30,7 +30,7 @@ python3 -m app --workspace /absolute/path/to/disposable-workspace
 
 Product data paths come from the chosen product repository's `curbpack.json`. See [Workspace configuration](../reference/workspace.md).
 
-The cover's **Developer** section links the Claim editor, Scaffold, a sample Requirement editor, and **Prepare sample workspace**. Prepare builds a small demo workspace. It does not select the Pack for a product repository.
+The cover shows Pack Editor, Discovery & Claims, Check, and Review. Developer routes (`/claims`, `/scaffold`, `/requirement`, `/prepare`) are not linked from the cover; they remain reachable by URL. Prepare builds a small demo workspace and does not select the Pack for a product repository.
 
 ## Run curbcheck from source
 

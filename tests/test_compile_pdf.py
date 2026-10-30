@@ -1,4 +1,4 @@
-"""REV-04: a saved historical report becomes a readable monochrome PDF."""
+"""REV-04 / REV-05: a saved historical report becomes a readable monochrome PDF."""
 from __future__ import annotations
 
 import copy
@@ -67,6 +67,52 @@ class CompilePdfTest(unittest.TestCase):
 
     def text(self):
         return '\n'.join(page.extract_text() for page in PdfReader(self.target).pages)
+
+    def test_management_summary_precedes_technical_appendix(self):
+        report = report_fixture()
+        self.save(report)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = self.text()
+        self.assertIn('Appendix A — Run and source records', text)
+        main, technical = text.split('Appendix A — Run and source records', 1)
+        for expected in ('Management summary', 'Evidence assertions', 'Automated checks',
+                         'What needs attention', 'Checks need follow-up',
+                         'Some checks were not performed', 'No reviewer decision recorded',
+                         'uncommitted changes', 'B.1', 'Recorded assertion'):
+            self.assertIn(expected, main)
+        for technical_value in ('Product commit', 'worktree',
+                                'digest', 'Check arguments', 'https://', 'REQ-A',
+                                'claim-0', 'No trusted certificate available.',
+                                report['run_result']['commit'], version_digest(report)):
+            self.assertNotIn(technical_value, main)
+        self.assertIn('Reason reported by the checker', main)
+        self.assertIn('Evidence missing', main)
+        self.assertIn('Changes since the run', main)
+        self.assertIn('Signatures are not independently verified', main)
+        self.assertIn('Appendix B', technical)
+        self.assertIn('Appendix C', technical)
+        self.assertIn('No trusted certificate available.', technical)
+        reader = PdfReader(self.target)
+        appendix_page = next(page for page in reader.pages if 'Appendix A — Run and source records' in page.extract_text())
+        self.assertTrue(appendix_page.extract_text().startswith('Curbpack Studio'))
+        self.assertNotIn('Management summary', appendix_page.extract_text())
+
+    def test_all_pass_summary_still_requires_human_review(self):
+        report = report_fixture()
+        for row in report['run_result']['claims']:
+            row['status'] = 'pass'
+            for check in row['checks']:
+                check['status'] = 'pass'
+                check.pop('detail', None)
+        report['decision'] = 'A named owner must review the underlying evidence.'
+        self.save(report)
+        self.assertEqual(self.run_cli().returncode, 0)
+        main = self.text().split('Appendix A — Run and source records', 1)[0]
+        self.assertIn('All recorded checks passed', main)
+        self.assertIn('Human review', main)
+        self.assertIn(report['decision'], main)
+        self.assertNotIn('Checks need follow-up', main)
 
     def test_cli_creates_readable_pdf_without_changing_report(self):
         self.save(report_fixture())

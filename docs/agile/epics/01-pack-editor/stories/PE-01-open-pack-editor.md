@@ -9,3 +9,5 @@
 **Accept when:** The start page offers Pack Editor; opening it shows the list of Packs; the other tools remain accessible.
 
 **Human review:** 2026-10-28, danielfl. The start page reaches Pack Editor, Discovery & Claims, Check, and Review. Hiding the Developer section stays open and is not part of this card.
+
+**Follow-up:** 2026-10-30, danielfl. The cover no longer shows the Developer section (Claim editor, Scaffold, sample requirement, Prepare). Those routes remain reachable by URL.
