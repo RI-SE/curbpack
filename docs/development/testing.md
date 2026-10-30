@@ -36,6 +36,27 @@ This starts a verification run, prepares R1 in the pinned reference product, run
 
 The runner reads Packs and Claims from the clone's `external_test/curbpack/` fixture and copies them into the product's configured directories. Manual and outside catalogue rows are not passing automated evidence.
 
+## Verify the installers
+
+The [SYS-05](../agile/epics/01-pack-editor/stories/SYS-05-simple-installation.md) installer tests use temporary directories and fixture downloads:
+
+```sh
+python3 -m unittest tests.test_installers tests.test_release_publish
+python3 scripts/build/package_installers.py
+```
+
+This verifies Studio-with-checker and checker-only selection, stable names, checksum failures, preservation of existing programs, version selection, repeat installation, Linux libc rejection, and the packaged installer/checksum artifacts. It does not establish native Windows behavior or publication of a release.
+
+On a Windows CI agent, run the PowerShell scenarios too:
+
+```powershell
+powershell -NoProfile -File tests/installers-windows.ps1
+```
+
+Downloads and installation directories are fixtures. The native Windows PATH check saves and restores the agent's user and process PATH in `finally`; on a non-Windows runtime it explicitly reports that check as not run. The installer CI job runs the Unix fixture tests and the native Windows scenarios independently of the program build jobs.
+
+Before calling a platform supported, verify a published release on that platform: follow the user installation command, start Studio, run `curbcheck --help`, and check the commands remain discoverable from a new terminal. Record the release tag, OS, architecture and actual result. Fixture success, an emulated Linux-container run and a native published-release check are distinct evidence.
+
 ## Run verification from a clean revision
 
 For verification tied to the recorded Studio commit, tracked files must match HEAD. Untracked files may remain. From the repository root:

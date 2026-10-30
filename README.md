@@ -76,7 +76,7 @@ The team updates the product evidence and runs the check again. A reviewer still
 
 ## Try it
 
-Download Curbpack Studio and `curbcheck` from the [latest release](https://github.com/RI-SE/curbpack/releases). See [Install](docs/user-guides/install.md) for platform-specific instructions.
+Start with [Install](docs/user-guides/install.md). The Studio installer includes `curbcheck`; a checker-only installer and manual installation are available on the same page. Installer commands require a release containing the installer files.
 
 [Getting Started](docs/user-guides/getting-started.md) walks through Pack Editor, Discovery & Claims, Check, and Review.
 

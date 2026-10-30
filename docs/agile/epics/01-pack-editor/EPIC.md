@@ -26,6 +26,7 @@ Preserve existing functioning user flows. Document and verify what the imported 
 | --- | --- |
 | SYS-03 | One repository is the door for Packs, Claims, Check, and Review. Required for the pilot. |
 | SYS-04 | Rename the repository key `hunt` to `search_hints`. |
+| [SYS-05](stories/SYS-05-simple-installation.md) | Simple Studio installation including curbcheck, a checker-only choice, and a manual alternative. |
 | PE-01–PE-11 | Choose Packs; extract, review, edit, sign and export Requirements |
 | CHK-01 | One `curbpack.json` page: what was loaded, which Packs and Requirements, and that repo's Claims |
 | CHK-02 | Run deterministic Checks on configured Claims |

@@ -203,3 +203,40 @@ class IndependentReleaseTest(unittest.TestCase):
                     self.assertEqual(module.main(["--run-id", "7", "--tag", "test"]), 0)
                 self.assertEqual(sum(args[:2] == ["run", "download"] for args in calls), 1)
                 self.assertEqual(sum(args[:2] == ["release", "create"] for args in calls), 1)
+
+    def test_release_includes_the_tested_installers_and_their_checksums(self):
+        import runpy
+        build = runpy.run_path(str(SCRIPT.parents[1] / 'build' / 'package_installers.py'))['build']
+        record = {
+            'workflowName': 'CI', 'headSha': 'a' * 40, 'conclusion': 'success',
+            'jobs': [{'name': 'tests', 'conclusion': 'success'}],
+        }
+        uploaded = []
+
+        def gh(args, **kwargs):
+            if args[0] == 'api':
+                return subprocess.CompletedProcess(args, 0, stdout='curbcheck-linux-x64\ncurbpack-installers\n')
+            if args[:2] == ['run', 'download']:
+                destination = Path(args[args.index('-D') + 1])
+                if args[args.index('-n') + 1] == 'curbpack-installers':
+                    build(destination)
+                else:
+                    name = 'curbcheck-linux-x64'
+                    (destination / name).write_bytes(b'tested checker')
+                    digest = hashlib.sha256(b'tested checker').hexdigest()
+                    (destination / 'SHA256SUMS').write_text(f'{digest}  {name}\n')
+            if args[:2] == ['release', 'create']:
+                files = {Path(item).name: Path(item) for item in args[args.index('--notes') + 2:]}
+                for name in ('install-studio.sh', 'install-studio.ps1', 'install-curbcheck.sh', 'install-curbcheck.ps1'):
+                    self.assertIn(name, files)
+                for line in files['SHA256SUMS'].read_text().splitlines():
+                    digest, name = line.split('  ')
+                    self.assertEqual(hashlib.sha256(files[name].read_bytes()).hexdigest(), digest)
+                uploaded.append(files.keys())
+            return subprocess.CompletedProcess(args, 0, stdout='')
+
+        with patch.object(module, '_run_record', return_value=record), patch.object(
+            module, '_repository', return_value='RI-SE/curbpack'
+        ), patch.object(module, '_tag_exists', return_value=False), patch.object(module, '_gh', side_effect=gh):
+            self.assertEqual(module.main(['--run-id', '7', '--tag', 'test']), 0)
+        self.assertEqual(len(uploaded), 1)

@@ -1,1 +1,2 @@
 scripts/ci/curbcheck-action.sh text eol=lf
+scripts/install/unix.sh text eol=lf
