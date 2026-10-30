@@ -87,7 +87,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn("no evidence to claim", page)
         self.assertNotIn("Run Discover, or add one with +.", page)
 
-    def test_a_different_why_is_green_and_the_saved_motivation_is_struck(self):
+    def test_saved_claims_list_first_beside_candidates_without_merging(self):
         from claims.ui.researcher import requirement_page
 
         page = requirement_page(
@@ -109,21 +109,21 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                         "score": 0.9,
                     },
                     {
+                        "path": "SECURITY.md",
+                        "why": "Mentions security practices.",
+                        "assessment_state": "assessed",
+                        "rank": "Low",
+                        "score": 0.3,
+                    },
+                    {
                         "path": "docs/other.md",
                         "why": "Only a candidate.",
                         "assessment_state": "assessed",
                         "rank": "Low",
                         "score": 0.2,
                     },
-                    {
-                        "path": "docs/plain.md",
-                        "why": "Kept aside.",
-                        "assessment_state": "assessed",
-                        "rank": "Low",
-                        "score": 0.1,
-                    },
                 ],
-                "marks": {"docs/plain.md": {"dismissed_why": "Kept aside."}},
+                "marks": {},
                 "claims": [
                     {
                         "id": "REQ-A-docs__risk-a.md",
@@ -134,6 +134,32 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                         "checks": [{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
                     },
                     {
+                        "id": "HOUSE-SECRET-PATHS",
+                        "requirement_id": "REQ-A",
+                        "source": "documents",
+                        "args": {
+                            "paths": [
+                                "README.md",
+                                "SECURITY.md",
+                                ".well-known/security.txt",
+                            ]
+                        },
+                        "description": "Required house-policy documents contain no secret-like patterns.",
+                        "checks": [
+                            {
+                                "check": "contents",
+                                "args": {
+                                    "paths": [
+                                        "README.md",
+                                        "SECURITY.md",
+                                        ".well-known/security.txt",
+                                    ],
+                                    "probes": [{"kind": "pattern", "pattern": "secret"}],
+                                },
+                            }
+                        ],
+                    },
+                    {
                         "id": "REQ-A-docs__kept.md",
                         "requirement_id": "REQ-A",
                         "source": "documents",
@@ -141,18 +167,12 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                         "description": "This claim stays when discovery misses the file.",
                         "checks": [{"check": "exist", "args": {"paths": ["docs/kept.md"]}}],
                     },
-                    {
-                        "id": "REQ-A-docs__plain.md",
-                        "requirement_id": "REQ-A",
-                        "source": "documents",
-                        "args": {"path": "docs/plain.md"},
-                        "description": "A saved line.",
-                        "checks": [{"check": "exist", "args": {"paths": ["docs/plain.md"]}}],
-                    },
                 ],
             }
         ).decode()
         self.assertIn("<h1>Claims Editor</h1>", page)
+        self.assertIn("<h2>Claims (3)</h2>", page)
+        self.assertIn("Saved Claims for this requirement are listed first.", page)
         self.assertIn(">Instrument</span><strong>CRA</strong>", page)
         self.assertIn(">Identifier</span><strong>CELEX:32024R2847</strong>", page)
         self.assertIn(">Locator</span><strong>VII.3</strong>", page)
@@ -160,23 +180,37 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn('class="ref-law law-flow"', page)
         self.assertIn('href="/requirements/requirement/REQ-A">Details</a>', page)
         self.assertNotIn("<h2>Requirement text</h2>", page)
-        self.assertIn('id="show-suggestions" checked', page)
+        self.assertIn('class="check-chip check-edit"', page)
+        self.assertIn('data-index="0"', page)
+        self.assertIn('id="show-suggestions"', page)
+        self.assertNotIn('id="show-suggestions" checked', page)
         self.assertIn("Show discovered claim candidates", page)
-        self.assertIn('class="hits-table show-suggestions"', page)
-        self.assertIn('class="motivation-current has-suggestion"', page)
+        self.assertIn('class="hits-table"', page)
+        self.assertNotIn('class="hits-table show-suggestions"', page)
         self.assertIn("suggestion-row", page)
         self.assertIn(">Motivation ", page)
-        self.assertEqual(page.count('class="motivation-old"'), 1)
-        self.assertEqual(page.count('class="motivation-new"'), 1)
-        self.assertIn('name="choice" value="keep"', page)
-        self.assertIn('name="choice" value="take"', page)
+        self.assertIn("Required house-policy documents contain no secret-like patterns.", page)
+        self.assertIn("README.md", page)
+        self.assertIn("SECURITY.md", page)
+        self.assertIn(".well-known/security.txt", page)
         self.assertIn("The reviewed file documents the product risks.", page)
         self.assertIn("Names the risk.", page)
+        self.assertIn("Mentions security practices.", page)
         self.assertIn("Only a candidate.", page)
-        self.assertNotIn('class="motivation-new">Only a candidate.', page)
         self.assertIn("docs/kept.md", page)
         self.assertIn("This claim stays when discovery misses the file.", page)
         self.assertIn("score-help", page)
+        multi = page.index("Required house-policy documents contain no secret-like patterns.")
+        kept = page.index("This claim stays when discovery misses the file.")
+        single = page.index("The reviewed file documents the product risks.")
+        candidate = page.index("Names the risk.")
+        self.assertLess(multi, kept)
+        self.assertLess(kept, single)
+        self.assertLess(single, candidate)
+        self.assertEqual(page.count('data-path="docs/risk-a.md"'), 2)
+        self.assertEqual(page.count('data-path="SECURITY.md"'), 1)
+        self.assertNotIn('name="choice" value="keep"', page)
+        self.assertNotIn('name="choice" value="take"', page)
 
     def test_clicking_keeps_the_claim_or_copies_the_sentence(self):
         import tempfile
