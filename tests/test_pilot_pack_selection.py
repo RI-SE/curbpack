@@ -174,13 +174,13 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertNotIn("/select-pack", home)
                 self.assertIn('href="/requirements"', home)
                 self.assertIn('href="/discover"', home)
-                self.assertIn('href="/claims"', home)
                 self.assertIn('href="/check"', home)
                 self.assertIn('href="/review"', home)
-                self.assertIn("Developer", home)
-                self.assertIn('href="/scaffold"', home)
+                self.assertNotIn("Developer", home)
+                self.assertNotIn('href="/claims"', home)
+                self.assertNotIn('href="/scaffold"', home)
+                self.assertNotIn("No review report.", home)
                 self.assertNotIn("signature verifies", home)
-                self.assertLess(home.index("Pack Editor"), home.index("Developer"))
 
                 _post(base + "/select-pack", {"kind": "working", "pack_id": "cra-baseline", "ref": "2026-10-13T090000Z"})
 
@@ -226,9 +226,12 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn("Curbpack Studio", home)
                 self.assertIn("author packs from law text", home)
                 self.assertIn('href="/requirements"', home)
-                self.assertIn("Developer", home)
-                for href in ("/discover", "/claims", "/check", "/review", "/scaffold"):
+                self.assertNotIn("Developer", home)
+                self.assertNotIn("No review report.", home)
+                for href in ("/discover", "/check", "/review"):
                     self.assertIn(f'href="{href}"', home)
+                for href in ("/claims", "/scaffold"):
+                    self.assertNotIn(f'href="{href}"', home)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

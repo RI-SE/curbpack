@@ -1,4 +1,4 @@
-"""Facts the cover page displays. No HTML."""
+"""Readings from the sample workspace. No HTML."""
 
 from __future__ import annotations
 

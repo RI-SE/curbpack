@@ -282,7 +282,7 @@ def _reading(reading: dict | None) -> str:
     return text
 
 
-def cover(model: dict, message: str = "", error: str = "") -> bytes:
+def cover(_model: dict, message: str = "", error: str = "") -> bytes:
     body = f"""
 <h1>Curbpack Studio</h1>
 <p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
@@ -294,16 +294,7 @@ check regularly → review the result and fix what failed.</p>
 <p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
 <p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
 <p><a href="/review">Review — compile and sign review</a></p>
-<p>{html.escape(str(model.get("report_line") or "No review report."))}</p>
 </div>
-<details class="card">
-<summary>Developer</summary>
-<p><a href="/claims">Claim editor</a> — edit, sign, or retire existing Claims (JSON)</p>
-<p><a href="/scaffold">Scaffold</a> — incomplete stub</p>
-<p><a href="/requirement">Sample requirement editor</a> — demo pack after Prepare</p>
-<form method="post" action="/prepare"><button type="submit">Prepare sample workspace</button></form>
-<p class="muted">Sample Prepare does not become the active Pack unless you select it. Check and Review keep curbpack.json semantics.</p>
-</details>
 """
     return page("Curbpack Studio", body)
 

@@ -34,13 +34,13 @@ class CoverNavigationTest(unittest.TestCase):
                 self.assertIn('href="/requirements"', cover)
                 self.assertNotIn('href="/studio"', cover)
                 self.assertNotIn('href="/requirements/copy"', cover)
-                self.assertIn("Developer", cover)
+                self.assertNotIn("Developer", cover)
+                self.assertNotIn("No review report.", cover)
                 self.assertIn("Discovery &amp; Claims", cover)
-                for href in ("/discover", "/claims", "/check", "/review", "/scaffold"):
+                for href in ("/discover", "/check", "/review"):
                     self.assertIn(f'href="{href}"', cover)
-                self.assertLess(cover.index("Pack Editor"), cover.index("Developer"))
-                self.assertLess(cover.index('href="/discover"'), cover.index("Developer"))
-                self.assertGreater(cover.index('href="/claims"'), cover.index("Developer"))
+                for href in ("/claims", "/scaffold"):
+                    self.assertNotIn(f'href="{href}"', cover)
                 catalog = _get(base + "/requirements")
                 self.assertIn("Pack Sources", catalog)
                 self.assertIn("Choose a repo", catalog)
