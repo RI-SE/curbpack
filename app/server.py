@@ -885,6 +885,15 @@ def make_handler(ws: Workspace):
                         "section_id",
                         f"a ready in-scope section, not {section_id}",
                     )
+                document_id = (form.get("document_id") or [""])[0].strip()
+                repo_id = (form.get("repo") or [""])[0].strip()
+                dest_repo = ""
+                dest_pack = ""
+                if document_id:
+                    found = _locate_repo_pack(ws, document_id, repo_id)
+                    if found is not None:
+                        dest_repo = found[0]
+                        dest_pack = document_id
                 job_id = f"extract-{secrets.token_hex(4)}"
                 start_extract_job(
                     ws.root / "jobs",
@@ -893,8 +902,9 @@ def make_handler(ws: Workspace):
                     adapter_dir=adapter_dir,
                     section_id=section_id,
                     pack=_pack_for_adapter(adapter),
+                    dest_repo=dest_repo,
+                    dest_pack=dest_pack,
                 )
-                document_id = (form.get("document_id") or [""])[0].strip()
                 located = f"document={document_id}&" if document_id else ""
                 repo_id = (form.get("repo") or [""])[0].strip()
                 if repo_id:
@@ -3351,12 +3361,28 @@ def _extract_review_model(ws: Workspace, query: dict) -> dict:
     adapter = _active_adapter(ws)
     proposal = (query.get("proposal") or [""])[0]
     destination = (query.get("destination") or [""])[0]
-    review = extraction_review(
-        select_working_copy(ws.root, adapter["pack_id"], destination),
-        select_working_copy(ws.root, adapter["pack_id"], proposal),
-    )
-    review["proposal"] = proposal
-    review["destination"] = destination
+    pack_id = (query.get("pack") or [""])[0].strip()
+    repo_id = (query.get("repo") or [""])[0].strip()
+    if pack_id:
+        found = _locate_repo_pack(ws, pack_id, repo_id)
+        if found is None:
+            raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+        found_repo, pack_dir, _pack = found
+        review = extraction_review(
+            pack_dir,
+            select_working_copy(ws.root, adapter["pack_id"], proposal),
+        )
+        review["proposal"] = proposal
+        review["destination"] = pack_id
+        review["dest_pack"] = pack_id
+        review["dest_repo"] = found_repo
+    else:
+        review = extraction_review(
+            select_working_copy(ws.root, adapter["pack_id"], destination),
+            select_working_copy(ws.root, adapter["pack_id"], proposal),
+        )
+        review["proposal"] = proposal
+        review["destination"] = destination
     if (query.get("kept") or [""])[0]:
         review["message"] = "Nothing was brought in. The working copy is unchanged."
     return review
@@ -3367,6 +3393,20 @@ def _apply_extraction_review(ws: Workspace, form: dict) -> str:
     pack_id = adapter["pack_id"]
     proposal_name = (form.get("proposal") or [""])[0]
     destination_name = (form.get("destination") or [""])[0]
+    repo_pack_id = (form.get("pack") or [""])[0].strip()
+    repo_id = (form.get("repo") or [""])[0].strip()
+    return_pack = ""
+    return_repo = ""
+    if repo_pack_id:
+        found = _locate_repo_pack(ws, repo_pack_id, repo_id)
+        if found is None:
+            raise ModelError("pack", "id", f"a pack named in curbpack.json, not {repo_pack_id}")
+        return_repo, destination_dir, _listed = found
+        return_pack = repo_pack_id
+        proposal_dir = select_working_copy(ws.root, pack_id, proposal_name)
+    else:
+        destination_dir = select_working_copy(ws.root, pack_id, destination_name)
+        proposal_dir = select_working_copy(ws.root, pack_id, proposal_name)
     pairs: dict[str, tuple[str, str | None]] = {}
     for raw in form.get("pair") or []:
         requirement_id, source_digest, destination_digest = raw.split("|", 2)
@@ -3428,6 +3468,14 @@ def _apply_extraction_review(ws: Workspace, form: dict) -> str:
             }
         )
     if not choices:
+        if return_pack:
+            return (
+                "/requirements?document="
+                + quote(return_pack, safe="")
+                + "&repo="
+                + quote(return_repo, safe="")
+                + "&kept=1"
+            )
         return (
             "/requirements/extract/review?proposal="
             + quote(proposal_name)
@@ -3435,11 +3483,15 @@ def _apply_extraction_review(ws: Workspace, form: dict) -> str:
             + quote(destination_name)
             + "&kept=1"
         )
-    apply_extraction_choices(
-        select_working_copy(ws.root, pack_id, destination_name),
-        select_working_copy(ws.root, pack_id, proposal_name),
-        choices,
-    )
+    apply_extraction_choices(destination_dir, proposal_dir, choices)
+    if return_pack:
+        return (
+            "/requirements?document="
+            + quote(return_pack, safe="")
+            + "&repo="
+            + quote(return_repo, safe="")
+            + "&brought=1"
+        )
     return "/requirements?brought=1"
 
 
