@@ -11,16 +11,16 @@
 
 | Field | Value |
 | --- | --- |
-| Plan status | APPROVED |
+| Plan status | DONE |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
 | Current task | DONE |
 | Last completed task | Task 7 |
 | Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door` — Ran 66 tests, OK. |
-| Last checkpoint commit | pending Task 7 commit |
+| Last checkpoint commit | `07d418d` |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Move `plan/REV-03.md` to `impl/REV-03.md`, then run `python3 scripts/check_story_plan.py REV-03 --phase done`. |
+| **Exact next action** | No further implementation. Story complete at `impl/REV-03.md`. |
 
 ## Requirements and acceptance mapping
 
@@ -213,5 +213,5 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-30 / Task 7 RED:** `python3 -m unittest tests.test_rev03_review.ReviewCompileDecisionSealTest` — Ran 3 tests, FAILED (failures=1). Scenarios 33 and 34 already green through existing compile routes. Scenario 35a failed because the flash still said `Report signed.` instead of `Report sealed.`
 - **2026-10-30 / Task 7 GREEN:** Flash after review-sign is `Report sealed.` Compile/decision/seal HTTP acceptance tests lock scenarios 33–35a. Validation — Ran 66 tests, OK. Independent review next.
 - **2026-10-30 / Task 7 review:** Approved (`6d0a6ffe`). No Critical or Important. Minor, not applied: assert embedded Claim/Requirement ids on the compiled file; assert the original decision sentence on the sealed page before the tamper write; post-tamper readability need not reopen Review (covered by Task 4). `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door` — Ran 66 tests, OK.
-- **2026-10-30 / Task 7 VERIFIED:** Checkpoint and local commit for compile / decision / seal. Story complete; move plan to `impl/`.
+- **2026-10-30 / Task 7 VERIFIED:** Checkpoint and local commit `07d418d` for compile / decision / seal. Story complete; move plan to `impl/`.
 - **2026-10-30 / DONE:** All REV-R01–REV-R10 evidenced. No new Packs v2 fields. `review/ARCHITECTURE.md` left stale per D1. Unrelated dirty tree preserved.
