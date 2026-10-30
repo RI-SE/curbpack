@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -39,7 +40,10 @@ def _parse_sums(sum_texts: list[str]) -> list[tuple[str, str]]:
     mac = [name for _digest, name in parsed if "macos" in name]
     windows = [name for _digest, name in parsed if "windows" in name]
     linux = [name for _digest, name in parsed if "linux" in name]
-    if len(mac) + len(windows) + len(linux) != len(parsed):
+    installers = [name for _digest, name in parsed if name in {
+        "install-studio.sh", "install-curbcheck.sh", "install-studio.ps1", "install-curbcheck.ps1",
+    }]
+    if len(mac) + len(windows) + len(linux) + len(installers) != len(parsed):
         raise ValueError("publish sums name a file this note cannot check")
     if not parsed:
         raise ValueError("publish sums name no binary")
@@ -74,6 +78,17 @@ def binary_notes(sum_texts: list[str], repo: str, tag: str) -> str:
     windows = [(digest, name) for digest, name in parsed if "windows" in name]
     linux = [(digest, name) for digest, name in parsed if "linux" in name]
     blocks = []
+    if any(name == "install-studio.sh" for _digest, name in parsed):
+        blocks.append(
+            "Install Studio (includes curbcheck) on macOS/Linux:\n\n"
+            "```sh\n"
+            f"curl -fsSL {base}/install-studio.sh -o install-studio.sh "
+            f"&& CURBPACK_VERSION={shlex.quote(tag)} sh install-studio.sh\n"
+            "```\n\n"
+            "For the checker alone, use `install-curbcheck.sh`. "
+            "On Windows use `install-studio.ps1` or `install-curbcheck.ps1`.\n\n"
+            "Manual installation:\n"
+        )
     if mac:
         curls = "\n".join(f"curl -fsSL -O {base}/{name}" for _digest, name in mac)
         names = " ".join(name for _digest, name in mac)
@@ -267,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         ])
         artifacts = sorted(
             name for name in listed.stdout.splitlines()
-            if name.startswith(("curbpack-studio-", "curbcheck-"))
+            if name.startswith(("curbpack-studio-", "curbcheck-")) or name == "curbpack-installers"
         )
         if not artifacts:
             print("[FAIL] publish found no package artifacts", flush=True)

@@ -51,6 +51,30 @@ jobs:
             dist/studio/SHA256SUMS
           if-no-files-found: error
 
+  package-installers:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest tests.test_installers
+      - name: Test Windows installers
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./tests/installers-windows.ps1
+      - run: python scripts/build/package_installers.py
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: curbpack-installers
+          path: dist/installers/*
+          if-no-files-found: error
+
   package-curbcheck:
     name: package-curbcheck (${{ matrix.artifact }})
     runs-on: ${{ matrix.os }}

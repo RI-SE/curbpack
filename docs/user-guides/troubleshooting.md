@@ -6,7 +6,9 @@ Installation is [Install](install.md).
 
 ## The application does not start
 
-The downloaded program is `curbpack-studio-windows-x64.exe` or `curbpack-studio-macos-arm64`. Run that file. It prints a local URL. Its workspace is `~/curbpack-studio/workspace`.
+After using the installer, run `curbpack-studio`. If you installed manually, run the downloaded `curbpack-studio-<host>` file (`.exe` on Windows). It prints a local URL. Its workspace is `~/curbpack-studio/workspace`.
+
+If the command is not found, check PATH: Unix installers use `~/.local/bin` by default and print a PATH instruction. The Windows installer adds `%LOCALAPPDATA%\Programs\Curbpack` to your user PATH; open a new terminal if needed. See [Install](install.md).
 
 From a source checkout:
 
@@ -27,15 +29,17 @@ A dirty tree is a real result. Do not present it as a clean commit. Requirements
 
 If a downloaded Studio binary fails the checksum command on its release page, do not run it. Download the file again from the release you intended. The steps and the command are in [Install](install.md). This guide does not list a published checksum, because a published pair of release binaries was not verified from this tree.
 
+An installer download returning HTTP 404 usually means that release does not contain the selected installer or platform binary. Check its asset list. Older releases without installers can still be installed using [Manual installation](install.md#manual-installation). A failed binary download or checksum stops an installer before replacing the installed programs.
+
 `make package` builds for the operating system you run it on. It does not prove that a binary exists for another operating system.
 
 ## macOS Gatekeeper
 
-The allow steps are in [Install](install.md). Run that release's checksum command before you allow the file. Click Done on the malware dialog, then System Settings, Privacy & Security, Open Anyway. Removing the quarantine attribute from a file you have not verified is how a bad download gets executed. Prefer `python3 -m app` when you do not have a release binary you trust.
+Verify the file against the release checksum before allowing it. If Gatekeeper blocks a verified file from an unidentified developer, use System Settings, Privacy & Security, Open Anyway. Do not bypass a warning that identifies actual malware. Prefer [Run from a checkout](../development/README.md#run-from-a-checkout) when you do not have a release binary you trust.
 
 ## Windows SmartScreen, execution policy, Defender
 
-The allow steps are in [Install](install.md). Run that release's checksum command before you click More info, Run anyway. If Defender removed a packaged `exe`, restore it from Protection history only after the checksum command prints OK, or rebuild with `make package` on that machine.
+Verify the file against the release checksum before allowing it through SmartScreen. If Defender removed a packaged `exe`, investigate the detection before restoring it, or rebuild with `make package` on that machine. The installer does not change execution policy, disable antivirus or bypass operating-system protections. If your organisation blocks downloaded scripts, use [Manual installation](install.md#manual-installation) and its own approval process.
 
 If a package build fails because the executable is locked, close the running process and retry.
 

@@ -63,6 +63,8 @@ make package-studio
 
 Each command builds and smoke-tests only its own program, using a separate script under `scripts/build/` and output directory under `dist/`. `make package` runs both. The CI jobs and platform matrices are separate too. See [Install](../user-guides/install.md) for released artifacts and checksum commands; build support does not mean a binary has already been published.
 
+`python3 scripts/build/package_installers.py` packages four standalone installer scripts under `dist/installers/`, with `SHA256SUMS`. The Studio installers select both programs; the curbcheck installers select only the checker. The shared implementations are `scripts/install/unix.sh` and `scripts/install/windows.ps1`; packaging adds a fixed program selection to each standalone script, so installed users do not need these source files. The independent installer CI job tests and uploads those exact scripts. Release publishing reuses the tested scripts alongside the binaries. See [Install](../user-guides/install.md) for installer commands and the manual alternative.
+
 ## Product CI integration
 
 The root [`action.yml`](../../action.yml) provides `uses: RI-SE/curbpack@<release-tag>` for GitHub Actions. It downloads the released checker, verifies its checksum, runs it against the product checkout, and retains the JSON result even when Checks fail. Its shell script is [`scripts/ci/curbcheck-action.sh`](../../scripts/ci/curbcheck-action.sh). Product workflow examples for GitHub, GitLab and Jenkins are in [CI/CD](../user-guides/ci-cd.md).
