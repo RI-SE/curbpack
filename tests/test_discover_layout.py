@@ -88,8 +88,8 @@ class DiscoverLayoutTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 discover = _get(base + "/discover?repo=sample-product")
-                self.assertIn("This page is the pilot", discover)
-                self.assertIn("Claim Discovery settings", discover)
+                self.assertIn("claims directory", discover)
+                self.assertNotIn("Pack editor", discover)
                 self.assertNotIn("Hunt settings", discover)
                 self.assertNotIn("The selected repo", discover)
                 self.assertIn('class="config-panel"', discover)
@@ -104,8 +104,8 @@ class DiscoverLayoutTest(unittest.TestCase):
                 self.assertEqual(discover.count('name="repo"'), 1)
                 self.assertLess(discover.index('name="repo"'), discover.index(">Add repo<"))
                 self.assertLess(discover.index(">Add repo<"), discover.index("<table>"))
-                self.assertLess(discover.index("<table>"), discover.index("CRA Annex VII"))
-                self.assertIn("NIS2 Article 21", discover)
+                self.assertLess(discover.index("<table>"), discover.index("cra-xml-baseline"))
+                self.assertIn("nis2-baseline", discover)
                 self.assertIn("># Req</th>", discover)
                 self.assertIn("># Claims</th>", discover)
                 self.assertIn("># Req without<br>claims</th>", discover)
@@ -114,16 +114,36 @@ class DiscoverLayoutTest(unittest.TestCase):
                     discover.index(">Limit</th>"),
                 )
                 self.assertLess(discover.index(">Limit</th>"), discover.index(">Actions</th>"))
-                self.assertIn("Working copy · 2026-10-13T090000Z", discover)
+                self.assertNotIn("Working copy", discover)
                 self.assertNotIn("2026-10-13T143000Z", discover)
-                self.assertIn("Published · 0.1.0", discover)
-                self.assertNotIn("· written", discover)
+                self.assertNotIn("Published · 0.1.0", discover)
+                self.assertNotIn('class="copy-select"', discover)
                 self.assertRegex(discover, r'class="req-link"[^>]*>2</a>')
                 self.assertRegex(discover, r'class="claims-link"[^>]*>1</a>')
                 self.assertRegex(discover, r'class="unclaimed-link"[^>]*>1</a>')
+                self.assertIn('class="edit-review"', discover)
+                self.assertIn(
+                    'href="/discover/claims?repo=sample-product&amp;pack=cra-xml-baseline"',
+                    discover,
+                )
                 self.assertNotIn('href="/discover/repo', discover)
                 self.assertIn(">Discover<", discover)
+                self.assertIn('name="pack_id" value="cra-xml-baseline"', discover)
                 self.assertIn("aria-label=\"Limit\"", discover)
+                claims_page = _get(
+                    base + "/discover/claims?repo=sample-product&pack=cra-xml-baseline"
+                )
+                self.assertIn("REQ-A", claims_page)
+                self.assertIn("<td>1</td>", claims_page)
+                requirement = _get(
+                    base + "/discover/claims/REQ-A?repo=sample-product&pack=cra-xml-baseline"
+                )
+                self.assertIn("Evidence for A.", requirement)
+                self.assertIn("docs/a.md", requirement)
+                self.assertIn(
+                    'href="/requirements/requirement/REQ-A?repo=sample-product&amp;pack=cra-xml-baseline"',
+                    requirement,
+                )
 
                 product = _get(base + "/discover/repo")
                 self.assertIn('class="repo-picker" action="/discover/repo"', product)
@@ -132,15 +152,15 @@ class DiscoverLayoutTest(unittest.TestCase):
                 self.assertIn('value="sample-product" selected', product)
                 self.assertNotIn(">Add repo<", product)
                 self.assertNotIn('class="copy-select"', product)
-                self.assertIn("CRA Annex VII", product)
-                self.assertIn("NIS2 Article 21", product)
-                self.assertIn("Working copy · 2026-10-13T090000Z", product)
-                self.assertIn("Working copy · 2026-10-13T100000Z", product)
+                self.assertIn("cra-xml-baseline", product)
+                self.assertIn("nis2-baseline", product)
+                self.assertNotIn("Working copy", product)
                 self.assertNotIn("Published · 0.1.0", product)
                 self.assertNotIn("2026-10-13T143000Z", product)
                 self.assertRegex(product, r'class="req-link"[^>]*>2</a>')
                 self.assertRegex(product, r'class="claims-link"[^>]*>1</a>')
                 self.assertRegex(product, r'class="unclaimed-link"[^>]*>1</a>')
+                self.assertIn('class="edit-review"', product)
                 self.assertLess(product.index(">Limit</th>"), product.index(">Actions</th>"))
                 self.assertIn(">Limit</th>", product)
                 self.assertIn(">Discover<", product)
