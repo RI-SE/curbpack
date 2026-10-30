@@ -15,12 +15,16 @@
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
 | Current task | DONE |
 | Last completed task | Task 7 |
-| Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door` — Ran 66 tests, OK. |
-| Last checkpoint commit | `07d418d` |
+| Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review_render tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_ui_smoke` — Ran 52 tests, OK. Visual check against CTAM PoC layout on a local Review page. |
+| Last checkpoint commit | This presentation correction commit. |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | No further implementation. Story complete at `impl/REV-03.md`. |
+| **Exact next action** | No further implementation. Presentation corrected to the CTAM PoC card hierarchy; contracts unchanged. |
+
+## Presentation correction (2026-10-30)
+
+The first DONE checkpoint shipped a functional but unusable data-dump Review view. Maintainer rejected that as REV-03 UI acceptance. Presentation was rebuilt against `ctam/poc/components/review/ui.py` without a new story: topline summary, Requirement/Claim cards, status/seal badges, Path/Checks table, check pills, action area, Technical details for raw args. Scenario and contract tests unchanged aside from nested-`<details>` depth handling in `_details`.
 
 ## Requirements and acceptance mapping
 

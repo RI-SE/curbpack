@@ -1768,8 +1768,21 @@ def _details(page: str, requirement_id: str) -> str:
     marker = f'data-requirement="{requirement_id}"'
     attr = page.index(marker)
     start = page.rindex("<details", 0, attr)
-    end = page.index("</details>", start)
-    return page[start:end]
+    depth = 0
+    i = start
+    while i < len(page):
+        if page.startswith("<details", i):
+            depth += 1
+            i += 8
+            continue
+        if page.startswith("</details>", i):
+            depth -= 1
+            if depth == 0:
+                return page[start:i]
+            i += 10
+            continue
+        i += 1
+    raise AssertionError(f"unclosed details for {requirement_id}")
 
 
 def _summary(page: str, requirement_id: str) -> str:
