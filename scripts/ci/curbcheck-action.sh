@@ -20,7 +20,11 @@ curl -fsSL "$base/SHA256SUMS" -o "$tool_dir/SHA256SUMS"
     cd "$tool_dir"
     awk '$2 == "curbcheck-linux-x64" { print }' SHA256SUMS > curbcheck.sha256
     test -s curbcheck.sha256
-    sha256sum -c curbcheck.sha256
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum -c curbcheck.sha256
+    else
+        shasum -a 256 -c curbcheck.sha256
+    fi
 )
 chmod +x "$tool_dir/curbcheck-linux-x64"
 

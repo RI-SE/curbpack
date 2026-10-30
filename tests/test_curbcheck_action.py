@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -87,6 +88,23 @@ class CurbcheckActionTest(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("FAILED", completed.stdout)
         self.assertFalse(list(self.root.glob("curbcheck.*/run-result.json")))
+
+    def test_checksum_verification_uses_shasum_when_sha256sum_is_absent(self):
+        """macOS runners often lack GNU sha256sum; the action must use shasum instead."""
+        shasum = shutil.which("shasum")
+        self.assertIsNotNone(shasum, "host needs shasum to exercise the fallback")
+        only_shasum = self.root / "only-shasum"
+        only_shasum.mkdir()
+        (only_shasum / "shasum").symlink_to(shasum)
+        path = [str(self.root / "bin"), str(only_shasum)]
+        for directory in os.environ["PATH"].split(os.pathsep):
+            if not directory or (Path(directory) / "sha256sum").exists():
+                continue
+            path.append(directory)
+        self.env["PATH"] = os.pathsep.join(path)
+        completed = self.run_action()
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("result=", self.output.read_text())
 
     def test_checksum_must_name_the_checker(self):
         (self.release / "SHA256SUMS").write_text("a" * 64 + "  another-binary\n")
