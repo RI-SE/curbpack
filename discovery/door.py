@@ -89,6 +89,28 @@ def claim_file_relative(repo: Path, folder: Path, claim_id: str) -> str:
         return path.name
 
 
+def pack_display_name(repo: Path, pack_id: str) -> str:
+    """Name from the pack file named by curbpack.json. The pack id when that file is missing."""
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        return pack_id
+    config = validate_curbpack_config(read_json(path))
+    if pack_id not in config["packs"]:
+        return pack_id
+    from checks.run import _pack_version_dir, packs_dir
+    from common.store import load_pack_directory
+
+    try:
+        directory = _pack_version_dir(packs_dir(repo, config), pack_id)
+        pack, _requirements = load_pack_directory(directory)
+    except ModelError:
+        return pack_id
+    name = pack.get("name") if isinstance(pack, dict) else ""
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    return pack_id
+
+
 def repo_pack_requirements(repo: Path, pack_id: str) -> list[dict]:
     """Requirements from packs_dir for a pack named in curbpack.json."""
     path = repo / "curbpack.json"

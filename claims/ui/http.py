@@ -9,9 +9,9 @@ from claims.ui.coverage import covered_paths, load_run
 from claims.ui import researcher
 from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
-from discovery.jobs import latest_job
+from discovery.jobs import CURBPACK_COPY, latest_job
 from discovery.present import overview_rows, signing_label
-from discovery.door import repo_claims_dir, repo_pack_requirements
+from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
 from requirements.workspace import resolve_copy_ref
@@ -189,6 +189,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
 
 def _context(root: Path, bag: dict, sources: list) -> dict:
     repo_id = _one(bag, "repo") or _one(bag, "repo_id")
+    pack_id = _one(bag, "pack") or _one(bag, "pack_id")
+    if pack_id:
+        return _pack_context(root, repo_id, pack_id)
     source_id = _one(bag, "source") or _one(bag, "source_id")
     timestamp = _one(bag, "timestamp")
     row = find_repo(load_repos(root), repo_id)
@@ -215,6 +218,45 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
         "section_id": str(source.get("section_id") or ""),
         "timestamp": timestamp,
         "repo": repo,
+        "claims_dir": folder,
+        "requirements": requirements,
+        "workspace": root,
+        "job": job,
+        "feedback": feedback,
+        "claims": claims,
+    }
+
+
+def _pack_context(root: Path, repo_id: str, pack_id: str) -> dict:
+    """Requirements and claims for one pack named in the repo's curbpack.json."""
+    row = find_repo(load_repos(root), repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    repo = resolve_repo_path(root, str(row.get("path") or ""))
+    from common.jsonio import read_json
+    from common.validate import validate_curbpack_config
+
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
+        raise ModelError("curbpack.json", "packs", "a curbpack.json in the chosen repository")
+    config = validate_curbpack_config(read_json(config_path))
+    if pack_id not in config["packs"]:
+        raise ModelError("discover", "pack_id", f"a pack named in curbpack.json, not {pack_id}")
+    folder = repo_claims_dir(repo)
+    requirements = repo_pack_requirements(repo, pack_id)
+    claims = read_claims(folder) if folder.is_dir() else []
+    job = latest_job(root / "jobs", repo_id=repo_id, source_id=pack_id, timestamp=CURBPACK_COPY)
+    feedback = load_feedback(root, repo_id, pack_id, CURBPACK_COPY)
+    return {
+        "repo_id": repo_id,
+        "repo_name": str(row.get("name") or repo_id),
+        "source_id": pack_id,
+        "pack_id": pack_id,
+        "section_name": pack_display_name(repo, pack_id),
+        "section_id": "",
+        "timestamp": CURBPACK_COPY,
+        "repo": repo,
+        "workspace": root,
         "claims_dir": folder,
         "requirements": requirements,
         "job": job,
@@ -250,6 +292,17 @@ def _requirement_model(context: dict, requirement: dict, bag: dict) -> dict:
             if isinstance(row, dict) and row.get("requirement_id") == requirement_id:
                 block = row
                 break
+    if block is None:
+        from discovery.try_run import load_try_result
+
+        workspace = context.get("workspace")
+        if isinstance(workspace, Path):
+            tried = load_try_result(workspace / "jobs", requirement_id, str(context.get("repo_id") or ""))
+            if isinstance(tried, dict):
+                block = {
+                    "requirement_id": requirement_id,
+                    "candidates": list(tried.get("candidates") or []),
+                }
     return {
         **_ids(context),
         "requirement": requirement,
@@ -285,6 +338,7 @@ def _ids(context: dict) -> dict:
         "section_name": context.get("section_name") or context["source_id"],
         "section_id": context.get("section_id") or "",
         "timestamp": context["timestamp"],
+        "pack_id": context.get("pack_id") or "",
     }
 
 

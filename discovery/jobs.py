@@ -24,6 +24,9 @@ from discovery.search import discover_candidates
 
 _LOCK = threading.Lock()
 
+# Discover for a product pack reads that repo's curbpack.json, not a Pack-editor copy.
+CURBPACK_COPY = "curbpack"
+
 SearchFn = Callable[[Path, dict, dict], list]
 AssessFn = Callable[..., list]
 
@@ -41,6 +44,7 @@ def start_discover_job(
     search: SearchFn | None = None,
     source_id: str = "",
     timestamp: str = "",
+    pack_id: str = "",
     assess_limit: int = DEFAULT_ASSESS_LIMIT,
     assess: AssessFn | None = None,
     model: str = DEFAULT_MODEL,
@@ -67,6 +71,7 @@ def start_discover_job(
             "repo_id": repo_id,
             "source_id": source_id,
             "timestamp": timestamp,
+            "pack_id": pack_id,
             "assess_limit": assess_limit,
             "model": model,
         },

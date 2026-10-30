@@ -52,7 +52,11 @@ def overview_page(model: dict) -> bytes:
         )
     section = html.escape(str(model.get("section_name") or model.get("source_id") or "this section"))
     repo = html.escape(str(model.get("repo_name") or model.get("repo_id") or ""))
-    copy = html.escape(str(model.get("timestamp") or ""))
+    if model.get("pack_id"):
+        place = f"Requirements in this pack for <strong>{repo}</strong>."
+    else:
+        copy = html.escape(str(model.get("timestamp") or ""))
+        place = f"Requirements in this section for <strong>{repo}</strong>, copy <code>{copy}</code>."
     gap = (
         "<p class=\"muted\">Only requirements that have no Claim yet.</p>"
         if model.get("gap")
@@ -61,7 +65,7 @@ def overview_page(model: dict) -> bytes:
     body = f"""
 <p class="muted"><a href="/discover">Discovery &amp; Claims</a></p>
 <h1>{section}</h1>
-<p class="muted">Requirements in this section for <strong>{repo}</strong>, copy <code>{copy}</code>.
+<p class="muted">{place}
 A <strong>finding</strong> is a product file Discover suggests for a requirement. It is not a Claim.
 Open a requirement and <strong>add a check</strong> to make a Claim for that file.
 <strong># Claims</strong> is how many Claims are saved for that requirement.
@@ -96,9 +100,12 @@ def requirement_page(model: dict) -> bytes:
     for index, item in enumerate(findings):
         rows.append(_hit_row(model, requirement_id, item, index))
     claim_count = sum(1 for item in findings if isinstance(item, dict) and item.get("has_claim"))
+    found = any(isinstance(item, dict) and str(item.get("why") or "").strip() for item in findings)
+    checked = " checked" if found else ""
+    table_class = "hits-table show-suggestions" if found else "hits-table"
     hits = (
-        '<label class="show-suggestions"><input type="checkbox" id="show-suggestions"> Show discovered claim candidates</label>'
-        '<div class="hits"><table class="hits-table"><thead><tr>'
+        f'<label class="show-suggestions"><input type="checkbox" id="show-suggestions"{checked}> Show discovered claim candidates</label>'
+        f'<div class="hits"><table class="{table_class}"><thead><tr>'
         f"<th></th><th>Evidence Source{_tip(COLUMN_HELP['Evidence Source'])}</th>"
         f"<th>Score{_tip(SCORE_HELP)}</th>"
         f"<th>Motivation{_tip(COLUMN_HELP['Motivation'])}</th>"
@@ -128,7 +135,7 @@ def requirement_page(model: dict) -> bytes:
     <span class="pill">{html.escape(str(model.get('model') or 'not scored'))}</span>
   </div>
 </div>
-{_identity_card(instrument, identifier, locator, requirement_id, law, source_url)}
+{_identity_card(model, instrument, identifier, locator, requirement_id, law, source_url)}
 {notice}
 {outcomes}
 <h2>Claims ({claim_count})</h2>
@@ -695,6 +702,8 @@ def _hidden(model: dict, requirement_id: str) -> str:
         "timestamp": model.get("timestamp") or "",
         "requirement_id": requirement_id,
     }
+    if model.get("pack_id"):
+        fields["pack"] = model.get("pack_id") or ""
     return_to = str(model.get("return_to") or "")
     if return_to:
         fields["return_to"] = return_to
@@ -705,11 +714,16 @@ def _hidden(model: dict, requirement_id: str) -> str:
 
 
 def _q(model: dict) -> str:
-    query = (
-        f"repo={quote(str(model.get('repo_id') or ''))}"
-        f"&source={quote(str(model.get('source_id') or ''))}"
-        f"&timestamp={quote(str(model.get('timestamp') or ''))}"
-    )
+    repo = quote(str(model.get("repo_id") or ""))
+    pack_id = str(model.get("pack_id") or "")
+    if pack_id:
+        query = f"repo={repo}&pack={quote(pack_id)}"
+    else:
+        query = (
+            f"repo={repo}"
+            f"&source={quote(str(model.get('source_id') or ''))}"
+            f"&timestamp={quote(str(model.get('timestamp') or ''))}"
+        )
     return_to = str(model.get("return_to") or "")
     if return_to:
         query += f"&return_to={quote(return_to, safe='')}"
@@ -738,6 +752,7 @@ def _ro_field(label: str, value: str) -> str:
 
 
 def _identity_card(
+    model: dict,
     instrument: str,
     identifier: str,
     locator: str,
@@ -769,6 +784,10 @@ def _identity_card(
     details = ""
     if requirement_id:
         href = "/requirements/requirement/" + quote(requirement_id, safe="")
+        repo_id = str(model.get("repo_id") or "")
+        pack_id = str(model.get("pack_id") or "")
+        if repo_id and pack_id:
+            href += "?repo=" + quote(repo_id) + "&pack=" + quote(pack_id)
         details = f'<a class="details" href="{html.escape(href)}">Details</a>'
     return (
         '<div class="card req-identity">'

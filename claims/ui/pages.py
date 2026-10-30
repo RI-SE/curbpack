@@ -17,16 +17,14 @@ def discover_page(model: dict) -> bytes:
     repo_query = f"?repo={repo_id}" if repo_id else ""
     if pilot:
         intro = (
-            "<p class=\"muted\">This page is the pilot. It lists every section from the Pack editor. "
-            "Pick a repository, then a working copy or a published release. "
-            "Claim Discovery settings come from the repository's <code>curbpack.json</code>.</p>"
+            "<p class=\"muted\">Packs named in the selected repository's <code>curbpack.json</code>. "
+            "Claims are read only from that file's claims directory.</p>"
         )
     else:
         name = html.escape(str(model.get("repo_name") or "the selected repo"))
         intro = (
             f"<p class=\"muted\">Repo <strong>{name}</strong>. "
-            "Sections for the packs named in this repo's <code>curbpack.json</code>. "
-            "The copy is the one already chosen in the Pack editor. "
+            "Packs and claims come from its <code>curbpack.json</code>. "
             f'<a href="/discover{repo_query}">Pilot</a>.</p>'
         )
     add_repo = (
@@ -45,7 +43,7 @@ def discover_page(model: dict) -> bytes:
 {intro}
 {flash}
 {panel}
-<div class="card discover-wrap">{_section_table(model, pilot)}</div>
+<div class="card discover-wrap">{_pack_table(model)}</div>
 """
     if pilot:
         body += _add_repo_dialog(str(model.get("workspace_root") or ""))
@@ -55,18 +53,18 @@ def discover_page(model: dict) -> bytes:
     return page("Discovery & Claims", body)
 
 
-def _section_table(model: dict, pilot: bool) -> str:
+def _pack_table(model: dict) -> str:
     repo_id = str(model.get("repo_id") or "")
-    reviewable = list(model.get("reviewable") or [])
-    rows = []
-    sections = list(model.get("sections") or [])
-    if sections:
-        rows.extend(_section_row(repo_id, section, reviewable, pilot) for section in sections)
-    elif not pilot:
-        rows.append('<tr><td colspan="8" class="muted">No sections for the packs in curbpack.json.</td></tr>')
+    rows = [
+        _pack_row(repo_id, pack)
+        for pack in model.get("pack_rows") or []
+        if isinstance(pack, dict)
+    ]
+    if not rows and repo_id:
+        rows.append('<tr><td colspan="6" class="muted">No packs named in curbpack.json.</td></tr>')
     return (
         "<table><thead><tr>"
-        "<th>Pack</th><th>Section</th><th>Copy</th>"
+        "<th>Pack</th>"
         '<th class="num"># Req</th><th class="num"># Claims</th>'
         '<th class="num wrap"># Req without<br>claims</th>'
         "<th>Limit</th><th>Actions</th>"
@@ -76,38 +74,25 @@ def _section_table(model: dict, pilot: bool) -> str:
     )
 
 
-def _section_row(repo_id: str, section: dict, reviewable: list, pilot: bool) -> str:
-    source_id = str(section.get("source_id") or "")
-    name = str(section.get("name") or source_id)
-    section_id = str(section.get("section_id") or "")
-    copies = [copy for copy in section.get("copies") or [] if isinstance(copy, dict)]
-    chosen = next((copy for copy in copies if copy.get("chosen")), copies[0] if copies else None)
-    value = str((chosen or {}).get("value") or "")
-    form_id = "discover-" + html.escape(source_id)
-    counts = {
-        str(copy.get("value") or ""): {
-            "requirements": int(copy.get("requirements") or 0),
-            "claims": int(copy.get("claims") or 0),
-            "unclaimed": int(copy.get("unclaimed") or 0),
-        }
-        for copy in copies
-    }
-    requirements = int((chosen or {}).get("requirements") or 0)
-    claims = int((chosen or {}).get("claims") or 0)
-    unclaimed = int((chosen or {}).get("unclaimed") or 0)
-    discover_disabled = "" if value and repo_id else " disabled"
+def _pack_row(repo_id: str, pack: dict) -> str:
+    pack_id = str(pack.get("pack_id") or "")
+    name = str(pack.get("name") or pack_id)
+    requirements = int(pack.get("requirements") or 0)
+    claims = int(pack.get("claims") or 0)
+    unclaimed = int(pack.get("unclaimed") or 0)
+    form_id = "discover-" + html.escape(pack_id)
+    href = _pack_href(repo_id, pack_id)
+    gap_href = href + ("&gap=1" if "?" in href else "")
     edit = ""
-    if _row_reviewable(repo_id, source_id, value, reviewable):
-        edit = f'<a class="edit-review" href="{html.escape(_overview_href(repo_id, source_id, value))}">Edit</a>'
+    if claims and repo_id and pack_id:
+        edit = f'<a class="edit-review" href="{html.escape(href)}">Edit</a>'
+    discover_disabled = "" if repo_id and pack_id and requirements else " disabled"
     return (
-        f'<tr class="section-row" data-repo="{html.escape(repo_id)}" '
-        f'data-source="{html.escape(source_id)}" data-counts="{html.escape(json.dumps(counts))}">'
+        f'<tr class="section-row" data-repo="{html.escape(repo_id)}" data-pack="{html.escape(pack_id)}">'
         f"<td>{html.escape(name)}</td>"
-        f"<td><code>{html.escape(section_id)}</code></td>"
-        f"<td>{_copy_cell(form_id, copies, chosen, pilot)}</td>"
-        f'<td class="num">{_count_link("req-link", _overview_href(repo_id, source_id, value), requirements, "Requirements in this copy")}</td>'
-        f'<td class="num">{_count_link("claims-link", _overview_href(repo_id, source_id, value), claims, "Claims on those requirements")}</td>'
-        f'<td class="num">{_count_link("unclaimed-link", _overview_href(repo_id, source_id, value, gap=True), unclaimed, "Requirements with no claim")}</td>'
+        f'<td class="num">{_count_link("req-link", href, requirements, "Requirements in this pack")}</td>'
+        f'<td class="num">{_count_link("claims-link", href, claims, "Claims on those requirements")}</td>'
+        f'<td class="num">{_count_link("unclaimed-link", gap_href, unclaimed, "Requirements with no claim")}</td>'
         "<td>"
         f'<input type="number" name="assess_limit" form="{form_id}" value="5" min="0" max="20" '
         'aria-label="Limit">'
@@ -115,71 +100,22 @@ def _section_row(repo_id: str, section: dict, reviewable: list, pilot: bool) -> 
         '<td class="actions">'
         f'<form id="{form_id}" method="post" action="/discover/run">'
         f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
-        f'<input type="hidden" name="source_id" value="{html.escape(source_id)}"></form>'
+        f'<input type="hidden" name="pack_id" value="{html.escape(pack_id)}"></form>'
         f'<button type="submit" class="discover" form="{form_id}"{discover_disabled}>Discover</button>'
         f"{edit}"
         "</td></tr>"
     )
 
 
+def _pack_href(repo_id: str, pack_id: str) -> str:
+    if not repo_id or not pack_id:
+        return "/discover/claims"
+    return "/discover/claims?repo=" + quote(repo_id) + "&pack=" + quote(pack_id)
+
+
 def _count_link(css: str, href: str, count: int, title: str) -> str:
     return (
         f'<a class="{css}" href="{html.escape(href)}" title="{html.escape(title)}">{count}</a>'
-    )
-
-
-def _copy_cell(form_id: str, copies: list, chosen: dict | None, pilot: bool) -> str:
-    if not pilot:
-        if not chosen:
-            return '<span class="muted">No working copy</span>'
-        return html.escape(str(chosen.get("label") or "")) + (
-            f'<input type="hidden" name="timestamp" form="{form_id}" '
-            f'value="{html.escape(str(chosen.get("value") or ""))}">'
-        )
-    if not copies:
-        return (
-            f'<select class="copy-select" name="timestamp" form="{form_id}" aria-label="Copy" disabled>'
-            '<option value="">No working copy</option></select>'
-        )
-    options = []
-    for copy in copies:
-        selected = " selected" if copy is chosen or copy.get("chosen") else ""
-        options.append(
-            f'<option value="{html.escape(str(copy.get("value") or ""))}"{selected}>'
-            f'{html.escape(str(copy.get("label") or ""))}</option>'
-        )
-    return (
-        f'<select class="copy-select" name="timestamp" form="{form_id}" aria-label="Copy">'
-        + "".join(options)
-        + "</select>"
-    )
-
-
-def _overview_href(repo_id: str, source_id: str, ref: str, *, gap: bool = False) -> str:
-    if not repo_id or not source_id or not ref:
-        return "/discover/claims"
-    href = (
-        "/discover/claims?repo="
-        + quote(repo_id)
-        + "&source="
-        + quote(source_id)
-        + "&timestamp="
-        + quote(ref)
-    )
-    if gap:
-        href += "&gap=1"
-    return href
-
-
-def _row_reviewable(repo_id: str, source_id: str, ref: str, reviewable: list) -> bool:
-    if not repo_id or not source_id or not ref:
-        return False
-    return any(
-        item.get("repo_id") == repo_id
-        and item.get("source_id") == source_id
-        and item.get("timestamp") == ref
-        for item in reviewable
-        if isinstance(item, dict)
     )
 
 
@@ -264,12 +200,16 @@ def _add_repo_dialog(workspace_root: str) -> str:
 def _job_dialog(job: dict) -> str:
     job_id = html.escape(str(job.get("job_id") or ""))
     status = str(job.get("status") or "")
+    done = _claims_done_href(job)
     if status == "running":
         dismiss = (
             f'<form method="post" action="/discover/jobs/{job_id}/abort">'
             '<button type="submit" class="secondary">Abort</button></form>'
         )
         note = '<p class="muted">Keep this window open while discovery runs.</p>'
+    elif done:
+        dismiss = f'<a href="{html.escape(done)}"><button type="button">OK</button></a>'
+        note = ""
     else:
         dismiss = '<form method="get" action="/discover"><button type="submit">OK</button></form>'
         note = ""
@@ -278,5 +218,26 @@ def _job_dialog(job: dict) -> str:
         job,
         poll=f"/discover/jobs/{job_id}",
         dismiss=dismiss,
+        done_href=done,
         note=note,
     )
+
+
+def _claims_done_href(job: dict) -> str:
+    """Where a finished Discover run opens the shared claims page."""
+    repo_id = str(job.get("repo_id") or "")
+    pack_id = str(job.get("pack_id") or "")
+    if repo_id and pack_id:
+        return "/discover/claims?repo=" + quote(repo_id) + "&pack=" + quote(pack_id)
+    source_id = str(job.get("source_id") or "")
+    timestamp = str(job.get("timestamp") or "")
+    if repo_id and source_id and timestamp:
+        return (
+            "/discover/claims?repo="
+            + quote(repo_id)
+            + "&source="
+            + quote(source_id)
+            + "&timestamp="
+            + quote(timestamp)
+        )
+    return ""
