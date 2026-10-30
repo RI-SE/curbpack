@@ -1155,6 +1155,147 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             )
 
 
+class ReviewCompileDecisionSealTest(unittest.TestCase):
+    def test_compile_writes_a_new_report_without_decision_or_overwrite(self):
+        """REV-03 scenario 33. REV-R10."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("compile-note", "REQ-SHARED", "compile.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            run_before = run_path.read_bytes()
+            reports = repo / "signed" / "reports"
+            with _serve(workspace) as base:
+                page = _post(
+                    base + "/review/compile",
+                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                )
+                first = sorted(reports.glob("review-report_*.json"))
+                self.assertEqual(len(first), 1)
+                first_bytes = first[0].read_bytes()
+                loaded = read_json(first[0])
+                self.assertEqual(loaded["run_result"], read_json(run_path))
+                self.assertNotIn("decision", loaded)
+                self.assertNotIn("signed", loaded)
+                self.assertEqual(run_path.read_bytes(), run_before)
+                _post(
+                    base + "/review/compile",
+                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                )
+            later = sorted(reports.glob("review-report_*.json"))
+            self.assertEqual(len(later), 2)
+            self.assertEqual(later[0].read_bytes(), first_bytes)
+            self.assertEqual(run_path.read_bytes(), run_before)
+            self.assertIn("Report compiled.", page)
+
+    def test_compile_stops_when_a_claim_is_missing_or_digest_differs(self):
+        """REV-03 scenario 34. REV-R10."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("gap-note", "REQ-SHARED", "gap.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            run_before = run_path.read_bytes()
+            reports = repo / "signed" / "reports"
+            (repo / "kept" / "claims" / "gap-note.json").unlink()
+            with _serve(workspace) as base:
+                missing = _post(
+                    base + "/review/compile",
+                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                )
+            self.assertEqual(list(reports.glob("review-report_*.json")), [])
+            self.assertIn("gap-note", missing)
+            self.assertEqual(run_path.read_bytes(), run_before)
+
+            write_claim(repo / "kept" / "claims", claim)
+            changed = _exist_claim("gap-note", "REQ-SHARED", "other.md")
+            write_claim(repo / "kept" / "claims", changed)
+            with _serve(workspace) as base:
+                mismatched = _post(
+                    base + "/review/compile",
+                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                )
+            self.assertEqual(list(reports.glob("review-report_*.json")), [])
+            self.assertIn("gap-note", mismatched)
+            self.assertNotIn("other.md", mismatched)
+            self.assertNotIn(json.dumps(changed, ensure_ascii=False), mismatched)
+            self.assertEqual(run_path.read_bytes(), run_before)
+
+    def test_decision_and_seal_stay_separate_from_check_status(self):
+        """REV-03 scenarios 35 and 35a. REV-R10."""
+        from common.keystore import trust_store
+        from review.compile import read_report_signature
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            failed = _exist_claim("decide-note", "REQ-SHARED", "decide.md")
+            skipped = _exist_claim("skip-note", "REQ-SHARED", "later.md")
+            write_claim(repo / "kept" / "claims", failed)
+            write_claim(repo / "kept" / "claims", skipped)
+            run = _matching_run(repo, [failed, skipped])
+            run["claims"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["detail"] = "missing file"
+            run["claims"][1]["status"] = "skipped"
+            run["claims"][1]["checks"][0]["status"] = "skipped"
+            run["claims"][1]["checks"][0]["detail"] = "left out"
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(run_path, run)
+            with _serve(workspace) as base:
+                _post(
+                    base + "/review/compile",
+                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                )
+                report_path = sorted((repo / "signed" / "reports").glob("review-report_*.json"))[-1]
+                decided = _post(
+                    base + "/review",
+                    {
+                        "repo_id": "alpha",
+                        "report": str(report_path.resolve()),
+                        "decision": "Please fix the missing file before approval.",
+                    },
+                )
+                self.assertIn("Decision saved.", decided)
+                self.assertIn("Please fix the missing file before approval.", decided)
+                stored = read_json(report_path)
+                self.assertEqual(
+                    stored["decision"],
+                    "Please fix the missing file before approval.",
+                )
+                self.assertEqual(stored["run_result"]["claims"][0]["status"], "fail")
+                self.assertEqual(stored["run_result"]["claims"][0]["checks"][0]["status"], "fail")
+                self.assertEqual(stored["run_result"]["claims"][1]["status"], "skipped")
+                self.assertEqual(stored["run_result"]["claims"][1]["checks"][0]["status"], "skipped")
+                sealed_page = _post(
+                    base + "/review/sign",
+                    {
+                        "repo_id": "alpha",
+                        "report": str(report_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
+                )
+            self.assertIn("Report sealed.", sealed_page)
+            self.assertNotIn("became pass", sealed_page.lower())
+            self.assertNotIn("decision became", sealed_page.lower())
+            self.assertIn('data-status="fail"', sealed_page)
+            self.assertIn('data-status="skipped"', sealed_page)
+            sealed = read_json(report_path)
+            reading = read_report_signature(sealed, trust_store(Path(tmp) / "keys"))
+            self.assertTrue(reading["verifiable"])
+            self.assertEqual(reading["who"], "Ada Reviewer")
+            sealed["decision"] = "Changed after seal."
+            write_json(report_path, sealed)
+            broken = read_json(report_path)
+            broken_reading = read_report_signature(broken, trust_store(Path(tmp) / "keys"))
+            self.assertFalse(broken_reading["verifiable"])
+            self.assertEqual(broken["decision"], "Changed after seal.")
+
+
 class ReviewCompiledReportTest(unittest.TestCase):
     def test_compiled_report_keeps_historical_grouping_when_the_claim_moved(self):
         """REV-03 scenario 6 and 10. REV-R06."""
