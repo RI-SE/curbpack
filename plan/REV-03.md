@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 7 |
-| Last completed task | Task 6 |
-| Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_review_replace_flow tests.test_claims_binding_ui` — Ran 42 tests, OK. |
-| Last checkpoint commit | pending Task 6 commit |
+| Current task | DONE |
+| Last completed task | Task 7 |
+| Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door` — Ran 66 tests, OK. |
+| Last checkpoint commit | pending Task 7 commit |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 7 IMPL-START: write RED tests for compile / decision / seal (REV-R10). |
+| **Exact next action** | Move `plan/REV-03.md` to `impl/REV-03.md`, then run `python3 scripts/check_story_plan.py REV-03 --phase done`. |
 
 ## Requirements and acceptance mapping
 
@@ -37,7 +37,7 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | Task 4 verified |
 | REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | Task 5 verified |
 | REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | Task 6 verified |
-| REV-R10 | REV-03 scenarios 33, 34, 35, 35a | `tests/test_rev03_review.py` | DRAFT |
+| REV-R10 | REV-03 scenarios 33, 34, 35, 35a | `tests/test_rev03_review.py` | Task 7 verified |
 
 ## Decisions
 
@@ -167,10 +167,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Validation:** `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door`
 **Stop if:** compile would accept a mismatched digest, overwrite a report, or encode the decision by editing a Check status.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ## Work log
 
@@ -208,4 +208,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 6 re-review:** Issues Found (`77519acf`). Important remain: return_to dropped after Discovery navigation / Take / error pages; breakout script injection risk; scenario 32 not a full Discovery post acceptance test. No third review. Task 6 BLOCKED. Local follow-up edits after that re-review are unreviewed.
 - **2026-10-30 / Task 6 REVIEW-START:** Maintainer authorized one additional review round for the three Important findings from `77519acf`. Follow-up fixes: return_to survives overview/file/vote/Take/check-error/create-error; breakout uses `_safe_review_return` plus JSON encoding; scenario 32 posts Discovery add+exist check, follows breakout, asserts D7 sentences and unchanged run/report/old Claim bytes. Validation — Ran 42 tests, OK. Independent review of the uncommitted Task 6 diff next.
 - **2026-10-30 / Task 6 review:** Approved (`53a5710b`). No Critical or Important. The three `77519acf` findings are resolved. Minor, not applied: missing-file Discovery error page has no Back link with return_to; reject `#` in `_safe_review_return` so claim_changed cannot land in a fragment. `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_review_replace_flow tests.test_claims_binding_ui` — Ran 42 tests, OK.
-- **2026-10-30 / Task 6 VERIFIED:** Checkpoint and local commit for Edit / Re-Discover / Discovery return_to / D7. Next: Task 7.
+- **2026-10-30 / Task 6 VERIFIED:** Checkpoint and local commit `bbdbb63` for Edit / Re-Discover / Discovery return_to / D7. Next: Task 7.
+- **2026-10-30 / Task 7 IMPL-START:** REV-R10 (scenarios 33, 34, 35, 35a). Planned test class in `tests/test_rev03_review.py`. Expected files `app/server.py`, `app/pages.py` only if seal wording must change. `review/compile.py` stays the writer.
+- **2026-10-30 / Task 7 RED:** `python3 -m unittest tests.test_rev03_review.ReviewCompileDecisionSealTest` — Ran 3 tests, FAILED (failures=1). Scenarios 33 and 34 already green through existing compile routes. Scenario 35a failed because the flash still said `Report signed.` instead of `Report sealed.`
+- **2026-10-30 / Task 7 GREEN:** Flash after review-sign is `Report sealed.` Compile/decision/seal HTTP acceptance tests lock scenarios 33–35a. Validation — Ran 66 tests, OK. Independent review next.
+- **2026-10-30 / Task 7 review:** Approved (`6d0a6ffe`). No Critical or Important. Minor, not applied: assert embedded Claim/Requirement ids on the compiled file; assert the original decision sentence on the sealed page before the tamper write; post-tamper readability need not reopen Review (covered by Task 4). `python3 -m unittest tests.test_rev03_review tests.test_review_compile tests.test_review_report_kept tests.test_sys03_door` — Ran 66 tests, OK.
+- **2026-10-30 / Task 7 VERIFIED:** Checkpoint and local commit for compile / decision / seal. Story complete; move plan to `impl/`.
+- **2026-10-30 / DONE:** All REV-R01–REV-R10 evidenced. No new Packs v2 fields. `review/ARCHITECTURE.md` left stale per D1. Unrelated dirty tree preserved.

@@ -222,7 +222,7 @@ def _review_message(query: dict) -> str:
     if (query.get("saved") or [""])[0]:
         return "Decision saved."
     if (query.get("signed") or [""])[0]:
-        return "Report signed."
+        return "Report sealed."
     if (query.get("claim_changed") or [""])[0]:
         return (
             "The current Claim has changed. "
