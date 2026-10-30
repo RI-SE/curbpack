@@ -262,6 +262,10 @@ def _claim_item(
             sentences = [CHANGED, NEW_RUN, PREVIOUS_UNKNOWN]
         else:
             sentences = [UNCHANGED]
+    digest_matches = current is not None and version_digest(current) == row.get("digest")
+    current_checks = current.get("checks") if isinstance(current, dict) else None
+    if not isinstance(current_checks, list):
+        current_checks = []
     checks = []
     for check in row.get("checks") or []:
         if not isinstance(check, dict):
@@ -273,13 +277,27 @@ def _claim_item(
         for relative in adapted.get("paths") or []:
             state = path_state(repo, relative) if repo is not None else "missing"
             paths.append({"path": relative, "state": state})
+        index = check.get("index")
+        edit = "none"
+        if current is not None:
+            if not digest_matches:
+                edit = "unsafe"
+            elif not isinstance(index, int) or index < 0 or index >= len(current_checks):
+                edit = "unsafe"
+            elif not isinstance(current_checks[index], dict) or str(
+                current_checks[index].get("check") or ""
+            ) != name:
+                edit = "unsafe"
+            else:
+                edit = "ok"
         entry = {
-            "index": check.get("index"),
+            "index": index,
             "check": name,
             "args": args,
             "status": str(check.get("status") or ""),
             "detail": str(check.get("detail") or ""),
             "paths": paths,
+            "edit": edit,
         }
         if "dep_ban" in adapted:
             entry["dep_ban"] = adapted["dep_ban"]

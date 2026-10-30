@@ -6,6 +6,7 @@ REV-R01 is scenarios 1, 2, and 38. REV-R02 is scenarios 3, 4, 5, 37a, 39, 40, 41
 from __future__ import annotations
 
 import html
+import json
 import re
 import tempfile
 import threading
@@ -17,14 +18,17 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from checks.run import reports_dir, results_dir
 from claims.bind import build_claim, write_claim
 from common.canonical import version_digest
-from common.jsonio import write_json
+from common.jsonio import read_json, write_json
 from common.store import save_pack, save_requirement
-from discovery.door import created_curbpack
+from common.validate import validate_curbpack_config
+from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, compile_report, record_decision, worktree_sentence, write_report
+from tests.test_claims_binding_ui import _seed_two_requirements
 
 
 class ReviewDocumentListsTest(unittest.TestCase):
@@ -883,6 +887,274 @@ class ReviewPathAdapterTest(unittest.TestCase):
             self.assertIn('data-requirement="REQ-SHARED"', page)
 
 
+class ReviewEditAndRediscoverTest(unittest.TestCase):
+    def test_matching_check_offers_edit_and_mismatched_check_does_not(self):
+        """REV-03 scenarios 29 and 30. REV-R09."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("edit-note", "REQ-SHARED", "edit.md")
+            write_claim(repo / "kept" / "claims", claim)
+            _matching_run(repo, [claim])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                claims = _get(
+                    base
+                    + "/claims?repo_id=alpha&return_to="
+                    + urllib.parse.quote(
+                        "/review?repo=alpha&result="
+                        + str(run_path.resolve())
+                        + "&expanded=REQ-SHARED",
+                        safe="",
+                    )
+                )
+            self.assertIn(">Edit</a>", page)
+            self.assertIn('data-edit-check="0"', page)
+            self.assertIn("return_to=", page.replace("&amp;", "&"))
+            self.assertNotIn('name="check"', page)
+            self.assertNotIn('name="args"', page)
+            self.assertIn('id="claim-edit-note"', claims)
+            self.assertIn("exist", html.unescape(claims))
+            self.assertIn("edit.md", html.unescape(claims))
+            self.assertIn('name="return_to"', claims)
+
+            changed = _exist_claim("edit-note", "REQ-SHARED", "other.md")
+            write_claim(repo / "kept" / "claims", changed)
+            with _serve(workspace) as base:
+                unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+            self.assertNotIn(">Edit</a>", unsafe)
+            self.assertIn("cannot be matched safely", unsafe)
+
+    def test_claims_editor_save_returns_to_review_and_leaves_run_bytes(self):
+        """REV-03 scenarios 16 and 31. REV-R09 and D7."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("round-note", "REQ-SHARED", "round.md")
+            from common.keystore import load_or_create_key
+            from common.signing import sign_object
+
+            private, _public = load_or_create_key(Workspace(workspace).keys, "Ada Reviewer")
+            sealed = sign_object(claim, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+            write_claim(repo / "kept" / "claims", sealed)
+            _matching_run(repo, [sealed])
+            run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            run_before = run_path.read_bytes()
+            return_to = (
+                f"/review?repo=alpha&result={urllib.parse.quote(str(run_path.resolve()), safe='')}"
+                f"&expanded=REQ-SHARED"
+            )
+            with _serve(workspace) as base:
+                page = _post_claims_save(
+                    base,
+                    "round-note",
+                    {
+                        "repo_id": "alpha",
+                        "return_to": return_to,
+                        "requirement_id": "REQ-SHARED",
+                        "source": "documents",
+                        "severity": "",
+                        "description": "The file is the reviewed evidence.",
+                        "args": json.dumps({"path": "round.md"}, ensure_ascii=False),
+                        "checks": json.dumps(
+                            [{"check": "exist", "args": {"paths": ["changed.md"]}}],
+                            ensure_ascii=False,
+                        ),
+                    },
+                )
+            self.assertIn("The current Claim has changed.", page)
+            self.assertIn(
+                "A new curbcheck run is required for a new run result, and then a new review report.",
+                page,
+            )
+            self.assertIn("expanded=REQ-SHARED", page.replace("&amp;", "&"))
+            self.assertEqual(run_path.read_bytes(), run_before)
+            current = json.loads((repo / "kept" / "claims" / "round-note.json").read_text(encoding="utf-8"))
+            self.assertNotIn("signed", current)
+            self.assertIn("changed.md", json.dumps(current))
+
+    def test_rediscover_button_text_and_dialog(self):
+        """REV-03 scenario 32 open/close. REV-R09."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("fail-note", "REQ-SHARED", "fail.md")
+            write_claim(repo / "kept" / "claims", claim)
+            run = {
+                "tool": "curbcheck",
+                "tool_version": "0.0.1a",
+                "commit": "abc123",
+                "worktree": "clean",
+                "packs": [{"id": "cra-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+                "claims": [
+                    {
+                        "id": "fail-note",
+                        "digest": version_digest(claim),
+                        "status": "fail",
+                        "checks": [
+                            {
+                                "index": 0,
+                                "check": "exist",
+                                "args": {"paths": ["fail.md"]},
+                                "status": "fail",
+                                "detail": "missing file",
+                            }
+                        ],
+                    }
+                ],
+            }
+            run_path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
+            write_json(run_path, run)
+            claim_before = (repo / "kept" / "claims" / "fail-note.json").read_bytes()
+            run_before = run_path.read_bytes()
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", run_path)
+            self.assertIn(">Re-Discover</button>", page)
+            self.assertIn("Re-Discover —", page)
+            self.assertEqual((repo / "kept" / "claims" / "fail-note.json").read_bytes(), claim_before)
+            self.assertEqual(run_path.read_bytes(), run_before)
+
+    def test_discovery_return_to_survives_navigation_take_and_errors(self):
+        """REV-03 scenario 32 return_to survival and breakout sanitisation. REV-R09."""
+        from claims.ui.http import _review_breakout, _safe_review_return
+
+        self.assertEqual(_safe_review_return("/review?</script><script>alert(1)"), "")
+        self.assertEqual(_safe_review_return("/review?x=<script>"), "")
+        self.assertEqual(_safe_review_return("https://evil.example/review"), "")
+        self.assertEqual(_safe_review_return("//evil.example/review"), "")
+        self.assertIsNone(_review_breakout({"return_to": ["/review?x=<script>"]}))
+        self.assertIsNone(_review_breakout({"return_to": ["/claims?x=1"]}))
+        safe = "/review?repo=sample-product&report=%2Ftmp%2Fr.json&expanded=REQ-A"
+        encoded = _review_breakout({"return_to": [safe]}).decode("utf-8")
+        self.assertIn("claim_changed=1", encoded)
+        self.assertIn("window.top.location.replace", encoded)
+        self.assertNotIn("<script>alert", encoded)
+        self.assertNotIn("</script><script>", encoded)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            product, run_path, report_path, claim = _review_discover_fixture(root)
+            return_to = (
+                f"/review?repo=sample-product&report="
+                f"{urllib.parse.quote(str(report_path.resolve()), safe='')}"
+                f"&expanded=REQ-A"
+            )
+            form = {
+                "repo_id": "sample-product",
+                "source_id": "cra-xml-vii",
+                "timestamp": "2026-10-14T080000Z",
+                "requirement_id": "REQ-A",
+                "path": "docs/risk-a.md",
+                "return_to": return_to,
+            }
+            query = (
+                "repo=sample-product&source=cra-xml-vii&timestamp=2026-10-14T080000Z"
+                f"&return_to={urllib.parse.quote(return_to, safe='')}"
+            )
+            with _serve(root) as base:
+                requirement = _get(base + f"/discover/claims/REQ-A?{query}")
+                self.assertIn('name="return_to"', requirement)
+                self.assertIn(urllib.parse.quote(return_to, safe=""), requirement.replace("&amp;", "&"))
+                overview = _get(base + f"/discover/claims?{query}")
+                self.assertIn("return_to=", overview.replace("&amp;", "&"))
+                self.assertIn("/discover/claims/REQ-A?", overview.replace("&amp;", "&"))
+                file_page = _get(base + f"/discover/claims/REQ-A/file?{query}&path=docs/risk-a.md")
+                self.assertIn("return_to=", file_page.replace("&amp;", "&"))
+                rejected = _post(
+                    base + "/discover/feedback/checks",
+                    {
+                        **form,
+                        "check": "contents",
+                        "probe_kind": "pattern",
+                        "pattern": "",
+                    },
+                )
+                self.assertIn('class="invalid"', rejected)
+                self.assertIn('name="return_to"', rejected)
+                self.assertIn(urllib.parse.quote(return_to, safe=""), rejected.replace("&amp;", "&"))
+                voted = _post_redirect(
+                    base + "/discover/feedback/vote",
+                    {**form, "vote": "useful"},
+                )
+                self.assertIn("return_to=", voted)
+                taken = _post(
+                    base + "/discover/feedback/motivation",
+                    {**form, "choice": "take", "why": "Taken rationale for the risk."},
+                )
+                self.assertIn("window.top.location.replace", taken)
+                self.assertIn("claim_changed=1", taken)
+                self.assertIn(return_to, taken.replace("&amp;", "&"))
+
+    def test_discovery_claim_write_returns_to_review_with_d7_sentences(self):
+        """REV-03 scenario 32 accept evidence through Discovery. D7."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            product, run_path, report_path, claim = _review_discover_fixture(root)
+            run_before = run_path.read_bytes()
+            report_before = report_path.read_bytes()
+            claim_before = (product / "curbpack" / "claims" / "claim-old.json").read_bytes()
+            return_to = (
+                f"/review?repo=sample-product&report="
+                f"{urllib.parse.quote(str(report_path.resolve()), safe='')}"
+                f"&expanded=REQ-A"
+            )
+            form = {
+                "repo_id": "sample-product",
+                "source_id": "cra-xml-vii",
+                "timestamp": "2026-10-14T080000Z",
+                "requirement_id": "REQ-A",
+                "path": "docs/risk-b.md",
+                "return_to": return_to,
+            }
+            with _serve(root) as base:
+                review = _get(
+                    base
+                    + "/review?repo=sample-product&source=cra-xml-vii"
+                    + "&timestamp=2026-10-14T080000Z&report="
+                    + urllib.parse.quote(str(report_path.resolve()), safe="")
+                )
+                self.assertIn(">Re-Discover</button>", review)
+                self.assertIn("return_to=", review.replace("&amp;", "&"))
+                iframe = re.search(r'src="([^"]*return_to[^"]*)"', review)
+                self.assertIsNotNone(iframe)
+                self.assertIn("from=review", html.unescape(iframe.group(1)))
+                _post(
+                    base + "/discover/feedback/add",
+                    {**form, "rationale": "Replacement evidence for the risk."},
+                )
+                breakout = _post(
+                    base + "/discover/feedback/checks",
+                    {**form, "check": "exist"},
+                )
+                self.assertIn("window.top.location.replace", breakout)
+                self.assertIn("claim_changed=1", breakout)
+                self.assertIn(return_to, breakout.replace("&amp;", "&"))
+                href = re.search(r'href="([^"]+)" target="_top"', breakout)
+                self.assertIsNotNone(href)
+                page = _get(base + html.unescape(href.group(1)))
+            self.assertIn("The current Claim has changed.", page)
+            self.assertIn(
+                "A new curbcheck run is required for a new run result, and then a new review report.",
+                page,
+            )
+            self.assertEqual(run_path.read_bytes(), run_before)
+            self.assertEqual(report_path.read_bytes(), report_before)
+            self.assertEqual(
+                (product / "curbpack" / "claims" / "claim-old.json").read_bytes(),
+                claim_before,
+            )
+            created = list((product / "curbpack" / "claims").glob("REQ-A-docs__risk-b.md.json"))
+            self.assertEqual(len(created), 1)
+            written = read_json(created[0])
+            self.assertEqual(written["requirement_id"], "REQ-A")
+            self.assertEqual(written["args"], {"path": "docs/risk-b.md"})
+            self.assertEqual(
+                written["checks"],
+                [{"check": "exist", "args": {"paths": ["docs/risk-b.md"]}}],
+            )
+
+
 class ReviewCompiledReportTest(unittest.TestCase):
     def test_compiled_report_keeps_historical_grouping_when_the_claim_moved(self):
         """REV-03 scenario 6 and 10. REV-R06."""
@@ -1403,5 +1675,101 @@ def _get(url: str) -> str:
 def _post(url: str, fields: dict) -> str:
     data = urllib.parse.urlencode(fields).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
-    with urllib.request.urlopen(request) as response:
-        return response.read().decode("utf-8")
+    try:
+        with urllib.request.urlopen(request) as response:
+            return response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        return exc.read().decode("utf-8")
+
+
+def _post_redirect(url: str, fields: dict) -> str:
+    data = urllib.parse.urlencode(fields).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST")
+
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    opener = urllib.request.build_opener(_NoRedirect)
+    try:
+        with opener.open(request) as response:
+            return response.geturl()
+    except urllib.error.HTTPError as exc:
+        if exc.code in {301, 302, 303, 307, 308}:
+            return exc.headers.get("Location") or ""
+        raise
+
+
+def _post_claims_save(base: str, claim_id: str, fields: dict) -> str:
+    return _post(base + f"/claims/{claim_id}", fields)
+
+
+def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
+    _seed_two_requirements(root)
+    product = root / "product"
+    claims_dir = product / "curbpack" / "claims"
+    claims_dir.mkdir(parents=True, exist_ok=True)
+    claim = build_claim(
+        claim_id="claim-old",
+        requirement_id="REQ-A",
+        source="documents",
+        args={"path": "docs/risk-a.md"},
+        checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
+        description="Old evidence.",
+    )
+    write_claim(claims_dir, claim)
+    config = validate_curbpack_config(read_json(product / "curbpack.json"))
+    run = {
+        "tool": "curbcheck",
+        "tool_version": "0.0.1a",
+        "commit": "abc123",
+        "worktree": "clean",
+        "packs": [{"id": "cra-xml-baseline", "version": draft_pack()["version"], "digest": "abc"}],
+        "claims": [
+            {
+                "id": "claim-old",
+                "digest": version_digest(claim),
+                "status": "fail",
+                "checks": [
+                    {
+                        "index": 0,
+                        "check": "exist",
+                        "args": {"paths": ["docs/risk-a.md"]},
+                        "status": "fail",
+                        "detail": "missing file",
+                    }
+                ],
+            }
+        ],
+    }
+    results = results_dir(product, config)
+    results.mkdir(parents=True, exist_ok=True)
+    run_path = results / "run-result_20260101T000000Z.json"
+    write_json(run_path, run)
+    report = compile_report(
+        run_result=run,
+        requirements=[
+            {
+                "id": "REQ-A",
+                "pack_id": "cra-xml-baseline",
+                "source": {
+                    "framework": "EU",
+                    "instrument": "CRA",
+                    "identifier": "CELEX:32024R2847",
+                    "language": "en",
+                    "url": "https://example.invalid/cra",
+                },
+                "references": [{"nr": 1, "locator": "VII.3", "law_text": "law passage for A"}],
+            }
+        ],
+        claims=[claim],
+        repo=product,
+    )
+    report = record_decision(report, "Keep the report.")
+    reports = reports_dir(product, config)
+    reports.mkdir(parents=True, exist_ok=True)
+    report_path = reports / "review-report_20260101T000000Z.json"
+    write_report(report_path, report)
+    save_repos(root, add_repo(root, load_repos(root), name="sample-product", path=str(product)))
+    set_open_repo(root, "sample-product")
+    return product, run_path, report_path, claim

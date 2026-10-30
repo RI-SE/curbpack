@@ -457,7 +457,7 @@ Editing a sealed Claim clears its seal.</p>
 
 def _claim_context(model: dict) -> str:
     fields = []
-    for key in ("repo_id", "source_id", "timestamp"):
+    for key in ("repo_id", "source_id", "timestamp", "return_to"):
         value = str(model.get(key) or "")
         if value:
             fields.append(f'<input type="hidden" name="{key}" value="{html.escape(value)}">')
@@ -713,14 +713,34 @@ def review_page(
         claims_href = _claims_href(discovery or {})
         rows = []
         dialog_parts = []
+        review_return = _review_return_url(door or {})
         for row in result.get("claims") or []:
             if not isinstance(row, dict):
                 continue
             claim = claims_by_id.get(row.get("id")) or {}
             rows.append(_review_claim_row(row, claim, claims_href))
-            dialog = _review_discover_dialog(row, claim, discovery or {})
+            dialog = _review_discover_dialog(row, claim, discovery or {}, return_to=review_return)
             if dialog:
                 dialog_parts.append(dialog)
+        if door and isinstance(door.get("presentation"), dict) and not dialog_parts:
+            for group in door["presentation"].get("groups") or []:
+                if not isinstance(group, dict):
+                    continue
+                group_id = str(group.get("id") or "")
+                for item in group.get("claims") or []:
+                    if not isinstance(item, dict):
+                        continue
+                    requirement_id = str(item.get("requirement_id") or "")
+                    if group_id and group_id != "Unresolved Claims":
+                        requirement_id = group_id
+                    dialog = _review_discover_dialog(
+                        {"id": item.get("id"), "status": item.get("status")},
+                        {"requirement_id": requirement_id},
+                        discovery or {},
+                        return_to=review_return,
+                    )
+                    if dialog:
+                        dialog_parts.append(dialog)
         appendix = []
         for item in report.get("appendix") or []:
             appendix.append(
@@ -911,13 +931,34 @@ def _review_groups(presentation: dict, door: dict) -> str:
                         f"banned_versions {banned}</span>"
                     )
                 path_html = (" " + " ".join(path_bits)) if path_bits else ""
+                edit = str(check.get("edit") or "none")
+                edit_html = ""
+                if edit == "ok":
+                    claim_id = str(claim.get("id") or "")
+                    return_to = (
+                        f"/review?repo={repo}&{document}"
+                        f"&expanded={quote(','.join(open_ids), safe='')}"
+                    )
+                    edit_href = (
+                        f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
+                        f"#claim-{quote(claim_id, safe='')}"
+                    )
+                    edit_html = (
+                        f' <a class="edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
+                        f'href="{html.escape(edit_href)}">Edit</a>'
+                    )
+                elif edit == "unsafe":
+                    edit_html = (
+                        ' <span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
+                    )
                 checks.append(
                     "<li "
                     f'data-check="{html.escape(str(check.get("check") or ""))}" '
                     f'data-status="{html.escape(check_status)}"{check_class}>'
                     f"{html.escape(str(check.get('index')))}: {html.escape(str(check.get('check') or ''))} "
                     f"{html.escape(check_status)}{detail_html}{path_html} "
-                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></li>"
+                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code>"
+                    f"{edit_html}</li>"
                 )
             sentences = "".join(
                 f"<p>{html.escape(str(line))}</p>" for line in claim.get("sentences") or []
@@ -934,11 +975,18 @@ def _review_groups(presentation: dict, door: dict) -> str:
             claim_header.append(
                 f' claim {html.escape(str(claim.get("id") or ""))}{claim_label_html}{claim_facts}'
             )
+            rediscover = ""
+            if status in {"fail", "skipped"} and str(claim.get("id") or ""):
+                rediscover = (
+                    f'<button type="button" class="discover-again" '
+                    f'data-dialog="{html.escape(_dialog_id(str(claim.get("id") or "")))}">'
+                    "Re-Discover</button>"
+                )
             claims_html.append(
                 f'<li data-claim="{html.escape(str(claim.get("id") or ""))}">'
                 f"<code>{html.escape(str(claim.get('id') or ''))}</code> "
                 f'<span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>'
-                f"{requirement_html}{sentences}<ul>{''.join(checks)}</ul></li>"
+                f"{requirement_html}{sentences}<ul>{''.join(checks)}</ul>{rediscover}</li>"
             )
         summary = (
             f'<a href="{html.escape(href)}">{html.escape(group_id)}'
@@ -1154,7 +1202,7 @@ def _review_claim_row(row: dict, claim: dict, claims_href: str) -> str:
     if requirement_id:
         button = (
             f'<button type="button" class="discover-again" data-dialog="{html.escape(_dialog_id(claim_id))}">'
-            "Discover again</button>"
+            "Re-Discover</button>"
         )
     return (
         f'<li class="review-failed" data-claim="{html.escape(claim_id)}" '
@@ -1188,7 +1236,7 @@ def _review_checks(row: dict) -> str:
     return "".join(parts)
 
 
-def _review_discover_dialog(row: dict, claim: dict, discovery: dict) -> str:
+def _review_discover_dialog(row: dict, claim: dict, discovery: dict, *, return_to: str = "") -> str:
     if str(row.get("status") or "") not in {"fail", "skipped"}:
         return ""
     requirement_id = str(claim.get("requirement_id") or "")
@@ -1203,6 +1251,8 @@ def _review_discover_dialog(row: dict, claim: dict, discovery: dict) -> str:
             f"/discover/claims/{quote(requirement_id)}"
             f"?repo={quote(repo_id)}&source={quote(source_id)}&timestamp={quote(timestamp)}&from=review"
         )
+        if return_to:
+            src += f"&return_to={quote(return_to, safe='')}"
         frame = (
             f'<iframe title="Discovery for {html.escape(requirement_id)}" src="{html.escape(src)}"></iframe>'
         )
@@ -1214,7 +1264,7 @@ def _review_discover_dialog(row: dict, claim: dict, discovery: dict) -> str:
     return f"""
 <dialog id="{html.escape(_dialog_id(claim_id))}" class="review-discover" data-requirement="{html.escape(requirement_id)}">
   <div class="head">
-    <h2>Discover again — <code>{html.escape(requirement_id)}</code></h2>
+    <h2>Re-Discover — <code>{html.escape(requirement_id)}</code></h2>
     <button type="button" class="secondary" data-close>Close</button>
   </div>
   <div class="body">
@@ -1244,6 +1294,22 @@ document.querySelectorAll("dialog.review-discover [data-close]").forEach((button
 });
 </script>
 """
+
+
+def _review_return_url(door: dict) -> str:
+    repo = quote(str(door.get("repo_id") or ""), safe="")
+    selected_result = quote(str(door.get("selected_result") or ""), safe="")
+    selected_report = quote(str(door.get("selected_report") or ""), safe="")
+    if not repo or (not selected_result and not selected_report):
+        return ""
+    document = f"report={selected_report}" if selected_report else f"result={selected_result}"
+    groups = door.get("presentation", {}).get("groups") if isinstance(door.get("presentation"), dict) else []
+    open_ids = [
+        str(group.get("id") or "")
+        for group in (groups or [])
+        if isinstance(group, dict) and group.get("open")
+    ]
+    return f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
 
 
 def _dialog_id(claim_id: str) -> str:

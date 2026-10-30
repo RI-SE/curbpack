@@ -13,14 +13,14 @@
 | --- | --- |
 | Plan status | APPROVED |
 | Approved by | Maintainer, 2026-10-29. Plan approved as written, including D1 dated reports and no compile preview. |
-| Current task | Task 6 — IMPL-START |
-| Last completed task | Task 5 |
-| Last verified tests | 2026-10-29 outside sandbox: `python3 -m unittest tests.test_rev03_review` — Ran 29 tests, OK. |
-| Last checkpoint commit | This commit. Resolve with `git log -1 --format=%H -- plan/REV-03.md`. |
+| Current task | Task 7 |
+| Last completed task | Task 6 |
+| Last verified tests | 2026-10-30 outside sandbox: `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_review_replace_flow tests.test_claims_binding_ui` — Ran 42 tests, OK. |
+| Last checkpoint commit | pending Task 6 commit |
 | Requirements | Story scenarios in `REV-03-Review-enhancements.md`. Plan rows REV-R01–REV-R10 are traceability aliases for those scenarios. No new `docs/req/` file. |
 | Packs v2 | `docs/reference/packs2.md` and `docs/reference/workspace.md` at `84682d68a6762ff59efb92b77cf66450e0e05c08`. This plan edits neither. Report keys stay `run_result`, `requirements`, `claims`, `appendix`, optional `decision`, optional `signed`. `decision` stays the reviewer's own words. |
 | Blockers | None |
-| **Exact next action** | Task 6 RED: Edit the matched Check, and Re-Discover. `python3 -m unittest tests.test_rev03_review`. |
+| **Exact next action** | Task 7 IMPL-START: write RED tests for compile / decision / seal (REV-R10). |
 
 ## Requirements and acceptance mapping
 
@@ -36,7 +36,7 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 | REV-R06 | REV-03 scenarios 6, 10, 37 | `tests/test_rev03_review.py` | Task 3 verified |
 | REV-R07 | REV-03 scenarios 17, 18, 19, 20, 36 | `tests/test_rev03_review.py` | Task 4 verified |
 | REV-R08 | REV-03 scenarios 24, 25, 26, 27, 28 | `tests/test_rev03_review.py` | Task 5 verified |
-| REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | DRAFT |
+| REV-R09 | REV-03 scenarios 29, 30, 31, 32 | `tests/test_rev03_review.py` | Task 6 verified |
 | REV-R10 | REV-03 scenarios 33, 34, 35, 35a | `tests/test_rev03_review.py` | DRAFT |
 
 ## Decisions
@@ -154,10 +154,10 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 **Validation:** `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_review_replace_flow tests.test_claims_binding_ui`
 **Stop if:** Edit would require a new Claims Editor route or a new Check editor inside Review.
 
-- [ ] RED observed for the intended behavior (or existing PASS demonstrated).
-- [ ] Minimal implementation and GREEN verified.
-- [ ] Relevant regressions and review complete.
-- [ ] Checkpoint saved and verified local commit created.
+- [x] RED observed for the intended behavior (or existing PASS demonstrated).
+- [x] Minimal implementation and GREEN verified.
+- [x] Relevant regressions and review complete.
+- [x] Checkpoint saved and verified local commit created.
 
 ### Task 7 — Compile the selected run, then decision and seal
 
@@ -203,3 +203,9 @@ The story already states the behavior as Given/When/Then. These ids are only so 
 - **2026-10-29 / Task 5 RED/GREEN:** Pilot path adapter for `exist`/`contents`/`dep_ban`, confined `file=` dialog, missing path opens all-pass. Validation — Ran 29 tests, OK.
 - **2026-10-29 / Task 5 review:** Issues Found (`a9479f03`). Important fixed: closed fixtures create evidence files; contents probes stay beside path links.
 - **2026-10-29 / Task 5 re-review:** Approved (`156180dd`). No Critical or Important. Minor, not applied: Close href / report file dialog assertion; alias and symlink assertions; resolve-then-reject for `..`. `python3 -m unittest tests.test_rev03_review` — Ran 29 tests, OK.
+- **2026-10-29 / Task 6 RED/GREEN:** Edit when digest+check match; unsafe sentence otherwise; Re-Discover label; Claims `return_to` with digest-gated `claim_changed`; Discovery breakout helper. Validation — Ran 41 tests, OK.
+- **2026-10-29 / Task 6 review:** Issues Found (`c2827b78`). Important: Discovery accept evidence did not return to Review; `claim_changed` on unchanged digest. Fixed in tree before re-review.
+- **2026-10-29 / Task 6 re-review:** Issues Found (`77519acf`). Important remain: return_to dropped after Discovery navigation / Take / error pages; breakout script injection risk; scenario 32 not a full Discovery post acceptance test. No third review. Task 6 BLOCKED. Local follow-up edits after that re-review are unreviewed.
+- **2026-10-30 / Task 6 REVIEW-START:** Maintainer authorized one additional review round for the three Important findings from `77519acf`. Follow-up fixes: return_to survives overview/file/vote/Take/check-error/create-error; breakout uses `_safe_review_return` plus JSON encoding; scenario 32 posts Discovery add+exist check, follows breakout, asserts D7 sentences and unchanged run/report/old Claim bytes. Validation — Ran 42 tests, OK. Independent review of the uncommitted Task 6 diff next.
+- **2026-10-30 / Task 6 review:** Approved (`53a5710b`). No Critical or Important. The three `77519acf` findings are resolved. Minor, not applied: missing-file Discovery error page has no Back link with return_to; reject `#` in `_safe_review_return` so claim_changed cannot land in a fragment. `python3 -m unittest tests.test_rev03_review tests.test_review_discover_again tests.test_review_replace_flow tests.test_claims_binding_ui` — Ran 42 tests, OK.
+- **2026-10-30 / Task 6 VERIFIED:** Checkpoint and local commit for Edit / Re-Discover / Discovery return_to / D7. Next: Task 7.
