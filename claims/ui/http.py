@@ -104,19 +104,29 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         wrote_claim = False
         try:
             check, args, label = _check_from_form(file_path, form)
-            document = save_check(**common, check=check, args=args, label=label)
-            wrote_claim = _sync_claim(context, requirement, file_path, document, form)
+            # Explicit Check edit updates the existing Claim. A plain save still
+            # goes through feedback + suggest_claim_id so a differently named
+            # Claim for the same path can be created (SYS-03 Discover).
+            if _one(form, "edit_index").isdigit() and _claim_for_path(
+                context["claims"], requirement_id, file_path
+            ) is not None:
+                wrote_claim = _update_claim_check(
+                    context, requirement_id, file_path, form, check, args, label
+                )
+            else:
+                document = save_check(**common, check=check, args=args, label=label)
+                wrote_claim = _sync_claim(context, requirement, file_path, document, form)
         except (ModelError, CheckError) as exc:
             model = _with_signing(context, requirement, form, trust)
+            return_to = _safe_review_return(_one(form, "return_to"))
+            if return_to:
+                model["return_to"] = return_to
             model["check_error"] = {
                 "path": file_path,
                 "check": _one(form, "check"),
                 "invalid": _invalid_fields(exc),
                 "values": {key: _one(form, key) for key in _CHECK_FIELDS},
             }
-            return_to = _safe_review_return(_one(form, "return_to"))
-            if return_to:
-                model["return_to"] = return_to
             return researcher.requirement_page(model)
         if wrote_claim:
             breakout = _review_breakout(form)
@@ -180,6 +190,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
             return breakout
     context["claims"] = read_claims(context["claims_dir"])
     model = _with_signing(context, requirement, form, trust)
+    return_to = _safe_review_return(_one(form, "return_to"))
+    if return_to:
+        model["return_to"] = return_to
     model["outcomes"] = outcomes
     return_to = _safe_review_return(_one(form, "return_to"))
     if return_to:
@@ -352,10 +365,15 @@ def _split(path: str) -> tuple[str, str]:
 def _back(context: dict, requirement_id: str, **extra: str) -> str:
     from urllib.parse import quote
 
-    query = (
-        f"repo={quote(context['repo_id'])}&source={quote(context['source_id'])}"
-        f"&timestamp={quote(context['timestamp'])}"
-    )
+    repo = quote(context["repo_id"])
+    pack_id = str(context.get("pack_id") or "")
+    if pack_id:
+        query = f"repo={repo}&pack={quote(pack_id)}"
+    else:
+        query = (
+            f"repo={repo}&source={quote(context['source_id'])}"
+            f"&timestamp={quote(context['timestamp'])}"
+        )
     for key, value in extra.items():
         if not value:
             continue
@@ -399,7 +417,12 @@ def _check_from_form(path: str, form: dict) -> tuple[str, dict, str]:
     """Map a PoC picker choice onto a Packs v2 check the runner can execute."""
     choice = _one(form, "check")
     if choice == "exist":
-        return "exist", {"paths": [path]}, ""
+        extra = [part.strip() for part in _one(form, "require_tree_paths").split(",") if part.strip()]
+        paths = [path]
+        for item in extra:
+            if item not in paths:
+                paths.append(item)
+        return "exist", {"paths": paths}, ""
     if choice == "contents":
         check, args = _file_present(path, form)
         if check == "exist":
@@ -512,6 +535,39 @@ def _choose_motivation(
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
         return False
     write_claim(context["claims_dir"], rebind(claim, description=why))
+    return True
+
+
+def _update_claim_check(
+    context: dict,
+    requirement_id: str,
+    file_path: str,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
+    """Replace one saved check, or append one. Other checks on the claim stay."""
+    claim = _claim_for_path(context["claims"], requirement_id, file_path)
+    if claim is None:
+        return False
+    proposed = {"check": check, "args": args}
+    if label:
+        proposed["label"] = label
+    checks = [item for item in claim.get("checks") or [] if isinstance(item, dict)]
+    raw = _one(form, "edit_index")
+    if raw.isdigit():
+        index = int(raw)
+        if not 0 <= index < len(checks):
+            raise ModelError("claim", "checks", "a check on this claim")
+        checks[index] = proposed
+    elif not any(item.get("check") == check and item.get("args") == args for item in checks):
+        checks.append(proposed)
+    if checks == [item for item in claim.get("checks") or [] if isinstance(item, dict)]:
+        return False
+    if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
+        raise ModelError("claim", "signed", "confirmation before changing a signed claim")
+    write_claim(context["claims_dir"], rebind(claim, checks=checks))
     return True
 
 
