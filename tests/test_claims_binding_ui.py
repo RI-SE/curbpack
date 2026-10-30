@@ -97,8 +97,9 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 )
                 discover = _get(base + "/discover?repo=sample-product")
                 self.assertIn(">Pack</th>", discover)
-                self.assertIn("CRA Annex VII", discover)
-                self.assertIn("2026-10-14T080000Z", discover)
+                self.assertIn("CRA baseline", discover)
+                self.assertNotIn("2026-10-14T080000Z", discover)
+                self.assertNotIn(">Edit<", discover)
                 requirement_file = root / "cra-xml-baseline" / "2026-10-14T080000Z" / "REQ-A.json"
                 before = requirement_file.read_bytes()
                 started = _post(
@@ -123,8 +124,7 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 self.assertNotIn("Open claims", finished)
                 self.assertNotIn(">Close<", finished)
                 self.assertNotIn("Use path", finished)
-                self.assertIn(">Edit<", finished)
-                self.assertNotRegex(finished, r'class="edit-review"[^>]*hidden')
+                self.assertNotIn(">Edit<", finished)
                 self.assertIn(
                     'href="/discover/claims?repo=sample-product&amp;source=cra-xml-vii&amp;timestamp=2026-10-14T080000Z"',
                     finished,
@@ -139,6 +139,12 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 self.assertNotIn("New claim", claims_empty)
 
                 _post(base + "/claims", _new_claim("claim-from-a", "REQ-A", "docs/risk-a.md", "Evidence for A."))
+                with_claims = _get(base + "/discover?repo=sample-product")
+                self.assertIn(">Edit<", with_claims)
+                self.assertIn(
+                    'href="/discover/claims?repo=sample-product&amp;pack=cra-xml-baseline"',
+                    with_claims,
+                )
                 saved_a = read_json(root / "product" / "curbpack" / "claims" / "claim-from-a.json")
                 self.assertEqual(saved_a["requirement_id"], "REQ-A")
                 self.assertEqual(saved_a["source"], "documents")

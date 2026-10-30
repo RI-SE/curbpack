@@ -57,6 +57,7 @@ from common.store import (
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
 from demo_setup import prepare_demo
+from discovery.jobs import CURBPACK_COPY
 from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import reviewable_targets
 from discovery.jobs import request_abort as abort_discover_job
@@ -67,6 +68,7 @@ from discovery.door import (
     created_curbpack,
     open_paths,
     open_repo_id,
+    pack_display_name,
     repo_claims_dir,
     repo_pack_requirements,
     save_directory_fields,
@@ -1117,7 +1119,7 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
         "repo_id": str((repo or {}).get("id") or ""),
         "repo_name": str((repo or {}).get("name") or ""),
         "repos": repos,
-        "sections": _discover_sections(ws, repo, product=product) if repo else [],
+        "pack_rows": _discover_pack_rows(ws, repo) if repo else [],
         "reviewable": reviewable_targets(ws.root),
         "job": job,
         "error": (query.get("error") or [""])[0],
@@ -1128,6 +1130,66 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
         "results_dir": fields.get("results_dir") or "",
         "reports_dir": fields.get("reports_dir") or "",
     }
+
+
+def _discover_pack_rows(ws: Workspace, repo: dict | None) -> list[dict]:
+    """One row per pack named in the selected repo's curbpack.json.
+
+    Requirement counts come from that file's packs directory. Claim counts come
+    from its claims directory. Pack-editor working copies are not consulted.
+    """
+    if not isinstance(repo, dict):
+        return []
+    try:
+        repo_path = resolve_repo_path(ws.root, str(repo.get("path") or ""))
+    except ModelError:
+        return []
+    config_path = repo_path / "curbpack.json"
+    if not config_path.is_file():
+        return []
+    from common.validate import validate_curbpack_config
+
+    try:
+        config = validate_curbpack_config(read_json(config_path))
+    except ModelError:
+        return []
+    try:
+        folder = repo_claims_dir(repo_path)
+        claims = read_claims(folder) if folder.is_dir() else []
+    except ModelError:
+        claims = []
+    claimed = {
+        claim.get("requirement_id")
+        for claim in claims
+        if isinstance(claim, dict)
+    }
+    rows = []
+    for pack_id in config["packs"]:
+        try:
+            requirements = repo_pack_requirements(repo_path, pack_id)
+        except ModelError:
+            requirements = []
+        ids = {
+            item["id"]
+            for item in requirements
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        claim_count = sum(
+            1
+            for claim in claims
+            if isinstance(claim, dict) and claim.get("requirement_id") in ids
+        )
+        unclaimed = sum(1 for requirement_id in ids if requirement_id not in claimed)
+        rows.append(
+            {
+                "pack_id": pack_id,
+                "name": pack_display_name(repo_path, pack_id),
+                "requirements": len(ids),
+                "claims": claim_count,
+                "unclaimed": unclaimed,
+            }
+        )
+    return rows
 
 
 def _discover_sections(ws: Workspace, repo: dict | None, *, product: bool) -> list[dict]:
@@ -1246,8 +1308,71 @@ def _copy_claim_counts(root: Path, repo: Path | None, pack_id: str, ref: str) ->
     return len(ids), claim_count, unclaimed
 
 
+def _start_pack_discover(ws: Workspace, repo_id: str, pack_id: str, form: dict) -> str:
+    """Discover the requirements of one pack named in the repo's curbpack.json."""
+    data = load_repos(ws.root)
+    row = find_repo(data, repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    if pack_id not in config["packs"]:
+        raise ModelError("discover", "pack_id", f"a pack named in curbpack.json, not {pack_id}")
+    requirements = repo_pack_requirements(repo, pack_id)
+    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    if not raw_limit.isdigit():
+        raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
+    name = pack_display_name(repo, pack_id)
+    title = f"Discover — {row.get('name') or repo_id} / {name}"
+    job_id = f"discover-{secrets.token_hex(4)}"
+    start_discover_job(
+        ws.root / "jobs",
+        job_id=job_id,
+        workspace=ws.root,
+        repo_id=repo_id,
+        repo=repo,
+        requirements=requirements,
+        hunt={"search_hints": config.get("search_hints") or {}},
+        title=title.strip(),
+        source_id=pack_id,
+        timestamp=CURBPACK_COPY,
+        pack_id=pack_id,
+        assess_limit=int(raw_limit),
+        complete=getattr(ws, "discover_complete", None),
+    )
+    return job_id
+
+
+def _pack_id_for_requirement(repo: Path, requirement_id: str) -> str:
+    """Pack in curbpack.json that contains this requirement, or empty."""
+    if not requirement_id:
+        return ""
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        return ""
+    from common.validate import validate_curbpack_config
+
+    try:
+        config = validate_curbpack_config(read_json(path))
+    except ModelError:
+        return ""
+    for pack_id in config["packs"]:
+        try:
+            requirements = repo_pack_requirements(repo, pack_id)
+        except ModelError:
+            continue
+        if any(isinstance(item, dict) and item.get("id") == requirement_id for item in requirements):
+            return pack_id
+    return ""
+
+
 def _start_discover(ws: Workspace, form: dict) -> str:
     repo_id = (form.get("repo_id") or [""])[0].strip()
+    pack_id = (form.get("pack_id") or [""])[0].strip()
+    if pack_id:
+        return _start_pack_discover(ws, repo_id, pack_id, form)
     source_id = (form.get("source_id") or [""])[0].strip()
     timestamp = (form.get("timestamp") or [""])[0].strip()
     data = load_repos(ws.root)
@@ -2555,6 +2680,9 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
     if not isinstance(config, dict):
         config = {}
     hunt = {"search_hints": config.get("search_hints") or {}}
+    pack_id = (form.get("pack") or [""])[0].strip() or _pack_id_for_requirement(
+        repo, str(requirement.get("id") or "")
+    )
     job_id = f"try-{secrets.token_hex(4)}"
     start_try_job(
         ws.root / "jobs",
@@ -2564,6 +2692,7 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
         requirement=requirement,
         hunt=hunt,
         assess_limit=assess_limit,
+        pack_id=pack_id,
         complete=getattr(ws, "discover_complete", None),
     )
     return job_id
