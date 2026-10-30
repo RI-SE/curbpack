@@ -129,7 +129,9 @@ python3 compile-pdf.py --report /path/to/review-report.json --out /path/to/revie
 
 Install runtime dependencies from `requirements.txt` first. The output parent directory must exist. Exit 0 means the PDF was written, 1 means rendering or input failed, and 2 means invalid command-line arguments. An existing output is refused and left unchanged.
 
-The PDF presents the saved JSON report in monochrome: run metadata and outcome counts, loaded Packs, Requirements with source passages, their Claims and Check results, recorded signature gaps, reviewer decision, and signature metadata. Everything is visible without buttons or expanding sections. It uses the embedded historical objects and does not open product evidence or run Checks. The input JSON is unchanged.
+The PDF opens with a plain-language management summary: compact run identity, scope and counts, items needing follow-up, separate approval gaps, and the recorded reviewer decision. Review findings then show failed/skipped assertions, the checker's recorded reasons, neutral questions for human review, and references to the detailed records. It does not invent business risk, ownership, deadlines, or decisions.
+
+Technical details follow on new pages in appendix tables: A — run metadata and loaded Pack versions/digests; B — a compact reviewed-item index, embedded Requirements/source passages, Claims/evidence and indexed Check arguments/outcomes; C — recorded signature gaps and seal metadata. Tables repeat headers and split long records across pages. Everything is monochrome and visible without controls. The input JSON and historical grouping are unchanged; the exporter does not open live evidence or run Checks. Changes since the run and unresolved current evidence are explicitly not assessed.
 
 The PDF is a readable companion to the original report. It does not independently verify signatures, and the JSON signature does not cover the PDF bytes. Keep the original JSON for verification. Implementation: `compile/pdf.py`; ownership: [Compile architecture](../../compile/ARCHITECTURE.md).
 

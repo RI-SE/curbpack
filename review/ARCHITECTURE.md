@@ -2,7 +2,7 @@
 
 Status: **normative target, reviewed against PoC1 and the current PoC2 code (21 October 2026)**. Existing implementation deviates in places described under Current code. The report and signing contracts remain governed by Packs v2. The Review page opens the existing one-Requirement Discovery in a popup. The durable report path below is a design decision and is not the path the current server writes.
 
-Normative domain model: `docs/reference/packs2.md` in this repository. The report uses the same `signed` shape as a Requirement (§2.6). Its body is the run result (§3.1) plus the reviewer's words. This file specifies how those are assembled. It is not a second run result and not a second Requirement or Claim.
+Normative domain model: `docs/reference/packs2.md` in this repository. The report uses the same `signed` shape as a Requirement (§2.6). Its body is the run result ([Outputs](../docs/reference/outputs.md#run-result)) plus the reviewer's words. This file specifies how those are assembled. It is not a second run result and not a second Requirement or Claim.
 
 Sibling documents:
 
