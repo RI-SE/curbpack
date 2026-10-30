@@ -321,7 +321,7 @@ def _reading(reading: dict | None) -> str:
     return text
 
 
-def cover(model: dict, message: str = "", error: str = "") -> bytes:
+def cover(_model: dict, message: str = "", error: str = "") -> bytes:
     body = f"""
 <h1>Curbpack Studio</h1>
 <p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
@@ -333,7 +333,6 @@ check regularly → review the result and fix what failed.</p>
 <p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
 <p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
 <p><a href="/review">Review — compile and sign review</a></p>
-<p>{html.escape(str(model.get("report_line") or "No review report."))}</p>
 </div>
 """
     return page("Curbpack Studio", body)

@@ -28,9 +28,12 @@ class UiSmokeTest(unittest.TestCase):
             try:
                 cover = _get(base + "/")
                 self.assertIn("Pack Editor", cover)
-                self.assertIn("No review report.", cover)
+                self.assertNotIn("No review report.", cover)
                 self.assertIn("Discover", cover)
                 self.assertNotIn("Developer", cover)
+                self.assertNotIn('href="/claims"', cover)
+                self.assertNotIn('href="/scaffold"', cover)
+                # Sample Prepare lives under packs/; it is not the active pilot Pack.
                 self.assertIn("author packs from law text", cover)
                 self.assertNotIn("CRA-ANNEX-VII-RISK", cover)
                 requirement = _get(base + "/requirement")

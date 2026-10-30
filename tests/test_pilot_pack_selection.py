@@ -177,8 +177,9 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn('href="/check"', home)
                 self.assertIn('href="/review"', home)
                 self.assertNotIn("Developer", home)
-                self.assertNotIn('href="/scaffold"', home)
                 self.assertNotIn('href="/claims"', home)
+                self.assertNotIn('href="/scaffold"', home)
+                self.assertNotIn("No review report.", home)
                 self.assertNotIn("signature verifies", home)
                 self.assertLess(home.index("Pack Editor"), home.index('href="/discover"'))
 
@@ -227,6 +228,7 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn("author packs from law text", home)
                 self.assertIn('href="/requirements"', home)
                 self.assertNotIn("Developer", home)
+                self.assertNotIn("No review report.", home)
                 for href in ("/discover", "/check", "/review"):
                     self.assertIn(f'href="{href}"', home)
                 self.assertNotIn('href="/claims"', home)

@@ -1275,27 +1275,10 @@ def _home_model(ws: Workspace) -> dict:
             else:
                 selected = selection.get("version") == item["ref"]
         options.append({**{key: value for key, value in item.items() if key != "path"}, "selected": selected})
-    info = snapshot(ws.root)
     return {
         "selection": selection if resolve_selected_pack(ws.root) else None,
         "options": options,
-        "report_line": _report_line(info),
     }
-
-
-def _report_line(info: dict) -> str:
-    if info.get("report_error"):
-        return str(info["report_error"])
-    reading = info.get("report_reading")
-    if not isinstance(reading, dict):
-        return "No review report."
-    verified = "yes" if reading.get("verifiable") else "no"
-    text = f"Report: {reading.get('what')} verifiable {verified}."
-    if info.get("same_run") is True:
-        text += " same run: yes."
-    elif info.get("same_run") is False:
-        text += " same run: no."
-    return text
 
 
 def _apply_pack_selection(ws: Workspace, form: dict) -> Path:
