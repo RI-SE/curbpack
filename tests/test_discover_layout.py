@@ -11,7 +11,7 @@ from pathlib import Path
 
 from app.server import Workspace, make_handler
 from claims.bind import build_claim, write_claim
-from common.jsonio import write_json
+from common.jsonio import read_json, write_json
 from common.store import save_requirement
 from discovery.door import created_curbpack
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
@@ -144,6 +144,37 @@ class DiscoverLayoutTest(unittest.TestCase):
                     'href="/requirements/requirement/REQ-A?repo=sample-product&amp;pack=cra-xml-baseline"',
                     requirement,
                 )
+                self.assertIn('class="check-chip check-edit"', requirement)
+                import urllib.parse
+                import urllib.request
+
+                body = urllib.parse.urlencode(
+                    {
+                        "repo_id": "sample-product",
+                        "source_id": "cra-xml-baseline",
+                        "timestamp": "curbpack",
+                        "pack": "cra-xml-baseline",
+                        "requirement_id": "REQ-A",
+                        "path": "docs/a.md",
+                        "edit_index": "0",
+                        "check": "exist",
+                        "require_tree_paths": "README.md",
+                    }
+                ).encode()
+                edit = urllib.request.Request(
+                    base + "/discover/feedback/checks",
+                    data=body,
+                    method="POST",
+                )
+                with urllib.request.urlopen(edit) as response:
+                    edited = response.read().decode()
+                self.assertIn("File is present", edited)
+                saved = read_json(repo / "curbpack" / "claims" / "claim-a.json")
+                self.assertEqual(
+                    saved["checks"],
+                    [{"check": "exist", "args": {"paths": ["docs/a.md", "README.md"]}}],
+                )
+                self.assertEqual(saved["description"], "Evidence for A.")
 
                 product = _get(base + "/discover/repo")
                 self.assertIn('class="repo-picker" action="/discover/repo"', product)

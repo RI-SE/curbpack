@@ -224,49 +224,230 @@ def _review_message(query: dict) -> str:
     if (query.get("saved") or [""])[0]:
         return "Decision saved."
     if (query.get("signed") or [""])[0]:
-        return "Report signed."
+        return "Report sealed."
+    if (query.get("claim_changed") or [""])[0]:
+        return (
+            "The current Claim has changed. "
+            "A new curbcheck run is required for a new run result, and then a new review report."
+        )
     return ""
 
 
 def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     query = query or {}
     repo_id = _sync_open_repo(ws, query)
+    empty = {"run_results": [], "review_reports": [], "results_notice": "", "selected_result": "", "selected_report": ""}
     if not repo_id:
-        return None, None, "No repository is chosen.", False, False, None, []
+        return None, None, "No repository is chosen.", False, False, None, [], empty
     from common.validate import validate_curbpack_config
 
     repo = _registered_repo_path(ws, repo_id)
     config_path = repo / "curbpack.json"
     if not config_path.is_file():
-        return None, None, "", False, False, None, []
-    config = validate_curbpack_config(read_json(config_path))
-    report_path = _confined_review_report_path(
-        str(reports_dir(repo, config).resolve()),
-        (query.get("report") or [""])[0],
-    )
-    run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
-    if report_path:
-        report = load_report(Path(report_path))
-        reading = read_report_signature(report, trust_store(ws.keys))
-        same = None
-        if run_path:
-            same = same_run(report, load_run_result(Path(run_path)))
-        return report, reading, "", True, True, same, _unchecked_for_repo(repo, config, report)
-    if not run_path:
-        return None, None, "", False, False, None, []
-    _packs, requirements = _report_sources_for_repo(repo, config)
-    if not _packs:
-        return None, None, "", False, False, None, []
+        return None, None, "curbpack.json is missing.", False, False, None, [], empty
+    try:
+        loaded_config = read_json(config_path)
+    except ValueError as exc:
+        raise ModelError("curbpack.json", "json", f"readable JSON ({exc})") from exc
+    config = validate_curbpack_config(loaded_config)
+    results_folder = results_dir(repo, config)
+    reports_folder = reports_dir(repo, config)
+    extra = dict(empty)
+    errors: list[str] = []
+    if not results_folder.is_dir():
+        errors.append(f"Results directory {config['results_dir']} cannot be used.")
+    else:
+        extra["run_results"] = _dated_entries(results_folder, "run-result")
+        if not extra["run_results"]:
+            extra["results_notice"] = "There is no run result."
+    if not reports_folder.is_dir():
+        errors.append(f"Reports directory {config['reports_dir']} cannot be used.")
+    else:
+        extra["review_reports"] = _dated_entries(reports_folder, "review-report")
+    requested_report = (query.get("report") or [""])[0]
+    requested_result = (query.get("result") or [""])[0]
+    if requested_report.strip():
+        status, chosen = _requested_dated(reports_folder, requested_report, "review-report")
+        if status != "ok":
+            errors.append(f"{chosen} is not a review report in the Reports directory.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        try:
+            report = load_report(Path(chosen))
+        except (ModelError, ValueError):
+            errors.append(f"{Path(chosen).name} is not a readable review report.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        extra["selected_report"] = chosen
+        try:
+            report_rel = str(Path(chosen).resolve().relative_to(repo.resolve()))
+        except ValueError:
+            report_rel = Path(chosen).name
+        reading = read_report_signature(
+            report, trust_store(ws.keys), repo=repo, relative=report_rel
+        )
+        same = _same_as_latest_run(results_folder, report)
+        extra["presentation"] = _report_presentation(ws, repo, config, report, query, reading)
+        extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
+        return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
+    if requested_result.strip():
+        status, chosen = _requested_dated(results_folder, requested_result, "run-result")
+        if status != "ok":
+            errors.append(f"{chosen} is not a run result in the Results directory.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        try:
+            loaded = load_run_result(Path(chosen))
+        except (ModelError, ValueError):
+            errors.append(f"{Path(chosen).name} is not a readable run result.")
+            return None, None, " ".join(errors), False, False, None, [], extra
+        extra["selected_result"] = chosen
+        report = {"run_result": loaded, "claims": [], "appendix": []}
+        extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
+        extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
+        return report, None, " ".join(errors), False, False, None, [], extra
+    return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _review_file_view(repo: Path, requested: str) -> dict | None:
+    wanted = requested.strip()
+    if not wanted:
+        return None
+    if Path(wanted).is_absolute() or ".." in Path(wanted).parts:
+        return {"path": wanted, "state": "invalid", "text": ""}
+    try:
+        path = (repo / wanted).resolve()
+        path.relative_to(repo.resolve())
+    except ValueError:
+        return {"path": wanted, "state": "invalid", "text": ""}
+    if not path.is_file():
+        return {"path": wanted, "state": "missing", "text": ""}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = path.read_bytes().decode("utf-8", errors="replace")
+    return {"path": wanted, "state": "present", "text": text}
+
+
+def _dated_entries(folder: Path, prefix: str) -> list[dict]:
+    rows = []
+    for path in sorted(folder.glob(f"{prefix}_*.json")):
+        if path.is_file():
+            rows.append({"name": path.name, "path": str(path.resolve())})
+    return rows
+
+
+def _requested_dated(folder: Path, requested: str, prefix: str) -> tuple[str, str]:
+    wanted = requested.strip()
+    path = Path(wanted).resolve()
+    try:
+        path.relative_to(folder.resolve())
+    except ValueError:
+        return "outside", wanted
+    if path.is_file() and path.name.startswith(prefix + "_") and path.name.endswith(".json"):
+        return "ok", str(path)
+    return "missing", str(path)
+
+
+def _same_as_latest_run(results_folder: Path, report: dict):
+    if not results_folder.is_dir():
+        return None
+    dated = [path for path in sorted(results_folder.glob("run-result_*.json")) if path.is_file()]
+    if not dated:
+        return None
+    try:
+        return same_run(report, load_run_result(dated[-1]))
+    except (ModelError, ValueError):
+        return None
+
+
+def _expanded_query(query: dict) -> set[str] | None:
+    if "expanded" in query:
+        return {part for part in (query.get("expanded") or [""])[0].split(",") if part}
+    return None
+
+
+def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict, query: dict) -> dict:
+    from common.signing import read_signature
+    from review.gitseal import read_claim_signature
+    from review.present import present_raw_run
+
     folder = repo_claims_dir(repo)
     claims = load_claims(folder) if folder.is_dir() else []
-    report = compile_report(
-        run_result=load_run_result(Path(run_path)),
-        requirements=requirements,
-        claims=claims,
-        trust=trust_store(ws.keys),
+    claims_by_id = {claim["id"]: claim for claim in claims if isinstance(claim.get("id"), str)}
+    _packs, requirements = _report_sources_for_repo(repo, config)
+    requirements_by_id = {
+        requirement["id"]: requirement for requirement in requirements if isinstance(requirement.get("id"), str)
+    }
+    trust = trust_store(ws.keys)
+    claim_readings = {}
+    for claim in claims:
+        claim_id = claim.get("id")
+        if not isinstance(claim_id, str):
+            continue
+        relative = claim_file_relative(repo, folder, claim_id)
+        claim_readings[claim_id] = read_claim_signature(claim, trust, repo=repo, relative=relative)
+    requirement_readings = {}
+    root = packs_dir(repo, config)
+    for requirement_id, requirement in requirements_by_id.items():
+        if isinstance(requirement.get("signed"), dict):
+            requirement_readings[requirement_id] = read_signature(requirement, trust, what="requirement")
+            continue
+        relative = None
+        try:
+            directory = _pack_version_dir(root, str(requirement.get("pack_id") or ""))
+            relative = str((directory / f"{requirement_id}.json").resolve().relative_to(repo.resolve()))
+        except (ModelError, ValueError):
+            relative = None
+        from review.gitseal import git_commit_signature
+
+        git_reading = git_commit_signature(repo, relative) if relative else None
+        requirement_readings[requirement_id] = git_reading or read_signature(
+            requirement, trust, what="requirement"
+        )
+    return present_raw_run(
+        run_result=run_result,
+        claims_by_id=claims_by_id,
+        requirements_by_id=requirements_by_id,
+        claim_readings=claim_readings,
+        requirement_readings=requirement_readings,
+        expanded=_expanded_query(query),
         repo=repo,
     )
-    return report, None, "", False, False, True, _unchecked_for_repo(repo, config, report)
+
+
+def _report_presentation(
+    ws: Workspace,
+    repo: Path,
+    config: dict,
+    report: dict,
+    query: dict,
+    report_reading: dict,
+) -> dict:
+    from common.signing import read_signature
+    from review.gitseal import read_claim_signature
+    from review.present import present_compiled_report
+
+    folder = repo_claims_dir(repo)
+    current = load_claims(folder) if folder.is_dir() else []
+    current_by_id = {claim["id"]: claim for claim in current if isinstance(claim.get("id"), str)}
+    trust = trust_store(ws.keys)
+    claim_readings = {}
+    for claim in report.get("claims") or []:
+        if not isinstance(claim, dict) or not isinstance(claim.get("id"), str):
+            continue
+        claim_readings[claim["id"]] = read_claim_signature(claim, trust)
+    requirement_readings = {}
+    for requirement in report.get("requirements") or []:
+        if not isinstance(requirement, dict) or not isinstance(requirement.get("id"), str):
+            continue
+        requirement_readings[requirement["id"]] = read_signature(requirement, trust, what="requirement")
+    return present_compiled_report(
+        report=report,
+        current_claims_by_id=current_by_id,
+        claim_readings=claim_readings,
+        requirement_readings=requirement_readings,
+        expanded=_expanded_query(query),
+        report_reading=report_reading,
+        repo=repo,
+    )
 
 
 def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
@@ -382,7 +563,8 @@ def make_handler(ws: Workspace):
                 self._send_browse(parse_qs(parsed.query))
                 return
             try:
-                body = self._get(parsed.path, parse_qs(parsed.query))
+                query = parse_qs(parsed.query, keep_blank_values=(parsed.path == "/review"))
+                body = self._get(parsed.path, query)
                 self._send(200, body)
             except Exception as exc:
                 self._fail(exc)
@@ -547,13 +729,21 @@ def make_handler(ws: Workspace):
                     editor=editor,
                 )
             if path == "/review":
-                report, reading, error, saved, report_exists, same, unchecked = _review_view(ws, query)
-                door = _door_chrome(ws, query)
-                if door.get("reports_dir"):
-                    door["report_path"] = _confined_review_report_path(
-                        str(door["reports_dir"]),
-                        (query.get("report") or [""])[0],
+                try:
+                    report, reading, error, saved, report_exists, same, unchecked, extra = _review_view(ws, query)
+                    door = _door_chrome(ws, query)
+                except (ModelError, ValueError) as exc:
+                    if "curbpack.json" not in str(exc):
+                        raise
+                    return pages.review_page(
+                        None,
+                        None,
+                        error=str(exc),
+                        door={"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)},
                     )
+                door.update(extra)
+                if extra.get("selected_report"):
+                    door["report_path"] = extra["selected_report"]
                 return pages.review_page(
                     report,
                     reading,
@@ -868,6 +1058,7 @@ def make_handler(ws: Workspace):
                 claim_id = path[len("/claims/") :]
                 claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
                 had_signed = isinstance(claim.get("signed"), dict)
+                before = version_digest(claim)
                 updated = rebind_from_fields(
                     claim,
                     source=(form.get("source") or [""])[0],
@@ -879,7 +1070,11 @@ def make_handler(ws: Workspace):
                 write_claim(_claims_directory(ws, form), updated)
                 flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
                 self._redirect(
-                    _claims_redirect(form, f"{flag}&requirement_id={updated.get('requirement_id', '')}")
+                    _claims_redirect(
+                        form,
+                        f"{flag}&requirement_id={updated.get('requirement_id', '')}",
+                        claim_changed=before != version_digest(updated),
+                    )
                 )
                 return
             if path == "/scaffold":
@@ -924,8 +1119,11 @@ def make_handler(ws: Workspace):
 
                 repo = _registered_repo_path(ws, repo_id)
                 config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                run_path = _confined_run_result_path(str(results_dir(repo, config).resolve()), "")
-                if not run_path:
+                requested = (form.get("result") or [""])[0]
+                if not requested.strip():
+                    raise ModelError("review", "compile", "a selected run result")
+                status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+                if status != "ok":
                     raise ModelError(
                         "review",
                         "compile",
@@ -1129,6 +1327,8 @@ def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dic
         "claims_dir": fields.get("claims_dir") or "",
         "results_dir": fields.get("results_dir") or "",
         "reports_dir": fields.get("reports_dir") or "",
+        "packs_dir_value": fields.get("packs_dir_value") or "",
+        "claims_dir_value": fields.get("claims_dir_value") or "",
     }
 
 
@@ -1682,6 +1882,10 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         "claims_dir": "",
         "results_dir": "",
         "reports_dir": "",
+        "packs_dir_value": "",
+        "claims_dir_value": "",
+        "results_dir_value": "",
+        "reports_dir_value": "",
     }
     opened = open_paths(ws.root)
     if not opened:
@@ -1694,6 +1898,14 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         fields["results_dir"] = str(opened["results_dir"])
     if opened.get("reports_dir") is not None:
         fields["reports_dir"] = str(opened["reports_dir"])
+    if config_path.is_file():
+        from common.validate import validate_curbpack_config
+
+        config = validate_curbpack_config(read_json(config_path))
+        fields["packs_dir_value"] = str(config["packs_dir"])
+        fields["claims_dir_value"] = str(config["claims_dir"])
+        fields["results_dir_value"] = str(config["results_dir"])
+        fields["reports_dir_value"] = str(config["reports_dir"])
     return fields
 
 
@@ -3408,9 +3620,15 @@ def _human_requirement_field_error(field: str, expected: str) -> str:
     return f"Field {label}: expected {expected_text}"
 
 
-def _claims_redirect(form: dict, extra: str) -> str:
+def _claims_redirect(form: dict, extra: str, *, claim_changed: bool = False) -> str:
     from urllib.parse import quote
 
+    return_to = _safe_local_next(_query_value(form, "return_to"))
+    if return_to.startswith("/review?") or return_to == "/review":
+        if claim_changed:
+            join = "&" if "?" in return_to else "?"
+            return f"{return_to}{join}claim_changed=1"
+        return return_to
     parts = [extra]
     for key in ("repo_id", "source_id", "timestamp"):
         value = _query_value(form, key)
@@ -3604,8 +3822,13 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "claims_dir": door.get("claims_dir") or "",
         "results_dir": door.get("results_dir") or "",
         "reports_dir": door.get("reports_dir") or "",
+        "packs_dir_value": door.get("packs_dir_value") or "",
+        "claims_dir_value": door.get("claims_dir_value") or "",
+        "results_dir_value": door.get("results_dir_value") or "",
+        "reports_dir_value": door.get("reports_dir_value") or "",
         "source_id": _query_value(query, "source_id"),
         "timestamp": _query_value(query, "timestamp"),
+        "return_to": _query_value(query, "return_to"),
     }
 
 

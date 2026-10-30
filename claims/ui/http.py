@@ -37,7 +37,11 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
                 if isinstance(claim, dict)
             }
             rows = [row for row in rows if row.get("id") not in claimed]
-        return researcher.overview_page({**_ids(context), "rows": rows, "gap": gap})
+        model = {**_ids(context), "rows": rows, "gap": gap}
+        return_to = _safe_review_return(_one(query, "return_to"))
+        if return_to:
+            model["return_to"] = return_to
+        return researcher.overview_page(model)
     if not path.startswith("/discover/claims/"):
         return None
     requirement_id, kind = _split(path)
@@ -46,6 +50,9 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
     if kind == "file":
         file_path = _one(query, "path")
         model = {**_ids(context), "requirement_id": requirement_id, "path": file_path}
+        return_to = _safe_review_return(_one(query, "return_to"))
+        if return_to:
+            model["return_to"] = return_to
         try:
             model["body"] = read_source_text(context["repo"], file_path)
         except ModelError as exc:
@@ -60,6 +67,9 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
         model["covered_paths"] = sorted(
             covered_paths(context["claims"], load_run(context["repo"]), requirement_id)
         )
+    return_to = _safe_review_return(_one(query, "return_to"))
+    if return_to:
+        model["return_to"] = return_to
     return researcher.requirement_page(model)
 
 
@@ -89,14 +99,28 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
     )
     if path == "/discover/feedback/vote":
         save_vote(**common, vote=_one(form, "vote"))
-        return _back(context, requirement_id)
+        return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/checks":
+        wrote_claim = False
         try:
             check, args, label = _check_from_form(file_path, form)
-            document = save_check(**common, check=check, args=args, label=label)
-            _sync_claim(context, requirement, file_path, document, form)
+            # Explicit Check edit updates the existing Claim. A plain save still
+            # goes through feedback + suggest_claim_id so a differently named
+            # Claim for the same path can be created (SYS-03 Discover).
+            if _one(form, "edit_index").isdigit() and _claim_for_path(
+                context["claims"], requirement_id, file_path
+            ) is not None:
+                wrote_claim = _update_claim_check(
+                    context, requirement_id, file_path, form, check, args, label
+                )
+            else:
+                document = save_check(**common, check=check, args=args, label=label)
+                wrote_claim = _sync_claim(context, requirement, file_path, document, form)
         except (ModelError, CheckError) as exc:
             model = _with_signing(context, requirement, form, trust)
+            return_to = _safe_review_return(_one(form, "return_to"))
+            if return_to:
+                model["return_to"] = return_to
             model["check_error"] = {
                 "path": file_path,
                 "check": _one(form, "check"),
@@ -104,13 +128,21 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
                 "values": {key: _one(form, key) for key in _CHECK_FIELDS},
             }
             return researcher.requirement_page(model)
-        return _back(context, requirement_id)
+        if wrote_claim:
+            breakout = _review_breakout(form)
+            if breakout is not None:
+                return breakout
+        return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/motivation":
-        _choose_motivation(root, context, requirement_id, file_path, form, known)
-        return _back(context, requirement_id)
+        wrote = _choose_motivation(root, context, requirement_id, file_path, form, known)
+        if wrote:
+            breakout = _review_breakout(form)
+            if breakout is not None:
+                return breakout
+        return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/add":
         add_finding(**common, repo=context["repo"], rationale=_one(form, "rationale"))
-        return _back(context, requirement_id, open_checks=file_path)
+        return _back(context, requirement_id, open_checks=file_path, return_to=_one(form, "return_to"))
     marks = _marks(context, requirement_id)
     entry = marks.get(file_path) if isinstance(marks.get(file_path), dict) else {}
     checks = [item for item in (entry.get("checks") or []) if isinstance(item, dict)]
@@ -140,6 +172,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
     )
     context["claims"] = read_claims(context["claims_dir"])
     model = _with_signing(context, requirement, form, trust)
+    return_to = _safe_review_return(_one(form, "return_to"))
+    if return_to:
+        model["return_to"] = return_to
     model["outcomes"] = outcomes
     return researcher.requirement_page(model)
 
@@ -309,21 +344,64 @@ def _split(path: str) -> tuple[str, str]:
 def _back(context: dict, requirement_id: str, **extra: str) -> str:
     from urllib.parse import quote
 
-    query = (
-        f"repo={quote(context['repo_id'])}&source={quote(context['source_id'])}"
-        f"&timestamp={quote(context['timestamp'])}"
-    )
+    repo = quote(context["repo_id"])
+    pack_id = str(context.get("pack_id") or "")
+    if pack_id:
+        query = f"repo={repo}&pack={quote(pack_id)}"
+    else:
+        query = (
+            f"repo={repo}&source={quote(context['source_id'])}"
+            f"&timestamp={quote(context['timestamp'])}"
+        )
     for key, value in extra.items():
-        if value:
-            query += f"&{quote(key)}={quote(value)}"
+        if not value:
+            continue
+        if key == "return_to":
+            safe = _safe_review_return(value)
+            if not safe:
+                continue
+            query += f"&return_to={quote(safe, safe='')}"
+            continue
+        query += f"&{quote(key)}={quote(value)}"
     return f"/discover/claims/{quote(requirement_id)}?{query}"
+
+
+def _safe_review_return(raw: str) -> str:
+    value = (raw or "").strip()
+    if value != "/review" and not value.startswith("/review?"):
+        return ""
+    if value.startswith("//") or any(ch in value for ch in "\\\n\r<>\"'"):
+        return ""
+    return value
+
+
+def _review_breakout(form: dict) -> bytes | None:
+    import html
+    import json
+
+    raw = _safe_review_return(_one(form, "return_to"))
+    if not raw:
+        return None
+    join = "&" if "?" in raw else "?"
+    target = f"{raw}{join}claim_changed=1"
+    encoded = json.dumps(target).replace("<", "\\u003c").replace(">", "\\u003e")
+    return (
+        "<!doctype html><title>Return to Review</title>"
+        f"<script>window.top.location.replace({encoded})</script>"
+        f'<p><a href="{html.escape(target)}" target="_top">Continue to Review</a></p>'
+    ).encode("utf-8")
 
 
 def _check_from_form(path: str, form: dict) -> tuple[str, dict, str]:
     """Map a PoC picker choice onto a Packs v2 check the runner can execute."""
     choice = _one(form, "check")
     if choice == "exist":
-        return "exist", {"paths": [path]}, ""
+        extra = [part.strip() for part in _one(form, "require_tree_paths").split(",") if part.strip()]
+        paths = [path]
+        for item in extra:
+            if item not in paths:
+                paths.append(item)
+        return "exist", {"paths": paths}, ""
     if choice == "contents":
         check, args = _file_present(path, form)
         if check == "exist":
@@ -408,7 +486,9 @@ def _integer(form: dict, key: str) -> int:
     return int(raw)
 
 
-def _choose_motivation(root: Path, context: dict, requirement_id: str, file_path: str, form: dict, known_ids: list) -> None:
+def _choose_motivation(
+    root: Path, context: dict, requirement_id: str, file_path: str, form: dict, known_ids: list
+) -> bool:
     """Keep drops the green sentence. Take copies it into description."""
     why = _one(form, "why").strip()
     choice = _one(form, "choice")
@@ -423,17 +503,51 @@ def _choose_motivation(root: Path, context: dict, requirement_id: str, file_path
             why=why,
             known_ids=known_ids,
         )
-        return
+        return False
     if choice != "take" or not why:
-        return
+        return False
     claim = _claim_for_path(context["claims"], requirement_id, file_path)
     if not isinstance(claim, dict):
-        return
+        return False
     if str(claim.get("description") or "").strip() == why:
-        return
+        return False
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
-        return
+        return False
     write_claim(context["claims_dir"], rebind(claim, description=why))
+    return True
+
+
+def _update_claim_check(
+    context: dict,
+    requirement_id: str,
+    file_path: str,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
+    """Replace one saved check, or append one. Other checks on the claim stay."""
+    claim = _claim_for_path(context["claims"], requirement_id, file_path)
+    if claim is None:
+        return False
+    proposed = {"check": check, "args": args}
+    if label:
+        proposed["label"] = label
+    checks = [item for item in claim.get("checks") or [] if isinstance(item, dict)]
+    raw = _one(form, "edit_index")
+    if raw.isdigit():
+        index = int(raw)
+        if not 0 <= index < len(checks):
+            raise ModelError("claim", "checks", "a check on this claim")
+        checks[index] = proposed
+    elif not any(item.get("check") == check and item.get("args") == args for item in checks):
+        checks.append(proposed)
+    if checks == [item for item in claim.get("checks") or [] if isinstance(item, dict)]:
+        return False
+    if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
+        raise ModelError("claim", "signed", "confirmation before changing a signed claim")
+    write_claim(context["claims_dir"], rebind(claim, checks=checks))
+    return True
 
 
 def _claim_for_path(claims: list, requirement_id: str, path: str) -> dict | None:
@@ -447,7 +561,7 @@ def _claim_for_path(claims: list, requirement_id: str, path: str) -> dict | None
     return None
 
 
-def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict, form: dict) -> None:
+def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict, form: dict) -> bool:
     """A row with one or more checks is the Claim. Saving a check writes that file."""
     requirement_id = requirement["id"]
     marks = (feedback.get("requirements") or {}).get(requirement_id) or {}
@@ -458,7 +572,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
         if isinstance(item, dict) and item.get("check") and isinstance(item.get("args"), dict)
     ]
     if not checks:
-        return
+        return False
     description = str(entry.get("human_why") or "").strip() or _candidate_why(context, requirement_id, file_path)
     if not description:
         raise ModelError(
@@ -480,7 +594,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
             and existing.get("description") == description
         )
         if same:
-            return
+            return False
         write_claim(
             directory,
             rebind(
@@ -491,7 +605,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
                 description=description,
             ),
         )
-        return
+        return True
     create_configured_claims(
         directory,
         requirement_id=requirement_id,
@@ -502,6 +616,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
         description=description,
         claim_id=claim_id,
     )
+    return True
 
 
 def _candidate_why(context: dict, requirement_id: str, file_path: str) -> str:

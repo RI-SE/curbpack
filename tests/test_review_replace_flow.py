@@ -11,7 +11,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
-from checks.run import reports_dir
+from checks.run import reports_dir, results_dir
 from claims.bind import build_claim, read_claim, write_claim
 from claims.ui.coverage import REPLACEMENT_UNCHECKED
 from common.jsonio import read_json
@@ -88,7 +88,16 @@ class ReplaceThenReviewTest(unittest.TestCase):
                     {**CONTEXT, "name": "Ada Reviewer"},
                 )
                 self.assertIn("Signed", signed)
-                _post(base + "/review/compile", {"repo_id": "sample-product"})
+                run = next(
+                    results_dir(
+                        product,
+                        validate_curbpack_config(read_json(product / "curbpack.json")),
+                    ).glob("run-result_*.json")
+                )
+                _post(
+                    base + "/review/compile",
+                    {"repo_id": "sample-product", "result": str(run.resolve())},
+                )
                 decided = _post(
                     base + "/review",
                     {"decision": "I read the replacement run. I am not saying the product meets CRA."},

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import json
 from urllib.parse import quote
 
 from app.pages import page
@@ -100,11 +101,18 @@ def requirement_page(model: dict) -> bytes:
     for index, item in enumerate(findings):
         rows.append(_hit_row(model, requirement_id, item, index))
     claim_count = sum(1 for item in findings if isinstance(item, dict) and item.get("has_claim"))
-    found = any(isinstance(item, dict) and str(item.get("why") or "").strip() for item in findings)
-    checked = " checked" if found else ""
-    table_class = "hits-table show-suggestions" if found else "hits-table"
+    has_candidates = any(isinstance(item, dict) and not item.get("has_claim") for item in findings)
+    # Saved Claims stay visible. Candidates are opt-in so Discover noise does not hide them.
+    checked = ""
+    table_class = "hits-table"
+    candidate_toggle = ""
+    if has_candidates:
+        candidate_toggle = (
+            f'<label class="show-suggestions"><input type="checkbox" id="show-suggestions"{checked}> '
+            "Show discovered claim candidates</label>"
+        )
     hits = (
-        f'<label class="show-suggestions"><input type="checkbox" id="show-suggestions"{checked}> Show discovered claim candidates</label>'
+        f"{candidate_toggle}"
         f'<div class="hits"><table class="{table_class}"><thead><tr>'
         f"<th></th><th>Evidence Source{_tip(COLUMN_HELP['Evidence Source'])}</th>"
         f"<th>Score{_tip(SCORE_HELP)}</th>"
@@ -139,7 +147,7 @@ def requirement_page(model: dict) -> bytes:
 {notice}
 {outcomes}
 <h2>Claims ({claim_count})</h2>
-<p class="muted">Edit the claims for this requirement. Show discovered claim candidates adds discovery sentences that differ from the saved motivation.</p>
+<p class="muted">Saved Claims for this requirement are listed first. Discovered claim candidates come from Discover for the same requirement; they are suggestions, not Claims, until you add a check.</p>
 {hits}
 {_add_dialog(model, requirement_id)}
 </div>
@@ -156,8 +164,36 @@ document.querySelectorAll("tr.hit-row").forEach((row) => {{
     if (mark) mark.textContent = opening ? "▾" : "▸";
   }});
 }});
+function fillCheckForm(form, values, index) {{
+  const stored = form.querySelector('[name="edit_index"]');
+  if (stored) stored.value = index == null ? "" : String(index);
+  const kind = form.querySelector(".check-kind");
+  if (kind) kind.value = (values && values.check) || kind.options[0].value;
+  form.querySelectorAll("input[name]").forEach((input) => {{
+    if (input.type === "hidden") return;
+    if (input.type === "checkbox") {{
+      input.checked = !!(values && values[input.name] === "1");
+      return;
+    }}
+    input.value = (values && values[input.name]) || "";
+  }});
+  syncCheckForm(form);
+}}
 document.querySelectorAll(".check-open").forEach((button) => {{
-  button.addEventListener("click", () => button.parentElement.querySelector("dialog.checks").showModal());
+  button.addEventListener("click", () => {{
+    const dialog = button.parentElement.querySelector("dialog.checks");
+    const form = dialog.querySelector("form.check-form");
+    fillCheckForm(form, null, null);
+    dialog.showModal();
+  }});
+}});
+document.querySelectorAll(".check-edit").forEach((button) => {{
+  button.addEventListener("click", () => {{
+    const dialog = button.closest(".checks-wrap").querySelector("dialog.checks");
+    const form = dialog.querySelector("form.check-form");
+    fillCheckForm(form, JSON.parse(button.dataset.values || "{{}}"), button.dataset.index);
+    dialog.showModal();
+  }});
 }});
 document.querySelectorAll(".check-close").forEach((button) => {{
   button.addEventListener("click", () => button.closest("dialog").close());
@@ -173,7 +209,7 @@ function syncCheckForm(form) {{
   const check = form.querySelector(".check-kind");
   const selected = check ? check.value : "";
   form.querySelectorAll("[data-for]").forEach((el) => {{
-    el.hidden = el.dataset.for !== selected;
+    el.hidden = !el.dataset.for.split(/\\s+/).includes(selected);
   }});
 }}
 document.querySelectorAll("form.check-form").forEach((form) => {{
@@ -283,8 +319,10 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     down = "down selected" if vote == "poor" else "down"
     checks = [entry for entry in item.get("checks") or [] if isinstance(entry, dict)]
     chips = "".join(
-        f'<span class="check-chip">{html.escape(check_caption(entry))}</span>'
-        for entry in checks
+        f'<button type="button" class="check-chip check-edit" data-index="{index}" '
+        f'data-values="{html.escape(json.dumps(_check_editor_values(entry, path)))}">'
+        f"{html.escape(check_caption(entry))}</button>"
+        for index, entry in enumerate(checks)
     ) or '<span class="muted">—</span>'
     options = "".join(
         f'<option value="{html.escape(key)}"{_selected(model, path, key)}>{html.escape(CAPTIONS[key])}</option>'
@@ -305,7 +343,7 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     return f"""
 <tr class="hit-row{suggestion_row}{vote_class}{covered_class}" data-hit="{hit_id}" data-path="{html.escape(path)}">
   <td class="col-toggle">▸</td>
-  <td class="col-file"><a class="file-link" href="{_file_href(model, requirement_id, path)}"><code>{html.escape(path)}</code></a>{covered_note}</td>
+  <td class="col-file">{_evidence_cell(model, requirement_id, item)}{covered_note}</td>
   <td class="col-score">{_score(item)}</td>
   <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}</div></td>
   <td class="col-checks"><div class="checks-wrap">{chips}
@@ -313,10 +351,12 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     <dialog class="checks"{_reopen(model, path)}>
       <div class="head"><h2>What to check for {html.escape(path)}</h2></div>
       <div class="body">
-        <form method="post" action="/discover/feedback/checks" class="check-form">
+        <form method="post" action="/discover/feedback/checks" class="check-form"{_check_confirm(item)}>
           {_hidden(model, requirement_id)}
           {_source_fields(model.get("source_ids") or [])}
           <input type="hidden" name="path" value="{html.escape(path)}">
+          <input type="hidden" name="edit_index" value="">
+          {_unsign_field(item)}
           <label>Check
             <select name="check" class="check-kind">
               {options}
@@ -327,7 +367,9 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
             <label>Min words<input type="text" name="min_words" inputmode="numeric" value="{_val(model, path, "min_words")}" class="{_bad(model, path, "min_words")}"></label>
             <label>Require headers<input type="text" name="require_headers" placeholder="# Title, ## Section" value="{_val(model, path, "require_headers")}" class="{_bad(model, path, "require_headers")}"></label>
             <label class="check-inline"><input type="checkbox" name="fp_bind_repo_token" value="1"{_checked(model, path, "fp_bind_repo_token")}> Bind repo token</label>
-            <label>Require tree paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{_val(model, path, "require_tree_paths")}"></label>
+          </div>
+          <div data-for="exist contents" hidden>
+            <label>Also require paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{_val(model, path, "require_tree_paths")}"></label>
           </div>
           <div data-for="text_forbid" hidden>
             <label>Pattern<input type="text" name="pattern" placeholder="regular expression" value="{_val(model, path, "pattern")}" class="{_bad(model, path, "pattern")}"></label>
@@ -363,7 +405,7 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     </form>
   </div></td>
 </tr>
-<tr class="detail-row" id="{hit_id}" hidden>
+<tr class="detail-row{suggestion_row}" id="{hit_id}" hidden>
   <td colspan="6"><div class="detail-inner"><pre class="excerpt">{html.escape(excerpt)}</pre></div></td>
 </tr>
 """
@@ -391,55 +433,155 @@ def _tip(text: str) -> str:
 
 
 def _with_claims(findings: list, claims: list, requirement_id: str) -> list:
-    """Candidates first. Claims this run did not find stay on the list."""
+    """Saved claims first (multi-path above single-path), then candidates beside them.
+
+    Pilot: no merge. A Claim and a discovery candidate for the same file stay as
+    separate rows; new checks on a candidate still get their own Claim id.
+    """
     owned = [
         claim
         for claim in claims
         if isinstance(claim, dict) and claim.get("requirement_id") == requirement_id
     ]
-    by_path: dict[str, dict] = {}
-    for claim in owned:
-        path = _claim_path(claim)
-        if path and path not in by_path:
-            by_path[path] = claim
-    rows = []
-    seen = set()
+
+    def claim_sort_key(claim: dict) -> tuple:
+        paths = _claim_paths(claim)
+        multi = 0 if len(paths) > 1 else 1
+        label = paths[0] if paths else str(claim.get("id") or "")
+        return (multi, label, str(claim.get("id") or ""))
+
+    rows = [_claim_row(claim) for claim in sorted(owned, key=claim_sort_key)]
     for item in findings:
         if not isinstance(item, dict):
             continue
         row = dict(item)
-        path = str(row.get("path") or "")
-        claim = by_path.get(path)
-        if claim:
-            row["description"] = str(claim.get("description") or "")
-            row["claim_signed"] = isinstance(claim.get("signed"), dict)
-            row["has_claim"] = True
-            seen.add(path)
+        row["has_claim"] = False
         rows.append(row)
-    for path in sorted(by_path):
-        if path in seen:
-            continue
-        claim = by_path[path]
-        rows.append(
-            {
-                "path": path,
-                "description": str(claim.get("description") or ""),
-                "has_claim": True,
-                "checks": [item for item in claim.get("checks") or [] if isinstance(item, dict)],
-                "assessment_state": "not_assessed",
-                "vote": "",
-                "excerpt": "",
-            }
-        )
     return rows
 
 
+def _claim_row(claim: dict) -> dict:
+    paths = _claim_paths(claim)
+    path = paths[0] if paths else ""
+    return {
+        "path": path,
+        "paths": paths,
+        "claim_id": str(claim.get("id") or ""),
+        "description": str(claim.get("description") or ""),
+        "claim_signed": isinstance(claim.get("signed"), dict),
+        "has_claim": True,
+        "checks": [item for item in claim.get("checks") or [] if isinstance(item, dict)],
+        "assessment_state": "not_assessed",
+        "vote": "",
+        "excerpt": "",
+    }
+
+
+def _check_confirm(item: dict) -> str:
+    if not item.get("claim_signed"):
+        return ""
+    return (
+        " onsubmit=\"return confirm('This claim is signed. "
+        "Saving this check removes the signature.')\""
+    )
+
+
+def _unsign_field(item: dict) -> str:
+    if not item.get("claim_signed"):
+        return ""
+    return '<input type="hidden" name="unsign" value="1">'
+
+
+def _check_editor_values(entry: dict, row_path: str) -> dict:
+    """Form values that reopen this saved check."""
+    args = entry.get("args") if isinstance(entry.get("args"), dict) else {}
+    check = str(entry.get("check") or "")
+    probes = [item for item in args.get("probes") or [] if isinstance(item, dict)]
+    kinds = {item.get("kind") for item in probes}
+    label = str(entry.get("label") or "")
+    if label in CAPTIONS:
+        kind = label
+    elif check == "contents" and kinds == {"pattern"}:
+        kind = "text_forbid"
+    elif check == "contents" and kinds == {"placeholder"}:
+        kind = "anti_placeholder"
+    elif check in CAPTIONS:
+        kind = check
+    else:
+        kind = "exist"
+    values: dict[str, str] = {"check": kind}
+    paths = args.get("paths") if isinstance(args.get("paths"), list) else []
+    extra = ", ".join(str(item) for item in paths if str(item) != row_path)
+    if kind == "contents":
+        for probe in probes:
+            if probe.get("kind") == "size" and probe.get("bytes") is not None:
+                values["min_bytes"] = str(probe["bytes"])
+            elif probe.get("kind") == "words" and probe.get("n") is not None:
+                values["min_words"] = str(probe["n"])
+            elif probe.get("kind") == "headers":
+                values["require_headers"] = ", ".join(str(item) for item in probe.get("headers") or [])
+            elif probe.get("kind") == "token":
+                values["fp_bind_repo_token"] = "1"
+        if extra:
+            values["require_tree_paths"] = extra
+    elif kind == "text_forbid":
+        for probe in probes:
+            if probe.get("kind") == "pattern":
+                values["pattern"] = str(probe.get("pattern") or "")
+    elif kind == "exist" and extra:
+        values["require_tree_paths"] = extra
+    elif kind == "dep_ban":
+        values["package"] = str(args.get("package") or "")
+        versions = args.get("banned_versions") if isinstance(args.get("banned_versions"), list) else []
+        values["banned_versions"] = ", ".join(str(item) for item in versions)
+    elif kind == "fresh":
+        if args.get("max_age_days") is not None:
+            values["max_age_days"] = str(args["max_age_days"])
+        if args.get("since_ref"):
+            values["since_ref"] = str(args["since_ref"])
+    elif kind == "owned":
+        if args.get("bind_repo_token"):
+            values["owned_bind_repo_token"] = "1"
+        if args.get("email"):
+            values["require_git_author_email"] = str(args["email"])
+        if args.get("name"):
+            values["require_git_author_name"] = str(args["name"])
+    return values
+
+
 def _claim_path(claim: dict) -> str:
+    paths = _claim_paths(claim)
+    return paths[0] if paths else ""
+
+
+def _claim_paths(claim: dict) -> list[str]:
     args = claim.get("args") if isinstance(claim.get("args"), dict) else {}
-    path = args.get("path")
-    if isinstance(path, str) and path.strip():
-        return path.strip()
-    return ""
+    found: list[str] = []
+    single = args.get("path")
+    if isinstance(single, str) and single.strip():
+        found.append(single.strip())
+    listed = args.get("paths")
+    if isinstance(listed, list):
+        for item in listed:
+            if isinstance(item, str) and item.strip() and item.strip() not in found:
+                found.append(item.strip())
+    return found
+
+
+def _evidence_cell(model: dict, requirement_id: str, item: dict) -> str:
+    paths = [str(p) for p in (item.get("paths") or []) if str(p).strip()]
+    if not paths:
+        path = str(item.get("path") or "")
+        if not path:
+            return '<span class="muted">—</span>'
+        paths = [path]
+    links = []
+    for path in paths:
+        links.append(
+            f'<a class="file-link" href="{_file_href(model, requirement_id, path)}">'
+            f"<code>{html.escape(path)}</code></a>"
+        )
+    return "<br>".join(links)
 
 
 def _motivation(model: dict, requirement_id: str, item: dict) -> str:
@@ -704,6 +846,9 @@ def _hidden(model: dict, requirement_id: str) -> str:
     }
     if model.get("pack_id"):
         fields["pack"] = model.get("pack_id") or ""
+    return_to = str(model.get("return_to") or "")
+    if return_to:
+        fields["return_to"] = return_to
     return "".join(
         f'<input type="hidden" name="{html.escape(key)}" value="{html.escape(str(value))}">'
         for key, value in fields.items()
@@ -714,12 +859,17 @@ def _q(model: dict) -> str:
     repo = quote(str(model.get("repo_id") or ""))
     pack_id = str(model.get("pack_id") or "")
     if pack_id:
-        return f"repo={repo}&pack={quote(pack_id)}"
-    return (
-        f"repo={repo}"
-        f"&source={quote(str(model.get('source_id') or ''))}"
-        f"&timestamp={quote(str(model.get('timestamp') or ''))}"
-    )
+        query = f"repo={repo}&pack={quote(pack_id)}"
+    else:
+        query = (
+            f"repo={repo}"
+            f"&source={quote(str(model.get('source_id') or ''))}"
+            f"&timestamp={quote(str(model.get('timestamp') or ''))}"
+        )
+    return_to = str(model.get("return_to") or "")
+    if return_to:
+        query += f"&return_to={quote(return_to, safe='')}"
+    return query
 
 
 def _overview_href(model: dict) -> str:
