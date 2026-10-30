@@ -36,6 +36,8 @@ def start_extract_job(
     pack: dict,
     proposals: list[dict] | None = None,
     complete: CompleteFn | None = None,
+    dest_repo: str = "",
+    dest_pack: str = "",
 ) -> str:
     """Run extract on a daemon thread and return the job id.
 
@@ -44,18 +46,18 @@ def start_extract_job(
     model producers.
     """
     jobs_dir.mkdir(parents=True, exist_ok=True)
-    _save(
-        jobs_dir,
-        job_id,
-        {
-            "job_id": job_id,
-            "status": "running",
-            "stage": "start",
-            "activity": _ACTIVITY["start"],
-            "progress": 0.2,
-            "log_tail": [f"start {section_id}"],
-        },
-    )
+    started = {
+        "job_id": job_id,
+        "status": "running",
+        "stage": "start",
+        "activity": _ACTIVITY["start"],
+        "progress": 0.2,
+        "log_tail": [f"start {section_id}"],
+    }
+    if dest_repo and dest_pack:
+        started["dest_repo"] = dest_repo
+        started["dest_pack"] = dest_pack
+    _save(jobs_dir, job_id, started)
     threading.Thread(
         target=_run_extract,
         args=(jobs_dir, job_id, root, adapter_dir, section_id, pack, proposals, complete),

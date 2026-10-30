@@ -1040,6 +1040,18 @@ def _script_json(value: object) -> str:
 def extract_review_page(model: dict) -> bytes:
     proposal = html.escape(str(model.get("proposal") or ""))
     destination = html.escape(str(model.get("destination") or ""))
+    dest_pack = str(model.get("dest_pack") or "")
+    dest_repo = str(model.get("dest_repo") or "")
+    dest_fields = ""
+    leave = "/requirements"
+    if dest_pack:
+        dest_fields = (
+            f'<input type="hidden" name="pack" value="{html.escape(dest_pack)}">'
+            f'<input type="hidden" name="repo" value="{html.escape(dest_repo)}">'
+        )
+        leave = "/requirements?document=" + html.escape(dest_pack, quote=True)
+        if dest_repo:
+            leave += "&repo=" + html.escape(dest_repo, quote=True)
     blocks = []
     visuals = []
     for item in model.get("updates") or []:
@@ -1319,6 +1331,7 @@ if (form && partsInput) {
 <form method="post" action="/requirements/extract/review">
 <input type="hidden" name="proposal" value="{proposal}">
 <input type="hidden" name="destination" value="{destination}">
+{dest_fields}
 <input type="hidden" name="parts" id="extract-parts" value="">
 {"".join(blocks)}
 {additions_html}
@@ -1326,7 +1339,7 @@ if (form && partsInput) {
 {unchanged_html}
 {empty}
 <p><button type="submit">Use the new definitions you chose</button>
-<a href="/requirements">Leave the working copy unchanged</a></p>
+<a href="{leave}">Leave the working copy unchanged</a></p>
 </form>
 {visual}
 """
@@ -1591,7 +1604,12 @@ function showJob(job) {{
   const closeButton = document.getElementById("job-close");
   const abortForm = document.getElementById("job-abort");
   if (job.status === "done") {{
-    if (job.base_timestamp && job.copy_timestamp) {{
+    if (job.dest_pack && job.copy_timestamp) {{
+      let review = "/requirements/extract/review?proposal=" + encodeURIComponent(job.copy_timestamp)
+        + "&pack=" + encodeURIComponent(job.dest_pack);
+      if (job.dest_repo) review += "&repo=" + encodeURIComponent(job.dest_repo);
+      location.assign(review);
+    }} else if (job.base_timestamp && job.copy_timestamp) {{
       location.assign(
         "/requirements/extract/review?proposal=" + encodeURIComponent(job.copy_timestamp)
         + "&destination=" + encodeURIComponent(job.base_timestamp)
@@ -1616,7 +1634,7 @@ async function pollJob() {{
   const response = await fetch(dialog.dataset.poll);
   showJob(await response.json());
 }}
-if (dialog.dataset.status === "running") pollJob();
+if (dialog.dataset.status === "running" || dialog.dataset.status === "done") pollJob();
 else showJob({{status: dialog.dataset.status, activity: document.getElementById("job-activity").textContent, log_tail: document.getElementById("job-log").textContent.split("\\n"), error: document.getElementById("job-error").textContent}});
 </script>
 """

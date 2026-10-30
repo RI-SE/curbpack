@@ -385,7 +385,11 @@ def _get(url: str) -> str:
 
 
 def _post(url: str, form: dict) -> str:
-    data = urllib.parse.urlencode(form).encode("utf-8")
+    return _post_form(url, form, doseq=False)
+
+
+def _post_form(url: str, form: dict, *, doseq: bool) -> str:
+    data = urllib.parse.urlencode(form, doseq=doseq).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST")
     try:
         with urllib.request.urlopen(request) as response:
@@ -616,6 +620,83 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertEqual(saved["id"], "house-policy")
                 self.assertIn(xml_url, updated)
                 self.assertIn("Pack info saved.", updated)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_extract_of_a_repo_pack_is_accepted_into_that_pack(self):
+        """Extraction stays out of the pack until the person accepts it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            version = draft_pack()["version"]
+            pack = repo / "curbpack" / "packs" / "cra" / version
+            pack.mkdir(parents=True)
+            xml_url = "https://publications.europa.eu/resource/celex/32024R2847"
+            write_json(repo / "curbpack.json", created_curbpack(packs=["cra"]))
+            write_json(
+                pack / "pack.json",
+                {
+                    "id": "cra",
+                    "name": "CRA",
+                    "version": version,
+                    "source": {"instrument": "CRA", "url": xml_url},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="Fixture product", path=str(repo)))
+            set_open_repo(root, "fixture-product")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                with patch(
+                    "requirements.extract.produce._default_complete",
+                    _fake_model_complete,
+                ):
+                    page = _post(
+                        base + "/requirements/extract",
+                        {
+                            "adapter_id": "cra-xml",
+                            "section_id": "VII",
+                            "document_id": "cra",
+                            "repo": "fixture-product",
+                        },
+                    )
+                    job = _wait_job(base, _job_id(page))
+                self.assertEqual(job["status"], "done", job)
+                self.assertEqual(job.get("dest_pack"), "cra")
+                self.assertEqual(job.get("dest_repo"), "fixture-product")
+                self.assertTrue(job.get("copy_timestamp"))
+                self.assertEqual([path.name for path in pack.glob("*.json")], ["pack.json"])
+                review = _get(
+                    base
+                    + "/requirements/extract/review?proposal="
+                    + urllib.parse.quote(job["copy_timestamp"])
+                    + "&pack=cra&repo=fixture-product"
+                )
+                self.assertIn("Only in this extraction", review)
+                adds = re.findall(r'name="add" value="([^"]*)"', review)
+                pairs = re.findall(r'name="pair" value="([^"]*)"', review)
+                self.assertTrue(adds)
+                accepted = _post_form(
+                    base + "/requirements/extract/review",
+                    {
+                        "proposal": job["copy_timestamp"],
+                        "destination": "cra",
+                        "pack": "cra",
+                        "repo": "fixture-product",
+                        "pair": pairs,
+                        "add": adds,
+                    },
+                    doseq=True,
+                )
+                written = [path for path in pack.glob("*.json") if path.name != "pack.json"]
+                self.assertTrue(written)
+                saved = json.loads(written[0].read_text(encoding="utf-8"))
+                self.assertEqual(saved["pack_id"], "cra")
+                self.assertIn('action="/requirements/copy"', accepted)
+                self.assertNotIn("disabled>Edit</button>", accepted)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
