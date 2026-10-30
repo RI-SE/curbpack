@@ -119,7 +119,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
         self.assertIn("docs/old.md", before)
         self.assertIn("missing phrase", before)
         self.assertIn('data-check="contents"', before)
-        self.assertIn("Discover again", before)
+        self.assertIn("Re-Discover", before)
         self.assertIn('data-claim="claim-ok"', before)
         self.assertIn('data-requirement="R1"', dialog)
         self.assertNotIn('data-requirement="R2"', dialog)

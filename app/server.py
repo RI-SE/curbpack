@@ -223,6 +223,11 @@ def _review_message(query: dict) -> str:
         return "Decision saved."
     if (query.get("signed") or [""])[0]:
         return "Report signed."
+    if (query.get("claim_changed") or [""])[0]:
+        return (
+            "The current Claim has changed. "
+            "A new curbcheck run is required for a new run result, and then a new review report."
+        )
     return ""
 
 
@@ -1034,7 +1039,7 @@ def make_handler(ws: Workspace):
             if path.startswith("/claims/") and path.endswith("/retire"):
                 claim_id = path[len("/claims/") : -len("/retire")]
                 retire_claim(_claims_directory(ws, form), claim_id)
-                self._redirect(_claims_redirect(form, "retired=1"))
+                self._redirect(_claims_redirect(form, "retired=1", claim_changed=False))
                 return
             if path.startswith("/claims/") and path.endswith("/sign"):
                 claim_id = path[len("/claims/") : -len("/sign")]
@@ -1044,13 +1049,18 @@ def make_handler(ws: Workspace):
                 sealed = sign_claim(claim, name=name, private_key=private, at=_now())
                 write_claim(_claims_directory(ws, form), sealed)
                 self._redirect(
-                    _claims_redirect(form, f"signed=1&requirement_id={claim.get('requirement_id', '')}")
+                    _claims_redirect(
+                        form,
+                        f"signed=1&requirement_id={claim.get('requirement_id', '')}",
+                        claim_changed=False,
+                    )
                 )
                 return
             if path.startswith("/claims/"):
                 claim_id = path[len("/claims/") :]
                 claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
                 had_signed = isinstance(claim.get("signed"), dict)
+                before = version_digest(claim)
                 updated = rebind_from_fields(
                     claim,
                     source=(form.get("source") or [""])[0],
@@ -1062,7 +1072,11 @@ def make_handler(ws: Workspace):
                 write_claim(_claims_directory(ws, form), updated)
                 flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
                 self._redirect(
-                    _claims_redirect(form, f"{flag}&requirement_id={updated.get('requirement_id', '')}")
+                    _claims_redirect(
+                        form,
+                        f"{flag}&requirement_id={updated.get('requirement_id', '')}",
+                        claim_changed=before != version_digest(updated),
+                    )
                 )
                 return
             if path == "/scaffold":
@@ -3500,9 +3514,15 @@ def _human_requirement_field_error(field: str, expected: str) -> str:
     return f"Field {label}: expected {expected_text}"
 
 
-def _claims_redirect(form: dict, extra: str) -> str:
+def _claims_redirect(form: dict, extra: str, *, claim_changed: bool = False) -> str:
     from urllib.parse import quote
 
+    return_to = _safe_local_next(_query_value(form, "return_to"))
+    if return_to.startswith("/review?") or return_to == "/review":
+        if claim_changed:
+            join = "&" if "?" in return_to else "?"
+            return f"{return_to}{join}claim_changed=1"
+        return return_to
     parts = [extra]
     for key in ("repo_id", "source_id", "timestamp"):
         value = _query_value(form, key)
@@ -3702,6 +3722,7 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "reports_dir_value": door.get("reports_dir_value") or "",
         "source_id": _query_value(query, "source_id"),
         "timestamp": _query_value(query, "timestamp"),
+        "return_to": _query_value(query, "return_to"),
     }
 
 

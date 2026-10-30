@@ -695,6 +695,9 @@ def _hidden(model: dict, requirement_id: str) -> str:
         "timestamp": model.get("timestamp") or "",
         "requirement_id": requirement_id,
     }
+    return_to = str(model.get("return_to") or "")
+    if return_to:
+        fields["return_to"] = return_to
     return "".join(
         f'<input type="hidden" name="{html.escape(key)}" value="{html.escape(str(value))}">'
         for key, value in fields.items()
@@ -702,11 +705,15 @@ def _hidden(model: dict, requirement_id: str) -> str:
 
 
 def _q(model: dict) -> str:
-    return (
+    query = (
         f"repo={quote(str(model.get('repo_id') or ''))}"
         f"&source={quote(str(model.get('source_id') or ''))}"
         f"&timestamp={quote(str(model.get('timestamp') or ''))}"
     )
+    return_to = str(model.get("return_to") or "")
+    if return_to:
+        query += f"&return_to={quote(return_to, safe='')}"
+    return query
 
 
 def _overview_href(model: dict) -> str:
