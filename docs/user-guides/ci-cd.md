@@ -165,6 +165,6 @@ Extract, Scaffold, signing, review decisions and review-sign stay outside this g
 
 ## Building Curbpack itself
 
-The examples above belong to product repositories. Curbpack's own `.github/workflows/ci.yml` tests this repository and builds Studio and `curbcheck` in separate jobs. `make package-curbcheck` builds only the checker; `make package-studio` builds only Studio. `.github/workflows/release.yml` publishes the tested artifacts when authorized. `make test` and `make ci-tests` test Curbpack itself; they do not check a product.
+The examples above belong to product repositories. Curbpack's own `.github/workflows/ci.yml` tests this repository and builds Studio and `curbcheck` in separate jobs. `make package-curbcheck` builds only the checker; `make package-studio` builds only Studio. `.github/workflows/release.yml` publishes the tested artifacts when authorized. `make test` tests Curbpack itself; `make cicd` also runs the PR packaging and smoke checks; these commands do not check a product.
 
 Curbpack Docker images, SBOM generation, artifact signing and vulnerability scanning of the Studio build remain future scope in [Future CI/CD](../agile/future_cicd.md).

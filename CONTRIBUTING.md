@@ -27,7 +27,7 @@ Two suites. They do not call each other.
 | --- | --- |
 | `make test` | Studio. `tests/`. Does not clone a product. |
 | `make test-curbcheck` | curbcheck against a fresh clone of the pinned product. Start from [Testing curbcheck](docs/testing/README.md). |
-| `make ci-tests` | The mandatory CI checks. `ONLY=name` runs one. |
+| `make cicd` | All PR checks: Studio tests, installer tests and packaging, both native builds and their smoke tests. |
 
 A green Studio run is not a curbcheck pass. A passing Check is not a legal conformity determination.
 

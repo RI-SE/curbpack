@@ -14,13 +14,23 @@ This discovers the Python tests under `tests/` through `scripts/ci/checks/tests.
 
 ## Before completing a change
 
-Run the checks required by the affected story and subsystem. Studio's required CI checks run locally with:
+Run the checks required by the affected story and subsystem. Run the PR pipeline's checks and native packaging locally with:
 
 ```sh
-make ci-tests
+make cicd
 ```
 
-The currently registered check is `tests`, which runs the same Studio suite as `make test`. `ONLY=tests make ci-tests` selects it explicitly. Record the commands and actual results, including failures, skips, and manual steps not executed. Approved story work also requires the review and verification steps in [the story workflow](../../.cursor/skills/story-workflow/SKILL.md).
+This runs the Studio suite, Unix installer tests, installer packaging, and both native program builds with their real binary smoke tests. It stops with a nonzero exit status if any step fails. `ONLY` does not reduce this gate. Install the build dependencies first:
+
+```sh
+python3 -m pip install -r requirements-dev.txt pyinstaller
+```
+
+The Python interpreter must be the one used by Make (`.venv/bin/python` when available, or set `PYTHON`). Build outputs go to `dist/`. Native builds target the current host: macOS ARM64 or Linux x64. Cross-platform builds and native Windows PowerShell installer tests still require the corresponding CI runners; artifact upload remains in GitHub Actions. `make cicd` does not publish a release.
+
+For a focused rerun, use `make test`, `make test-installers`, `make package-installers`, `make package-studio`, or `make package-curbcheck`. The PR workflow uses these same targets.
+
+Record the commands and actual results, including failures, skips, and manual steps not executed. Approved story work also requires the review and verification steps in [the story workflow](../../.cursor/skills/story-workflow/SKILL.md).
 
 For changes affecting curbcheck, also run its verification below. The Studio suite and curbcheck verification are separate; passing one does not establish that the other passed.
 
