@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, quote, urlparse
 _LOG = logging.getLogger("poc2.app")
 
 from app import pages
+from app import project_selector
 from checks.run import (
     _pack_version_dir,
     claims_dir,
@@ -168,8 +169,40 @@ _VENDOR = {
         ROOT / "requirements" / "ui" / "vendor" / "jsondiffpatch" / "html.css",
         "text/css; charset=utf-8",
     ),
+    "/icons/curbpack-icon.svg": (
+        ROOT / "app" / "icons" / "curbpack-icon.svg",
+        "image/svg+xml",
+    ),
 }
+_PROJECT_ALLOWED = frozenset({"/project"})
 DEFAULT_WORKSPACE = default_workspace()
+
+
+def _requires_open_project(path: str) -> bool:
+    """Product doors and the cover need an open project.
+
+    Pack-editor routes under /requirements/... (export, extract, try-discovery)
+    stay reachable without one. Exact /requirements is Pack Sources and does not.
+    """
+    if path in {
+        "/",
+        "/requirements",
+        "/studio",
+        "/discover",
+        "/discover/repo",
+        "/check",
+        "/review",
+        "/requirement",
+        "/scaffold",
+    }:
+        return True
+    if path == "/discover/run" or path.startswith("/discover/jobs/"):
+        return True
+    if path.startswith("/discover/claims") or path.startswith("/discover/feedback"):
+        return True
+    if path.startswith("/review/") or path.startswith("/studio/"):
+        return True
+    return False
 
 
 class Workspace:
@@ -559,11 +592,18 @@ def make_handler(ws: Workspace):
             if parsed.path.startswith("/requirements/try-discovery/jobs/"):
                 self._send_try_job(parsed.path[len("/requirements/try-discovery/jobs/") :])
                 return
-            if parsed.path == "/discover/browse":
-                self._send_browse(parse_qs(parsed.query))
-                return
             try:
                 query = parse_qs(parsed.query, keep_blank_values=(parsed.path == "/review"))
+                try:
+                    _sync_open_repo(ws, query)
+                except ModelError:
+                    pass
+                if parsed.path == "/discover/browse":
+                    self._send_browse(query)
+                    return
+                if _requires_open_project(parsed.path) and not open_repo_id(ws.root):
+                    self._redirect("/project")
+                    return
                 body = self._get(parsed.path, query)
                 self._send(200, body)
             except Exception as exc:
@@ -643,8 +683,26 @@ def make_handler(ws: Workspace):
             form: dict = {}
             try:
                 form = self._form()
+                try:
+                    _sync_open_repo(ws, form)
+                except ModelError:
+                    pass
+                if _requires_open_project(parsed.path) and not open_repo_id(ws.root):
+                    self._redirect("/project")
+                    return
                 self._post(parsed.path, form)
             except ModelError as exc:
+                if parsed.path == "/project":
+                    self._send(
+                        200,
+                        project_selector.project_page(
+                            project_selector.project_model(
+                                ws.root,
+                                error=_escape(str(exc)),
+                            )
+                        ),
+                    )
+                    return
                 target = _requirement_editor_for_error(exc, form)
                 if target:
                     self._redirect(target)
@@ -663,6 +721,15 @@ def make_handler(ws: Workspace):
             )
             if researcher is not None:
                 return researcher
+            if path == "/project":
+                message = ""
+                if (query.get("added") or [""])[0]:
+                    message = "Project added."
+                if (query.get("saved") or [""])[0]:
+                    message = "Saved curbpack.json in the repo."
+                return project_selector.project_page(
+                    project_selector.project_model(ws.root, message=message)
+                )
             if path == "/":
                 return pages.cover(_home_model(ws), message=_home_message(query))
             if path == "/requirements":
@@ -765,6 +832,9 @@ def make_handler(ws: Workspace):
             return pages.page("Not found", "<p>Unknown page.</p>")
 
         def _post(self, path: str, form: dict) -> None:
+            if path == "/project":
+                self._redirect(project_selector.handle_project_post(ws.root, form))
+                return
             researcher = claim_http.handle_post(
                 ws.root,
                 path,
@@ -975,6 +1045,8 @@ def make_handler(ws: Workspace):
                 )
                 save_repos(ws.root, data)
                 new_id = str((data.get("repos") or [])[-1].get("id") or "")
+                if new_id:
+                    set_open_repo(ws.root, new_id)
                 next_url = _safe_local_next((form.get("next") or [""])[0])
                 if next_url:
                     join = "&" if "?" in next_url else "?"
@@ -1100,16 +1172,6 @@ def make_handler(ws: Workspace):
                 if repo_id:
                     set_open_repo(ws.root, repo_id)
                 action = (form.get("action") or [""])[0].strip()
-                if repo_id and action == "save":
-                    save_directory_fields(
-                        _registered_repo_path(ws, repo_id),
-                        packs_dir=(form.get("packs_dir") or [""])[0],
-                        claims_dir=(form.get("claims_dir") or [""])[0],
-                        results_dir=(form.get("results_dir") or [""])[0],
-                        reports_dir=(form.get("reports_dir") or [""])[0],
-                    )
-                    self._redirect(f"/check?repo={quote(repo_id, safe='')}&saved=1")
-                    return
                 if repo_id and action == "check":
                     repo = _registered_repo_path(ws, repo_id)
                     from common.validate import validate_curbpack_config
@@ -1274,7 +1336,10 @@ def _home_message(query: dict) -> str:
 
 
 def _home_model(ws: Workspace) -> dict:
-    ensure_default_selection(ws.root)
+    try:
+        ensure_default_selection(ws.root)
+    except ModelError:
+        pass
     selection = read_selection(ws.root)
     if selection and isinstance(selection.get("pack_id"), str):
         _sync_adapter_for_pack(ws, selection["pack_id"])
@@ -3385,6 +3450,10 @@ def _extract_review_model(ws: Workspace, query: dict) -> dict:
         review["destination"] = destination
     if (query.get("kept") or [""])[0]:
         review["message"] = "Nothing was brought in. The working copy is unchanged."
+    if (query.get("brought") or [""])[0]:
+        review["message"] = (
+            "Updated the fields you chose. The working copy you were editing stays selected."
+        )
     return review
 
 
@@ -3492,7 +3561,13 @@ def _apply_extraction_review(ws: Workspace, form: dict) -> str:
             + quote(return_repo, safe="")
             + "&brought=1"
         )
-    return "/requirements?brought=1"
+    return (
+        "/requirements/extract/review?proposal="
+        + quote(proposal_name)
+        + "&destination="
+        + quote(destination_name)
+        + "&brought=1"
+    )
 
 
 def _compare_model(ws: Workspace, query: dict) -> dict:

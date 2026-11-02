@@ -395,6 +395,10 @@ class DoorUiTest(unittest.TestCase):
     def test_start_empty_then_save_lists_bundled_adapters(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
+            product = workspace / "product"
+            product.mkdir()
+            _register(workspace, "Product", product)
+            set_open_repo(workspace, "product")
             httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
@@ -402,9 +406,7 @@ class DoorUiTest(unittest.TestCase):
             try:
                 empty = _get(base + "/requirements")
                 self.assertNotIn("cra-xml", empty)
-                started = _post(base + "/requirements/start-empty", {"folder": "product"})
-                self.assertNotIn("cra-xml", started)
-                self.assertFalse((workspace / "product" / "curbpack.json").exists())
+                self.assertFalse((product / "curbpack.json").exists())
                 fields = created_curbpack()
                 saved = _post(
                     base + "/requirements/curbpack",
@@ -461,28 +463,26 @@ class DoorUiTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 sources = _get(base + "/requirements")
-                self.assertIn("Choose a repo", sources)
+                self.assertIn("Registered projects", sources)
                 self.assertNotIn("Hidden Pack", sources)
                 self.assertNotIn("Catalog Only", sources)
                 self.assertNotIn('id="add-open"', sources)
                 editor = _get(base + "/requirements?document=hidden-pack")
-                self.assertIn("Choose a repo", editor)
+                self.assertIn("Registered projects", editor)
                 self.assertNotIn("Hidden Pack", editor)
                 discover = _get(base + "/discover")
-                self.assertIn("Choose a repo", discover)
+                self.assertIn("Registered projects", discover)
                 self.assertNotIn("Catalog Only", discover)
                 self.assertNotIn("Hidden Pack", discover)
                 check = _get(base + "/check")
-                self.assertIn("Choose a repo", check)
+                self.assertIn("Registered projects", check)
                 self.assertNotIn("hidden-claim", check)
                 self.assertNotIn("Hidden Pack", check)
                 review = _get(base + "/review")
-                self.assertIn("Choose a repo", review)
-                self.assertIn("No repository is chosen", review)
+                self.assertIn("Registered projects", review)
                 self.assertNotIn("hidden-claim", review)
                 studio = _get(base + "/studio")
-                self.assertIn("Choose a repo", studio)
-                self.assertIn("No repository is chosen", studio)
+                self.assertIn("Registered projects", studio)
                 self.assertNotIn("hidden-claim", studio)
             finally:
                 httpd.shutdown()
@@ -548,7 +548,8 @@ class DoorUiTest(unittest.TestCase):
                 self.assertNotIn("Baselines", saved)
                 self.assertIn('class="config-panel"', saved)
                 self.assertIn('readonly', saved)
-                self.assertIn("Edit configuration", saved)
+                self.assertNotIn("Edit configuration", saved)
+                self.assertNotIn(">Change</a>", saved)
                 self.assertIn('id="curbpack-dialog"', saved)
                 listed_missing = _post(
                     base + "/requirements/curbpack",
@@ -658,27 +659,31 @@ class CheckIoTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 empty = _get(base + "/check")
-                self.assertIn("Choose a repo", empty)
+                self.assertIn("Registered projects", empty)
                 self.assertNotIn("hidden-pack", empty)
                 self.assertNotIn("Read it and tick the packs it names?", empty)
-                page = _post(base + "/check", {"repo_id": "widget", "action": "open"})
+                _post(base + "/project", {"repo_id": "widget", "action": "select"})
                 self.assertEqual(open_repo_id(workspace), "widget")
+                page = _get(base + "/")
+                self.assertIn("Pack Editor", page)
                 sources = _get(base + "/requirements")
                 self.assertIn("widget", sources.lower())
-                self.assertIn(str((repo / "curbpack.json").resolve()), page)
-                self.assertIn("tree/packs", page)
-                self.assertIn("kept/claims", page)
-                self.assertIn("runs/out", page)
-                self.assertIn("signed/reports", page)
-                self.assertIn("cra-baseline", page)
-                self.assertIn("OTHER-REQ", page)
-                self.assertNotIn("Read it", page)
-                self.assertNotIn("Start empty", page)
-                self.assertNotIn("hidden-pack", page)
-                self.assertIn('name="packs_dir"', page)
-                self.assertNotIn('name="pack"', page)
+                project = _get(base + "/project")
+                self.assertIn(str((repo / "curbpack.json").resolve()), project)
+                self.assertIn("tree/packs", project)
+                self.assertIn("kept/claims", project)
+                self.assertIn("runs/out", project)
+                self.assertIn("signed/reports", project)
+                check_page = _get(base + "/check")
+                self.assertIn("cra-baseline", check_page)
+                self.assertIn("OTHER-REQ", check_page)
+                self.assertNotIn("Read it", check_page)
+                self.assertNotIn("Start empty", check_page)
+                self.assertNotIn("hidden-pack", check_page)
+                self.assertIn('name="packs_dir"', project)
+                self.assertNotIn('name="packs_dir"', check_page)
                 saved_paths = _post(
-                    base + "/check",
+                    base + "/project",
                     {
                         "repo_id": "widget",
                         "action": "save",
@@ -956,7 +961,7 @@ class ReviewIoTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 empty = _get(base + "/review")
-                self.assertIn("No repository is chosen", empty)
+                self.assertIn("Registered projects", empty)
                 self.assertNotIn("sneak-claim", empty)
                 page = _get(base + "/review?repo=widget")
                 self.assertEqual(open_repo_id(workspace), "widget")
@@ -1028,7 +1033,7 @@ class StudioConfigTest(unittest.TestCase):
             studio_file = repo / "curbpack-studio.json"
             try:
                 empty = _get(base + "/studio")
-                self.assertIn("No repository is chosen", empty)
+                self.assertIn("Registered projects", empty)
                 self.assertFalse(studio_file.exists())
                 page = _get(base + "/studio?repo=widget")
                 self.assertEqual(open_repo_id(workspace), "widget")

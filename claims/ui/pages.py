@@ -27,16 +27,11 @@ def discover_page(model: dict) -> bytes:
             "Packs and claims come from its <code>curbpack.json</code>. "
             f'<a href="/discover{repo_query}">Pilot</a>.</p>'
         )
-    add_repo = (
-        '<p class="actions"><button type="button" id="add-repo-open">Add repo</button></p>'
-        if pilot
-        else ""
-    )
+    # Add repo lives on Project, not in this panel.
     panel = repo_config_panel(
         model,
         action="/discover" if pilot else "/discover/repo",
         show=("config", "packs", "claims"),
-        beside=add_repo,
     )
     body = f"""
 <h1>Discovery &amp; Claims</h1>
@@ -45,8 +40,6 @@ def discover_page(model: dict) -> bytes:
 {panel}
 <div class="card discover-wrap">{_pack_table(model)}</div>
 """
-    if pilot:
-        body += _add_repo_dialog(str(model.get("workspace_root") or ""))
     body += _section_script(list(model.get("reviewable") or []))
     if model.get("job"):
         body += _job_dialog(model["job"])
@@ -159,41 +152,7 @@ document.querySelectorAll("tr.section-row").forEach((row) => {{
   const select = row.querySelector(".copy-select");
   if (select) select.addEventListener("change", () => applySection(row));
 }});
-const addOpen = document.getElementById("add-repo-open");
-const addDialog = document.getElementById("add-repo");
-if (addOpen && addDialog) {{
-  addOpen.addEventListener("click", () => addDialog.showModal());
-  document.getElementById("add-repo-cancel").addEventListener("click", () => addDialog.close());
-}}
-const browseBtn = document.getElementById("discover-browse-path");
-const pathInput = document.getElementById("discover-repo-path");
-const nameInput = document.querySelector('#add-repo input[name="name"]');
-if (browseBtn && pathInput && typeof window.openRepoBrowse === "function") {{
-  browseBtn.addEventListener("click", () => window.openRepoBrowse(pathInput, nameInput));
-}}
 </script>
-"""
-
-
-def _add_repo_dialog(workspace_root: str) -> str:
-    from discovery.browse_ui import browse_dialog_and_script, path_field_with_browse
-
-    start = workspace_root.strip() or "/"
-    return f"""
-<dialog id="add-repo">
-<div class="head"><h2>Add repo</h2></div>
-<div class="body">
-<form method="post" action="/discover/repos">
-<label>Name<input type="text" name="name" required autocomplete="off" placeholder="cyberready-test-product"></label>
-{path_field_with_browse(path_id="discover-repo-path", browse_id="discover-browse-path")}
-<p class="actions">
-<button type="button" class="secondary" id="add-repo-cancel">Cancel</button>
-<button type="submit">Save</button>
-</p>
-</form>
-</div>
-</dialog>
-{browse_dialog_and_script(start_path=start)}
 """
 
 

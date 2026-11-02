@@ -47,23 +47,29 @@ def _requirement(requirement_id: str, concept: str) -> dict:
 
 
 def _product_with_hunt(root: Path) -> Path:
+    from discovery.door import created_curbpack, set_open_repo
+    from discovery.repos import add_repo, load_repos, save_repos
+
     repo = root / "product"
     repo.mkdir(parents=True)
     write_json(
         repo / "curbpack.json",
-        {
-            "packs": ["other-authoritative"],
-            "search_hints": {
+        created_curbpack(
+            packs=["other-authoritative"],
+            search_hints={
+                "sources": [{"source": "documents"}, {"source": "git"}],
                 "exclude_path_globs": ["**/node_modules/**"],
                 "prefer_path_globs": ["**/docs/**"],
             },
-        },
+        ),
     )
     (repo / "docs").mkdir()
     (repo / "docs" / "risk-assessment.md").write_text(
         "product risk assessment notes\n", encoding="utf-8"
     )
     (repo / "readme.md").write_text("other text\n", encoding="utf-8")
+    save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+    set_open_repo(root, "product")
     return repo
 
 
@@ -167,7 +173,7 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             try:
                 home = _get(base + "/")
                 self.assertIn(">Home</a>", home)
-                self.assertIn("Turn law into checkable packs", home)
+                self.assertIn("Change Project", home)
                 self.assertIn("author packs from law text", home)
                 self.assertNotIn(">PoC2</a>", home)
                 self.assertNotIn("Active Pack", home)
@@ -193,8 +199,8 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn(">Pack</th>", discover)
                 self.assertIn("># Claims</th>", discover)
                 self.assertNotIn(">Copy</th>", discover)
-                self.assertIn("Add repo", discover)
-                self.assertIn("Choose a repo", discover)
+                self.assertNotIn("Add repo", discover)
+                self.assertIn("Change Project", discover)
                 self.assertNotIn("CRA Annex VII", discover)
                 self.assertNotIn("matched_by", discover)
                 self.assertNotIn("docs/risk-assessment.md", discover)
@@ -225,12 +231,11 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             try:
                 home = _get(base + "/")
                 self.assertIn("Curbpack Studio", home)
-                self.assertIn("author packs from law text", home)
-                self.assertIn('href="/requirements"', home)
+                self.assertIn("Registered projects", home)
+                self.assertIn("Change Project", home)
+                self.assertIn('href="/project"', home)
                 self.assertNotIn("Developer", home)
                 self.assertNotIn("No review report.", home)
-                for href in ("/discover", "/check", "/review"):
-                    self.assertIn(f'href="{href}"', home)
                 self.assertNotIn('href="/claims"', home)
                 self.assertNotIn('href="/scaffold"', home)
             finally:

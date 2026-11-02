@@ -56,11 +56,10 @@ class BrowseHttpTest(unittest.TestCase):
                 self.assertEqual(payload["path"], str(root.resolve()))
                 self.assertEqual([row["name"] for row in payload["dirs"]], ["product"])
 
-                with urllib.request.urlopen(base + "/discover") as response:
+                with urllib.request.urlopen(base + "/project") as response:
                     page = response.read().decode("utf-8")
-                self.assertIn('id="discover-browse-path"', page)
-                self.assertIn('id="repo-browse"', page)
-                self.assertIn("openRepoBrowse", page)
+                self.assertIn("Add project", page)
+                self.assertNotIn('id="add-repo-open"', page)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

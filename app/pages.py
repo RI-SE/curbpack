@@ -17,6 +17,20 @@ body{font-family:ui-sans-serif,system-ui,sans-serif;margin:0;background:var(--bg
 main{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 3rem}
 h1{font-size:1.5rem;margin:0 0 .35rem}
 a{color:var(--accent)}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem 1rem;margin:0 0 1rem;padding:0 0 .85rem;border-bottom:1px solid var(--line)}
+.topbar .brand{display:inline-flex;align-items:center;gap:.45rem;font-family:"Poppins",ui-sans-serif,system-ui,sans-serif;font-size:1.05rem;color:var(--ink);text-decoration:none;margin-right:.25rem}
+.topbar .brand img{width:1.55rem;height:1.55rem;display:block}
+.topbar .brand .name-curbpack{font-weight:700}
+.topbar .brand .name-studio{font-weight:400}
+.topbar nav{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.55rem .85rem}
+.topbar nav a{margin:0;text-decoration:none}
+.topbar .crumbs{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.35rem;color:var(--muted);font-size:.92rem}
+.topbar .crumbs a{margin:0}
+.topbar .crumbs .here{color:var(--ink)}
+.repo-current{font-size:.92rem;margin-right:.5rem}
+.repo-current strong{font-weight:600}
+form.inline{display:inline}
+button.secondary{background:#fff;color:var(--ink);border:1px solid #cbd5e1}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
 .muted{color:var(--muted)}
 .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:.6rem .75rem;border-radius:8px}
@@ -213,11 +227,38 @@ body:has(.review-board){background:#f4f1ea}
 """
 
 
-def page(title: str, body: str) -> bytes:
+def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> bytes:
+    crumb_html = ""
+    if crumbs:
+        parts = []
+        for index, (href, label) in enumerate(crumbs):
+            if index:
+                parts.append('<span class="muted">›</span>')
+            if index == len(crumbs) - 1 or not href:
+                parts.append(f'<span class="here">{html.escape(label)}</span>')
+            else:
+                parts.append(f'<a href="{html.escape(href)}">{html.escape(label)}</a>')
+        crumb_html = f'<span class="crumbs">{"".join(parts)}</span>'
+    topbar = f"""
+<header class="topbar">
+<a class="brand" href="/" title="Curbpack Studio">
+<img src="/icons/curbpack-icon.svg" alt="" width="24" height="24">
+<span><span class="name-curbpack">Curbpack</span> <span class="name-studio">Studio</span></span>
+</a>
+<nav>
+<a href="/project">Change Project</a>
+<a href="/">Home</a>
+{crumb_html}
+</nav>
+</header>
+"""
     doc = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>{html.escape(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 <style>{CSS}</style></head><body><main>
-<p><a href="/">Home</a> <span class="muted">· Curbpack Studio. Turn law into checkable packs.</span></p>
+{topbar}
 {body}
 </main></body></html>"""
     return doc.encode("utf-8")
@@ -580,8 +621,9 @@ def check_page(
     )
     body = f"""
 <h1>Check</h1>
-<p class="muted">Choose a repo. Check reads that repository's <code>curbpack.json</code>.
-The file is not signed. A green check row is not a legal conclusion.</p>
+<p class="muted">Check reads this repository's <code>curbpack.json</code>.
+The file is not signed. A green check row is not a legal conclusion.
+Edit paths on <a href="/project">Project</a>.</p>
 {panel}
 {_flash(message, error)}
 {_curbpack_editor(door)}
@@ -600,11 +642,13 @@ _PATH_FIELDS = (
 )
 
 
-def repo_config_panel(model: dict, *, action: str, show: tuple[str, ...] = (), beside: str = "") -> str:
-    """Repo picker plus the path fields named in show.
+def repo_config_panel(model: dict, *, action: str = "", show: tuple[str, ...] = (), beside: str = "") -> str:
+    """Readonly curbpack path banner for the fields named in show.
 
     show is a subset of config, packs, claims, results, reports.
+    action is unused (kept for call-site compatibility); change project via topbar.
     """
+    del action
     wanted = set(show)
     fields = []
     for key, label, source in _PATH_FIELDS:
@@ -617,39 +661,35 @@ def repo_config_panel(model: dict, *, action: str, show: tuple[str, ...] = (), b
             f"<label>{html.escape(label)} "
             f'<input type="text" readonly value="{html.escape(value)}"></label>'
         )
-    picker = _product_repo_picker(model, action)
+    current = _current_project_label(model)
     return (
         '<section class="config-panel">'
-        f'<div class="repo-row">{picker}{beside}</div>'
+        f'<div class="repo-row">{current}{beside}</div>'
         f'{"".join(fields)}'
         "</section>"
     )
 
 
-def _product_repo_picker(model: dict, action: str) -> str:
+def _current_project_label(model: dict) -> str:
     repo_id = str(model.get("repo_id") or "")
-    options = ['<option value="">Choose a repo</option>']
+    name = repo_id
     for repo in model.get("repos") or []:
-        if not isinstance(repo, dict):
-            continue
-        row_id = str(repo.get("id") or "")
-        name = str(repo.get("name") or row_id)
-        selected = " selected" if row_id == repo_id else ""
-        options.append(
-            f'<option value="{html.escape(row_id)}"{selected}>{html.escape(name)}</option>'
-        )
-    return (
-        f'<form method="get" class="repo-picker" action="{html.escape(action)}">'
-        '<label>Repo <select name="repo" onchange="this.form.submit()">'
-        + "".join(options)
-        + "</select></label></form>"
-    )
+        if isinstance(repo, dict) and str(repo.get("id") or "") == repo_id:
+            name = str(repo.get("name") or repo_id)
+            break
+    if not repo_id:
+        return '<span class="repo-current muted">No project selected.</span>'
+    # Change lives on Project / top bar, not in this panel.
+    return f'<span class="repo-current">Project <strong>{html.escape(name)}</strong></span>'
 
 
 def _curbpack_editor(editor: dict) -> str:
     repo_id = str(editor.get("repo_id") or "")
     if not repo_id:
-        return '<div class="card discover-wrap"><p class="muted">Choose a repo to work with.</p></div>'
+        return (
+            '<div class="card discover-wrap">'
+            '<p class="muted">Select a project to run Check.</p></div>'
+        )
     rows = []
     for pack in editor.get("packs") or []:
         if not isinstance(pack, dict):
@@ -685,12 +725,7 @@ def _curbpack_editor(editor: dict) -> str:
 </tbody></table>
 <form method="post" action="/check">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<label>packs_dir <input type="text" name="packs_dir" value="{html.escape(str(editor.get("packs_dir_value") or ""))}"></label>
-<label>claims_dir <input type="text" name="claims_dir" value="{html.escape(str(editor.get("claims_dir_value") or ""))}"></label>
-<label>results_dir <input type="text" name="results_dir" value="{html.escape(str(editor.get("results_dir_value") or ""))}"></label>
-<label>reports_dir <input type="text" name="reports_dir" value="{html.escape(str(editor.get("reports_dir_value") or ""))}"></label>
 <p class="actions">
-<button type="submit" name="action" value="save">Save</button>
 <button type="submit" name="action" value="check">Check</button>
 </p>
 </form>
@@ -1364,12 +1399,12 @@ def _review_path_chrome(door: dict) -> str:
 def studio_page(model: dict, message: str = "") -> bytes:
     door = model.get("door") or {}
     repo_id = str(door.get("repo_id") or "")
-    picker = _product_repo_picker(door, "/studio")
+    current = _current_project_label(door)
     chrome = _review_path_chrome(door)
     if not repo_id:
         body = f"""
 <h1>Studio config</h1>
-{picker}
+{current}
 <p>No repository is chosen.</p>
 """
         return page("Studio config", body)
@@ -1390,7 +1425,7 @@ def studio_page(model: dict, message: str = "") -> bytes:
     body = f"""
 <h1>Studio config</h1>
 <p class="muted">Operator settings for this product repository. Absent file keeps today's bind/model/temp wiring.</p>
-{picker}
+{current}
 {chrome}
 {offer}
 {paths}
