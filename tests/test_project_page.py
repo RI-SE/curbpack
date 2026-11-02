@@ -20,27 +20,35 @@ from discovery.repos import load_repos
 class ProjectPageTest(unittest.TestCase):
     def test_gate_redirects_to_project_and_select_opens_cover(self):
         with tempfile.TemporaryDirectory() as tmp:
-            parent = Path(tmp)
-            workspace = parent / "workspace"
+            workspace = Path(tmp) / "workspace"
             workspace.mkdir()
-            demo = parent / "demo-product"
+
+            demo = workspace / "demo-product"
             demo.mkdir()
             write_json(demo / "curbpack.json", created_curbpack())
-            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+
+            httpd = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                make_handler(Workspace(workspace)),
+            )
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
             try:
                 project = _get(base + "/discover")
                 self.assertIn("Registered projects", project)
                 self.assertIn("demo-product", project)
+
                 repos = load_repos(workspace).get("repos") or []
                 self.assertEqual(len(repos), 1)
                 self.assertEqual(repos[0]["name"], "demo-product")
+
                 cover = _post(
                     base + "/project",
                     {"action": "select", "repo_id": str(repos[0]["id"])},
                 )
+
                 self.assertEqual(open_repo_id(workspace), str(repos[0]["id"]))
                 self.assertIn("Pack Editor", cover)
                 self.assertIn("Change Project", cover)
@@ -50,17 +58,22 @@ class ProjectPageTest(unittest.TestCase):
 
     def test_ensure_repos_populated_writes_once(self):
         with tempfile.TemporaryDirectory() as tmp:
-            parent = Path(tmp)
-            workspace = parent / "ws"
+            workspace = Path(tmp) / "ws"
             workspace.mkdir()
-            sibling = parent / "alpha"
-            sibling.mkdir()
-            write_json(sibling / "curbpack.json", created_curbpack())
+
+            product = workspace / "alpha"
+            product.mkdir()
+            write_json(product / "curbpack.json", created_curbpack())
+
             first = ensure_repos_populated(workspace)
             self.assertEqual(len(first["repos"]), 1)
+
             second = ensure_repos_populated(workspace)
             self.assertEqual(len(second["repos"]), 1)
-            self.assertEqual(read_json(workspace / "product_repos.json")["repos"][0]["name"], "alpha")
+
+            self.assertEqual(
+                read_json(workspace / "product_repos.json")["repos"][0]["name"],
+                "alpha",)
 
 
 def _get(url: str) -> str:
