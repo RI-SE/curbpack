@@ -5,6 +5,7 @@ Tests provide evidence that the behavior defined by a story has been implemented
 The story is the primary source of observable acceptance behavior. New stories define this behavior using Given/When/Then, examples, or an equivalent semi-executable format. Older stories may additionally rely on derived requirements in `docs/req/`.
 
 Do not create duplicate derived requirements when the story already defines the required behavior.
+CI and packaging workflows must not define separate functional or acceptance behavior. Functional and acceptance tests executed in CI must be part of the same test suite and executable through the same test commands used for local verification. A test that is required for CI acceptance must also be runnable locally through those commands. Packaging-specific smoke tests may verify that an artifact builds, starts, contains required packaged resources, and can be invoked, but must not duplicate or redefine story acceptance behavior.
 
 ## 1. Story acceptance
 
