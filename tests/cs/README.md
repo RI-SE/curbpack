@@ -4,7 +4,7 @@
 
 ## Installera och köra
 
-Skripten ligger i `tests/cs/` tills testerna följer system och delsystem. De ingår inte i `make test` eller `make ci-tests`. Kör individuellt:
+Skripten ligger i `tests/cs/` tills testerna följer system och delsystem. De ingår inte i `make test` eller `make cicd`. Kör individuellt:
 
 ```sh
 python3 tests/cs/path_boundary.py

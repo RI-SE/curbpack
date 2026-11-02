@@ -8,8 +8,7 @@ endif
 
 .DEFAULT_GOAL := help
 PORT ?= 8770
-.PHONY: help start stop test ci-tests package package-studio package-curbcheck start-verification-run test-curbcheck
-export ONLY
+.PHONY: help start stop test cicd test-installers package-installers package package-studio package-curbcheck start-verification-run test-curbcheck
 
 help:
 	@echo "make start                   Start the local application"
@@ -19,7 +18,9 @@ help:
 	@echo "                             DEVELOPER_MODE=TRUE allows a dirty Studio tree"
 	@echo "make test-curbcheck          Source that run, apply R1, run curbcheck"
 	@echo "                             Reuses DEVELOPER_MODE from env or the filled run"
-	@echo "make ci-tests                Run mandatory CI checks. ONLY=name runs one check"
+	@echo "make cicd                    Run all PR checks, native builds and smoke tests"
+	@echo "make test-installers         Run the Unix installer tests"
+	@echo "make package-installers      Package installers and checksums"
 	@echo "make package                 Build and smoke-test both native packages"
 	@echo "make package-studio          Build and smoke-test Studio only"
 	@echo "make package-curbcheck       Build and smoke-test curbcheck only"
@@ -39,8 +40,20 @@ start-verification-run:
 test-curbcheck:
 	@sh tests/check/run.sh
 
-ci-tests:
-	@$(PYTHON) scripts/ci/run.py
+# Keep PR jobs on these same targets; run sequentially and stop on failure.
+# Native binaries are built for this host; other OS runners remain necessary.
+cicd:
+	+$(MAKE) test
+	+$(MAKE) test-installers
+	+$(MAKE) package-installers
+	+$(MAKE) package-studio
+	+$(MAKE) package-curbcheck
+
+test-installers:
+	$(PYTHON) -m unittest tests.test_installers
+
+package-installers:
+	$(PYTHON) scripts/build/package_installers.py
 
 package: package-studio package-curbcheck
 

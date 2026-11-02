@@ -60,20 +60,48 @@ class FrozenWorkspaceTest(unittest.TestCase):
             self.assertEqual(workspace, Path.home() / "curbpack-studio" / "workspace")
 
 
-class CiRunnerTest(unittest.TestCase):
-    def test_unknown_only_fails_and_lists_the_checks(self):
-        env = dict(os.environ)
-        env["ONLY"] = "docker"
-        completed = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "ci" / "run.py")],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(completed.returncode, 1)
-        self.assertIn("[FAIL] unknown ONLY=docker", completed.stdout)
-        self.assertIn("tests", completed.stdout)
+class CicdTargetTest(unittest.TestCase):
+    commands = [
+        "scripts/ci/checks/tests.py",
+        "-m unittest tests.test_installers",
+        "scripts/build/package_installers.py",
+        "scripts/build/package_studio.py",
+        "scripts/build/package_curbcheck.py",
+    ]
+
+    def run_cicd(self, fail_command=""):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            log = directory / "commands.log"
+            python = directory / "python"
+            python.write_text(
+                "#!/bin/sh\n"
+                'printf "%s\\n" "$*" >> "$CICD_COMMAND_LOG"\n'
+                'if [ "$*" = "$CICD_FAIL_COMMAND" ]; then exit 1; fi\n',
+                encoding="utf-8",
+            )
+            python.chmod(0o755)
+            completed = subprocess.run(
+                ["make", "--no-print-directory", "cicd", f"PYTHON={python}"],
+                cwd=ROOT,
+                env=dict(os.environ, CICD_COMMAND_LOG=str(log),
+                         CICD_FAIL_COMMAND=fail_command, ONLY="tests"),
+                capture_output=True, text=True,
+            )
+            commands = log.read_text().splitlines() if log.exists() else []
+            return completed, commands
+
+    def test_cicd_runs_all_pr_operations_even_with_only_in_environment(self):
+        completed, commands = self.run_cicd()
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertEqual(commands, self.commands)
+
+    def test_cicd_fails_when_any_pr_operation_fails(self):
+        for index, command in enumerate(self.commands):
+            with self.subTest(command=command):
+                completed, commands = self.run_cicd(fail_command=command)
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertEqual(commands, self.commands[:index + 1])
 
 
 def _ci_tests():
