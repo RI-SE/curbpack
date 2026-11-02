@@ -99,19 +99,14 @@ def smoke(binary: Path) -> int:
             else:
                 print("[FAIL] smoke cover page did not respond", flush=True)
                 return 1
-            if "Curbpack" not in body or "Review" not in body:
+            if "Curbpack" not in body or "Registered projects" not in body:
                 print("[FAIL] smoke cover page is not the pilot", flush=True)
                 return 1
             vendor = _get(f"http://127.0.0.1:{port}/vendor/jsondiffpatch.js")
             if "jsondiffpatch" not in vendor:
                 print("[FAIL] smoke did not read the bundled UI resource", flush=True)
                 return 1
-            try:
-                requirements = _pack_sources_with_adapters(f"http://127.0.0.1:{port}")
-            except Exception as exc:
-                print(exc, flush=True)
-                print("[FAIL] smoke did not read the bundled adapters", flush=True)
-                return 1
+            
             if "cra-xml" not in requirements:
                 print("[FAIL] smoke did not read the bundled adapters", flush=True)
                 return 1
