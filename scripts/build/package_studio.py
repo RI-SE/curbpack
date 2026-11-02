@@ -10,7 +10,8 @@ from pathlib import Path
 from package_common import ROOT, host_filename, host_label, package_binary, pyinstaller_args
 
 DIST = ROOT / "dist" / "studio"
-DATAS = (
+DATAS =( 
+    ("app/icons/curbpack-icon.svg","app/icons/"),  
     ("requirements/extract/adapters", "requirements/extract/adapters"),
     ("requirements/extract/data", "requirements/extract/data"),
     ("requirements/extract/guidance", "requirements/extract/guidance"),
