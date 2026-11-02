@@ -25,9 +25,10 @@ def ensure_repos_populated(workspace: Path) -> dict:
         return data
     ws = workspace.resolve()
     roots = [ws]
-    parent = ws.parent
-    if parent != ws and parent.is_dir():
-        roots.append(parent)
+    # Skip looking into parent dirs for now! 
+    #  parent = ws.parent
+    #  if parent != ws and parent.is_dir():
+    #   roots.append(parent) 
     changed = False
     seen: set[str] = set()
     for root in roots:
