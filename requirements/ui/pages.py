@@ -38,12 +38,7 @@ def documents_page(model: dict) -> bytes:
             '<button type="button" id="curbpack-open">Create curbpack.json</button>'
             "</p>"
         )
-    elif repo_id and not file_absent:
-        create = (
-            '<p class="actions">'
-            '<button type="button" class="secondary" id="curbpack-open">Edit configuration</button>'
-            "</p>"
-        )
+    # Edit configuration lives on Project, not in this panel.
     show = ("config",) if repo_id and not file_absent and model.get("curbpack_file") else ()
     config_panel = repo_config_panel(model, action="/requirements", show=show, beside=create)
     add = _add_toolbar() if repo_id and not file_absent else ""
@@ -56,8 +51,8 @@ def documents_page(model: dict) -> bytes:
     config_dialog = _curbpack_dialog(model) if repo_id else ""
     body = f"""
 <h1>Pack Sources</h1>
-<p class="muted">Choose the repository to work with. Pack Sources then reads the Packs named in that
-repository's curbpack.json.</p>
+<p class="muted">Pack Sources reads the Packs named in this repository's curbpack.json.
+Change project from the top bar.</p>
 {config_panel}
 {_start_empty_form(show=not repo_id)}
 {claims_line}

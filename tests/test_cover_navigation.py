@@ -29,48 +29,41 @@ class CoverNavigationTest(unittest.TestCase):
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
-                cover = _get(base + "/")
-                self.assertIn("Curbpack Studio", cover)
-                self.assertIn('href="/requirements"', cover)
-                self.assertNotIn('href="/studio"', cover)
-                self.assertNotIn('href="/requirements/copy"', cover)
-                self.assertNotIn("Developer", cover)
-                self.assertNotIn("No review report.", cover)
-                self.assertNotIn('href="/scaffold"', cover)
-                self.assertNotIn('href="/claims"', cover)
-                self.assertIn("Discovery &amp; Claims", cover)
-                for href in ("/discover", "/check", "/review"):
-                    self.assertIn(f'href="{href}"', cover)
-                self.assertLess(cover.index("Pack Editor"), cover.index('href="/discover"'))
+                project = _get(base + "/")
+                self.assertIn("Curbpack Studio", project)
+                self.assertIn("Change Project", project)
+                self.assertIn("Registered projects", project)
+                self.assertIn('href="/project"', project)
+                self.assertNotIn("Developer", project)
+                self.assertNotIn('href="/scaffold"', project)
+                self.assertNotIn('href="/claims"', project)
                 catalog = _get(base + "/requirements")
-                self.assertIn("Pack Sources", catalog)
-                self.assertIn("Choose a repo", catalog)
+                self.assertIn("Registered projects", catalog)
                 self.assertNotIn("id=\"add-open\"", catalog)
-                self.assertNotIn("cra-xml", catalog)
                 self.assertNotIn("Content of the technical documentation", catalog)
-                self.assertNotIn("Inventory units", catalog)
                 self.assertNotIn("Extract selected section", catalog)
                 editor = _get(base + "/requirements?document=cra-annex-vii")
-                self.assertIn("Pack Editor", editor)
-                self.assertIn("Choose a repo", editor)
+                self.assertIn("Registered projects", editor)
                 self.assertNotIn("Working copy", editor)
                 for path in (
-                    "/claims",
-                    "/scaffold",
                     "/check",
                     "/review",
+                    "/studio",
+                    "/requirement",
+                    "/scaffold",
+                ):
+                    self.assertIn("<h1>", _get(base + path))
+                    self.assertIn("Registered projects", _get(base + path))
+                # Pack-editor extract routes and legacy Claim editor stay open.
+                for path in (
+                    "/claims",
                     "/requirements/compare",
                     "/requirements/consolidate",
                 ):
-                    self.assertIn("<h1>", _get(base + path))
-
-                status, body = _get_status(base + "/requirement")
-                self.assertEqual(status, 400)
-                self.assertIn("Prepare sample workspace", body)
-                self.assertIn("Requirements catalog", body)
-                self.assertIn("demo pack", body)
-                self.assertNotIn("Traceback", body)
-                self.assertNotIn("FileNotFoundError", body)
+                    page = _get(base + path)
+                    self.assertIn("<h1>", page)
+                    self.assertNotIn("Traceback", page)
+                    self.assertNotIn("FileNotFoundError", page)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

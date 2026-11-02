@@ -59,10 +59,11 @@ class CheckEditorTest(unittest.TestCase):
                 self.assertNotIn("Start empty", page)
                 self.assertIn("cra-baseline", page)
                 self.assertIn("present", page)
-                self.assertIn('name="packs_dir"', page)
-                self.assertIn('name="reports_dir"', page)
+                self.assertIn('value="curbpack/packs"', page)
+                self.assertIn('value="signed/reports"', page)
+                self.assertNotIn('name="packs_dir"', page)
                 saved = _post(
-                    base + "/check",
+                    base + "/project",
                     {
                         "action": "save",
                         "repo_id": "widget",
@@ -74,7 +75,9 @@ class CheckEditorTest(unittest.TestCase):
                 )
                 self.assertEqual(read_json(repo / "curbpack.json")["reports_dir"], "kept/reports")
                 self.assertEqual(read_json(repo / "curbpack.json")["packs"], ["cra-baseline"])
-                self.assertIn("kept/reports", saved)
+                check_again = _get(base + "/check?repo=widget")
+                self.assertIn('value="kept/reports"', check_again)
+                self.assertIn("Project", saved)
                 ran = _post(base + "/check", {"action": "check", "repo_id": "widget"})
                 results = sorted((repo / ".curbpack").glob("run-result_*.json"))
                 self.assertEqual(len(results), 1)

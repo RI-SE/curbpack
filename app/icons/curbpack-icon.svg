@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 188 188" role="img" aria-label="Curbpack icon">
+  <title>Curbpack</title>
+  <rect width="188" height="188" rx="41" fill="#171717"/>
+  <path d="M35 35 H102 V78 H69 V111 H35 Z" fill="#FFFFFF"/>
+  <path d="M119 81 H153 V154 H70 V119 H119 Z" fill="#FFFFFF"/>
+  <rect x="113" y="35" width="40" height="35" fill="#00E58E"/>
+</svg>
