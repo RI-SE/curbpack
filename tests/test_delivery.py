@@ -131,7 +131,7 @@ class QuietCiReportTest(unittest.TestCase):
         self.assertIn("[PASS]", text)
         self.assertNotIn("Traceback", text)
 
-    def test_a_failing_quiet_check_prints_the_traceback_and_captured_output(self):
+    def test_a_failing_check_prints_the_traceback_and_captured_output_in_both_modes(self):
         ci = _ci_tests()
 
         class Sample(unittest.TestCase):
@@ -140,18 +140,73 @@ class QuietCiReportTest(unittest.TestCase):
 
             def test_bad(self):
                 print("marker-from-stdout")
+                print("marker-from-stderr", file=sys.stderr)
                 self.assertEqual(1, 2)
 
         result = ci._Result()
         unittest.defaultTestLoader.loadTestsFromTestCase(Sample).run(result)
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            code = ci.report(result, quiet=True)
-        text = buf.getvalue()
-        self.assertEqual(code, 1)
-        self.assertIn("[FAIL]", text)
-        self.assertIn("FAIL:", text)
-        self.assertIn("AssertionError: 1 != 2", text)
-        self.assertIn("marker-from-stdout", text)
-        self.assertIn("Summary: 1 PASS, 1 FAIL", text)
-        self.assertNotIn("test_ok", text.split("FAIL:", 1)[-1])
+        for quiet in (True, False):
+            with self.subTest(quiet=quiet):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    code = ci.report(result, quiet=quiet)
+                text = buf.getvalue()
+                self.assertEqual(code, 1)
+                self.assertIn("[FAIL]", text)
+                self.assertIn("FAIL:", text)
+                self.assertIn("Traceback (most recent call last):", text)
+                self.assertRegex(text, r'File "[^"]*test_delivery\.py", line \d+, in test_bad')
+                self.assertIn("AssertionError: 1 != 2", text)
+                self.assertIn("marker-from-stdout", text)
+                self.assertIn("marker-from-stderr", text)
+                self.assertIn("Summary: 1 PASS, 1 FAIL", text)
+                self.assertNotIn("test_ok", text.split("FAIL:", 1)[-1])
+
+    def test_a_large_difference_is_printed_in_full(self):
+        ci = _ci_tests()
+        expected = [f"expected-{index}" for index in range(100)]
+        actual = [f"actual-{index}" for index in range(100)]
+
+        class Sample(unittest.TestCase):
+            def test_bad(self):
+                self.assertEqual(actual, expected)
+
+        result = ci._Result()
+        unittest.defaultTestLoader.loadTestsFromTestCase(Sample).run(result)
+        for quiet in (True, False):
+            with self.subTest(quiet=quiet):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    code = ci.report(result, quiet=quiet)
+                text = buf.getvalue()
+                self.assertEqual(code, 1)
+                self.assertIn("actual-99", text)
+                self.assertIn("expected-99", text)
+                self.assertNotIn("Set self.maxDiff to None", text)
+
+    def test_an_unexpected_exception_preserves_its_cause_and_output(self):
+        ci = _ci_tests()
+        body = "response-body-start\n" + "x" * 1000 + "\nresponse-body-end"
+
+        class Sample(unittest.TestCase):
+            def test_error(self):
+                print("server-log", file=sys.stderr)
+                try:
+                    raise ValueError(body)
+                except ValueError as exc:
+                    raise RuntimeError("request failed") from exc
+
+        result = ci._Result()
+        unittest.defaultTestLoader.loadTestsFromTestCase(Sample).run(result)
+        for quiet in (True, False):
+            with self.subTest(quiet=quiet):
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    code = ci.report(result, quiet=quiet)
+                text = buf.getvalue()
+                self.assertEqual(code, 1)
+                self.assertIn("ERROR:", text)
+                self.assertIn(body, text)
+                self.assertIn("RuntimeError: request failed", text)
+                self.assertIn("server-log", text)
+                self.assertRegex(text, r'File "[^"]*test_delivery\.py", line \d+, in test_error')

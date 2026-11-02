@@ -37,6 +37,10 @@ class _Result(unittest.TextTestResult):
         self.buffer = True
         self.rows: list[tuple[str, bool, str]] = []
 
+    def startTest(self, test: unittest.TestCase) -> None:
+        test.maxDiff = None
+        super().startTest(test)
+
     def addSuccess(self, test: unittest.TestCase) -> None:
         super().addSuccess(test)
         self.rows.append((case_name(test), True, ""))
@@ -95,6 +99,8 @@ def report(result: _Result, *, quiet: bool) -> int:
         print(dotted(name, ok, width), flush=True)
         if reason:
             print(f"  {reason}", flush=True)
+    if bad:
+        _print_details(result)
     print(flush=True)
     print(summary(passed, len(failed)), flush=True)
     return 1 if bad else 0
