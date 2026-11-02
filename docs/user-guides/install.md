@@ -161,6 +161,65 @@ For older release binaries, run `--help` to check their supported flags; an olde
 
 A source checkout is for people changing this repository or building for themselves. See [Run from a checkout](../development/README.md#run-from-a-checkout).
 
+## Uninstall
+
+There is no separate uninstaller. Stop Studio with **Ctrl+C** in the terminal where it is running, and let any running checker finish before deleting the programs.
+
+### macOS or Linux
+
+For the default installer location, remove both programs:
+
+```sh
+rm -f "$HOME/.local/bin/curbpack-studio" "$HOME/.local/bin/curbcheck"
+```
+
+To keep curbcheck, remove only `curbpack-studio`. If you installed under a custom `CURBPACK_INSTALL_DIR`, use that directory instead. Keep `~/.local/bin` and its PATH entry if other programs use them; the installer does not edit shell startup files.
+
+### Windows
+
+For the default installer location, run in PowerShell:
+
+```powershell
+$installDir = Join-Path $env:LOCALAPPDATA 'Programs\Curbpack'
+Remove-Item -LiteralPath (Join-Path $installDir 'curbpack-studio.exe')
+Remove-Item -LiteralPath (Join-Path $installDir 'curbcheck.exe')
+```
+
+To keep curbcheck, omit the second `Remove-Item` command and keep the PATH entry. If you installed under a custom `CURBPACK_INSTALL_DIR`, set `$installDir` to that directory instead.
+
+After removing both programs, remove the installation directory's entry from your user PATH and the current terminal's PATH:
+
+```powershell
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+$remainingPath = @($userPath -split ';' | Where-Object { $_ -and $_ -ine $installDir }) -join ';'
+[Environment]::SetEnvironmentVariable('Path', $remainingPath, 'User')
+$env:Path = @($env:Path -split ';' | Where-Object { $_ -and $_ -ine $installDir }) -join ';'
+```
+
+Open a new terminal after this change. Keep the PATH entry if other programs in a custom installation directory still need it.
+
+### Manual downloads
+
+Delete the downloaded executables wherever you placed them. You can also delete downloaded installer scripts and `SHA256SUMS` files you no longer need.
+
+### Optional: delete the saved Studio workspace
+
+Removing the programs preserves saved data. **The following commands permanently delete the default Studio workspace and everything in it.** Back up any work you want to keep before running one of them.
+
+macOS/Linux:
+
+```sh
+rm -rf "$HOME/curbpack-studio/workspace"
+```
+
+Windows PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force -LiteralPath (Join-Path $HOME 'curbpack-studio\workspace')
+```
+
+If you used `--workspace`, review that directory separately. Product repositories and their Packs, Claims, reports, and result files outside the workspace remain where you saved them; remove those separately only if you also want to delete that work.
+
 ## If it does not start
 
 Record the program, platform, command and error. A missing release file or failed checksum stops the installer before replacing any program. Do not delete a workspace or regenerate Packs as a generic fix. If the port is taken, start Studio with `--port` set to a free port. More cases are in [Troubleshooting](troubleshooting.md).
