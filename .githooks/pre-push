@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+# Enable repository hooks after cloning:
+# git config --local core.hooksPath .githooks
+
+# Avoid pushing directly to main.
+branch=$(git branch --show-current)
+
+if [ "$branch" = "main" ]; then
+    echo "ERROR: Don't push main directly. Use a PR."
+    exit 1
+fi
+
+# Ensure this branch contains the current origin/main.
+git fetch origin main --quiet
+
+base=$(git merge-base HEAD origin/main)
+remote_main=$(git rev-parse origin/main)
+
+if [ "$base" != "$remote_main" ]; then
+    echo "ERROR: $branch is not based on current origin/main."
+    echo
+    echo "Current origin/main is not an ancestor of HEAD."
+    echo "Rebase/update the branch before pushing."
+    exit 1
+fi
