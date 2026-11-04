@@ -1,6 +1,6 @@
 # EP-06 — Migrated verification suite
 
-**Status:** Draft. Do not start until DOC-01, DOC-02, DOC-03, and PK2-01 are accepted.
+**Status:** FINISHED. Do not start until DOC-01, DOC-02, DOC-03, and PK2-01 are accepted.
 
 **Goal:** The suite command in `docs/testing/README.md` exits 0 only when every case `plan/TST-01.md` marks carried has its expected exit status.
 

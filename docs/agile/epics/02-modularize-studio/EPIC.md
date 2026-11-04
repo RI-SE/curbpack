@@ -1,56 +1,61 @@
-# EP-02 - Modularize Curbpack Studio
+# EP-02 — Migrate to the Curbpack target architecture
 
-**Status:** Planned, not approved for implementation until the pilot baseline is verified.
-**Type:** Technical epic.
-**Priority:** After the working pilot is completed and frozen as a tested baseline.
+**Status:** Planned; implementation starts after the pilot baseline is recorded.
+**Type:** Architecture migration, not a feature epic.
+**Authority:** [CURBPACK_ARCHITECTURE.md](CURBPACK_ARCHITECTURE.md).
 
 ## Goal
 
-Make the existing Studio application easier to maintain and test, and allow future GUIs or clients to reuse the same functionality without rewriting it.
+Move the existing pilot into the agreed Curbpack structure **without losing working behavior**. The pilot intentionally retained its old HTTP server; that was acceptable for the pilot, **not the target architecture**.
 
-**As a developer**, I want to keep HTTP/presentation code separate from shared contracts and subsystem behavior, so that we can change the GUI or deployment arrangement without changing what Requirements, Discovery, Claims, Checks, Compile, and Review do.
+## Target
 
-## Scope
+- `models/`: shared public Pydantic contracts and internal types; generate JSON Schema when needed. Packs v2 remains authoritative.
+- `curbcheck/`: independent Python API, CLI and Check implementation; **no Curbcheck REST router**.
+- `studio/app.py`: thin FastAPI application shell and router registration.
+- `studio/authentication/` and `studio/authorization/`: identity and access control.
+- `studio/pack/`: Packs, Requirements, extraction and Pack Editor.
+- `studio/claim/`: Claims, Discovery and Claim Editor.
+- `studio/check/`: REST adapter calling `curbcheck/api.py`, plus thin UI; **no duplicate Check engine**.
+- `studio/compile/`: report compilation and exports; separate from Check and Review.
+- `studio/review/`: human review of results, evidence and decisions.
 
-- Keep FastAPI routing, authentication/authorization, HTTP handling and GUI integration in `app/`.
-- Split GUI pages into understandable files under `app/pages/`; keep browser-side code limited to presentation and interaction.
-- Put Pydantic models shared by the app and subsystems in `models/`; do not invent a parallel schema to Packs v2.
-- Keep each subsystem's business rules, operations, validation and persistence owned by that subsystem.
-- Ensure subsystem functions can run and be tested without importing the GUI or starting FastAPI.
+Each Studio functional area owns `router.py`, functionally divided `impl/` and `pages/` where required. Routers own HTTP/Pydantic and map to **explicit typed Python arguments**. `impl/` does not import FastAPI. Thin TypeScript pages perform business operations only via REST. CLI entry points, where needed, reuse the same implementation.
 
-The existing PoC2 pilot is the functional and regression baseline. Refactoring should change structure, not observable product behavior.
+The target directory tree and ownership table in `CURBPACK_ARCHITECTURE.md` are normative. File names under `impl/` are examples, not a checklist for empty modules. **KISS applies to migration as well as code.**
 
 ## Stories
 
-| ID | Story |
+| ID | Deliverable |
 | --- | --- |
-| [ARCH-01](stories/ARCH-01-app-http-and-auth.md) | Keep HTTP routing and access checks in `app/` |
-| [ARCH-02](stories/ARCH-02-shared-pydantic-models.md) | Share Pydantic contracts in `models/` |
-| [ARCH-03](stories/ARCH-03-subsystem-ownership.md) | Give each subsystem ownership of its functionality |
-| [ARCH-04](stories/ARCH-04-thin-gui-pages.md) | Keep GUI pages thin and separate |
-| [ARCH-05](stories/ARCH-05-headless-subsystem-tests.md) | Run and test subsystem functions without the GUI |
+| [ARCH-01](stories/ARCH-01-app-http-and-auth.md) | Thin app shell, subsystem-owned REST routers, identity and access control |
+| [ARCH-02](stories/ARCH-02-shared-pydantic-models.md) | Shared contracts without duplicated schemas |
+| [ARCH-03](stories/ARCH-03-subsystem-ownership.md) | Move ownership and implementation to target directories, including Curbcheck and Compile |
+| [ARCH-04](stories/ARCH-04-thin-gui-pages.md) | Thin subsystem-owned TypeScript pages calling REST |
+| [ARCH-05](stories/ARCH-05-headless-subsystem-tests.md) | Functional and regression evidence before and after migration |
+
+## Migration constraints
+
+1. Record a working pilot commit and its known failures **before changes**. Compare existing user journeys, including PoC-only functionality that may have been lost in the pilot; do not silently accept that loss as a desired design change.
+2. Prefer straightforward `git mv` and import/path repairs before changing internal behavior. A move does **not** by itself satisfy the new architecture.
+3. Migrate one bounded feature or call path at a time. Leave unrelated pilot functionality running until its replacement is verified.
+4. Preserve Packs v2, signed artifacts, external formats and observable behavior unless a separate requirement explicitly authorizes a change.
+5. No new framework, intermediary service, duplicated domain logic, or process machinery merely to accomplish the migration.
+6. Failed tests and unverified behavior must be reported; do not claim parity without evidence.
+
+## Baseline and coverage
+
+[MIGRATION_COVERAGE.md](MIGRATION_COVERAGE.md) enumerates the pilot source areas, legacy HTTP paths, test candidates and observable behaviors. This is a **required completion checklist**, not a new planning workflow. No story can be accepted solely on directory layout, import success or generic test claims. PoC parity needs the actual PoC snapshot; unresolved gaps remain OPEN, not PASS.
 
 ## Epic acceptance
 
-1. Existing pilot user journeys continue to behave as before; affected regression tests and agreed manual acceptance scenarios pass.
-2. Neither Packs v2 nor published/signed artifacts are changed by this refactoring.
-3. No domain behavior is duplicated between browser JavaScript, page handlers and subsystem Python code.
-4. GUI code does not directly implement persistence, extraction, signing, checking, or review business rules.
-5. Subsystem functions can be called and tested without a running web server.
-6. Each migration step is small enough to review and verify; findings and outstanding failures are reported, not hidden.
+- The agreed repository ownership and call paths are in place: `TypeScript page → studio/<area>/router.py → studio/<area>/impl/`; for checks, `studio/check/router.py → curbcheck/api.py → curbcheck/impl/`.
+- `studio/app.py` owns only startup, shared application concerns and router registration, **not subsystem endpoints or domain operations**.
+- HTTP/Pydantic models remain at the public boundary; implementations take explicit typed Python arguments and run without FastAPI or browser dependencies.
+- Curbcheck remains independently usable from Python and CLI, with no separate HTTP server/router.
+- Compile owns report generation; Check executes checks; Review handles human review. None silently absorbs another's responsibility.
+- Every row in `MIGRATION_COVERAGE.md` is verified against the migrated code with real test evidence, or remains OPEN; EP-02 is not DONE while required rows are OPEN. Full pilot journeys and CLI/build regressions pass. PoC parity is separately checked when a PoC baseline is available; otherwise it is explicitly unverified.
 
-## Not part of EP-02
+## Outside scope
 
-- The development container ([EP-12](../12-development-environment/EPIC.md)), a central database, a multiuser service, or a new GUI.
-- New business features, UX redesign, Packs v2 changes or a new API version merely for architectural purity.
-- Generic plugin frameworks, service abstractions, or additional layers without an existing need.
-- Unrelated cleanup before the tested pilot baseline is established.
-
-These are possible future uses of the modular design, not acceptance criteria for this epic.
-
-## Before implementation
-
-1. Freeze a fresh, tested PoC2 pilot baseline and record known failures.
-2. Inspect the actual code and existing architecture/contracts; choose a sequence of small moves.
-3. Derive testable requirements in `docs/req/` and map them to existing and new regression tests.
-4. Do not start moving code simply because this epic exists.
+New features, UX redesign, data-contract changes, unrelated refactors, CI overhauls, plugin frameworks, and additional architectural layers. Discovery provider extensibility (`DISC-01`) is a separate proposed feature, **not part of EP-02**.

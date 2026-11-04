@@ -1,6 +1,6 @@
 # EP-07 — Reference product, Studio external test
 
-**Status:** Draft. Do not start until DOC-01, DOC-02, PK2-01, and TST-01 are accepted. EP-08 does not block this epic, and this epic does not edit `docs/testing/`.
+**Status:** FINISHED. Do not start until DOC-01, DOC-02, PK2-01, and TST-01 are accepted. EP-08 does not block this epic, and this epic does not edit `docs/testing/`.
 
 **Goal:** `external_test/curbpack-studio` in Glucose Log describes Studio and holds the PK2-01 Pack bytes. The rest of that repository stays untouched. `states/R1.sh` through `states/R7.sh` are byte-identical to the versions present when this epic starts.
 

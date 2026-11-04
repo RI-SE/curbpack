@@ -1,12 +1,13 @@
-# ARCH-02 - Shared Pydantic contracts
+# ARCH-02 — Shared data contracts
 
-**Status:** Draft; after pilot baseline.
-**Epic:** [EP-02 Modularize Curbpack Studio](../EPIC.md)
+**Status:** Draft; after pilot baseline.  
+**Epic:** [EP-02](../EPIC.md)
 
-**As a developer**, I want Pydantic contracts shared by `app/` and the subsystems to live in `models/`, so that callers validate and exchange the same data.
+**As a developer**, I want shared contracts in `models/pydantic/` and internal types in `models/internal/`, so that data is validated consistently without parallel schemas.
 
 **Accept when:**
-- Models genuinely shared by app and subsystems are defined once in `models/` and used from both places.
-- Models used only within one subsystem may remain local to that subsystem; no needless centralization.
-- Shared models respect the authoritative Packs v2 structures and validation semantics; no competing persisted schema is introduced.
-- Existing external data formats and relevant validation tests continue to pass.
+- Shared public Pydantic contracts reside in `models/pydantic/`; private types belong in `models/internal/` or remain local when not shared.
+- Routers use Pydantic at HTTP boundaries and pass explicitly mapped, typed Python arguments to domain functions; domain code does not depend on FastAPI or HTTP request objects.
+- JSON Schema is generated from Pydantic when required; do not maintain duplicate hand-written schemas. Preserve any separately authoritative Packs v2 external contract.
+- Existing persisted Pack/Requirement/Claim/report formats, signing semantics and relevant validation tests remain unchanged.
+- Assert round-trip compatibility for representative persisted Requirement, Claim, Pack and report fixtures; test invalid payload rejection, defaults, references and signing/digest behavior. Generating OpenAPI alone is insufficient.
