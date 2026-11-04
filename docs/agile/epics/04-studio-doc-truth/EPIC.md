@@ -1,6 +1,6 @@
 # EP-04 — Studio documentation truth
 
-**Status:** DOC-01, DOC-02, and DOC-03 are done. `daniel/ny_sdd/` stays that account. [DOC-06](stories/DOC-06-published-reader-docs.md) updates the published documents a reader opens from the repository README. An extra path under `daniel/ny_sdd/` still fails this epic. DOC-06 does not merge `daniel/ny_sdd/` into `docs/`.
+**Status:** FINISHED
 
 **Goal:** `daniel/ny_sdd/` ends as the Studio account of the moved baseline.
 
