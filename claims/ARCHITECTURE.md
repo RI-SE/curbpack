@@ -1,18 +1,18 @@
 # Discovery & Claims — subsystem architecture
 
-Status: **normative target; implementation gaps are identified explicitly.**  
+Status: **target functional component contract**, updated 2026-11-06; existing paths and tests are migration evidence, not a claim of implemented target behavior.  
 Normative domain model: `docs/reference/packs2.md` in this repository.
-Sibling documents (`docs/arch/ARCHITECTURE.md`, `policies/working-rules.md`, `docs/concepts/end-to-end-scenario.md`) describe the wider product. This file owns Discovery and Claims under `poc2/claims/`; some current code is still in `poc2/discovery/` until migration.
+The approved overall architecture is `docs/arch/ARCHITECTURE.md` and the detailed EP-02 `CURBPACK_ARCHITECTURE.md`. Claims/Discovery belong to `studio/claim/`; legacy `claims/`, `discovery/`, `app/` and `poc2/` paths are migration references only.
 
 Extract is out of scope. Do not change Extract’s implementation or architecture from this document.
 
-`poc/` is a behaviour reference only. PoC2 does not import it at runtime.
+PoC1/PoC2 are historical behavioral references, not current runtime dependencies or architecture authorities. The normative persisted shapes remain human-approved Packs v2; VL-00/VL-04 changes are planned, not yet presumed implemented.
 
 ---
 
 ## 1. Purpose
 
-`curbpack-claims` finds possible evidence locations, maintains product-specific Claim bindings, and lets humans approve and seal those Claims. It implements the durable product loop in Packs v2 §6 without treating discovery as verification and without inventing parallel domain types.
+The Studio Claims component finds possible evidence locations, maintains product-specific Claim bindings, and lets humans review and seal those Claims. It implements the durable product loop in Packs v2 §6 without treating discovery as verification and without inventing parallel domain types.
 
 **Claims Review** here is human inspection and signing of Claims. It is not `curbpack-review`, which reviews compiled evidence and check run results.
 
@@ -30,7 +30,7 @@ Three distinct, independently testable responsibilities. They do not require thr
 
 Workflow words **candidate**, **selected**, **draft**, and **approved** label UI state. They are not persistent types. An unsigned Claim is still a Claim (`signed` absent).
 
-Shared infrastructure (not a fourth product module): `common.validate`, `common.store`, `common.signing`, and check-args validation. Editor and Review call these; they do not reimplement them.
+Shared validation, persistence, signing and check-args validation are reused; Claims does not duplicate them. Studio Claims owns `studio/claim/router.py`, `impl/`, and thin TypeScript `pages/`. REST and optional CLI invoke the same headless backend functions.
 
 ---
 
@@ -44,10 +44,10 @@ Discovery, Editor, and Review **read** Requirements. Product-specific binding ch
 
 | Field | Why necessary |
 | --- | --- |
-| `id` | Join key for `Claim.requirement_id` |
+| `id` | Requirement ID component; no longer sufficient on its own for an unambiguous binding (VL-04) |
 | `discovery_hints` | Hunt guidance (`concepts`, `path_hints`, `sources`, `expected_evidence`) |
 | `references[].law_text` | Human inspection context; not a search key for the deterministic walk |
-| `pack_id` | Confirms the Requirement belongs to a pack selected in `curbpack.json` |
+| `namespace`, `pack_id` | Namespace-qualified Requirement identity under VL-00; selected Pack and digest must match at binding time |
 
 Editing `discovery_hints` is a Requirements concern, not Claims.
 
@@ -60,44 +60,24 @@ Editing `discovery_hints` is a Requirements concern, not Claims.
 | `hunt.exclude_path_globs` | Paths discovery must skip |
 | `hunt.prefer_path_globs` | Prioritize candidates **already found**; never invent candidates alone |
 
-### 3.3 Claim (the only durable binding)
+### 3.3 Claim (the durable evidence binding)
 
-```json
-{
-  "id": "claim-risk",
-  "requirement_id": "CRA-ANNEX-VII-RISK",
-  "source": "documents",
-  "args": { "path": "docs/security/risk_assessment.md" },
-  "description": "The reviewed file is the evidence for this Requirement.",
-  "severity": "high",
-  "checks": [
-    { "check": "exist", "args": { "paths": ["docs/security/risk_assessment.md"] } },
-    { "check": "contents", "args": { "path": "docs/security/risk_assessment.md", "probes": [] } }
-  ],
-  "signed": { "at": "…", "name": "…", "signature": "…" }
-}
-```
+A Claim remains a single Packs v2 object describing **one evidence binding with zero or more configured Checks**. Multiple independent evidence sources for a Requirement may have distinct Claims. `source`/`args` identify the evidence adapter and locator; each `checks[]` entry is validated by the registered Check's argument schema. No ClaimDraft, separate approval database, or embedded law-text copy is introduced.
 
-`source` uses the same adapter namespace as `discovery_hints.sources`. It is not `Requirement.source`. Source `args` identify the evidence. Each `checks[]` entry is `{check, args}` validated by `available_checks.json`. A path inside a Check's `args` is not the Claim's evidence locator. `checks: []` is a saved proposal: it reloads, it is not executed, and it is not published. An unsigned Claim with Checks may be tested. The seal covers the whole Claim, including `source`, source `args`, `description`, and every Check. It does not cover the external file bytes.
+The current persisted `requirement_id`-only binding is **insufficient** for the revised EP-11. **VL-04** adds `namespace`, `pack_id`, `requirement_id`, and `requirement_digest` to the Claim's signed payload. The precise approved field names and canonical digest semantics are governed by the updated `docs/reference/packs2.md`, **not** inferred from this architecture. A binding operation shared by Claims Editor and Discovery resolves one exact Requirement and records the fully qualified identity + digest. An ordinary change of evidence/Checks retains that binding. Explicit Requirement rebind records new identity/digest and invalidates the old Claim signature. A no-op does not remove it.
 
-| Field | Why necessary |
-| --- | --- |
-| `id` | Stable evaluation and storage key |
-| `requirement_id` | The one Requirement this Claim supports |
-| `source` | Adapter id for the evidence, same namespace as hunt sources |
-| `args` | Adapter-specific locator for that evidence |
-| `description` | Human rationale. Checks do not read it |
-| `severity` | Optional product triage (`high` / `medium` / `critical`); not legal `strength` |
-| `checks` | Zero or more configured Checks |
-| `signed` | Optional seal; absent ⇒ unsigned Claim |
+| Data | Owner / meaning |
+|---|---|
+| `id` | Claim's own stable identity |
+| Qualified Requirement identity + digest | Exact Requirement payload approved for this Claim (VL-04) |
+| `source`, `args` | Evidence reach/locator; not the Requirement's legal source |
+| `description`, `severity` | Human rationale and triage |
+| `checks[]` | Registry-backed Check IDs and arguments; same evidence can have several Checks |
+| `signed` | Optional signature over the full Claim payload, including VL-04 binding; does not seal external evidence |
 
-Forbidden on Claims (Packs v2): `remediation`, `expected`, `settlement`, and Requirement fields such as `law_text` or `search`. No `retired` field. No top-level `check`.
+Evidence adjustment is **not** automatically a Requirement rebind. A changed Claim payload removes its embedded signature as required by the shared signing contract. Signed Git commit reading uses VR-00 and does not turn a signer name into approval. No `retired` field or synthetic persistent candidate type.
 
-Several Claims may share one `requirement_id` when they are different evidence. The same evidence with several Checks is one Claim. Creating a Claim does not overwrite an existing file. Traceability across reruns is that file: same `id`, updated source `args` or `checks` when the binding changes. A changed signed payload drops `signed`.
-
-On disk: one JSON file per Claim (PoC2: `claims/<id>.json`). Packs v2 names the layer `CLAIMS/`; the directory name is packaging, not a second schema.
-
----
+Git retains committed historical Claim bytes. Claims Review and later `studio/review/` inspect signatures; `curbcheck/` independently reports Requirement binding status (match/stale/missing) and **still executes every configured Check**. History resolution is read-only and belongs to the Review backend under VL-05.
 
 ## 4. Data passed between modules
 
@@ -313,8 +293,9 @@ discover_candidates(repo, requirement, config, *, limit=40,
 ### 8.2 Claims Editor
 
 ```text
-build_claim(*, claim_id, requirement_id, source, args, checks, description, severity=None) → Claim  # unsigned
-rebind(claim, *, source=None, args=None, checks=None, severity=None, description=None) → Claim  # drops signed if payload changed
+build_claim(*, claim_id, requirement_binding, source, args, checks, description, severity=None) → Claim  # unsigned, exact Requirement identity + digest
+edit_claim(claim, *, source=None, args=None, checks=None, severity=None, description=None) → Claim  # retain Requirement binding; drop signed on changed payload
+explicit_rebind_requirement(claim, requirement) → Claim  # new exact identity + digest; drop signed
 write_claim(directory: Path, claim: Claim) → Path
 read_claim(path: Path) → Claim
 read_claims(directory: Path) → list[Claim]
@@ -323,7 +304,7 @@ retire_claim(directory: Path, claim_id: str) → None
 
 **Retirement:** remove the Claim from the active set. For the current Git-based repository, deleting the Claim file is valid. Git history retains past bytes if committed. No `retired` field, soft-delete model, separate history database, or workflow engine.
 
-A candidate `path` is only a convenience prefill for source `args`. When the Requirement's effective hunt list has one source id, Create uses that id. Validate Claim shape and each Check's args against `available_checks.json` before write. Requirement digests must remain unchanged across create/rebind/retire.
+A candidate `path` is only a convenience prefill for source `args`. When the Requirement's effective hunt list has one source id, Create uses that id. Validate Claim shape and each Check's args against `available_checks.json` before write. Requirement payloads must remain unchanged across create/edit/rebind/retire; Claims bind to an exact Requirement without modifying that Requirement.
 
 ### 8.3 Claims Review
 
@@ -346,7 +327,7 @@ read_claim_seal(claim, trust, *, repo=None, relative=None) → five-fact reading
 1. Discovery returns Candidates (retrieval-only or after optional assessment); UI shows them with Requirement law text.
 2. Useful or Poor, and a selected check configuration, write the workspace feedback file for this repository, source, and working copy. That file is not a Claim. Skipping still writes nothing.
 3. Create writes one Packs v2 Claim for that evidence, with every configured Check on it, when that Claim id is absent. The Claims Editor is the path for a confirmed update. A path from a finding may prefill source `args`; the person does not retype it.
-4. Claims Review seals when the organisation wants a Claim seal.
+4. Claims Review seals when the organisation wants a Claim seal. This signing is separate from the Requirement/Pack `status` and from Review of Check results.
 5. Re-run Discovery with any strategy mix; Editor Claims, Requirements, and Packs are untouched unless a human edits them through the proper Editor / Requirements paths.
 
 PoC1 `feedback.json` votes and check selections are operational researcher state, not a domain store and not a signature. `_signs` stays dropped. Assessment output is stored on the Discover job record so the same inputs are not scored again. It is not evidence and not a Claim field.
@@ -357,7 +338,7 @@ PoC1 `feedback.json` votes and check selections are operational researcher state
 
 | Rule | Meaning |
 | --- | --- |
-| Discovery never writes Claims, Requirements, or Packs | Rerun / assessment cannot overwrite human or publisher artefacts |
+| Discovery retrieval/assessment never writes Claims, Requirements, or Packs | Rerun / assessment cannot overwrite human or publisher artefacts |
 | Deterministic retrieval baseline | Same controlled paths + hints + hunt ⇒ same Candidate core list |
 | Optional assessment | May be non-deterministic. Not evidence, and not required for binding. The researcher job runs it under `assess_limit`. Completed rows on the job are reused when law text, file body, model, and prompt are unchanged. |
 | Claims are repo files | Sealed Claim changes persist independently of discovery |
@@ -392,12 +373,14 @@ PoC1 `feedback.json` votes and check selections are operational researcher state
 
 ---
 
-## 12. PoC2 today vs this architecture
+## 12. Historical implementation notes (non-normative)
+
+The items in this section describe historical implementation observations, not guaranteed defects in the current repository. Verify against the current code before planning work.
 
 Already aligned (callable without UI):
 
 - `discover_candidates` returns temporary lists and does not write
-- `build_claim` / `rebind` / `write_claim` / `retire_claim` (file delete)
+- `build_claim` / `edit_claim` / `write_claim` / `retire_claim` (file delete)
 - Validation and store helpers in `common`
 - Rebind drops `signed`; Requirement digest unchanged
 
@@ -449,19 +432,19 @@ Existing tests cover much of Editor and today’s discover walk; update discover
 
 ---
 
-## 14. Placement
+## 14. Target placement and boundary
 
 ```text
-poc2/discovery/    # current path. Target: poc2/claims/discovery/. Access, retrieval, read_source_text, optional assessment
-poc2/claims/       # Claims Editor and Claims Review callables
-poc2/claims/ui/    # Claims rendering (target). Until migration, those pages still render from poc2/app/
-poc2/common/       # validate, store, signing — shared, not discovery logic
-poc2/app/          # HTTP routes and navigation. Not Claims rendering
+studio/claim/
+  router.py              # All Claims/Discovery REST routes
+  impl/                  # Headless Discovery, binding, editing and Claim-signing operations
+  pages/                 # Thin TypeScript Discovery, Claims Editor and Claim Review UI
+  cli.py                 # Optional thin entry point invoking the same impl functions
 ```
 
-Access, retrieval, and assessment may live as separate modules under `discovery/` or as named functions in one file. They must stay independently callable in tests. Splitting Editor and Review into separate directories is optional. Claims owns the rendering in `poc2/claims/ui/`. `app/server.py` dispatches a URL prefix to the subsystem handler when that handler exists. New researcher routes under `/discover/claims` and `/discover/feedback` are handlers in `claims/ui/`. Those handlers own form parsing, the operation call, and the page. The existing `/discover` launcher routes and the `/claims` editor stay in `app/server.py` and keep calling subsystem operations. The server method does not retrieve, assess, validate checks, or write Claims.
+This is one Studio functional component; Discovery, Claims Editor and Claims Review are internal functional responsibilities, **not separate systems** and not separate required processes. `studio/app.py` registers the Claims router but never handles feature-specific form parsing, Claim writes or discovery decisions. The UI calls component REST endpoints. The `studio/check/` adapter talks to Curbcheck and never writes Claims.
 
----
+The former `poc2/app/` and Python-rendered `claims/ui/` structure and endpoint dispatch text elsewhere in this file are **historical UX references only**. They are not permitted as destination layout or ownership. Preserve interactions, not the old rendering framework. No duplicated REST and CLI implementation.
 
 ## 15. Residual non-blockers
 
@@ -480,7 +463,7 @@ Extract / pack-publication open questions stay in `docs/arch/ARCHITECTURE.md`.
 - A candidate database other than the Discover job file, and a feedback store other than the one workspace file per repository, source, and working copy
 - ClaimDraft / Approval / Binding status types
 - Soft-delete / `retired` field / retirement workflow engine
-- Version graphs or signature chains between Requirement and Claim
+- Separate version-graph database or signature-chain framework (the exact digest binding and read-only history required by VL-04/VL-05 remain in scope)
 - Source-adapter / connector platforms or general agent frameworks
 - Assessment as a condition of binding
 - Strategy configuration sealed into Requirement, Claim, or Pack
@@ -491,7 +474,7 @@ What remains: Packs v2 Requirement and Claim, repo `hunt`, temporary Candidates 
 
 ---
 
-## 17. User capabilities
+## 17. User capabilities to preserve during EP-02
 
 Status: design decision for the screens. Sentences about `poc/components/requirement_manager/`, `poc/components/cra_evidence_hunt/`, and `poc2/app/` are confirmed by that code. Behaviour already dropped in §11 is not decided again here.
 
@@ -507,7 +490,7 @@ PoC2 opens Discover by loading `/discover`, for `CRA-ANNEX-VII-RISK` only, and s
 | See score, rank, and rationale when a model scored the hits | Retain | Optional assessment fields. The page shows them only when assessment ran. |
 | Bind a chosen path to a check | Retain | Human gate. The write is `build_claim` and `write_claim`. |
 | Several bindings for one requirement | Retain | Several Claims, one `requirement_id`. PoC1 allowed several check choices on one evidence path. In PoC2 they belong in one Claim's `checks[]` for that evidence, rather than being separate Claims. |
-| Change check, args, severity, or description | Retain | `rebind` and `write_claim`. A payload change drops `signed`. |
+| Change check, args, severity, or description | Retain | `edit_claim` and `write_claim`. A payload change drops `signed`. |
 | Remove a binding | Retain | `retire_claim`. |
 | Approve a binding with a real seal and read it back | Adapt | PoC1 toggles `_signs` on the requirement id and says the signature is fake. The seal is `sign_claim` on the Claim. The reading is `read_claim_seal`. |
 | Law text beside the hits, and a way back to the requirement | Adapt | PoC1's detail header. The text is `references[].law_text` on the loaded Requirement. The page does not edit it. |
@@ -516,15 +499,15 @@ PoC2 opens Discover by loading `/discover`, for `CRA-ANNEX-VII-RISK` only, and s
 | Mark a hit Useful or Poor and see that mark later | Adapt | Workspace feedback for this repository, source, and working copy. Not a Claim. A new Discover run does not delete it. |
 | Vote counts on the requirement list | Adapt | Counts from that file. |
 | Check picker writing into the findings file | Adapt | The picker shows a sentence a reviewer can read. The saved `check` id is the implementation name. Saving a check writes one Claim for that evidence. The same check again leaves the file unchanged. A further check updates that Claim. |
-| Signed flag on the requirement, including clearing it with no other change | Drop | `_signs` is not a Claim seal. A seal leaves when `rebind` changes the payload. Review does not flip a boolean. |
+| Signed flag on the requirement, including clearing it with no other change | Drop | `_signs` is not a Claim seal. A seal leaves when `edit_claim` changes the payload. Review does not flip a boolean. |
 | Come back another day to the same hit list without searching | Adapt | The latest Discover job for that repository, source, and working copy. Abort keeps candidates already written on that job. A later run reuses an assessment whose law text, file body, model, and prompt are unchanged. |
 | Claim slug and top-level locus columns | Drop | Forbidden on the Requirement. The list shows Requirement `id` and `references[].locator`. |
 | Hide hits the model ranked None | Adapt | Score 0 and rank None are omitted from the candidate list. The judgment stays on the job for reuse. Paths that were not assessed stay in the list. |
 | `repos.json` registry | Drop | The product repository is the path passed to `discover_candidates` and the directory passed to `write_claim`. Another product is another path. |
 
-## 18. UI
+## 18. UI behavior to preserve (implementation language/paths are not normative)
 
-Status: design decision for presentation. Claims owns this rendering. Target path: `poc2/claims/ui/`. `app/server.py` dispatches a URL prefix to the subsystem handler when that handler exists. New researcher routes under `/discover/claims` and `/discover/feedback` are handlers in `claims/ui/`. Those handlers own form parsing, the operation call, and the page. The existing `/discover` launcher routes and the `/claims` editor stay in `app/server.py` and keep calling subsystem operations. The server method does not retrieve, assess, validate checks, or write Claims. Discovery, Editor, and Review stay the functions in §8. The page does not search, validate checks, seal, or read a source file inside the template. Candidate, selected, draft, and approved are labels on this interaction.
+Status: design decision for presentation. Claims owns the presentation under `studio/claim/pages/` and every relevant HTTP endpoint under `studio/claim/router.py`. TypeScript invokes REST; the router calls backend operations. `studio/app.py` only registers routers, without form handling or domain rules. Discovery, Editor, and Review stay the functions in §8. The page does not search, validate checks, seal, or read a source file inside the template. Candidate, selected, draft, and approved are labels on this interaction.
 
 `discovery_hints` are edited in the requirements application. This UI reads them. Check execution and the review report stay on their own screens.
 
@@ -547,7 +530,7 @@ The person sees each in-scope Requirement: `id`, locator, findings, High, Useful
 | Action | Function |
 | --- | --- |
 | List requirements | Load the Requirements the repo's `curbpack.json` selects. |
-| Count bindings | `read_claims`, grouped by `requirement_id`. |
+| Count bindings | `read_claims`, grouped by qualified Requirement identity after VL-04 (legacy `requirement_id` grouping is historical). |
 | Open discovery or open claims | Navigation. Neither action writes. |
 
 A missing Requirement file or a Requirement outside the selected pack is the load error, shown on that row. Incomplete work is a Requirement with no Claims. That is an empty binding, not a failed search.
@@ -563,19 +546,19 @@ The person sees the law text, the locator, `source.url`, and the hints that will
 | Stop | Abort keeps every candidate the job has already written. |
 | Open the file | `read_source_text` for this finding's path. The page marks an excerpt only when that excerpt occurs exactly in the returned text. A model excerpt that does not occur is labeled as not found. |
 | Add a candidate | The person picks a repository file Discover missed. Feedback stores it with the discovered candidates. A check is not required; adding a check makes a Claim. |
-| Bind this path | Saving a check writes feedback and one Claim for that evidence. A later check on the same source updates that Claim through `rebind`. The Editor remains the place for severity, description, retire, and sign. |
+| Bind this path | Saving a check writes feedback and one Claim for that evidence. A later check on the same source updates that Claim through `edit_claim`. The Editor remains the place for severity, description, retire, and sign. |
 | Skip | No call. |
 
 An unsupported source, once selection is wired, is the explicit failure from §6.1, not an empty table presented as a successful search. A readable failure from the current markdown walk is shown the same way. No candidates means the call returned an empty list. The file view, when the path cannot be read, shows the excerpt and the read error.
 
 ### Claims editor
 
-The person sees the Claims for this `requirement_id`: id, check, severity, description, args, and whether `signed` is present. The law text is on the page and is not a field. Links return to Discovery for this Requirement and to Review for this Claim. A new Claim starts with the path from Discovery when they came from a candidate; otherwise the path is empty. One save writes one Claim. A second Check on the same evidence is another entry in the **same Claim**'s `checks[]`; distinct evidence for this Requirement may have distinct Claims. This is the target domain contract, even where current UI code still requires correction. The check control offers the checks `validate_check_args` accepts. The argument fields are the ones that check requires: `exist` takes `paths`; `contents` takes `path` or `paths`, and `probes`.
+The person sees the Claims for this qualified Requirement identity: id, check, severity, description, args, and whether `signed` is present. The law text is on the page and is not a field. Links return to Discovery for this Requirement and to Review for this Claim. A new Claim starts with the path from Discovery when they came from a candidate; otherwise the path is empty. One save writes one Claim. A second Check on the same evidence is another entry in the **same Claim**'s `checks[]`; distinct evidence for this Requirement may have distinct Claims. This is the target domain contract, even where current UI code still requires correction. The check control offers the checks `validate_check_args` accepts. The argument fields are the ones that check requires: `exist` takes `paths`; `contents` takes `path` or `paths`, and `probes`.
 
 | Action | Function |
 | --- | --- |
-| Create | `build_claim`, then `write_claim`. The person types the Claim `id`. |
-| Save | `rebind`, then `write_claim`. |
+| Create | `build_claim` (with exact Requirement binding), then `write_claim`. The person types the Claim `id`. |
+| Save | `edit_claim` (preserving the Requirement binding), then `write_claim`; explicit Requirement rebinding uses `explicit_rebind_requirement`. |
 | Retire | `retire_claim`. |
 
 `ModelError` and `CheckError` are shown on the form. A check id the runner knows but does not implement shows that `CheckError` before a file is written. When the loaded Claim has `signed` and the form differs, the page says that saving clears the seal. After a successful save, the seal reading is gone and the page says it was cleared. Retire asks for confirmation because the file is removed. Other Claims for the requirement stay.

@@ -1,82 +1,50 @@
-# Requirements architecture
+# Pack / Requirements — subsystem architecture
 
-Status: **target subsystem contract, ready for iterative review; not a claim that current PoC2 code conforms**. This is the **only** `ARCHITECTURE.md` for the Requirements subsystem, including Extract. The separate `poc2/extract/ARCHITECTURE.md` has been removed and is not a second contract. The governing overall boundary is `docs/arch/ARCHITECTURE.md`; the persistent contract reference is `docs/reference/packs2.md` in Studio. PoC1 is a *functional and UX reference*, never a schema authority.
+**Status:** Target functional contract for `studio/pack/`, aligned with the approved Curbpack target architecture and revised EP-11 (2026-11-06). Current `requirements/` is a migration source. All exact persistent shapes remain governed by the human-approved `docs/reference/packs2.md`; VR-00/VL-00 changes must be incorporated there before implementation.
 
 ## 1. Scope and invariants
 
-Requirements owns regulation adapters and extraction, import of a published Pack, dated Pack working copies, Requirements review/edit, Compare, Consolidator, local acceptance, and publishing immutable Pack versions. It does not discover product evidence, create Claims, run Checks, compile run reports, or perform final product review. Git history of the workspace is repository history, not a second Requirements workflow.
+The Pack component owns regulation adapters and Extract, Pack/Requirement workspace selection and IO, import/export, human Review/Edit, Compare, Consolidator, signing, and cross-namespace Take Ownership. Its HTTP router, backend implementation, and thin TypeScript pages belong together under `studio/pack/`. It does **not** own Claims, Discovery of product evidence, Check execution, Compile, or final product Review.
 
-- A **Pack** is the unit of work. An extraction is a new working copy of that Pack, not an overwrite of an existing one.
-- Every saved Requirement draft uses the **Packs v2 Requirement JSON shape**, without `signed`. There is no second accepted interpretation object, `ClaimDraft`, approval schema, or `decisions.json` in the target workflow.
-- The regulation-specific parser/atomizer is deterministic at runtime. Developers use a coding agent to develop adapters and inspect readable JSON next to source law text. Product UI does **not** configure cuts or offer a segmentation editor.
-- LLM interpretation and discovery-hint proposals are nondeterministic and separate from deterministic parsing. A completed extraction preserves its results in its own directory.
-- Editing, Compare transfers, and Consolidator modifications apply only to the explicitly selected writable working copy. No read-only comparison and no new Extract may mutate other working copies or a published Pack.
-- If a payload is changed, drop `signed` on the changed object. A no-op edit must not drop it. `signed` and directory seals use the existing Packs v2 semantics; a signature does not confer organizational authority. The employee identity and the Git author string are not a signature.
-- Import copies a published Pack unchanged into `published/<pack-id>/<version>/`. It does not set `origin`. That directory is not a working copy.
-- A local working copy of a published Pack is a new timestamped directory. `working_copy` sets `origin`. The published source stays unchanged. `approve_working_copy` signs that copy and keeps `origin`. That acceptance does not publish a release.
-- Publisher publication applies to Requirements with no `origin`. It writes a new `published/<pack-id>/<version>/`. It does not remove `origin` or present a local copy as the source publisher's release. An organisation publishing under its own separate pack identity is outside this contract.
-- One Requirements subsystem specification. Component implementation can be split into directories, but component architecture documents are not created.
-- `app/` owns HTTP routing and navigation; Requirements owns ordinary Python operations and its own HTML rendering. CLI/tests must call operations without HTTP or UI.
+- Extract source parsing is deterministic; interpretation and discovery-hint proposals may use models and must remain reviewable. A proposal is not silently applied.
+- Pack/Requirement persisted objects are exactly Packs v2; extraction diagnostics and proposals are operational artifacts, not alternative accepted Requirement types.
+- Only an explicitly selected writable Pack is modified; reads and Compare previews are side-effect-free. Existing payload changes invalidate only affected signatures; a no-op does not.
+- Pack and Requirement identity, `origin` and `status` follow VL-00. Cross-namespace editing invokes the explicit whole-Pack Take Ownership backend operation defined by VL-01; originals are untouched.
+- Embedded signatures and trusted Git-commit signatures are independently reported by VR-00. Signing is not review status or an approval decision. A signed Pack can contain unsigned Requirements.
+- EP-01 Export is extended by VL-02 ZIP export/import of the existing Pack directory. Export is non-blocking; Import performs safe extraction and collision protection.
+- `studio/pack/router.py` owns Pack/Requirements REST paths; `impl/` is headless and called by REST and optional thin CLI. UI uses REST and does not implement filesystem, diff, validation, or signing policy.
+- Preserve the current working flows, data and tests during EP-02. VL-00–VL-03 are subsequent behavioral changes, not undocumented migration assumptions.
 
-## 2. Working-copy lifecycle and storage
+## 2. Workspace, versions, ownership and exchange
 
-`Pack id` groups independently selectable working copies. Every *new Extract invocation* creates a **new, collision-free UTC timestamped directory**. Reopening, editing, comparing, or signing within an existing selected working copy does not create a new Extract directory. The same timestamped layout is the working-copy identity for a local copy of a published Pack. The timestamp is not `pack.version`, `origin.version`, or a Requirement version.
+`docs/reference/workspace.md` is the current source for configured Pack locations. `docs/reference/packs2.md` is the norm for Pack/Requirement identity and persistent fields. The revised VL-00 namespace contract must update both documents through explicit approval; do not infer a new pathname scheme from `namespace` or from the version digest.
 
-The workspace root is deploy-time configuration, not a Packs v2 domain field. Authentication, the organisation/employee relationship, and provisioning of the organisation's Git repository are outside Requirements and outside PoC2. When the deployment supplies that repository, it is the workspace root: the same directories live there, and that repository's Git history is how those directories are committed, diffed, and restored. Restoring a revision recovers the Packs v2 files at that revision. It does not change selection by pack id and timestamp, and it does not assign `pack.version`, `origin`, or a signature. A signed Git commit remains the Packs v2 seal reading when `signed` is absent. Until that repository is supplied, the configured workspace root remains, and Requirements does not add a history of its own.
+The current repository supports selected Pack directories, Extract outputs, editable snapshots and Git history. A working snapshot is different from `pack.version`, a Requirement payload digest, and a Git commit. Existing dated-copy behavior remains a migration baseline where in use, **not** a required new publication scheme.
 
-Illustrative (exact configured root and corpus naming are deployment details):
+| Backend operation | Responsibility and invariant |
+|---|---|
+| List/select/load Packs and Requirements | Respect configured paths, namespace-aware identity after VL-00, reject ambiguous or missing selection; no mutation on read |
+| Extract and save a proposal | Preserve existing extraction flow, diagnostics and source traceability; do not silently overwrite accepted Requirements |
+| Compare/preview/apply | Compare current and proposed data in backend; explicit selected changes only; atomic saves, no read-time mutations |
+| Edit Requirement / Pack metadata | Validate against Packs v2; preserve unmodified fields; invalidate affected signatures on actual payload change |
+| Take ownership (VL-01) | Explicitly confirm then atomically copy the **entire** foreign Pack into the local namespace, set immediate Pack and Requirement origins, invalidate copied signatures, protect source/collisions |
+| Import/Export ZIP (VL-02) | Exchange the existing Pack directory tree, preserve bytes/signatures/origin; validate ZIP path safety and identity collisions; allow unsigned export |
+| Verify/sign | Reuse shared signing verification and Pack directory seal, report method/status separately; do not make Export depend on sealing |
 
-```text
-internal-data/
-  cra-baseline/
-    2026-10-13T090000Z/
-      pack.json
-      REQ-A.json
-      REQ-B.json
-    2026-10-13T143000Z/
-      pack.json
-      REQ-A.json
-  published/
-    cra-baseline/
-      1.0.0/
-        pack.json
-        REQ-A.json
-      1.1.0/
-        pack.json
-        REQ-A.json
-```
+**No separate mandatory Publish operation** or immutable `published/<id>/<version>/` service is part of the revised target. Older published directories, if present, remain historical data and must not be deleted as part of EP-02. Retired `publish_pack`, `publish_requirement` and `approve_working_copy` workflow assumptions are not new acceptance requirements. Git provides version history; do not build a separate SQLite version store.
 
-A working-copy directory represents one editable Pack snapshot. `pack.json` carries its Pack metadata using the existing Packs v2 fields; timestamp is **not** `pack.version`, `origin.version`, or a Requirement version. Temporary section/provision JSON, model-call diagnostics, job logs and comparison previews reside in a non-published work/diagnostics area associated with that extraction, **never inside the directory that will be sealed**. Publisher publication copies only the validated Pack files to a newly created release directory. The exact location/linkage of non-pack diagnostics must be selected in implementation without introducing a new persistent domain schema.
-
-Required operations (ordinary Python callables; these names are descriptive contracts, not already-implemented claims):
-
-| Operation | Input | Result / invariant |
-| --- | --- | --- |
-| `list_working_copies` | Pack id | Ordered available dated copies; latest selection is explicit and deterministic. |
-| `create_extraction_copy` | Pack id, corpus/adapter, run settings | Uniquely allocated *new* directory of unsigned Requirements with no `origin`; fails rather than overwrites on collision. |
-| Import published Pack | Source published directory for one pack id and version | Unchanged files at `published/<pack-id>/<version>/` after the existing published-pack validation and signature reading pass. Identical bytes already stored remain. Different bytes at that identity are refused. No `origin`. The source is unchanged. Failure leaves no new directory. The result is not a working copy. |
-| Local working copy | A published Pack already in this workspace | A new timestamped directory. `working_copy` sets `origin` to that pack id and version on each included Requirement. The copy is unsigned. The published directory is unchanged. |
-| `select_working_copy` | Pack id, timestamp | Valid existing location; reject missing or wrong-Pack location. No file mutation. Selecting a published directory, including an import, does not make it writable. |
-| `load_working_copy` | Selected directory | Validated `pack.json` and Requirements, with clear errors for corrupt/missing files. |
-| `publish_pack` | Selected working copy whose Requirements have no `origin`, explicit `pack.version`, signing inputs | A new immutable published Pack directory. Refuse an existing destination, invalid objects, and a Requirement that still has `origin`. Do not partially publish. |
-
-A new Extract may fail midway; it leaves an identifiable incomplete run for inspection, and that run is not a publishable Pack. Do not expose a failed or partial run as ready. Validation and signing precede writing a new published directory; stage output must never appear half-published. Keep the source working copy after publishing. The Packs v2 files in the selected directory are the Requirement data. When the workspace root is the organisation repository, Git history restores an earlier revision of those files and is not a second copy of their fields.
-
-**Terminology distinction:** the timestamp identifies the working-copy directory for both an Extract output and a local copy of a published Pack. Packs v2 `origin` is set only by `working_copy` / `accept_published_version` when a published version is taken in. Extract does not set it. Import does not set it. A timestamp does not set it.
-
-## 3. Components and responsibility boundaries
+## 3. Component responsibilities
 
 | Component | Owns | Does not own |
-| --- | --- | --- |
-| Extract | Adapters; stages 00–04; model proposals; validation; new working-copy output and run diagnostics | Editing old copies, decisions replay, publication, Claim discovery |
-| Catalog / workspace selection | Pack and dated-copy selection; import of a published Pack; creating a local working copy from a published Pack; reading statuses; launching Extract jobs | Deterministic parser internals or domain validation |
-| Requirements Editor | Read/modify saved Requirements and associated Pack metadata; form-to-operation mapping | Adapter corrections or Claims |
-| Compare | Read-only diffs across copies or published Packs; explicit selected-field/whole-Requirement copy to selected destination | Automatic reconciliation or source mutation |
-| Consolidator | Recommend overlaps; show evidence and proposed merged Requirement; human-confirmed merge of drafts | Parser segmentation or silent deletion of signed/published objects |
-| Publication | Seal Requirements; validate and publish a versioned Pack | Running Extract or editing published releases |
-| Requirements UI | Thin pages, forms, job log, interaction feedback | Filesystem traversal, cryptographic checks, validation policy, business decisions |
-
-`common/` remains owner of shared Packs v2 validation, canonical digests, signing and IO primitives.
+|---|---|---|
+| Source/adapters and Extract | Deterministic source parsing, model proposals, extraction diagnostics | Claims or repository evidence discovery |
+| Pack catalog and workspace | Selection, configured paths, read/write rules, import/export | Alternative data format or invisible versioning |
+| Editor | Human-reviewed Requirement/Pack changes, backend validation and save | Extraction adapters or Claim editing |
+| Compare | Backend diff/preview/apply, source/proposed values, explicit selection | Automatic merge or UI implementation of diff rules |
+| Consolidator | Suggested overlaps, explicit human-confirmed consolidations | Silent deletion, new persistent decision schema |
+| Signing and verification | Shared Pack/Requirement signature operations and distinct validity readings | Approval, status changes or release gates |
+| Ownership | Atomic whole-Pack cross-namespace copy with provenance | Rewriting imported originals |
+| Router / UI | Thin HTTP contract / presentation and interaction respectively | Backend business logic |
 
 ## 4. Extract: deterministic preparation and LLM proposals
 
@@ -334,20 +302,17 @@ Re-running the same or changed parser/LLM **always** creates a new dated working
 
 ## 5. Requirements Editor and signing
 
-Editor loads one Requirement by ID from the **selected working copy**. It never infers a fixed `CRA-ANNEX-VII-RISK` path. It shows every `references[]` item, source fields, `note`, `remediation_hint`, five properties, and full `discovery_hints` including sources `args`. It must preserve every field not explicitly changed. `references[].nr` is assigned `1..n` in current array order. A no-op patch does not remove `signed`; a changed payload does. All writes validate Packs v2. Editing source `law_text` in a draft is a human correction to the Requirement, **not** a change to the regulation adapter.
+The Editor loads an exact Requirement from the selected Pack. It presents all references, legal source, notes, properties and discovery hints, preserving fields not explicitly edited. Editing legal text in a draft is a human modification, not an adapter change. The backend validates all writes against Packs v2 and performs compare-and-save protection against stale input.
 
-| Operation | Input | Result / protection |
-| --- | --- | --- |
-| `load_requirement` | selected copy, Requirement id | Parsed and validated existing object |
-| `apply_edits` | stored object, subset patch | New validated object; omitted keys preserved; `signed` dropped if and only if payload digest differs |
-| `save_requirement` | selected writable copy, updated object | Saves only to selected copy, never a published directory; reject stale/changed-on-disk input rather than silently overwriting concurrent changes |
-| `withdraw_requirement_signature` | signed object | Same content without `signed`; explicit confirmation |
-| `publish_requirement` | publisher Requirement, signer inputs | Signed Requirement; `source.edition` required as in Packs v2 |
-| `approve_working_copy` | Requirement with Packs v2 `origin`, signer inputs | Signed local Requirement, retains `origin` |
-| `working_copy` / `accept_published_version` | publisher Requirement and destination local Pack | Sets `origin` per Packs v2. The destination is a timestamped working copy. The timestamp does not set `origin`. Extract writes no `origin`. |
-| `read_signature` / `read_pack_seal` | object or directory, trust, file context | Five-fact reading under Packs v2 §2.6 (including applicable signed-Git-commit fallback) |
+| Operation | Result / protection |
+|---|---|
+| Load/select Requirement | Resolve namespace-qualified identity after VL-00; no hard-coded Requirement IDs |
+| Apply edits | Change only selected fields; no-op keeps signatures; a changed signed payload invalidates its signature |
+| Save Requirement | Write atomically to selected writable Pack; never mutate another Pack merely by viewing it |
+| Sign / verify Requirement or Pack | Use shared VR-00 signing/verification; Pack signature and Requirement signatures are independent |
+| Ownership before foreign edit | VL-01 confirmation and **whole-Pack** copy; all copied Requirements carry immediate origins |
 
-Signatures are stored on the existing object. A pack directory seal is separate from each Requirement's signature. Changing a file invalidates the directory seal until it is created again. An unsigned Requirement is a draft, not a different schema. The system validates signatures; organizational signing authority is not inferred from a signer name. Preserve signed Git-commit semantics from Packs v2 when no `signed` block exists. The Git author string and the employee identified at the deployment boundary are not that signature.
+`status` (`draft` / `reviewed`) is a separate human declaration under VL-00, not computed from the signature. No automatic re-sign, no implicit signed = approved. `withdraw_signature` remains an explicit supported operation where applicable.
 
 ## 6. Compare (independent component inside Requirements)
 
@@ -377,57 +342,21 @@ A confirmed **merge** leaves exactly **one** Requirement whose `references[]` pr
 
 If a source Requirement carries `signed`, do **not** strip it and delete it as an implicit consequence. Require separate explicit human workflow first. Newly consolidated content is an unsigned draft until signed. The source legal text is preserved via references; the redundant Requirement ID is not itself a new persisted object.
 
-## 8. Publication
+## 8. Signing, ownership and Pack exchange
 
-The user selects the Pack working copy and explicit `pack.version`. Publisher publication validates the pack metadata, every included Requirement and the required seals per Packs v2, and then creates an **immutable release directory**. It applies only to a working copy whose Requirements have no `origin`. It refuses to overwrite an existing version and refuses an invalid, missing, partial, or inconsistent working copy, including a Requirement that still has `origin`. A file change after review invalidates the relevant signature: publication cannot pretend a verified reading applies to new bytes. Publication failure must not leave a directory discoverable as a complete published release.
+Signature reading and signing are backend operations shared with other components. A signed Pack may contain unsigned Requirements. Export of a Pack directory or ZIP is permitted whether signatures verify, fail, or are absent; display the independent reading instead of gating export. The VR-00 verification rules distinguish valid/invalid/unsigned and method/reason, and an invalid embedded signature must not be concealed by a signed Git commit.
 
-| Action | Function | Effect |
-| --- | --- | --- |
-| Save Pack metadata | Pack validation and save on selected copy | Updated draft metadata; existing directory seal no longer verifies after payload changes |
-| Publish/sign Requirement | `publish_requirement` or `approve_working_copy` according to Packs v2 `origin` | Signed version of that saved Requirement |
-| Seal Pack | `seal_pack_directory` over validated directory | Pack directory seal, independent of Requirement seals |
-| Publish release | `publish_pack` | New immutable `published/<pack-id>/<version>/` with Pack metadata and Requirements only |
+When `pack.namespace` is foreign to the configured namespace base, any edit first requires VL-01's explicit Take Ownership confirmation. On acceptance the **entire Pack** is copied atomically with `origin` recorded for the Pack and each Requirement, current namespace assigned, signatures invalidated, and the original left unchanged. Failure leaves no partial copy. Normal same-namespace edits retain origins.
 
-An unsigned Requirement may be visible during editing, but publish must not silently treat it as signed approval. Existing Packs v2 seal requirements govern what can be called a published Pack. Avoid inventing `Approved`, `PackDraft`, or a new publication entity. The timestamped source copy remains available after release. Publication is a *new version*, never in-place modification of a prior release.
+VL-02 ZIP export/import exchanges existing Pack files, not a second manifest/schema. Import is atomic, rejects traversal/symlink escape and collisions, preserves signatures and origin, and enters the same Requirements compare/review/edit workflow as Extract. Neither import nor export implies Publish.
 
-Publisher publication uses `publish_requirement` and `publish_pack` and applies only to Requirements with no `origin`. Local acceptance uses `approve_working_copy`, keeps `origin`, and does not create `published/<pack-id>/<version>/`. Local acceptance is not a new version from the source publisher. This contract has no operation that removes `origin`, changes `pack_id`, or signs a local copy so the result is the source publisher's release. An organisation publishing under its own separate pack identity is a separate publisher workflow and is outside this document.
+## 9. Thin UI and interaction contract
 
-## 9. Thin UI/UX contract
+Pack UI belongs under `studio/pack/pages/` as thin TypeScript components using Pack REST operations. `studio/pack/router.py` owns all Pack/Requirements HTTP paths, not `studio/app.py`. Pages do not parse arbitrary on-disk Pack data, implement business validation or compute canonical differences.
 
-Requirements owns rendering of its pages; `app/` only routes and serves them. The visual baseline is PoC1: compact tables, English labels, source link in new tab, status pills, green save flash/red error, modal for signer name and long jobs. UX is specified to be reproducible without copying legacy UI code. Developer-only parsing and adapter debugging may later get optional support UI; they are not required product screens.
+Retain Pack -> Sections / Sources navigation, source Edit/Extract, job progress and diagnostics, complete Requirement editing, signing, Compare, Consolidator and non-blocking Export functionality. The new VL-03 Compare page displays the familiar editing form with changed fields offering complete Old/New values, supports select-all choices, and calls the existing backend compare/apply operations; it is not a second diff engine. Compare and Import feed the same review flow. See VL-03 for precise GWT acceptance rather than re-specifying the UI here.
 
-| View | Shows | Important actions |
-| --- | --- | --- |
-| Catalog / working copies | Packs and regulation adapters, source links, available dated copies, latest marker, incomplete/failed run flags, published versions with pack id, version, and the signature reading | Select a dated working copy, start **new Extract**, import a published Pack, create a local working copy from a published Pack, open the current working copy. A published directory stays read-only |
-| Section / extraction status | Parsed provision loci/passages and model notes for a selected run (diagnostic context); generated Requirements and coverage/errors | Open Requirement, inspect job progress; no visual editing of cuts; use adapter code for parser corrections |
-| Requirement Editor | All reference passages and all Packs v2 fields, signature reading and pack seal summary | Edit, save, add/reorder references, sign/withdraw, return to copy |
-| Compare | Side-by-side snapshots, field differences, one-to-many candidate relationships | Choose explicit source/destination, preview and apply selected fields/Requirements |
-| Consolidator | Candidate overlaps, source references and conflicting fields, resulting JSON preview | Review and confirm merge, reject suggestion without saving |
-| Pack publication | Full Pack metadata, included Requirements, individual and directory seal readings, destination version | Save metadata, sign, seal, publish as new version |
-
-### 9.1 Job modal and states (preserve PoC1)
-
-A long operation reports `running`, `done`, `failed`, or `aborted`, current stage, progress as activity (not provision coverage), last 200 log lines and explicit error. Poll twice per second while visible/running. While running, Escape/backdrop does not abort or dismiss; **Abort** requests termination; UI polls until terminal. On done/aborted reload the relevant page; on failure keep the log visible until **Close**. A failed Extract never implies successful published Requirements; prior copies and published releases are byte-for-byte unchanged. A job record is operational, not Packs v2 data; do not store it inside a Pack directory to be sealed.
-
-### 9.2 Editor interactions
-
-The editor shows every `references[]` item with `locator`, `law_text` and displayed `nr` (assigned by the operation, not manually submitted). **Add**, **Remove**, **Move up/down** affect local form state only until save. Display `source.framework`, `instrument`, `identifier`, `edition`, `language`, and clickable `url`; `note`, `remediation_hint`, `strength` (blank/MUST/SHOULD/MAY), `responsible`, `applicability`, `exceptions`, `scope`; discovery-hints lists `concepts`, `path_hints`, `expected_evidence` and every `{source,args?}` entry (with JSON validation for `args`). Blank optional values remove the key; omitted inputs leave fields unchanged. Never convert sources to bare strings or lose `args`.
-
-Initially a verifiably signed Requirement is read-only; **Edit** enables inputs locally without writing. **Save** validates and changes only the selected copy, stripping `signed` if and only if the payload digest changes. Dirty form shows **Unsaved edits. The saved version is unchanged.** Signing/publishing controls do not operate on unsaved inputs. Show five-fact reading (what/who/when/which version/verifiable/reason) and separate Pack seal state. Unknown Requirement shows Not found, not an unhandled traceback. Success/failure flashes identify the operation; never show raw stack traces.
-
-### 9.3 Sign and publish modals
-
-One name modal for **Publish and sign**, **Approve and sign**, and **Seal Pack directory**; name required, Cancel/escape/backdrop writes nothing. Current PoC2 local-key sentence: *Local Ed25519 keys are created when someone signs. They are not X.509 certificates.* These operations never sign unsaved browser state. A publishing Requirement with no `origin` uses `publish_requirement`; a Packs v2 local copy with `origin` uses `approve_working_copy`. Do not infer approval authority from a typed name. Display errors returned by the operations, not duplicated validation in page handlers.
-
-### 9.4 Human journeys
-
-1. **New run:** choose Pack and corpus/adapter → Extract allocates a new dated copy → show job progress and incomplete coverage/errors → open its drafts after successful completion.
-2. **Review:** inspect legal text/reference beside interpretation → edit and save actual Requirement draft → sign when satisfied. Parser segmentation corrections are made in adapter code outside the product UI.
-3. **Later run:** run Extract again → *new* directory → compare against previous working copy/publication → explicitly transfer desired fields or requirements to selected destination (never overwrite implicitly).
-4. **Consolidate:** review overlap candidates → preview one merged Requirement preserving multiple references → confirm → redundant unsigned draft(s) removed in the current copy only → sign merged draft later.
-5. **Publish:** select a working copy whose Requirements have no `origin` → verify contents/signatures → set `pack.version` → seal as required → create a new immutable published release. Published packs remain available for future comparisons. A working copy that still has `origin` is approved with `approve_working_copy` and is not this release.
-6. **Recovery:** a failed/aborted job never mutates previously existing copies. A failed compare/consolidate/publish/import write leaves a consistent previous state and clear error. When the workspace is the organisation repository, restoring an earlier Git revision recovers the Packs v2 files from that revision and leaves selection by pack id and timestamp in place.
-7. **Import and local copy:** import a published Pack, then read that published directory unchanged. Create a local working copy: a new dated directory with `origin` set. Edit that copy and approve it with `origin` retained. The imported or previously published directory is unchanged. Publishing a release remains journey 5 and applies to Requirements with no `origin`.
+The old Python-HTML pages and central handlers are implementation sources for EP-02 only. Do not preserve their placement or introduce a second UI backend.
 
 ## 10. PoC1 capabilities carried forward
 
@@ -448,36 +377,12 @@ This table is a **functional preservation checklist**, not permission to keep Po
 | Legacy hunt YAML, `claim` slug, `seals.json`, `sources.json`, gate approval file | Do not revive. Claims/Discovery are separate subsystem. |
 | Fake Curbpack SCAN panel | Drop; real Checks and Review are separate. |
 
-## 11. Acceptance criteria (target)
+## 11. Preservation and verification
 
-1. Two new Extract calls on the same Pack create **different** uniquely dated directories with intact pre-existing outputs; first run contents and published versions are byte-identical afterward.
-2. A developer-controlled CRA adapter yields stable section/provision JSON with unique loci and complete correct source cuts across the Annex VII test fixture. NIS2/Medtech stub adapters refuse rather than claiming success.
-3. Stages 02 and 03 reject invented/missing loci, wrong count, forbidden fields and malformed discovery hints; no `Claim`, `claim` or `search` field is emitted on a Requirement.
-4. Stage 04 creates validated, **unsigned Packs v2 Requirement JSON** within the newly created copy from available valid proposals, recording unmatched/invalid provisions as visible incomplete extraction. `decisions.json` is neither read nor written.
-5. Different model/prompt arguments leave adapters and earlier copies untouched; new output contains traceable model-call diagnostics outside published Pack material.
-6. Selecting a previous working copy loads its Requirements directly without replaying or running Extract; switching to another copy changes the read/write target explicitly.
-7. Editing `remediation_hint` preserves all unsubmitted properties, references and `discovery_hints.sources[].args`. Same-value edit preserves `signed`; changed payload removes `signed` and invalidates the relevant directory seal reading.
-8. Two references store `nr` 1 and 2 in array order; the editor displays both passages and all fields, including source URL.
-9. Compare identical and changed IDs, additions/deletions and one-to-many reference correspondence. Merely comparing makes **zero filesystem writes**. Transferring a selected field alters only the chosen writable destination, preserves unrelated fields, and cannot overwrite concurrent modifications.
-10. Consolidator suggestions make **zero writes**. Confirmed consolidation of two unsigned Requirements yields exactly one with both law passages; conflicts are explicitly resolved. Partial failure does not lose a source. Signed/published requirements are never silently removed.
-11. Publication refuses an existing version, an invalid/partial copy and stale signatures as Packs v2 requires; a successful versioned directory contains only correct Pack artifacts and remains immutable. No published directory is partially exposed after failure.
-12. Signing a Requirement and sealing its Pack are independent; `read_signature`/`read_pack_seal` show the correct five facts, including applicable signed Git commits and missing-key states.
-13. All operations are callable directly from Python tests/CLI without importing the HTTP server. UI handlers do not implement source parsing, file IO, signing or domain validation.
-14. UI can select working copies, render a multi-Requirement catalog, edit all fields, show a long-running job, Compare, Consolidate and publish, with the correct read-only and unsaved states.
-15. `curbcheck`, Claims, Compile and Review continue to operate on selected **published Packs v2** independently of Extract and the Requirements UI.
-16. Import stores a published Pack byte-for-byte, with no `origin` added, and leaves the source unchanged. The same bytes at the same pack id and version stay as they are. Different bytes at that identity are refused, and a failed import leaves no new published directory. The imported directory is not a writable working copy.
-17. A local working copy of an imported or own published Pack is a new timestamped directory. `origin` names that pack id and version. The published directory is unchanged and the copy is unsigned. `approve_working_copy` retains `origin` and does not create a published release.
-18. Publisher publication still requires every included Requirement to have no `origin`. Removing `origin`, changing pack identity, or signing a local copy so it reads as the source publisher's release is outside this contract.
+EP-02 moves this component without altering extraction semantics, existing selectable Pack content, adapter rules, diagnostics, signing behavior (except separately authorized VR-00), Compare/Consolidator outcomes, or successful accepted user flows. Each migrated entry point is mapped to a target operation and an existing or improved regression in `MIGRATION_COVERAGE.md`.
 
-## 12. Implementation delta and matters to verify
+Later VR-00/VL-00–VL-03 tests establish signature readings, namespace/origin/status, whole-Pack ownership, ZIP round-trip and form-based Compare explicitly. Do not silently label those future requirements already satisfied by migration.
 
-**This is a specification, not a statement of current implementation.** Current PoC2 still renders one hard-coded CRA Requirement, and current Extract stage 04 / previous architectural text rely on `decisions.json` and acceptance after assembly. Migration must update code/tests to the target contract; never treat those obsolete behaviors as requirements to preserve.
+## 12. Current implementation notes (non-normative)
 
-- Replace `write_decision`, decision replay and `accept_assembled` in the target lifecycle with durable unsigned draft output per dated Extract working copy and explicit later editing.
-- Retain precise adapter parsing, valid proposal shapes, model experiment strategies and PoC1 job UX. Preserve existing signing, canonical digest, validation and Packs v2 working-copy (`origin`) functions where consistent.
-- Specify/implement unique copy allocation, copy selection and publication transaction/atomicity and test safe failure. These are engineering details required by the already-decided workflow, not additional domain schemas.
-- Distinguish `pack.version`, Requirement content digest and extraction timestamp. Do not invent a sequential Requirement-version counter.
-- Confirm the precise adapter/source pairing, ID and locator conventions for additional CRA loci, CRA articles, NIS2 and Medtech when implementing those adapters. Keep regulation-specific naming out of shared stage code; do not guess IDs from old PoC1 claim slugs.
-- The target **one document** supersedes the previous standalone Extract architecture; keep its old code/path as an implementation reference only until physical migration.
-
-**Scope limit:** no additional user-facing adapter-editor UI, no vector database, no new persistence engine, no generic workflow framework, no OIDC, organisation, or employee implementation, no repository provisioning, and no HTTP-framework coupling. The workspace root stays the configured directory until the deployment supplies the organisation's Git repository as that root. Product decisions follow Packs v2 and the overall PoC2 architecture. The dated working-copy layout and selection by pack id and timestamp stay. An organisation publishing under its own separate pack identity, after adapting someone else's Pack, is not specified here.
+Legacy `requirements/`, `app/server.py` and Python-rendered pages are source locations for EP-02 migration; any historical PoC1/PoC2 paths in retained Extract sections refer to evidence/examples, not authorized destination paths. The destination owner is `studio/pack/`, and the detailed current-to-target inventory is `docs/agile/epics/02-modularize-studio/MIGRATION_COVERAGE.md`.

@@ -1,37 +1,38 @@
-# Compile and final review
+# Review — Studio component architecture
 
-Status: **normative target, reviewed against PoC1 and the current PoC2 code (21 October 2026)**. Existing implementation deviates in places described under Current code. The report and signing contracts remain governed by Packs v2. The Review page opens the existing one-Requirement Discovery in a popup. The durable report path below is a design decision and is not the path the current server writes.
+**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`.
 
-Normative domain model: `docs/reference/packs2.md` in this repository. The report uses the same `signed` shape as a Requirement (§2.6). Its body is the run result ([Outputs](../docs/reference/outputs.md#run-result)) plus the reviewer's words. This file specifies how those are assembled. It is not a second run result and not a second Requirement or Claim.
+## Responsibility and boundaries
 
-Sibling documents:
+`studio/review/` owns human inspection of existing Run Results and compiled reports, review decisions, verification readings, Review report signatures, and read-only historical traceability (VL-05). It **does not** execute Checks, create Run Results, assemble reports, render PDFs, edit Claims, or change Requirements.
 
-- `poc2/checks/ARCHITECTURE.md` — the only writer of a run result.
-- `poc2/claims/ARCHITECTURE.md` — Claim sealing (`sign_claim`). Final review reads that seal and does not write it.
-- `docs/arch/ARCHITECTURE.md` — the cover page and the product scenarios.
-- `poc2/tests/Review_ACCEPTANCE_SCENARIOS.md` — testable behavioral acceptance for Review/Discovery integration, not a second normative architecture.
+| Component | Responsibility |
+|---|---|
+| `curbcheck/` | Executes Checks and records Run Results |
+| `studio/compile/` | Builds unsigned validated review reports and renders JSON/PDF |
+| `studio/review/impl/` | Loads/inspects reports, records decisions, verifies/signs reports, resolves history |
+| `studio/review/router.py` | Thin REST endpoint adapter to Review backend operations |
+| `studio/review/pages/` | Thin TypeScript UI for inspecting evidence and taking explicit actions |
+| `studio/claim/` | Claim editing/signing and Discovery; callable by Review UI navigation, never reimplemented in Review |
 
-This activity is final human Review of a Check run. Claims Review in the Claims document is a separate Claim-sealing action; the older Curbpack CLI `review` for deterministic document/reference inspection is not the final human Review UI.
+Review uses `studio/app.py` only for router registration. No Review domain logic lives in a central server or page template. Optional Review CLI calls the **same backend operations** as REST. The user may open Claim Discovery from a failed Check; it is the existing Claims-owned Discovery flow, not a Review search engine.
 
-## Two activities
+## Review operations
 
-Compile and final review share one JSON file. They are separately callable. Compile does not record a decision. Final review does not run checks.
+| Operation | Behavior |
+|---|---|
+| Open Run Result / report | Read exact selected persisted records; do not assume newest means same run |
+| Inspect Claim and Requirement | Display what the run actually evaluated, including Check arguments and recorded outcomes |
+| Record decision | Explicit human text on the selected review report; invalidates a prior report signature when changed |
+| Verify signatures | Reuse VR-00's independent embedded/Git reading, never imply approval from a seal |
+| Sign report | Sign the explicit saved review content under Packs v2; do not sign Requirements or Claims implicitly |
+| Resolve historical chain (VL-05) | Backend-only read-only exact identity/digest lookup, local Git fallback, report every missing/stale link and verification method |
 
-| Activity | Function | Writes |
-| --- | --- | --- |
-| Compile | `compile_report(run_result, requirements, claims)` | An unsigned report with no `decision`. |
-| Compile | `write_report(path, report)` / `load_report(path)` | That file, after `validate_report`. |
-| Final review | `record_decision(report, text)` | The same report with `decision` set and `signed` removed. |
-| Final review | `sign_report(report, *, name, private_key, at)` | The same report with `signed`. |
-| Final review | `read_report_signature(report, trust, *, repo=None, relative=None)` | The five-fact reading. |
+Compile and Review are **separate components**. `compile_report`, `write_report` and PDF rendering move to Compile. `record_decision`, `sign_report` and signature inspection remain Review operations. Review may call Compile's public backend operation at the user's explicit request to create an unsigned report; it does not own that implementation.
 
-`compile_report` copies the run result. It does not call the runner and does not build a substitute result. A missing run result is `ModelError` on `run_result`. The caller loads the run result with `load_run_result`, loads each row's Claim from the product repo, and loads each of those Claims' Requirements from the pack directory. An existing report file is not an input.
+## Historical chain resolution (VL-05)
 
-The path is an argument. The durable file is `<product-repo>/docs/reports/review-report.json`. It belongs to the product repository, outside the Pack directory, so a Pack seal does not cover it. There is one current file and no report index. Earlier signed reports are that file's Git history after the user commits it. PoC2 does not commit, and it does not keep a second copy.
-
-The current server still writes `<product-repo>/.curbpack/review-report.json`. That directory is temporary working data. The run result stays there. Moving the durable report to `docs/reports/` is this storage contract and is not yet what the server does.
-
-The report identifies what was checked by the objects it already embeds. `run_result.commit` and `run_result.worktree` are the product revision Git reported for that run. `run_result.packs` carries each Pack id, version, and directory digest. The embedded Claims and their row digests are the Claims that ran. Committing `docs/reports/review-report.json` creates a later product-repo commit. That commit does not replace `run_result.commit`. When `worktree` is `dirty`, the recorded commit is not by itself the checked files. No new report field carries this.
+Review's backend resolver starts from a selected Run Result, resolves the recorded Claim and its bound Requirement using **both qualified identity and exact digest**, searches local Git history when current objects differ, and reports the verified recovered commit where available. It compares recorded Check configuration and outcomes without recomputing the historical run. Missing or changed objects are independently reported and do not suppress other links. A Git match proves recovered bytes, not that those bytes were signed; perform separate VR-00 verification. Read-only resolution never mutates Packs, Claims, results, reports or Git. The UI only displays the backend findings and invokes existing comparison for historical vs current Requirements.
 
 ## Report
 
@@ -57,24 +58,24 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
 | `decision` | The reviewer's words. Inside the version digest. |
 | `signed` | `review-sign`. Same shape as every other seal. |
 
-`run_result.packs` already carries pack id, `version`, and the directory digest. The report does not embed `pack.json`. When the pack directory is available, the page calls `read_pack_seal`. The collection identity on the report is the run result's `packs` entry.
+`run_result.packs` contains recorded Pack identity and version/digest data defined by the currently approved output contract (extended by VL-00/VL-04 where specified). The report does not embed `pack.json`. When the pack directory is available, the page calls `read_pack_seal`. The collection identity on the report is the run result's `packs` entry.
 
-The page derives two sentences and does not store them on the report. From `worktree` `dirty`: the result is not verification of that commit's content. From `worktree` `clean`: the worktree was clean. Beside the decision field, the page states that a passing check does not mean the legal requirement is fulfilled, and that the report has no field for a conclusion that the product meets CRA.
+The presentation derives explanatory observations from recorded result facts without changing them. From `worktree` `dirty`: the result is not verification of that commit's content. From `worktree` `clean`: the worktree was clean. Beside the decision field, the page states that a passing check does not mean the legal requirement is fulfilled, and that the report has no field for a conclusion that the product meets CRA.
 
 ### Validation
 
-`validate_report` rejects an unknown key. The keys it rejects include `packs`, `git_note`, `limits`, `exit`, `compliant`, and `meets_cra`.
+`validate_report` follows the current human-approved report contract; it rejects unknown/unapproved keys. The keys it rejects include `packs`, `git_note`, `limits`, `exit`, `compliant`, and `meets_cra`.
 
 For a report that compile returns:
 
 - `run_result` passes `validate_run_result`.
 - For each run-result row whose Claim is embedded, `version_digest` of that Claim equals the row's `digest`, and each nested Check `index`, `check`, and `args` equal the configured Check.
-- Each Claim's `requirement_id` is the `id` of exactly one embedded Requirement, and every embedded Requirement is referenced.
+- Claims resolve to exact qualified Requirement identity and digest after VL-04; historical objects use VL-05 resolution. Before that implementation, retain existing output validation without silently substituting different current objects.
 - Each embedded Requirement passes `validate_requirement`. Each embedded Claim passes `validate_claim`.
 - `appendix` lists executed Claims that are unsigned or whose signature does not verify, with Claim id, Requirement id, and the reading's reason. It is not part of `run_result`. A Claim with no Checks is outside the appendix.
 - `decision` and `signed` are absent.
 
-A row whose Claim file is missing, or whose digest does not match, fails compile. The previous report file is left in place. The person runs checks again after changing a Claim. Compile does not embed a Claim that did not run.
+Compile must not silently embed a Claim different from the one recorded in the run. Historical resolution under VL-05 can recover the exact earlier object and report an unresolved link when history is absent. A previous report file is never silently destroyed. This is a Compile input rule, not Review-owned compilation logic.
 
 `record_decision` requires non-empty words, strips them, and removes the report's `signed` only. Embedded `signed` blocks stay. `sign_report` requires `decision` and `run_result`, then calls `sign_object`. An empty signer name fails before a write, the same way the other seals do.
 
@@ -84,9 +85,9 @@ A row whose Claim file is missing, or whose digest does not match, fails compile
 
 The five facts are `packs2.md` §2.6 with `what` set to `review report`. The version is `version_digest` of the report. That digest covers `run_result`, the embedded objects, and `decision`. It is not the Requirement digest and not the Claim digest.
 
-When `signed` is present, `read_report_signature` reads that block. When it is absent and the caller passes the repo and the report's relative path, a signed Git commit of that file is the seal, through the same reading as `read_claim_signature`. The Git author string is not the signer. When neither exists, the report is unsigned.
+VR-00's shared verifier reads embedded object signatures and eligible trusted signed Git-commit evidence independently, reporting valid, invalid or unsigned and the method/reason. An invalid embedded block is never masked by a valid Git signature. The Git author string is not the signer. When neither exists, the report is unsigned.
 
-The page reads an embedded Requirement with `read_signature` and an embedded Claim with `read_claim_signature`. A Claim whose only seal is a Git commit shows that commit when the product repo is available. A reviewer who has only the report file sees the `signed` block that was copied, and an unsigned reading when the Claim had none.
+The Review backend verifies an embedded Requirement or Claim using the available embedded signature and eligible signed-Git evidence according to VR-00. A standalone report may not provide the repository context required to verify a Git-based seal; explicitly report verification unavailable rather than silently declaring unsigned or valid.
 
 Signing the report does not sign the Requirement, the Claim, or the pack. The organisation chooses who holds the key. The report has no role field.
 
@@ -94,13 +95,13 @@ Signing the report does not sign the Requirement, the Claim, or the pack. The or
 
 `same_run(report, run_result)` is true when the report's `run_result` and the loaded run result compare equal. The cover and the review page both use it. Nothing stores the flag.
 
-A check run **must not write or delete** the saved report. After a different result is written, Review must distinguish the earlier signed report from the new run; `same_run` is a relationship between snapshots, not a review-currency or compliance verdict. **Compile** can replace the single durable file with a new unsigned report and no `decision` only after explicit confirmation. The previous bytes remain available when the user has committed that file; PoC2 does not create that commit, and an uncommitted overwrite is not retained. Compiling the same run also requires confirmation; prior decisions are not copied forward.
+A check run **must not write or delete** the saved report. After a different result is written, Review must distinguish the earlier signed report from the new run; `same_run` is a relationship between snapshots, not a review-currency or compliance verdict. **Compile** can replace the single durable file with a new unsigned report and no `decision` only after explicit confirmation. Preserving prior bytes requires the configured retention behavior or committed Git history; do not infer that an uncommitted overwritten file can be recovered. Compiling the same run also requires confirmation; prior decisions are not copied forward.
 
-Opening the review page when no report file exists shows a preview from `compile_report` and does not write. **Compile** is the write. **Save decision** and **review-sign** require the file.
+Opening Review without a report does not write anything. A preview may be requested from the Compile backend; explicit Compile creates the unsigned report. **Save decision** and **review-sign** operate on a selected saved report.
 
 ## UI
 
-Review owns this rendering, including the compile action on this page. Target path: `poc2/review/ui/`. Until migration the page still renders from `poc2/app/pages.py` `review_page`. The route stays in `app/`. Compile keeps the report functions in this file until that split; this page is not a second architecture document.
+Review owns its thin TypeScript presentation under `studio/review/pages/` and REST endpoints under `studio/review/router.py`. A Compile action exposed on the Review page invokes **Compile-owned** backend operations via the appropriate REST/API interface. The legacy `poc2/review/ui/`, `poc2/app/pages.py` and central routing are migration sources, not targets.
 
 The page renders the report and posts the decision and the signer name. It does not evaluate checks, edit Claim `args`, or edit a Requirement.
 
@@ -119,9 +120,9 @@ The page renders the report and posts the decision and the signer name. It does 
 
 | Action | Function | Result on the page |
 | --- | --- | --- |
-| Compile | `compile_report`, then `write_report`. | The new file. No decision, unsigned. |
-| Save decision | `record_decision`, then `write_report`. | Flash that the decision was saved. A previous report signature is gone. |
-| review-sign | `sign_report`, then `write_report`. | The report reading. Requirement and Claim readings are unchanged. |
+| Compile | Call the `studio/compile/` operation explicitly. | A new unsigned report, without a decision. |
+| Save decision | Review-owned decision operation and shared persisted report IO. | The decision is saved and a prior report signature invalidated if content changes. |
+| review-sign | Review-owned signing operation and shared report IO. | Report signature reading; Requirement and Claim signatures unchanged. |
 | Open the Claim | Navigation. | Claims Editor for this Claim; Return preserves the Review context. |
 | Discover again | UI opens the existing one-Requirement Discovery as a popup. | The failed Claim and its original Check statuses remain visible in the underlying Review context. No mutation on open/close. |
 | Run checks | Navigation. | The check page; a new result must be rendered before claiming a replacement passes. |
@@ -145,7 +146,7 @@ This is the required **PoC1-style follow-up**, implemented using the existing Cl
 
 ## PoC1
 
-PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. The SCAN panel on the requirement catalog starts that demo and does not run a checker. `state.json` stores keep, re-hunt, a signed flag, and check edits. `/remedy` is a closing page. PoC2's review page shows one report for `CRA-ANNEX-VII-RISK` and can sign it.
+PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. The SCAN panel on the requirement catalog starts that demo and does not run a checker. `state.json` stores keep, re-hunt, a signed flag, and check edits. `/remedy` is a closing page. legacy PoC2's review page shows one report for `CRA-ANNEX-VII-RISK` and can sign it.
 
 | Capability | Decision | Why |
 | --- | --- | --- |
@@ -173,14 +174,14 @@ PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. T
 8. A handler test posts a decision and asserts `record_decision` received that text and that the handler did not call `run_and_write`.
 9. UI integration tests demonstrate failed Claim context retained behind the Discovery popup; candidates are greyed only on verified matching passing Check rows for the same Requirement/repo; Add creates one or more new Claims; original Claim requires explicit retire; cancellation changes nothing; later Check/Claim-sign and final Review-sign remain separate. See `poc2/tests/Review_ACCEPTANCE_SCENARIOS.md`.
 
-## Current code
+## Historical code notes (not a target contract)
 
 `compile_report` copies `packs`, sets `git_note` from `worktree`, sets `limits` to the two standing sentences, checks an embedded Claim's digest and nested Checks against its row, and writes `appendix` for unsigned or unverifiable executed Claims. `current_report` in `poc2/app/server.py` loads the Packs named by the product `curbpack.json` when those directories exist. `read_report_signature` does not take a repo. Check leaves the report file in place. The review page shows the failed Claim, its Checks, and a Discovery popup for that Requirement. It still writes `.curbpack/review-report.json`. It does not show `same_run`, and it does not ask before a new decision replaces the saved report.
 
-## Unresolved and verified implementation gaps
+## Historical gaps (verify against current code before scheduling)
 
 - **Implemented in the current UI, still short of this contract:** the one-Requirement Discovery popup, the Check-result grey-out on that presentation, and Add → explicit Retire → Check → Claim sign → report sign. The page still has no separate Compile action. Saving a decision writes the preview. `same_run` is not shown, and replacing a saved report does not ask for confirmation.
-- **Durable path not yet written:** the server still uses `.curbpack/review-report.json`. The approved file is `docs/reports/review-report.json` in the product repository. Check must keep whichever file is the saved report. Git history of the durable file, after the user commits it, is the retention. PoC2 does not commit and does not store another copy.
+- **Durable path not yet written:** the server still uses `.curbpack/review-report.json`. The approved file is `docs/reports/review-report.json` in the product repository. Check must keep whichever file is the saved report. Git history of the durable file, after the user commits it, is the retention. legacy PoC2 does not commit and does not store another copy.
 - **Intentionally deferred:** durable per-item Keep/Re-hunt marks and automatic review-currency inference. Do not mark those features implemented or invent persistence solely for them.
 
 The reviewer's authority is the organisation's choice of key. The report does not record it.
