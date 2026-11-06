@@ -1,6 +1,26 @@
 # EP-02 — Migration coverage and verification
 
-**Source inspected:** `curbpack-review(1).zip` (pilot snapshot); route inventory below is extracted from `app/server.py`. This is a migration checklist, **not proof of test success**. No PoC source was supplied for this review.
+**Historical inventory source:** `curbpack-review(1).zip`. This inventory is **not** a verified description of the current working tree. Before implementation, re-inventory the current repository revision, all active routes/pages and their callers; record the actual revision, relevant tests and observed results here. Existing test names below are candidates, never proof of passing behavior.
+
+## Required checkpoint record for each bounded change
+
+Do not use a whole functional-area row as an implementation batch. For each **individual page, handler or backend operation**, add a record with:
+
+| Field | Required information |
+| --- | --- |
+| Identifier | Old page/route/operation, HTTP method and visible user action |
+| Baseline | Revision, source file/function, representative input and actual output, focused test and result |
+| Extract | New Python file, old dispatcher/delegation preserved, same test result |
+| Move | Owning component and new path, same test result |
+| Separate | Backend `impl/` callable, direct test plus old HTTP/UI regression result |
+| Boundary | Approved Pydantic model and compatibility test, when applicable |
+| HTTP | Owning FastAPI router, direct request tests and remaining old callers |
+| UI | TypeScript page, browser-to-REST test and old Python page retirement |
+| Gate | Latest passing commands/results, known failures, local checkpoint commit, status OPEN or VERIFIED |
+
+**Order:** baseline → extract Python page → test → move module → test → separate backend → test → Pydantic boundary → test → FastAPI/component router → test → TypeScript page → test → remove obsolete code → full regression. One bounded change at a time. A stage may be recorded as N/A only with an explanation.
+
+**No mass `git mv`, import-only success, test skipping or blanket parity claims.** The old `ThreadingHTTPServer` and Python rendering remain the working integration path until their specific replacements pass. Preserve existing behavior and files; any new EP-11 feature is separate work.
 
 ## Required migration coverage
 
@@ -37,18 +57,11 @@ These are literal path predicates extracted from the pilot handlers; a prefix en
 
 ## Evidence for accepting each migrated feature
 
-1. Baseline: record the current pilot test(s), a representative request/input, the observed output and any known failure **before** moving the behavior.
-2. Implementation: confirm real TypeScript page → owning Studio REST router → explicit typed Python arguments → domain implementation. For Checks: Studio router → curbcheck Python API → engine. CLI uses the same engine.
-3. API: test success and invalid request (Pydantic 422), plus relevant permission/authorization enforcement on **direct** HTTP requests (not just UI). Ensure error responses and status codes are intentional.
-4. Domain: test implementation directly without importing FastAPI. Test persistent file formats, relative paths, signatures and non-happy paths with real fixtures where applicable.
-5. UI: exercise an actual user interaction via browser/test client so a rendered page **cannot pass** if REST wiring is missing; verify both returned state and persistent result.
-6. Regression: run pre-existing relevant tests after adaptation and an end-to-end flow spanning Pack → Claim/Discovery → Check → Compile → Review. Capture failures, do not mark complete on mocks alone.
-7. Completion: ensure no live route or navigation still depends on old `app/server.py`, `app/pages.py`, `requirements/ui/` or `claims/ui/`; compatibility shims must be explicitly listed and temporary, not hidden.
-8. Preserve current CLI, native packaging, `Makefile` target behavior, external input/output formats and signature semantics. No new functionality is implied by this migration.
-
-## Not verified by this inventory
-
-- Current test pass/fail and runtime behavior have not been executed in this audit.
-- Functional parity against the **original PoC** cannot be established without the PoC snapshot or recorded observations; do not use the pilot as proof that lost features are present.
-- There is no demonstrated TypeScript browser test suite or full new REST API coverage yet; these must be built as the corresponding feature is migrated, reusing existing fixture assertions.
-- The authentication and authorization target is an architecture decision; current pilot endpoints are not proof that OIDC, roles, certificates or a SQLite authorization store already exist.
+1. **Current baseline:** record actual behavior, revision, inputs, outputs, side effects, tests and known failures before each change.
+2. **Python extraction:** old HTTP server and Python page remain active. Test GET/POST, invalid input and persistent outcomes after extracting a single module.
+3. **Physical move:** repeat the same tests after moving only the isolated module and repairing its imports/callers.
+4. **Backend separation:** call the new component `impl/` without UI/HTTP and repeat old HTTP/page regressions. Separate Curbcheck API from Studio Check adapter; Compile from Review.
+5. **Contracts:** compare Pydantic validation and round trips to the human-approved Packs v2 contract, including digests and signatures.
+6. **FastAPI:** direct success, invalid and protected-route tests. Verify per-component router ownership and no framework objects in the implementation.
+7. **TypeScript:** exercise a real browser action through the owning REST route to the backend; verify state and failures before removing Python rendering.
+8. **Completion:** no active old dispatcher/pages or unaccounted callers, and full Pack → Claim/Discovery → Check → Compile → Review, CLI, packaging and negative/security regressions pass. Record actual evidence; unresolved coverage is OPEN.
