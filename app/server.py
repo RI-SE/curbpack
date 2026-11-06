@@ -20,6 +20,7 @@ from app import pages
 from app import project_selector
 from app.cover import cover
 from app.requirement_page import requirement_page
+from app.studio_page import studio_page
 from checks.run import (
     _pack_version_dir,
     claims_dir,
@@ -830,7 +831,7 @@ def make_handler(ws: Workspace):
                     door=door,
                 )
             if path == "/studio":
-                return pages.studio_page(_studio_model(ws, query), message=_studio_message(query))
+                return studio_page(_studio_model(ws, query), message=_studio_message(query))
             return pages.page("Not found", "<p>Unknown page.</p>")
 
         def _post(self, path: str, form: dict) -> None:

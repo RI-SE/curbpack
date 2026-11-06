@@ -10,7 +10,7 @@ Labels used below:
 - **Judgment** — an owner or extraction order inferred from the target architecture. Not a license to implement.
 - **Open** — a gap or ambiguity. Not decided here.
 
-Every row is **not started**, except that MIG-01 extracted the Home renderer and MIG-02 extracted the demo requirement renderer, and each extract gate passed. `VERIFIED` still means a finished checkpoint for that operation, not a file move. Home and the demo requirement page are not VERIFIED as completed migrations.
+Every row is **not started**, except that MIG-01 extracted the Home renderer, MIG-02 extracted the demo requirement renderer, and MIG-03 extracted the Studio renderer, and each extract gate passed. `VERIFIED` still means a finished checkpoint for that operation, not a file move. Home, the demo requirement page, and Studio settings are not VERIFIED as completed migrations.
 
 ## Required checkpoint record for each bounded change
 
@@ -46,9 +46,10 @@ Do not use a whole functional-area row as an implementation batch. For each **in
 | --- | --- | --- |
 | HTTP dispatch, redirects, open-project gate, most form orchestration | `app/server.py` `Handler._get` / `Handler._post` and the `_…_model` / `_apply_…` helpers | Not a thin adapter. Several branches validate and choose files before calling a domain function. |
 | Discover-claim and feedback HTTP | `claims/ui/http.py` `handle_get` / `handle_post`, called before the other GET/POST branches | `claims/ui/researcher.py` and `claims/ui/pages.py` do not write files. `http.py` does (`write_claim`, `save_vote`, `save_check`, `add_finding`). `_check_from_form` maps picker fields onto Check args. |
-| HTML for Claims editor, Scaffold, Check, Review, Studio | `app/pages.py` | No file writes. `page()` also emits the shared CSS. |
+| HTML for Claims editor, Scaffold, Check, and Review | `app/pages.py` | No file writes. `page()` also emits the shared CSS. |
 | Home HTML | `app/cover.py` `cover` | No file writes. Calls `page` and `_flash` in `app/pages.py`. GET `/` and `_home_model` stay in `app/server.py`. |
 | Demo requirement HTML | `app/requirement_page.py` `requirement_page` | No file writes. Calls `page`, `_flash`, and `_reading` in `app/pages.py`. GET `/requirement`, `load_requirement`, `snapshot`, and `_require_demo_requirement` stay in `app/server.py`. |
+| Studio config HTML | `app/studio_page.py` `studio_page` | No file writes. Calls `page`, `_flash`, and `_current_project_label` in `app/pages.py`. `_review_path_chrome` is in this module. GET and POST `/studio`, `_studio_model`, `_studio_message`, and `save_studio_config` stay in `app/server.py`. |
 | Project page | `app/project_selector.py` `project_page`, `handle_project_post` | Selection writes repo registration through `discovery` helpers. |
 | Pack-editor HTML | `requirements/ui/pages.py`, `requirements/ui/try_discovery.py` | No file writes. |
 | Discover list HTML | `claims/ui/pages.py` `discover_page` | No file writes. |
@@ -93,11 +94,11 @@ Each row is a function that returns HTML bytes for a GET. Owner is a **judgment*
 | Scaffold | `/scaffold` | `app/pages.py` `scaffold_page` | `Handler._get` | **Open.** No target component is named. | Smoke. `test_cover_navigation.py` asserts `<h1>` and "Registered projects" on GET `/scaffold` with no open project (the gate redirects). `test_ui_smoke.py` POSTs `/scaffold` and does not assert the scaffold page body. |
 | Check | `/check` | `app/pages.py` `check_page` | `_check_editor_model`, `_check_report` | `studio/check/` UI, calling future `curbcheck/api.py`. The engine stays in Curbcheck. | Asserted. `test_ui_smoke.py` asserts `claim-risk` and `fail` after POST. `test_check_editor.py` and `test_sys03_door.py` assert named packs, directory fields, and dated run-result files. |
 | Review | `/review` | `app/pages.py` `review_page` | `_review_view` | `studio/review/` | Asserted. `test_ui_smoke.py` asserts "not saved" and "Compile writes the report" before compile, and asserts POST `/review` is HTTP 400 until a report file exists. `test_rev03_review.py` asserts grouping, seals, path dialogs, and decisions. |
-| Studio settings | `/studio` | `app/pages.py` `studio_page` | `_studio_model` | Shell configuration, not Check and not Review. | Asserted. `test_sys03_door.py` `test_studio_page_creates_and_edits_curbpack_studio_json` asserts create, cancel, and edit of `curbpack-studio.json`. |
+| Studio settings | `/studio` | `app/studio_page.py` `studio_page` | `Handler._get` still builds `_studio_model` and `_studio_message`, then calls `studio_page` | Shell configuration, not Check and not Review. Extract only; not moved into `studio/`. | Extract gate passed. Same assertions as the baseline: `test_sys03_door.py` `test_studio_page_creates_and_edits_curbpack_studio_json` asserts create, cancel, and edit of `curbpack-studio.json`. Without an open project, `_requires_open_project` in `app/server.py` still redirects `/studio` to `/project`; `test_cover_navigation.py` follows that and asserts "Registered projects". |
 | Error / not found | any other GET | `app/pages.py` `page` | `Handler._fail` and the final `else` of `_get` | Shell | Partial. Unknown discover-claim ids raise and become HTTP errors in `test_discover_claims_ui.py`. No test was found that asserts the literal "Unknown page." body. |
 | Job dialogs (fragments, not top-level pages) | polled from extract, discover, and try-discovery pages | `requirements/ui/pages.py` `job_fragment`, `progress_dialog` in `app/pages.py` | pages embed `data-poll` | Same owner as the page that embeds them | The fragment URLs are covered with the job handlers below. |
 
-Shared HTML helpers that later page extractions must keep importable from `app.pages`: `page`, `_flash`, `_reading`, `progress_dialog`, and `repo_config_panel`. **Fact.** `app/cover.py` imports `page` and `_flash`. `app/requirement_page.py` imports `page`, `_flash`, and `_reading`. `requirements/ui/pages.py`, `claims/ui/pages.py`, `claims/ui/researcher.py`, and `requirements/ui/try_discovery.py` import `page` and, for some of them, `progress_dialog` or `repo_config_panel`. `tests/test_review_compile.py` imports `review_page` directly.
+Shared HTML helpers that later page extractions must keep importable from `app.pages`: `page`, `_flash`, `_reading`, `_current_project_label`, `progress_dialog`, and `repo_config_panel`. **Fact.** `app/cover.py` imports `page` and `_flash`. `app/requirement_page.py` imports `page`, `_flash`, and `_reading`. `app/studio_page.py` imports `page`, `_flash`, and `_current_project_label`. `requirements/ui/pages.py`, `claims/ui/pages.py`, `claims/ui/researcher.py`, and `requirements/ui/try_discovery.py` import `page` and, for some of them, `progress_dialog` or `repo_config_panel`. `tests/test_review_compile.py` imports `review_page` directly.
 
 ## HTTP handlers
 
@@ -162,7 +163,7 @@ Verification words: **Asserted** means a test issues that request and a later as
 | POST `/review/compile` | loads the selected run result, claims, and requirements; `compile_report`; `write_report` to a new dated path | `review/compile.py` | `studio/compile/` for assembly. The route may stay a Review action that calls Compile. | **Asserted.** `test_ui_smoke.py` asserts exactly one new `review-report_*.json` and that the decision text is still absent. `test_rev03_review.py` asserts compile without a selected result writes nothing, and a missing or changed claim does not write. `test_review_compile.py` asserts the embedded run omits stored legal sentences. |
 | POST `/review` | `save_report_decision` on a confined report path | `review/compile.py` | `studio/review/` | **Asserted.** `test_ui_smoke.py` asserts HTTP 400 before a file exists and asserts the decision text after compile. `test_review_report_kept.py` asserts a later check run does not delete a signed report. |
 | POST `/review/sign` | `save_report_signature` | `review/compile.py`, keystore | `studio/review/` | **Asserted.** `test_review_replace_flow.py` and `test_rev03_review.py` `test_decision_and_seal_stay_separate_from_check_status`. `test_compile_pdf.py` asserts the PDF does not call a recorded signature verified. |
-| GET/POST `/studio` | show or `save_studio_config` | `discovery/studio.py` | Shell | **Asserted.** `test_sys03_door.py` studio test. |
+| GET/POST `/studio` | GET calls `studio_page`; POST `save_studio_config` | `discovery/studio.py`, still called from `app/server.py` | Shell. Extract only; not moved into `studio/`. | **Asserted.** Handler unchanged. See MIG-03 and the Studio settings row. |
 
 Open-project gate, **fact:** `_requires_open_project` is true for `/`, `/requirements`, `/studio`, `/discover`, `/discover/repo`, `/check`, `/review`, `/requirement`, `/scaffold`, `/discover/run`, `/discover/jobs/…`, `/discover/claims…`, `/discover/feedback…`, and `/review/…`, `/studio/…`. It is false for `/requirements/…` subpaths other than exact `/requirements`, for `/project`, `/claims`, `/prepare`, `/select-pack`, and the demo `/publish` and `/seal-pack`. Failure redirects to `/project`. `test_project_page.py` asserts GET `/discover` with no open repo shows the project list. `test_cover_navigation.py` asserts `/check`, `/review`, `/studio`, `/requirement`, and `/scaffold` show "Registered projects" in that situation, and asserts `/claims`, `/requirements/compare`, and `/requirements/consolidate` still return a heading rather than a traceback.
 
@@ -189,9 +190,10 @@ This is the current implementation map. It is not a move list. One later change 
 | Current module | Responsibility observed | Target component | Tests that assert this module's behavior |
 | --- | --- | --- | --- |
 | `app/server.py` | Dispatch, gate, view-models, several validations and writes | Temporary adapter, then delete per route | Most HTTP tests import `make_handler`. `test_requirement_field_errors.py` imports `_requirement_editor_for_error`. `test_sys03_door.py` imports `_write_curbpack`. |
-| `app/pages.py` | HTML for the five doors that remain here, plus shared chrome (`page`, `_flash`, `_reading`, `progress_dialog`, `repo_config_panel`) | Stage 1 split is still Python. Final UI is the owning component's TypeScript. | `test_review_compile.py` calls `review_page`. Other tests assert HTTP HTML. |
+| `app/pages.py` | HTML for Claims, Scaffold, Check, and Review, plus shared chrome (`page`, `_flash`, `_reading`, `_current_project_label`, `progress_dialog`, `repo_config_panel`) | Stage 1 split is still Python. Final UI is the owning component's TypeScript. | `test_review_compile.py` calls `review_page`. Other tests assert HTTP HTML. |
 | `app/cover.py` | Home HTML only | Shell, after a later move. Not `studio/` yet. | `test_cover_navigation.py`, `test_ui_smoke.py`, `test_pilot_pack_selection.py` assert GET `/`. |
 | `app/requirement_page.py` | Demo `/requirement` HTML only | `studio/pack/` after a later move. Not `studio/` yet. | `test_ui_smoke.py` asserts GET `/requirement`. `test_cover_navigation.py` GETs `/requirement` when no project is open. |
+| `app/studio_page.py` | Studio `/studio` HTML only | Shell, after a later move. Not `studio/` yet. | `test_sys03_door.py` `test_studio_page_creates_and_edits_curbpack_studio_json` asserts create, cancel, and edit. `test_cover_navigation.py` GETs `/studio` when no project is open. |
 | `app/project_selector.py` | Project list, add, select | Shell | `test_project_page.py` (`ensure_repos_populated` writes once; select opens the cover). |
 | `requirements/catalog.py` | Document/section catalog | `studio/pack/impl/` | `test_requirements_catalog.py` |
 | `requirements/workspace.py` | Working copies, selection, publish, export | `studio/pack/impl/` | `test_requirements_publish.py`, `test_requirements_export.py`, `test_requirements_extract.py`, `test_pilot_pack_selection.py` |
@@ -221,7 +223,7 @@ This is the current implementation map. It is not a move list. One later change 
 
 These are differences between this tree and the target. They are expected before migration. They are not defects to fix in MIG-00.
 
-1. **Fact.** Product HTTP and HTML are centralized in `app/server.py` and `app/pages.py`. The target shell only starts the app and registers component routers.
+1. **Fact.** Dispatch is still `app/server.py`. Extracted renderers (`app/cover.py`, `app/requirement_page.py`, `app/studio_page.py`) live beside `app/pages.py` until a later move. The remaining product HTML is still in `app/pages.py`. The target shell only starts the app and registers component routers.
 2. **Fact.** Check execution is `checks/`, invoked by Studio as `run_and_write`. The target public API is `curbcheck/api.py`, with `studio/check/` as a thin adapter.
 3. **Fact.** `review/compile.py` both assembles the report and records the human decision and signature. The target gives assembly and PDF to `studio/compile/` and the decision/signature to `studio/review/`.
 4. **Fact.** `compile/pdf.py` is headless CLI only. Review's HTTP compile writes JSON, not PDF.
@@ -263,13 +265,13 @@ These are differences between this tree and the target. They are expected before
 
 ## Proposed order to extract Python pages
 
-**Judgment for items 3–7. Items 1 and 2 are extracted.** Stage 1 of the epic only: move one rendering function out of `app/pages.py`, leave the URL and the handler in `app/server.py`, and keep `page`, `progress_dialog`, and `repo_config_panel` importable from `app.pages` until each consumer has moved. `cover` also imports `_flash` from `app.pages`; leave `_flash` there while other pages use it. `requirement_page` also imports `_reading` from `app.pages`; leave `_reading` there while `review_page` uses it. Do not combine these. Do not start the next one after a failure.
+**Judgment for items 4–7. Items 1–3 are extracted. Items 4–7 are not started.** Stage 1 of the epic only: move one rendering function out of `app/pages.py`, leave the URL and the handler in `app/server.py`, and keep `page`, `_flash`, `_reading`, `_current_project_label`, `progress_dialog`, and `repo_config_panel` importable from `app.pages` until each consumer has moved. `cover` also imports `_flash` from `app.pages`; leave `_flash` there while other pages use it. `requirement_page` also imports `_reading` from `app.pages`; leave `_reading` there while `review_page` uses it. `studio_page` also imports `_current_project_label` from `app.pages`; leave `_current_project_label` there while `repo_config_panel` uses it. Do not combine these. Do not start the next one after a failure.
 
 Pages already in `requirements/ui/` and `claims/ui/` are not in this list. Splitting them again would not remove them from `app/pages.py`. Their server view-models are later, still one handler at a time, and are not authorized by this order.
 
 1. `cover` — **extracted** in MIG-01 to `app/cover.py`. GET `/` and the redirect to `/project` when no project is open stay in `app/server.py`.
 2. `requirement_page` — **extracted** in MIG-02 to `app/requirement_page.py`. GET `/requirement`, `load_requirement`, `snapshot`, and `_require_demo_requirement` stay in `app/server.py`. `test_ui_smoke.py` asserts the requirement text.
-3. `studio_page` — move `_review_path_chrome` with it; that helper is only used there. Gate: `test_sys03_door.py` `test_studio_page_creates_and_edits_curbpack_studio_json`.
+3. `studio_page` — **extracted** in MIG-03 to `app/studio_page.py`. `_review_path_chrome` moved with it. GET and POST `/studio`, `_studio_model`, `_studio_message`, and `save_studio_config` stay in `app/server.py`. Gate: `test_sys03_door.py` `test_studio_page_creates_and_edits_curbpack_studio_json`.
 4. `check_page` — leave `repo_config_panel` in `app/pages.py`. Gate: `test_check_editor.py` and `test_sys03_door.py` check tests.
 5. `claims_page` — gate: `test_claims_binding_ui.py`.
 6. `review_page` — last. It owns most of the remaining private helpers in `app/pages.py`. Gate: `test_rev03_review.py` and `test_review_compile.py` `test_page_shows_an_older_run_and_requirements_that_were_not_checked`.
@@ -295,7 +297,7 @@ The epic asked for one row per area. Those rows are indexes. Work proceeds by th
 
 | Functional area | Existing implementation | Target owner | Assertion-backed tests (inspected) | Handlers still without an HTTP assertion | Status |
 | --- | --- | --- | --- | --- | --- |
-| Shell / project / Studio settings | `app/server.py`, `app/project_selector.py`, `app/cover.py` `cover`, `app/pages.py` `studio_page` | Shell | `test_project_page.py`, `test_cover_navigation.py`, `test_pilot_pack_selection.py`, `test_sys03_door.py` studio and curbpack save | POST `/prepare`; SVG icon | Cover renderer extracted. Project selection, Studio settings, and the handler are not started. |
+| Shell / project / Studio settings | `app/server.py`, `app/project_selector.py`, `app/cover.py` `cover`, `app/studio_page.py` `studio_page` | Shell | `test_project_page.py`, `test_cover_navigation.py`, `test_pilot_pack_selection.py`, `test_sys03_door.py` studio and curbpack save | POST `/prepare`; SVG icon | Cover and Studio renderers extracted. Project selection and the handler are not started. |
 | Pack catalogue and sources | `requirements/catalog.py`, `requirements/ui/pages.py`, server view-models | `studio/pack/` | `test_requirements_catalog.py`, `test_requirements_ui.py` | GET `/requirements/inspect`, POST `/requirements/source`, POST `/requirements/start-empty` | Baseline recorded; migration not started |
 | Extract and jobs | `requirements/extract/`, `requirements/jobs.py` | `studio/pack/` | `test_requirements_extract.py`, `test_requirements_jobs.py`, `test_requirements_ui.py`, `test_revise_loop.py`, `test_e2e_annex_vii.py` | POST job abort URL | Baseline recorded; migration not started |
 | Formex | `requirements/extract/formex/` | `studio/pack/impl/` | `test_formex_inventory.py`, `test_formex_provisions_cra.py`, `test_formex_package.py`, `test_formex_no_number_leak.py`, `test_xml_adapters.py`, `test_cra_vii_compare.py` | no separate HTTP surface | Baseline recorded; migration not started |
@@ -352,6 +354,26 @@ The epic asked for one row per area. Those rows are indexes. Work proceeds by th
 
 `app.pages.requirement_page` is gone. The only call site was `app/server.py`.
 
+## MIG-03 — extract `studio_page`
+
+**Status:** extract gate passed. Move, separate, Pydantic, FastAPI, and TypeScript are not this step.
+
+| Field | Record |
+| --- | --- |
+| Identifier | Studio settings. GET `/studio`. Shows the studio config form, or the project list when no project is open. |
+| Baseline | Parent revision `3f044c1f2b15a1bb0d5b29747bb87efb51c10cc2`. Renderer was `app/pages.py` `studio_page`. `Handler._get` still calls `_studio_model` and `_studio_message`, then renders. POST `/studio` still calls `save_studio_config`. No open project: `_requires_open_project` redirects to `/project`. |
+| Extract | `app/studio_page.py` `studio_page`. Same function text. `app/server.py` delegates with `studio_page(_studio_model(ws, query), message=_studio_message(query))`. URL, handler, `_studio_model`, and `_studio_message` stayed in `app/server.py`. POST still calls `save_studio_config` there. `_review_path_chrome` moved with `studio_page`; a search found no other caller. `_current_project_label` stayed in `app/pages.py` because `repo_config_panel` calls it. Claims, Check, and Review in `app/pages.py` use that panel, and so do `requirements/ui/pages.py` and `claims/ui/pages.py`. `studio_page` imports `page`, `_flash`, and `_current_project_label`. |
+| Move | Not started. File is not under `studio/`. |
+| Separate | Not started. No domain logic was moved. |
+| Boundary | Not applicable. No Packs v2 or Pydantic change. |
+| HTTP | Not started. Old `ThreadingHTTPServer` still serves GET and POST `/studio`. |
+| UI | Not started. Still Python HTML. |
+| Gate | Focused: `.venv/bin/python -m unittest tests.test_sys03_door.StudioConfigTest.test_studio_page_creates_and_edits_curbpack_studio_json tests.test_cover_navigation`. 5 tests, OK, 2.250s (`real 2.40`). Exit code 0. Then `make test`: **Summary: 416 PASS, 0 FAIL**, exit code 0, about 85 seconds (`real 85.08`). No skip summary was printed. This run did not execute `make cicd`, `make package`, `make package-studio`, `make package-curbcheck`, or `tests/cs/`. |
+| Checkpoint | The later local commit on `daniel/post-pilot-fixes-1` that adds this section. The hash is not written here; a commit cannot record itself. |
+| Review | Independent read of `git diff HEAD`. No Critical or Important findings. Two wording notes were applied before the commit: `_current_project_label` is on the keep-importable list, and the deviation list no longer says all product HTML is still in `app/pages.py`. |
+
+`app.pages.studio_page` is gone. The only call site was `app/server.py`.
+
 ## Stop
 
-MIG-02 stops here. The next Python page extraction is `studio_page`. It is not started.
+MIG-03 stops here. The next Python page extraction is `check_page`. It is not started.
