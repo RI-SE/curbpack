@@ -18,6 +18,7 @@ _LOG = logging.getLogger("poc2.app")
 
 from app import pages
 from app import project_selector
+from app.check_page import check_page
 from app.cover import cover
 from app.requirement_page import requirement_page
 from app.studio_page import studio_page
@@ -792,7 +793,7 @@ def make_handler(ws: Workspace):
             if path == "/check":
                 editor = _check_editor_model(ws, query)
                 result, exit_code = _check_report(ws, query, editor)
-                return pages.check_page(
+                return check_page(
                     result,
                     exit_code,
                     message=_check_message(query),
