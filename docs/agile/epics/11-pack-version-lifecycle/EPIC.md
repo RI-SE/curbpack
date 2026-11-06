@@ -17,6 +17,7 @@ Curbpack verifies and reports technical facts. The publisher is responsible for 
 - **Signatures:** Object signatures and verified signed Git commits provide authentication. A Pack can be signed with unsigned Requirements.
 - **Exchange:** Export and Import preserve Packs v2 content and signatures. Neither requires all Requirements to be signed.
 - **Traceability:** Claims reference exact Requirement payloads; Run Results preserve the Claim and Requirement relationships.
+- **Claim impact:** Requirement changes expose affected Claims for explicit review, rebinding or Discovery. Existing Claims and historical results are never silently modified.
 - **Review:** Historical objects can be resolved by identity and digest, including through local Git history.
 - **Reporting:** Curbcheck executes configured Checks and reports findings independently. Release policy may evaluate those findings separately.
 
@@ -29,6 +30,11 @@ Extract source ──┐
                  ├── Requirements workspace
 Import Pack ZIP ─┘         │
                            ├── Compare / Apply / Edit
+                           │     └── Requirement changed?
+                           │           └── Show affected Claims
+                           │                 ├── Review / Rebind
+                           │                 ├── Discovery
+                           │                 └── Later
                            ├── Sign Requirement or Pack
                            └── Export Pack ZIP
 
@@ -55,8 +61,9 @@ Requirement
 | [VL-03](stories/VL-03-Review-changes-in-form.md) | Review Requirement changes in a form instead of JSON diff | VL-02 |
 | [VL-04](stories/VL-04-Bind-claims-to-req.md) | Bind Claims to exact Requirement identities and digests | VL-00 |
 | [VL-05](stories/VL-05-Claims-to-req-resolve.md) | Resolve historical Requirement–Claim–Check chains for Review | VL-04 |
+| [VL-06](stories/VL-06-review-affected-claims.md) | Show affected Claims after Requirement changes; offer Review, Rebind or Discovery | VL-01, VL-03, VL-04 |
 
-VR-00 and VL-00 establish the contracts before EP-02 code migration; VL-01–VL-05 are implemented in the resulting architecture, subject to their own stated dependencies. Export ZIP extends completed EP-01 PE-11; new VL-02 takes precedence without rewriting that completed story.
+VR-00 and VL-00 establish the contracts before EP-02 code migration; VL-01–VL-06 are implemented in the resulting architecture, subject to their own stated dependencies. Export ZIP extends completed EP-01 PE-11; new VL-02 takes precedence without rewriting that completed story.
 
 Contract changes update human-approved `docs/reference/packs2.md` and the corresponding `docs/reference/workspace.md`; Pydantic implements the normative contracts and JSON Schema is generated. Reconcile `docs/agile/DECISIONS.md` when decisions change.
 
@@ -68,7 +75,7 @@ The epic is complete when all listed stories are accepted and their automated te
 
 ## Relation to existing functionality
 
-Existing Extract, Compare, Apply, signing, Claims, curbcheck and Review implementations are reused and extended through the applicable stories.
+Existing Extract, Compare, Apply, signing, Claims, Discovery, curbcheck and Review implementations are reused and extended through the applicable stories.
 
 The former EP-11 stories covering persistent update queues, a separate Publish lifecycle and a SQLite versions index have been retired.
 
