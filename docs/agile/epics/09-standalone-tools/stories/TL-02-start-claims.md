@@ -1,15 +1,18 @@
-# TL-02 — Start curbpack-claims alone
+# TL-02 — Use Claims and Discovery operations from CLI
 
-**Status:** Draft. Not authorization to implement.
-**Epic:** [EP-09 Start each Packs v2 tool on its own](../EPIC.md)
+**Status:** Draft; after relevant EP-02 Claims migration.
+**Epic:** [EP-09](../EPIC.md)
 
-**As a QA engineer**, I want to start curbpack-claims by itself, so that I can discover evidence, bind and maintain Claims, and sign them without opening the Requirements editor or the pilot.
+**As an engineer**, I want to invoke supported Claims and Discovery operations headlessly, so that I can automate or test them without a browser.
 
-**Accept when:**
+## Acceptance — Given / When / Then
 
-- One command starts curbpack-claims and shows Discover and the Claims editor.
-- Those operations also run from that command without a browser.
-- The process does not import `pilot_app` or another tool's UI.
-- Discover reads Requirement files and the product tree through `common/`. It does not import the extract pipeline (`requirements.extract`).
-- An unsigned Claim can be saved and evaluated later by curbcheck. Signing sets `signed` on that Claim. Requirement files stay unchanged.
-- Discover is a mode of this tool, not its own program.
+**Given** an implemented `studio/claim/impl/` operation **when** called by the CLI **then** the CLI uses that operation, as does the owning REST router; there is no duplicate search, Claim-binding or signing logic.
+
+**Given** Discovery output **when** presented by CLI **then** candidates remain proposals and no Claim is written without an explicit binding operation.
+
+**Given** a Claim edit **when** persisted through CLI **then** the same validation, signature invalidation and preservation rules as the backend apply.
+
+**Given** a headless environment **when** this CLI runs **then** it does not require FastAPI, TypeScript pages or the Studio server.
+
+New namespace/digest binding behavior comes from VL-04 after its acceptance. No standalone Claims GUI process is required.

@@ -20,7 +20,7 @@ A page is adapted when every command, path, button, and file it presents as some
 - A page that only remembers the old CLI says so in its first paragraph, and a user guide does not link to it.
 - The page does not send the reader to a file this repository does not contain.
 
-Describe what this tree runs today. [SYS-03](../../01-pack-editor/stories/SYS-03-one-repo-door.md) decided a `curbpack` directory layout that is not implemented. Do not write that layout into these pages. [DOC-04](../../01-pack-editor/stories/DOC-04-single-persistent-model.md) owns the Packs v2 contract. Do not edit `docs/reference/packs2.md` here.
+Describe what this tree runs today. [SYS-03](../../01-pack-editor/stories/SYS-03-one-repo-door.md) decided a `curbpack` directory layout that is not implemented. Do not write that layout into these pages. `docs/reference/packs2.md` is the human/PO-owned normative Packs v2 contract. [DOC-04](../../01-pack-editor/stories/DOC-04-single-persistent-model.md) aligns its Pydantic implementation and generated schemas; it does not replace the normative source. Do not edit `docs/reference/packs2.md` here.
 
 Working-tree edits already on the front door are not acceptance. Read the file as it is, keep an edit that already meets this rule, and change the sentence that does not.
 
@@ -103,7 +103,7 @@ Do not open these unless the maintainer names one.
 | `docs/reference/packs2.md` | Persistent contract. DOC-04. The tool table still names `curbpack-claims`, `curbpack-scaffold`, `curbpack-compile`, and `curbpack-review`. |
 | `daniel/ny_sdd/` | Finished SDD account. An extra file there fails EP-04. |
 | `docs/agile/` except the EP-04 row and this story | Backlog. Stories are not the product manual. |
-| `docs/agile/future_architecture.md`, `docs/agile/future_cicd.md` | Drafts. Not in force. |
+| `docs/agile/future_architecture.md`, `docs/agile/future_cicd.md` | Historical/superseded architecture proposal and separate CI/CD draft, respectively; neither overrides the EP-02 target. |
 | `docs/req/` | Derived requirements. Do not invent one to finish a sentence. |
 | `docs/ssdf/` | Evidence map, not a user guide. `harness.md` names PoC2 as a historical source. |
 | `docs/test/README.md` | Pointer to keep the pilot tests. Not linked from the README. |

@@ -1,6 +1,6 @@
 # VL-03 — Review Requirement changes in form view
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **Starts when:** VL-02 is accepted.
 

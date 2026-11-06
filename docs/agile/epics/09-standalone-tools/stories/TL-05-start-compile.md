@@ -1,14 +1,16 @@
-# TL-05 — Start curbpack-compile alone
+# TL-05 — Compile reports from CLI
 
-**Status:** Draft. Not authorization to implement.
-**Epic:** [EP-09 Start each Packs v2 tool on its own](../EPIC.md)
+**Status:** Draft; after EP-02 Compile migration.
+**Epic:** [EP-09](../EPIC.md)
 
-**As the person preparing a handoff**, I want to start curbpack-compile by itself, so that I can build the review report from a run result that already exists, without running Checks and without opening the reviewer.
+**As a report preparer**, I want a headless CLI for existing Compile operations, so that I can build reports from recorded results without opening Studio.
 
-**Accept when:**
+## Acceptance — Given / When / Then
 
-- One command reads an existing run result and writes one review report.
-- It does not call the check runner, and it does not record a decision or a review signature.
-- It does not import `pilot_app` or the review UI.
-- An existing report file is replaced only when the caller confirms, using the confirmation `review/compile.py` already requires.
-- Requirement files, Claim files, and the run result keep their bytes.
+**Given** an existing valid Run Result **when** a supported Compile CLI operation runs **then** it calls `studio/compile/` backend operations also used by its REST router and produces the same output.
+
+**Given** existing JSON/PDF rendering commands **when** migration completes **then** their supported arguments, output content and overwrite/error behavior continue to work.
+
+**Given** compilation **when** invoked **then** it neither executes Checks nor records a human Review decision or signature.
+
+**Given** a headless environment **when** started **then** no Studio server, browser or Review UI is required. No duplicate report formatter is introduced.

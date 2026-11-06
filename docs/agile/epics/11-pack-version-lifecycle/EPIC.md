@@ -48,13 +48,17 @@ Requirement
 
 | ID | User goal | Depends on |
 |---|---|---|
-| [VR-00](stories/VR-00.md) | Consistent signature verification and non-blocking export | — |
-| [VL-00](stories/VL-00.md) | Namespace, origin and status contracts | VR-00 |
-| [VL-01](stories/VL-01.md) | Take ownership when editing a foreign Pack | VL-00 |
-| [VL-02](stories/VL-02.md) | Import and export Packs as ZIP through the Requirements workflow | VL-01 |
-| [VL-03](stories/VL-03.md) | Review Requirement changes in a form instead of JSON diff | VL-02 |
-| [VL-04](stories/VL-04.md) | Bind Claims to exact Requirement identities and digests | VL-00 |
-| [VL-05](stories/VL-05.md) | Resolve historical Requirement–Claim–Check chains for Review | VL-04 |
+| [VR-00](stories/VR-00-verification-methods.md) | Consistent signature verification and non-blocking export | — |
+| [VL-00](stories/VL-00-Introduce-namespaces.md) | Namespace, origin and status contracts | VR-00 |
+| [VL-01](stories/VL-01-fork-pack-req-at-edit.md) | Take ownership when editing a foreign Pack | VL-00 |
+| [VL-02](stories/VL-02-import-export.md) | Import and export Packs as ZIP through the Requirements workflow | VL-01 |
+| [VL-03](stories/VL-03-Review-changes-in-form.md) | Review Requirement changes in a form instead of JSON diff | VL-02 |
+| [VL-04](stories/VL-04-Bind-claims-to-req.md) | Bind Claims to exact Requirement identities and digests | VL-00 |
+| [VL-05](stories/VL-05-Claims-to-req-resolve.md) | Resolve historical Requirement–Claim–Check chains for Review | VL-04 |
+
+VR-00 and VL-00 establish the contracts before EP-02 code migration; VL-01–VL-05 are implemented in the resulting architecture, subject to their own stated dependencies. Export ZIP extends completed EP-01 PE-11; new VL-02 takes precedence without rewriting that completed story.
+
+Contract changes update human-approved `docs/reference/packs2.md` and the corresponding `docs/reference/workspace.md`; Pydantic implements the normative contracts and JSON Schema is generated. Reconcile `docs/agile/DECISIONS.md` when decisions change.
 
 Each story defines its own behavior and Given/When/Then acceptance criteria. This epic establishes their shared purpose and execution order, not a second set of requirements.
 

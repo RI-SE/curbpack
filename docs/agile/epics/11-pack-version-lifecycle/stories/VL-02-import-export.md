@@ -1,6 +1,6 @@
 # VL-02 — Import and export Pack ZIP
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **Starts when:** VR-00, VL-00 and VL-01 are accepted.
 

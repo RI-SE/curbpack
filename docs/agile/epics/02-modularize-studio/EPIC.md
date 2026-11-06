@@ -1,6 +1,6 @@
 # EP-02 — Migrate to the Curbpack target architecture
 
-**Status:** Planned; implementation starts after the pilot baseline is recorded.
+**Status:** Planned; implementation starts after pilot baseline and approved VR-00/VL-00 contracts. No code migration is authorized by this epic alone.
 **Type:** Architecture migration, not a feature epic.
 **Authority:** [CURBPACK_ARCHITECTURE.md](CURBPACK_ARCHITECTURE.md).
 
@@ -10,7 +10,7 @@ Move the existing pilot into the agreed Curbpack structure **without losing work
 
 ## Target
 
-- `models/`: shared public Pydantic contracts and internal types; generate JSON Schema when needed. Packs v2 remains authoritative.
+- `models/`: shared public Pydantic contracts and internal types; generate JSON Schema when needed. `docs/reference/packs2.md` remains the human/PO-approved norm; Pydantic implements it and JSON Schema is generated.
 - `curbcheck/`: independent Python API, CLI and Check implementation; **no Curbcheck REST router**.
 - `studio/app.py`: thin FastAPI application shell and router registration.
 - `studio/authentication/` and `studio/authorization/`: identity and access control.
@@ -33,6 +33,13 @@ The target directory tree and ownership table in `CURBPACK_ARCHITECTURE.md` are 
 | [ARCH-03](stories/ARCH-03-subsystem-ownership.md) | Move ownership and implementation to target directories, including Curbcheck and Compile |
 | [ARCH-04](stories/ARCH-04-thin-gui-pages.md) | Thin subsystem-owned TypeScript pages calling REST |
 | [ARCH-05](stories/ARCH-05-headless-subsystem-tests.md) | Functional and regression evidence before and after migration |
+
+## Precedence and sequence
+
+- **Architecture:** [`CURBPACK_ARCHITECTURE.md`](CURBPACK_ARCHITECTURE.md) defines the accepted two-system target; `docs/arch/ARCHITECTURE.md` is the normative entry point and subsystem documents refine responsibilities without contradicting it.
+- **Before migration:** verify pilot baseline, apply VR-00 and VL-00 contract decisions and update Packs v2/workspace reference material as specified by those stories.
+- **During migration:** retain existing functionality; do not implement VL-01–VL-05 as part of a code move. Those are later feature stories.
+- **After migration:** EP-09 CLI interfaces are thin clients of the same backend, not new systems or separate GUI processes.
 
 ## Migration constraints
 

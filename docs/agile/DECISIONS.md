@@ -33,11 +33,9 @@ The architecture documents must not redefine Packs v2 fields or semantics.
 
 EP-02 establishes the target architecture for Curbpack.
 
-The proposed architecture is documented in `docs/agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md`. It is the starting point for review, not yet a second approved architecture.
+`docs/agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md` is the **approved detailed target**, and `docs/arch/ARCHITECTURE.md` is its normative system-level entry point. They describe one architecture. Existing subsystem documents are subordinate to these boundaries and the Packs v2 contract. Their historical versions remain in Git.
 
-The architecture review shall reconcile that proposal with existing subsystem responsibilities and the decisions in this document. Once approved, it replaces the obsolete overall `docs/arch/ARCHITECTURE.md`. Git preserves the previous version.
-
-The intended design is:
+The approved design is:
 
 - **Curbpack Studio:** A modular monolith with a thin application shell.
 - **Subsystem ownership:** Each functional area owns its backend operations, REST endpoints and UI where applicable.

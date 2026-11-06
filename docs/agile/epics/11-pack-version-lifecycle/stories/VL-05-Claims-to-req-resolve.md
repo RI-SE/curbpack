@@ -1,6 +1,6 @@
 # VL-05 — Resolve historical Requirement and Claim chain
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **Starts when:** VL-04 is accepted.
 

@@ -1,6 +1,6 @@
 # VL-00 — Introduce namespace, origin and status contracts
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **As a developer**, I want namespace, origin and status metadata introduced consistently across Curbpack, while preserving existing workflows, so that cross-namespace ownership can be implemented separately in VL-01.
 

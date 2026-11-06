@@ -1,6 +1,6 @@
 # VL-01 — Take ownership on cross-namespace edit
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **Starts when:** VL-00 is accepted.
 
@@ -23,9 +23,9 @@ When editing a Requirement:
 >
 > You are about to modify a Pack published under another namespace.
 >
-> By continuing, you take responsibility for maintaining and publishing your own copy of the entire Pack, including all its Requirements.
+> By continuing, you take responsibility for maintaining your own copy of the entire Pack, including all its Requirements.
 >
-> The original Pack remains unchanged. Your copy will require review and signing before publication.
+> The original Pack remains unchanged. Your copy is unsigned and requires your own review; signing is a separate action, not a condition for export.
 >
 > **Cancel | Take ownership**
 

@@ -1,10 +1,10 @@
 # Future architecture policy
 
-**Status:** Not in force. [`policies/architecture.md`](../../policies/architecture.md) governs the pilot. This file takes effect when EP-01 is accepted, by moving it to `policies/architecture.md`. Until then it authorizes no code moves.
+**Status:** Superseded proposal — NOT an activation instruction. The agreed target is [`docs/arch/ARCHITECTURE.md`](../arch/ARCHITECTURE.md) with details in [EP-02 `CURBPACK_ARCHITECTURE.md`](epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md). Do not promote this historical proposal into `policies/architecture.md` merely because EP-01 is accepted.
 
 **Applies to:** Curbpack Studio after the pilot. CTAM and Curbpack are sources to copy from. Do not change those repositories from this policy.
 
-EP-02 remains the only planned reshape of the existing packages. This policy does not add a third directory layout and does not rename Requirements, Claims, Discovery, Checks, Compile, Review, or the application shell.
+This historical proposal contains design ideas, not a competing directory layout, authority hierarchy or code-migration task. Where it differs from the approved EP-02 target, the approved target governs.
 
 Delivery is [`future_cicd.md`](future_cicd.md). This file does not repeat its Make targets.
 

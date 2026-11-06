@@ -1,6 +1,6 @@
 # VR-00 — Unified signature verification and non-blocking export
 
-**Epic:** EP-11 — Pack Version Lifecycle
+**Epic:** [EP-11 — Pack identity, exchange and traceability](../EPIC.md)
 
 **Starts when:** Immediately. Must be accepted before VL-00 and VL-01.
 
