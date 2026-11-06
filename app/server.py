@@ -18,6 +18,7 @@ _LOG = logging.getLogger("poc2.app")
 
 from app import pages
 from app import project_selector
+from app.cover import cover
 from checks.run import (
     _pack_version_dir,
     claims_dir,
@@ -731,7 +732,7 @@ def make_handler(ws: Workspace):
                     project_selector.project_model(ws.root, message=message)
                 )
             if path == "/":
-                return pages.cover(_home_model(ws), message=_home_message(query))
+                return cover(_home_model(ws), message=_home_message(query))
             if path == "/requirements":
                 document_id = (query.get("document") or [""])[0].strip()
                 if document_id:
