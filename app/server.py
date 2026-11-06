@@ -19,6 +19,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.check_page import check_page
+from app.claims_page import claims_page
 from app.cover import cover
 from app.requirement_page import requirement_page
 from app.studio_page import studio_page
@@ -787,7 +788,7 @@ def make_handler(ws: Workspace):
                     message = "Claim signed."
                 if (query.get("retired") or [""])[0]:
                     message = "Claim retired."
-                return pages.claims_page(_claims_model(ws, query), message=message)
+                return claims_page(_claims_model(ws, query), message=message)
             if path == "/scaffold":
                 return pages.scaffold_page()
             if path == "/check":
