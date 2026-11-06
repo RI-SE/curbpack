@@ -19,6 +19,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.cover import cover
+from app.requirement_page import requirement_page
 from checks.run import (
     _pack_version_dir,
     claims_dir,
@@ -769,7 +770,7 @@ def make_handler(ws: Workspace):
             if path == "/requirement":
                 requirement = load_requirement(_require_demo_requirement(ws))
                 reading = snapshot(ws.root)["requirement_reading"]
-                return pages.requirement_page(requirement, reading)
+                return requirement_page(requirement, reading)
             if path == "/discover/repo":
                 return claim_pages.discover_page(_discover_model(ws, query, product=True))
             if path == "/discover":
