@@ -22,6 +22,7 @@ from app.check_page import check_page
 from app.claims_page import claims_page
 from app.cover import cover
 from app.requirement_page import requirement_page
+from app.review_page import review_page
 from app.studio_page import studio_page
 from checks.run import (
     _pack_version_dir,
@@ -807,7 +808,7 @@ def make_handler(ws: Workspace):
                 except (ModelError, ValueError) as exc:
                     if "curbpack.json" not in str(exc):
                         raise
-                    return pages.review_page(
+                    return review_page(
                         None,
                         None,
                         error=str(exc),
@@ -816,7 +817,7 @@ def make_handler(ws: Workspace):
                 door.update(extra)
                 if extra.get("selected_report"):
                     door["report_path"] = extra["selected_report"]
-                return pages.review_page(
+                return review_page(
                     report,
                     reading,
                     message=_review_message(query),
