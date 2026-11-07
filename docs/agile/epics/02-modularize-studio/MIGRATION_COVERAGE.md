@@ -10,7 +10,7 @@ Labels used below:
 - **Judgment** — an owner or extraction order inferred from the target architecture. Not a license to implement.
 - **Open** — a gap or ambiguity. Not decided here.
 
-Every row is **not started**, except that MIG-01 extracted the Home renderer, MIG-02 extracted the demo requirement renderer, MIG-03 extracted the Studio renderer, MIG-04 extracted the Check renderer, MIG-05 extracted the Claims editor renderer, MIG-06 extracted the Review renderer, and MIG-07 extracted the Scaffold renderer, and each extract gate passed. `VERIFIED` still means a finished checkpoint for that operation, not a file move. None of those pages is VERIFIED as a completed migration. Scaffold's target owner stays **Open**.
+Every row is **not started**, except that MIG-01 extracted the Home renderer, MIG-02 extracted the demo requirement renderer, MIG-03 extracted the Studio renderer, MIG-04 extracted the Check renderer, MIG-05 extracted the Claims editor renderer, MIG-06 extracted the Review renderer, MIG-07 extracted the Scaffold renderer, and MIG-08 extracted the Pack sources view-model, and each extract gate passed. `VERIFIED` still means a finished checkpoint for that operation, not a file move. None of those operations is VERIFIED as a completed migration. Scaffold's target owner stays **Open**.
 
 ## Required checkpoint record for each bounded change
 
@@ -48,6 +48,7 @@ Do not use a whole functional-area row as an implementation batch. For each **in
 | Discover-claim and feedback HTTP | `claims/ui/http.py` `handle_get` / `handle_post`, called before the other GET/POST branches | `claims/ui/researcher.py` and `claims/ui/pages.py` do not write files. `http.py` does (`write_claim`, `save_vote`, `save_check`, `add_finding`). `_check_from_form` maps picker fields onto Check args. |
 | Shared HTML chrome | `app/pages.py` `page`, `_flash`, `_reading`, `progress_dialog`, `repo_config_panel` | No file writes. `page()` also emits the shared CSS. |
 | Scaffold HTML | `app/scaffold_page.py` `scaffold_page` | No file writes. Calls `page` and `_flash` in `app/pages.py`. GET and POST `/scaffold` stay in `app/server.py`. POST calls `write_stub` in `scaffold/stub.py`, which is unmoved. |
+| Pack sources view-model | `app/documents_model.py` `_documents_model` | Does not write pack files, claim files, or `curbpack.json`. When the query names a repo id that is already registered, `_sync_open_repo` still writes `open-repo.json`. An unknown id raises `ModelError` and does not write. GET `/requirements` without `document` stays in `app/server.py` and calls this, then `documents_page`. `?document=` and the Pack POST routes stay in `app/server.py`. |
 | Review HTML | `app/review_page.py` `review_page` | No file writes. Calls `page`, `_flash`, `_reading`, and `repo_config_panel` in `app/pages.py`. The private review helpers moved with it. GET `/review`, `_review_view`, and `_door_chrome` stay in `app/server.py`. |
 | Claims editor HTML | `app/claims_page.py` `claims_page` | No file writes. Calls `page`, `_flash`, and `repo_config_panel` in `app/pages.py`. `_claim_context`, `_claim_seal_html`, and `_passages_html` are in this module. GET `/claims` and the claim POST routes stay in `app/server.py`. |
 | Home HTML | `app/cover.py` `cover` | No file writes. Calls `page` and `_flash` in `app/pages.py`. GET `/` and `_home_model` stay in `app/server.py`. |
@@ -78,7 +79,7 @@ Each row is a function that returns HTML bytes for a GET. Owner is a **judgment*
 | --- | --- | --- | --- | --- | --- |
 | Home / cover | `/` | `app/cover.py` `cover` | `Handler._get` still builds `_home_model`, then calls `cover` | Shell. Not a Pack operation. Extract only; not moved into `studio/`. | Extract gate passed. Same assertions as the baseline: `test_ui_smoke.py` asserts Pack Editor, Discover, and the absence of `/claims` and `/scaffold` links. `test_cover_navigation.py` and `test_pilot_pack_selection.py` assert nav links. Without an open project, `_requires_open_project` in `app/server.py` still redirects `/` to `/project`; `test_cover_navigation.py` follows that and asserts "Registered projects". |
 | Project | `/project` | `app/project_selector.py` `project_page` | `Handler._get` | Shell / workspace selection. `studio/app.py` must not grow this logic; the epic's shell row is the destination, not `studio/pack/`. | Asserted. `test_project_page.py` posts `action=select` and asserts the open repo id and "Pack Editor". `test_discover_browse.py` asserts "Add project" on GET `/project`. |
-| Pack sources | `/requirements` without `document` | `requirements/ui/pages.py` `documents_page` | `_documents_model` | `studio/pack/` | Asserted. `test_sys03_door.py` `test_start_empty_then_save_lists_bundled_adapters` asserts `cra-xml` is absent before save. `test_requirements_export.py` asserts `action="/requirements/export"`. |
+| Pack sources | `/requirements` without `document` | `requirements/ui/pages.py` `documents_page` | `Handler._get` calls `app.documents_model._documents_model`, then `documents_page`. `?document=` still uses `_catalog_model` in `app/server.py`. | `studio/pack/`. Extract only; not moved into `studio/`. | Extract gate passed. `test_cover_navigation.py` `test_opening_an_existing_catalog_shows_the_pack_and_does_not_change_it` asserts `<h1>Pack Sources</h1>` and `House Rules`. `test_requirements_export.py` `test_pack_sources_row_submits_export_for_that_document` asserts `action="/requirements/export"`. `test_sys03_door.py` `test_start_empty_then_save_lists_bundled_adapters` asserts `cra-xml` is absent before save. Without an open project, `_requires_open_project` still redirects `/requirements` to `/project`. |
 | Pack sections | `/requirements?document=` | `requirements/ui/pages.py` `catalog_page` | `_catalog_model` | `studio/pack/` | Asserted. `test_requirements_ui.py` `test_catalog_edit_sign_publish_and_extract` asserts `action="/requirements/extract"` on the sections page. `test_cover_navigation.py` asserts the extract dialog keeps the pack link. |
 | Source inspect | `/requirements/inspect` | `requirements/ui/pages.py` `source_page` | `_inspect_model` | `studio/pack/` | **None** for this URL. No test contains `/requirements/inspect`. Adapter behavior is asserted in `test_requirements_extract.py` and `test_xml_adapters.py` against `requirements.extract`, not this page. |
 | Extract review | `/requirements/extract/review` | `requirements/ui/pages.py` `extract_review_page` | `_extract_review_model` | `studio/pack/` | Asserted. `test_requirements_compare.py` `test_page_leaves_unchecked_fields_and_updates_the_chosen_one` asserts "Use the new definition", the unchecked note checkbox, and after POST that `note` changed while `remediation_hint` did not. |
@@ -124,7 +125,7 @@ Verification words: **Asserted** means a test issues that request and a later as
 | GET `/` | `app/cover.py` `cover` | `_home_model` in `app/server.py` | Shell | **Asserted.** Handler unchanged. See MIG-01 and the Home row. |
 | POST `/prepare` | `prepare_demo`, redirect `/?prepared=1` | `demo_setup.py` | Shell demo fixture. Not a Pack lifecycle operation. | **None** for this URL. `test_ui_smoke.py` calls `prepare_demo` directly, then uses the resulting files. |
 | POST `/select-pack` | `_apply_pack_selection`, redirect `/?selected=1` | `requirements/workspace.py` selection helpers | `studio/pack/` | **Asserted.** `test_pilot_pack_selection.py` asserts Home does not contain `/select-pack`, then POSTs a working copy and asserts GET `/requirements/copy` contains that timestamp and `REQ-A`. A second POST of the published ref asserts `curbpack.json` bytes are unchanged. |
-| GET `/requirements` | documents or catalog page | catalog, workspace, door | `studio/pack/` | **Asserted.** See page rows. |
+| GET `/requirements` | Without `document`, `Handler._get` calls `app.documents_model._documents_model`, then `documents_page`. With `document`, it still calls `_catalog_model` in `app/server.py`. | catalog, workspace, door. The view-model still calls `_sync_open_repo`, `_registered_repo_path`, `_adapter_for_url`, `_catalog_job`, and `_catalog_message` in `app/server.py`. | `studio/pack/`. Extract only; not moved into `studio/`. | **Asserted.** See the Pack sources and Pack sections rows. |
 | POST `/requirements/source` | `mark_source_adapter`, redirect to inspect | `requirements/workspace.py` `mark_source_adapter`, `requirements/extract/adapter.py` `load_adapter` | `studio/pack/` | **None** for this URL. |
 | POST `/requirements/start-empty` | `_start_empty_folder`, redirect to `/requirements?repo=` | `discovery` repo registration | `studio/pack/` together with shell repo registration | **None** for this URL. The similarly named `test_start_empty_then_save_lists_bundled_adapters` POSTs `/requirements/curbpack`, not this path. |
 | POST `/requirements/curbpack` | `set_open_repo`; optional `_save_curbpack_form` | `discovery/door.py`, `common/validate.py` | Shell for the open repo; path fields are workspace config (`docs/reference/workspace.md`), not a new schema | **Asserted.** `test_sys03_door.py` asserts `cra-xml` appears after save and that saving one path field leaves the other file unchanged. |
@@ -202,6 +203,7 @@ This is the current implementation map. It is not a move list. One later change 
 | `app/claims_page.py` | Claims editor `/claims` HTML only | `studio/claim/`, after a later move. Not `studio/` yet. | `test_claims_binding_ui.py` GETs `/claims`. `test_cover_navigation.py` GETs `/claims` when no project is open. `test_ui_smoke.py` and `test_review_replace_flow.py` post claim actions. |
 | `app/review_page.py` | Review `/review` HTML only | `studio/review/`, after a later move. Not `studio/` yet. | `test_rev03_review.py`, `test_review_compile.py` (imports `review_page`), `test_ui_smoke.py`, `test_cover_navigation.py`. |
 | `app/scaffold_page.py` | Scaffold `/scaffold` HTML only | **Open.** Not `studio/scaffold/`. | `test_ui_smoke.py` `test_open_project_scaffold_page_shows_the_stub_form` asserts the heading, `action="/scaffold"`, and "The stub is not approved evidence." `test_cover_navigation.py` GETs `/scaffold` when no project is open. |
+| `app/documents_model.py` | Pack sources view-model for GET `/requirements` without `document` | `studio/pack/`, after a later move. Not `studio/` yet. | `test_cover_navigation.py` `test_opening_an_existing_catalog_shows_the_pack_and_does_not_change_it`, `test_requirements_export.py` `test_pack_sources_row_submits_export_for_that_document`, `test_sys03_door.py` `test_start_empty_then_save_lists_bundled_adapters`. |
 | `app/project_selector.py` | Project list, add, select | Shell | `test_project_page.py` (`ensure_repos_populated` writes once; select opens the cover). |
 | `requirements/catalog.py` | Document/section catalog | `studio/pack/impl/` | `test_requirements_catalog.py` |
 | `requirements/workspace.py` | Working copies, selection, publish, export | `studio/pack/impl/` | `test_requirements_publish.py`, `test_requirements_export.py`, `test_requirements_extract.py`, `test_pilot_pack_selection.py` |
@@ -231,7 +233,7 @@ This is the current implementation map. It is not a move list. One later change 
 
 These are differences between this tree and the target. They are expected before migration. They are not defects to fix in MIG-00.
 
-1. **Fact.** Dispatch is still `app/server.py`. Extracted renderers (`app/cover.py`, `app/requirement_page.py`, `app/studio_page.py`, `app/check_page.py`, `app/claims_page.py`, `app/review_page.py`, `app/scaffold_page.py`) live beside `app/pages.py` until a later move. Shared chrome is still in `app/pages.py`. The target shell only starts the app and registers component routers.
+1. **Fact.** Dispatch is still `app/server.py`. Extracted renderers (`app/cover.py`, `app/requirement_page.py`, `app/studio_page.py`, `app/check_page.py`, `app/claims_page.py`, `app/review_page.py`, `app/scaffold_page.py`) and the Pack sources view-model (`app/documents_model.py`) live beside `app/pages.py` until a later move. Shared chrome is still in `app/pages.py`. The target shell only starts the app and registers component routers.
 2. **Fact.** Check execution is `checks/`, invoked by Studio as `run_and_write`. The target public API is `curbcheck/api.py`, with `studio/check/` as a thin adapter.
 3. **Fact.** `review/compile.py` both assembles the report and records the human decision and signature. The target gives assembly and PDF to `studio/compile/` and the decision/signature to `studio/review/`.
 4. **Fact.** `compile/pdf.py` is headless CLI only. Review's HTTP compile writes JSON, not PDF.
@@ -274,7 +276,7 @@ These are differences between this tree and the target. They are expected before
 
 **Items 1–7 are extracted.** Stage 1 page extraction for this list is complete. Each step moved one rendering function out of `app/pages.py`, left the URL and the handler in `app/server.py`, and kept `page`, `_flash`, `_reading`, `_current_project_label`, `progress_dialog`, and `repo_config_panel` importable from `app.pages`. `scaffold_page` also imports `page` and `_flash`. Do not combine the later handler slices. Do not start the next one after a failure.
 
-Pages already in `requirements/ui/` and `claims/ui/` are not in this list. Splitting them again would not remove them from `app/pages.py`. Their server view-models are later, still one handler at a time, and are not authorized by this order.
+Pages already in `requirements/ui/` and `claims/ui/` are not in this list. Splitting them again would not remove them from `app/pages.py`. Their server view-models follow this list, still one handler at a time.
 
 1. `cover` — **extracted** in MIG-01 to `app/cover.py`. GET `/` and the redirect to `/project` when no project is open stay in `app/server.py`.
 2. `requirement_page` — **extracted** in MIG-02 to `app/requirement_page.py`. GET `/requirement`, `load_requirement`, `snapshot`, and `_require_demo_requirement` stay in `app/server.py`. `test_ui_smoke.py` asserts the requirement text.
@@ -286,7 +288,11 @@ Pages already in `requirements/ui/` and `claims/ui/` are not in this list. Split
 
 `project_page` is already outside `app/pages.py`. Do not mix it into this extraction. A later single change can thin `handle_project_post` without moving the other doors.
 
-After those seven, the next single slices are handler/view-model extractions, still not a batch: Pack sources GET, then the requirement editor GET/POST, then export GET/POST, then extract-review GET/POST. Compare and consolidate HTTP apply should not move until a test actually posts `/requirements/compare/apply` and `/requirements/consolidate/apply`, or the existing domain tests are deliberately reused and the gap is written down. That choice is **open**.
+After those seven, the next single slices are handler/view-model extractions, still not a batch.
+
+8. Pack sources GET — **extracted** in MIG-08 to `app/documents_model.py` `_documents_model`. `_edit_adapter_choices` moved with it because nothing else called it. The URL stays in `Handler._get`. `?document=` still calls `_catalog_model` in `app/server.py`. POST routes stay there. `_sync_open_repo`, `_registered_repo_path`, `_adapter_for_url`, `_catalog_job`, and `_catalog_message` stay in `app/server.py` because other handlers use them. The model imports those five when it runs. `documents_page` stays in `requirements/ui/pages.py`. Not moved into `studio/`.
+
+The next single slice is the requirement editor GET/POST. It is not started. Then export GET/POST, then extract-review GET/POST. Compare and consolidate HTTP apply should not move until a test actually posts `/requirements/compare/apply` and `/requirements/consolidate/apply`, or the existing domain tests are deliberately reused and the gap is written down. That choice is **open**.
 
 ## Open questions
 
@@ -305,7 +311,7 @@ The epic asked for one row per area. Those rows are indexes. Work proceeds by th
 | Functional area | Existing implementation | Target owner | Assertion-backed tests (inspected) | Handlers still without an HTTP assertion | Status |
 | --- | --- | --- | --- | --- | --- |
 | Shell / project / Studio settings | `app/server.py`, `app/project_selector.py`, `app/cover.py` `cover`, `app/studio_page.py` `studio_page` | Shell | `test_project_page.py`, `test_cover_navigation.py`, `test_pilot_pack_selection.py`, `test_sys03_door.py` studio and curbpack save | POST `/prepare`; SVG icon | Cover and Studio renderers extracted. Project selection and the handler are not started. |
-| Pack catalogue and sources | `requirements/catalog.py`, `requirements/ui/pages.py`, server view-models | `studio/pack/` | `test_requirements_catalog.py`, `test_requirements_ui.py` | GET `/requirements/inspect`, POST `/requirements/source`, POST `/requirements/start-empty` | Baseline recorded; migration not started |
+| Pack catalogue and sources | `requirements/catalog.py`, `requirements/ui/pages.py`, `app/documents_model.py`, remaining server view-models | `studio/pack/` | `test_requirements_catalog.py`, `test_requirements_ui.py` | GET `/requirements/inspect`, POST `/requirements/source`, POST `/requirements/start-empty` | Pack sources view-model extracted. The editor, export, and the other Pack handlers are not started. |
 | Extract and jobs | `requirements/extract/`, `requirements/jobs.py` | `studio/pack/` | `test_requirements_extract.py`, `test_requirements_jobs.py`, `test_requirements_ui.py`, `test_revise_loop.py`, `test_e2e_annex_vii.py` | POST job abort URL | Baseline recorded; migration not started |
 | Formex | `requirements/extract/formex/` | `studio/pack/impl/` | `test_formex_inventory.py`, `test_formex_provisions_cra.py`, `test_formex_package.py`, `test_formex_no_number_leak.py`, `test_xml_adapters.py`, `test_cra_vii_compare.py` | no separate HTTP surface | Baseline recorded; migration not started |
 | Requirement edit and sign | `requirements/editing.py`, editor page, `app/requirement_page.py` `requirement_page` | `studio/pack/` | `test_m1_requirement.py`, `test_requirement_field_errors.py`, `test_requirements_ui.py`, `test_requirements_publish.py` | demo POST `/requirement`, `/publish`, `/seal-pack` | Demo `/requirement` renderer extracted. The editor, sign, and the handler are not started. GET `/requirement` is asserted in `test_ui_smoke.py`. |
@@ -461,6 +467,26 @@ The epic asked for one row per area. Those rows are indexes. Work proceeds by th
 
 `app.pages.scaffold_page` is gone. The only call site was `app/server.py`.
 
+## MIG-08 — extract the Pack sources view-model
+
+**Status:** extract gate passed. Move, separate, Pydantic, FastAPI, and TypeScript are not this step.
+
+| Field | Record |
+| --- | --- |
+| Identifier | Pack sources. GET `/requirements` without `document`. With no open project the open-project gate redirects to the project list. `?document=` is the Pack sections page and is not this step. |
+| Baseline | Parent revision `3bd3b0f28a72945b91d7488c6e4e7487f1429a17`. View-model was `app/server.py` `_documents_model`. `Handler._get` calls `documents_page` with that model. POST routes under `/requirements` stay in `app/server.py`. |
+| Extract | `app/documents_model.py` `_documents_model`. Same return value and the same calls. `_edit_adapter_choices` moved with it. The model imports `_sync_open_repo`, `_registered_repo_path`, `_adapter_for_url`, `_catalog_job`, and `_catalog_message` from `app.server` when it runs, because those functions still serve other handlers. When the query names a repo id that is already registered, `_sync_open_repo` still writes `open-repo.json`. An unknown id raises `ModelError` and does not write. This function does not write pack files, claim files, or `curbpack.json`. `app/server.py` delegates with `_documents_model(ws, query)`. The URL, the `?document=` branch, and the POST handlers stayed in `app/server.py`. `documents_page` stayed in `requirements/ui/pages.py`. No `studio/` directory. |
+| Move | Not started. File is not under `studio/`. |
+| Separate | Not started. No domain logic was rewritten. |
+| Boundary | Not applicable. No Packs v2 or Pydantic change. |
+| HTTP | Not started. Old `ThreadingHTTPServer` still serves GET `/requirements`. |
+| UI | Not started. `documents_page` is still the Python page. |
+| Gate | Focused: `.venv/bin/python -m unittest tests.test_cover_navigation tests.test_sys03_door tests.test_requirements_export tests.test_requirements_ui`. 50 tests, OK, 16.784s. Exit code 0. Then `make test`: **Summary: 417 PASS, 0 FAIL**, exit code 0, about 85 seconds. No skip summary was printed. This run did not execute `make cicd`, `make package`, `make package-studio`, `make package-curbcheck`, or `tests/cs/`. |
+| Checkpoint | The later local commit on `daniel/post-pilot-fixes-1` that adds this section. The hash is not written here; a commit cannot record itself. |
+| Review | Two independent reads of `git diff HEAD`. The first found no Critical findings and one Important finding: the record said the view-model writes no files, while a query that names a repo still writes `open-repo.json` through `_sync_open_repo`. That disclosure is now in the behavior row and the Extract cell. The same review's Minor notes are applied: the definition moved and `app/server.py` imports it, and the Pack catalogue rollup says this view-model is extracted. The second read found no Critical or Important findings. Its note is applied: the write happens when the named id is already registered. An unknown id raises `ModelError` and does not write. |
+
+The definition of `_documents_model` moved to `app/documents_model.py`. `app/server.py` imports it, and `Handler._get` calls it.
+
 ## Stop
 
-MIG-07 stops here. The seven Python page extractions in this list are done. The next single slice is the Pack sources GET handler, still one handler at a time. It is not started.
+MIG-08 stops here. The next single slice is the requirement editor GET/POST. It is not started.
