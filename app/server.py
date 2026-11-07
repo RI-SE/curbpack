@@ -23,6 +23,7 @@ from app.claims_page import claims_page
 from app.cover import cover
 from app.requirement_page import requirement_page
 from app.review_page import review_page
+from app.scaffold_page import scaffold_page
 from app.studio_page import studio_page
 from checks.run import (
     _pack_version_dir,
@@ -791,7 +792,7 @@ def make_handler(ws: Workspace):
                     message = "Claim retired."
                 return claims_page(_claims_model(ws, query), message=message)
             if path == "/scaffold":
-                return pages.scaffold_page()
+                return scaffold_page()
             if path == "/check":
                 editor = _check_editor_model(ws, query)
                 result, exit_code = _check_report(ws, query, editor)

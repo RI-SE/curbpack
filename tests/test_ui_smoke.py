@@ -123,6 +123,23 @@ class UiSmokeTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
 
+    def test_open_project_scaffold_page_shows_the_stub_form(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepare_demo(root)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/scaffold")
+                self.assertIn("<h1>Scaffold</h1>", page)
+                self.assertIn('action="/scaffold"', page)
+                self.assertIn("The stub is not approved evidence.", page)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
 
 def _get(url: str) -> str:
     with urllib.request.urlopen(url) as response:
