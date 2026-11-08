@@ -23,6 +23,7 @@ from app.cover import cover
 from app.documents_model import _documents_model
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.pack_compare import _apply_compare_form, _compare_model
+from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
@@ -128,7 +129,6 @@ from requirements.catalog import (
     make_id,
     save_catalog,
 )
-from requirements.consolidate import apply_consolidation, suggest_consolidations
 from requirements.jobs import read_job, request_abort, start_extract_job
 from requirements.ui import pages as requirement_pages
 from requirements.ui import try_discovery as try_discovery_ui
@@ -3053,41 +3053,6 @@ def _seal_selected(ws: Workspace, form: dict) -> None:
     name = (form.get("name") or [""])[0].strip()
     private, _public = load_or_create_key(ws.keys, name)
     seal_pack_directory(directory, name=name, private_key=private, at=_now())
-
-
-def _consolidate_model(ws: Workspace) -> dict:
-    adapter = _active_adapter(ws)
-    directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        return {"suggestions": [], "requirements": [], "digests": {}}
-    _pack, requirements = load_working_copy(directory)
-    return {
-        "suggestions": suggest_consolidations(directory),
-        "requirements": requirements,
-        "digests": {item["id"]: version_digest(item) for item in requirements},
-    }
-
-
-def _apply_consolidation_form(ws: Workspace, form: dict) -> None:
-    adapter = _active_adapter(ws)
-    directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        raise ModelError("working copy", "timestamp", "a selected working copy")
-    ids = form.get("ids") or []
-    digest_ids = form.get("digest_id") or []
-    digest_values = form.get("digest_value") or []
-    if len(digest_ids) != len(digest_values):
-        raise ModelError("requirement", "version", "a digest for each selected requirement")
-    locators = form.get("ref_locator") or []
-    texts = form.get("ref_law_text") or []
-    apply_consolidation(
-        directory,
-        ids,
-        (form.get("retained_id") or [""])[0],
-        {"note": (form.get("note") or [""])[0].strip()},
-        [{"locator": locator, "law_text": text} for locator, text in zip(locators, texts)],
-        digests=dict(zip(digest_ids, digest_values)),
-    )
 
 
 def _publish_selected(ws: Workspace, form: dict) -> None:
