@@ -39,6 +39,10 @@ The target architecture remains unchanged: **Curbpack Studio** is a modular mono
 
 These are **target responsibilities, not five large implementation batches**. [MIGRATION_COVERAGE.md](MIGRATION_COVERAGE.md) tracks actual migrated pages/routes/operations and their evidence. Do not create a second project-management process.
 
+## Ownership decisions
+
+Four questions that were open in [MIGRATION_COVERAGE.md](MIGRATION_COVERAGE.md) are decided there under "Decided ownership": Scaffold, try-discovery, authentication, and compare/consolidate apply. No new story records them. They do not block the one-handler extracts. Scaffold keeps its current stub through this epic; its later agent and repair architecture is out of scope. Authentication keeps the packages named by the target architecture and is not added by a page extract. Try-discovery belongs to `studio/claim/` Discovery, and the requirement editor only calls it. Compare and consolidate apply belong to `studio/pack/` through the shared Requirements backend, not through logic in the router or the UI.
+
 ## Dependencies and boundaries
 
 - VR-00 and VL-00 contract work must be accepted before the stage that relies on their changed contracts; baseline, Python page extraction and isolated behavior-preserving moves need not wait solely for future feature work. Do not mix contract changes into a mechanical extraction.
