@@ -37,6 +37,7 @@ from app.requirement_page import requirement_page
 from app.review_model import _review_view
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
+from app.scaffold_write import _write_scaffold
 from app.studio_model import _studio_model
 from app.studio_page import studio_page
 from app.try_discovery_file import _try_discovery_file_model
@@ -139,7 +140,6 @@ from review.compile import (
     save_report_signature,
     write_report,
 )
-from scaffold.stub import write_stub
 from workflow import snapshot
 
 ROOT = install_root()
@@ -861,8 +861,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_update_claim(ws, claim_id, form))
                 return
             if path == "/scaffold":
-                write_stub(ws.repo, (form.get("path") or [""])[0].strip())
-                self._redirect("/scaffold?wrote=1")
+                self._redirect(_write_scaffold(ws, form))
                 return
             if path == "/check":
                 repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
