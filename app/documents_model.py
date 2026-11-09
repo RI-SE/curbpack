@@ -1,13 +1,15 @@
-"""Pack sources view-model. Builds the values the documents page renders."""
+"""Pack sources view-model and curbpack POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from checks.run import _pack_version_dir, claims_dir, packs_dir, reports_dir, results_dir
 from common.errors import ModelError
-from common.jsonio import read_json
-from discovery.door import created_curbpack
+from common.jsonio import read_json, write_json
+from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import load_repos
 from requirements.catalog import list_formex_adapter_choices
 from requirements.extract.adapter import list_adapters
@@ -130,3 +132,55 @@ def _edit_adapter_choices() -> list[dict]:
             }
         )
     return rows
+
+
+def _save_curbpack(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path
+
+    repo_id = (form.get("repo") or [""])[0].strip()
+    if not repo_id:
+        raise ModelError("curbpack.json", "repo", "a chosen repository")
+    set_open_repo(ws.root, repo_id)
+    if (form.get("action") or [""])[0].strip() == "save":
+        _save_curbpack_form(_registered_repo_path(ws, repo_id), form)
+    return f"/requirements?repo={quote(repo_id)}"
+
+
+def _save_curbpack_form(repo: Path, form: dict) -> None:
+    from common.validate import validate_curbpack_config
+
+    packs = [
+        item.strip()
+        for item in ((form.get("packs") or [""])[0]).split(",")
+        if item.strip()
+    ]
+    exclude = [
+        item.strip()
+        for item in ((form.get("exclude_requirements") or [""])[0]).split(",")
+        if item.strip()
+    ]
+    hints_raw = (form.get("search_hints") or [""])[0]
+    try:
+        hints = json.loads(hints_raw) if hints_raw.strip() else created_curbpack()["search_hints"]
+    except json.JSONDecodeError:
+        raise ModelError("curbpack.json", "search_hints", "JSON object")
+    document: dict = {
+        "packs": packs,
+        "search_hints": hints,
+        "packs_dir": (form.get("packs_dir") or [""])[0].strip(),
+        "claims_dir": (form.get("claims_dir") or [""])[0].strip(),
+        "results_dir": (form.get("results_dir") or [""])[0].strip(),
+        "reports_dir": (form.get("reports_dir") or [""])[0].strip(),
+        "unsigned_requirements": (form.get("unsigned_requirements") or [""])[0].strip(),
+    }
+    path = repo / "curbpack.json"
+    if path.is_file():
+        loaded = read_json(path)
+        if isinstance(loaded, dict) and "requirements" in loaded and not exclude:
+            document["requirements"] = loaded["requirements"]
+    if exclude:
+        document["exclude_requirements"] = exclude
+        document.pop("requirements", None)
+    write_json(path, validate_curbpack_config(document))

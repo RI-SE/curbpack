@@ -24,7 +24,7 @@ from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
 from app.discover_model import _discover_model
-from app.documents_model import _documents_model
+from app.documents_model import _documents_model, _save_curbpack
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
@@ -69,7 +69,6 @@ from discovery.jobs import request_abort as abort_discover_job
 from discovery.jobs import start_discover_job
 from discovery.browse import list_directories
 from discovery.door import (
-    created_curbpack,
     open_paths,
     open_repo_id,
     pack_display_name,
@@ -607,13 +606,7 @@ def make_handler(ws: Workspace):
                 self._redirect(f"/requirements?repo={quote(repo_id)}")
                 return
             if path == "/requirements/curbpack":
-                repo_id = (form.get("repo") or [""])[0].strip()
-                if not repo_id:
-                    raise ModelError("curbpack.json", "repo", "a chosen repository")
-                set_open_repo(ws.root, repo_id)
-                if (form.get("action") or [""])[0].strip() == "save":
-                    _save_curbpack_form(_registered_repo_path(ws, repo_id), form)
-                self._redirect(f"/requirements?repo={quote(repo_id)}")
+                self._redirect(_save_curbpack(ws, form))
                 return
             if path == "/requirements/documents":
                 repo_id = (form.get("repo") or [""])[0].strip()
@@ -1329,44 +1322,6 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         fields["results_dir_value"] = str(config["results_dir"])
         fields["reports_dir_value"] = str(config["reports_dir"])
     return fields
-
-
-def _save_curbpack_form(repo: Path, form: dict) -> None:
-    from common.validate import validate_curbpack_config
-
-    packs = [
-        item.strip()
-        for item in ((form.get("packs") or [""])[0]).split(",")
-        if item.strip()
-    ]
-    exclude = [
-        item.strip()
-        for item in ((form.get("exclude_requirements") or [""])[0]).split(",")
-        if item.strip()
-    ]
-    hints_raw = (form.get("search_hints") or [""])[0]
-    try:
-        hints = json.loads(hints_raw) if hints_raw.strip() else created_curbpack()["search_hints"]
-    except json.JSONDecodeError:
-        raise ModelError("curbpack.json", "search_hints", "JSON object")
-    document: dict = {
-        "packs": packs,
-        "search_hints": hints,
-        "packs_dir": (form.get("packs_dir") or [""])[0].strip(),
-        "claims_dir": (form.get("claims_dir") or [""])[0].strip(),
-        "results_dir": (form.get("results_dir") or [""])[0].strip(),
-        "reports_dir": (form.get("reports_dir") or [""])[0].strip(),
-        "unsigned_requirements": (form.get("unsigned_requirements") or [""])[0].strip(),
-    }
-    path = repo / "curbpack.json"
-    if path.is_file():
-        loaded = read_json(path)
-        if isinstance(loaded, dict) and "requirements" in loaded and not exclude:
-            document["requirements"] = loaded["requirements"]
-    if exclude:
-        document["exclude_requirements"] = exclude
-        document.pop("requirements", None)
-    write_json(path, validate_curbpack_config(document))
 
 
 def _start_empty_folder(ws: Workspace, folder: str) -> str:
