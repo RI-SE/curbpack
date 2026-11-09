@@ -16,7 +16,7 @@ _LOG = logging.getLogger("poc2.app")
 
 from app import pages
 from app import project_selector
-from app.catalog_model import _catalog_model
+from app.catalog_model import _add_catalog_section, _catalog_model
 from app.check_model import _check_editor_model, _check_report, _run_check
 from app.check_page import check_page
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
@@ -96,11 +96,7 @@ from requirements.extract.adapter import (
 from requirements.extract.pipeline import draft_pack
 from requirements.catalog import (
     add_document,
-    add_section,
     ensure_catalog,
-    find_document,
-    make_id,
-    save_catalog,
 )
 from requirements.jobs import read_job, request_abort, start_extract_job
 from requirements.ui import pages as requirement_pages
@@ -611,23 +607,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_save_pack_document(ws, form))
                 return
             if path == "/requirements/catalog":
-                catalog = ensure_catalog(ws.root)
-                document_id = (form.get("document_id") or [""])[0].strip()
-                section_id = (form.get("section_id") or [""])[0]
-                repo_id = (form.get("repo") or [""])[0].strip()
-                if find_document(catalog, document_id) is None:
-                    _add_pack_section(ws, document_id, repo_id, section_id)
-                else:
-                    add_section(
-                        catalog,
-                        document_id=document_id,
-                        section_id=section_id,
-                    )
-                    save_catalog(ws.root, catalog)
-                located = f"document={quote(document_id, safe='')}&added=1"
-                if repo_id:
-                    located += f"&repo={quote(repo_id, safe='')}"
-                self._redirect(f"/requirements?{located}")
+                self._redirect(_add_catalog_section(ws, form))
                 return
             if path == "/requirements/select":
                 adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
@@ -1447,55 +1427,6 @@ def _locator_section(locator: str, section_ids: list[str]) -> str:
             if len(section_id) > len(best):
                 best = section_id
     return best
-
-
-def _add_pack_section(ws: Workspace, pack_id: str, repo_id: str, section_id: str) -> None:
-    """Remember a section on this Pack. Does not write a Requirement."""
-    section_id = (section_id or "").strip()
-    if not section_id:
-        raise ModelError("pack", "section_id", "a section id")
-    located = _locate_repo_pack(ws, pack_id, repo_id)
-    if located is None:
-        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
-    _repo_id, _pack_dir, pack = located
-    source = pack.get("source") if isinstance(pack.get("source"), dict) else {}
-    url = str(source.get("url") or "")
-    adapter = _adapter_for_url(url)
-    if adapter is None:
-        raise ModelError("pack", "adapter", "an adapter for this pack")
-    match = next(
-        (
-            item
-            for item in adapter.get("sections") or []
-            if isinstance(item, dict)
-            and item.get("id") == section_id
-            and item.get("ready") is True
-            and item.get("in_scope") is True
-        ),
-        None,
-    )
-    if match is None:
-        raise ModelError("pack", "section_id", "a section that can be extracted")
-    catalog = ensure_catalog(ws.root)
-    for row in catalog.get("sources") or []:
-        if (
-            isinstance(row, dict)
-            and row.get("document_id") == pack_id
-            and row.get("section_id") == section_id
-        ):
-            return
-    catalog.setdefault("sources", []).append(
-        {
-            "id": make_id(str(adapter.get("id") or ""), section_id),
-            "document_id": pack_id,
-            "name": str(pack.get("name") or pack_id),
-            "official_name": str(match.get("title") or ""),
-            "url": url,
-            "adapter_id": adapter.get("id"),
-            "section_id": section_id,
-        }
-    )
-    save_catalog(ws.root, catalog)
 
 
 def _catalog_job(ws: Workspace, query: dict):
