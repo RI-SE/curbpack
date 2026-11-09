@@ -34,6 +34,7 @@ from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
+from app.studio_model import _studio_model
 from app.studio_page import studio_page
 from app.try_discovery_file import _try_discovery_file_model
 from checks.run import (
@@ -92,13 +93,7 @@ from discovery.door import (
     save_directory_fields,
     set_open_repo,
 )
-from discovery.studio import (
-    created_studio_config,
-    editor_values,
-    save_studio_config,
-    studio_file,
-    studio_from_form,
-)
+from discovery.studio import save_studio_config, studio_from_form
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import read_try_job, start_try_job
 from requirements.editing import (
@@ -1719,21 +1714,6 @@ def _studio_message(query: dict) -> str:
     if (query.get("saved") or [""])[0]:
         return "Saved curbpack-studio.json in the repo."
     return ""
-
-
-def _studio_model(ws: Workspace, query: dict) -> dict:
-    door = _door_chrome(ws, query)
-    repo_id = str(door.get("repo_id") or "")
-    values = editor_values(created_studio_config())
-    present = False
-    path = ""
-    if repo_id:
-        repo = _registered_repo_path(ws, repo_id)
-        path = str(studio_file(repo).resolve())
-        if studio_file(repo).is_file():
-            present = True
-            values = editor_values(read_json(studio_file(repo)))
-    return {"door": door, "values": values, "present": present, "path": path}
 
 
 def _door_chrome(ws: Workspace, query: dict | None = None) -> dict:
