@@ -1,7 +1,9 @@
-"""Review view-model. The URL stays on the old server."""
+"""Review view-model and compile POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -12,10 +14,12 @@ from common.keystore import trust_store
 from common.store import load_claims, load_pack_directory, load_run_result
 from discovery.door import claim_file_relative, repo_claims_dir
 from review.compile import (
+    compile_report,
     load_report,
     read_report_signature,
     same_run,
     unchecked_requirement_ids,
+    write_report,
 )
 
 if TYPE_CHECKING:
@@ -253,3 +257,56 @@ def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
     except ModelError:
         return []
     return unchecked_requirement_ids(selected, report)
+
+
+def _new_dated_json(folder: Path, prefix: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    while True:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        path = folder / f"{prefix}_{stamp}.json"
+        if not path.exists():
+            return path
+        time.sleep(1)
+
+
+def _new_review_report_path(folder: Path) -> Path:
+    return _new_dated_json(folder, "review-report")
+
+
+def _compile_review(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path, _report_sources_for_repo, _requested_dated, _sync_open_repo
+    from common.validate import validate_curbpack_config
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    requested = (form.get("result") or [""])[0]
+    if not requested.strip():
+        raise ModelError("review", "compile", "a selected run result")
+    status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+    if status != "ok":
+        raise ModelError(
+            "review",
+            "compile",
+            "a run-result file under that repository's results_dir",
+        )
+    folder = repo_claims_dir(repo)
+    claims = load_claims(folder) if folder.is_dir() else []
+    _packs, requirements = _report_sources_for_repo(repo, config)
+    report = compile_report(
+        run_result=load_run_result(Path(run_path)),
+        requirements=requirements,
+        claims=claims,
+        trust=trust_store(ws.keys),
+        repo=repo,
+    )
+    out = _new_review_report_path(reports_dir(repo, config))
+    write_report(out, report)
+    return (
+        f"/review?repo={quote(repo_id, safe='')}&compiled=1"
+        f"&report={quote(str(out.resolve()), safe='')}"
+    )

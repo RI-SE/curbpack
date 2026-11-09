@@ -6,7 +6,6 @@ import json
 import logging
 import re
 import secrets
-import time
 import traceback
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,7 +33,7 @@ from app.pack_export import _export_model, _export_selected
 from app.publication_model import _publication_model
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
-from app.review_model import _review_view
+from app.review_model import _compile_review, _review_view
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
@@ -46,7 +45,6 @@ from checks.run import (
     claims_dir,
     packs_dir,
     reports_dir,
-    results_dir,
 )
 from claims.bind import (
     read_claims,
@@ -61,7 +59,6 @@ from common.store import (
     load_pack,
     load_pack_directory,
     load_requirement,
-    load_run_result,
     save_requirement,
 )
 from claims.ui import http as claim_http
@@ -132,11 +129,9 @@ from requirements.workspace import (
     work_directory,
 )
 from review.compile import (
-    compile_report,
     durable_report_path,
     save_report_decision,
     save_report_signature,
-    write_report,
 )
 from workflow import snapshot
 
@@ -865,40 +860,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_run_check(ws, form))
                 return
             if path == "/review/compile":
-                repo_id = _sync_open_repo(ws, form)
-                if not repo_id:
-                    raise ModelError("review", "repo", "a chosen repository")
-                from common.store import load_claims, load_run_result
-                from common.validate import validate_curbpack_config
-
-                repo = _registered_repo_path(ws, repo_id)
-                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                requested = (form.get("result") or [""])[0]
-                if not requested.strip():
-                    raise ModelError("review", "compile", "a selected run result")
-                status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
-                if status != "ok":
-                    raise ModelError(
-                        "review",
-                        "compile",
-                        "a run-result file under that repository's results_dir",
-                    )
-                folder = repo_claims_dir(repo)
-                claims = load_claims(folder) if folder.is_dir() else []
-                _packs, requirements = _report_sources_for_repo(repo, config)
-                report = compile_report(
-                    run_result=load_run_result(Path(run_path)),
-                    requirements=requirements,
-                    claims=claims,
-                    trust=trust_store(ws.keys),
-                    repo=repo,
-                )
-                out = _new_review_report_path(reports_dir(repo, config))
-                write_report(out, report)
-                self._redirect(
-                    f"/review?repo={quote(repo_id, safe='')}&compiled=1"
-                    f"&report={quote(str(out.resolve()), safe='')}"
-                )
+                self._redirect(_compile_review(ws, form))
                 return
             if path == "/review":
                 repo_id = _sync_open_repo(ws, form)
@@ -1914,20 +1876,6 @@ def _check_message(query: dict) -> str:
     if (query.get("saved") or [""])[0]:
         return "Saved curbpack.json in the repo."
     return ""
-
-
-def _new_review_report_path(folder: Path) -> Path:
-    return _new_dated_json(folder, "review-report")
-
-
-def _new_dated_json(folder: Path, prefix: str) -> Path:
-    folder.mkdir(parents=True, exist_ok=True)
-    while True:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = folder / f"{prefix}_{stamp}.json"
-        if not path.exists():
-            return path
-        time.sleep(1)
 
 
 def _confined_review_report_path(reports_folder: str, requested: str) -> str:
