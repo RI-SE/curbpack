@@ -33,7 +33,7 @@ from app.pack_export import _export_model, _export_selected
 from app.publication_model import _publication_model
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
-from app.review_model import _compile_review, _review_view
+from app.review_model import _compile_review, _review_view, _save_review_decision
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
@@ -130,7 +130,6 @@ from requirements.workspace import (
 )
 from review.compile import (
     durable_report_path,
-    save_report_decision,
     save_report_signature,
 )
 from workflow import snapshot
@@ -863,24 +862,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_compile_review(ws, form))
                 return
             if path == "/review":
-                repo_id = _sync_open_repo(ws, form)
-                if not repo_id:
-                    raise ModelError("review", "repo", "a chosen repository")
-                from common.validate import validate_curbpack_config
-
-                repo = _registered_repo_path(ws, repo_id)
-                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                report_path = _confined_review_report_path(
-                    str(reports_dir(repo, config).resolve()),
-                    (form.get("report") or [""])[0],
-                )
-                if not report_path:
-                    raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
-                save_report_decision(Path(report_path), (form.get("decision") or [""])[0])
-                self._redirect(
-                    f"/review?repo={quote(repo_id, safe='')}&saved=1"
-                    f"&report={quote(report_path, safe='')}"
-                )
+                self._redirect(_save_review_decision(ws, form))
                 return
             if path == "/review/sign":
                 repo_id = _sync_open_repo(ws, form)

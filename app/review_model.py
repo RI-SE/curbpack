@@ -1,4 +1,4 @@
-"""Review view-model and compile POST. The URL stays on the old server."""
+"""Review view-model, compile POST, and decision POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from review.compile import (
     load_report,
     read_report_signature,
     same_run,
+    save_report_decision,
     unchecked_requirement_ids,
     write_report,
 )
@@ -309,4 +310,28 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     return (
         f"/review?repo={quote(repo_id, safe='')}&compiled=1"
         f"&report={quote(str(out.resolve()), safe='')}"
+    )
+
+
+def _save_review_decision(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _confined_review_report_path, _registered_repo_path, _sync_open_repo
+    from common.validate import validate_curbpack_config
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    report_path = _confined_review_report_path(
+        str(reports_dir(repo, config).resolve()),
+        (form.get("report") or [""])[0],
+    )
+    if not report_path:
+        raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
+    save_report_decision(Path(report_path), (form.get("decision") or [""])[0])
+    return (
+        f"/review?repo={quote(repo_id, safe='')}&saved=1"
+        f"&report={quote(report_path, safe='')}"
     )
