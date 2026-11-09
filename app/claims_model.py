@@ -13,11 +13,12 @@ from claims.bind import (
     read_claim_seal,
     rebind_from_fields,
     require_requirement_id,
+    sign_claim,
     write_claim,
 )
 from common.canonical import version_digest
 from common.errors import ModelError
-from common.keystore import trust_store
+from common.keystore import load_or_create_key, trust_store
 from discovery.door import claim_file_relative, repo_claims_dir
 
 if TYPE_CHECKING:
@@ -160,4 +161,19 @@ def _update_claim(ws: Workspace, claim_id: str, form: dict) -> str:
         form,
         f"{flag}&requirement_id={updated.get('requirement_id', '')}",
         claim_changed=before != version_digest(updated),
+    )
+
+
+def _sign_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect, _now
+
+    claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    sealed = sign_claim(claim, name=name, private_key=private, at=_now())
+    write_claim(_claims_directory(ws, form), sealed)
+    return _claims_redirect(
+        form,
+        f"signed=1&requirement_id={claim.get('requirement_id', '')}",
+        claim_changed=False,
     )

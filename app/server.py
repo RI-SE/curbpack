@@ -20,7 +20,7 @@ from app import project_selector
 from app.catalog_model import _catalog_model
 from app.check_model import _check_editor_model, _check_report
 from app.check_page import check_page
-from app.claims_model import _claims_model, _create_claim, _update_claim
+from app.claims_model import _claims_model, _create_claim, _sign_claim, _update_claim
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
@@ -50,11 +50,8 @@ from checks.run import (
     run_and_write,
 )
 from claims.bind import (
-    read_claim,
     read_claims,
     retire_claim,
-    sign_claim,
-    write_claim,
 )
 from common.paths import default_workspace, install_root
 from common.errors import CheckError, ModelError, SigningUnavailable
@@ -859,18 +856,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/claims/") and path.endswith("/sign"):
                 claim_id = path[len("/claims/") : -len("/sign")]
-                claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
-                name = (form.get("name") or [""])[0].strip()
-                private, _public = load_or_create_key(ws.keys, name)
-                sealed = sign_claim(claim, name=name, private_key=private, at=_now())
-                write_claim(_claims_directory(ws, form), sealed)
-                self._redirect(
-                    _claims_redirect(
-                        form,
-                        f"signed=1&requirement_id={claim.get('requirement_id', '')}",
-                        claim_changed=False,
-                    )
-                )
+                self._redirect(_sign_claim(ws, claim_id, form))
                 return
             if path.startswith("/claims/"):
                 claim_id = path[len("/claims/") :]
