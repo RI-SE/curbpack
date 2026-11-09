@@ -25,6 +25,7 @@ from app.cover import cover
 from app.discover_model import _discover_model
 from app.documents_model import _documents_model
 from app.extract_review import _apply_extraction_review, _extract_review_model
+from app.home_model import _home_model
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
@@ -130,7 +131,6 @@ from requirements.ui import try_discovery as try_discovery_ui
 from requirements.workspace import (
     ensure_default_selection,
     list_pack_ids,
-    list_pack_options,
     list_published_versions,
     list_working_copies,
     load_working_copy,
@@ -1335,29 +1335,6 @@ def _home_message(query: dict) -> str:
     if (query.get("prepared") or [""])[0]:
         return "Sample workspace prepared. It is not the active Pack unless you select it."
     return ""
-
-
-def _home_model(ws: Workspace) -> dict:
-    try:
-        ensure_default_selection(ws.root)
-    except ModelError:
-        pass
-    selection = read_selection(ws.root)
-    if selection and isinstance(selection.get("pack_id"), str):
-        _sync_adapter_for_pack(ws, selection["pack_id"])
-    options = []
-    for item in list_pack_options(ws.root):
-        selected = False
-        if selection and selection.get("kind") == item["kind"] and selection.get("pack_id") == item["pack_id"]:
-            if item["kind"] == "working":
-                selected = selection.get("timestamp") == item["ref"]
-            else:
-                selected = selection.get("version") == item["ref"]
-        options.append({**{key: value for key, value in item.items() if key != "path"}, "selected": selected})
-    return {
-        "selection": selection if resolve_selected_pack(ws.root) else None,
-        "options": options,
-    }
 
 
 def _apply_pack_selection(ws: Workspace, form: dict) -> Path:
