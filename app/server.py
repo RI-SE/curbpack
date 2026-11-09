@@ -27,6 +27,7 @@ from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
+from app.publication_model import _publication_model
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
 from app.review_page import review_page
@@ -108,7 +109,6 @@ from requirements.editing import (
     apply_edits,
     approve_working_copy,
     publish_requirement,
-    read_pack_seal,
     save_working_requirement,
     seal_pack_directory,
 )
@@ -139,7 +139,6 @@ from requirements.workspace import (
     list_published_versions,
     list_working_copies,
     load_working_copy,
-    list_publication_blockers,
     mark_published_selected,
     mark_selected,
     mark_source_adapter,
@@ -2328,27 +2327,6 @@ def _shown_pack_dir(ws: Workspace, pack_id: str, fallback: Path | None) -> str:
     if fallback is not None:
         return str(fallback.resolve())
     return ""
-
-
-def _publication_model(ws: Workspace, query: dict) -> dict:
-    adapter = _active_adapter(ws)
-    directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        return {"timestamp": None, "blockers": [], "requirements": []}
-    pack, requirements = load_working_copy(directory)
-    trust = trust_store(ws.keys)
-    message = ""
-    if (query.get("sealed") or [""])[0]:
-        message = "Pack directory sealed."
-    return {
-        "timestamp": directory.name,
-        "pack_version": pack.get("version"),
-        "requirements": _requirement_rows(directory, requirements, trust),
-        "seal": read_pack_seal(directory, trust),
-        "blockers": list_publication_blockers(ws.root, directory, trust),
-        "coverage_detail": _coverage_detail(directory),
-        "message": message,
-    }
 
 
 def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
