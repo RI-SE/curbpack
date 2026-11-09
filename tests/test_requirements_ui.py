@@ -550,6 +550,78 @@ class RepoPackSectionsTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
 
+    def test_copy_section_keeps_only_the_named_article(self):
+        """A section query lists that article and leaves the other article out."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            version = draft_pack()["version"]
+            kept = repo / "curbpack" / "packs" / "kept-nis" / version
+            kept.mkdir(parents=True)
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["kept-nis"]),
+            )
+            write_json(
+                kept / "pack.json",
+                {
+                    "id": "kept-nis",
+                    "name": "Kept NIS",
+                    "version": "0.1.0",
+                    "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
+                },
+            )
+            for article, text in (
+                ("Art.1", "This Directive lays down measures."),
+                ("Art.2", "This Directive applies to public and private entities."),
+            ):
+                requirement_id = "NIS-" + article.replace(".", "").upper()
+                write_json(
+                    kept / f"{requirement_id}.json",
+                    {
+                        "id": requirement_id,
+                        "pack_id": "kept-nis",
+                        "source": {
+                            "framework": "EU",
+                            "instrument": "NIS2",
+                            "identifier": "CELEX:32022L2555",
+                            "language": "en",
+                            "url": _NIS_URL,
+                        },
+                        "references": [{"nr": 1, "locator": article, "law_text": text}],
+                    },
+                )
+            save_repos(
+                root,
+                add_repo(root, load_repos(root), name="Fixture product", path=str(repo)),
+            )
+            set_open_repo(root, "fixture-product")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                both = _get(base + "/requirements/copy?repo=fixture-product&pack=kept-nis")
+                self.assertIn("NIS-ART1", both)
+                self.assertIn("NIS-ART2", both)
+                article_one = _get(
+                    base + "/requirements/copy?repo=fixture-product&pack=kept-nis&section=Art.1"
+                )
+                self.assertIn("NIS-ART1", article_one)
+                self.assertNotIn("NIS-ART2", article_one)
+                self.assertIn(
+                    'href="/requirements/requirement/NIS-ART1?repo=fixture-product&amp;pack=kept-nis&amp;section=Art.1"',
+                    article_one,
+                )
+                article_two = _get(
+                    base + "/requirements/copy?repo=fixture-product&pack=kept-nis&section=Art.2"
+                )
+                self.assertIn("NIS-ART2", article_two)
+                self.assertNotIn("NIS-ART1", article_two)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
     def test_pack_row_shows_url_or_manual_content_and_edit_saves_pack_info(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
