@@ -33,7 +33,7 @@ from app.pack_export import _export_model, _export_selected
 from app.publication_model import _publication_model
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
-from app.review_model import _compile_review, _review_view, _save_review_decision
+from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
@@ -44,7 +44,6 @@ from checks.run import (
     _pack_version_dir,
     claims_dir,
     packs_dir,
-    reports_dir,
 )
 from claims.bind import (
     read_claims,
@@ -130,7 +129,6 @@ from requirements.workspace import (
 )
 from review.compile import (
     durable_report_path,
-    save_report_signature,
 )
 from workflow import snapshot
 
@@ -865,31 +863,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_save_review_decision(ws, form))
                 return
             if path == "/review/sign":
-                repo_id = _sync_open_repo(ws, form)
-                if not repo_id:
-                    raise ModelError("review", "repo", "a chosen repository")
-                from common.validate import validate_curbpack_config
-
-                repo = _registered_repo_path(ws, repo_id)
-                config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                report_path = _confined_review_report_path(
-                    str(reports_dir(repo, config).resolve()),
-                    (form.get("report") or [""])[0],
-                )
-                if not report_path:
-                    raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
-                name = (form.get("name") or [""])[0].strip()
-                private, _public = load_or_create_key(ws.keys, name)
-                save_report_signature(
-                    Path(report_path),
-                    name=name,
-                    private_key=private,
-                    at=_now(),
-                )
-                self._redirect(
-                    f"/review?repo={quote(repo_id, safe='')}&signed=1"
-                    f"&report={quote(report_path, safe='')}"
-                )
+                self._redirect(_sign_review(ws, form))
                 return
             if path == "/studio":
                 repo_id = _sync_open_repo(ws, form)
@@ -1857,25 +1831,6 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
 def _check_message(query: dict) -> str:
     if (query.get("saved") or [""])[0]:
         return "Saved curbpack.json in the repo."
-    return ""
-
-
-def _confined_review_report_path(reports_folder: str, requested: str) -> str:
-    if not reports_folder:
-        return ""
-    folder = Path(reports_folder).resolve()
-    wanted = (requested or "").strip()
-    if wanted:
-        path = Path(wanted).resolve()
-        try:
-            path.relative_to(folder)
-        except ValueError:
-            path = None
-        if path is not None and path.is_file() and path.name.startswith("review-report_") and path.name.endswith(".json"):
-            return str(path)
-    dated = sorted(folder.glob("review-report_*.json"))
-    if dated:
-        return str(dated[-1].resolve())
     return ""
 
 

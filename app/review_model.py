@@ -1,4 +1,4 @@
-"""Review view-model, compile POST, and decision POST. The URL stays on the old server."""
+"""Review view-model, compile POST, decision POST, and sign POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from checks.run import _pack_version_dir, packs_dir, reports_dir, results_dir
 from common.errors import ModelError
 from common.jsonio import read_json
-from common.keystore import trust_store
+from common.keystore import load_or_create_key, trust_store
 from common.store import load_claims, load_pack_directory, load_run_result
 from discovery.door import claim_file_relative, repo_claims_dir
 from review.compile import (
@@ -19,6 +19,7 @@ from review.compile import (
     read_report_signature,
     same_run,
     save_report_decision,
+    save_report_signature,
     unchecked_requirement_ids,
     write_report,
 )
@@ -313,10 +314,29 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     )
 
 
+def _confined_review_report_path(reports_folder: str, requested: str) -> str:
+    if not reports_folder:
+        return ""
+    folder = Path(reports_folder).resolve()
+    wanted = (requested or "").strip()
+    if wanted:
+        path = Path(wanted).resolve()
+        try:
+            path.relative_to(folder)
+        except ValueError:
+            path = None
+        if path is not None and path.is_file() and path.name.startswith("review-report_") and path.name.endswith(".json"):
+            return str(path)
+    dated = sorted(folder.glob("review-report_*.json"))
+    if dated:
+        return str(dated[-1].resolve())
+    return ""
+
+
 def _save_review_decision(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
-    from app.server import _confined_review_report_path, _registered_repo_path, _sync_open_repo
+    from app.server import _registered_repo_path, _sync_open_repo
     from common.validate import validate_curbpack_config
 
     repo_id = _sync_open_repo(ws, form)
@@ -333,5 +353,36 @@ def _save_review_decision(ws: Workspace, form: dict) -> str:
     save_report_decision(Path(report_path), (form.get("decision") or [""])[0])
     return (
         f"/review?repo={quote(repo_id, safe='')}&saved=1"
+        f"&report={quote(report_path, safe='')}"
+    )
+
+
+def _sign_review(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _now, _registered_repo_path, _sync_open_repo
+    from common.validate import validate_curbpack_config
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    report_path = _confined_review_report_path(
+        str(reports_dir(repo, config).resolve()),
+        (form.get("report") or [""])[0],
+    )
+    if not report_path:
+        raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    save_report_signature(
+        Path(report_path),
+        name=name,
+        private_key=private,
+        at=_now(),
+    )
+    return (
+        f"/review?repo={quote(repo_id, safe='')}&signed=1"
         f"&report={quote(report_path, safe='')}"
     )
