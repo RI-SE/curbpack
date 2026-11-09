@@ -24,7 +24,7 @@ from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
 from app.discover_model import _discover_model
-from app.documents_model import _documents_model, _save_curbpack
+from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
@@ -99,7 +99,6 @@ from requirements.catalog import (
     add_section,
     ensure_catalog,
     find_document,
-    make_document_id,
     make_id,
     save_catalog,
 )
@@ -609,26 +608,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_save_curbpack(ws, form))
                 return
             if path == "/requirements/documents":
-                repo_id = (form.get("repo") or [""])[0].strip()
-                if not repo_id:
-                    raise ModelError("pack", "repo", "a chosen repository")
-                pack_fields = dict(
-                    name=(form.get("name") or [""])[0],
-                    official_name=(form.get("official_name") or [""])[0],
-                    url=(form.get("url") or [""])[0],
-                    adapter_id=(form.get("adapter_id") or [""])[0],
-                )
-                if (form.get("action") or [""])[0].strip() == "update":
-                    _update_pack_info(
-                        ws,
-                        repo_id,
-                        (form.get("pack") or [""])[0],
-                        **pack_fields,
-                    )
-                    self._redirect(f"/requirements?repo={quote(repo_id)}&updated=1")
-                    return
-                _add_pack_to_repo(ws, repo_id, **pack_fields)
-                self._redirect(f"/requirements?repo={quote(repo_id)}&added=1")
+                self._redirect(_save_pack_document(ws, form))
                 return
             if path == "/requirements/catalog":
                 catalog = ensure_catalog(ws.root)
@@ -1349,95 +1329,6 @@ def _start_empty_folder(ws: Workspace, folder: str) -> str:
         raise ModelError("curbpack.json", "folder", "a working folder")
     set_open_repo(ws.root, repo_id)
     return repo_id
-
-
-def _add_pack_to_repo(
-    ws: Workspace,
-    repo_id: str,
-    *,
-    name: str,
-    official_name: str,
-    url: str,
-    adapter_id: str = "",
-) -> None:
-    from common.validate import validate_pack
-
-    repo = _registered_repo_path(ws, repo_id)
-    config_path = repo / "curbpack.json"
-    if not config_path.is_file():
-        raise ModelError("curbpack.json", "repo", "a curbpack.json in the chosen repository")
-    raw = read_json(config_path)
-    config = raw if isinstance(raw, dict) else {}
-    pack_id = make_document_id(name)
-    from common.validate import validate_curbpack_config
-    from requirements.extract.pipeline import draft_pack
-
-    checked = validate_curbpack_config(config)
-    wanted = (adapter_id or "").strip()
-    inferred = _adapter_for_url(url.strip()) if url.strip() else None
-    if wanted and (inferred is None or str(inferred.get("id") or "") != wanted):
-        raise ModelError("pack", "adapter", "the adapter that matches this URL")
-    pack_dir = packs_dir(repo, checked) / pack_id / draft_pack()["version"]
-    if (pack_dir / "pack.json").is_file():
-        raise ModelError("pack", "id", f"a new pack, not existing {pack_id}")
-    pack: dict = {"id": pack_id, "name": name.strip(), "version": draft_pack()["version"]}
-    source = {}
-    if official_name.strip():
-        source["instrument"] = official_name.strip()
-    if url.strip():
-        source["url"] = url.strip()
-    if source:
-        pack["source"] = source
-    checked_pack = validate_pack(pack)
-    pack_dir.mkdir(parents=True, exist_ok=True)
-    write_json(pack_dir / "pack.json", checked_pack)
-    packs = [item for item in config.get("packs") or [] if isinstance(item, str)]
-    if pack_id not in packs:
-        packs.append(pack_id)
-    _write_curbpack(repo, packs)
-
-
-def _update_pack_info(
-    ws: Workspace,
-    repo_id: str,
-    pack_id: str,
-    *,
-    name: str,
-    official_name: str,
-    url: str,
-    adapter_id: str = "",
-) -> None:
-    """Write name and source on an existing pack.json. Does not add a field for the adapter."""
-    from common.validate import validate_pack
-
-    located = _locate_repo_pack(ws, (pack_id or "").strip(), repo_id)
-    if located is None:
-        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
-    _chosen, pack_dir, pack = located
-    wanted = (adapter_id or "").strip()
-    cleaned_url = "" if wanted == "manual" else url.strip()
-    inferred = _adapter_for_url(cleaned_url) if cleaned_url else None
-    if wanted and wanted != "manual" and (
-        inferred is None or str(inferred.get("id") or "") != wanted
-    ):
-        raise ModelError("pack", "adapter", "the adapter that matches this URL")
-    if name.strip():
-        pack["name"] = name.strip()
-    source = dict(pack["source"]) if isinstance(pack.get("source"), dict) else {}
-    official = official_name.strip()
-    if official:
-        source["instrument"] = official
-    else:
-        source.pop("instrument", None)
-    if cleaned_url:
-        source["url"] = cleaned_url
-    else:
-        source.pop("url", None)
-    if source:
-        pack["source"] = source
-    else:
-        pack.pop("source", None)
-    write_json(pack_dir / "pack.json", validate_pack(pack))
 
 
 def _signature_counts(root: Path, pack_id: str, trust: dict) -> tuple[int | None, int | None]:

@@ -1,4 +1,4 @@
-"""Pack sources view-model and curbpack POST. The URL stays on the old server."""
+"""Pack sources view-model, curbpack POST, and pack-document POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import load_repos
-from requirements.catalog import list_formex_adapter_choices
+from requirements.catalog import list_formex_adapter_choices, make_document_id
 from requirements.extract.adapter import list_adapters
 
 if TYPE_CHECKING:
@@ -184,3 +184,116 @@ def _save_curbpack_form(repo: Path, form: dict) -> None:
         document["exclude_requirements"] = exclude
         document.pop("requirements", None)
     write_json(path, validate_curbpack_config(document))
+
+
+def _save_pack_document(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    repo_id = (form.get("repo") or [""])[0].strip()
+    if not repo_id:
+        raise ModelError("pack", "repo", "a chosen repository")
+    pack_fields = dict(
+        name=(form.get("name") or [""])[0],
+        official_name=(form.get("official_name") or [""])[0],
+        url=(form.get("url") or [""])[0],
+        adapter_id=(form.get("adapter_id") or [""])[0],
+    )
+    if (form.get("action") or [""])[0].strip() == "update":
+        _update_pack_info(
+            ws,
+            repo_id,
+            (form.get("pack") or [""])[0],
+            **pack_fields,
+        )
+        return f"/requirements?repo={quote(repo_id)}&updated=1"
+    _add_pack_to_repo(ws, repo_id, **pack_fields)
+    return f"/requirements?repo={quote(repo_id)}&added=1"
+
+
+def _add_pack_to_repo(
+    ws: Workspace,
+    repo_id: str,
+    *,
+    name: str,
+    official_name: str,
+    url: str,
+    adapter_id: str = "",
+) -> None:
+    from app.server import _adapter_for_url, _registered_repo_path, _write_curbpack
+    from common.validate import validate_curbpack_config, validate_pack
+    from requirements.extract.pipeline import draft_pack
+
+    repo = _registered_repo_path(ws, repo_id)
+    config_path = repo / "curbpack.json"
+    if not config_path.is_file():
+        raise ModelError("curbpack.json", "repo", "a curbpack.json in the chosen repository")
+    raw = read_json(config_path)
+    config = raw if isinstance(raw, dict) else {}
+    pack_id = make_document_id(name)
+    checked = validate_curbpack_config(config)
+    wanted = (adapter_id or "").strip()
+    inferred = _adapter_for_url(url.strip()) if url.strip() else None
+    if wanted and (inferred is None or str(inferred.get("id") or "") != wanted):
+        raise ModelError("pack", "adapter", "the adapter that matches this URL")
+    pack_dir = packs_dir(repo, checked) / pack_id / draft_pack()["version"]
+    if (pack_dir / "pack.json").is_file():
+        raise ModelError("pack", "id", f"a new pack, not existing {pack_id}")
+    pack: dict = {"id": pack_id, "name": name.strip(), "version": draft_pack()["version"]}
+    source = {}
+    if official_name.strip():
+        source["instrument"] = official_name.strip()
+    if url.strip():
+        source["url"] = url.strip()
+    if source:
+        pack["source"] = source
+    checked_pack = validate_pack(pack)
+    pack_dir.mkdir(parents=True, exist_ok=True)
+    write_json(pack_dir / "pack.json", checked_pack)
+    packs = [item for item in config.get("packs") or [] if isinstance(item, str)]
+    if pack_id not in packs:
+        packs.append(pack_id)
+    _write_curbpack(repo, packs)
+
+
+def _update_pack_info(
+    ws: Workspace,
+    repo_id: str,
+    pack_id: str,
+    *,
+    name: str,
+    official_name: str,
+    url: str,
+    adapter_id: str = "",
+) -> None:
+    """Write name and source on an existing pack.json. Does not add a field for the adapter."""
+    from app.server import _adapter_for_url, _locate_repo_pack
+    from common.validate import validate_pack
+
+    located = _locate_repo_pack(ws, (pack_id or "").strip(), repo_id)
+    if located is None:
+        raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+    _chosen, pack_dir, pack = located
+    wanted = (adapter_id or "").strip()
+    cleaned_url = "" if wanted == "manual" else url.strip()
+    inferred = _adapter_for_url(cleaned_url) if cleaned_url else None
+    if wanted and wanted != "manual" and (
+        inferred is None or str(inferred.get("id") or "") != wanted
+    ):
+        raise ModelError("pack", "adapter", "the adapter that matches this URL")
+    if name.strip():
+        pack["name"] = name.strip()
+    source = dict(pack["source"]) if isinstance(pack.get("source"), dict) else {}
+    official = official_name.strip()
+    if official:
+        source["instrument"] = official
+    else:
+        source.pop("instrument", None)
+    if cleaned_url:
+        source["url"] = cleaned_url
+    else:
+        source.pop("url", None)
+    if source:
+        pack["source"] = source
+    else:
+        pack.pop("source", None)
+    write_json(pack_dir / "pack.json", validate_pack(pack))
