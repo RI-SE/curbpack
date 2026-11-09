@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from checks.run import _pack_version_dir, packs_dir
 from common.errors import ModelError
 from common.jsonio import read_json
+from common.store import load_run_result
 
 if TYPE_CHECKING:
     from app.server import Workspace
@@ -95,3 +96,18 @@ def _check_editor_model(ws: Workspace, query: dict) -> dict:
         "reports_dir_value": values["reports_dir"],
         "run_result_path": result_path,
     }
+
+
+def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None, int | None]:
+    path_text = str(editor.get("run_result_path") or "").strip()
+    if not path_text:
+        return None, None
+    path = Path(path_text)
+    if not path.is_file():
+        return None, None
+    result = load_run_result(path)
+    if (query.get("exit") or [""])[0] != "":
+        return result, int((query.get("exit") or ["1"])[0] or "1")
+    from checks.run import process_exit_code
+
+    return result, process_exit_code(result)

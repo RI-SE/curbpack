@@ -18,7 +18,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.catalog_model import _catalog_model
-from app.check_model import _check_editor_model
+from app.check_model import _check_editor_model, _check_report
 from app.check_page import check_page
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
@@ -43,7 +43,6 @@ from checks.run import (
     claims_dir,
     new_run_result_path,
     packs_dir,
-    process_exit_code,
     reports_dir,
     results_dir,
     run_and_write,
@@ -2299,21 +2298,6 @@ def _repo_claims(ws: Workspace, repo_id: str, packs: list[dict]) -> list[dict]:
             }
         )
     return rows
-
-
-def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None, int | None]:
-    path_text = str(editor.get("run_result_path") or "").strip()
-    if not path_text:
-        return None, None
-    path = Path(path_text)
-    if not path.is_file():
-        return None, None
-    result = load_run_result(path)
-    if (query.get("exit") or [""])[0] != "":
-        return result, int((query.get("exit") or ["1"])[0] or "1")
-    from checks.run import process_exit_code
-
-    return result, process_exit_code(result)
 
 
 def _registered_repo_path(ws: Workspace, repo_id: str) -> Path:
