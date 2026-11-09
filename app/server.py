@@ -18,6 +18,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.catalog_model import _catalog_model
+from app.check_model import _check_editor_model
 from app.check_page import check_page
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
@@ -2235,26 +2236,6 @@ def _check_message(query: dict) -> str:
     return ""
 
 
-def _confined_run_result_path(results_folder: str, requested: str) -> str:
-    if not results_folder:
-        return ""
-    folder = Path(results_folder).resolve()
-    wanted = (requested or "").strip()
-    if wanted:
-        path = Path(wanted).resolve()
-        try:
-            path.relative_to(folder)
-        except ValueError:
-            return ""
-        if path.is_file() and path.name.startswith("run-result_") and path.name.endswith(".json"):
-            return str(path)
-        return ""
-    dated = sorted(folder.glob("run-result_*.json"))
-    if dated:
-        return str(dated[-1].resolve())
-    return ""
-
-
 def _new_review_report_path(folder: Path) -> Path:
     return _new_dated_json(folder, "review-report")
 
@@ -2286,63 +2267,6 @@ def _confined_review_report_path(reports_folder: str, requested: str) -> str:
     if dated:
         return str(dated[-1].resolve())
     return ""
-
-
-def _check_editor_model(ws: Workspace, query: dict) -> dict:
-    repos = _listed_repos(ws)
-    repo_id = _sync_open_repo(ws, query)
-    if repo_id and not any(row.get("id") == repo_id for row in repos):
-        raise ModelError("check", "repo", f"a registered repository, not {repo_id}")
-    fields = _door_path_fields(ws, repo_id) if repo_id else {}
-    packs: list[dict] = []
-    selection = ""
-    values = {key: "" for key in ("packs_dir", "claims_dir", "results_dir", "reports_dir")}
-    if repo_id:
-        repo = _registered_repo_path(ws, repo_id)
-        config_path = repo / "curbpack.json"
-        if config_path.is_file():
-            from common.validate import validate_curbpack_config
-
-            config = validate_curbpack_config(read_json(config_path))
-            for key in values:
-                values[key] = str(config.get(key) or "")
-            packs_root = packs_dir(repo, config)
-            for pack_id in config["packs"]:
-                try:
-                    pack_dir = _pack_version_dir(packs_root, pack_id)
-                    present = True
-                except ModelError:
-                    pack_dir = packs_root / pack_id
-                    present = False
-                packs.append(
-                    {
-                        "id": pack_id,
-                        "present": present,
-                        "pack_dir": str(pack_dir.resolve()),
-                    }
-                )
-            if "exclude_requirements" in config:
-                selection = "exclude_requirements " + ", ".join(config["exclude_requirements"])
-            elif "requirements" in config:
-                selection = "requirements " + ", ".join(config["requirements"])
-    result_path = _confined_run_result_path(fields.get("results_dir") or "", (query.get("result") or [""])[0])
-    return {
-        "repos": repos,
-        "repo_id": repo_id,
-        "ask_read": False,
-        "packs": packs,
-        "selection": selection,
-        "curbpack_file": fields.get("curbpack_file") or "",
-        "directory": fields.get("directory") or "",
-        "claims_dir": fields.get("claims_dir") or "",
-        "results_dir": fields.get("results_dir") or "",
-        "reports_dir": fields.get("reports_dir") or "",
-        "packs_dir_value": values["packs_dir"],
-        "claims_dir_value": values["claims_dir"],
-        "results_dir_value": values["results_dir"],
-        "reports_dir_value": values["reports_dir"],
-        "run_result_path": result_path,
-    }
 
 
 def _repo_claims(ws: Workspace, repo_id: str, packs: list[dict]) -> list[dict]:
