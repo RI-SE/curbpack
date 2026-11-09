@@ -26,7 +26,7 @@ from app.cover import cover
 from app.discover_model import _discover_model
 from app.documents_model import _documents_model
 from app.extract_review import _apply_extraction_review, _extract_review_model
-from app.home_model import _home_model
+from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
@@ -113,7 +113,6 @@ from requirements.workspace import (
     list_published_versions,
     list_working_copies,
     load_working_copy,
-    mark_published_selected,
     mark_selected,
     mark_source_adapter,
     publish_pack,
@@ -595,8 +594,7 @@ def make_handler(ws: Workspace):
                 self._redirect("/?prepared=1")
                 return
             if path == "/select-pack":
-                _apply_pack_selection(ws, form)
-                self._redirect("/?selected=1")
+                self._redirect(_select_pack(ws, form))
                 return
             if path == "/requirements/source":
                 adapter_id = (form.get("adapter_id") or [""])[0].strip()
@@ -920,23 +918,6 @@ def _home_message(query: dict) -> str:
     if (query.get("prepared") or [""])[0]:
         return "Sample workspace prepared. It is not the active Pack unless you select it."
     return ""
-
-
-def _apply_pack_selection(ws: Workspace, form: dict) -> Path:
-    packed = (form.get("pack") or [""])[0].strip()
-    kind = (form.get("kind") or [""])[0].strip()
-    pack_id = (form.get("pack_id") or [""])[0].strip()
-    ref = (form.get("ref") or [""])[0].strip()
-    if packed and "|" in packed:
-        kind, pack_id, ref = packed.split("|", 2)
-    if not kind or not pack_id or not ref:
-        raise ModelError("active pack", "selection", "kind, pack_id, and ref")
-    _sync_adapter_for_pack(ws, pack_id)
-    if kind == "working":
-        return mark_selected(ws.root, pack_id, ref)
-    if kind == "published":
-        return mark_published_selected(ws.root, pack_id, ref)
-    raise ModelError("active pack", "kind", "working or published")
 
 
 def _sync_adapter_for_pack(ws: Workspace, pack_id: str) -> None:
