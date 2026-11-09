@@ -18,7 +18,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.catalog_model import _catalog_model
-from app.check_model import _check_editor_model, _check_report
+from app.check_model import _check_editor_model, _check_report, _run_check
 from app.check_page import check_page
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.claims_page import claims_page
@@ -44,11 +44,9 @@ from app.try_discovery_file import _try_discovery_file_model
 from checks.run import (
     _pack_version_dir,
     claims_dir,
-    new_run_result_path,
     packs_dir,
     reports_dir,
     results_dir,
-    run_and_write,
 )
 from claims.bind import (
     read_claims,
@@ -864,23 +862,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_write_scaffold(ws, form))
                 return
             if path == "/check":
-                repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
-                if repo_id:
-                    set_open_repo(ws.root, repo_id)
-                action = (form.get("action") or [""])[0].strip()
-                if repo_id and action == "check":
-                    repo = _registered_repo_path(ws, repo_id)
-                    from common.validate import validate_curbpack_config
-
-                    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-                    out = new_run_result_path(results_dir(repo, config))
-                    result, code = run_and_write(repo, None, out)
-                    self._redirect(
-                        f"/check?repo={quote(repo_id, safe='')}&exit={code}"
-                        f"&result={quote(str(out.resolve()), safe='')}"
-                    )
-                    return
-                self._redirect(f"/check?repo={quote(repo_id, safe='')}" if repo_id else "/check")
+                self._redirect(_run_check(ws, form))
                 return
             if path == "/review/compile":
                 repo_id = _sync_open_repo(ws, form)

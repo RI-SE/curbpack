@@ -1,4 +1,4 @@
-"""Check view-model. The URL stays on the old server."""
+"""Check view-model and POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
@@ -111,3 +111,27 @@ def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None
     from checks.run import process_exit_code
 
     return result, process_exit_code(result)
+
+
+def _run_check(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path
+    from checks.run import new_run_result_path, results_dir, run_and_write
+    from common.validate import validate_curbpack_config
+    from discovery.door import set_open_repo
+
+    repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
+    if repo_id:
+        set_open_repo(ws.root, repo_id)
+    action = (form.get("action") or [""])[0].strip()
+    if repo_id and action == "check":
+        repo = _registered_repo_path(ws, repo_id)
+        config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+        out = new_run_result_path(results_dir(repo, config))
+        result, code = run_and_write(repo, None, out)
+        return (
+            f"/check?repo={quote(repo_id, safe='')}&exit={code}"
+            f"&result={quote(str(out.resolve()), safe='')}"
+        )
+    return f"/check?repo={quote(repo_id, safe='')}" if repo_id else "/check"
