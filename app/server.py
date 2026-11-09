@@ -20,7 +20,7 @@ from app import project_selector
 from app.catalog_model import _catalog_model
 from app.check_model import _check_editor_model, _check_report
 from app.check_page import check_page
-from app.claims_model import _claims_model, _create_claim, _sign_claim, _update_claim
+from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
@@ -51,7 +51,6 @@ from checks.run import (
 )
 from claims.bind import (
     read_claims,
-    retire_claim,
 )
 from common.paths import default_workspace, install_root
 from common.errors import CheckError, ModelError, SigningUnavailable
@@ -851,8 +850,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/claims/") and path.endswith("/retire"):
                 claim_id = path[len("/claims/") : -len("/retire")]
-                retire_claim(_claims_directory(ws, form), claim_id)
-                self._redirect(_claims_redirect(form, "retired=1", claim_changed=False))
+                self._redirect(_retire_claim(ws, claim_id, form))
                 return
             if path.startswith("/claims/") and path.endswith("/sign"):
                 claim_id = path[len("/claims/") : -len("/sign")]

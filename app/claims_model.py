@@ -13,6 +13,7 @@ from claims.bind import (
     read_claim_seal,
     rebind_from_fields,
     require_requirement_id,
+    retire_claim,
     sign_claim,
     write_claim,
 )
@@ -177,3 +178,10 @@ def _sign_claim(ws: Workspace, claim_id: str, form: dict) -> str:
         f"signed=1&requirement_id={claim.get('requirement_id', '')}",
         claim_changed=False,
     )
+
+
+def _retire_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect
+
+    retire_claim(_claims_directory(ws, form), claim_id)
+    return _claims_redirect(form, "retired=1", claim_changed=False)
