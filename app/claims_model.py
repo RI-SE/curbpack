@@ -9,10 +9,13 @@ from claims.bind import (
     build_claim,
     exist_args_for_path,
     law_passages,
+    read_claim,
     read_claim_seal,
+    rebind_from_fields,
     require_requirement_id,
     write_claim,
 )
+from common.canonical import version_digest
 from common.errors import ModelError
 from common.keystore import trust_store
 from discovery.door import claim_file_relative, repo_claims_dir
@@ -135,3 +138,26 @@ def _create_claim(ws: Workspace, form: dict) -> str:
         raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
     write_claim(claims_dir, claim)
     return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+
+
+def _update_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect
+
+    claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
+    had_signed = isinstance(claim.get("signed"), dict)
+    before = version_digest(claim)
+    updated = rebind_from_fields(
+        claim,
+        source=(form.get("source") or [""])[0],
+        args_json=(form.get("args") or ["{}"])[0],
+        checks_json=(form.get("checks") or ["[]"])[0],
+        severity=(form.get("severity") or [""])[0],
+        description=(form.get("description") or [""])[0],
+    )
+    write_claim(_claims_directory(ws, form), updated)
+    flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
+    return _claims_redirect(
+        form,
+        f"{flag}&requirement_id={updated.get('requirement_id', '')}",
+        claim_changed=before != version_digest(updated),
+    )

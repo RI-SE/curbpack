@@ -20,7 +20,7 @@ from app import project_selector
 from app.catalog_model import _catalog_model
 from app.check_model import _check_editor_model, _check_report
 from app.check_page import check_page
-from app.claims_model import _claims_model, _create_claim
+from app.claims_model import _claims_model, _create_claim, _update_claim
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
@@ -52,12 +52,10 @@ from checks.run import (
 from claims.bind import (
     read_claim,
     read_claims,
-    rebind_from_fields,
     retire_claim,
     sign_claim,
     write_claim,
 )
-from common.canonical import version_digest
 from common.paths import default_workspace, install_root
 from common.errors import CheckError, ModelError, SigningUnavailable
 from common.jsonio import read_json, write_json
@@ -876,26 +874,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/claims/"):
                 claim_id = path[len("/claims/") :]
-                claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
-                had_signed = isinstance(claim.get("signed"), dict)
-                before = version_digest(claim)
-                updated = rebind_from_fields(
-                    claim,
-                    source=(form.get("source") or [""])[0],
-                    args_json=(form.get("args") or ["{}"])[0],
-                    checks_json=(form.get("checks") or ["[]"])[0],
-                    severity=(form.get("severity") or [""])[0],
-                    description=(form.get("description") or [""])[0],
-                )
-                write_claim(_claims_directory(ws, form), updated)
-                flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
-                self._redirect(
-                    _claims_redirect(
-                        form,
-                        f"{flag}&requirement_id={updated.get('requirement_id', '')}",
-                        claim_changed=before != version_digest(updated),
-                    )
-                )
+                self._redirect(_update_claim(ws, claim_id, form))
                 return
             if path == "/scaffold":
                 write_stub(ws.repo, (form.get("path") or [""])[0].strip())
