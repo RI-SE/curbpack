@@ -37,7 +37,7 @@ from app.review_model import _compile_review, _review_view, _save_review_decisio
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
-from app.studio_model import _studio_model
+from app.studio_model import _save_studio, _studio_model
 from app.studio_page import studio_page
 from app.try_discovery_file import _try_discovery_file_model
 from checks.run import (
@@ -78,7 +78,6 @@ from discovery.door import (
     save_directory_fields,
     set_open_repo,
 )
-from discovery.studio import save_studio_config, studio_from_form
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import read_try_job, start_try_job
 from requirements.editing import (
@@ -866,15 +865,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_sign_review(ws, form))
                 return
             if path == "/studio":
-                repo_id = _sync_open_repo(ws, form)
-                if not repo_id:
-                    raise ModelError("studio", "repo", "a chosen repository")
-                action = (form.get("action") or [""])[0].strip()
-                if action == "save":
-                    save_studio_config(_registered_repo_path(ws, repo_id), studio_from_form(form))
-                    self._redirect(f"/studio?repo={quote(repo_id, safe='')}&saved=1")
-                    return
-                self._redirect(f"/studio?repo={quote(repo_id, safe='')}")
+                self._redirect(_save_studio(ws, form))
                 return
             raise ModelError("request", "path", "a known action")
 
