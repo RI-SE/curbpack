@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
-from claims.bind import exist_args_for_path, law_passages, read_claim_seal
+from claims.bind import (
+    build_claim,
+    exist_args_for_path,
+    law_passages,
+    read_claim_seal,
+    require_requirement_id,
+    write_claim,
+)
 from common.errors import ModelError
 from common.keystore import trust_store
 from discovery.door import claim_file_relative, repo_claims_dir
@@ -96,3 +104,34 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "timestamp": _query_value(query, "timestamp"),
         "return_to": _query_value(query, "return_to"),
     }
+
+
+def _create_claim(ws: Workspace, form: dict) -> str:
+    from app.server import _claims_directory, _claims_lookup, _claims_redirect
+
+    known = list(_claims_lookup(ws, form))
+    requirement_id = require_requirement_id(
+        (form.get("requirement_id") or [""])[0],
+        known,
+    )
+    args = json.loads((form.get("args") or ["{}"])[0])
+    checks = json.loads((form.get("checks") or ["[]"])[0])
+    if not isinstance(args, dict):
+        raise ModelError("claim", "args", "JSON object")
+    if not isinstance(checks, list):
+        raise ModelError("claim", "checks", "JSON list")
+    claim = build_claim(
+        claim_id=(form.get("id") or [""])[0].strip(),
+        requirement_id=requirement_id,
+        source=(form.get("source") or [""])[0].strip(),
+        args=args,
+        checks=checks,
+        description=(form.get("description") or [""])[0].strip(),
+        severity=(form.get("severity") or [""])[0].strip() or None,
+    )
+    claims_dir = _claims_directory(ws, form)
+    destination = claims_dir / f"{claim['id']}.json"
+    if destination.is_file():
+        raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
+    write_claim(claims_dir, claim)
+    return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")

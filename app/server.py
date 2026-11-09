@@ -20,7 +20,7 @@ from app import project_selector
 from app.catalog_model import _catalog_model
 from app.check_model import _check_editor_model, _check_report
 from app.check_page import check_page
-from app.claims_model import _claims_model
+from app.claims_model import _claims_model, _create_claim
 from app.claims_page import claims_page
 from app.copy_model import _copy_model
 from app.cover import cover
@@ -50,11 +50,9 @@ from checks.run import (
     run_and_write,
 )
 from claims.bind import (
-    build_claim,
     read_claim,
     read_claims,
     rebind_from_fields,
-    require_requirement_id,
     retire_claim,
     sign_claim,
     write_claim,
@@ -854,32 +852,7 @@ def make_handler(ws: Workspace):
                 self._redirect("/requirement?sealed=1")
                 return
             if path == "/claims":
-                known = list(_claims_lookup(ws, form))
-                requirement_id = require_requirement_id(
-                    (form.get("requirement_id") or [""])[0],
-                    known,
-                )
-                args = json.loads((form.get("args") or ["{}"])[0])
-                checks = json.loads((form.get("checks") or ["[]"])[0])
-                if not isinstance(args, dict):
-                    raise ModelError("claim", "args", "JSON object")
-                if not isinstance(checks, list):
-                    raise ModelError("claim", "checks", "JSON list")
-                claim = build_claim(
-                    claim_id=(form.get("id") or [""])[0].strip(),
-                    requirement_id=requirement_id,
-                    source=(form.get("source") or [""])[0].strip(),
-                    args=args,
-                    checks=checks,
-                    description=(form.get("description") or [""])[0].strip(),
-                    severity=(form.get("severity") or [""])[0].strip() or None,
-                )
-                claims_dir = _claims_directory(ws, form)
-                destination = claims_dir / f"{claim['id']}.json"
-                if destination.is_file():
-                    raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
-                write_claim(claims_dir, claim)
-                self._redirect(_claims_redirect(form, f"saved=1&requirement_id={requirement_id}"))
+                self._redirect(_create_claim(ws, form))
                 return
             if path.startswith("/claims/") and path.endswith("/retire"):
                 claim_id = path[len("/claims/") : -len("/retire")]
