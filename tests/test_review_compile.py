@@ -11,7 +11,7 @@ from claims.bind import build_claim
 from common.canonical import version_digest
 from common.errors import ModelError
 from common.signing import generate_keypair, read_signature
-from app.review_page import review_page
+from studio.review.review_page import review_page
 from review.compile import (
     compile_report,
     durable_report_path,

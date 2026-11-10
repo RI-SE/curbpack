@@ -404,7 +404,7 @@ def _review_message(query: dict) -> str:
 
 
 def _review_get(ws: Workspace, query: dict) -> bytes:
-    from app.review_page import review_page
+    from studio.review.review_page import review_page
     from app.server import _door_chrome, _listed_repos, _sync_open_repo
 
     try:
