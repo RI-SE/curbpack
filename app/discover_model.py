@@ -1,16 +1,17 @@
-"""Discover packs view-model. The URL stays on the old server."""
+"""Discover packs view-model and repository POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from claims.bind import read_claims
 from common.errors import ModelError
 from common.jsonio import read_json
-from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements
+from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements, set_open_repo
 from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import reviewable_targets
-from discovery.repos import find_repo, resolve_repo_path
+from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 
 if TYPE_CHECKING:
     from app.server import Workspace
@@ -107,3 +108,26 @@ def _discover_pack_rows(ws: Workspace, repo: dict | None) -> list[dict]:
             }
         )
     return rows
+
+
+def _add_discover_repo(ws: Workspace, form: dict) -> str:
+    from app.server import _safe_local_next
+
+    data = load_repos(ws.root)
+    add_repo(
+        ws.root,
+        data,
+        name=(form.get("name") or [""])[0],
+        path=(form.get("path") or [""])[0],
+    )
+    save_repos(ws.root, data)
+    new_id = str((data.get("repos") or [])[-1].get("id") or "")
+    if new_id:
+        set_open_repo(ws.root, new_id)
+    next_url = _safe_local_next((form.get("next") or [""])[0])
+    if next_url:
+        join = "&" if "?" in next_url else "?"
+        if new_id and "try_repo=" not in next_url:
+            next_url = f"{next_url}{join}try_repo={quote(new_id, safe='')}"
+        return next_url
+    return "/discover?added=1"

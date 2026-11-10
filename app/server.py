@@ -23,7 +23,7 @@ from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_
 from app.claims_page import claims_page
 from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
-from app.discover_model import _discover_model
+from app.discover_model import _add_discover_repo, _discover_model
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
@@ -666,25 +666,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_publish_selected(ws, form))
                 return
             if path == "/discover/repos":
-                data = load_repos(ws.root)
-                add_repo(
-                    ws.root,
-                    data,
-                    name=(form.get("name") or [""])[0],
-                    path=(form.get("path") or [""])[0],
-                )
-                save_repos(ws.root, data)
-                new_id = str((data.get("repos") or [])[-1].get("id") or "")
-                if new_id:
-                    set_open_repo(ws.root, new_id)
-                next_url = _safe_local_next((form.get("next") or [""])[0])
-                if next_url:
-                    join = "&" if "?" in next_url else "?"
-                    if new_id and "try_repo=" not in next_url:
-                        next_url = f"{next_url}{join}try_repo={quote(new_id, safe='')}"
-                    self._redirect(next_url)
-                else:
-                    self._redirect("/discover?added=1")
+                self._redirect(_add_discover_repo(ws, form))
                 return
             if path == "/discover/run":
                 job_id = _start_discover(ws, form)
