@@ -1,4 +1,4 @@
-"""Demo requirement GET, save, and publish. The URLs stay on the old server."""
+"""Demo requirement GET, save, publish, and pack seal. The URLs stay on the old server."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from app.requirement_page import requirement_page
 from common.errors import ModelError
 from common.keystore import load_or_create_key
 from common.store import load_requirement, save_requirement
-from requirements.editing import apply_edits, publish_requirement
+from requirements.editing import apply_edits, publish_requirement, seal_pack_directory
 from workflow import snapshot
 
 if TYPE_CHECKING:
@@ -78,3 +78,19 @@ def _publish_demo_requirement(ws: Workspace, form: dict) -> str:
     published = publish_requirement(current, name=name, private_key=private, at=_now())
     save_requirement(ws.pack, published, published=True)
     return "/requirement?published=1"
+
+
+def _seal_demo_pack(ws: Workspace, form: dict) -> str:
+    from app.server import _now
+
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    if not (ws.pack / "pack.json").is_file():
+        raise ModelError(
+            "demo pack",
+            "pack.json",
+            "a prepared sample under packs/cra-baseline/ "
+            "(use Prepare sample workspace on the cover)",
+        )
+    seal_pack_directory(ws.pack, name=name, private_key=private, at=_now())
+    return "/requirement?sealed=1"
