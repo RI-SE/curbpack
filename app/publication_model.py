@@ -1,15 +1,16 @@
-"""Legacy Publish view-model. The URL stays on the old server.
+"""Legacy Publish view-model and seal POST. The URL stays on the old server.
 
 EP-11 retires the separate Publish lifecycle. This module preserves the
-current page. It does not rebuild or extend that lifecycle.
+current page and the existing seal call. It does not rebuild or extend that lifecycle.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from common.keystore import trust_store
-from requirements.editing import read_pack_seal
+from common.errors import ModelError
+from common.keystore import load_or_create_key, trust_store
+from requirements.editing import read_pack_seal, seal_pack_directory
 from requirements.workspace import list_publication_blockers, load_working_copy, selected_copy
 
 if TYPE_CHECKING:
@@ -37,3 +38,16 @@ def _publication_model(ws: Workspace, query: dict) -> dict:
         "coverage_detail": _coverage_detail(directory),
         "message": message,
     }
+
+
+def _seal_selected(ws: Workspace, form: dict) -> str:
+    from app.server import _active_adapter, _now
+
+    adapter = _active_adapter(ws)
+    directory = selected_copy(ws.root, adapter["pack_id"])
+    if directory is None:
+        raise ModelError("working copy", "timestamp", "a selected working copy")
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    seal_pack_directory(directory, name=name, private_key=private, at=_now())
+    return "/requirements/publish?sealed=1"

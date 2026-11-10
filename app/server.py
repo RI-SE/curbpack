@@ -31,7 +31,7 @@ from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
-from app.publication_model import _publication_model
+from app.publication_model import _publication_model, _seal_selected
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
 from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
@@ -645,8 +645,7 @@ def make_handler(ws: Workspace):
                 self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
                 return
             if path == "/requirements/seal":
-                _seal_selected(ws, form)
-                self._redirect("/requirements/publish?sealed=1")
+                self._redirect(_seal_selected(ws, form))
                 return
             if path == "/requirements/consolidate/apply":
                 _apply_consolidation_form(ws, form)
@@ -1655,16 +1654,6 @@ def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> None:
         signed,
         expected_digest=(form.get("expected_digest") or [""])[0],
     )
-
-
-def _seal_selected(ws: Workspace, form: dict) -> None:
-    adapter = _active_adapter(ws)
-    directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        raise ModelError("working copy", "timestamp", "a selected working copy")
-    name = (form.get("name") or [""])[0].strip()
-    private, _public = load_or_create_key(ws.keys, name)
-    seal_pack_directory(directory, name=name, private_key=private, at=_now())
 
 
 def _publish_selected(ws: Workspace, form: dict) -> None:
