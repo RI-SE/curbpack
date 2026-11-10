@@ -1,4 +1,4 @@
-"""Working-copy view-model. The URL stays on the old server."""
+"""Working-copy view-model and select POST. The URL stays on the old server."""
 
 from __future__ import annotations
 
@@ -12,9 +12,12 @@ from common.store import load_pack_directory
 from requirements.catalog import load_catalog
 from requirements.workspace import (
     load_working_copy,
+    mark_selected,
+    mark_source_adapter,
     read_selection,
     resolve_selected_pack,
     selected_copy,
+    selected_source_adapter,
 )
 
 if TYPE_CHECKING:
@@ -144,3 +147,21 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
         else "",
         **document,
     }
+
+
+def _select_working_copy(ws: Workspace, form: dict) -> str:
+    from app.server import _load_adapter
+
+    adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
+    _adapter_dir, adapter = _load_adapter(adapter_id)
+    timestamp = (form.get("timestamp") or [""])[0].strip()
+    if not timestamp:
+        raise ModelError(adapter_id, "timestamp", "a dated working copy")
+    mark_source_adapter(ws.root, adapter_id)
+    mark_selected(ws.root, adapter["pack_id"], timestamp)
+    nxt = (form.get("next") or [""])[0].strip()
+    if nxt == "edit":
+        return "/requirements/copy"
+    if nxt == "publish":
+        return "/requirements/publish"
+    return "/requirements?selected=1"

@@ -21,7 +21,7 @@ from app.check_model import _check_editor_model, _check_report, _run_check
 from app.check_page import check_page
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.claims_page import claims_page
-from app.copy_model import _copy_model
+from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
 from app.discover_model import _discover_model
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
@@ -107,7 +107,6 @@ from requirements.workspace import (
     list_published_versions,
     list_working_copies,
     load_working_copy,
-    mark_selected,
     mark_source_adapter,
     publish_pack,
     read_selection,
@@ -610,20 +609,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_add_catalog_section(ws, form))
                 return
             if path == "/requirements/select":
-                adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
-                _adapter_dir, adapter = _load_adapter(adapter_id)
-                timestamp = (form.get("timestamp") or [""])[0].strip()
-                if not timestamp:
-                    raise ModelError(adapter_id, "timestamp", "a dated working copy")
-                mark_source_adapter(ws.root, adapter_id)
-                mark_selected(ws.root, adapter["pack_id"], timestamp)
-                nxt = (form.get("next") or [""])[0].strip()
-                if nxt == "edit":
-                    self._redirect("/requirements/copy")
-                elif nxt == "publish":
-                    self._redirect("/requirements/publish")
-                else:
-                    self._redirect("/requirements?selected=1")
+                self._redirect(_select_working_copy(ws, form))
                 return
             if path == "/requirements/extract":
                 adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
