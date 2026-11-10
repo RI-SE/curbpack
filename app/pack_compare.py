@@ -99,7 +99,7 @@ def _resolve_compare_ref(root: Path, pack_id: str, ref: str) -> Path:
     return select_working_copy(root, pack_id, raw)
 
 
-def _apply_compare_form(ws: Workspace, form: dict) -> None:
+def _apply_compare_form(ws: Workspace, form: dict) -> str:
     from app.server import _active_adapter
 
     adapter = _active_adapter(ws)
@@ -120,3 +120,4 @@ def _apply_compare_form(ws: Workspace, form: dict) -> None:
         source_digest=(form.get("source_digest") or [""])[0],
         destination_digest=destination_digest or None,
     )
+    return f"/requirements/compare?left={source_ref}&right={destination_ref}"

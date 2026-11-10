@@ -591,10 +591,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_apply_extraction_review(ws, form))
                 return
             if path == "/requirements/compare/apply":
-                _apply_compare_form(ws, form)
-                source = (form.get("source") or [""])[0]
-                destination = (form.get("destination") or [""])[0]
-                self._redirect(f"/requirements/compare?left={source}&right={destination}")
+                self._redirect(_apply_compare_form(ws, form))
                 return
             if path == "/requirements/export":
                 _export_selected(self, ws, form)
