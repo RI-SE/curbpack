@@ -95,8 +95,8 @@ def _editor_message(query: dict) -> str:
     return ""
 
 
-def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> None:
-    from app.server import _open_requirement
+def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> str:
+    from app.server import _open_requirement, _pack_query
 
     directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
     if directory is None or requirement is None:
@@ -107,6 +107,9 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> No
         edited,
         expected_digest=(form.get("expected_digest") or [""])[0],
     )
+    extra = _pack_query(form)
+    suffix = f"?{extra}&saved=1" if extra else "?saved=1"
+    return f"/requirements/requirement/{requirement_id}{suffix}"
 
 
 def _edits_from_form(requirement: dict, form: dict) -> dict:

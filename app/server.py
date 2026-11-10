@@ -632,10 +632,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/requirements/requirement/"):
                 requirement_id = path[len("/requirements/requirement/") :]
-                _save_requirement_form(ws, requirement_id, form)
-                extra = _pack_query(form)
-                suffix = f"?{extra}&saved=1" if extra else "?saved=1"
-                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
+                self._redirect(_save_requirement_form(ws, requirement_id, form))
                 return
             if path == "/requirements/seal":
                 self._redirect(_seal_selected(ws, form))
