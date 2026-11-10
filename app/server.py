@@ -25,6 +25,7 @@ from app.cover import cover
 from app.discover_model import _add_discover_repo, _discover_model, _start_discover
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.empty_folder import _start_empty_folder
+from app.extract_abort import _abort_extract
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
@@ -97,7 +98,7 @@ from requirements.catalog import (
     add_document,
     ensure_catalog,
 )
-from requirements.jobs import read_job, request_abort
+from requirements.jobs import read_job
 from requirements.ui import pages as requirement_pages
 from requirements.ui import try_discovery as try_discovery_ui
 from requirements.workspace import (
@@ -561,10 +562,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/requirements/jobs/") and path.endswith("/abort"):
                 job_id = path[len("/requirements/jobs/") : -len("/abort")]
-                request_abort(ws.root / "jobs", job_id)
-                document_id = (form.get("document") or [""])[0].strip()
-                located = f"document={document_id}&" if document_id else ""
-                self._redirect(f"/requirements?{located}job={job_id}")
+                self._redirect(_abort_extract(ws, job_id, form))
                 return
             if path.startswith("/requirements/requirement/") and path.endswith("/sign"):
                 requirement_id = path[len("/requirements/requirement/") : -len("/sign")]
