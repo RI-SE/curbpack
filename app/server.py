@@ -32,7 +32,7 @@ from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
-from app.requirement_editor import _editor_model, _save_requirement_form
+from app.requirement_editor import _editor_model, _save_requirement_form, _sign_requirement
 from app.requirement_page import requirement_page
 from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
 from app.review_page import review_page
@@ -80,9 +80,7 @@ from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, 
 from discovery.try_run import read_try_job, start_try_job
 from requirements.editing import (
     apply_edits,
-    approve_working_copy,
     publish_requirement,
-    save_working_requirement,
     seal_pack_directory,
 )
 from requirements.extract.adapter import (
@@ -620,10 +618,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/requirements/requirement/") and path.endswith("/sign"):
                 requirement_id = path[len("/requirements/requirement/") : -len("/sign")]
-                _sign_requirement(ws, requirement_id, form)
-                extra = _pack_query(form)
-                suffix = f"?{extra}&signed=1" if extra else "?signed=1"
-                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
+                self._redirect(_sign_requirement(ws, requirement_id, form))
                 return
             if path.startswith("/requirements/requirement/") and path.endswith("/try-discovery"):
                 requirement_id = path[
@@ -1530,23 +1525,6 @@ def _open_requirement(ws: Workspace, requirement_id: str, params: dict):
     pack, requirements = load_pack_directory(pack_dir)
     match = next((item for item in requirements if item["id"] == requirement_id), None)
     return pack_dir, pack, match
-
-
-def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> None:
-    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
-    if directory is None or requirement is None:
-        raise ModelError("requirement", "id", "a requirement in the selected working copy")
-    name = (form.get("name") or [""])[0].strip()
-    private, _public = load_or_create_key(ws.keys, name)
-    if "origin" in requirement:
-        signed = approve_working_copy(requirement, name=name, private_key=private, at=_now())
-    else:
-        signed = publish_requirement(requirement, name=name, private_key=private, at=_now())
-    save_working_requirement(
-        directory,
-        signed,
-        expected_digest=(form.get("expected_digest") or [""])[0],
-    )
 
 
 def _safe_local_next(raw: str) -> str:

@@ -1,4 +1,7 @@
-"""Requirement editor view-model and save. Renders nothing and does not sign."""
+"""Requirement editor view-model, save, and sign POST. Renders nothing.
+
+The URLs stay on the old server.
+"""
 
 from __future__ import annotations
 
@@ -8,13 +11,15 @@ from typing import TYPE_CHECKING
 
 from common.canonical import version_digest
 from common.errors import ModelError
-from common.keystore import trust_store
+from common.keystore import load_or_create_key, trust_store
 from common.signing import read_signature
 from discovery.repos import load_repos
 from discovery.try_run import load_try_result, read_try_job
 from requirements.editing import (
     apply_edits,
+    approve_working_copy,
     assign_reference_numbers,
+    publish_requirement,
     read_pack_seal,
     save_working_requirement,
 )
@@ -161,3 +166,25 @@ def _edits_from_form(requirement: dict, form: dict) -> dict:
             ]
         )
     return edits
+
+
+def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> str:
+    from app.server import _now, _open_requirement, _pack_query
+
+    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
+    if directory is None or requirement is None:
+        raise ModelError("requirement", "id", "a requirement in the selected working copy")
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    if "origin" in requirement:
+        signed = approve_working_copy(requirement, name=name, private_key=private, at=_now())
+    else:
+        signed = publish_requirement(requirement, name=name, private_key=private, at=_now())
+    save_working_requirement(
+        directory,
+        signed,
+        expected_digest=(form.get("expected_digest") or [""])[0],
+    )
+    extra = _pack_query(form)
+    suffix = f"?{extra}&signed=1" if extra else "?signed=1"
+    return f"/requirements/requirement/{requirement_id}{suffix}"
