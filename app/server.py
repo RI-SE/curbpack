@@ -26,6 +26,7 @@ from app.cover import cover
 from app.discover_model import _discover_model
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.extract_review import _apply_extraction_review, _extract_review_model
+from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
@@ -93,12 +94,11 @@ from requirements.extract.adapter import (
     section_provisions,
     stage00,
 )
-from requirements.extract.pipeline import draft_pack
 from requirements.catalog import (
     add_document,
     ensure_catalog,
 )
-from requirements.jobs import read_job, request_abort, start_extract_job
+from requirements.jobs import read_job, request_abort
 from requirements.ui import pages as requirement_pages
 from requirements.ui import try_discovery as try_discovery_ui
 from requirements.workspace import (
@@ -612,53 +612,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_select_working_copy(ws, form))
                 return
             if path == "/requirements/extract":
-                adapter_id = (form.get("adapter_id") or [""])[0].strip() or selected_source_adapter(ws.root)
-                section_id = (form.get("section_id") or [""])[0].strip()
-                adapter_dir, adapter = _load_adapter(adapter_id)
-                mark_source_adapter(ws.root, adapter_id)
-                if not section_id:
-                    raise ModelError(adapter_id, "section_id", "a ready section id")
-                ready = next(
-                    (
-                        item
-                        for item in adapter.get("sections") or []
-                        if item.get("id") == section_id
-                        and item.get("ready") is True
-                        and item.get("in_scope") is True
-                    ),
-                    None,
-                )
-                if ready is None:
-                    raise ModelError(
-                        adapter_id,
-                        "section_id",
-                        f"a ready in-scope section, not {section_id}",
-                    )
-                document_id = (form.get("document_id") or [""])[0].strip()
-                repo_id = (form.get("repo") or [""])[0].strip()
-                dest_repo = ""
-                dest_pack = ""
-                if document_id:
-                    found = _locate_repo_pack(ws, document_id, repo_id)
-                    if found is not None:
-                        dest_repo = found[0]
-                        dest_pack = document_id
-                job_id = f"extract-{secrets.token_hex(4)}"
-                start_extract_job(
-                    ws.root / "jobs",
-                    job_id=job_id,
-                    root=ws.root,
-                    adapter_dir=adapter_dir,
-                    section_id=section_id,
-                    pack=_pack_for_adapter(adapter),
-                    dest_repo=dest_repo,
-                    dest_pack=dest_pack,
-                )
-                located = f"document={document_id}&" if document_id else ""
-                repo_id = (form.get("repo") or [""])[0].strip()
-                if repo_id:
-                    located += f"repo={quote(repo_id, safe='')}&"
-                self._redirect(f"/requirements?{located}job={job_id}&adapter={adapter_id}")
+                self._redirect(_start_extract(ws, form))
                 return
             if path.startswith("/requirements/jobs/") and path.endswith("/abort"):
                 job_id = path[len("/requirements/jobs/") : -len("/abort")]
@@ -821,16 +775,6 @@ def _load_adapter(adapter_id: str) -> tuple[Path, dict]:
 def _active_adapter(ws: Workspace) -> dict:
     _dir, adapter = _load_adapter(selected_source_adapter(ws.root))
     return adapter
-
-
-def _pack_for_adapter(adapter: dict) -> dict:
-    if adapter.get("id") == "cra":
-        return draft_pack()
-    return {
-        "id": adapter["pack_id"],
-        "name": f"{adapter['id']} extract",
-        "version": "0.1.0",
-    }
 
 
 def _catalog_message(query: dict, *, added: str) -> str:
