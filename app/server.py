@@ -31,6 +31,7 @@ from app.inspect_model import _inspect_model
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
+from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
 from app.requirement_editor import (
     _editor_model,
@@ -68,7 +69,6 @@ from common.store import (
 )
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
-from demo_setup import prepare_demo
 from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import request_abort as abort_discover_job
 from discovery.browse import list_directories
@@ -581,8 +581,7 @@ def make_handler(ws: Workspace):
                 self._redirect(researcher)
                 return
             if path == "/prepare":
-                prepare_demo(ws.root)
-                self._redirect("/?prepared=1")
+                self._redirect(_prepare_workspace(ws))
                 return
             if path == "/select-pack":
                 self._redirect(_select_pack(ws, form))
