@@ -226,3 +226,10 @@ def _start_discover(ws: Workspace, form: dict) -> str:
         complete=getattr(ws, "discover_complete", None),
     )
     return f"/discover?job={job_id}"
+
+
+def _abort_discover(ws: Workspace, job_id: str) -> str:
+    from discovery.jobs import request_abort
+
+    request_abort(ws.root / "jobs", job_id)
+    return f"/discover?job={job_id}"

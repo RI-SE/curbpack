@@ -22,7 +22,7 @@ from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_
 from app.claims_page import claims_page
 from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
-from app.discover_model import _add_discover_repo, _discover_model, _start_discover
+from app.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.empty_folder import _start_empty_folder
 from app.extract_abort import _abort_extract
@@ -71,7 +71,6 @@ from common.store import (
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
 from discovery.jobs import read_job as read_discover_job
-from discovery.jobs import request_abort as abort_discover_job
 from discovery.browse import list_directories
 from discovery.door import (
     open_paths,
@@ -604,8 +603,7 @@ def make_handler(ws: Workspace):
                 return
             if path.startswith("/discover/jobs/") and path.endswith("/abort"):
                 job_id = path[len("/discover/jobs/") : -len("/abort")]
-                abort_discover_job(ws.root / "jobs", job_id)
-                self._redirect(f"/discover?job={job_id}")
+                self._redirect(_abort_discover(ws, job_id))
                 return
             if path == "/requirement":
                 current = load_requirement(_require_demo_requirement(ws))
