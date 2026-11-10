@@ -35,7 +35,7 @@ from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
-from app.requirement_demo import _demo_requirement
+from app.requirement_demo import _demo_requirement, _save_demo_requirement
 from app.requirement_editor import (
     _editor_model,
     _run_try_discovery,
@@ -84,7 +84,6 @@ from discovery.door import (
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import read_try_job
 from requirements.editing import (
-    apply_edits,
     publish_requirement,
     seal_pack_directory,
 )
@@ -186,30 +185,6 @@ def _now() -> str:
 
 def _lines(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
-
-
-def edits_for_requirement(requirement: dict, form: dict) -> dict:
-    source = dict(requirement["source"])
-    edition = (form.get("edition") or [""])[0].strip()
-    if edition:
-        source["edition"] = edition
-    else:
-        source.pop("edition", None)
-    hints = {
-        "concepts": _lines((form.get("concepts") or [""])[0]),
-        "path_hints": _lines((form.get("path_hints") or [""])[0]),
-        "expected_evidence": _lines((form.get("expected_evidence") or [""])[0]),
-    }
-    sources = [{"source": item} for item in _lines((form.get("sources") or [""])[0])]
-    if sources:
-        hints["sources"] = sources
-    hints = {key: value for key, value in hints.items() if value}
-    return {
-        "source": source,
-        "remediation_hint": (form.get("remediation_hint") or [""])[0].strip(),
-        "note": (form.get("note") or [""])[0].strip(),
-        "discovery_hints": hints,
-    }
 
 
 def _requested_dated(folder: Path, requested: str, prefix: str) -> tuple[str, str]:
@@ -606,10 +581,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_abort_discover(ws, job_id))
                 return
             if path == "/requirement":
-                current = load_requirement(_require_demo_requirement(ws))
-                edited = apply_edits(current, edits_for_requirement(current, form))
-                save_requirement(ws.pack, edited)
-                self._redirect("/requirement?saved=1")
+                self._redirect(_save_demo_requirement(ws, form))
                 return
             if path == "/publish":
                 name = (form.get("name") or [""])[0].strip()
