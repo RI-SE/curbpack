@@ -17,7 +17,6 @@ from app import pages
 from app import project_selector
 from app.catalog_model import _add_catalog_section, _catalog_model
 from app.check_model import _check_editor_model, _check_report, _run_check
-from app.check_page import check_page
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
@@ -116,6 +115,7 @@ from requirements.workspace import (
 from review.compile import (
     durable_report_path,
 )
+from studio.check.check_page import check_page
 from studio.claim.claims_page import claims_page
 
 ROOT = install_root()
