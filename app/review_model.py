@@ -386,3 +386,55 @@ def _sign_review(ws: Workspace, form: dict) -> str:
         f"/review?repo={quote(repo_id, safe='')}&signed=1"
         f"&report={quote(report_path, safe='')}"
     )
+
+
+def _review_message(query: dict) -> str:
+    if (query.get("compiled") or [""])[0]:
+        return "Report compiled."
+    if (query.get("saved") or [""])[0]:
+        return "Decision saved."
+    if (query.get("signed") or [""])[0]:
+        return "Report sealed."
+    if (query.get("claim_changed") or [""])[0]:
+        return (
+            "The current Claim has changed. "
+            "A new curbcheck run is required for a new run result, and then a new review report."
+        )
+    return ""
+
+
+def _review_get(ws: Workspace, query: dict) -> bytes:
+    from app.review_page import review_page
+    from app.server import _door_chrome, _listed_repos, _sync_open_repo
+
+    try:
+        report, reading, error, saved, report_exists, same, unchecked, extra = _review_view(ws, query)
+        door = _door_chrome(ws, query)
+    except (ModelError, ValueError) as exc:
+        if "curbpack.json" not in str(exc):
+            raise
+        return review_page(
+            None,
+            None,
+            error=str(exc),
+            door={"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)},
+        )
+    door.update(extra)
+    if extra.get("selected_report"):
+        door["report_path"] = extra["selected_report"]
+    return review_page(
+        report,
+        reading,
+        message=_review_message(query),
+        error=error,
+        discovery={
+            "repo_id": (query.get("repo") or query.get("repo_id") or [""])[0],
+            "source_id": (query.get("source") or query.get("source_id") or [""])[0],
+            "timestamp": (query.get("timestamp") or [""])[0],
+        },
+        saved=saved,
+        report_exists=report_exists,
+        same_run_value=same,
+        unchecked=unchecked,
+        door=door,
+    )

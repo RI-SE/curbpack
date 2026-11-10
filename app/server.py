@@ -41,8 +41,7 @@ from app.requirement_editor import (
     _save_requirement_form,
     _sign_requirement,
 )
-from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
-from app.review_page import review_page
+from app.review_model import _compile_review, _review_get, _save_review_decision, _sign_review
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
 from app.studio_model import _save_studio, _studio_model
@@ -211,21 +210,6 @@ def edits_for_requirement(requirement: dict, form: dict) -> dict:
         "note": (form.get("note") or [""])[0].strip(),
         "discovery_hints": hints,
     }
-
-
-def _review_message(query: dict) -> str:
-    if (query.get("compiled") or [""])[0]:
-        return "Report compiled."
-    if (query.get("saved") or [""])[0]:
-        return "Decision saved."
-    if (query.get("signed") or [""])[0]:
-        return "Report sealed."
-    if (query.get("claim_changed") or [""])[0]:
-        return (
-            "The current Claim has changed. "
-            "A new curbcheck run is required for a new run result, and then a new review report."
-        )
-    return ""
 
 
 def _requested_dated(folder: Path, requested: str, prefix: str) -> tuple[str, str]:
@@ -526,37 +510,7 @@ def make_handler(ws: Workspace):
                     editor=editor,
                 )
             if path == "/review":
-                try:
-                    report, reading, error, saved, report_exists, same, unchecked, extra = _review_view(ws, query)
-                    door = _door_chrome(ws, query)
-                except (ModelError, ValueError) as exc:
-                    if "curbpack.json" not in str(exc):
-                        raise
-                    return review_page(
-                        None,
-                        None,
-                        error=str(exc),
-                        door={"repos": _listed_repos(ws), "repo_id": _sync_open_repo(ws, query)},
-                    )
-                door.update(extra)
-                if extra.get("selected_report"):
-                    door["report_path"] = extra["selected_report"]
-                return review_page(
-                    report,
-                    reading,
-                    message=_review_message(query),
-                    error=error,
-                    discovery={
-                        "repo_id": (query.get("repo") or query.get("repo_id") or [""])[0],
-                        "source_id": (query.get("source") or query.get("source_id") or [""])[0],
-                        "timestamp": (query.get("timestamp") or [""])[0],
-                    },
-                    saved=saved,
-                    report_exists=report_exists,
-                    same_run_value=same,
-                    unchecked=unchecked,
-                    door=door,
-                )
+                return _review_get(ws, query)
             if path == "/studio":
                 return studio_page(_studio_model(ws, query), message=_studio_message(query))
             return pages.page("Not found", "<p>Unknown page.</p>")
