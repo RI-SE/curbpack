@@ -27,7 +27,7 @@ from app.documents_model import _documents_model, _save_curbpack, _save_pack_doc
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
-from app.inspect_model import _inspect_model
+from app.inspect_model import _inspect_model, _select_source
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
@@ -587,10 +587,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_select_pack(ws, form))
                 return
             if path == "/requirements/source":
-                adapter_id = (form.get("adapter_id") or [""])[0].strip()
-                mark_source_adapter(ws.root, adapter_id)
-                _load_adapter(adapter_id)
-                self._redirect(f"/requirements/inspect?adapter={adapter_id}")
+                self._redirect(_select_source(ws, form))
                 return
             if path == "/requirements/start-empty":
                 repo_id = _start_empty_folder(ws, (form.get("folder") or [""])[0])

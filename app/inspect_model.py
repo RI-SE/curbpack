@@ -1,4 +1,4 @@
-"""Source-details GET model. The URL stays on the old server."""
+"""Source-details GET model and source POST. The URLs stay on the old server."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from common.errors import ModelError
 from requirements.extract.adapter import section_provisions, stage00
+from requirements.workspace import mark_source_adapter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -62,3 +63,12 @@ def _inspect_model(ws: Workspace, query: dict) -> dict:
         "provisions_preview": provisions_preview,
         "provision_diagnostics": provision_diagnostics,
     }
+
+
+def _select_source(ws: Workspace, form: dict) -> str:
+    from app.server import _load_adapter
+
+    adapter_id = (form.get("adapter_id") or [""])[0].strip()
+    mark_source_adapter(ws.root, adapter_id)
+    _load_adapter(adapter_id)
+    return f"/requirements/inspect?adapter={adapter_id}"
