@@ -31,7 +31,7 @@ from app.home_model import _home_model, _select_pack
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
-from app.publication_model import _publication_model, _seal_selected
+from app.publication_model import _publication_model, _publish_selected, _seal_selected
 from app.requirement_editor import _editor_model, _save_requirement_form
 from app.requirement_page import requirement_page
 from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
@@ -108,7 +108,6 @@ from requirements.workspace import (
     list_working_copies,
     load_working_copy,
     mark_source_adapter,
-    publish_pack,
     read_selection,
     resolve_copy_ref,
     resolve_selected_pack,
@@ -664,8 +663,7 @@ def make_handler(ws: Workspace):
                 _export_selected(self, ws, form)
                 return
             if path == "/requirements/publish":
-                _publish_selected(ws, form)
-                self._redirect("/requirements?published=1")
+                self._redirect(_publish_selected(ws, form))
                 return
             if path == "/discover/repos":
                 data = load_repos(ws.root)
@@ -1654,15 +1652,6 @@ def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> None:
         signed,
         expected_digest=(form.get("expected_digest") or [""])[0],
     )
-
-
-def _publish_selected(ws: Workspace, form: dict) -> None:
-    adapter = _active_adapter(ws)
-    directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        raise ModelError("working copy", "timestamp", "a selected working copy")
-    version = (form.get("version") or [""])[0].strip()
-    publish_pack(ws.root, directory, version=version, trust=trust_store(ws.keys))
 
 
 def _safe_local_next(raw: str) -> str:
