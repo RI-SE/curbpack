@@ -584,8 +584,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_seal_selected(ws, form))
                 return
             if path == "/requirements/consolidate/apply":
-                _apply_consolidation_form(ws, form)
-                self._redirect("/requirements/consolidate?merged=1")
+                self._redirect(_apply_consolidation_form(ws, form))
                 return
             if path == "/requirements/extract/review":
                 self._redirect(_apply_extraction_review(ws, form))

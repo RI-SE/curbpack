@@ -28,7 +28,7 @@ def _consolidate_model(ws: Workspace) -> dict:
     }
 
 
-def _apply_consolidation_form(ws: Workspace, form: dict) -> None:
+def _apply_consolidation_form(ws: Workspace, form: dict) -> str:
     from app.server import _active_adapter
 
     adapter = _active_adapter(ws)
@@ -50,3 +50,4 @@ def _apply_consolidation_form(ws: Workspace, form: dict) -> None:
         [{"locator": locator, "law_text": text} for locator, text in zip(locators, texts)],
         digests=dict(zip(digest_ids, digest_values)),
     )
+    return "/requirements/consolidate?merged=1"
