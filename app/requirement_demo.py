@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from app.requirement_page import requirement_page
+from studio.pack.requirement_page import requirement_page
 from common.errors import ModelError
 from common.keystore import load_or_create_key
 from common.store import load_requirement, save_requirement
