@@ -34,13 +34,13 @@ from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
+from app.requirement_demo import _demo_requirement
 from app.requirement_editor import (
     _editor_model,
     _run_try_discovery,
     _save_requirement_form,
     _sign_requirement,
 )
-from app.requirement_page import requirement_page
 from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
 from app.review_page import review_page
 from app.scaffold_page import scaffold_page
@@ -120,7 +120,6 @@ from requirements.workspace import (
 from review.compile import (
     durable_report_path,
 )
-from workflow import snapshot
 
 ROOT = install_root()
 _VENDOR = {
@@ -499,9 +498,7 @@ def make_handler(ws: Workspace):
                 requirement_id = path[len("/requirements/requirement/") :]
                 return requirement_pages.editor_page(_editor_model(ws, requirement_id, query))
             if path == "/requirement":
-                requirement = load_requirement(_require_demo_requirement(ws))
-                reading = snapshot(ws.root)["requirement_reading"]
-                return requirement_page(requirement, reading)
+                return _demo_requirement(ws)
             if path == "/discover/repo":
                 return claim_pages.discover_page(_discover_model(ws, query, product=True))
             if path == "/discover":
