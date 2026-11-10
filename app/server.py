@@ -22,7 +22,6 @@ from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
 from app.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
-from app.extract_abort import _abort_extract
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
@@ -117,6 +116,7 @@ from review.compile import (
 from studio.check.check_page import check_page
 from studio.claim.claims_page import claims_page
 from studio.pack.empty_folder import _start_empty_folder
+from studio.pack.extract_abort import _abort_extract
 
 ROOT = install_root()
 _VENDOR = {
