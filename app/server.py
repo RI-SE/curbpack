@@ -27,6 +27,7 @@ from app.documents_model import _documents_model, _save_curbpack, _save_pack_doc
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
+from app.inspect_model import _inspect_model
 from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
@@ -91,8 +92,6 @@ from requirements.extract.adapter import (
     ADAPTERS,
     list_adapters,
     load_adapter,
-    section_provisions,
-    stage00,
 )
 from requirements.catalog import (
     add_document,
@@ -1226,55 +1225,6 @@ def _catalog_job(ws: Workspace, query: dict):
     if not job_id:
         return None
     return read_job(ws.root / "jobs", job_id)
-
-
-def _adapter_from_query(ws: Workspace, query: dict) -> tuple[Path, dict]:
-    adapter_id = (query.get("adapter") or [""])[0].strip()
-    if not adapter_id:
-        raise ModelError("source", "adapter", "an adapter id")
-    return _load_adapter(adapter_id)
-
-
-def _inspect_model(ws: Workspace, query: dict) -> dict:
-    adapter_dir, adapter = _adapter_from_query(ws, query)
-    listed = stage00(adapter, adapter_dir=adapter_dir)
-    ready_sections = [
-        item
-        for item in listed["sections"]
-        if item.get("ready") is True and item.get("in_scope") is True
-    ]
-    inspect_section = (query.get("section") or [""])[0].strip()
-    provisions_preview = None
-    provision_diagnostics = []
-    if inspect_section and any(item["id"] == inspect_section for item in ready_sections):
-        extracted = section_provisions(adapter_dir, adapter, inspect_section)
-        provisions_preview = extracted["provisions"]
-        provision_diagnostics = list(extracted.get("diagnostics") or [])
-    sections = []
-    for item in listed["sections"]:
-        match = next(
-            (section for section in adapter.get("sections") or [] if section.get("id") == item.get("id")),
-            {},
-        )
-        sections.append(
-            {
-                "id": item.get("id"),
-                "title": match.get("title") or "",
-                "ready": item.get("ready"),
-                "in_scope": item.get("in_scope"),
-            }
-        )
-    return {
-        "adapter_id": adapter.get("id"),
-        "status": adapter.get("status"),
-        "source_format": adapter.get("source_format") or "text",
-        "source": adapter.get("source") or {},
-        "sections": sections,
-        "inventory": listed.get("inventory"),
-        "inspect_section": inspect_section,
-        "provisions_preview": provisions_preview,
-        "provision_diagnostics": provision_diagnostics,
-    }
 
 
 def _requirement_rows(directory: Path, requirements: list[dict], trust: dict) -> list[dict]:
