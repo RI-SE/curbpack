@@ -655,8 +655,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_add_discover_repo(ws, form))
                 return
             if path == "/discover/run":
-                job_id = _start_discover(ws, form)
-                self._redirect(f"/discover?job={job_id}")
+                self._redirect(_start_discover(ws, form))
                 return
             if path.startswith("/discover/jobs/") and path.endswith("/abort"):
                 job_id = path[len("/discover/jobs/") : -len("/abort")]

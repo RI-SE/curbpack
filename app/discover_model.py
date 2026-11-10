@@ -181,7 +181,8 @@ def _start_discover(ws: Workspace, form: dict) -> str:
     repo_id = (form.get("repo_id") or [""])[0].strip()
     pack_id = (form.get("pack_id") or [""])[0].strip()
     if pack_id:
-        return _start_pack_discover(ws, repo_id, pack_id, form)
+        job_id = _start_pack_discover(ws, repo_id, pack_id, form)
+        return f"/discover?job={job_id}"
     source_id = (form.get("source_id") or [""])[0].strip()
     timestamp = (form.get("timestamp") or [""])[0].strip()
     data = load_repos(ws.root)
@@ -224,4 +225,4 @@ def _start_discover(ws: Workspace, form: dict) -> str:
         assess_limit=int(raw_limit),
         complete=getattr(ws, "discover_complete", None),
     )
-    return job_id
+    return f"/discover?job={job_id}"
