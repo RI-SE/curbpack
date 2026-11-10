@@ -1,7 +1,11 @@
-"""Discover packs view-model and repository POST. The URL stays on the old server."""
+"""Discover packs view-model, repository POST, and discover run.
+
+The URLs stay on the old server.
+"""
 
 from __future__ import annotations
 
+import secrets
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
@@ -9,9 +13,12 @@ from claims.bind import read_claims
 from common.errors import ModelError
 from common.jsonio import read_json
 from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements, set_open_repo
+from discovery.jobs import CURBPACK_COPY
 from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import reviewable_targets
+from discovery.jobs import start_discover_job
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
+from requirements.workspace import resolve_copy_ref
 
 if TYPE_CHECKING:
     from app.server import Workspace
@@ -131,3 +138,90 @@ def _add_discover_repo(ws: Workspace, form: dict) -> str:
             next_url = f"{next_url}{join}try_repo={quote(new_id, safe='')}"
         return next_url
     return "/discover?added=1"
+
+
+def _start_pack_discover(ws: Workspace, repo_id: str, pack_id: str, form: dict) -> str:
+    """Discover the requirements of one pack named in the repo's curbpack.json."""
+    data = load_repos(ws.root)
+    row = find_repo(data, repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    if pack_id not in config["packs"]:
+        raise ModelError("discover", "pack_id", f"a pack named in curbpack.json, not {pack_id}")
+    requirements = repo_pack_requirements(repo, pack_id)
+    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    if not raw_limit.isdigit():
+        raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
+    name = pack_display_name(repo, pack_id)
+    title = f"Discover — {row.get('name') or repo_id} / {name}"
+    job_id = f"discover-{secrets.token_hex(4)}"
+    start_discover_job(
+        ws.root / "jobs",
+        job_id=job_id,
+        workspace=ws.root,
+        repo_id=repo_id,
+        repo=repo,
+        requirements=requirements,
+        hunt={"search_hints": config.get("search_hints") or {}},
+        title=title.strip(),
+        source_id=pack_id,
+        timestamp=CURBPACK_COPY,
+        pack_id=pack_id,
+        assess_limit=int(raw_limit),
+        complete=getattr(ws, "discover_complete", None),
+    )
+    return job_id
+
+
+def _start_discover(ws: Workspace, form: dict) -> str:
+    repo_id = (form.get("repo_id") or [""])[0].strip()
+    pack_id = (form.get("pack_id") or [""])[0].strip()
+    if pack_id:
+        return _start_pack_discover(ws, repo_id, pack_id, form)
+    source_id = (form.get("source_id") or [""])[0].strip()
+    timestamp = (form.get("timestamp") or [""])[0].strip()
+    data = load_repos(ws.root)
+    row = find_repo(data, repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    from app.server import _registered_sources
+
+    source = next((item for item in _registered_sources(ws) if item.get("source_id") == source_id), None)
+    if source is None:
+        raise ModelError("discover", "source_id", f"a registered source, not {source_id}")
+    pack_id = source.get("pack_id")
+    if not isinstance(pack_id, str) or not pack_id:
+        raise ModelError("discover", "pack_id", "a pack id on the source")
+    if not timestamp:
+        raise ModelError("discover", "timestamp", "a working copy or published release")
+    resolve_copy_ref(ws.root, pack_id, timestamp)
+    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+    requirements = repo_pack_requirements(repo, pack_id)
+    from common.validate import validate_curbpack_config
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    hunt = {"search_hints": config.get("search_hints") or {}}
+    title = f"Discover — {row.get('name') or repo_id} / {source.get('name') or source_id} {source.get('section_id') or ''}"
+    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    if not raw_limit.isdigit():
+        raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
+    job_id = f"discover-{secrets.token_hex(4)}"
+    start_discover_job(
+        ws.root / "jobs",
+        job_id=job_id,
+        workspace=ws.root,
+        repo_id=repo_id,
+        repo=repo,
+        requirements=requirements,
+        hunt=hunt,
+        title=title.strip(),
+        source_id=source_id,
+        timestamp=timestamp,
+        assess_limit=int(raw_limit),
+        complete=getattr(ws, "discover_complete", None),
+    )
+    return job_id
