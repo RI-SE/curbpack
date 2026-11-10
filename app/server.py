@@ -24,6 +24,7 @@ from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
 from app.discover_model import _add_discover_repo, _discover_model, _start_discover
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
+from app.empty_folder import _start_empty_folder
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.extract_start import _start_extract
 from app.home_model import _home_model, _select_pack
@@ -590,8 +591,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_select_source(ws, form))
                 return
             if path == "/requirements/start-empty":
-                repo_id = _start_empty_folder(ws, (form.get("folder") or [""])[0])
-                self._redirect(f"/requirements?repo={quote(repo_id)}")
+                self._redirect(_start_empty_folder(ws, (form.get("folder") or [""])[0]))
                 return
             if path == "/requirements/curbpack":
                 self._redirect(_save_curbpack(ws, form))
@@ -1069,33 +1069,6 @@ def _door_path_fields(ws: Workspace, repo_id: str) -> dict:
         fields["results_dir_value"] = str(config["results_dir"])
         fields["reports_dir_value"] = str(config["reports_dir"])
     return fields
-
-
-def _start_empty_folder(ws: Workspace, folder: str) -> str:
-    raw = (folder or "").strip()
-    if not raw:
-        raise ModelError("curbpack.json", "folder", "a working folder")
-    resolved = resolve_repo_path(ws.root, raw)
-    resolved.mkdir(parents=True, exist_ok=True)
-    target = resolved / "curbpack.json"
-    data = load_repos(ws.root)
-    name = resolved.name or "repo"
-    try:
-        data = add_repo(ws.root, data, name=name, path=str(resolved))
-        save_repos(ws.root, data)
-        repo_id = str((data.get("repos") or [])[-1].get("id") or "")
-    except ModelError:
-        repo_id = ""
-        for row in data.get("repos") or []:
-            if resolve_repo_path(ws.root, str(row.get("path") or "")) == resolved:
-                repo_id = str(row.get("id") or "")
-                break
-        if not repo_id:
-            raise
-    if target.exists() and not target.is_file():
-        raise ModelError("curbpack.json", "folder", "a working folder")
-    set_open_repo(ws.root, repo_id)
-    return repo_id
 
 
 def _signature_counts(root: Path, pack_id: str, trust: dict) -> tuple[int | None, int | None]:
