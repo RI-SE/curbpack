@@ -1,20 +1,24 @@
-"""Requirement editor view-model, save, and sign POST. Renders nothing.
+"""Requirement editor view-model, save, sign POST, and try-discovery POST.
 
-The URLs stay on the old server.
+Renders nothing. The URLs stay on the old server.
 """
 
 from __future__ import annotations
 
 import copy
 import json
+import secrets
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from common.canonical import version_digest
 from common.errors import ModelError
+from common.jsonio import read_json
 from common.keystore import load_or_create_key, trust_store
 from common.signing import read_signature
-from discovery.repos import load_repos
-from discovery.try_run import load_try_result, read_try_job
+from discovery.door import repo_pack_requirements
+from discovery.repos import find_repo, load_repos, resolve_repo_path
+from discovery.try_run import load_try_result, read_try_job, start_try_job
 from requirements.editing import (
     apply_edits,
     approve_working_copy,
@@ -187,4 +191,70 @@ def _sign_requirement(ws: Workspace, requirement_id: str, form: dict) -> str:
     )
     extra = _pack_query(form)
     suffix = f"?{extra}&signed=1" if extra else "?signed=1"
+    return f"/requirements/requirement/{requirement_id}{suffix}"
+
+
+def _pack_id_for_requirement(repo: Path, requirement_id: str) -> str:
+    """Pack in curbpack.json that contains this requirement, or empty."""
+    if not requirement_id:
+        return ""
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        return ""
+    from common.validate import validate_curbpack_config
+
+    try:
+        config = validate_curbpack_config(read_json(path))
+    except ModelError:
+        return ""
+    for pack_id in config["packs"]:
+        try:
+            requirements = repo_pack_requirements(repo, pack_id)
+        except ModelError:
+            continue
+        if any(isinstance(item, dict) and item.get("id") == requirement_id for item in requirements):
+            return pack_id
+    return ""
+
+
+def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
+    from app.server import _open_requirement, _pack_query
+
+    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
+    if requirement is None or directory is None:
+        raise ModelError("try discovery", "requirement", "a requirement in the selected working copy")
+    repo_id = (form.get("repo_id") or [""])[0].strip()
+    data = load_repos(ws.root)
+    row = find_repo(data, repo_id)
+    if row is None:
+        raise ModelError("try discovery", "repo_id", f"a registered repository, not {repo_id}")
+    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    if not raw_limit.isdigit():
+        raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
+    assess_limit = int(raw_limit)
+    if assess_limit > 20:
+        raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
+    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+    config_path = repo / "curbpack.json"
+    config = read_json(config_path) if config_path.is_file() else {}
+    if not isinstance(config, dict):
+        config = {}
+    hunt = {"search_hints": config.get("search_hints") or {}}
+    pack_id = (form.get("pack") or [""])[0].strip() or _pack_id_for_requirement(
+        repo, str(requirement.get("id") or "")
+    )
+    job_id = f"try-{secrets.token_hex(4)}"
+    start_try_job(
+        ws.root / "jobs",
+        job_id=job_id,
+        repo=repo,
+        repo_id=repo_id,
+        requirement=requirement,
+        hunt=hunt,
+        assess_limit=assess_limit,
+        pack_id=pack_id,
+        complete=getattr(ws, "discover_complete", None),
+    )
+    extra = _pack_query(form)
+    suffix = f"?{extra}&try_job={job_id}" if extra else f"?try_job={job_id}"
     return f"/requirements/requirement/{requirement_id}{suffix}"

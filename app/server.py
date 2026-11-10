@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import secrets
 import traceback
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,7 +31,12 @@ from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
-from app.requirement_editor import _editor_model, _save_requirement_form, _sign_requirement
+from app.requirement_editor import (
+    _editor_model,
+    _run_try_discovery,
+    _save_requirement_form,
+    _sign_requirement,
+)
 from app.requirement_page import requirement_page
 from app.review_model import _compile_review, _review_view, _save_review_decision, _sign_review
 from app.review_page import review_page
@@ -77,7 +81,7 @@ from discovery.door import (
     set_open_repo,
 )
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
-from discovery.try_run import read_try_job, start_try_job
+from discovery.try_run import read_try_job
 from requirements.editing import (
     apply_edits,
     publish_requirement,
@@ -624,10 +628,7 @@ def make_handler(ws: Workspace):
                 requirement_id = path[
                     len("/requirements/requirement/") : -len("/try-discovery")
                 ]
-                job_id = _run_try_discovery(ws, requirement_id, form)
-                extra = _pack_query(form)
-                suffix = f"?{extra}&try_job={job_id}" if extra else f"?try_job={job_id}"
-                self._redirect(f"/requirements/requirement/{requirement_id}{suffix}")
+                self._redirect(_run_try_discovery(ws, requirement_id, form))
                 return
             if path.startswith("/requirements/requirement/"):
                 requirement_id = path[len("/requirements/requirement/") :]
@@ -896,29 +897,6 @@ def _copy_claim_counts(root: Path, repo: Path | None, pack_id: str, ref: str) ->
     }
     unclaimed = sum(1 for requirement_id in ids if requirement_id not in claimed)
     return len(ids), claim_count, unclaimed
-
-
-def _pack_id_for_requirement(repo: Path, requirement_id: str) -> str:
-    """Pack in curbpack.json that contains this requirement, or empty."""
-    if not requirement_id:
-        return ""
-    path = repo / "curbpack.json"
-    if not path.is_file():
-        return ""
-    from common.validate import validate_curbpack_config
-
-    try:
-        config = validate_curbpack_config(read_json(path))
-    except ModelError:
-        return ""
-    for pack_id in config["packs"]:
-        try:
-            requirements = repo_pack_requirements(repo, pack_id)
-        except ModelError:
-            continue
-        if any(isinstance(item, dict) and item.get("id") == requirement_id for item in requirements):
-            return pack_id
-    return ""
 
 
 def _formex_sources() -> list[dict]:
@@ -1353,45 +1331,6 @@ def _shown_pack_dir(ws: Workspace, pack_id: str, fallback: Path | None) -> str:
     if fallback is not None:
         return str(fallback.resolve())
     return ""
-
-
-def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
-    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
-    if requirement is None or directory is None:
-        raise ModelError("try discovery", "requirement", "a requirement in the selected working copy")
-    repo_id = (form.get("repo_id") or [""])[0].strip()
-    data = load_repos(ws.root)
-    row = find_repo(data, repo_id)
-    if row is None:
-        raise ModelError("try discovery", "repo_id", f"a registered repository, not {repo_id}")
-    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
-    if not raw_limit.isdigit():
-        raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
-    assess_limit = int(raw_limit)
-    if assess_limit > 20:
-        raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
-    repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
-    config_path = repo / "curbpack.json"
-    config = read_json(config_path) if config_path.is_file() else {}
-    if not isinstance(config, dict):
-        config = {}
-    hunt = {"search_hints": config.get("search_hints") or {}}
-    pack_id = (form.get("pack") or [""])[0].strip() or _pack_id_for_requirement(
-        repo, str(requirement.get("id") or "")
-    )
-    job_id = f"try-{secrets.token_hex(4)}"
-    start_try_job(
-        ws.root / "jobs",
-        job_id=job_id,
-        repo=repo,
-        repo_id=repo_id,
-        requirement=requirement,
-        hunt=hunt,
-        assess_limit=assess_limit,
-        pack_id=pack_id,
-        complete=getattr(ws, "discover_complete", None),
-    )
-    return job_id
 
 
 def _check_message(query: dict) -> str:
