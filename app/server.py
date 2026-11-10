@@ -19,7 +19,6 @@ from app.catalog_model import _add_catalog_section, _catalog_model
 from app.check_model import _check_editor_model, _check_report, _run_check
 from app.check_page import check_page
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
-from app.claims_page import claims_page
 from app.copy_model import _copy_model, _select_working_copy
 from app.cover import cover
 from app.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
@@ -117,6 +116,7 @@ from requirements.workspace import (
 from review.compile import (
     durable_report_path,
 )
+from studio.claim.claims_page import claims_page
 
 ROOT = install_root()
 _VENDOR = {
