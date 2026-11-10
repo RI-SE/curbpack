@@ -35,7 +35,7 @@ from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
-from app.requirement_demo import _demo_requirement, _save_demo_requirement
+from app.requirement_demo import _demo_requirement, _publish_demo_requirement, _save_demo_requirement
 from app.requirement_editor import (
     _editor_model,
     _run_try_discovery,
@@ -65,8 +65,6 @@ from common.store import (
     load_claims,
     load_pack,
     load_pack_directory,
-    load_requirement,
-    save_requirement,
 )
 from claims.ui import http as claim_http
 from claims.ui import pages as claim_pages
@@ -84,7 +82,6 @@ from discovery.door import (
 from discovery.repos import add_repo, find_repo, load_repos, resolve_repo_path, save_repos
 from discovery.try_run import read_try_job
 from requirements.editing import (
-    publish_requirement,
     seal_pack_directory,
 )
 from requirements.extract.adapter import (
@@ -214,20 +211,6 @@ def _report_sources_for_repo(repo: Path, config: dict) -> tuple[list[dict], list
         packs.append(pack)
         requirements.extend(rows)
     return packs, requirements
-
-
-def _require_demo_requirement(ws: Workspace) -> Path:
-    """Legacy Annex VII.3 sample pack used by /requirement and discovery demo steps."""
-    path = ws.requirement_path()
-    if path.is_file():
-        return path
-    raise ModelError(
-        "demo pack",
-        "CRA-ANNEX-VII-RISK.json",
-        "a prepared sample under packs/cra-baseline/ "
-        "(use Prepare sample workspace on the cover), "
-        "or open Requirements catalog for dated extracts from regulation adapters",
-    )
 
 
 def make_handler(ws: Workspace):
@@ -584,12 +567,7 @@ def make_handler(ws: Workspace):
                 self._redirect(_save_demo_requirement(ws, form))
                 return
             if path == "/publish":
-                name = (form.get("name") or [""])[0].strip()
-                private, _public = load_or_create_key(ws.keys, name)
-                current = load_requirement(_require_demo_requirement(ws))
-                published = publish_requirement(current, name=name, private_key=private, at=_now())
-                save_requirement(ws.pack, published, published=True)
-                self._redirect("/requirement?published=1")
+                self._redirect(_publish_demo_requirement(ws, form))
                 return
             if path == "/seal-pack":
                 name = (form.get("name") or [""])[0].strip()
