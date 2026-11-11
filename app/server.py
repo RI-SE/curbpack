@@ -19,7 +19,6 @@ from app.check_model import _check_editor_model, _check_report, _run_check
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.cover import cover
 from app.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
-from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.home_model import _home_model, _select_pack
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
@@ -109,6 +108,7 @@ from studio.check.check_page import check_page
 from studio.claim.claims_page import claims_page
 from studio.pack.catalog_model import _add_catalog_section, _catalog_model
 from studio.pack.copy_model import _copy_model, _select_working_copy
+from studio.pack.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
 from studio.pack.extract_review import _apply_extraction_review, _extract_review_model
