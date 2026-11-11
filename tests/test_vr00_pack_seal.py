@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from common.signing import generate_keypair, sign_object
-from common.store import save_pack, save_requirement
+from common.signing import complete_pack_digest, generate_keypair, sign_object, verify_signature
+from common.store import load_pack, save_pack, save_requirement
 from requirements.editing import read_pack_seal, seal_pack_directory
 
 
@@ -57,3 +57,24 @@ class PackSealTest(unittest.TestCase):
         signed = sign_object(requirement, name="Ada", private_key=private, at="2026-11-11T13:00:00Z")
         save_requirement(root, signed)
         self.assertFalse(read_pack_seal(root, trust)["verifiable"])
+
+    def test_a_dotfile_is_part_of_the_same_seal(self):
+        private, public = generate_keypair()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        save_pack(root, {"id": "pack", "version": "1"})
+        save_requirement(root, _requirement())
+        (root / ".note").write_text("hidden", encoding="utf-8")
+        seal_pack_directory(root, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
+        trust = {"Ada": public}
+        pack = load_pack(root / "pack.json")
+        result = verify_signature(complete_pack_digest(root), pack.get("signed"), trust)
+        self.assertTrue(read_pack_seal(root, trust)["verifiable"])
+        self.assertEqual(result["status"], "valid")
+        self.assertEqual(result["method"], "object")
+        (root / ".note").write_text("changed", encoding="utf-8")
+        changed = verify_signature(complete_pack_digest(root), pack.get("signed"), trust)
+        self.assertFalse(read_pack_seal(root, trust)["verifiable"])
+        self.assertEqual(changed["status"], "invalid")
+        self.assertEqual(changed["method"], "object")

@@ -51,11 +51,11 @@ class ObjectSignatureTest(unittest.TestCase):
             hidden = root / ".note"
             hidden.write_text("a", encoding="utf-8")
             before = complete_pack_digest(root)
-            ignored = pack_directory_digest(root)
+            self.assertEqual(before, pack_directory_digest(root))
             hidden.write_text("b", encoding="utf-8")
             after = complete_pack_digest(root)
             self.assertNotEqual(before, after)
-            self.assertEqual(ignored, pack_directory_digest(root))
+            self.assertEqual(after, pack_directory_digest(root))
 
 
 def _git(repo: Path, *args: str, env: dict | None = None) -> str:

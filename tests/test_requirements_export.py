@@ -159,6 +159,24 @@ class ExportPackTest(unittest.TestCase):
         self.assertEqual(_file_bytes(copy), before)
         self.assertTrue((destination / "pack" / "pack.json").is_file())
 
+    def test_a_git_toplevel_outside_the_copy_does_not_raise(self):
+        from studio.pack.pack_export import _signature_rows
+
+        copy = self.root / "pack"
+        copy.mkdir()
+        save_pack(copy, {"id": "pack", "version": "1"})
+        save_requirement(copy, _plain_requirement("REQ-OPEN"))
+        pack, requirements = load_pack_directory(copy)
+        with patch(
+            "studio.pack.pack_export._git_toplevel",
+            return_value=Path("/does/not/contain/this/pack"),
+        ):
+            rows = _signature_rows(copy, pack, requirements, {})
+        self.assertEqual(rows[0]["status"], "unsigned")
+        self.assertEqual(rows[0]["method"], "none")
+        self.assertEqual(rows[1]["status"], "unsigned")
+        self.assertEqual(rows[1]["method"], "none")
+
 
 def _plain_requirement(requirement_id: str) -> dict:
     return {

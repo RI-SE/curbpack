@@ -9,7 +9,7 @@ digest in this process is the same bytes:
 - pack directory digest: SHA-256 hex of sorted relative paths, each followed by
   the SHA-256 hex of that file's bytes. `pack.json` is included with
   `signed.signature` cleared to an empty string and then re-encoded with the
-  same canonical JSON. Dotfiles are ignored.
+  same canonical JSON. Every file is included, including dotfiles.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ def pack_json_bytes_for_digest(doc: dict) -> bytes:
 
 def pack_directory_digest(root: Path) -> str:
     rows: list[str] = []
-    files = [path for path in root.rglob("*") if path.is_file() and not any(part.startswith(".") for part in path.relative_to(root).parts)]
+    files = [path for path in root.rglob("*") if path.is_file()]
     for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
         rel = path.relative_to(root).as_posix()
         if rel == "pack.json":

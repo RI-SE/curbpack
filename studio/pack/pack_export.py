@@ -86,16 +86,12 @@ def _git_toplevel(directory: Path) -> Path | None:
 
 
 def _signature_rows(directory: Path, pack: dict, requirements: list, trust: dict) -> list[dict]:
-    repo = _git_toplevel(directory)
+    located = _paths_inside_repo(directory)
+    repo = None
     paths: list[str] = []
     prefix = None
-    if repo is not None:
-        prefix = directory.relative_to(repo).as_posix()
-        paths = sorted(
-            path.relative_to(repo).as_posix()
-            for path in directory.rglob("*")
-            if path.is_file()
-        )
+    if located is not None:
+        repo, prefix, paths = located
     pack_result = verify_signature(
         complete_pack_digest(directory),
         pack.get("signed"),
@@ -108,7 +104,7 @@ def _signature_rows(directory: Path, pack: dict, requirements: list, trust: dict
     for requirement in requirements:
         relative = None
         if repo is not None and isinstance(requirement.get("id"), str):
-            relative = (directory / f"{requirement['id']}.json").relative_to(repo).as_posix()
+            relative = (directory.resolve() / f"{requirement['id']}.json").relative_to(repo).as_posix()
         result = verify_signature(
             version_digest(requirement),
             requirement.get("signed"),
@@ -118,6 +114,24 @@ def _signature_rows(directory: Path, pack: dict, requirements: list, trust: dict
         )
         rows.append(_report_row(str(requirement.get("id") or "Requirement"), result))
     return rows
+
+
+def _paths_inside_repo(directory: Path) -> tuple[Path, str, list[str]] | None:
+    repo = _git_toplevel(directory)
+    if repo is None:
+        return None
+    try:
+        directory_real = directory.resolve()
+        repo_real = repo.resolve()
+        prefix = directory_real.relative_to(repo_real).as_posix()
+        paths = sorted(
+            path.resolve().relative_to(repo_real).as_posix()
+            for path in directory.rglob("*")
+            if path.is_file()
+        )
+    except ValueError:
+        return None
+    return repo_real, prefix, paths
 
 
 def _report_row(title: str, result: dict) -> dict:
