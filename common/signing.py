@@ -192,3 +192,28 @@ def verify_object(digest: str, signed: object, trust: dict[str, bytes]) -> dict:
         "version": digest,
         "reason": reading.get("reason"),
     }
+
+
+def verify_signature(
+    digest: str,
+    signed: object,
+    trust: dict[str, bytes],
+    *,
+    repo: Path | None = None,
+    paths: list[str] | None = None,
+    tree_prefix: str | None = None,
+) -> dict:
+    """Object signature first. Git is used only when no ``signed`` block is present."""
+    if isinstance(signed, dict):
+        return verify_object(digest, signed, trust)
+    if repo is None:
+        return {
+            "status": "unsigned",
+            "method": "none",
+            "signer": None,
+            "version": None,
+            "reason": "No signed block and no signed Git commit. The object is unsigned.",
+        }
+    from review.gitseal import git_content_result
+
+    return git_content_result(repo, list(paths or []), tree_prefix=tree_prefix)
