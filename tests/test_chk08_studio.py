@@ -252,7 +252,7 @@ class DefaultsTest(unittest.TestCase):
         self.assertEqual(fields["claims_dir"], "curbpack/claims")
         self.assertEqual(fields["results_dir"], ".curbpack")
         self.assertEqual(fields["reports_dir"], "curbpack/reports")
-        self.assertEqual(fields["unsigned_requirements"], "reject")
+        self.assertNotIn("unsigned_requirements", fields)
 
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -269,7 +269,7 @@ class DefaultsTest(unittest.TestCase):
                 self.assertIn(f'value="{fields["claims_dir"]}"', page)
                 self.assertIn(f'value="{fields["results_dir"]}"', page)
                 self.assertIn(f'value="{fields["reports_dir"]}"', page)
-                self.assertIn(f'value="{fields["unsigned_requirements"]}" selected', page)
+                self.assertNotIn('name="unsigned_requirements"', page)
                 self.assertFalse((repo / "curbpack.json").exists())
             finally:
                 httpd.shutdown()

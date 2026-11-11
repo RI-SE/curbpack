@@ -316,10 +316,7 @@ CURBPACK_CONFIG_FIELDS = {
     "claims_dir",
     "results_dir",
     "reports_dir",
-    "unsigned_requirements",
 }
-
-UNSIGNED_REQUIREMENTS_VALUES = {"report", "reject", "signed_commit"}
 
 
 def validate_curbpack_config(obj: object) -> dict:
@@ -337,8 +334,6 @@ def validate_curbpack_config(obj: object) -> dict:
     _validate_search_hints(config["search_hints"])
     for field in ("packs_dir", "claims_dir", "results_dir", "reports_dir"):
         _relative_dir(config.get(field), field)
-    if config.get("unsigned_requirements") not in UNSIGNED_REQUIREMENTS_VALUES:
-        _expect("curbpack.json", "unsigned_requirements", '"report", "reject" or "signed_commit"')
     return config
 
 

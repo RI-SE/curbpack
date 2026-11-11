@@ -49,7 +49,6 @@ ALLOWED_CURBPACK_KEYS = [
     "requirements",
     "results_dir",
     "search_hints",
-    "unsigned_requirements",
 ]
 
 
@@ -61,7 +60,6 @@ def _config(**overrides) -> dict:
         "claims_dir": "curbpack/claims",
         "results_dir": ".curbpack",
         "reports_dir": "curbpack/reports",
-        "unsigned_requirements": "reject",
     }
     document.update(overrides)
     return document
@@ -127,7 +125,6 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             "results_dir": "a relative directory",
             "reports_dir": "a relative directory",
             "search_hints": "object",
-            "unsigned_requirements": '"report", "reject" or "signed_commit"',
             "packs": "non-empty list of strings",
         }
         for field, expected in cases.items():
@@ -236,6 +233,7 @@ class CurbpackPathFieldsTest(unittest.TestCase):
                 exclude_requirements=["OTHER-REQ"],
             )
             original["curbpack"] = "curbpack"
+            original["unsigned_requirements"] = "reject"
             (repo / "curbpack.json").write_text(json.dumps(original) + "\n", encoding="utf-8")
             _write_curbpack(repo, ["cra-baseline", "house-policy"])
             written = json.loads((repo / "curbpack.json").read_text(encoding="utf-8"))
@@ -244,7 +242,7 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             self.assertEqual(written["claims_dir"], "kept/claims")
             self.assertEqual(written["results_dir"], "runs/out")
             self.assertEqual(written["reports_dir"], "signed/reports")
-            self.assertEqual(written["unsigned_requirements"], "reject")
+            self.assertNotIn("unsigned_requirements", written)
             self.assertEqual(written["exclude_requirements"], ["OTHER-REQ"])
             self.assertNotIn("curbpack", written)
             validate_curbpack_config(written)
@@ -418,7 +416,6 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": fields["claims_dir"],
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
-                        "unsigned_requirements": fields["unsigned_requirements"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )
@@ -509,7 +506,7 @@ class DoorUiTest(unittest.TestCase):
                 self.assertIn('name="claims_dir"', empty)
                 self.assertIn('name="results_dir"', empty)
                 self.assertIn('name="reports_dir"', empty)
-                self.assertIn('name="unsigned_requirements"', empty)
+                self.assertNotIn('name="unsigned_requirements"', empty)
                 self.assertIn('name="search_hints"', empty)
                 self.assertIn("Save", empty)
                 self.assertIn("Cancel", empty)
@@ -528,7 +525,6 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": fields["claims_dir"],
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
-                        "unsigned_requirements": fields["unsigned_requirements"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )
@@ -539,7 +535,7 @@ class DoorUiTest(unittest.TestCase):
                 self.assertEqual(written["claims_dir"], "curbpack/claims")
                 self.assertEqual(written["results_dir"], ".curbpack")
                 self.assertEqual(written["reports_dir"], "curbpack/reports")
-                self.assertEqual(written["unsigned_requirements"], "reject")
+                self.assertNotIn("unsigned_requirements", written)
                 self.assertIn("No Claims", saved)
                 self.assertIn("No packs yet", saved)
                 self.assertNotIn("Current Pack Dir", saved)
@@ -561,7 +557,6 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": "kept/claims",
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
-                        "unsigned_requirements": fields["unsigned_requirements"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )

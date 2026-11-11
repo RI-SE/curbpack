@@ -43,7 +43,7 @@ class DefaultsFactoryTest(unittest.TestCase):
         self.assertEqual(document["claims_dir"], "curbpack/claims")
         self.assertEqual(document["results_dir"], ".curbpack")
         self.assertEqual(document["reports_dir"], "curbpack/reports")
-        self.assertEqual(document["unsigned_requirements"], "reject")
+        self.assertNotIn("unsigned_requirements", document)
         self.assertNotIn("exclude_requirements", document)
         self.assertNotIn("requirements", document)
 

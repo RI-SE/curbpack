@@ -41,14 +41,13 @@ A product repository selects Packs by writing `curbpack.json`:
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "reports_dir": "curbpack/reports"
 }
 ```
 
 Check reads these paths relative to the product repository. Packs live at `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with the Requirement JSON files beside `pack.json`. Claims live directly in `claims_dir`. Two ids in `packs` select both Packs. Use `requirements` to select specific Requirement ids, or `exclude_requirements` to leave some out; those two fields are mutually exclusive.
 
-In Studio, choose the product repository with **Repo**. Check, Discovery, Compile, and Review use that repository's `curbpack.json`. Studio's `--workspace` selects its own working area; the product data paths come from the chosen repository's configuration. See [Workspace configuration](../reference/workspace.md) for all fields and the separate `curbpack-studio.json`. The `unsigned_requirements` field is required, but its enforcement is deferred as described there.
+In Studio, choose the product repository with **Repo**. Check, Discovery, Compile, and Review use that repository's `curbpack.json`. Studio's `--workspace` selects its own working area; the product data paths come from the chosen repository's configuration. See [Workspace configuration](../reference/workspace.md) for all fields and the separate `curbpack-studio.json`.
 
 **Prepare sample workspace** is the cover's demo helper. It does not select a Pack for your repository.
 

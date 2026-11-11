@@ -34,7 +34,7 @@ Check reads the Pack ids in the product repository's `curbpack.json` and loads `
 
 ## Selecting packs
 
-The selection file is `curbpack.json` at the repository root. Accepted keys are `packs`, `exclude_requirements`, `requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, and `unsigned_requirements`. A missing required key or an unknown key is rejected before a run file is written.
+The selection file is `curbpack.json` at the repository root. Accepted keys are `packs`, `exclude_requirements`, `requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, and `reports_dir`. A missing required key or an unknown key is rejected before a run file is written.
 
 ```json
 {
@@ -48,8 +48,7 @@ The selection file is `curbpack.json` at the repository root. Accepted keys are 
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "reports_dir": "curbpack/reports"
 }
 ```
 
@@ -59,7 +58,7 @@ Selection is one mode. `exclude_requirements` removes those ids from the selecte
 
 `search_hints` is the shared discovery scope. Search uses that object, then the Requirement's `discovery_hints`. The key `hunt` is not accepted. Check does not read the hints.
 
-The four directory fields are each required. Created-file values are `curbpack/packs`, `curbpack/claims`, `.curbpack`, and `curbpack/reports`. A Claim file is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`. `unsigned_requirements` is required. Accepted values and intended behaviour are Workspace §2.4.
+The four directory fields are each required. Created-file values are `curbpack/packs`, `curbpack/claims`, `.curbpack`, and `curbpack/reports`. A Claim file is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`.
 
 Putting two ids in `packs` selects both Packs. Each Requirement stays in its own Pack through `pack_id`.
 

@@ -267,9 +267,6 @@ def _curbpack_dialog(model: dict) -> str:
         str(item) for item in fields.get("exclude_requirements") or [] if isinstance(item, str)
     )
     hints = json.dumps(fields.get("search_hints") or {}, indent=2, ensure_ascii=False)
-    unsigned = str(fields.get("unsigned_requirements") or "reject")
-    reject_sel = " selected" if unsigned == "reject" else ""
-    commit_sel = " selected" if unsigned == "signed_commit" else ""
     show = "1" if model.get("show_curbpack_dialog") else ""
     return f"""
 <dialog id="curbpack-dialog" data-show="{show}">
@@ -285,10 +282,6 @@ def _curbpack_dialog(model: dict) -> str:
 <label>claims_dir <input type="text" name="claims_dir" value="{html.escape(str(fields.get("claims_dir") or ""))}" required autocomplete="off"></label>
 <label>results_dir <input type="text" name="results_dir" value="{html.escape(str(fields.get("results_dir") or ""))}" required autocomplete="off"></label>
 <label>reports_dir <input type="text" name="reports_dir" value="{html.escape(str(fields.get("reports_dir") or ""))}" required autocomplete="off"></label>
-<label>unsigned_requirements <select name="unsigned_requirements">
-<option value="reject"{reject_sel}>reject</option>
-<option value="signed_commit"{commit_sel}>signed_commit</option>
-</select></label>
 <label>search_hints <textarea name="search_hints" required>{html.escape(hints)}</textarea></label>
 <p class="actions">
 <button type="button" id="curbpack-cancel-footer" class="secondary">Cancel</button>

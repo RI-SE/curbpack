@@ -2,7 +2,7 @@
 
 **Status:** design intent — implementation follows. Pack / Requirement / Claim / run-result **shapes** stay in [Packs v2](packs2.md). This file owns **where** product and Studio config live, and which path fields Check/Compile read.
 
-Pilot: while `curbpack-studio.json` is absent, Studio keeps today's bind/model/prompt/keys wiring. `unsigned_requirements` behaviour ships in a later epic. Aligning `curbcheck` itself (path fields, `-j`/`-o`, `--defaults`, id-list filters) is [CHK-07](../agile/epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md); the keys and flags are named here so created files stay stable. Created-file JSON is owned by that same defaults factory — Studio must not keep a second copy.
+Pilot: while `curbpack-studio.json` is absent, Studio keeps today's bind/model/prompt/keys wiring. Aligning `curbcheck` itself (path fields, `-j`/`-o`, `--defaults`, id-list filters) is [CHK-07](../agile/epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md); the keys and flags are named here so created files stay stable. Created-file JSON is owned by that same defaults factory — Studio must not keep a second copy.
 
 ---
 
@@ -47,7 +47,6 @@ Accepted keys are only those in §2.2.
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
-| `unsigned_requirements` | yes | `"reject"` | `"report"`, `"reject"`, or `"signed_commit"`. Behaviour: §2.4, later epic. |
 
 **Dialog → file:** packs and requirements as checkboxes. Ticked packs → `packs`. Unticked requirements → `exclude_requirements`.
 
@@ -79,8 +78,7 @@ Accepted keys are only those in §2.2.
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "report"
+  "reports_dir": "curbpack/reports"
 }
 ```
 
@@ -94,17 +92,6 @@ With that file:
 | Review report | `<repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json` |
 
 `"results_dir": "artifacts/check"` → run under `<repo>/artifacts/check/…`. Same contract.
-
-### 2.4 `unsigned_requirements` (later epic)
-
-Accepted values are `report`, `reject`, and `signed_commit`. A created file uses `reject`. Intended curbcheck behaviour where it is already written:
-
-| Value | Intended curbcheck behaviour |
-|-------|------------------------------|
-| `reject` | Requirement whose JSON `signed` does not verify → reported unsigned. |
-| `signed_commit` | Same report, unless that requirement file is covered by a signed commit (allowed-signers). |
-
-Studio import still verifies seals when bringing a published pack into `packs_dir`.
 
 ---
 

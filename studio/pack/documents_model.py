@@ -173,7 +173,6 @@ def _save_curbpack_form(repo: Path, form: dict) -> None:
         "claims_dir": (form.get("claims_dir") or [""])[0].strip(),
         "results_dir": (form.get("results_dir") or [""])[0].strip(),
         "reports_dir": (form.get("reports_dir") or [""])[0].strip(),
-        "unsigned_requirements": (form.get("unsigned_requirements") or [""])[0].strip(),
     }
     path = repo / "curbpack.json"
     if path.is_file():

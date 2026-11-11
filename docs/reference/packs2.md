@@ -184,7 +184,7 @@ Owns the configuration Studio and curbcheck need for this repository: which coll
 
 `packs` lists pack ids. It does not list versions. The version the team is using is `version` on the local `pack.json` for that id, the file Curbpack loads for the id. Keeping that file (in git, or in the air-gapped pack directory) is what makes the choice reproducible without a network. A newer publication is visible only when its `pack.json` has reached the environment. Nothing fetches it on its own. Compare that file's `version` with the version the team is already using, and with `origin.version` on each local requirement. Those are different facts.
 
-On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with that pack's Requirement files as the other `*.json` files in that same version directory. A Claim is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`, one new file per run. A review report is `<reports_dir>/review-report_<UTC>.json`. Field meanings and the full created-file example, including the required `unsigned_requirements` key, are [workspace.md](workspace.md) §2.2–§2.3.
+On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with that pack's Requirement files as the other `*.json` files in that same version directory. A Claim is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`, one new file per run. A review report is `<reports_dir>/review-report_<UTC>.json`. Field meanings and the full created-file example are [workspace.md](workspace.md) §2.2–§2.3.
 
 ```json
 {
@@ -200,8 +200,7 @@ On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-ver
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "reports_dir": "curbpack/reports"
 }
 ```
 
@@ -426,7 +425,20 @@ Same `signed` shape (shown inside its enclosing object):
 
 DSSE and Sigstore are not a prerequisite. The seal is the `signed` block in this section. A later change to either of them needs a requirement from the party who relies on the signature, a test that verification still works with no network, a dependency analysis, and a fixture for the migration.
 
-A signed Git commit does not write the `signed` block. When `signed` is present, the reading shows that block. When `signed` is absent and the requirement's bytes are in a signed Git commit, the reading shows a Git commit: the signing key, the time stated on that commit, that commit as the version, and whether the commit signature verifies. When neither exists, the requirement is an unsigned draft, not an approved requirement version. The same reading applies to a claim and to the pack. `discovery_hints` has no seal of its own; it is inside the requirement payload. Git records the history of the files. It is not a signature chain, not a version graph, and not a merge. Nothing joins RISE's signature to a later local signature, and nothing merges an upstream release into a working copy. SourceSafe, ClearCase, and a copied folder have no commit to consult. A verified signed Git commit authenticates its recorded content; whether its signer was authorized to approve a particular Claim remains an organisational responsibility. It is not a substitute for reading the Claim and its Check results.
+A signed Git commit does not write the `signed` block. The reading is one result. `status` is `valid`, `invalid`, or `unsigned`. `method` is `object`, `git`, or `none`. The result also names the signer, the version, and the reason when there is one.
+
+An object `signed` block is read first. Git is not consulted when that block is present, whether the block verifies or not. A block that verifies is `valid` with method `object`. A block that does not verify stays `invalid` with method `object`.
+
+When no `signed` block is present, Git is local only. There is no fetch. Trust is a good signature, `%G?` = `G`. The signer is `%GS`, never the author or committer. `version` is that commit id. The commit is the latest one that touches the object. An older signed commit does not count when a later commit touches the object.
+
+| Situation | status | method |
+| --- | --- | --- |
+| No repository, no commit that touches the object, or `%G?` is `N` | `unsigned` | `none` |
+| `%G?` is not `G` | `invalid` | `git` |
+| `%G?` is `G` and the current bytes differ | `invalid` | `git` |
+| `%G?` is `G`, the signer is `%GS`, and the current bytes match | `valid` | `git` |
+
+A Requirement matches when the worktree file equals the blob in that commit. A Pack matches when every file in the directory digest, including dotfiles, has the same bytes in that commit. `pack.json` is compared after `signed.signature` is cleared. An extra or missing digest file is a mismatch. When neither an object signature nor an applicable Git signature exists, `status` is `unsigned` and `method` is `none`. The object is an unsigned draft, not an approved version. The same reading applies to a claim and to the pack. `discovery_hints` has no seal of its own; it is inside the requirement payload. Git records the history of the files. It is not a signature chain, not a version graph, and not a merge. Nothing joins RISE's signature to a later local signature, and nothing merges an upstream release into a working copy. SourceSafe, ClearCase, and a copied folder have no commit to consult. A verified signed Git commit authenticates its recorded content; whether its signer was authorized to approve a particular Claim remains an organisational responsibility. It is not a substitute for reading the Claim and its Check results.
 
 There is no separate signing document, no `approved_for_pilot_use` decision on the seal, and no reviewer role field. The person who judges that the claims are sufficient signs the review report (`review-sign`). That signature is not the requirement seal. The report uses the same `signed` shape. Its version digest is the report with `signed` removed.
 
