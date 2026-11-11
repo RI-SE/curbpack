@@ -15,7 +15,6 @@ _LOG = logging.getLogger("poc2.app")
 
 from app import pages
 from app import project_selector
-from app.check_model import _check_editor_model, _check_report, _run_check
 from app.cover import cover
 from app.home_model import _home_model, _select_pack
 from app.prepare_post import _prepare_workspace
@@ -89,6 +88,7 @@ from requirements.workspace import (
 from review.compile import (
     durable_report_path,
 )
+from studio.check.check_model import _check_editor_model, _check_report, _run_check
 from studio.check.check_page import check_page
 from studio.claim.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from studio.claim.claims_page import claims_page
