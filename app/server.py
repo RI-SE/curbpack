@@ -43,7 +43,6 @@ from common.store import (
     load_pack_directory,
 )
 from claims.ui import http as claim_http
-from claims.ui import pages as claim_pages
 from discovery.jobs import read_job as read_discover_job
 from discovery.browse import list_directories
 from discovery.door import (
@@ -92,6 +91,7 @@ from studio.check.check_page import check_page
 from studio.claim.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from studio.claim.claims_page import claims_page
 from studio.claim.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
+from studio.claim.discover_page import discover_page
 from studio.claim.try_discovery import file_page
 from studio.claim.try_discovery_file import _try_discovery_file_model
 from studio.pack.catalog_model import _add_catalog_section, _catalog_model
@@ -444,9 +444,9 @@ def make_handler(ws: Workspace):
             if path == "/requirement":
                 return _demo_requirement(ws)
             if path == "/discover/repo":
-                return claim_pages.discover_page(_discover_model(ws, query, product=True))
+                return discover_page(_discover_model(ws, query, product=True))
             if path == "/discover":
-                return claim_pages.discover_page(_discover_model(ws, query))
+                return discover_page(_discover_model(ws, query))
             if path == "/claims":
                 message = ""
                 if (query.get("saved") or [""])[0]:
