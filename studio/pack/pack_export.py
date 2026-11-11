@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
+from common.canonical import version_digest
 from common.errors import ModelError
 from common.keystore import trust_store
-from common.signing import read_signature
+from common.signing import complete_pack_digest, verify_signature
 from requirements.catalog import ensure_catalog, find_document
-from requirements.editing import read_pack_seal
 from requirements.workspace import export_pack, load_working_copy, selected_copy
 
 if TYPE_CHECKING:
@@ -38,26 +39,15 @@ def _export_model(ws: Workspace, query: dict) -> dict:
         return model
     trust = trust_store(ws.keys)
     pack, requirements = load_working_copy(directory)
-    signed = 0
-    unsigned = 0
-    blocked = []
-    for requirement in requirements:
-        reading = read_signature(requirement, trust, what="requirement")
-        if reading.get("verifiable"):
-            signed += 1
-        elif isinstance(requirement.get("signed"), dict):
-            blocked.append(
-                {"title": str(requirement.get("id") or "Requirement"), "reading": reading}
-            )
-        else:
-            unsigned += 1
+    rows = _signature_rows(directory, pack, requirements, trust)
+    signed = sum(1 for row in rows[1:] if row["status"] == "valid")
+    unsigned = sum(1 for row in rows[1:] if row["status"] == "unsigned")
     model.update(
         {
             "timestamp": directory.name,
             "signed": signed,
             "unsigned": unsigned,
-            "seal": read_pack_seal(directory, trust),
-            "blocked": blocked,
+            "rows": rows,
             "pack_version": pack.get("version"),
         }
     )
@@ -79,6 +69,66 @@ def _export_document(ws: Workspace, document_id: str) -> tuple[dict, str, Path |
     if not isinstance(pack_id, str) or not pack_id:
         raise ModelError("export", "pack_id", "one adapter pack id")
     return document, pack_id, selected_copy(ws.root, pack_id)
+
+
+def _git_toplevel(directory: Path) -> Path | None:
+    try:
+        found = subprocess.run(
+            ["git", "-C", str(directory), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if found.returncode != 0 or not found.stdout.strip():
+        return None
+    return Path(found.stdout.strip())
+
+
+def _signature_rows(directory: Path, pack: dict, requirements: list, trust: dict) -> list[dict]:
+    repo = _git_toplevel(directory)
+    paths: list[str] = []
+    prefix = None
+    if repo is not None:
+        prefix = directory.relative_to(repo).as_posix()
+        paths = sorted(
+            path.relative_to(repo).as_posix()
+            for path in directory.rglob("*")
+            if path.is_file()
+        )
+    pack_result = verify_signature(
+        complete_pack_digest(directory),
+        pack.get("signed"),
+        trust,
+        repo=repo,
+        paths=paths,
+        tree_prefix=prefix,
+    )
+    rows = [_report_row("Pack", pack_result)]
+    for requirement in requirements:
+        relative = None
+        if repo is not None and isinstance(requirement.get("id"), str):
+            relative = (directory / f"{requirement['id']}.json").relative_to(repo).as_posix()
+        result = verify_signature(
+            version_digest(requirement),
+            requirement.get("signed"),
+            trust,
+            repo=repo,
+            paths=[relative] if relative else None,
+        )
+        rows.append(_report_row(str(requirement.get("id") or "Requirement"), result))
+    return rows
+
+
+def _report_row(title: str, result: dict) -> dict:
+    return {
+        "title": title,
+        "status": result.get("status"),
+        "method": result.get("method"),
+        "signer": result.get("signer"),
+        "version": result.get("version"),
+        "reason": result.get("reason"),
+    }
 
 
 def _export_selected(handler, ws: Workspace, form: dict) -> None:

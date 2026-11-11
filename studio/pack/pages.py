@@ -83,9 +83,7 @@ def export_page(model: dict) -> bytes:
 {cancel}
 """
         return page("Export Pack", body)
-    readings = _reading_block("Pack", model.get("seal"))
-    for item in model.get("blocked") or []:
-        readings += _reading_block(str(item.get("title") or "Requirement"), item.get("reading"))
+    readings = _signature_report(model.get("rows") or [])
     conflict_html = ""
     if conflict:
         shown = html.escape(conflict)
@@ -116,6 +114,23 @@ def export_page(model: dict) -> bytes:
 {cancel}
 """
     return page("Export Pack", body)
+
+
+def _signature_report(rows: list) -> str:
+    """Print status rows. This does not decide whether a signature is valid."""
+    parts: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        title = html.escape(str(row.get("title") or ""))
+        status = html.escape(str(row.get("status") or ""))
+        method = html.escape(str(row.get("method") or ""))
+        reason = str(row.get("reason") or "").strip()
+        reason_html = f" — {html.escape(reason)}" if reason else ""
+        parts.append(
+            f'<p class="signature"><strong>{title}</strong> status {status} method {method}{reason_html}</p>'
+        )
+    return "\n".join(parts)
 
 
 def catalog_page(model: dict) -> bytes:

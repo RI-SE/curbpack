@@ -24,7 +24,7 @@ from checks.run import run_pack_directories
 from common.canonical import pack_directory_digest
 from common.errors import ModelError
 from common.keystore import load_or_create_key
-from common.signing import sign_object
+from common.signing import generate_keypair, sign_object
 from common.jsonio import write_json
 from common.store import load_pack_directory, load_requirement, save_pack, save_requirement
 from discovery.door import created_curbpack, set_open_repo
@@ -103,6 +103,76 @@ class ExportPackTest(unittest.TestCase):
         risk = copy / "CRA-ANNEX-VII-RISK.json"
         risk.write_bytes(risk.read_bytes() + b"\n")
         self.assertEqual(_file_bytes(pack_dir), exported_before_edit)
+
+    def test_mixed_signatures_export_and_leave_the_source_unchanged(self):
+        """VR-R08: valid, invalid, and unsigned requirements export without edits."""
+        from requirements.workspace import export_pack
+        from studio.pack.pack_export import _signature_rows
+        from studio.pack.pages import export_page
+
+        private, public = generate_keypair()
+        copy = self.root / "pack"
+        copy.mkdir()
+        save_pack(copy, {"id": "pack", "version": "1"})
+        valid = _plain_requirement("REQ-VALID")
+        valid = sign_object(valid, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
+        invalid = sign_object(
+            _plain_requirement("REQ-BAD"),
+            name="Ada",
+            private_key=private,
+            at="2026-11-11T12:00:00Z",
+        )
+        invalid["signed"]["signature"] = "not-a-signature"
+        save_requirement(copy, valid)
+        save_requirement(copy, invalid)
+        save_requirement(copy, _plain_requirement("REQ-OPEN"))
+        before = _file_bytes(copy)
+        pack, requirements = load_pack_directory(copy)
+        rows = {row["title"]: row for row in _signature_rows(copy, pack, requirements, {"Ada": public})}
+        self.assertEqual(rows["REQ-VALID"]["status"], "valid")
+        self.assertEqual(rows["REQ-VALID"]["method"], "object")
+        self.assertEqual(rows["REQ-BAD"]["status"], "invalid")
+        self.assertEqual(rows["REQ-BAD"]["method"], "object")
+        self.assertIn("does not verify", rows["REQ-BAD"]["reason"])
+        self.assertEqual(rows["REQ-OPEN"]["status"], "unsigned")
+        self.assertEqual(rows["REQ-OPEN"]["method"], "none")
+        self.assertIn("No signed block", rows["REQ-OPEN"]["reason"])
+        page = export_page(
+            {
+                "pack_id": "pack",
+                "document_id": "doc",
+                "timestamp": "copy",
+                "signed": 1,
+                "unsigned": 1,
+                "rows": list(rows.values()),
+            }
+        ).decode("utf-8")
+        self.assertIn("status valid", page)
+        self.assertIn("method object", page)
+        self.assertIn("status invalid", page)
+        self.assertIn("does not verify", page)
+        self.assertIn("status unsigned", page)
+        self.assertIn("method none", page)
+        destination = self.root / "out"
+        destination.mkdir()
+        export_pack(copy, destination)
+        self.assertEqual(_file_bytes(copy), before)
+        self.assertTrue((destination / "pack" / "pack.json").is_file())
+
+
+def _plain_requirement(requirement_id: str) -> dict:
+    return {
+        "id": requirement_id,
+        "pack_id": "pack",
+        "source": {
+            "framework": "CRA",
+            "instrument": "Annex",
+            "identifier": "VII.3",
+            "language": "en",
+            "url": "https://example.invalid/cra",
+        },
+        "references": [{"nr": 1, "locator": "VII.3", "law_text": "Assess the risk."}],
+    }
 
 
 class ExportRefusalTest(unittest.TestCase):
@@ -383,6 +453,9 @@ class ExportPageTest(unittest.TestCase):
         self.assertIn("Signed: 0", page)
         self.assertIn("Unsigned: 2", page)
         self.assertIn(">Pack</strong>", page)
+        self.assertIn("status unsigned", page)
+        self.assertIn("method none", page)
+        self.assertIn("No signed block", page)
         self.assertIn("Unsigned", page)
 
     def test_missing_selection_names_the_pack_and_writes_no_destination(self):
