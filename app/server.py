@@ -24,7 +24,6 @@ from app.discover_model import _abort_discover, _add_discover_repo, _discover_mo
 from app.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from app.extract_review import _apply_extraction_review, _extract_review_model
 from app.home_model import _home_model, _select_pack
-from app.pack_compare import _apply_compare_form, _compare_model
 from app.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from app.pack_export import _export_model, _export_selected
 from app.prepare_post import _prepare_workspace
@@ -117,6 +116,7 @@ from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
 from studio.pack.extract_start import _start_extract
 from studio.pack.inspect_model import _inspect_model, _select_source
+from studio.pack.pack_compare import _apply_compare_form, _compare_model
 
 ROOT = install_root()
 _VENDOR = {
