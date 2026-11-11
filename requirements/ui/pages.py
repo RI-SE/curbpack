@@ -1491,7 +1491,7 @@ if (fields) {
     sign_btn = "" if signed else '<button type="button" id="sign-open">Sign</button>'
     sign_ui = "" if signed else _sign_dialog(requirement, model)
     status = _seal_status_badge(model.get("reading"))
-    from requirements.ui import try_discovery as try_discovery_ui
+    from studio.claim.try_discovery import dialog_html
 
     try_model = {
         "requirement_id": requirement.get("id"),
@@ -1540,7 +1540,7 @@ if (fields) {
 </p>
 </form>
 {sign_ui}
-{try_discovery_ui.dialog_html(try_model)}
+{dialog_html(try_model)}
 {script}
 """
     return page(str(requirement.get("id")), body)

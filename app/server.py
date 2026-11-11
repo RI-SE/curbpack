@@ -68,7 +68,6 @@ from requirements.catalog import (
 )
 from requirements.jobs import read_job
 from requirements.ui import pages as requirement_pages
-from requirements.ui import try_discovery as try_discovery_ui
 from requirements.workspace import (
     ensure_default_selection,
     list_pack_ids,
@@ -93,6 +92,7 @@ from studio.check.check_page import check_page
 from studio.claim.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from studio.claim.claims_page import claims_page
 from studio.claim.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
+from studio.claim.try_discovery import file_page
 from studio.claim.try_discovery_file import _try_discovery_file_model
 from studio.pack.catalog_model import _add_catalog_section, _catalog_model
 from studio.pack.copy_model import _copy_model, _select_working_copy
@@ -435,7 +435,7 @@ def make_handler(ws: Workspace):
                 requirement_id = path[
                     len("/requirements/requirement/") : -len("/try-discovery/file")
                 ]
-                return try_discovery_ui.file_page(
+                return file_page(
                     _try_discovery_file_model(ws, requirement_id, query)
                 )
             if path.startswith("/requirements/requirement/"):
