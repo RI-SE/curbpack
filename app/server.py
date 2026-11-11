@@ -66,7 +66,7 @@ from requirements.catalog import (
     ensure_catalog,
 )
 from requirements.jobs import read_job
-from requirements.ui import pages as requirement_pages
+from requirements.ui.publication_page import publication_page
 from requirements.workspace import (
     ensure_default_selection,
     list_pack_ids,
@@ -105,6 +105,17 @@ from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
 from studio.pack.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from studio.pack.pack_export import _export_model, _export_selected
+from studio.pack.pages import (
+    catalog_page,
+    compare_page,
+    consolidate_page,
+    copy_page,
+    documents_page,
+    editor_page,
+    export_page,
+    extract_review_page,
+    source_page,
+)
 from studio.pack.requirement_demo import (
     _demo_requirement,
     _publish_demo_requirement,
@@ -411,24 +422,24 @@ def make_handler(ws: Workspace):
             if path == "/requirements":
                 document_id = (query.get("document") or [""])[0].strip()
                 if document_id:
-                    return requirement_pages.catalog_page(
+                    return catalog_page(
                         _catalog_model(ws, query, document_id)
                     )
-                return requirement_pages.documents_page(_documents_model(ws, query))
+                return documents_page(_documents_model(ws, query))
             if path == "/requirements/inspect":
-                return requirement_pages.source_page(_inspect_model(ws, query))
+                return source_page(_inspect_model(ws, query))
             if path == "/requirements/extract/review":
-                return requirement_pages.extract_review_page(_extract_review_model(ws, query))
+                return extract_review_page(_extract_review_model(ws, query))
             if path == "/requirements/copy":
-                return requirement_pages.copy_page(_copy_model(ws, query))
+                return copy_page(_copy_model(ws, query))
             if path == "/requirements/export":
-                return requirement_pages.export_page(_export_model(ws, query))
+                return export_page(_export_model(ws, query))
             if path == "/requirements/publish":
-                return requirement_pages.publication_page(_publication_model(ws, query))
+                return publication_page(_publication_model(ws, query))
             if path == "/requirements/compare":
-                return requirement_pages.compare_page(_compare_model(ws, query))
+                return compare_page(_compare_model(ws, query))
             if path == "/requirements/consolidate":
-                return requirement_pages.consolidate_page(_consolidate_model(ws))
+                return consolidate_page(_consolidate_model(ws))
             if path.startswith("/requirements/requirement/") and path.endswith(
                 "/try-discovery/file"
             ):
@@ -440,7 +451,7 @@ def make_handler(ws: Workspace):
                 )
             if path.startswith("/requirements/requirement/"):
                 requirement_id = path[len("/requirements/requirement/") :]
-                return requirement_pages.editor_page(_editor_model(ws, requirement_id, query))
+                return editor_page(_editor_model(ws, requirement_id, query))
             if path == "/requirement":
                 return _demo_requirement(ws)
             if path == "/discover/repo":

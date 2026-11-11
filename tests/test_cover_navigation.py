@@ -16,7 +16,7 @@ from common.store import save_pack
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
-from requirements.ui.pages import job_fragment
+from studio.pack.pages import job_fragment
 from requirements.workspace import create_extraction_copy, mark_selected
 
 
