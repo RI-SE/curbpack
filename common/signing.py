@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import base64
 import copy
+import hashlib
+import json
+from pathlib import Path
 from typing import Optional
 
-from common.canonical import version_digest
+from common.canonical import pack_json_bytes_for_digest, version_digest
 from common.errors import ModelError, SigningUnavailable
 
 try:
@@ -141,3 +144,51 @@ def _decode_signature(value: object) -> Optional[bytes]:
         return base64.b64decode(value, validate=True)
     except Exception:
         return None
+
+
+def complete_pack_digest(root: Path) -> str:
+    """Directory digest of every file, including dotfiles.
+
+    Packs v2 seals every relative path. ``pack_directory_digest`` skips
+    dotfiles, so this walk does not call it. ``pack.json`` is hashed with
+    ``signed.signature`` cleared.
+    """
+    rows: list[str] = []
+    files = [path for path in root.rglob("*") if path.is_file()]
+    for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
+        rel = path.relative_to(root).as_posix()
+        if rel == "pack.json":
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            data = pack_json_bytes_for_digest(doc)
+        else:
+            data = path.read_bytes()
+        rows.append(f"{rel}\n{hashlib.sha256(data).hexdigest()}\n")
+    return hashlib.sha256("".join(rows).encode("utf-8")).hexdigest()
+
+
+def verify_object(digest: str, signed: object, trust: dict[str, bytes]) -> dict:
+    """Object-signature result. Git is not consulted."""
+    reading = read_digest(digest, signed, trust, what="object")
+    if not isinstance(signed, dict):
+        return {
+            "status": "unsigned",
+            "method": "none",
+            "signer": None,
+            "version": digest,
+            "reason": reading.get("reason"),
+        }
+    if reading.get("verifiable"):
+        return {
+            "status": "valid",
+            "method": "object",
+            "signer": reading.get("who"),
+            "version": digest,
+            "reason": None,
+        }
+    return {
+        "status": "invalid",
+        "method": "object",
+        "signer": reading.get("who"),
+        "version": digest,
+        "reason": reading.get("reason"),
+    }
