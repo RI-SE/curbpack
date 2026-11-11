@@ -27,7 +27,6 @@ from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
 from app.studio_model import _save_studio, _studio_model
 from app.studio_page import studio_page
-from app.try_discovery_file import _try_discovery_file_model
 from checks.run import (
     _pack_version_dir,
     claims_dir,
@@ -94,6 +93,7 @@ from review.compile import (
 )
 from studio.check.check_page import check_page
 from studio.claim.claims_page import claims_page
+from studio.claim.try_discovery_file import _try_discovery_file_model
 from studio.pack.catalog_model import _add_catalog_section, _catalog_model
 from studio.pack.copy_model import _copy_model, _select_working_copy
 from studio.pack.documents_model import _documents_model, _save_curbpack, _save_pack_document
