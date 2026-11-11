@@ -6,7 +6,6 @@ from pathlib import Path
 
 from claims.bind import create_configured_claims, read_claim, read_claims, rebind, suggest_claim_id, write_claim
 from claims.ui.coverage import covered_paths, load_run
-from claims.ui import researcher
 from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
 from discovery.jobs import CURBPACK_COPY, latest_job
@@ -15,6 +14,7 @@ from discovery.door import pack_display_name, repo_claims_dir, repo_pack_require
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
 from requirements.workspace import resolve_copy_ref
+from studio.claim import researcher
 
 
 def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict) -> bytes | None:

@@ -19,7 +19,7 @@ from tests.test_claims_binding_ui import _seed_two_requirements
 
 class DiscoverClaimsUiTest(unittest.TestCase):
     def test_overview_names_the_section_and_the_seal(self):
-        from claims.ui.researcher import overview_page
+        from studio.claim.researcher import overview_page
 
         overview = overview_page(
             {
@@ -61,7 +61,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn("VII.3", overview)
 
     def test_an_empty_list_offers_discover_and_says_why_it_may_stay_empty(self):
-        from claims.ui.researcher import requirement_page
+        from studio.claim.researcher import requirement_page
 
         page = requirement_page(
             {
@@ -88,7 +88,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertNotIn("Run Discover, or add one with +.", page)
 
     def test_saved_claims_list_first_beside_candidates_without_merging(self):
-        from claims.ui.researcher import requirement_page
+        from studio.claim.researcher import requirement_page
 
         page = requirement_page(
             {
