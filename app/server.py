@@ -22,12 +22,6 @@ from app.discover_model import _abort_discover, _add_discover_repo, _discover_mo
 from app.home_model import _home_model, _select_pack
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
-from app.requirement_demo import (
-    _demo_requirement,
-    _publish_demo_requirement,
-    _save_demo_requirement,
-    _seal_demo_pack,
-)
 from app.review_model import _compile_review, _review_get, _save_review_decision, _sign_review
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
@@ -111,6 +105,12 @@ from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
 from studio.pack.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from studio.pack.pack_export import _export_model, _export_selected
+from studio.pack.requirement_demo import (
+    _demo_requirement,
+    _publish_demo_requirement,
+    _save_demo_requirement,
+    _seal_demo_pack,
+)
 from studio.pack.requirement_editor import (
     _editor_model,
     _run_try_discovery,
