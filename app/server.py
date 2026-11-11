@@ -28,12 +28,6 @@ from app.requirement_demo import (
     _save_demo_requirement,
     _seal_demo_pack,
 )
-from app.requirement_editor import (
-    _editor_model,
-    _run_try_discovery,
-    _save_requirement_form,
-    _sign_requirement,
-)
 from app.review_model import _compile_review, _review_get, _save_review_decision, _sign_review
 from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
@@ -117,6 +111,12 @@ from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
 from studio.pack.pack_consolidate import _apply_consolidation_form, _consolidate_model
 from studio.pack.pack_export import _export_model, _export_selected
+from studio.pack.requirement_editor import (
+    _editor_model,
+    _run_try_discovery,
+    _save_requirement_form,
+    _sign_requirement,
+)
 
 ROOT = install_root()
 _VENDOR = {
