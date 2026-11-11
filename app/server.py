@@ -15,7 +15,6 @@ _LOG = logging.getLogger("poc2.app")
 
 from app import pages
 from app import project_selector
-from app.catalog_model import _add_catalog_section, _catalog_model
 from app.check_model import _check_editor_model, _check_report, _run_check
 from app.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
 from app.cover import cover
@@ -108,6 +107,7 @@ from review.compile import (
 )
 from studio.check.check_page import check_page
 from studio.claim.claims_page import claims_page
+from studio.pack.catalog_model import _add_catalog_section, _catalog_model
 from studio.pack.copy_model import _copy_model, _select_working_copy
 from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
