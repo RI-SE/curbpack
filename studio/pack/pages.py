@@ -42,6 +42,14 @@ def documents_page(model: dict) -> bytes:
     show = ("config",) if repo_id and not file_absent and model.get("curbpack_file") else ()
     config_panel = repo_config_panel(model, action="/requirements", show=show, beside=create)
     add = _add_toolbar() if repo_id and not file_absent else ""
+    import_zip = ""
+    if repo_id and not file_absent:
+        import_zip = """
+<form method="post" action="/requirements" enctype="multipart/form-data">
+<label>Import ZIP <input type="file" name="archive" accept=".zip,application/zip"></label>
+<button type="submit">Import ZIP</button>
+</form>
+"""
     dialog = _document_add_dialog(model.get("adapters") or [], repo_id) if add else ""
     edit_dialog = (
         _document_edit_dialog(model.get("edit_adapters") or model.get("adapters") or [], repo_id)
@@ -57,6 +65,7 @@ Change project from the top bar.</p>
 {_start_empty_form(show=not repo_id)}
 {claims_line}
 {add}
+{import_zip}
 {flash}
 <div class="card">{table}</div>
 {dialog}
@@ -110,6 +119,11 @@ def export_page(model: dict) -> bytes:
 <input type="hidden" name="document" value="{document_id}">
 <label>Destination <input name="destination" value="{destination}"></label>
 <button type="submit">Export</button>
+</form>
+<form method="post" action="/requirements/export">
+<input type="hidden" name="document" value="{document_id}">
+<input type="hidden" name="exchange" value="zip">
+<button type="submit">Export ZIP</button>
 </form>
 {cancel}
 """
@@ -857,11 +871,13 @@ def copy_page(model: dict) -> bytes:
         )
     path = str(model.get("pack_dir") or "")
     path_line = f'<p class="muted"><code>{html.escape(path)}</code></p>' if path else ""
+    report = _signature_report(model.get("rows") or []) if model.get("rows") else ""
     body = f"""
 <p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}
  · <code>{html.escape(str(model.get("adapter_id") or ""))}</code></p>
 <h1>Requirements</h1>
 {path_line}
+{report}
 {_flash(str(model.get("message") or ""))}
 <div class="card">{listed}</div>
 {coverage_html}

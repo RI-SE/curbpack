@@ -134,6 +134,11 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
     _pack, requirements = load_working_copy(directory)
     trust = trust_store(ws.keys)
     kind = (selection or {}).get("kind") or "working"
+    rows = None
+    if (_query.get("imported") or [""])[0] == "1":
+        from studio.pack.pack_export import _signature_rows
+
+        rows = _signature_rows(directory, _pack, requirements, trust)
     return {
         "adapter_id": adapter_id,
         "timestamp": directory.name,
@@ -141,6 +146,7 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
         "pack_kind": kind,
         "read_only": kind == "published",
         "requirements": _requirement_rows(directory, requirements, trust),
+        "rows": rows,
         "coverage_detail": _coverage_detail(directory) if kind == "working" else None,
         "message": "Published Pack — read-only. Use Compare to copy into a working copy."
         if kind == "published"

@@ -295,3 +295,166 @@ class SignedImportTest(unittest.TestCase):
         by_title = {row["title"]: row["status"] for row in rows}
         self.assertEqual(by_title["REQ-B"], "unsigned")
         self.assertEqual(by_title["REQ-C"], "invalid")
+
+
+class RequirementsPageTest(unittest.TestCase):
+    def setUp(self):
+        import threading
+        from http.server import ThreadingHTTPServer
+
+        from app.server import Workspace, make_handler
+        from discovery.door import created_curbpack, set_open_repo
+        from discovery.repos import add_repo, load_repos, save_repos
+        from requirements.workspace import mark_selected
+
+        self.threading = threading
+        self.Workspace = Workspace
+        self.make_handler = make_handler
+        self.created_curbpack = created_curbpack
+        self.set_open_repo = set_open_repo
+        self.add_repo = add_repo
+        self.load_repos = load_repos
+        self.save_repos = save_repos
+        self.mark_selected = mark_selected
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+
+    def _serve(self):
+        from http.server import ThreadingHTTPServer
+
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), self.make_handler(self.Workspace(self.root)))
+        thread = self.threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(httpd.shutdown)
+        self.addCleanup(httpd.server_close)
+        return f"http://127.0.0.1:{httpd.server_address[1]}"
+
+    def test_export_zip_is_the_selected_working_copy(self):
+        import urllib.parse
+        import urllib.request
+
+        stamp = "2026-11-12T140000Z"
+        directory = self.root / "cra-xml-baseline" / stamp
+        save_pack(
+            directory,
+            _pack(id="cra-xml-baseline", name="CRA XML", namespace="RISE/CRA XML"),
+        )
+        save_requirement(
+            directory,
+            _requirement("REQ-A", pack_id="cra-xml-baseline", namespace="RISE/CRA XML"),
+        )
+        self.mark_selected(self.root, "cra-xml-baseline", stamp)
+        expected, _rows = export_pack_zip(directory, {})
+        base = self._serve()
+        page = urllib.request.urlopen(
+            base + "/requirements/export?document=cra-annex-vii"
+        ).read().decode("utf-8")
+        self.assertIn('name="destination"', page)
+        self.assertIn("Export ZIP", page)
+        data = urllib.parse.urlencode(
+            {"document": "cra-annex-vii", "exchange": "zip"}
+        ).encode("utf-8")
+        with urllib.request.urlopen(
+            urllib.request.Request(base + "/requirements/export", data=data, method="POST")
+        ) as response:
+            self.assertEqual(response.headers.get("Content-Type"), "application/zip")
+            self.assertEqual(response.read(), expected)
+
+    def test_import_opens_edit_compare_and_ownership(self):
+        import html
+        import re
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+
+        from common.jsonio import write_json
+
+        repo = self.root / "product"
+        repo.mkdir()
+        write_json(
+            repo / "curbpack.json",
+            self.created_curbpack(namespace_base="ACME", packs=["cra-xml-baseline"]),
+        )
+        self.save_repos(
+            self.root,
+            self.add_repo(self.root, self.load_repos(self.root), name="Product", path=str(repo)),
+        )
+        self.set_open_repo(self.root, "product")
+        source = self.root / "source"
+        save_pack(
+            source,
+            _pack(id="imported-pack", name="Imported", namespace="OTHER/Imported"),
+        )
+        save_requirement(
+            source,
+            _requirement("REQ-A", pack_id="imported-pack", namespace="OTHER/Imported"),
+        )
+        before = _file_bytes(source)
+        payload, _rows = export_pack_zip(source, {})
+        base = self._serve()
+        sources = urllib.request.urlopen(base + "/requirements").read().decode("utf-8")
+        self.assertIn('name="archive"', sources)
+        boundary = "vl02boundarytoken"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="archive"; filename="pack.zip"\r\n'
+            "Content-Type: application/zip\r\n\r\n"
+        ).encode("utf-8") + payload + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        request = urllib.request.Request(
+            base + "/requirements",
+            data=body,
+            method="POST",
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        try:
+            with urllib.request.urlopen(request) as response:
+                copied = response.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            self.fail(exc.read().decode("utf-8"))
+        self.assertIn("status unsigned", copied)
+        self.assertIn("REQ-A", copied)
+        editor = urllib.request.urlopen(
+            base + "/requirements/requirement/REQ-A"
+        ).read().decode("utf-8")
+        self.assertIn(">Sign</button>", editor)
+        compared = urllib.request.urlopen(base + "/requirements/compare").read().decode("utf-8")
+        self.assertIn("Working copy", compared)
+        stamp = next(path.name for path in (self.root / "imported-pack").iterdir() if path.is_dir())
+        self.assertIn(stamp, compared)
+        digest = re.search(r'name="expected_digest" value="([^"]*)"', editor).group(1)
+        asked = urllib.request.urlopen(
+            urllib.request.Request(
+                base + "/requirements/requirement/REQ-A",
+                data=urllib.parse.urlencode(
+                    {"present": "note", "note": "Owned note.", "expected_digest": digest}
+                ).encode("utf-8"),
+                method="POST",
+            )
+        ).read().decode("utf-8")
+        self.assertIn("Take ownership of this Pack?", asked)
+        form_html = asked.split("<form", 1)[1].split("</form>", 1)[0]
+        posted = {
+            html.unescape(name): html.unescape(value)
+            for name, value in re.findall(
+                r'<input type="hidden" name="([^"]*)" value="([^"]*)">',
+                form_html,
+            )
+        }
+        try:
+            urllib.request.urlopen(
+                urllib.request.Request(
+                    base + "/requirements/requirement/REQ-A",
+                    data=urllib.parse.urlencode(posted).encode("utf-8"),
+                    method="POST",
+                )
+            ).read()
+        except urllib.error.HTTPError as exc:
+            self.fail(exc.read().decode("utf-8"))
+        self.assertEqual(_file_bytes(source), before)
+        owned = next(
+            path
+            for path in (self.root / "imported-pack").iterdir()
+            if path.is_dir() and b"Owned note." in (path / "REQ-A.json").read_bytes()
+        )
+        self.assertIn(b"ACME/Imported", (owned / "pack.json").read_bytes())

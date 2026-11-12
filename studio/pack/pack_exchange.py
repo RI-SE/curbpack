@@ -67,6 +67,14 @@ def import_pack_zip(
     return final, rows
 
 
+def import_posted_zip(root: Path, keys: Path, payload: bytes) -> str:
+    """Install an uploaded archive and open the working-copy page."""
+    from common.keystore import trust_store
+
+    import_pack_zip(payload, root, trust_store(keys))
+    return "/requirements/copy?imported=1"
+
+
 def _regular_files(directory: Path) -> list[Path]:
     found = []
     for path in sorted(directory.rglob("*")):

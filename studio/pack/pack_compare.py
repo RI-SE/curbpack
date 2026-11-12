@@ -19,11 +19,25 @@ if TYPE_CHECKING:
     from app.server import Workspace
 
 
-def _compare_model(ws: Workspace, query: dict) -> dict:
+def _compare_pack_id(ws: Workspace) -> str:
+    """The selected working copy when it is not the active adapter's pack."""
     from app.server import _active_adapter
 
     adapter = _active_adapter(ws)
-    pack_id = adapter["pack_id"]
+    selection = read_selection(ws.root)
+    selected = selection.get("pack_id") if isinstance(selection, dict) else None
+    if (
+        isinstance(selection, dict)
+        and selection.get("kind") == "working"
+        and isinstance(selected, str)
+        and selected != adapter.get("pack_id")
+    ):
+        return selected
+    return str(adapter["pack_id"])
+
+
+def _compare_model(ws: Workspace, query: dict) -> dict:
+    pack_id = _compare_pack_id(ws)
     options = _compare_options(ws, pack_id)
     left = (query.get("left") or [""])[0]
     right = (query.get("right") or [""])[0]
@@ -100,10 +114,7 @@ def _resolve_compare_ref(root: Path, pack_id: str, ref: str) -> Path:
 
 
 def _apply_compare_form(ws: Workspace, form: dict) -> str:
-    from app.server import _active_adapter
-
-    adapter = _active_adapter(ws)
-    pack_id = adapter["pack_id"]
+    pack_id = _compare_pack_id(ws)
     source_ref = (form.get("source") or [""])[0]
     destination_ref = (form.get("destination") or [""])[0]
     if _compare_ref_kind(destination_ref) != "working":

@@ -149,8 +149,6 @@ def _export_selected(handler, ws: Workspace, form: dict) -> None:
     document_id = (form.get("document") or [""])[0].strip()
     destination_text = (form.get("destination") or [""])[0].strip()
     overwrite = (form.get("overwrite") or [""])[0] == "1"
-    if not destination_text:
-        raise ModelError("export", "destination", "an existing directory")
     _document, pack_id, directory = _export_document(ws, document_id)
     if directory is None:
         raise ModelError(
@@ -158,6 +156,14 @@ def _export_selected(handler, ws: Workspace, form: dict) -> None:
             "selection",
             f"No working copy is selected for {pack_id}",
         )
+    if (form.get("exchange") or [""])[0] == "zip":
+        from studio.pack.pack_exchange import export_pack_zip
+
+        payload, _rows = export_pack_zip(directory, trust_store(ws.keys))
+        handler._send_download(payload, f"{pack_id}.zip")
+        return
+    if not destination_text:
+        raise ModelError("export", "destination", "an existing directory")
     try:
         final = export_pack(directory, Path(destination_text), overwrite=overwrite)
     except ModelError as exc:

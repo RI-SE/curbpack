@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import secrets
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from common.errors import ModelError
@@ -21,6 +21,20 @@ def in_target_namespace(pack: dict, namespace_base: str) -> bool:
     if not isinstance(name, str) or not name.strip():
         return False
     return pack.get("namespace") == pack_namespace(namespace_base, name)
+
+
+def _free_stamp(root: Path, pack_id: str, at: str | None) -> str:
+    """Use `at` when the caller named the directory. Otherwise take a free second."""
+    if at is not None:
+        if not at or Path(at).name != at or at in {".", ".."}:
+            raise ModelError("working copy", "timestamp", "a single directory name")
+        return at
+    moment = datetime.now(timezone.utc).replace(microsecond=0)
+    for offset in range(5):
+        stamp = (moment + timedelta(seconds=offset)).strftime("%Y-%m-%dT%H%M%SZ")
+        if not (root / pack_id / stamp).exists():
+            return stamp
+    raise ModelError("working copy", "timestamp", "a free second within five attempts")
 
 
 def _confined_directory(root: Path, pack_id: str, stamp: str) -> Path:
@@ -56,9 +70,7 @@ def take_ownership(
         )
     pack_id = _pack_id_name(str(pack.get("id") or ""))
     _refuse_existing_target(pack_id, target, source, destination_root, also_search)
-    stamp = at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
-    if not stamp or Path(stamp).name != stamp or stamp in {".", ".."}:
-        raise ModelError("working copy", "timestamp", "a single directory name")
+    stamp = _free_stamp(destination_root, pack_id, at)
     final = _confined_directory(destination_root, pack_id, stamp)
     if final.exists():
         raise ModelError("working copy", "timestamp", f"a new directory, not {stamp}")

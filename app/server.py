@@ -238,6 +238,37 @@ def make_handler(ws: Workspace):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_download(self, body: bytes, filename: str) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _archive_field(self, field: str) -> bytes:
+            """One uploaded file. Called instead of `_form` for a multipart body."""
+            content_type = self.headers.get("Content-Type") or ""
+            if "boundary=" not in content_type.lower():
+                raise ModelError("import", "archive", "a zip file")
+            marker = content_type.split("boundary=", 1)[1].strip().strip('"')
+            length = int(self.headers.get("Content-Length") or "0")
+            body = self.rfile.read(length)
+            boundary = ("--" + marker).encode("utf-8")
+            wanted = f'name="{field}"'.encode("utf-8")
+            for part in body.split(boundary):
+                if wanted not in part:
+                    continue
+                _header, sep, data = part.partition(b"\r\n\r\n")
+                if not sep:
+                    continue
+                if data.endswith(b"\r\n"):
+                    data = data[:-2]
+                if not data:
+                    break
+                return data
+            raise ModelError("import", "archive", "a zip file")
+
         def _form(self) -> dict:
             length = int(self.headers.get("Content-Length") or "0")
             raw = self.rfile.read(length).decode("utf-8")
@@ -369,6 +400,20 @@ def make_handler(ws: Workspace):
             parsed = urlparse(self.path)
             form: dict = {}
             try:
+                content_type = self.headers.get("Content-Type") or ""
+                if (
+                    parsed.path == "/requirements"
+                    and content_type.lower().startswith("multipart/")
+                ):
+                    if not open_repo_id(ws.root):
+                        self._archive_field("archive")
+                        self._redirect("/project")
+                        return
+                    payload = self._archive_field("archive")
+                    from studio.pack.pack_exchange import import_posted_zip
+
+                    self._redirect(import_posted_zip(ws.root, ws.keys, payload))
+                    return
                 form = self._form()
                 try:
                     _sync_open_repo(ws, form)
@@ -1259,6 +1304,14 @@ def _copy_label(directory: Path) -> str:
 def _selected_requirement(ws: Workspace, requirement_id: str):
     adapter = _active_adapter(ws)
     directory = selected_copy(ws.root, adapter["pack_id"])
+    selection = read_selection(ws.root)
+    if (
+        directory is None
+        and isinstance(selection, dict)
+        and selection.get("kind") == "working"
+        and selection.get("pack_id") != adapter.get("pack_id")
+    ):
+        directory = resolve_selected_pack(ws.root)
     if directory is None:
         return None, None, None
     pack, requirements = load_working_copy(directory)
