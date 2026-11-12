@@ -232,3 +232,27 @@ class SignatureStatusTest(unittest.TestCase):
             changed = dict(signed)
             changed[field] = value
             self.assertFalse(read_signature(changed, trust, what="requirement")["verifiable"])
+
+
+class ExtractNamespaceTest(unittest.TestCase):
+    def test_extract_pack_uses_the_given_namespace_base(self):
+        from studio.pack.extract_start import _namespace_base_at, _pack_for_adapter
+
+        cra = _pack_for_adapter({"id": "cra", "pack_id": "cra-baseline"}, "ACME")
+        self.assertEqual(cra["namespace"], "ACME/CRA baseline")
+        other = _pack_for_adapter({"id": "nis", "pack_id": "nis-pack"}, "ACME")
+        self.assertEqual(other["namespace"], "ACME/nis extract")
+        self.assertEqual(other["status"], "draft")
+        import tempfile
+        from pathlib import Path
+
+        self.assertEqual(_namespace_base_at(None), "RISE")
+        from checks.defaults import created_curbpack
+        from common.jsonio import write_json
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name)
+        write_json(repo / "curbpack.json", created_curbpack(namespace_base="ACME"))
+        self.assertEqual(_namespace_base_at(repo), "ACME")
+        self.assertEqual(_namespace_base_at(repo / "missing"), "RISE")

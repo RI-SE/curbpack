@@ -470,6 +470,7 @@ def extract_section(
     work = work_directory(copy)
     try:
         for requirement in requirements:
+            requirement["namespace"] = pack["namespace"]
             save_requirement(copy, requirement, published=False)
     except ModelError as exc:
         _write_extract_diagnostics(

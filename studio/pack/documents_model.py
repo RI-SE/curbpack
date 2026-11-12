@@ -220,7 +220,7 @@ def _add_pack_to_repo(
     adapter_id: str = "",
 ) -> None:
     from app.server import _adapter_for_url, _registered_repo_path, _write_curbpack
-    from common.validate import validate_curbpack_config, validate_pack
+    from common.validate import pack_namespace, validate_curbpack_config, validate_pack
     from requirements.extract.pipeline import draft_pack
 
     repo = _registered_repo_path(ws, repo_id)
@@ -242,7 +242,7 @@ def _add_pack_to_repo(
         "id": pack_id,
         "name": name.strip(),
         "version": draft_pack()["version"],
-        "namespace": f"{checked['namespace_base']}/{name.strip()}",
+        "namespace": pack_namespace(checked["namespace_base"], name.strip()),
         "status": "draft",
     }
     source = {}

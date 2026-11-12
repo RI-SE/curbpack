@@ -52,7 +52,7 @@ The product team chooses a published collection by pack id. The version they are
 
 ### 2.1 Pack
 
-Pack is **metadata only**. Membership is `requirement.pack_id → pack.id`.
+Pack is **metadata only**. Membership is `requirement.pack_id → pack.id`. Identity is `(namespace, id)` for a Pack and `(namespace, pack_id, id)` for a Requirement. `version` is a separate release fact.
 
 ```json
 {
@@ -476,7 +476,7 @@ Kalle's requirement, after his hint edit, reads as: a requirement; Kalle; `2026-
 
 RISE publishes `cra-baseline` with `pack.version` `"1.0.0"`. The requirement has no `origin`. RISE signs it. The product team chooses that collection: `curbpack.json` lists `cra-baseline`, and their local `pack.json` says `"1.0.0"`. Fetching or importing those files does not alter them. Offline, this is the copy they already have. No network is required to read it.
 
-They create a working copy of the requirement. `origin` is set at that moment to `{ "pack": "cra-baseline", "version": "1.0.0" }`. The hints are still the ones RISE published. The copy is unsigned. It is a draft. RISE's signature does not cover it. RISE's file is unchanged. Approving the draft seals it. That sealed payload is the approved local version.
+They create a working copy of the requirement. `origin` is set at that moment to `{ "namespace": "RISE/CRA baseline", "pack": "cra-baseline", "version": "1.0.0", "requirement": "CRA-ANNEX-VII-RISK" }`. The hints are still the ones RISE published. The copy is unsigned. It is a draft. RISE's signature does not cover it. RISE's file is unchanged. Approving the draft seals it. That sealed payload is the approved local version.
 
 Kalle later changes `discovery_hints`. `origin` stays `"1.0.0"`. He approves the edit and signs that payload. `signed.name` is Kalle. Git records the edit. His signature does not extend RISE's, and nothing syncs the copy back to RISE.
 
