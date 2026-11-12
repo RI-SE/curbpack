@@ -541,3 +541,56 @@ class RequirementsPageTest(unittest.TestCase):
             if path.is_dir() and b"Transferred note." in (path / "REQ-A.json").read_bytes()
         )
         self.assertNotEqual(owned, installed)
+
+    def test_compare_apply_without_a_repository_leaves_a_foreign_import(self):
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+
+        from common.canonical import version_digest
+        from common.store import load_requirement
+
+        private, _public = generate_keypair()
+        source = self.root / "source"
+        save_pack(
+            source,
+            _pack(id="imported-pack", name="Imported", namespace="OTHER/Imported"),
+        )
+        save_requirement(
+            source,
+            sign_object(
+                _requirement("REQ-A", pack_id="imported-pack", namespace="OTHER/Imported"),
+                name="Ada",
+                private_key=private,
+                at="2026-11-12T12:00:00Z",
+            ),
+        )
+        payload, _rows = export_pack_zip(source, {})
+        installed, _rows = import_pack_zip(payload, self.root, {}, at="2026-11-12T140000Z")
+        before = _file_bytes(installed)
+        digest = version_digest(load_requirement(installed / "REQ-A.json"))
+        base = self._serve()
+        request = urllib.request.Request(
+            base + "/requirements/compare/apply",
+            data=urllib.parse.urlencode(
+                {
+                    "source": installed.name,
+                    "destination": installed.name,
+                    "requirement_id": "REQ-A",
+                    "field": "note",
+                    "value": "Transferred note.",
+                    "source_digest": digest,
+                    "destination_digest": digest,
+                }
+            ).encode("utf-8"),
+            method="POST",
+        )
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(request)
+        self.assertEqual(caught.exception.code, 400)
+        self.assertIn("the open repository", caught.exception.read().decode("utf-8"))
+        self.assertEqual(_file_bytes(installed), before)
+        self.assertEqual(
+            [path.name for path in (self.root / "imported-pack").iterdir() if path.is_dir()],
+            [installed.name],
+        )

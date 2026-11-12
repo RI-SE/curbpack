@@ -13,7 +13,10 @@ from pathlib import Path
 
 from app.server import Workspace, make_handler
 from common.canonical import version_digest
+from common.jsonio import write_json
 from common.store import load_requirement, save_requirement
+from discovery.door import created_curbpack, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 from requirements.editing import apply_edits
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 from requirements.workspace import create_extraction_copy
@@ -44,6 +47,14 @@ class CompareApplyPostTest(unittest.TestCase):
     def test_apply_redirects_to_the_posted_copies_and_refuses_a_published_destination(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            repo = root / "product"
+            repo.mkdir()
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(namespace_base="RISE", packs=["cra-baseline"]),
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+            set_open_repo(root, "product")
             base = extract_annex_vii_risk()
             source = create_extraction_copy(root, "cra-baseline", draft_pack(), at="2026-10-13T090000Z")
             destination = create_extraction_copy(root, "cra-baseline", draft_pack(), at="2026-10-13T143000Z")
