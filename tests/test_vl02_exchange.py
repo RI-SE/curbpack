@@ -12,7 +12,8 @@ from common.errors import ModelError
 from common.signing import generate_keypair, sign_object
 from common.store import save_pack, save_requirement
 from requirements.editing import seal_pack_directory
-from studio.pack.pack_exchange import export_pack_zip
+from requirements.workspace import selected_copy
+from studio.pack.pack_exchange import export_pack_zip, import_pack_zip
 
 
 def _pack(**overrides) -> dict:
@@ -111,3 +112,85 @@ class ExportZipTest(unittest.TestCase):
         (self.directory / "escape").symlink_to(outside)
         with self.assertRaises(ModelError):
             export_pack_zip(self.directory, {"Ada": self.public})
+
+
+def _file_bytes(directory: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(directory).as_posix(): path.read_bytes()
+        for path in sorted(directory.rglob("*"))
+        if path.is_file() and not path.is_symlink()
+    }
+
+
+def _facts(rows: list[dict]) -> dict[str, tuple]:
+    return {
+        row["title"]: (row["status"], row["method"], row["signer"], row["version"])
+        for row in rows
+    }
+
+
+class ImportZipTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.source = Path(self.tmp.name) / "source"
+        self.studio = Path(self.tmp.name) / "studio"
+        self.studio.mkdir()
+        private, public = generate_keypair()
+        self.trust = {"Ada": public}
+        save_pack(
+            self.source,
+            _pack(origin={"namespace": "OLDER/CRA baseline", "pack": "older", "version": "0.1.0"}),
+        )
+        save_requirement(
+            self.source,
+            sign_object(
+                _requirement(
+                    "REQ-A",
+                    origin={
+                        "namespace": "OLDER/CRA baseline",
+                        "pack": "older",
+                        "version": "0.1.0",
+                        "requirement": "REQ-A",
+                    },
+                ),
+                name="Ada",
+                private_key=private,
+                at="2026-11-12T12:00:00Z",
+            ),
+        )
+        save_requirement(self.source, _requirement("REQ-B"))
+        (self.source / ".keep").write_bytes(b"dot\n")
+        seal_pack_directory(
+            self.source,
+            name="Ada",
+            private_key=private,
+            at="2026-11-12T12:00:00Z",
+        )
+        self.before = _file_bytes(self.source)
+        self.payload, self.exported_rows = export_pack_zip(self.source, self.trust)
+
+    def test_import_keeps_the_bytes_and_the_verification(self):
+        installed, rows = import_pack_zip(
+            self.payload,
+            self.studio,
+            self.trust,
+            at="2026-11-12T140000Z",
+        )
+        self.assertEqual(installed, selected_copy(self.studio, "cra-baseline"))
+        self.assertEqual(_file_bytes(installed), self.before)
+        self.assertEqual(_file_bytes(self.source), self.before)
+        self.assertEqual(_facts(rows), _facts(self.exported_rows))
+
+    def test_a_single_top_directory_is_the_pack_directory(self):
+        wrapped = io.BytesIO()
+        with zipfile.ZipFile(wrapped, "w") as archive:
+            for name, data in self.before.items():
+                archive.writestr(f"cra-baseline/{name}", data)
+        installed, _rows = import_pack_zip(
+            wrapped.getvalue(),
+            self.studio,
+            self.trust,
+            at="2026-11-12T140000Z",
+        )
+        self.assertEqual(_file_bytes(installed), self.before)
