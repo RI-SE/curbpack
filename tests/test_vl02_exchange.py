@@ -225,3 +225,73 @@ class ImportZipTest(unittest.TestCase):
         )
         self.assertEqual(installed.name, "2026-11-12T150000Z")
         self.assertTrue((self.studio / "cra-baseline" / "2026-11-12T140000Z").is_dir())
+
+
+def _zip(members: dict[str, bytes], *, symlink: str | None = None) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name, data in members.items():
+            info = zipfile.ZipInfo(name)
+            if name == symlink:
+                info.external_attr = 0o120777 << 16
+            archive.writestr(info, data)
+    return buffer.getvalue()
+
+
+class UnsafeZipTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.studio = Path(self.tmp.name) / "studio"
+        self.studio.mkdir()
+
+    def test_unsafe_archives_leave_the_workspace_empty(self):
+        archives = [
+            _zip({"../out.txt": b"x", "pack.json": b"{}"}),
+            _zip({"pack.json": b"{}", "escape": b"link"}, symlink="escape"),
+            _zip({"/pack.json": b"{}"}),
+            _zip({"pack.json": b"{}", "foo\\bar.json": b"{}"}),
+            _zip({"one/pack.json": b"{}", "two/pack.json": b"{}"}),
+            _zip({"cra/pack.json": b"{}", "note.txt": b"x"}),
+            _zip({"REQ-A.json": b"{}"}),
+        ]
+        for payload in archives:
+            with self.assertRaises(ModelError):
+                import_pack_zip(payload, self.studio, {}, at="2026-11-12T140000Z")
+            self.assertFalse((self.studio.parent / "out.txt").exists())
+            self.assertEqual(list(self.studio.iterdir()), [])
+
+
+class SignedImportTest(unittest.TestCase):
+    def test_invalid_and_unsigned_requirements_still_import(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        source = Path(tmp.name) / "pack"
+        studio = Path(tmp.name) / "studio"
+        studio.mkdir()
+        private, public = generate_keypair()
+        other, _other_public = generate_keypair()
+        save_pack(source, _pack())
+        save_requirement(source, _requirement("REQ-B"))
+        save_requirement(
+            source,
+            sign_object(
+                _requirement("REQ-C"),
+                name="Ada",
+                private_key=other,
+                at="2026-11-12T12:00:00Z",
+            ),
+        )
+        (source / ".keep").write_bytes(b"dot\n")
+        before = _file_bytes(source)
+        payload, _rows = export_pack_zip(source, {"Ada": public})
+        installed, rows = import_pack_zip(
+            payload,
+            studio,
+            {"Ada": public},
+            at="2026-11-12T140000Z",
+        )
+        self.assertEqual(_file_bytes(installed), before)
+        by_title = {row["title"]: row["status"] for row in rows}
+        self.assertEqual(by_title["REQ-B"], "unsigned")
+        self.assertEqual(by_title["REQ-C"], "invalid")
