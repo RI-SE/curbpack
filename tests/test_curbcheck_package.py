@@ -75,6 +75,7 @@ def _write_curbpack(repo: Path, **overrides) -> None:
         "claims_dir": "curbpack/claims",
         "results_dir": ".curbpack",
         "reports_dir": "curbpack/reports",
+        "namespace_base": "RISE",
     }
     document.update(overrides)
     (repo / "curbpack.json").write_text(json.dumps(document) + "\n", encoding="utf-8")

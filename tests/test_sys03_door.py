@@ -43,6 +43,7 @@ CREATED_SEARCH_HINTS = {
 ALLOWED_CURBPACK_KEYS = [
     "claims_dir",
     "exclude_requirements",
+    "namespace_base",
     "packs",
     "packs_dir",
     "reports_dir",
@@ -60,6 +61,7 @@ def _config(**overrides) -> dict:
         "claims_dir": "curbpack/claims",
         "results_dir": ".curbpack",
         "reports_dir": "curbpack/reports",
+        "namespace_base": "RISE",
     }
     document.update(overrides)
     return document
@@ -124,6 +126,7 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             "claims_dir": "a relative directory",
             "results_dir": "a relative directory",
             "reports_dir": "a relative directory",
+            "namespace_base": "non-empty string",
             "search_hints": "object",
             "packs": "non-empty list of strings",
         }
@@ -416,6 +419,7 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": fields["claims_dir"],
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
+                        "namespace_base": fields["namespace_base"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )
@@ -525,6 +529,7 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": fields["claims_dir"],
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
+                        "namespace_base": fields["namespace_base"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )
@@ -557,6 +562,7 @@ class DoorUiTest(unittest.TestCase):
                         "claims_dir": "kept/claims",
                         "results_dir": fields["results_dir"],
                         "reports_dir": fields["reports_dir"],
+                        "namespace_base": fields["namespace_base"],
                         "search_hints": json.dumps(fields["search_hints"]),
                     },
                 )

@@ -64,7 +64,7 @@ There is no global `--as-of`, `--heal`, or `--diff`. `git_fresh` carries its own
 
 ## What the run reads
 
-`curbpack.json` sits at the repository root. The runner validates the required workspace.md §2.2 fields (`packs`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`) plus optional `requirements` or `exclude_requirements`. The single key `curbpack` is rejected. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope, unless `--packs` / `--requirements` overlay that selection for this run without writing the file. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
+`curbpack.json` sits at the repository root. The runner validates the required workspace.md §2.2 fields (`packs`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `namespace_base`) plus optional `requirements` or `exclude_requirements`. The single key `curbpack` is rejected. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope, unless `--packs` / `--requirements` overlay that selection for this run without writing the file. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
 
 `packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way.
 
@@ -75,7 +75,8 @@ There is no global `--as-of`, `--heal`, or `--diff`. `git_fresh` carries its own
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 

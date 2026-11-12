@@ -34,7 +34,7 @@ Check reads the Pack ids in the product repository's `curbpack.json` and loads `
 
 ## Selecting packs
 
-The selection file is `curbpack.json` at the repository root. Accepted keys are `packs`, `exclude_requirements`, `requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, and `reports_dir`. A missing required key or an unknown key is rejected before a run file is written.
+The selection file is `curbpack.json` at the repository root. Accepted keys are `packs`, `exclude_requirements`, `requirements`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, and `namespace_base`. A missing required key or an unknown key is rejected before a run file is written.
 
 ```json
 {
@@ -48,7 +48,8 @@ The selection file is `curbpack.json` at the repository root. Accepted keys are 
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 

@@ -1206,6 +1206,7 @@ def _write_curbpack(repo: Path, pack_ids: list[str]) -> None:
             "claims_dir",
             "results_dir",
             "reports_dir",
+            "namespace_base",
         )
         if key in current
     }

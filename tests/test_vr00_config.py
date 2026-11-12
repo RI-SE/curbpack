@@ -22,6 +22,7 @@ def _config(**overrides) -> dict:
         "claims_dir": "curbpack/claims",
         "results_dir": ".curbpack",
         "reports_dir": "curbpack/reports",
+        "namespace_base": "RISE",
     }
     document.update(overrides)
     return document

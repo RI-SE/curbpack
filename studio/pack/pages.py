@@ -282,6 +282,7 @@ def _curbpack_dialog(model: dict) -> str:
 <label>claims_dir <input type="text" name="claims_dir" value="{html.escape(str(fields.get("claims_dir") or ""))}" required autocomplete="off"></label>
 <label>results_dir <input type="text" name="results_dir" value="{html.escape(str(fields.get("results_dir") or ""))}" required autocomplete="off"></label>
 <label>reports_dir <input type="text" name="reports_dir" value="{html.escape(str(fields.get("reports_dir") or ""))}" required autocomplete="off"></label>
+<label>namespace_base <input type="text" name="namespace_base" value="{html.escape(str(fields.get("namespace_base") or ""))}" required autocomplete="off"></label>
 <label>search_hints <textarea name="search_hints" required>{html.escape(hints)}</textarea></label>
 <p class="actions">
 <button type="button" id="curbpack-cancel-footer" class="secondary">Cancel</button>

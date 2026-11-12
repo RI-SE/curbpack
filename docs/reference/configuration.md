@@ -33,6 +33,7 @@ Selection mode is exactly one of: `exclude_requirements`, or `requirements`, or 
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory: `<claims_dir>/<claim-id>.json`. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
+| `namespace_base` | yes | `"RISE"` | Publisher base namespace. A new Pack namespace is this value, a slash, and the Pack `name`. |
 
 `packs` lists pack ids. It does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached `packs_dir`. Nothing fetches one.
 
@@ -74,7 +75,8 @@ Search merge: the repository `search_hints`, then that requirement's `discovery_
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 
@@ -99,7 +101,8 @@ Explicit include, hand/CLI only. A real file still carries every required key:
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 

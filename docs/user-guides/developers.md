@@ -41,7 +41,8 @@ A product repository selects Packs by writing `curbpack.json`:
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 

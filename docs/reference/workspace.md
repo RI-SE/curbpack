@@ -47,6 +47,7 @@ Accepted keys are only those in §2.2.
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
+| `namespace_base` | yes | `"RISE"` | Publisher base namespace. A new Pack namespace is this value, a slash, and the Pack `name`. |
 
 **Dialog → file:** packs and requirements as checkboxes. Ticked packs → `packs`. Unticked requirements → `exclude_requirements`.
 
@@ -78,7 +79,8 @@ Accepted keys are only those in §2.2.
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 

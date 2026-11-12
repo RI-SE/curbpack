@@ -316,6 +316,7 @@ CURBPACK_CONFIG_FIELDS = {
     "claims_dir",
     "results_dir",
     "reports_dir",
+    "namespace_base",
 }
 
 
@@ -334,6 +335,7 @@ def validate_curbpack_config(obj: object) -> dict:
     _validate_search_hints(config["search_hints"])
     for field in ("packs_dir", "claims_dir", "results_dir", "reports_dir"):
         _relative_dir(config.get(field), field)
+    _nonempty_str(config, "curbpack.json", "namespace_base", required=True)
     return config
 
 

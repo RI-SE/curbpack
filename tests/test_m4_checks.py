@@ -204,6 +204,7 @@ class CheckBehaviorTest(unittest.TestCase):
                         "claims_dir": "curbpack/claims",
                         "results_dir": ".curbpack",
                         "reports_dir": "curbpack/reports",
+                        "namespace_base": "RISE",
                     }
                 )
                 + "\n",

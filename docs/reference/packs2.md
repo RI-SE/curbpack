@@ -200,7 +200,8 @@ On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-ver
   "packs_dir": "curbpack/packs",
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
-  "reports_dir": "curbpack/reports"
+  "reports_dir": "curbpack/reports",
+  "namespace_base": "RISE"
 }
 ```
 
