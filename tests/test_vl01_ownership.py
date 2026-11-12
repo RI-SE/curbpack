@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from common.errors import ModelError
 from common.signing import generate_keypair, read_signature, sign_object
 from common.store import load_pack_directory, save_pack, save_requirement
 from requirements.editing import read_pack_seal, seal_pack_directory
@@ -151,7 +152,7 @@ class OwnershipCopyTest(unittest.TestCase):
         existing = self.destination / "cra-baseline" / "2026-11-01T000000Z"
         save_pack(existing, _pack(namespace="ACME/CRA baseline", status="draft"))
         before_existing = _file_bytes(existing)
-        with self.assertRaises(Exception):
+        with self.assertRaises(ModelError) as caught:
             take_ownership(
                 self.source,
                 self.destination,
@@ -160,12 +161,13 @@ class OwnershipCopyTest(unittest.TestCase):
                 edits={"note": "Owned note."},
                 at="2026-11-12T130000Z",
             )
+        self.assertEqual(caught.exception.field, "namespace")
         self.assertEqual(_file_bytes(self.source), self.before)
         self.assertEqual(_file_bytes(existing), before_existing)
         self.assertFalse((self.destination / "cra-baseline" / "2026-11-12T130000Z").exists())
 
     def test_a_failed_edit_leaves_no_partial_copy(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(ModelError) as caught:
             take_ownership(
                 self.source,
                 self.destination,
@@ -174,8 +176,30 @@ class OwnershipCopyTest(unittest.TestCase):
                 edits={"not-a-field": "x"},
                 at="2026-11-12T130000Z",
             )
+        self.assertEqual(caught.exception.field, "not-a-field")
         self.assertEqual(_file_bytes(self.source), self.before)
         self.assertFalse((self.destination / "cra-baseline").exists())
+
+    def test_a_pack_id_cannot_leave_the_workspace(self):
+        for unsafe in ("../out", "published/cra"):
+            save_pack(self.source, _pack(id=unsafe))
+            for requirement_id in ("REQ-A", "REQ-B"):
+                save_requirement(
+                    self.source,
+                    _requirement(requirement_id, pack_id=unsafe),
+                )
+            with self.assertRaises(ModelError) as caught:
+                take_ownership(
+                    self.source,
+                    self.destination,
+                    namespace_base="ACME",
+                    requirement_id="REQ-A",
+                    edits={"note": "Owned note."},
+                    at="2026-11-12T130000Z",
+                )
+            self.assertEqual(caught.exception.field, "id")
+        self.assertFalse((self.destination.parent / "out").exists())
+        self.assertFalse((self.destination / "published" / "cra").exists())
 
 
 def _editor_bytes(model: dict) -> str:
@@ -214,6 +238,19 @@ class EditorFactsTest(unittest.TestCase):
         self.assertIn('data-signature="unsigned"', page)
         self.assertNotIn("No signed block", page)
         self.assertNotIn('data-signature="draft"', page)
+        invalid = _editor_bytes(
+            {
+                "requirement": _requirement("REQ-A", namespace="ACME/CRA baseline"),
+                "pack_id": "cra-baseline",
+                "reading": {
+                    "verifiable": False,
+                    "who": "Ada",
+                    "reason": "The certificate does not verify the signature, or name is not the identity on that certificate.",
+                },
+            }
+        )
+        self.assertIn('data-signature="invalid"', invalid)
+        self.assertIn("Origin namespace", page)
         bare = _editor_bytes(
             {
                 "requirement": _requirement("REQ-A", namespace="ACME/CRA baseline"),
@@ -311,6 +348,7 @@ class EditorOwnershipTest(unittest.TestCase):
         self.assertIn("Cancel", page)
         self.assertEqual(_file_bytes(self.pack_dir), before)
         self.assertIn('href="/requirements/requirement/REQ-A?repo=product&amp;pack=cra-baseline"', page)
+        return page
 
     def test_cancel_leaves_the_source(self):
         import urllib.request
@@ -327,10 +365,24 @@ class EditorOwnershipTest(unittest.TestCase):
         self.assertEqual(_file_bytes(self.pack_dir), before)
 
     def test_confirming_edits_the_copy_only(self):
+        import html
+        import re
+
         form = self._store("OTHER/CRA baseline")
         before = _file_bytes(self.pack_dir)
-        form["take_ownership"] = "1"
-        page = self._post(form)
+        asked = self._post(form)
+        self.assertIn("Take ownership of this Pack?", asked)
+        form_html = asked.split("<form", 1)[1].split("</form>", 1)[0]
+        posted = {
+            html.unescape(name): html.unescape(value)
+            for name, value in re.findall(
+                r'<input type="hidden" name="([^"]*)" value="([^"]*)">',
+                form_html,
+            )
+        }
+        self.assertEqual(posted["note"], "Owned note.")
+        self.assertEqual(posted["take_ownership"], "1")
+        page = self._post(posted)
         self.assertEqual(_file_bytes(self.pack_dir), before)
         copies = list((self.root / "cra-baseline").glob("*/REQ-A.json"))
         self.assertEqual(len(copies), 1)

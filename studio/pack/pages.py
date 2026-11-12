@@ -1388,12 +1388,13 @@ def _copy_line(model: dict, requirement: dict) -> str:
 
 def _signature_word(reading: dict | None) -> str:
     """valid, invalid, or unsigned. Object status is a different fact."""
-    if not isinstance(reading, dict) or not reading.get("who"):
-        if isinstance(reading, dict) and reading.get("verifiable"):
-            return "valid"
+    if not isinstance(reading, dict):
         return "unsigned"
     if reading.get("verifiable"):
         return "valid"
+    reason = str(reading.get("reason") or "")
+    if reason.startswith("No signed block"):
+        return "unsigned"
     return "invalid"
 
 
@@ -1407,11 +1408,10 @@ def _identity_lines(model: dict, requirement: dict) -> str:
     origin = requirement.get("origin")
     origin_line = ""
     if isinstance(origin, dict) and origin:
-        bits = [
-            f'<code>{html.escape(str(origin.get(key) or ""))}</code>'
-            for key in ("namespace", "pack", "version", "requirement")
-            if key in origin
-        ]
+        bits = []
+        for key in ("namespace", "pack", "version", "requirement"):
+            if key in origin:
+                bits.append(f'{key} <code>{html.escape(str(origin.get(key) or ""))}</code>')
         origin_line = f'<p id="requirement-origin">Origin {" ".join(bits)}</p>'
     word = _signature_word(model.get("reading") if isinstance(model.get("reading"), dict) else None)
     signature = (

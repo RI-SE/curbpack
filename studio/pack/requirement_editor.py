@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import json
 import secrets
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -129,7 +130,11 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
             edits=_edits_from_form(requirement, form),
             also_search=(packs,),
         )
-        mark_selected(ws.root, str(pack["id"]), copied.name)
+        try:
+            mark_selected(ws.root, str(pack["id"]), copied.name)
+        except Exception:
+            shutil.rmtree(copied, ignore_errors=True)
+            raise
         return f"/requirements/requirement/{quote(requirement_id, safe='')}?saved=1"
     edited = apply_edits(requirement, _edits_from_form(requirement, form))
     save_working_requirement(

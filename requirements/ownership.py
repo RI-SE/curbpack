@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import secrets
 import shutil
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from common.errors import ModelError
 from common.store import load_pack_directory, save_pack, save_requirement
 from common.validate import pack_namespace
 from requirements.editing import apply_edits
+from requirements.workspace import _pack_id_name
 
 
 def in_target_namespace(pack: dict, namespace_base: str) -> bool:
@@ -19,6 +21,16 @@ def in_target_namespace(pack: dict, namespace_base: str) -> bool:
     if not isinstance(name, str) or not name.strip():
         return False
     return pack.get("namespace") == pack_namespace(namespace_base, name)
+
+
+def _confined_directory(root: Path, pack_id: str, stamp: str) -> Path:
+    """A new working-copy path that stays inside root."""
+    pack_id = _pack_id_name(pack_id)
+    root_resolved = root.resolve()
+    final = (root_resolved / pack_id / stamp).resolve()
+    if root_resolved != final and root_resolved not in final.parents:
+        raise ModelError("pack", "id", "a directory inside the workspace")
+    return final
 
 
 def take_ownership(
@@ -42,19 +54,27 @@ def take_ownership(
             "id",
             "a requirement in this pack",
         )
-    _refuse_existing_target(pack["id"], target, source, destination_root, also_search)
+    pack_id = _pack_id_name(str(pack.get("id") or ""))
+    _refuse_existing_target(pack_id, target, source, destination_root, also_search)
     stamp = at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     if not stamp or Path(stamp).name != stamp or stamp in {".", ".."}:
         raise ModelError("working copy", "timestamp", "a single directory name")
-    final = destination_root / pack["id"] / stamp
+    final = _confined_directory(destination_root, pack_id, stamp)
     if final.exists():
         raise ModelError("working copy", "timestamp", f"a new directory, not {stamp}")
-    with tempfile.TemporaryDirectory() as tmp:
-        work = Path(tmp) / "copy"
-        shutil.copytree(source, work)
-        _write_owned_copy(work, pack, requirements, target, requirement_id, edits)
+    temp = destination_root / f".own-tmp-{secrets.token_hex(8)}"
+    try:
+        shutil.copytree(source, temp)
+        _write_owned_copy(temp, pack, requirements, target, requirement_id, edits)
         final.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(work), str(final))
+        try:
+            os.rename(temp, final)
+        except OSError:
+            raise ModelError("working copy", "timestamp", f"a new directory, not {stamp}") from None
+    except Exception:
+        if temp.exists():
+            shutil.rmtree(temp)
+        raise
     return final
 
 
