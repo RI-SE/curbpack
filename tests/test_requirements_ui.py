@@ -50,7 +50,7 @@ def _xml_pack() -> dict:
         "id": "cra-xml-baseline",
         "name": "CRA XML",
         "version": "0.1.0",
-        "namespace": "RISE/cra-xml extract",
+        "namespace": "RISE/CRA XML",
     }
 
 

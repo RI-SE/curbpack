@@ -13,6 +13,14 @@ from common.validate import pack_namespace
 from requirements.editing import apply_edits
 
 
+def in_target_namespace(pack: dict, namespace_base: str) -> bool:
+    """True when the Pack already uses namespace_base plus its name."""
+    name = pack.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return False
+    return pack.get("namespace") == pack_namespace(namespace_base, name)
+
+
 def take_ownership(
     source: Path,
     destination_root: Path,

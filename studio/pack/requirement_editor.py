@@ -95,12 +95,42 @@ def _editor_message(query: dict) -> str:
     return ""
 
 
-def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> str:
-    from app.server import _open_requirement, _pack_query
+def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> str | bytes:
+    from urllib.parse import quote
 
-    directory, _pack, requirement = _open_requirement(ws, requirement_id, form)
-    if directory is None or requirement is None:
+    from app.server import _open_requirement, _pack_query
+    from requirements.ownership import in_target_namespace, take_ownership
+    from requirements.workspace import mark_selected
+    from studio.pack.pages import ownership_confirmation_page
+
+    directory, pack, requirement = _open_requirement(ws, requirement_id, form)
+    if directory is None or requirement is None or pack is None:
         raise ModelError("requirement", "id", "a requirement in the selected working copy")
+    namespace_base, packs = _namespace_base_for_edit(ws, form)
+    if not in_target_namespace(pack, namespace_base):
+        if (form.get("take_ownership") or [""])[0] != "1":
+            query = _pack_query(form)
+            cancel = f"/requirements/requirement/{quote(requirement_id, safe='')}"
+            if query:
+                cancel = f"{cancel}?{query}"
+            return ownership_confirmation_page(requirement_id, form, cancel)
+        expected = (form.get("expected_digest") or [""])[0]
+        if version_digest(requirement) != expected:
+            raise ModelError(
+                f"requirement {requirement_id}",
+                "version",
+                "the digest read before this save",
+            )
+        copied = take_ownership(
+            directory,
+            ws.root,
+            namespace_base=namespace_base,
+            requirement_id=requirement_id,
+            edits=_edits_from_form(requirement, form),
+            also_search=(packs,),
+        )
+        mark_selected(ws.root, str(pack["id"]), copied.name)
+        return f"/requirements/requirement/{quote(requirement_id, safe='')}?saved=1"
     edited = apply_edits(requirement, _edits_from_form(requirement, form))
     save_working_requirement(
         directory,
@@ -110,6 +140,24 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
     extra = _pack_query(form)
     suffix = f"?{extra}&saved=1" if extra else "?saved=1"
     return f"/requirements/requirement/{requirement_id}{suffix}"
+
+
+def _namespace_base_for_edit(ws: Workspace, form: dict) -> tuple[str, Path]:
+    """Publisher base and that repository's packs directory. A missing file is an error."""
+    from app.server import _registered_repo_path
+    from checks.run import packs_dir
+    from common.validate import validate_curbpack_config
+    from discovery.door import open_repo_id
+
+    repo_id = (form.get("repo") or [""])[0].strip() or (open_repo_id(ws.root) or "")
+    if not repo_id:
+        raise ModelError("curbpack.json", "namespace_base", "the open repository")
+    repo = _registered_repo_path(ws, repo_id)
+    path = repo / "curbpack.json"
+    if not path.is_file():
+        raise ModelError("curbpack.json", "namespace_base", "a curbpack.json in the repository")
+    config = validate_curbpack_config(read_json(path))
+    return str(config["namespace_base"]), packs_dir(repo, config)
 
 
 def _edits_from_form(requirement: dict, form: dict) -> dict:
