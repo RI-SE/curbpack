@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def report_fixture(*, long=False):
     passage = 'Åtgärder för säkerhet: läs och granska <källa> & underlag.'
     requirement = {
-        'id': 'REQ-A', 'pack_id': 'house',
+        'id': 'REQ-A', 'pack_id': 'house', 'namespace': 'RISE/house',
         'source': {'framework': 'test', 'instrument': 'Security policy',
                    'identifier': 'POL-1', 'language': 'sv', 'url': 'https://example.test/policy'},
         'references': [{'nr': 1, 'locator': '2.1', 'law_text': (passage + ' ') * (230 if long else 1)}],

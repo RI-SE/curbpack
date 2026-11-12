@@ -310,6 +310,7 @@ def _requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "house",
+        "namespace": "RISE/house",
         "source": {
             "framework": "test",
             "instrument": "fixture",

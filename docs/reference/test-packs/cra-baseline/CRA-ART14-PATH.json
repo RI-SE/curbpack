@@ -101,5 +101,7 @@
       "law_text": "The Commission may, by means of implementing acts, specify further the format\nand procedures of the notifications referred to in this Article as well as in\nArticles 15 and 16. Those implementing acts shall be adopted in accordance\nwith the examination procedure referred to in Article 62(2). The Commission\nshall cooperate with the CSIRTs network and ENISA in preparing those draft\nimplementing acts."
     }
   ],
-  "strength": "MUST"
+  "strength": "MUST",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft"
 }

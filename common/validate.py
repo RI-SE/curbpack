@@ -23,6 +23,8 @@ REQUIREMENT_FIELDS = {
     "discovery_hints",
     "origin",
     "signed",
+    "namespace",
+    "status",
 }
 
 # Old PoC fields and fields packs2.md explicitly removed.
@@ -45,10 +47,12 @@ PACK_FIELDS = {
     "id",
     "name",
     "version",
-    "assurance_class",
+    "namespace",
+    "status",
     "description",
     "jurisdiction",
     "source",
+    "origin",
     "signed",
 }
 
@@ -70,6 +74,23 @@ SOURCE_REQUIRED = ("framework", "instrument", "identifier", "language", "url")
 
 STRENGTHS = {"MUST", "SHOULD", "MAY"}
 SEVERITIES = {"high", "medium", "critical"}
+STATUSES = {"draft", "reviewed"}
+
+
+def pack_namespace(namespace_base: str, name: str) -> str:
+    return f"{namespace_base}/{name}"
+
+
+def pack_identity(pack: dict) -> tuple[str, str]:
+    return (str(pack.get("namespace") or ""), str(pack.get("id") or ""))
+
+
+def requirement_identity(requirement: dict) -> tuple[str, str, str]:
+    return (
+        str(requirement.get("namespace") or ""),
+        str(requirement.get("pack_id") or ""),
+        str(requirement.get("id") or ""),
+    )
 
 
 def _expect(object_name: str, field: str, expected: str) -> None:
@@ -173,12 +194,24 @@ def _validate_references(refs: object, object_name: str) -> None:
         _expect(object_name, "references[].nr", "1, 2, 3, … in array order")
 
 
+def _apply_status(obj: dict, object_name: str) -> None:
+    if "status" not in obj:
+        obj["status"] = "draft"
+        return
+    if obj["status"] not in STATUSES:
+        _expect(object_name, "status", "draft or reviewed")
+
+
 def _validate_origin(origin: object, object_name: str) -> None:
     if not isinstance(origin, dict):
         _expect(object_name, "origin", "object")
-    _reject_unknown(origin, f"{object_name}.origin", {"pack", "version"})
+    _reject_unknown(origin, f"{object_name}.origin", {"namespace", "pack", "version", "requirement"})
+    if "namespace" in origin:
+        _nonempty_str(origin, f"{object_name}.origin", "namespace", required=True)
     _nonempty_str(origin, f"{object_name}.origin", "pack", required=True)
     _nonempty_str(origin, f"{object_name}.origin", "version", required=True)
+    if "requirement" in origin:
+        _nonempty_str(origin, f"{object_name}.origin", "requirement", required=True)
 
 
 def validate_requirement(obj: object, *, published: bool = False) -> dict:
@@ -190,6 +223,8 @@ def validate_requirement(obj: object, *, published: bool = False) -> dict:
     _reject_unknown(requirement, name, REQUIREMENT_FIELDS)
     _nonempty_str(requirement, name, "id", required=True)
     _nonempty_str(requirement, name, "pack_id", required=True)
+    _nonempty_str(requirement, name, "namespace", required=True)
+    _apply_status(requirement, name)
     if "source" not in requirement:
         _expect(name, "source", "legal instrument")
     _validate_source(requirement["source"], name, require_edition=published)
@@ -217,9 +252,13 @@ def validate_pack(obj: object, *, sealed: bool = False) -> dict:
     _reject_unknown(pack, name, PACK_FIELDS)
     _nonempty_str(pack, name, "id", required=True)
     _nonempty_str(pack, name, "version", required=True)
-    for field in ("name", "assurance_class", "description", "jurisdiction"):
+    _nonempty_str(pack, name, "namespace", required=True)
+    _apply_status(pack, name)
+    for field in ("name", "description", "jurisdiction"):
         if field in pack:
             _nonempty_str(pack, name, field, required=True)
+    if "origin" in pack:
+        _validate_origin(pack["origin"], name)
     if "source" in pack:
         source = pack["source"]
         if not isinstance(source, dict):

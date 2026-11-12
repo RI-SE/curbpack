@@ -59,7 +59,8 @@ Pack is **metadata only**. Membership is `requirement.pack_id → pack.id`.
   "id": "house-policy",
   "name": "House Policy Example",
   "version": "0.1.0",
-  "assurance_class": "structural_draft",
+  "namespace": "RISE/House Policy Example",
+  "status": "draft",
   "description": "…",
   "jurisdiction": "EU",
   "source": {
@@ -95,6 +96,8 @@ The Check definitions own their args schemas. A Claim contains `checks[]`, each 
 {
   "id": "CRA-ANNEX-VII-RISK",
   "pack_id": "cra-baseline",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft",
   "remediation_hint": "Populate a product-specific risk assessment (no placeholders).",
   "source": {
     "framework": "EU",
@@ -159,9 +162,13 @@ The Check definitions own their args schemas. A Claim contains `checks[]`, each 
 | `references[].law_text` | Verbatim passage. The requirement's meaning is this text plus the properties extracted from it. |
 | `note` | Optional human comment. Omit the key when there is nothing to say. `check` does not read it. Not a second law text, and not `applicability`. |
 | `discovery_hints` | Candidate-discovery hints. Part of the signed payload. See §2.7. `check` does not read them. |
-| `origin` | Optional. Omit on the publisher's requirement. Set when a local working copy is created from a published version, not when `discovery_hints` is later edited. `pack` and `version` name that published version. Included in the digest. Change `version` only when a newer published version is actually taken in and accepted. |
+| `origin` | Optional. Omit on the publisher's requirement. Set when a local working copy is created from a published version, not when `discovery_hints` is later edited. Included in the digest. A present origin may name `namespace`, and `requirement` when the source is a Requirement. Do not add those keys to an origin that does not already carry them. |
+| `origin.namespace` | Optional. Namespace of the source object. |
 | `origin.pack` | Id of the published pack, the same id as `pack.id`. |
 | `origin.version` | That pack's `version` at the release that was taken in. Not a Git commit and not a content hash. |
+| `origin.requirement` | Optional. Id of the source Requirement. Omit on a Pack origin. |
+| `namespace` | Namespace of the containing Pack. A Requirement uses the same value as its Pack. |
+| `status` | `draft` or `reviewed`. The publisher's declared review state. A missing key is `draft`. This is not the signature status `valid`, `invalid`, or `unsigned`. Signing does not change it. |
 | `signed` | Required on a published requirement. Omitted on a local draft. Present when an approved local version uses this seal. The publisher's signature verifies only the publisher's bytes. See §2.6. |
 
 There is no `description` and no `expected` on the requirement. The meaning is `law_text` and the properties extracted from it. "Draft suitable for human review" is not a requirement field. There is no `severity` on the requirement. There is no `statement`, no `limitations`, and no `mandatory` or `verification` flag. There is no `source_digest`.

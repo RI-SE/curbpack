@@ -15,5 +15,7 @@
       "locator": "Security docs",
       "law_text": "SECURITY.md present with Security header and substantive content."
     }
-  ]
+  ],
+  "namespace": "RISE/House Policy Example",
+  "status": "draft"
 }

@@ -113,7 +113,7 @@ class ExportPackTest(unittest.TestCase):
         private, public = generate_keypair()
         copy = self.root / "pack"
         copy.mkdir()
-        save_pack(copy, {"id": "pack", "version": "1"})
+        save_pack(copy, {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack"})
         valid = _plain_requirement("REQ-VALID")
         valid = sign_object(valid, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
         invalid = sign_object(
@@ -164,7 +164,7 @@ class ExportPackTest(unittest.TestCase):
 
         copy = self.root / "pack"
         copy.mkdir()
-        save_pack(copy, {"id": "pack", "version": "1"})
+        save_pack(copy, {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack"})
         save_requirement(copy, _plain_requirement("REQ-OPEN"))
         pack, requirements = load_pack_directory(copy)
         with patch(
@@ -182,6 +182,8 @@ def _plain_requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "pack",
+        "namespace": "RISE/pack",
+        "status": "draft",
         "source": {
             "framework": "CRA",
             "instrument": "Annex",
@@ -407,7 +409,12 @@ def _file_bytes(directory: Path) -> dict[str, bytes]:
     }
 
 
-_XML_PACK = {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"}
+_XML_PACK = {
+    "id": "cra-xml-baseline",
+    "name": "CRA XML",
+    "version": "0.1.0",
+    "namespace": "RISE/cra-xml extract",
+}
 _BAD_SIGNATURE_REASON = (
     "The certificate for name is not available. Verification does not fetch it."
 )
@@ -443,6 +450,7 @@ class ExportPageTest(unittest.TestCase):
                 "id": "cra-annex-vii",
                 "name": "CRA Annex VII",
                 "version": draft_pack()["version"],
+                "namespace": "RISE/CRA Annex VII",
             },
         )
         save_repos(

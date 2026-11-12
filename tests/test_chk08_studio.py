@@ -37,6 +37,7 @@ def _requirement(requirement_id: str, pack_id: str = "cra-baseline") -> dict:
     return {
         "id": requirement_id,
         "pack_id": pack_id,
+        "namespace": "RISE/CRA baseline",
         "source": {
             "framework": "EU",
             "instrument": "CRA",

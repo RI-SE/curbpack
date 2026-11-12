@@ -238,7 +238,13 @@ def _add_pack_to_repo(
     pack_dir = packs_dir(repo, checked) / pack_id / draft_pack()["version"]
     if (pack_dir / "pack.json").is_file():
         raise ModelError("pack", "id", f"a new pack, not existing {pack_id}")
-    pack: dict = {"id": pack_id, "name": name.strip(), "version": draft_pack()["version"]}
+    pack: dict = {
+        "id": pack_id,
+        "name": name.strip(),
+        "version": draft_pack()["version"],
+        "namespace": f"{checked['namespace_base']}/{name.strip()}",
+        "status": "draft",
+    }
     source = {}
     if official_name.strip():
         source["instrument"] = official_name.strip()

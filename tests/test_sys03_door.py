@@ -71,6 +71,7 @@ def _requirement(requirement_id: str, pack_id: str = "cra-baseline") -> dict:
     return {
         "id": requirement_id,
         "pack_id": pack_id,
+        "namespace": "RISE/CRA baseline",
         "source": {
             "framework": "EU",
             "instrument": "CRA",
@@ -190,7 +191,7 @@ class CurbpackPathFieldsTest(unittest.TestCase):
             )
             # Old layout must not be consulted.
             old_pack = repo / "curbpack" / "packs" / "cra-baseline"
-            save_pack(old_pack, {"id": "cra-baseline", "name": "old", "version": "9.9.9"})
+            save_pack(old_pack, {"id": "cra-baseline", "name": "old", "version": "9.9.9", "namespace": "RISE/old"})
             write_claim(
                 repo / "curbpack" / "claims",
                 _exist_claim("claim-old-root", "CRA-PURPOSE", "README.md"),
@@ -1157,6 +1158,7 @@ def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "cra-xml-baseline",
+        "namespace": "RISE/CRA baseline",
         "source": {
             "framework": "EU",
             "instrument": "CRA",

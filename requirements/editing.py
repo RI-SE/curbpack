@@ -83,6 +83,17 @@ def _refuse_published_directory(directory: Path) -> None:
         )
 
 
+def _new_origin(requirement: dict, pack: dict) -> dict:
+    origin = {"pack": pack["id"], "version": pack["version"]}
+    namespace = pack.get("namespace")
+    if isinstance(namespace, str) and namespace.strip():
+        origin["namespace"] = namespace
+    requirement_id = requirement.get("id")
+    if isinstance(requirement_id, str) and requirement_id.strip():
+        origin["requirement"] = requirement_id
+    return origin
+
+
 def working_copy(requirement: dict, pack: dict) -> dict:
     """Copy a published requirement into the product repo. Unsigned, with origin set."""
     validate_pack(pack)
@@ -94,7 +105,9 @@ def working_copy(requirement: dict, pack: dict) -> dict:
         )
     out = copy.deepcopy(requirement)
     out.pop("signed", None)
-    out["origin"] = {"pack": pack["id"], "version": pack["version"]}
+    if "namespace" not in out and isinstance(pack.get("namespace"), str):
+        out["namespace"] = pack["namespace"]
+    out["origin"] = _new_origin(requirement, pack)
     return validate_requirement(out, published=False)
 
 
@@ -109,7 +122,9 @@ def accept_published_version(published: dict, pack: dict) -> dict:
         )
     out = copy.deepcopy(published)
     out.pop("signed", None)
-    out["origin"] = {"pack": pack["id"], "version": pack["version"]}
+    if "namespace" not in out and isinstance(pack.get("namespace"), str):
+        out["namespace"] = pack["namespace"]
+    out["origin"] = _new_origin(published, pack)
     return validate_requirement(out, published=False)
 
 
@@ -120,7 +135,8 @@ def publish_requirement(requirement: dict, *, name: str, private_key: bytes, at:
             "origin",
             "absent when publishing; this is a local working copy",
         )
-    signed = sign_object(requirement, name=name, private_key=private_key, at=at)
+    document = validate_requirement(requirement, published=False)
+    signed = sign_object(document, name=name, private_key=private_key, at=at)
     return validate_requirement(signed, published=True)
 
 
@@ -152,11 +168,12 @@ def read_pack_seal(root: Path, trust: dict[str, bytes]) -> dict:
 
 
 def approve_working_copy(requirement: dict, *, name: str, private_key: bytes, at: str) -> dict:
-    if "origin" not in requirement:
+    document = validate_requirement(requirement, published=False)
+    if "origin" not in document:
         raise ModelError(
             f"requirement {requirement.get('id', '?')}",
             "origin",
             "present on a local working copy before approval",
         )
-    signed = sign_object(requirement, name=name, private_key=private_key, at=at)
+    signed = sign_object(document, name=name, private_key=private_key, at=at)
     return validate_requirement(signed, published=False)

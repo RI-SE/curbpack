@@ -89,6 +89,7 @@ class CoverNavigationTest(unittest.TestCase):
                     "id": "house",
                     "name": "House Rules",
                     "version": draft_pack()["version"],
+                    "namespace": "RISE/House Rules",
                     "source": {"instrument": "House", "url": "https://example.test/house"},
                 },
             )
@@ -130,7 +131,12 @@ class CoverNavigationTest(unittest.TestCase):
             copy = create_extraction_copy(
                 root,
                 "cra-xml-baseline",
-                {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"},
+                {
+                    "id": "cra-xml-baseline",
+                    "name": "CRA XML",
+                    "version": "0.1.0",
+                    "namespace": "RISE/cra-xml extract",
+                },
                 at="2026-10-27T065647Z",
             )
             mark_selected(root, "cra-xml-baseline", copy.name)

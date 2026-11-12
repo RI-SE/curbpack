@@ -154,6 +154,7 @@ def _build_requirement(provision: dict, proposal: dict, adapter: dict) -> dict:
     requirement = {
         "id": requirement_id,
         "pack_id": pack_id,
+        "namespace": _namespace_for_adapter(adapter),
         "source": dict(source),
         "references": [
             {"nr": 1, "locator": locator, "law_text": provision["law_text"]},
@@ -166,6 +167,14 @@ def _build_requirement(provision: dict, proposal: dict, adapter: dict) -> dict:
         return validate_requirement(requirement, published=False)
     except ModelError as exc:
         return {"locus": locus, "reason": str(exc)}
+
+
+def _namespace_for_adapter(adapter: dict) -> str:
+    from requirements.extract.pipeline import draft_pack
+
+    if adapter.get("id") == "cra":
+        return str(draft_pack()["namespace"])
+    return f"RISE/{adapter.get('id') or 'extract'} extract"
 
 
 def _omit_unusable_expected_evidence(proposal: dict) -> None:
@@ -187,6 +196,7 @@ def _check_hints_shape(hints: object) -> None:
     probe = {
         "id": "probe",
         "pack_id": "probe",
+        "namespace": "RISE/probe",
         "source": {
             "framework": "EU",
             "instrument": "CRA",

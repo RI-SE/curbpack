@@ -45,6 +45,23 @@ for pack_id in sys.argv[3:]:
     if target.exists():
         shutil.rmtree(target)
     shutil.copytree(source_dir, target)
+    pack_path = target / "pack.json"
+    if "assurance_class" in pack or "namespace" not in pack:
+        pack.pop("assurance_class", None)
+        name = pack.get("name")
+        if not isinstance(name, str) or not name.strip():
+            name = pack["id"]
+        pack["namespace"] = f"RISE/{name}"
+        pack["status"] = "draft"
+        pack_path.write_text(json.dumps(pack, indent=2) + "\n", encoding="utf-8")
+        for path in target.glob("*.json"):
+            if path.name == "pack.json":
+                continue
+            requirement = json.loads(path.read_text(encoding="utf-8"))
+            requirement.pop("assurance_class", None)
+            requirement["namespace"] = pack["namespace"]
+            requirement["status"] = "draft"
+            path.write_text(json.dumps(requirement, indent=2) + "\n", encoding="utf-8")
 PY
 }
 

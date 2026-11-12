@@ -15,5 +15,7 @@
       "locator": "VII.3",
       "law_text": "an assessment of the cybersecurity risks against which the product with\ndigital elements is designed, developed, produced, delivered and maintained\npursuant to Article 13, including how the essential cybersecurity requirements\nset out in Part I of Annex I are applicable;"
     }
-  ]
+  ],
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft"
 }

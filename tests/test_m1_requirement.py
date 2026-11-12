@@ -119,7 +119,15 @@ class EditAndPersistTest(unittest.TestCase):
         self.assertNotIn("origin", published)
 
         copy = working_copy(published, draft_pack())
-        self.assertEqual(copy["origin"], {"pack": "cra-baseline", "version": "0.1.0"})
+        self.assertEqual(
+            copy["origin"],
+            {
+                "namespace": "RISE/CRA baseline",
+                "pack": "cra-baseline",
+                "version": "0.1.0",
+                "requirement": "CRA-ANNEX-VII-RISK",
+            },
+        )
         self.assertNotIn("signed", copy)
         unsigned = read_signature(copy, trust, what="requirement")
         self.assertFalse(unsigned["verifiable"])

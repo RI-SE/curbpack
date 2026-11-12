@@ -15,5 +15,7 @@
       "locator": "FIX-OWNED-POLICY",
       "law_text": "Repo-bound draft with expected git author on last commit."
     }
-  ]
+  ],
+  "namespace": "RISE/Fresh and owned check fixture (test only)",
+  "status": "draft"
 }

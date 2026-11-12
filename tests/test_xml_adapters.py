@@ -21,7 +21,7 @@ from requirements.workspace import extract_section, list_working_copies
 
 
 def _pack(pack_id: str, name: str) -> dict:
-    return {"id": pack_id, "name": name, "version": "0.1.0"}
+    return {"id": pack_id, "name": name, "version": "0.1.0", "namespace": f"RISE/{name}"}
 
 
 class XmlAdapterCatalogTest(unittest.TestCase):

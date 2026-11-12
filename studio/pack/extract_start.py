@@ -18,10 +18,13 @@ if TYPE_CHECKING:
 def _pack_for_adapter(adapter: dict) -> dict:
     if adapter.get("id") == "cra":
         return draft_pack()
+    name = f"{adapter['id']} extract"
     return {
         "id": adapter["pack_id"],
-        "name": f"{adapter['id']} extract",
+        "name": name,
         "version": "0.1.0",
+        "namespace": f"RISE/{name}",
+        "status": "draft",
     }
 
 

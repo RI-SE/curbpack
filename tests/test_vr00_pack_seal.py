@@ -15,6 +15,7 @@ def _requirement(requirement_id: str = "REQ-A") -> dict:
     return {
         "id": requirement_id,
         "pack_id": "pack",
+        "namespace": "RISE/pack",
         "source": {
             "framework": "CRA",
             "instrument": "Annex",
@@ -32,7 +33,7 @@ class PackSealTest(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
-        save_pack(root, {"id": "pack", "version": "1"})
+        save_pack(root, {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack"})
         save_requirement(root, _requirement())
         save_requirement(root, _requirement("REQ-B"))
         seal_pack_directory(root, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
@@ -63,7 +64,7 @@ class PackSealTest(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
-        save_pack(root, {"id": "pack", "version": "1"})
+        save_pack(root, {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack"})
         save_requirement(root, _requirement())
         (root / ".note").write_text("hidden", encoding="utf-8")
         seal_pack_directory(root, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")

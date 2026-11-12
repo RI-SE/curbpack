@@ -43,10 +43,13 @@ _POINT_3_HINTS = {
 
 
 def draft_pack() -> dict:
+    name = "CRA baseline"
     return {
         "id": "cra-baseline",
-        "name": "CRA baseline",
+        "name": name,
         "version": "0.1.0",
+        "namespace": f"RISE/{name}",
+        "status": "draft",
         "description": "CRA applies to products with digital elements.",
         "source": {
             "framework": "EU",

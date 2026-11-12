@@ -15,5 +15,7 @@
       "locator": "Security docs",
       "law_text": "No placeholder patterns in required security docs."
     }
-  ]
+  ],
+  "status": "draft",
+  "namespace": "RISE/House Policy Example"
 }

@@ -25,5 +25,7 @@
       "locator": "II.8(d)",
       "law_text": "detailed instructions or an internet address referring to such detailed\ninstructions and information on: (d) the secure decommissioning of the product\nwith digital elements, including information on how user data can be securely\nremoved;"
     }
-  ]
+  ],
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft"
 }

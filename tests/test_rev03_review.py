@@ -1590,6 +1590,7 @@ def _requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "cra-baseline",
+        "namespace": "RISE/CRA baseline",
         "source": {
             "framework": "EU",
             "instrument": "CRA",
@@ -1906,6 +1907,7 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
             {
                 "id": "REQ-A",
                 "pack_id": "cra-xml-baseline",
+                "namespace": "RISE/cra-xml extract",
                 "source": {
                     "framework": "EU",
                     "instrument": "CRA",

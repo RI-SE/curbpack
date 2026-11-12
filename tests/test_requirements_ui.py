@@ -46,7 +46,12 @@ def _proposals() -> list[dict]:
 
 
 def _xml_pack() -> dict:
-    return {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"}
+    return {
+        "id": "cra-xml-baseline",
+        "name": "CRA XML",
+        "version": "0.1.0",
+        "namespace": "RISE/cra-xml extract",
+    }
 
 
 class RequirementsUiTest(unittest.TestCase):
@@ -98,6 +103,7 @@ class RequirementsUiTest(unittest.TestCase):
                     "id": "house-policy",
                     "name": "House Policy",
                     "version": draft_pack()["version"],
+                    "namespace": "RISE/House Policy",
                     "source": {
                         "instrument": "Content of the technical documentation",
                         "url": "https://publications.europa.eu/resource/celex/32024R2847",
@@ -424,6 +430,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "fresh-nis",
                     "name": "Fresh NIS",
                     "version": "0.1.0",
+                    "namespace": "RISE/Fresh NIS",
                     "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
                 },
             )
@@ -433,12 +440,15 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "kept-nis",
                     "name": "Kept NIS",
                     "version": "0.1.0",
+                    "namespace": "RISE/Kept NIS",
                     "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
                 },
             )
             requirement = {
                 "id": "NIS-ART1",
                 "pack_id": "kept-nis",
+                "namespace": "RISE/Kept NIS",
+                "status": "draft",
                 "source": {
                     "framework": "EU",
                     "instrument": "NIS2",
@@ -457,6 +467,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "house-policy",
                     "name": "House Policy Example",
                     "version": "0.1.0",
+                    "namespace": "RISE/House Policy Example",
                 },
             )
             write_json(
@@ -464,6 +475,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                 {
                     "id": "HOUSE-SECURITY-MD",
                     "pack_id": "house-policy",
+                    "namespace": "RISE/House Policy Example",
                     "source": {
                         "framework": "internal",
                         "instrument": "House Policy Example",
@@ -568,6 +580,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "kept-nis",
                     "name": "Kept NIS",
                     "version": "0.1.0",
+                    "namespace": "RISE/Kept NIS",
                     "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
                 },
             )
@@ -581,6 +594,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     {
                         "id": requirement_id,
                         "pack_id": "kept-nis",
+                        "namespace": "RISE/Kept NIS",
                         "source": {
                             "framework": "EU",
                             "instrument": "NIS2",
@@ -639,7 +653,7 @@ class RepoPackSectionsTest(unittest.TestCase):
             )
             write_json(
                 house / "pack.json",
-                {"id": "house-policy", "name": "House Policy Example", "version": "0.1.0"},
+                {"id": "house-policy", "name": "House Policy Example", "version": "0.1.0", "namespace": "RISE/House Policy Example"},
             )
             write_json(
                 cra / "pack.json",
@@ -647,6 +661,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "cra-baseline",
                     "name": "CRA Annex VII",
                     "version": "0.1.0",
+                    "namespace": "RISE/CRA Annex VII",
                     "source": {"framework": "EU", "instrument": "CRA", "url": cra_url},
                 },
             )
@@ -713,6 +728,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "cra",
                     "name": "CRA",
                     "version": version,
+                    "namespace": "RISE/CRA",
                     "source": {"instrument": "CRA", "url": xml_url},
                 },
             )

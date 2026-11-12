@@ -319,6 +319,7 @@ def _transferred(pack: dict, requirements: list[dict], existing: dict | None, re
             raise ModelError(f"requirement {requirement_id}", "requirement", "an object")
         incoming.pop("signed", None)
         incoming["pack_id"] = pack["id"]
+        incoming["namespace"] = pack["namespace"]
         incoming_id = incoming.get("id")
         if any(item.get("id") == incoming_id for item in requirements):
             raise ModelError(

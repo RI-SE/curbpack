@@ -280,6 +280,7 @@ def _seed_two_requirements(root: Path) -> None:
             {
                 "id": requirement_id,
                 "pack_id": pack_id,
+                "namespace": draft_pack()["namespace"],
                 "source": {
                     "framework": "EU",
                     "instrument": "CRA",
