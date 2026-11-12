@@ -113,7 +113,15 @@ def _resolve_compare_ref(root: Path, pack_id: str, ref: str) -> Path:
     return select_working_copy(root, pack_id, raw)
 
 
-def _apply_compare_form(ws: Workspace, form: dict) -> str:
+def _apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
+    from urllib.parse import quote
+
+    from common.canonical import version_digest
+    from requirements.ownership import in_target_namespace, take_ownership
+    from requirements.workspace import load_working_copy, mark_selected
+    from studio.pack.pages import ownership_confirmation_page
+    from studio.pack.requirement_editor import _namespace_base_for_edit
+
     pack_id = _compare_pack_id(ws)
     source_ref = (form.get("source") or [""])[0]
     destination_ref = (form.get("destination") or [""])[0]
@@ -122,7 +130,52 @@ def _apply_compare_form(ws: Workspace, form: dict) -> str:
     source = _resolve_compare_ref(ws.root, pack_id, source_ref)
     destination = _resolve_compare_ref(ws.root, pack_id, destination_ref)
     field = (form.get("field") or [""])[0].strip()
+    requirement_id = (form.get("requirement_id") or [""])[0].strip()
     destination_digest = (form.get("destination_digest") or [""])[0]
+    pack, requirements = load_working_copy(destination)
+    from discovery.door import open_repo_id
+
+    repo_id = (form.get("repo") or [""])[0].strip() or (open_repo_id(ws.root) or "")
+    if repo_id:
+        namespace_base, packs = _namespace_base_for_edit(ws, form)
+        if not in_target_namespace(pack, namespace_base):
+            requirement = next((item for item in requirements if item.get("id") == requirement_id), None)
+            if requirement is None:
+                raise ModelError("requirement", "id", "a requirement in the selected working copy")
+            if (form.get("take_ownership") or [""])[0] != "1":
+                return ownership_confirmation_page(
+                    requirement_id,
+                    form,
+                    "/requirements/compare",
+                    action="/requirements/compare/apply",
+                )
+            if version_digest(requirement) != destination_digest:
+                raise ModelError(
+                    f"requirement {requirement_id}",
+                    "version",
+                    "the digest read before this save",
+                )
+            copied = take_ownership(
+                destination,
+                ws.root,
+                namespace_base=namespace_base,
+                requirement_id=requirement_id,
+                edits={field: (form.get("value") or [""])[0]},
+                also_search=(packs,),
+            )
+            try:
+                mark_selected(ws.root, str(pack["id"]), copied.name)
+            except Exception:
+                import shutil
+
+                shutil.rmtree(copied, ignore_errors=True)
+                raise
+            return (
+                "/requirements/compare?left="
+                + quote(source_ref, safe="")
+                + "&right="
+                + quote(copied.name, safe="")
+            )
     apply_transfer(
         source,
         destination,

@@ -1437,7 +1437,12 @@ def _identity_lines(model: dict, requirement: dict) -> str:
     return identity + origin_line + signature
 
 
-def ownership_confirmation_page(requirement_id: str, form: dict, cancel_href: str) -> bytes:
+def ownership_confirmation_page(
+    requirement_id: str,
+    form: dict,
+    cancel_href: str,
+    action: str | None = None,
+) -> bytes:
     """The story's confirmation. Nothing has been written yet."""
     hidden = []
     for key, values in form.items():
@@ -1449,6 +1454,7 @@ def ownership_confirmation_page(requirement_id: str, form: dict, cancel_href: st
                 f'value="{html.escape(str(value))}">'
             )
     hidden.append('<input type="hidden" name="take_ownership" value="1">')
+    post_action = action or f"/requirements/requirement/{html.escape(requirement_id)}"
     body = f"""
 <h1>Take ownership of this Pack?</h1>
 <p>You are about to modify a Pack published under another namespace.</p>
@@ -1456,7 +1462,7 @@ def ownership_confirmation_page(requirement_id: str, form: dict, cancel_href: st
 <p>The original Pack remains unchanged. Your copy is unsigned and requires your own review; signing is a separate action, not a condition for export.</p>
 <p class="actions">
 <a href="{html.escape(cancel_href)}">Cancel</a>
-<form method="post" action="/requirements/requirement/{html.escape(requirement_id)}">
+<form method="post" action="{post_action}">
 {"".join(hidden)}
 <button type="submit">Take ownership</button>
 </form>

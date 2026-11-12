@@ -458,3 +458,86 @@ class RequirementsPageTest(unittest.TestCase):
             if path.is_dir() and b"Owned note." in (path / "REQ-A.json").read_bytes()
         )
         self.assertIn(b"ACME/Imported", (owned / "pack.json").read_bytes())
+
+    def test_compare_apply_asks_before_changing_a_foreign_pack(self):
+        import html
+        import re
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+
+        from common.canonical import version_digest
+        from common.jsonio import write_json
+        from common.store import load_requirement
+
+        repo = self.root / "product"
+        repo.mkdir()
+        write_json(
+            repo / "curbpack.json",
+            self.created_curbpack(namespace_base="ACME", packs=["cra-xml-baseline"]),
+        )
+        self.save_repos(
+            self.root,
+            self.add_repo(self.root, self.load_repos(self.root), name="Product", path=str(repo)),
+        )
+        self.set_open_repo(self.root, "product")
+        source = self.root / "source"
+        save_pack(
+            source,
+            _pack(id="imported-pack", name="Imported", namespace="OTHER/Imported"),
+        )
+        save_requirement(
+            source,
+            _requirement("REQ-A", pack_id="imported-pack", namespace="OTHER/Imported"),
+        )
+        payload, _rows = export_pack_zip(source, {})
+        installed, _rows = import_pack_zip(payload, self.root, {}, at="2026-11-12T140000Z")
+        before = _file_bytes(installed)
+        digest = version_digest(load_requirement(installed / "REQ-A.json"))
+        base = self._serve()
+        fields = {
+            "source": installed.name,
+            "destination": installed.name,
+            "requirement_id": "REQ-A",
+            "field": "note",
+            "value": "Transferred note.",
+            "source_digest": digest,
+            "destination_digest": digest,
+        }
+        try:
+            asked = urllib.request.urlopen(
+                urllib.request.Request(
+                    base + "/requirements/compare/apply",
+                    data=urllib.parse.urlencode(fields).encode("utf-8"),
+                    method="POST",
+                )
+            ).read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            self.fail(exc.read().decode("utf-8"))
+        self.assertIn("Take ownership of this Pack?", asked)
+        self.assertEqual(_file_bytes(installed), before)
+        form_html = asked.split("<form", 1)[1].split("</form>", 1)[0]
+        posted = {
+            html.unescape(name): html.unescape(value)
+            for name, value in re.findall(
+                r'<input type="hidden" name="([^"]*)" value="([^"]*)">',
+                form_html,
+            )
+        }
+        try:
+            urllib.request.urlopen(
+                urllib.request.Request(
+                    base + "/requirements/compare/apply",
+                    data=urllib.parse.urlencode(posted).encode("utf-8"),
+                    method="POST",
+                )
+            ).read()
+        except urllib.error.HTTPError as exc:
+            self.fail(exc.read().decode("utf-8"))
+        self.assertEqual(_file_bytes(installed), before)
+        owned = next(
+            path
+            for path in (self.root / "imported-pack").iterdir()
+            if path.is_dir() and b"Transferred note." in (path / "REQ-A.json").read_bytes()
+        )
+        self.assertNotEqual(owned, installed)
