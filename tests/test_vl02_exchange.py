@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import tempfile
 import unittest
 import zipfile
@@ -194,3 +195,33 @@ class ImportZipTest(unittest.TestCase):
             at="2026-11-12T140000Z",
         )
         self.assertEqual(_file_bytes(installed), self.before)
+
+    def test_the_same_identity_is_not_imported_twice(self):
+        import_pack_zip(self.payload, self.studio, self.trust, at="2026-11-12T140000Z")
+        first = self.studio / "cra-baseline" / "2026-11-12T140000Z"
+        before = _file_bytes(first)
+        with self.assertRaises(ModelError) as caught:
+            import_pack_zip(self.payload, self.studio, self.trust, at="2026-11-12T150000Z")
+        self.assertEqual(caught.exception.field, "version")
+        self.assertEqual(_file_bytes(first), before)
+        self.assertFalse((self.studio / "cra-baseline" / "2026-11-12T150000Z").exists())
+
+    def test_a_different_version_is_another_pack(self):
+        import shutil
+
+        import_pack_zip(self.payload, self.studio, self.trust, at="2026-11-12T140000Z")
+        other = Path(self.tmp.name) / "other"
+        shutil.copytree(self.source, other)
+        pack = json.loads((other / "pack.json").read_text())
+        pack["version"] = "1.1.0"
+        pack.pop("signed", None)
+        (other / "pack.json").write_text(json.dumps(pack, indent=2) + "\n")
+        payload, _rows = export_pack_zip(other, self.trust)
+        installed, _rows = import_pack_zip(
+            payload,
+            self.studio,
+            self.trust,
+            at="2026-11-12T150000Z",
+        )
+        self.assertEqual(installed.name, "2026-11-12T150000Z")
+        self.assertTrue((self.studio / "cra-baseline" / "2026-11-12T140000Z").is_dir())

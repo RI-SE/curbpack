@@ -47,6 +47,7 @@ def import_pack_zip(
         _write_members(temp, files)
         pack, requirements = load_pack_directory(temp)
         pack_id = _pack_id_name(str(pack.get("id") or ""))
+        _refuse_same_identity(destination_root, pack)
         _confined(destination_root, pack_id, stamp)
         final = destination_root / pack_id / stamp
         if final.exists():
@@ -145,6 +146,29 @@ def _write_members(temp: Path, files: list[tuple[str, bytes]]) -> None:
             raise ModelError("import", "path", "a path inside the workspace")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
+
+
+def _refuse_same_identity(root: Path, pack: dict) -> None:
+    pack_id = str(pack.get("id") or "")
+    for base in (root / pack_id, root / "published" / pack_id):
+        if not base.is_dir():
+            continue
+        candidates = [base] if (base / "pack.json").is_file() else []
+        for child in sorted(base.iterdir()):
+            if child.is_dir() and (child / "pack.json").is_file():
+                candidates.append(child)
+        for directory in candidates:
+            found, _requirements = load_pack_directory(directory)
+            if (
+                found.get("namespace") == pack.get("namespace")
+                and found.get("id") == pack.get("id")
+                and found.get("version") == pack.get("version")
+            ):
+                raise ModelError(
+                    "pack",
+                    "version",
+                    f"no pack {pack_id} {pack.get('version')} already in {pack.get('namespace')}",
+                )
 
 
 def _confined(root: Path, pack_id: str, stamp: str) -> Path:
