@@ -63,7 +63,15 @@ Requirement
 | [VL-05](stories/VL-05-Claims-to-req-resolve.md) | Resolve historical Requirement–Claim–Check chains for Review | VL-04 |
 | [VL-06](stories/VL-06-review-affected-claims.md) | Show affected Claims after Requirement changes; offer Review, Rebind or Discovery | VL-01, VL-03, VL-04 |
 
-VR-00 and VL-00 establish the contracts before EP-02 code migration; VL-01–VL-06 are implemented in the resulting architecture, subject to their own stated dependencies. Export ZIP extends completed EP-01 PE-11; new VL-02 takes precedence without rewriting that completed story.
+## Placement
+
+New functionality follows the target architecture's component ownership, headless backend, and Pydantic models of the approved Packs v2 contracts. Component ownership is defined in [CURBPACK_ARCHITECTURE.md](../02-modularize-studio/CURBPACK_ARCHITECTURE.md) and `docs/arch/ARCHITECTURE.md`.
+
+New pages are written in TypeScript under the owning component's `pages/` directory. The existing HTTP server is a thin adapter until FastAPI is introduced. Existing Python pages may be changed only where required to expose this epic's functionality. No new business logic is added to Python pages.
+
+This placement does not change any story's behavior or acceptance criteria.
+
+VR-00 and VL-00 establish the contracts that those Pydantic models implement, subject to each story's stated dependencies. Export ZIP extends completed EP-01 PE-11; VL-02 takes precedence for the new exchange workflow without rewriting that completed story.
 
 Contract changes update human-approved `docs/reference/packs2.md` and the corresponding `docs/reference/workspace.md`; Pydantic implements the normative contracts and JSON Schema is generated. Reconcile `docs/agile/DECISIONS.md` when decisions change.
 

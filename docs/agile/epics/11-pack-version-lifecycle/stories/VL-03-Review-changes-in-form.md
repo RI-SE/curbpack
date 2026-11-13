@@ -22,7 +22,7 @@ The comparison belongs to the current Extract or Import operation. No persistent
 
 Replace the existing JSON-diff presentation with a form-based Compare page.
 
-Implement the page in its own Python module, e.g. `requirements/ui/compare_form.py`.
+Implement the new Compare page as its own thin TypeScript page, e.g. `studio/pack/pages/compare_form.ts`.
 
 The page receives the current Requirement, the proposed Requirement and the context needed to return to the correct Requirements list.
 

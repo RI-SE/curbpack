@@ -1,6 +1,6 @@
 # Agreed design decisions and open questions
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-11
 
 This document records decisions that govern ongoing and future Curbpack work. It is not a replacement for normative contracts, architecture specifications, user stories or acceptance tests.
 
@@ -65,7 +65,7 @@ EP-09 does not establish an alternative application architecture, HTTP ownership
 
 The revised **EP-11 — Pack identity, exchange and traceability** supersedes the former Pack version lifecycle epic and its retired stories.
 
-The current scope is VR-00 and VL-00 through VL-05.
+The current scope is VR-00 and VL-00 through VL-06.
 
 Agreed principles:
 
@@ -147,8 +147,8 @@ The intended sequence is:
 1. Reconcile the open backlog and architecture documents with these decisions.
 2. Implement VR-00 — signature verification.
 3. Implement VL-00 — namespace, origin and status contracts.
-4. Complete EP-02 — architecture migration with behavioral parity.
-5. Implement VL-01–VL-05 in the approved architecture.
+4. Continue EP-02 — behavior-preserving architecture migration. EP-02 does not implement EP-11 behavior.
+5. Implement VL-01–VL-06 under the placement rule in EP-11: target component ownership, headless backend, and Pydantic models of the approved Packs v2 contracts; new pages in TypeScript; the existing HTTP server as a thin adapter until FastAPI is introduced. Existing Python pages change only where required to expose that functionality. No new business logic in Python pages.
 6. Complete remaining EP-09 standalone CLI work.
 
 Independent epics may proceed when their own prerequisites are satisfied.

@@ -80,7 +80,7 @@ This is the **ownership and dependency map**, not a mandate to create empty dire
 | Owner | Owns | Does not own |
 |---|---|---|
 | `models/` | Python representation, validation, serialization, generated JSON Schema | Normative Packs v2 decisions or workflow |
-| `studio/app.py` | Application creation, middleware, router registration | Component business operations or component routes |
+`studio/app.py` | Application creation, project selection, middleware, router registration | Component business operations or component routes
 | `studio/pack/` | Pack/Requirement IO, adapters, Extract, review/edit, Compare, Consolidator, ownership, signatures, ZIP exchange | Claims, Check execution, final product Review |
 | `studio/claim/` | Discovery candidates, Claims editing/binding, Claim review/signing | Requirement edits, Check outcomes, final report decision |
 | `curbcheck/` | Registered Checks, execution, independent CLI/API, Run Results | Human Claims binding, Compile, Review |
