@@ -113,39 +113,53 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
     )
 
     pack_id = (_query.get("pack") or [""])[0].strip()
-    if pack_id:
+    if pack_id and not (_query.get("proposal") or [""])[0].strip():
         return _repo_pack_copy_model(ws, _query, pack_id)
+    from studio.pack.compare_form import comparison_list
+
+    compared = comparison_list(ws, _query)
     selection = read_selection(ws.root)
     if selection and isinstance(selection.get("pack_id"), str):
         _sync_adapter_for_pack(ws, selection["pack_id"])
     adapter = _active_adapter(ws)
     adapter_id = str(adapter.get("id") or "")
     document = _copy_document(ws.root, adapter_id)
-    directory = resolve_selected_pack(ws.root)
-    if directory is None:
-        directory = selected_copy(ws.root, adapter["pack_id"])
-    if directory is None:
-        return {
-            "adapter_id": adapter_id,
-            "timestamp": None,
-            "requirements": [],
-            **document,
-        }
-    _pack, requirements = load_working_copy(directory)
+    if compared is not None:
+        directory = compared["directory"]
+        requirements = compared["requirements"]
+    else:
+        directory = resolve_selected_pack(ws.root)
+        if directory is None:
+            directory = selected_copy(ws.root, adapter["pack_id"])
+        if directory is None:
+            return {
+                "adapter_id": adapter_id,
+                "timestamp": None,
+                "requirements": [],
+                **document,
+            }
+        _pack, requirements = load_working_copy(directory)
     trust = trust_store(ws.keys)
     kind = (selection or {}).get("kind") or "working"
     rows = None
+    shown_pack, shown_requirements = load_working_copy(directory)
     if (_query.get("imported") or [""])[0] == "1":
         from studio.pack.pack_export import _signature_rows
 
-        rows = _signature_rows(directory, _pack, requirements, trust)
+        rows = _signature_rows(directory, shown_pack, shown_requirements, trust)
+    listed = _requirement_rows(directory, requirements, trust)
+    for item in listed:
+        href = (compared or {}).get("links", {}).get(item["id"], "") if compared else ""
+        if href:
+            item["changes_href"] = href
     return {
         "adapter_id": adapter_id,
         "timestamp": directory.name,
         "pack_dir": _shown_pack_dir(ws, str(adapter.get("pack_id") or ""), directory),
         "pack_kind": kind,
         "read_only": kind == "published",
-        "requirements": _requirement_rows(directory, requirements, trust),
+        "requirements": listed,
+        "comparison": compared is not None,
         "rows": rows,
         "coverage_detail": _coverage_detail(directory) if kind == "working" else None,
         "message": "Published Pack — read-only. Use Compare to copy into a working copy."

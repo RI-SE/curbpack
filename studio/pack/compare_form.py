@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from urllib.parse import urlencode
+
 from common.canonical import version_digest
 from common.errors import ModelError
 from requirements.compare import extraction_review
@@ -11,6 +13,46 @@ from requirements.workspace import load_working_copy, select_working_copy
 
 if TYPE_CHECKING:
     from app.server import Workspace
+
+
+def comparison_list(ws: Workspace, query: dict) -> dict | None:
+    """The destination copy and Changes links for this Extract or Import pair."""
+    proposal_name = (query.get("proposal") or [""])[0].strip()
+    destination_name = (query.get("destination") or [""])[0].strip()
+    if not proposal_name or not destination_name:
+        return None
+    destination, proposal = _pair(ws, query)
+    review = extraction_review(destination, proposal)
+    _pack, requirements = load_working_copy(destination)
+    _proposal_pack, proposed = load_working_copy(proposal)
+    linked = {str(item.get("id") or "") for item in review["updates"]}
+    linked.update(str(item.get("id") or "") for item in review["additions"])
+    by_id = {item.get("id"): item for item in requirements}
+    for item in proposed:
+        if item.get("id") in linked and item.get("id") not in by_id:
+            requirements.append(item)
+    return {
+        "directory": destination,
+        "requirements": requirements,
+        "links": {
+            requirement_id: _form_href(requirement_id, query)
+            for requirement_id in linked
+            if requirement_id
+        },
+    }
+
+
+def _form_href(requirement_id: str, query: dict) -> str:
+    pairs = [
+        ("requirement", requirement_id),
+        ("proposal", (query.get("proposal") or [""])[0]),
+        ("destination", (query.get("destination") or [""])[0]),
+    ]
+    for key in ("pack", "repo"):
+        value = (query.get(key) or [""])[0].strip()
+        if value:
+            pairs.append((key, value))
+    return "/requirements/compare/form?" + urlencode(pairs)
 
 
 def compare_form_model(ws: Workspace, query: dict) -> dict:

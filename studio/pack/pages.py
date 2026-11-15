@@ -845,15 +845,23 @@ def copy_page(model: dict) -> bytes:
                 f'<a href="/requirements/requirement/{html.escape(requirement_id)}{query}">'
                 f"<code>{html.escape(requirement_id)}</code></a>"
             )
+        new_cell = ""
+        if model.get("comparison"):
+            href = str(item.get("changes_href") or "")
+            link = f'<a href="{html.escape(href)}">Changes</a>' if href else ""
+            new_cell = f"<td>{link}</td>"
         rows.append(
             "<tr>"
             f"<td>{id_cell}</td>"
             f"<td>{html.escape(locators)}</td>"
             f"<td>{badge}</td>"
+            f"{new_cell}"
             "</tr>"
         )
     listed = (
-        "<table><thead><tr><th>Requirement</th><th>Source references</th><th>Signature</th></tr></thead>"
+        "<table><thead><tr><th>Requirement</th><th>Source references</th><th>Signature</th>"
+        + ("<th>New</th>" if model.get("comparison") else "")
+        + "</tr></thead>"
         "<tbody>"
         + "".join(rows)
         + "</tbody></table>"

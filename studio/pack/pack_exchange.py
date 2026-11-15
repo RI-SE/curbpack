@@ -68,11 +68,32 @@ def import_pack_zip(
 
 
 def import_posted_zip(root: Path, keys: Path, payload: bytes) -> str:
-    """Install an uploaded archive and open the working-copy page."""
-    from common.keystore import trust_store
+    """Install an uploaded archive and open the same comparison list Extract uses."""
+    from urllib.parse import quote
 
-    import_pack_zip(payload, root, trust_store(keys))
-    return "/requirements/copy?imported=1"
+    from common.keystore import trust_store
+    from requirements.workspace import read_selection
+
+    selection = read_selection(root)
+    installed, _rows = import_pack_zip(payload, root, trust_store(keys))
+    pack_id = installed.parent.name
+    previous = ""
+    if (
+        isinstance(selection, dict)
+        and selection.get("kind") == "working"
+        and selection.get("pack_id") == pack_id
+        and isinstance(selection.get("timestamp"), str)
+        and selection.get("timestamp") != installed.name
+    ):
+        previous = selection["timestamp"]
+    if not previous:
+        return "/requirements/copy?imported=1"
+    return (
+        "/requirements/copy?imported=1&proposal="
+        + quote(installed.name, safe="")
+        + "&destination="
+        + quote(previous, safe="")
+    )
 
 
 def _regular_files(directory: Path) -> list[Path]:
