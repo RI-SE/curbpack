@@ -47,16 +47,20 @@ export function changeOne(
 export function renderCompareForm(model: {
   current?: Requirement;
   proposed?: Requirement;
+  addition?: boolean;
 }): string {
+  const controls = (
+    '<p><button type="button" id="select-all-old">Select all old</button> '
+    + '<button type="button" id="select-all-new">Select all new</button></p>'
+  );
+  const style = "<style>.choice-old{color:#991b1b;text-decoration:line-through}.choice-new{color:#15803d}</style>";
+  if (model.addition) {
+    return style + controls + renderDisclosure("requirement", "", textOf(model.proposed ?? {}));
+  }
   const current = model.current ?? {};
   const proposed = model.proposed ?? {};
   const blocks = FIELDS.map((field) => renderField(field, current, proposed));
-  return (
-    "<style>.choice-old{color:#991b1b;text-decoration:line-through}.choice-new{color:#15803d}</style>"
-    + '<p><button type="button" id="select-all-old">Select all old</button> '
-    + '<button type="button" id="select-all-new">Select all new</button></p>'
-    + blocks.join("")
-  );
+  return style + controls + blocks.join("");
 }
 
 function renderField(field: Field, current: Requirement, proposed: Requirement): string {
@@ -65,9 +69,14 @@ function renderField(field: Field, current: Requirement, proposed: Requirement):
   if (oldText === newText) {
     return `<section data-field="${escapeHtml(field.name)}"><p>${escapeHtml(oldText)}</p></section>`;
   }
+  return renderDisclosure(field.name, oldText, newText);
+}
+
+function renderDisclosure(name: string, oldText: string, newText: string): string {
   return (
-    `<section data-field="${escapeHtml(field.name)}">`
+    `<section data-field="${escapeHtml(name)}">`
     + '<details data-choice="old">'
+    + `<summary>${escapeHtml(name)}</summary>`
     + `<button type="button" data-side="old"><pre class="choice-old">${escapeHtml(oldText)}</pre></button>`
     + `<button type="button" data-side="new"><pre class="choice-new">${escapeHtml(newText)}</pre></button>`
     + "</details></section>"

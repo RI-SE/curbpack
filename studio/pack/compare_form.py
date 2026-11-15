@@ -15,11 +15,24 @@ if TYPE_CHECKING:
     from app.server import Workspace
 
 
+def copy_list_target(query: dict) -> str:
+    """The Requirements list for this Extract or Import pair."""
+    pairs = []
+    for key in ("proposal", "destination", "pack", "repo"):
+        value = (query.get(key) or [""])[0]
+        if value:
+            pairs.append((key, value))
+    if not pairs:
+        return "/requirements/copy"
+    return "/requirements/copy?" + urlencode(pairs)
+
+
 def comparison_list(ws: Workspace, query: dict) -> dict | None:
     """The destination copy and Changes links for this Extract or Import pair."""
     proposal_name = (query.get("proposal") or [""])[0].strip()
     destination_name = (query.get("destination") or [""])[0].strip()
-    if not proposal_name or not destination_name:
+    pack_id = (query.get("pack") or [""])[0].strip()
+    if not proposal_name or not (destination_name or pack_id):
         return None
     destination, proposal = _pair(ws, query)
     review = extraction_review(destination, proposal)
@@ -77,11 +90,15 @@ def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
         raise ModelError("compare", "choice", "a JSON object of old or new") from exc
     if not isinstance(choice, dict):
         raise ModelError("compare", "choice", "a JSON object of old or new")
-    current = _requirement(destination, requirement_id) or {}
+    current = _requirement(destination, requirement_id)
     proposed = _requirement(proposal, requirement_id)
     if proposed is None:
         raise ModelError("requirement", "id", "a requirement in the proposal")
-    fields, partial = _choice_edits(current, proposed, choice)
+    adding = current is None
+    if adding:
+        fields, partial = [], {}
+    else:
+        fields, partial = _choice_edits(current, proposed, choice)
     pack, _requirements = load_working_copy(destination)
     if not in_target_namespace(pack, namespace_base):
         if (form.get("take_ownership") or [""])[0] != "1":
@@ -104,7 +121,24 @@ def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
         )
         mark_selected(ws.root, str(pack["id"]), copied.name)
         return f"/requirements/requirement/{requirement_id}"
-    if current and (fields or partial):
+    if adding:
+        if choice.get("requirement") == "new":
+            apply_extraction_choices(
+                destination,
+                proposal,
+                [
+                    {
+                        "id": requirement_id,
+                        "fields": [],
+                        "partial": {},
+                        "source_digest": version_digest(proposed),
+                        "destination_digest": None,
+                    }
+                ],
+            )
+        else:
+            return _list_href(form)
+    elif fields or partial:
         apply_extraction_choices(
             destination,
             proposal,
@@ -118,6 +152,20 @@ def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
                 }
             ],
         )
+    return _editor_href(ws, form, requirement_id, destination, pack)
+
+
+def _editor_href(ws: Workspace, form: dict, requirement_id: str, destination, pack: dict) -> str:
+    """Open the editor on the copy that was just written."""
+    from requirements.workspace import mark_selected
+
+    pack_query = (form.get("pack") or [""])[0].strip()
+    repo_id = (form.get("repo") or [""])[0].strip()
+    if pack_query:
+        pairs = [("pack", pack_query)]
+        if repo_id:
+            pairs.append(("repo", repo_id))
+        return f"/requirements/requirement/{requirement_id}?" + urlencode(pairs)
     mark_selected(ws.root, str(pack["id"]), destination.name)
     return f"/requirements/requirement/{requirement_id}"
 
@@ -171,8 +219,18 @@ def compare_form_model(ws: Workspace, query: dict) -> dict:
         raise ModelError("requirement", "id", "a requirement id")
     current = _requirement(destination, requirement_id)
     proposed = _requirement(proposal, requirement_id)
-    if current is None or proposed is None:
-        raise ModelError("requirement", "id", "a requirement in both copies")
+    if proposed is None:
+        raise ModelError("requirement", "id", "a requirement in the proposal")
+    if current is None:
+        return {
+            "id": requirement_id,
+            "current": {},
+            "proposed": proposed,
+            "source_digest": version_digest(proposed),
+            "destination_digest": None,
+            "changed": ["requirement"],
+            "addition": True,
+        }
     changed = []
     for item in review["updates"]:
         if item.get("id") == requirement_id:

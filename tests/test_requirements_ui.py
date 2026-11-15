@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import tempfile
@@ -758,34 +759,35 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertEqual(job.get("dest_repo"), "fixture-product")
                 self.assertTrue(job.get("copy_timestamp"))
                 self.assertEqual([path.name for path in pack.glob("*.json")], ["pack.json"])
-                review = _get(
+                listing = _get(
                     base
-                    + "/requirements/extract/review?proposal="
+                    + "/requirements/copy?proposal="
                     + urllib.parse.quote(job["copy_timestamp"])
                     + "&pack=cra&repo=fixture-product"
                 )
-                self.assertIn("Only in this extraction", review)
-                adds = re.findall(r'name="add" value="([^"]*)"', review)
-                pairs = re.findall(r'name="pair" value="([^"]*)"', review)
-                self.assertTrue(adds)
-                accepted = _post_form(
-                    base + "/requirements/extract/review",
-                    {
-                        "proposal": job["copy_timestamp"],
-                        "destination": "cra",
-                        "pack": "cra",
-                        "repo": "fixture-product",
-                        "pair": pairs,
-                        "add": adds,
-                    },
-                    doseq=True,
-                )
+                self.assertIn("<th>New</th>", listing)
+                hrefs = re.findall(r'href="(/requirements/compare/form\?[^"]+)"', listing)
+                self.assertTrue(hrefs)
+                accepted = ""
+                for href in hrefs:
+                    query = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query)
+                    accepted = _post_form(
+                        base + "/requirements/compare/form/apply",
+                        {
+                            "requirement": query["requirement"][0],
+                            "proposal": query["proposal"][0],
+                            "destination": (query.get("destination") or [""])[0],
+                            "pack": query["pack"][0],
+                            "repo": query["repo"][0],
+                            "choice": '{"requirement": "new"}',
+                        },
+                        doseq=False,
+                    )
                 written = [path for path in pack.glob("*.json") if path.name != "pack.json"]
                 self.assertTrue(written)
                 saved = json.loads(written[0].read_text(encoding="utf-8"))
                 self.assertEqual(saved["pack_id"], "cra")
-                self.assertIn('action="/requirements/copy"', accepted)
-                self.assertNotIn("disabled>Edit</button>", accepted)
+                self.assertIn(">Sign</button>", accepted)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

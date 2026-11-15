@@ -99,8 +99,8 @@ from studio.pack.copy_model import _copy_model, _select_working_copy
 from studio.pack.documents_model import _documents_model, _save_curbpack, _save_pack_document
 from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
-from studio.pack.extract_review import _apply_extraction_review, _extract_review_model
-from studio.pack.compare_form import apply_compare_form, compare_form_model
+from studio.pack.extract_review import _apply_extraction_review
+from studio.pack.compare_form import apply_compare_form, compare_form_model, copy_list_target
 from studio.pack.extract_start import _start_extract
 from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
@@ -115,7 +115,6 @@ from studio.pack.pages import (
     documents_page,
     editor_page,
     export_page,
-    extract_review_page,
     source_page,
 )
 from studio.pack.requirement_demo import (
@@ -324,6 +323,9 @@ def make_handler(ws: Workspace):
                 if parsed.path == "/requirements/compare/form.json":
                     self._send_json(compare_form_model(ws, query))
                     return
+                if parsed.path == "/requirements/extract/review":
+                    self._redirect(copy_list_target(query))
+                    return
                 if parsed.path == "/discover/browse":
                     self._send_browse(query)
                     return
@@ -500,8 +502,6 @@ def make_handler(ws: Workspace):
                 return documents_page(_documents_model(ws, query))
             if path == "/requirements/inspect":
                 return source_page(_inspect_model(ws, query))
-            if path == "/requirements/extract/review":
-                return extract_review_page(_extract_review_model(ws, query))
             if path == "/requirements/copy":
                 return copy_page(_copy_model(ws, query))
             if path == "/requirements/export":
