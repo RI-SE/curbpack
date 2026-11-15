@@ -311,6 +311,9 @@ def make_handler(ws: Workspace):
                 self._send_try_job(parsed.path[len("/requirements/try-discovery/jobs/") :])
                 return
             try:
+                if parsed.path == "/requirements/compare/form.js":
+                    self._send_compare_script()
+                    return
                 query = parse_qs(parsed.query, keep_blank_values=(parsed.path == "/review"))
                 try:
                     _sync_open_repo(ws, query)
@@ -326,6 +329,17 @@ def make_handler(ws: Workspace):
                 self._send(200, body)
             except Exception as exc:
                 self._fail(exc)
+
+        def _send_compare_script(self) -> None:
+            file_path = install_root() / "studio" / "pack" / "pages" / "compare_form.js"
+            if not file_path.is_file():
+                raise ModelError("compare", "script", "the committed compare form script")
+            body = file_path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def _send_vendor(self, path: str) -> None:
             file_path, content_type = _VENDOR[path]
