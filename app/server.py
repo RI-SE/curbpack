@@ -1360,8 +1360,15 @@ def _selected_requirement(ws: Workspace, requirement_id: str):
 
 
 def _open_requirement(ws: Workspace, requirement_id: str, params: dict):
-    """Requirement in the named repo pack, or the selected working copy."""
+    """Requirement in the named repo pack, the named working copy, or the selection."""
     pack_id = (params.get("pack") or [""])[0].strip()
+    timestamp = (params.get("timestamp") or [""])[0].strip()
+    if timestamp and not pack_id:
+        adapter = _active_adapter(ws)
+        directory = select_working_copy(ws.root, adapter["pack_id"], timestamp)
+        pack, requirements = load_working_copy(directory)
+        match = next((item for item in requirements if item["id"] == requirement_id), None)
+        return directory, pack, match
     if not pack_id:
         return _selected_requirement(ws, requirement_id)
     repo_id = (params.get("repo") or [""])[0].strip()

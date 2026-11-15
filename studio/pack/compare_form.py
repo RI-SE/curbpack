@@ -95,6 +95,8 @@ def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
     if proposed is None:
         raise ModelError("requirement", "id", "a requirement in the proposal")
     adding = current is None
+    if adding and choice.get("requirement") != "new":
+        return _list_href(form)
     if adding:
         fields, partial = [], {}
     else:
@@ -108,17 +110,30 @@ def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
                 _list_href(form),
                 action="/requirements/compare/form/apply",
             )
-        edits = dict(partial)
-        for name in fields:
-            edits[name] = proposed.get(name)
-        copied = take_ownership(
-            destination,
-            ws.root,
-            namespace_base=namespace_base,
-            requirement_id=requirement_id,
-            edits=edits,
-            also_search=(packs,),
-        )
+        if adding:
+            proposal_pack, _proposed_requirements = load_working_copy(proposal)
+            copied = take_ownership(
+                destination,
+                ws.root,
+                namespace_base=namespace_base,
+                requirement_id=requirement_id,
+                edits={},
+                also_search=(packs,),
+                addition=proposed,
+                addition_pack=proposal_pack,
+            )
+        else:
+            edits = dict(partial)
+            for name in fields:
+                edits[name] = proposed.get(name)
+            copied = take_ownership(
+                destination,
+                ws.root,
+                namespace_base=namespace_base,
+                requirement_id=requirement_id,
+                edits=edits,
+                also_search=(packs,),
+            )
         mark_selected(ws.root, str(pack["id"]), copied.name)
         return f"/requirements/requirement/{requirement_id}"
     if adding:

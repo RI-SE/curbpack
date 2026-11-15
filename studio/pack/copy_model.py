@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from common.errors import ModelError
 from common.keystore import trust_store
@@ -152,14 +152,29 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
         href = (compared or {}).get("links", {}).get(item["id"], "") if compared else ""
         if href:
             item["changes_href"] = href
+    pack_query = (_query.get("pack") or [""])[0].strip()
+    repo_query = (_query.get("repo") or [""])[0].strip()
+    if compared is not None and pack_query:
+        identity = "?" + urlencode([("pack", pack_query)] + ([("repo", repo_query)] if repo_query else []))
+        shown_dir = str(directory.resolve())
+        shown_kind = "pack"
+    elif compared is not None:
+        identity = "?" + urlencode([("timestamp", directory.name)])
+        shown_dir = str(directory.resolve())
+        shown_kind = "working"
+    else:
+        identity = str(document.get("requirement_query") or "")
+        shown_dir = _shown_pack_dir(ws, str(adapter.get("pack_id") or ""), directory)
+        shown_kind = kind
     return {
         "adapter_id": adapter_id,
         "timestamp": directory.name,
-        "pack_dir": _shown_pack_dir(ws, str(adapter.get("pack_id") or ""), directory),
-        "pack_kind": kind,
+        "pack_dir": shown_dir,
+        "pack_kind": shown_kind,
         "read_only": kind == "published",
         "requirements": listed,
         "comparison": compared is not None,
+        "requirement_query": identity,
         "rows": rows,
         "coverage_detail": _coverage_detail(directory) if kind == "working" else None,
         "message": "Published Pack — read-only. Use Compare to copy into a working copy."

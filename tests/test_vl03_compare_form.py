@@ -171,6 +171,10 @@ class CompareFormPageTest(unittest.TestCase):
         self.assertIn("<th>New</th>", imported_list)
         self.assertIn("CRA-ANNEX-VII-RISK", imported_list)
         self.assertIn(">Changes</a>", imported_list)
+        self.assertIn(
+            'href="/requirements/requirement/CRA-ANNEX-VII-RISK?timestamp=2026-10-13T090000Z"',
+            imported_list,
+        )
 
     def test_import_without_a_selected_copy_has_no_changes_link(self):
         import urllib.error
@@ -382,3 +386,52 @@ class CompareFormPageTest(unittest.TestCase):
             body = exc.read().decode("utf-8")
         self.assertIn("Take ownership of this Pack?", body)
         self.assertEqual((destination / "CRA-ANNEX-VII-RISK.json").read_bytes(), before)
+
+    def test_a_foreign_addition_is_copied_only_when_new_is_chosen(self):
+        import json
+        import urllib.error
+        import urllib.parse
+
+        destination, proposal = self._pair(namespace="OTHER/Imported", name="Imported")
+        extra = dict(load_requirement(proposal / "CRA-ANNEX-VII-RISK.json"))
+        extra["id"] = "CRA-ANNEX-VII-EXTRA"
+        extra.pop("signed", None)
+        save_requirement(proposal, extra)
+        before = sorted(path.name for path in destination.glob("*.json"))
+        base = self._serve()
+        old = urllib.parse.urlencode(
+            {
+                "requirement": "CRA-ANNEX-VII-EXTRA",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+                "choice": json.dumps({"requirement": "old"}),
+            }
+        ).encode("utf-8")
+        try:
+            kept = urllib.request.urlopen(
+                urllib.request.Request(base + "/requirements/compare/form/apply", data=old, method="POST")
+            )
+            location = kept.geturl()
+            body = kept.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            location = ""
+            body = exc.read().decode("utf-8")
+        self.assertNotIn("Take ownership of this Pack?", body)
+        self.assertIn("/requirements/copy", location or body)
+        self.assertEqual(sorted(path.name for path in destination.glob("*.json")), before)
+        posted = urllib.parse.urlencode(
+            {
+                "requirement": "CRA-ANNEX-VII-EXTRA",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+                "choice": json.dumps({"requirement": "new"}),
+                "take_ownership": "1",
+            }
+        ).encode("utf-8")
+        editor = urllib.request.urlopen(
+            urllib.request.Request(base + "/requirements/compare/form/apply", data=posted, method="POST")
+        ).read().decode("utf-8")
+        self.assertIn("CRA-ANNEX-VII-EXTRA", editor)
+        self.assertEqual(sorted(path.name for path in destination.glob("*.json")), before)
+        copies = list((self.root / "cra-baseline").glob("*/CRA-ANNEX-VII-EXTRA.json"))
+        self.assertEqual(len(copies), 2)

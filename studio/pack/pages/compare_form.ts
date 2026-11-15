@@ -53,7 +53,11 @@ export function renderCompareForm(model: {
     '<p><button type="button" id="select-all-old">Select all old</button> '
     + '<button type="button" id="select-all-new">Select all new</button></p>'
   );
-  const style = "<style>.choice-old{color:#991b1b;text-decoration:line-through}.choice-new{color:#15803d}</style>";
+  const style = (
+    "<style>.choice-old{color:#991b1b;text-decoration:line-through}.choice-new{color:#15803d}"
+    + 'details[data-choice="old"] button[data-side="old"]{outline:2px solid #991b1b}'
+    + 'details[data-choice="new"] button[data-side="new"]{outline:2px solid #15803d}</style>'
+  );
   if (model.addition) {
     return style + controls + renderDisclosure("requirement", "", textOf(model.proposed ?? {}));
   }

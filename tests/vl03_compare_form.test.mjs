@@ -28,6 +28,7 @@ test("a changed multiline note shows both complete values", () => {
   assert.match(html, /\.choice-old\{[^}]*color:#991b1b/);
   assert.match(html, /\.choice-old\{[^}]*text-decoration:line-through/);
   assert.match(html, /\.choice-new\{[^}]*color:#15803d/);
+  assert.match(html, /details\[data-choice="new"\] button\[data-side="new"\]\{outline:2px solid #15803d\}/);
   const note = html.split('data-field="note"')[1].split('data-field=')[0];
   assert.match(note, /<pre class="choice-old">line one\nline two<\/pre>/);
   assert.match(note, /<pre class="choice-new">line one\nline three<\/pre>/);

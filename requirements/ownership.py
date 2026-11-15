@@ -56,13 +56,16 @@ def take_ownership(
     edits: dict,
     at: str | None = None,
     also_search: tuple[Path, ...] = (),
+    addition: dict | None = None,
+    addition_pack: dict | None = None,
 ) -> Path:
     """Write a new dated working copy. `at` is that directory name when given."""
     pack, requirements = load_pack_directory(source)
     target = pack_namespace(namespace_base, str(pack.get("name") or ""))
     if pack.get("namespace") == target:
         raise ModelError("pack", "namespace", "a namespace other than the target namespace")
-    if not any(item.get("id") == requirement_id for item in requirements):
+    present = any(item.get("id") == requirement_id for item in requirements)
+    if not present and addition is None:
         raise ModelError(
             f"requirement {requirement_id}",
             "id",
@@ -77,7 +80,16 @@ def take_ownership(
     temp = destination_root / f".own-tmp-{secrets.token_hex(8)}"
     try:
         shutil.copytree(source, temp)
-        _write_owned_copy(temp, pack, requirements, target, requirement_id, edits)
+        _write_owned_copy(
+            temp,
+            pack,
+            requirements,
+            target,
+            requirement_id,
+            edits,
+            addition=addition,
+            addition_pack=addition_pack,
+        )
         final.parent.mkdir(parents=True, exist_ok=True)
         try:
             os.rename(temp, final)
@@ -97,6 +109,8 @@ def _write_owned_copy(
     target: str,
     requirement_id: str,
     edits: dict,
+    addition: dict | None = None,
+    addition_pack: dict | None = None,
 ) -> None:
     owned_pack = {
         key: value
@@ -111,21 +125,25 @@ def _write_owned_copy(
         "version": pack["version"],
     }
     save_pack(directory, owned_pack)
-    for requirement in requirements:
+    items = list(requirements)
+    if addition is not None and not any(item.get("id") == requirement_id for item in items):
+        items.append(addition)
+    for requirement in items:
         owned = {
             key: value
             for key, value in requirement.items()
             if key != "signed"
         }
+        source_pack = addition_pack if addition is not None and requirement.get("id") == requirement_id and addition_pack else pack
         owned["namespace"] = target
         owned["status"] = "draft"
         owned["origin"] = {
             "namespace": requirement["namespace"],
-            "pack": pack["id"],
-            "version": pack["version"],
+            "pack": source_pack["id"],
+            "version": source_pack["version"],
             "requirement": requirement["id"],
         }
-        if requirement["id"] == requirement_id:
+        if requirement["id"] == requirement_id and edits:
             owned = apply_edits(owned, edits)
         save_requirement(directory, owned)
 
