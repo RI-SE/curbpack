@@ -220,3 +220,15 @@ class CompareFormPageTest(unittest.TestCase):
         page = urllib.request.urlopen(base + location).read().decode("utf-8")
         self.assertNotIn("<th>New</th>", page)
         self.assertNotIn(">Changes</a>", page)
+
+    def test_node_checks_the_disclosure_and_select_all(self):
+        import subprocess
+
+        root = Path(__file__).resolve().parents[1]
+        completed = subprocess.run(
+            ["node", "--test", "tests/vl03_compare_form.test.mjs"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
