@@ -100,7 +100,7 @@ from studio.pack.documents_model import _documents_model, _save_curbpack, _save_
 from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
 from studio.pack.extract_review import _apply_extraction_review, _extract_review_model
-from studio.pack.compare_form import compare_form_model
+from studio.pack.compare_form import apply_compare_form, compare_form_model
 from studio.pack.extract_start import _start_extract
 from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
@@ -109,6 +109,7 @@ from studio.pack.pack_export import _export_model, _export_selected
 from studio.pack.pages import (
     catalog_page,
     compare_page,
+    compare_form_document,
     consolidate_page,
     copy_page,
     documents_page,
@@ -507,6 +508,8 @@ def make_handler(ws: Workspace):
                 return export_page(_export_model(ws, query))
             if path == "/requirements/publish":
                 return publication_page(_publication_model(ws, query))
+            if path == "/requirements/compare/form":
+                return compare_form_document(query)
             if path == "/requirements/compare":
                 return compare_page(_compare_model(ws, query))
             if path == "/requirements/consolidate":
@@ -631,6 +634,13 @@ def make_handler(ws: Workspace):
                 return
             if path == "/requirements/extract/review":
                 self._redirect(_apply_extraction_review(ws, form))
+                return
+            if path == "/requirements/compare/form/apply":
+                outcome = apply_compare_form(ws, form)
+                if isinstance(outcome, bytes):
+                    self._send(200, outcome)
+                    return
+                self._redirect(outcome)
                 return
             if path == "/requirements/compare/apply":
                 outcome = _apply_compare_form(ws, form)

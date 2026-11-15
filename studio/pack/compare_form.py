@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
-
 from urllib.parse import urlencode
 
 from common.canonical import version_digest
@@ -53,6 +53,113 @@ def _form_href(requirement_id: str, query: dict) -> str:
         if value:
             pairs.append((key, value))
     return "/requirements/compare/form?" + urlencode(pairs)
+
+
+def apply_compare_form(ws: Workspace, form: dict) -> str | bytes:
+    """Write the selected New leaves, or ask for ownership first."""
+    import json
+
+    from requirements.compare import apply_extraction_choices
+    from requirements.ownership import in_target_namespace, take_ownership
+    from requirements.workspace import mark_selected
+    from studio.pack.pages import ownership_confirmation_page
+    from studio.pack.requirement_editor import _namespace_base_for_edit
+
+    namespace_base, packs = _namespace_base_for_edit(ws, form)
+    destination, proposal = _pair(ws, form)
+    requirement_id = (form.get("requirement") or [""])[0].strip()
+    if not requirement_id:
+        raise ModelError("requirement", "id", "a requirement id")
+    raw = (form.get("choice") or ["{}"])[0] or "{}"
+    try:
+        choice = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ModelError("compare", "choice", "a JSON object of old or new") from exc
+    if not isinstance(choice, dict):
+        raise ModelError("compare", "choice", "a JSON object of old or new")
+    current = _requirement(destination, requirement_id) or {}
+    proposed = _requirement(proposal, requirement_id)
+    if proposed is None:
+        raise ModelError("requirement", "id", "a requirement in the proposal")
+    fields, partial = _choice_edits(current, proposed, choice)
+    pack, _requirements = load_working_copy(destination)
+    if not in_target_namespace(pack, namespace_base):
+        if (form.get("take_ownership") or [""])[0] != "1":
+            return ownership_confirmation_page(
+                requirement_id,
+                form,
+                _list_href(form),
+                action="/requirements/compare/form/apply",
+            )
+        edits = dict(partial)
+        for name in fields:
+            edits[name] = proposed.get(name)
+        copied = take_ownership(
+            destination,
+            ws.root,
+            namespace_base=namespace_base,
+            requirement_id=requirement_id,
+            edits=edits,
+            also_search=(packs,),
+        )
+        mark_selected(ws.root, str(pack["id"]), copied.name)
+        return f"/requirements/requirement/{requirement_id}"
+    if current and (fields or partial):
+        apply_extraction_choices(
+            destination,
+            proposal,
+            [
+                {
+                    "id": requirement_id,
+                    "fields": fields,
+                    "partial": partial,
+                    "source_digest": version_digest(proposed),
+                    "destination_digest": version_digest(current),
+                }
+            ],
+        )
+    mark_selected(ws.root, str(pack["id"]), destination.name)
+    return f"/requirements/requirement/{requirement_id}"
+
+
+def _list_href(form: dict) -> str:
+    pairs = []
+    for key in ("proposal", "destination", "pack", "repo"):
+        value = (form.get(key) or [""])[0]
+        if value:
+            pairs.append((key, value))
+    if not pairs:
+        return "/requirements/copy"
+    return "/requirements/copy?" + urlencode(pairs)
+
+
+def _choice_edits(current: dict, proposed: dict, choice: dict) -> tuple[list[str], dict]:
+    fields: list[str] = []
+    parents: dict[str, dict] = {}
+    chosen_new: set[str] = set()
+    for name, side in choice.items():
+        if side not in {"old", "new"}:
+            raise ModelError("compare", "choice", "old or new")
+        if "." not in name:
+            if side == "new":
+                fields.append(str(name))
+            continue
+        parent, key = str(name).split(".", 1)
+        if parent not in {"source", "discovery_hints"}:
+            raise ModelError("compare", "choice", "an editor field")
+        if parent not in parents:
+            original = current.get(parent) or {}
+            parents[parent] = copy.deepcopy(original) if isinstance(original, dict) else {}
+        if side != "new":
+            continue
+        chosen_new.add(parent)
+        proposed_parent = proposed.get(parent) or {}
+        if isinstance(proposed_parent, dict) and key in proposed_parent:
+            parents[parent][key] = copy.deepcopy(proposed_parent[key])
+        else:
+            parents[parent].pop(key, None)
+    partial = {parent: value for parent, value in parents.items() if parent in chosen_new}
+    return fields, partial
 
 
 def compare_form_model(ws: Workspace, query: dict) -> dict:

@@ -232,3 +232,153 @@ class CompareFormPageTest(unittest.TestCase):
             text=True,
         )
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def _pair(self, *, namespace: str = "RISE/CRA baseline", name: str = "CRA baseline"):
+        from common.jsonio import write_json
+        from discovery.door import created_curbpack, set_open_repo
+        from discovery.repos import add_repo, load_repos, save_repos
+
+        base_requirement = extract_annex_vii_risk()
+        current_source = {
+            "framework": "EU",
+            "instrument": "CRA",
+            "url": "https://old.example/cra",
+            "identifier": "CELEX",
+            "language": "en",
+        }
+        proposed_source = {
+            "framework": "SE",
+            "instrument": "CRA",
+            "url": "https://new.example/cra",
+            "identifier": "CELEX",
+            "language": "en",
+        }
+        current = apply_edits(
+            base_requirement,
+            {
+                "note": "Current note.",
+                "remediation_hint": "Current hint.",
+                "source": current_source,
+            },
+        )
+        proposed = apply_edits(
+            base_requirement,
+            {
+                "note": "Proposed note.",
+                "remediation_hint": "Proposed hint.",
+                "source": proposed_source,
+            },
+        )
+        if namespace != "RISE/CRA baseline":
+            pack = dict(draft_pack(), name=name, namespace=namespace)
+            current["namespace"] = namespace
+            proposed["namespace"] = namespace
+        else:
+            pack = draft_pack()
+        destination = create_extraction_copy(
+            self.root, "cra-baseline", pack, at="2026-10-13T090000Z"
+        )
+        proposal = create_extraction_copy(
+            self.root, "cra-baseline", pack, at="2026-10-13T143000Z"
+        )
+        save_requirement(destination, current)
+        save_requirement(proposal, proposed)
+        repo = self.root / "product"
+        repo.mkdir()
+        write_json(repo / "curbpack.json", created_curbpack(namespace_base="RISE", packs=["cra-baseline"]))
+        save_repos(self.root, add_repo(self.root, load_repos(self.root), name="Product", path=str(repo)))
+        set_open_repo(self.root, "product")
+        return destination, proposal
+
+    def test_apply_writes_only_the_new_leaves_and_opens_the_editor(self):
+        import json
+        import urllib.parse
+
+        destination, _proposal = self._pair()
+        base = self._serve()
+        form = urllib.request.urlopen(
+            base
+            + "/requirements/compare/form?requirement=CRA-ANNEX-VII-RISK"
+            + "&proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
+        ).read().decode("utf-8")
+        self.assertIn('href="/requirements/copy?proposal=2026-10-13T143000Z&amp;destination=2026-10-13T090000Z"', form)
+        self.assertIn(">Cancel</a>", form)
+        before = (destination / "CRA-ANNEX-VII-RISK.json").read_bytes()
+        urllib.request.urlopen(base + "/requirements/copy?proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z").read()
+        self.assertEqual((destination / "CRA-ANNEX-VII-RISK.json").read_bytes(), before)
+        posted = urllib.parse.urlencode(
+            {
+                "requirement": "CRA-ANNEX-VII-RISK",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+                "choice": json.dumps({"note": "new", "remediation_hint": "old"}),
+            }
+        ).encode("utf-8")
+        editor = urllib.request.urlopen(
+            urllib.request.Request(
+                base + "/requirements/compare/form/apply",
+                data=posted,
+                method="POST",
+            )
+        ).read().decode("utf-8")
+        saved = load_requirement(destination / "CRA-ANNEX-VII-RISK.json")
+        self.assertEqual(saved["note"], "Proposed note.")
+        self.assertEqual(saved["remediation_hint"], "Current hint.")
+        self.assertIn("Proposed note.", editor)
+        self.assertIn(">Sign</button>", editor)
+
+    def test_apply_keeps_an_unchanged_source_sibling(self):
+        import json
+        import urllib.parse
+
+        destination, _proposal = self._pair()
+        base = self._serve()
+        posted = urllib.parse.urlencode(
+            {
+                "requirement": "CRA-ANNEX-VII-RISK",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+                "choice": json.dumps({"source.framework": "new", "source.url": "old"}),
+            }
+        ).encode("utf-8")
+        urllib.request.urlopen(
+            urllib.request.Request(
+                base + "/requirements/compare/form/apply",
+                data=posted,
+                method="POST",
+            )
+        ).read()
+        saved = load_requirement(destination / "CRA-ANNEX-VII-RISK.json")
+        self.assertEqual(saved["source"]["framework"], "SE")
+        self.assertEqual(saved["source"]["url"], "https://old.example/cra")
+        self.assertEqual(saved["source"]["instrument"], "CRA")
+        self.assertEqual(saved["note"], "Current note.")
+
+    def test_apply_does_not_rewrite_a_foreign_pack(self):
+        import json
+        import urllib.error
+        import urllib.parse
+
+        destination, _proposal = self._pair(namespace="OTHER/Imported", name="Imported")
+        before = (destination / "CRA-ANNEX-VII-RISK.json").read_bytes()
+        base = self._serve()
+        posted = urllib.parse.urlencode(
+            {
+                "requirement": "CRA-ANNEX-VII-RISK",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+                "choice": json.dumps({"note": "new"}),
+            }
+        ).encode("utf-8")
+        try:
+            body = urllib.request.urlopen(
+                urllib.request.Request(
+                    base + "/requirements/compare/form/apply",
+                    data=posted,
+                    method="POST",
+                )
+            ).read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8")
+        self.assertIn("Take ownership of this Pack?", body)
+        self.assertEqual((destination / "CRA-ANNEX-VII-RISK.json").read_bytes(), before)

@@ -1317,6 +1317,27 @@ if (form && partsInput) {
     return page("Review extraction", body)
 
 
+def compare_form_document(query: dict) -> bytes:
+    """Shell for the compiled form. The script draws the fields."""
+    from urllib.parse import urlencode
+
+    pairs = []
+    for key in ("proposal", "destination", "pack", "repo"):
+        value = (query.get(key) or [""])[0]
+        if value:
+            pairs.append((key, value))
+    cancel = "/requirements/copy"
+    if pairs:
+        cancel += "?" + urlencode(pairs)
+    requirement = html.escape((query.get("requirement") or [""])[0])
+    body = (
+        f'<p><a href="{html.escape(cancel)}">Cancel</a></p>'
+        f'<div id="compare-form" data-requirement="{requirement}"></div>'
+        '<script type="module" src="/requirements/compare/form.js"></script>'
+    )
+    return page("Compare", body)
+
+
 def compare_page(model: dict) -> bytes:
     left = str(model.get("left") or "")
     right = str(model.get("right") or "")
