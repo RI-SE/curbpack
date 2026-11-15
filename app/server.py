@@ -100,6 +100,7 @@ from studio.pack.documents_model import _documents_model, _save_curbpack, _save_
 from studio.pack.empty_folder import _start_empty_folder
 from studio.pack.extract_abort import _abort_extract
 from studio.pack.extract_review import _apply_extraction_review, _extract_review_model
+from studio.pack.compare_form import compare_form_model
 from studio.pack.extract_start import _start_extract
 from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
@@ -319,6 +320,9 @@ def make_handler(ws: Workspace):
                     _sync_open_repo(ws, query)
                 except ModelError:
                     pass
+                if parsed.path == "/requirements/compare/form.json":
+                    self._send_json(compare_form_model(ws, query))
+                    return
                 if parsed.path == "/discover/browse":
                     self._send_browse(query)
                     return
@@ -329,6 +333,14 @@ def make_handler(ws: Workspace):
                 self._send(200, body)
             except Exception as exc:
                 self._fail(exc)
+
+        def _send_json(self, payload: dict) -> None:
+            body = json.dumps(payload).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def _send_compare_script(self) -> None:
             file_path = install_root() / "studio" / "pack" / "pages" / "compare_form.js"
