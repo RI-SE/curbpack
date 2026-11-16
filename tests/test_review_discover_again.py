@@ -28,7 +28,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             ws = Workspace(root)
             old = build_claim(
                 claim_id="claim-old",
-                requirement_id="R1",
+                requirement={"id": "R1", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/old.md"},
                 checks=[
@@ -44,7 +44,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             )
             ok = build_claim(
                 claim_id="claim-ok",
-                requirement_id="R1",
+                requirement={"id": "R1", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/ok.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/ok.md"]}}],

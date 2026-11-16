@@ -1,6 +1,9 @@
 {
   "id": "HOUSE-ANTI-PLACEHOLDER",
   "requirement_id": "HOUSE-ANTI-PLACEHOLDER",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "0e5b5c1ff2674ec9899baf7386e42889cabc93e75f74bbfc34eb0b80ae4d13c2",
   "source": "documents",
   "args": {
     "paths": [

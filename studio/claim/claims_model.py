@@ -114,10 +114,10 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
 def _create_claim(ws: Workspace, form: dict) -> str:
     from app.server import _claims_directory, _claims_lookup, _claims_redirect
 
-    known = list(_claims_lookup(ws, form))
+    known = _claims_lookup(ws, form)
     requirement_id = require_requirement_id(
         (form.get("requirement_id") or [""])[0],
-        known,
+        list(known),
     )
     args = json.loads((form.get("args") or ["{}"])[0])
     checks = json.loads((form.get("checks") or ["[]"])[0])
@@ -127,7 +127,7 @@ def _create_claim(ws: Workspace, form: dict) -> str:
         raise ModelError("claim", "checks", "JSON list")
     claim = build_claim(
         claim_id=(form.get("id") or [""])[0].strip(),
-        requirement_id=requirement_id,
+        requirement=known[requirement_id],
         source=(form.get("source") or [""])[0].strip(),
         args=args,
         checks=checks,

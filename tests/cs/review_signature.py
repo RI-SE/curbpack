@@ -21,7 +21,7 @@ def specimen(private: bytes) -> dict:
         repo = Path(tmp)
         (repo / 'evidence.md').write_text('Evidence\n', encoding='utf-8')
         claim = build_claim(
-            claim_id='C-1', requirement_id='REQ-1', source='documents',
+            claim_id='C-1', requirement={"id": 'REQ-1', "namespace": "RISE/Example", "pack_id": "example"}, source='documents',
             args={'path':'evidence.md'},
             checks=[{'check':'exist', 'args':{'paths':['evidence.md']}}],
             description='This document is the checked evidence.')

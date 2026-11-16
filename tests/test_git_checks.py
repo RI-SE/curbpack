@@ -151,7 +151,7 @@ def _two_fresh(repo: Path, first: str, second: str, as_of: str) -> dict:
         repo,
         build_claim(
             claim_id="claim-fresh",
-            requirement_id="CRA-ANNEX-VII-RISK",
+            requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": first},
             checks=[
@@ -178,7 +178,7 @@ def _fresh(repo: Path, path: str, max_age_days: int, as_of: str) -> dict:
 def _fresh_claim(path: str, max_age_days: int, as_of: str) -> dict:
     return build_claim(
         claim_id="claim-fresh",
-        requirement_id="CRA-ANNEX-VII-RISK",
+        requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[
@@ -442,7 +442,7 @@ class GitFreshTest(unittest.TestCase):
             (repo / "out").symlink_to(outside, target_is_directory=True)
             claim = build_claim(
                 claim_id="claim-fresh",
-                requirement_id="CRA-ANNEX-VII-RISK",
+                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "out/file.md"},
                 checks=[
@@ -520,7 +520,7 @@ def _author(repo: Path, path: str, *, name: str | None = None, email: str | None
         repo,
         build_claim(
             claim_id="claim-author",
-            requirement_id="CRA-ANNEX-VII-RISK",
+            requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": path},
             checks=[{"check": "git_author", "args": args}],
@@ -608,7 +608,7 @@ class GitAuthorTest(unittest.TestCase):
                 repo,
                 build_claim(
                     claim_id="claim-author",
-                    requirement_id="CRA-ANNEX-VII-RISK",
+                    requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
                     source="documents",
                     args={"path": "risk.md"},
                     checks=[

@@ -1,6 +1,9 @@
 {
   "id": "HOUSE-SECURITY-TXT",
   "requirement_id": "HOUSE-SECURITY-TXT",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "020b142867814698ccf5848bf50f51150e351800fb8ece73ebdbc3109c4a18c4",
   "source": "documents",
   "args": {
     "path": ".well-known/security.txt"

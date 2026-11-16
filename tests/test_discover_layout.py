@@ -69,7 +69,7 @@ class DiscoverLayoutTest(unittest.TestCase):
                 repo / "curbpack" / "claims",
                 build_claim(
                     claim_id="claim-a",
-                    requirement_id="REQ-A",
+                    requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                     source="documents",
                     args={"path": "docs/a.md"},
                     checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],

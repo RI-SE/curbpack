@@ -1,6 +1,9 @@
 {
   "id": "CRA-ART14-PATH",
   "requirement_id": "CRA-ART14-PATH",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "pack_id": "cra-baseline",
+  "requirement_digest": "92ab2069c8bb07769ec98d740751e73a4eed7af3c3f5ca8020bebaa0b4cdc84c",
   "source": "documents",
   "args": {
     "path": "docs/incident/art14-path.md"

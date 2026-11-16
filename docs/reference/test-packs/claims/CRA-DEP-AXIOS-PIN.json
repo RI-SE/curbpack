@@ -1,6 +1,9 @@
 {
   "id": "CRA-DEP-AXIOS-PIN",
   "requirement_id": "CRA-DEP-AXIOS",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "pack_id": "cra-baseline",
+  "requirement_digest": "21f96cf44da392c10d9ba2313b64fd2dc67df3bc6ae503012631695abd2cc0f1",
   "source": "documents",
   "args": {
     "path": "package.json"

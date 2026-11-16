@@ -255,9 +255,9 @@ The same Claim JSON object is used for saving, editing, publishing, checking, si
 | --- | --- |
 | `id` | Stable Claim identity within the product's Claim collection. |
 | `requirement_id` | The one Requirement this Claim supports. |
-| `namespace` | Namespace of that Requirement, recorded when the Claim is bound. Omitted when no binding is recorded. |
-| `pack_id` | Pack id of that Requirement, recorded when the Claim is bound. Omitted when no binding is recorded. |
-| `requirement_digest` | Version digest of the Requirement payload at bind time. Omitted when no binding is recorded. |
+| `namespace` | Namespace of the Requirement this Claim was assessed against. Part of the signed payload. |
+| `pack_id` | Pack id of that Requirement. Part of the signed payload. |
+| `requirement_digest` | Version digest of that Requirement payload at bind time. Part of the signed payload. |
 | `source` | Source adapter identifier, such as `documents` or `git`. |
 | `args` | Source-specific arguments identifying the evidence and, where applicable, the regions supporting the Claim. |
 | `description` | The human rationale explaining how the identified evidence supports the Requirement. |
@@ -265,12 +265,15 @@ The same Claim JSON object is used for saving, editing, publishing, checking, si
 | `checks` | Zero or more `{ "check": <id>, "args": <object> }` entries, defined in §2.5. |
 | `signed` | Optional Claim signature (§2.6). |
 
-A file-backed Claim with two Checks:
+A file-backed Claim with two Checks. `requirement_digest` below is the shape of the field. A stored Claim uses `version_digest` of the Requirement it names.
 
 ```json
 {
   "id": "claim-house-security-md",
   "requirement_id": "HOUSE-SECURITY-REPORTING",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "f7e03eb876b5251db1b1458180fa7525e8dda063db2fb702298d96e5aa9054ca",
   "source": "git",
   "args": {
     "path": "SECURITY.md"

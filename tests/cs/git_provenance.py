@@ -29,7 +29,7 @@ class GitProvenance(unittest.TestCase):
         git(self.repo, 'init', '-q')
         (self.repo / 'docs').mkdir()
         (self.repo / 'docs' / 'evidence.md').write_text('first version\n', encoding='utf-8')
-        self.claim = build_claim(claim_id='C-EVIDENCE', requirement_id='REQ-A', source='documents',
+        self.claim = build_claim(claim_id='C-EVIDENCE', requirement={"id": 'REQ-A', "namespace": "RISE/Example", "pack_id": "example"}, source='documents',
           args={'path':'docs/evidence.md'},checks=[{'check':'exist','args':{'paths':['docs/evidence.md']}}],
           description='The document is evidence.')
         save_claim(self.repo / 'claims', self.claim)

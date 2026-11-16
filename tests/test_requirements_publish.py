@@ -245,7 +245,7 @@ class PublishPackTest(unittest.TestCase):
         self.assertEqual(_snapshot(destination), before)
         claim = build_claim(
             claim_id="risk-assessment-exists",
-            requirement_id=point3["id"],
+            requirement={"id": point3["id"], "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": "docs/annex-vii/risk_assessment.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/annex-vii/risk_assessment.md"]}}],

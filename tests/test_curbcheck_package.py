@@ -28,7 +28,7 @@ from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 def _running_claim(claim_id: str = "claim-risk") -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id="CRA-ANNEX-VII-RISK",
+        requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": "docs/a.md"},
         checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -205,7 +205,7 @@ class ToolReentryTest(unittest.TestCase):
             repo / "curbpack" / "claims",
             build_claim(
                 claim_id="claim-risk",
-                requirement_id="CRA-ANNEX-VII-RISK",
+                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/a.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],

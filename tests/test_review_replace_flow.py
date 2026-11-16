@@ -38,7 +38,7 @@ class ReplaceThenReviewTest(unittest.TestCase):
             claims_dir = product / "curbpack" / "claims"
             old = build_claim(
                 claim_id="claim-old",
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/risk-a.md"},
                 checks=[

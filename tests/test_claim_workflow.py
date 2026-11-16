@@ -19,7 +19,7 @@ class ClaimWorkflowTest(unittest.TestCase):
         path = "docs/risk.md"
         proposal = build_claim(
             claim_id="claim-risk",
-            requirement_id="REQ-A",
+            requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": path},
             checks=[],
@@ -60,7 +60,7 @@ class ClaimWorkflowTest(unittest.TestCase):
             self.assertEqual(process_exit_code(failed), 1)
             other = build_claim(
                 claim_id="claim-other",
-                requirement_id="REQ-B",
+                requirement={"id": "REQ-B", "namespace": "RISE/Example", "pack_id": "example"},
                 source="git",
                 args={"path": "README.md"},
                 checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],

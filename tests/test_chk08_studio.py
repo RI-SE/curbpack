@@ -52,7 +52,7 @@ def _requirement(requirement_id: str, pack_id: str = "cra-baseline") -> dict:
 def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id=requirement_id,
+        requirement={"id": requirement_id, "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],

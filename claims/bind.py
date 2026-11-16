@@ -47,10 +47,29 @@ def law_passages(requirement: dict) -> list[str]:
     return passages
 
 
+def record_binding(claim: dict, requirement: dict) -> dict:
+    """Copy the selected Requirement's identity and payload digest onto the Claim."""
+    if not isinstance(requirement, dict):
+        raise ModelError("claim", "requirement", "the selected Requirement")
+    out = copy.deepcopy(claim)
+    name = f"claim {out.get('id', '?')}"
+    for field, source in (
+        ("namespace", "namespace"),
+        ("pack_id", "pack_id"),
+        ("requirement_id", "id"),
+    ):
+        value = requirement.get(source)
+        if not isinstance(value, str) or not value.strip():
+            raise ModelError(name, field, "the selected Requirement")
+        out[field] = value
+    out["requirement_digest"] = version_digest(requirement)
+    return out
+
+
 def build_claim(
     *,
     claim_id: str,
-    requirement_id: str,
+    requirement: dict,
     source: str,
     args: dict,
     checks: list[dict],
@@ -60,7 +79,6 @@ def build_claim(
     """One Claim: evidence locator plus zero or more Checks. Unsigned."""
     claim: dict = {
         "id": claim_id,
-        "requirement_id": requirement_id,
         "source": source,
         "args": copy.deepcopy(args),
         "description": description,
@@ -68,7 +86,7 @@ def build_claim(
     }
     if severity:
         claim["severity"] = severity
-    return validate_claim(claim)
+    return validate_claim(record_binding(claim, requirement))
 
 
 def rebind(
@@ -150,7 +168,7 @@ def suggest_claim_id(requirement_id: str, path: str) -> str:
 def create_configured_claims(
     directory: Path,
     *,
-    requirement_id: str,
+    requirement: dict,
     known_ids: list[str],
     source: str,
     args: dict,
@@ -160,13 +178,13 @@ def create_configured_claims(
     claim_id: str | None = None,
 ) -> list[dict]:
     """Create one Claim for this evidence. An existing id is never overwritten."""
-    requirement_id = require_requirement_id(requirement_id, known_ids)
+    requirement_id = require_requirement_id(str(requirement.get("id") or ""), known_ids)
     if not claim_id:
         claim_id = suggest_claim_id(requirement_id, _source_path(args))
     try:
         claim = build_claim(
             claim_id=claim_id,
-            requirement_id=requirement_id,
+            requirement=requirement,
             source=source,
             args=args,
             checks=checks,
@@ -181,6 +199,9 @@ def create_configured_claims(
         signed = isinstance(existing.get("signed"), dict)
         same = (
             existing.get("requirement_id") == claim["requirement_id"]
+            and existing.get("namespace") == claim["namespace"]
+            and existing.get("pack_id") == claim["pack_id"]
+            and existing.get("requirement_digest") == claim["requirement_digest"]
             and existing.get("source") == claim["source"]
             and existing.get("args") == claim["args"]
             and existing.get("checks") == claim["checks"]

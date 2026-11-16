@@ -1,6 +1,9 @@
 {
   "id": "FIX-OWNED-POLICY",
   "requirement_id": "FIX-OWNED-POLICY",
+  "namespace": "RISE/Fresh and owned check fixture (test only)",
+  "pack_id": "fresh-owned-test",
+  "requirement_digest": "3258a1c3d4629d968c2768ee47a405602a365dbba0ffd688bb0592e727f40ddd",
   "source": "documents",
   "args": {
     "path": "docs/owned-policy.md"

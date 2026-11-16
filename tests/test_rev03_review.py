@@ -667,7 +667,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             probes = [{"kind": "placeholder"}]
             claim = build_claim(
                 claim_id="paths-note",
-                requirement_id="REQ-SHARED",
+                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"paths": ["docs/one.md", "docs/two.md"]},
                 checks=[
@@ -771,7 +771,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = build_claim(
                 claim_id="mixed-note",
-                requirement_id="REQ-SHARED",
+                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"package": "left-pad"},
                 checks=[
@@ -1336,7 +1336,7 @@ class ReviewCompiledReportTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = build_claim(
                 claim_id="checked-note",
-                requirement_id="REQ-SHARED",
+                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "one.md"},
                 checks=[
@@ -1559,7 +1559,7 @@ def _run(claim_id: str) -> dict:
 def _report(claim_id: str, decision: str) -> dict:
     claim = build_claim(
         claim_id=claim_id,
-        requirement_id="CRA-PURPOSE",
+        requirement={"id": "CRA-PURPOSE", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": "README.md"},
         checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],
@@ -1605,7 +1605,7 @@ def _requirement(requirement_id: str) -> dict:
 def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id=requirement_id,
+        requirement={"id": requirement_id, "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],
@@ -1866,7 +1866,7 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
     claims_dir.mkdir(parents=True, exist_ok=True)
     claim = build_claim(
         claim_id="claim-old",
-        requirement_id="REQ-A",
+        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": "docs/risk-a.md"},
         checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],

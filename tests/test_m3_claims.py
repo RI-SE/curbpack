@@ -18,7 +18,7 @@ from requirements.extract.pipeline import extract_annex_vii_risk
 def _claim(claim_id: str, requirement_id: str, path: str, checks: list[dict]) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id=requirement_id,
+        requirement={"id": requirement_id, "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=checks,
@@ -93,7 +93,7 @@ class ClaimsTest(unittest.TestCase):
     def test_unchecked_claim_reloads_and_is_not_a_pass(self):
         claim = build_claim(
             claim_id="claim-proposal",
-            requirement_id="CRA-ANNEX-VII-RISK",
+            requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": "docs/annex-vii/risk_assessment.md"},
             checks=[],
@@ -143,6 +143,9 @@ class ClaimsTest(unittest.TestCase):
         legacy = {
             "id": "CRA-ANNEX-VII-DESCRIPTION-SOFTWARE-VERSIONS-CHANGELOG.md-contents",
             "requirement_id": "CRA-ANNEX-VII-DESCRIPTION-SOFTWARE-VERSIONS",
+            "namespace": "RISE/Example",
+            "pack_id": "example",
+            "requirement_digest": "recorded-digest",
             "check": "contents",
             "args": {
                 "path": "CHANGELOG.md",
@@ -159,6 +162,9 @@ class ClaimsTest(unittest.TestCase):
         self.assertEqual(loaded["checks"][0]["args"]["probes"][0]["kind"], "words")
         self.assertNotIn("check", stored)
         self.assertEqual(stored["source"], "documents")
+        self.assertEqual(loaded["namespace"], "RISE/Example")
+        self.assertEqual(loaded["pack_id"], "example")
+        self.assertEqual(loaded["requirement_digest"], "recorded-digest")
 
 
 if __name__ == "__main__":

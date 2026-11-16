@@ -298,7 +298,7 @@ class ReviewPageTest(unittest.TestCase):
 def _claim(claim_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id="REQ-A",
+        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],

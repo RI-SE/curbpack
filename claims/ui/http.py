@@ -177,7 +177,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         return researcher.requirement_page(model)
     outcomes = create_configured_claims(
         context["claims_dir"],
-        requirement_id=requirement_id,
+        requirement=requirement,
         known_ids=known,
         source=source,
         args={"path": file_path},
@@ -629,7 +629,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
         return True
     create_configured_claims(
         directory,
-        requirement_id=requirement_id,
+        requirement=requirement,
         known_ids=known,
         source=source,
         args={"path": file_path},

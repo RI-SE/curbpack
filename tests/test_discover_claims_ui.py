@@ -224,7 +224,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             _seed_two_requirements(root)
             claim = build_claim(
                 claim_id="REQ-A-docs__risk-a.md",
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/risk-a.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],

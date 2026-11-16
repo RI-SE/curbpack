@@ -1,6 +1,9 @@
 {
   "id": "HOUSE-DEP-AXIOS-PIN",
   "requirement_id": "HOUSE-DEP-AXIOS-PIN",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "8203fd9820b0e5baee70e5030a9d8966cee2bcffffb9486b62b36936028d970b",
   "source": "documents",
   "args": {
     "path": "package.json"

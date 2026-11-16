@@ -1,6 +1,9 @@
 {
   "id": "MD-SW-CLASS",
   "requirement_id": "MD-SW-CLASS",
+  "namespace": "RISE/MedTech IEC 62304 draft overlay (informational)",
+  "pack_id": "medtech-iec62304",
+  "requirement_digest": "3c9ea0a9b20e2fa2ba4c293fdce1533f8d462308ba3cf7a47ba5b44d625d5e2c",
   "source": "documents",
   "args": {
     "path": "docs/medtech/software_safety_class.md"

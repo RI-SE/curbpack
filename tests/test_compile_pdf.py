@@ -27,10 +27,13 @@ def report_fixture(*, long=False):
         'strength': 'MUST', 'remediation_hint': 'Document the security process.',
     }
     claims, rows = [], []
+    bound = version_digest(requirement)
     for index, status in enumerate(('pass', 'fail', 'skipped')):
         paths = [f'docs/{"long-path-" * (18 if long else 1)}{n}-säkerhet.md' for n in range(9 if long else 2)]
         claim = {
             'id': f'claim-{index}', 'requirement_id': 'REQ-A',
+            'namespace': requirement['namespace'], 'pack_id': requirement['pack_id'],
+            'requirement_digest': bound,
             'source': 'documents', 'args': {'path': paths[0]},
             'description': f'Reviewed evidence {index}: <b>literal text</b> & rationale.',
             'checks': [{'check': 'exist', 'args': {'paths': paths}}],

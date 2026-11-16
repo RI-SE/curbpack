@@ -91,7 +91,7 @@ class CoverageHookTest(unittest.TestCase):
 def _claim(claim_id: str, path: str, checks: list[dict]) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id="REQ-A",
+        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=checks,

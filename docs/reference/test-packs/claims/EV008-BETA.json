@@ -1,6 +1,9 @@
 {
   "id": "EV008-BETA",
   "requirement_id": "EV008-BETA",
+  "namespace": "RISE/EV-008 order independence (test only)",
+  "pack_id": "ev-008-order",
+  "requirement_digest": "2ea41a6af28eb71d24ef8f29f5bb4f2369f3418a372c133900313d98768dc0e5",
   "source": "documents",
   "args": {
     "path": "docs/ev008-beta.md"
