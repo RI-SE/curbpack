@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import copy
+import json
+import os
+import subprocess
 from pathlib import Path
 
 from checks.run import _pack_version_dir, claims_dir, packs_dir
@@ -10,7 +13,16 @@ from common.canonical import version_digest
 from common.errors import ModelError
 from common.jsonio import read_json
 from common.store import load_pack_directory
-from common.validate import validate_claim, validate_curbpack_config
+from common.validate import validate_claim, validate_curbpack_config, validate_requirement
+
+_GIT_ENV_DROP = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+)
 
 
 def resolve_chain(repo: Path, run_result: dict) -> dict:
@@ -20,7 +32,7 @@ def resolve_chain(repo: Path, run_result: dict) -> dict:
     claims = _current_claims(repo, config)
     return {
         "claims": [
-            _resolve_row(row, requirements, claims)
+            _resolve_row(repo, row, requirements, claims)
             for row in run_result.get("claims") or []
             if isinstance(row, dict)
         ]
@@ -51,14 +63,94 @@ def _current_claims(repo: Path, config: dict) -> list[dict]:
     return claims
 
 
-def _resolve_row(row: dict, requirements: list, claims: list[dict]) -> dict:
-    requirement = _matching_requirement(row, requirements)
+def _resolve_row(repo: Path, row: dict, requirements: list, claims: list[dict]) -> dict:
+    requirement = _requirement_result(repo, row, requirements)
     claim = _matching_claim(row, claims)
     return {
-        "requirement": _found("current", row.get("requirement_digest"), requirement),
+        "requirement": requirement,
         "claim": _found("current", row.get("digest"), claim),
         "checks": _checks(claim, row),
     }
+
+
+def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
+    recorded = row.get("requirement_digest")
+    current = _matching_requirement(row, loaded)
+    if current is not None:
+        return _found("current", recorded, current)
+    found = _historical_requirement(repo, row)
+    if found == "unavailable":
+        result = _found("unresolved", recorded, None)
+        result["history"] = "unavailable"
+        return result
+    if found is None:
+        return _found("unresolved", recorded, None)
+    commit, obj = found
+    result = _found("historical", recorded, obj)
+    result["commit"] = commit
+    return result
+
+
+def _historical_requirement(repo: Path, row: dict):
+    requirement_id = row.get("requirement_id")
+    if not isinstance(requirement_id, str) or "/" in requirement_id or not requirement_id.strip():
+        return None
+    log = _git(repo, "log", "--all", "--pretty=format:%H", "--name-only")
+    if log is None:
+        return "unavailable"
+    commit = None
+    for line in log.splitlines():
+        text = line.strip()
+        if not text:
+            commit = None
+            continue
+        if len(text) == 40 and all(char in "0123456789abcdef" for char in text):
+            commit = text
+            continue
+        if commit is None or not text.endswith(f"/{requirement_id}.json"):
+            continue
+        raw = _git(repo, "show", f"{commit}:{text}", decode=False)
+        if raw is None:
+            continue
+        obj = _requirement_blob(raw)
+        if obj is None:
+            continue
+        if obj.get("namespace") != row.get("namespace") or obj.get("pack_id") != row.get("pack_id"):
+            continue
+        if obj.get("id") != requirement_id or version_digest(obj) != row.get("requirement_digest"):
+            continue
+        return commit, obj
+    return None
+
+
+def _requirement_blob(raw: bytes):
+    try:
+        parsed = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    try:
+        return validate_requirement(parsed)
+    except ModelError:
+        return None
+
+
+def _git(repo: Path, *args: str, decode: bool = True):
+    env = os.environ.copy()
+    for key in _GIT_ENV_DROP:
+        env.pop(key, None)
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo), *args],
+            capture_output=True,
+            env=env,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    if decode:
+        return result.stdout.decode("utf-8", errors="replace")
+    return result.stdout
 
 
 def _matching_requirement(row: dict, loaded: list):

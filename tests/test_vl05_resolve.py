@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -86,3 +87,108 @@ class CurrentChainTest(unittest.TestCase):
                 item["checks"],
                 [{"index": 0, "check": "exist", "args": {"paths": ["docs/present.md"]}, "corresponds": True}],
             )
+
+
+class HistoricalRequirementTest(unittest.TestCase):
+    def test_a_changed_requirement_is_recovered_from_the_commit_that_matches(self):
+        """VL-05 GWT-02, GWT-04, and GWT-05. The current file is not substituted for a missing digest."""
+        requirement = extract_annex_vii_risk()
+        requirement["note"] = "historical note"
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-current",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "init")
+            _git(root, "add", "curbpack.json", "curbpack")
+            _git(root, "commit", "-m", "record the requirement")
+            recorded_commit = _git(root, "rev-parse", "HEAD").strip()
+            recorded = version_digest(stored)
+            pack_dir = root / "curbpack" / "packs" / stored["pack_id"] / "0.1.0"
+            changed = load_requirement(pack_dir / f"{stored['id']}.json")
+            changed["note"] = "current note"
+            save_requirement(pack_dir, changed)
+            _git(root, "add", "curbpack")
+            _git(root, "commit", "-m", "change the requirement")
+            requirement_path = root / "curbpack" / "packs" / stored["pack_id"] / "0.1.0" / f"{stored['id']}.json"
+            before = requirement_path.read_bytes()
+            status_before = _git(root, "status", "--porcelain")
+            row = _row(stored, claim, recorded)
+            missing = dict(row, id="claim-missing-digest", requirement_digest="missing-digest")
+            chain = resolve_chain(root, {"claims": [row, missing]})
+            found = chain["claims"][0]
+            absent = chain["claims"][1]
+            self.assertEqual(found["requirement"]["location"], "historical")
+            self.assertEqual(found["requirement"]["commit"], recorded_commit)
+            self.assertEqual(version_digest(found["requirement"]["object"]), recorded)
+            self.assertEqual(found["requirement"]["object"]["note"], "historical note")
+            self.assertEqual(found["claim"]["location"], "current")
+            self.assertEqual(found["claim"]["object"]["requirement_digest"], recorded)
+            self.assertEqual(
+                found["checks"],
+                [{"index": 0, "check": "exist", "args": {"paths": ["docs/present.md"]}, "corresponds": True}],
+            )
+            self.assertEqual(absent["requirement"]["location"], "unresolved")
+            self.assertIsNone(absent["requirement"]["object"])
+            self.assertNotEqual(version_digest(changed), recorded)
+            self.assertEqual(requirement_path.read_bytes(), before)
+            self.assertEqual(_git(root, "status", "--porcelain"), status_before)
+
+    def test_a_directory_without_git_still_resolves_the_current_object(self):
+        """History is unavailable. A current digest match is still reported."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-current",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            recorded = version_digest(stored)
+            missing = _row(stored, claim, "missing-digest")
+            chain = resolve_chain(root, {"claims": [_row(stored, claim, recorded), missing]})
+            self.assertEqual(chain["claims"][0]["requirement"]["location"], "current")
+            self.assertEqual(chain["claims"][1]["requirement"]["location"], "unresolved")
+            self.assertEqual(chain["claims"][1]["requirement"]["history"], "unavailable")
+            self.assertIsNone(chain["claims"][1]["requirement"]["object"])
+
+
+def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:
+    return {
+        "id": claim["id"],
+        "digest": version_digest(claim),
+        "namespace": stored["namespace"],
+        "pack_id": stored["pack_id"],
+        "requirement_id": stored["id"],
+        "requirement_digest": requirement_digest,
+        "status": "pass",
+        "checks": [
+            {"index": 0, "check": "exist", "args": {"paths": ["docs/present.md"]}, "status": "pass"}
+        ],
+    }
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), "-c", "user.email=review@example.com", "-c", "user.name=Review", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
