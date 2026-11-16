@@ -59,6 +59,9 @@ PACK_FIELDS = {
 CLAIM_FIELDS = {
     "id",
     "requirement_id",
+    "namespace",
+    "pack_id",
+    "requirement_digest",
     "source",
     "args",
     "description",
@@ -322,6 +325,8 @@ def validate_claim(obj: object) -> dict:
     _reject_unknown(claim, name, CLAIM_FIELDS)
     _nonempty_str(claim, name, "id", required=True)
     _nonempty_str(claim, name, "requirement_id", required=True)
+    for field in ("namespace", "pack_id", "requirement_digest"):
+        _nonempty_str(claim, name, field, required=False)
     _nonempty_str(claim, name, "source", required=True)
     _nonempty_str(claim, name, "description", required=True)
     if not isinstance(claim.get("args"), dict):
