@@ -42,12 +42,18 @@ A loaded Pack may have no Claim rows. Selection of a Pack does not create Claims
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Claim id, not a separate Requirement-id field. |
-| `digest` | Version digest of the whole Claim with its entire `signed` block removed, using Packs v2 §2.6. |
+| `id` | Claim id. |
+| `digest` | Claim digest: version digest of the whole Claim with its entire `signed` block removed, using Packs v2 §2.6. |
+| `namespace` | Requirement namespace recorded on the Claim. Present on a new result. |
+| `pack_id` | Pack id recorded on the Claim. Present on a new result. |
+| `requirement_id` | Requirement id recorded on the Claim. Present on a new result. |
+| `requirement_digest` | Requirement digest recorded on the Claim. Present on a new result. |
+| `actual_digest` | Digest of the Requirement that resolved. Present for `match` and `stale`. Omitted for `missing`. |
+| `binding` | `match`, `stale`, or `missing`. Separate from `status`. Present on a new result. |
 | `status` | Aggregate of the nested Check outcomes: `fail` if any failed; otherwise `skipped` if any was skipped; otherwise `pass`. |
-| `checks` | One result per configured Check, including passing Checks. |
+| `checks` | One result per configured Check, including passing Checks. A Check row does not repeat the binding fields. |
 
-The Claim's `requirement_id`, source, rationale, and signature are in the Claim object, not duplicated on the result row. Claims with `checks: []` and Claims outside the selected Requirements are omitted by the repository runner. A selected Requirement without an executed Claim produces no row.
+A new Claim row carries the Requirement identity, the recorded Requirement digest, the Claim digest in `digest`, and the binding status. `actual_digest` is included only when the Requirement resolves. A historical row with only `id`, `digest`, `status`, and `checks` still validates. Reading that file does not rewrite it. Claims with `checks: []` and Claims outside the selected Requirements are omitted by the repository runner. A selected Requirement without an executed Claim produces no row.
 
 ### Check results
 
@@ -76,6 +82,12 @@ Simplified from `run-result_20261029T135239Z.json`: one Pack, one Claim, and one
     {
       "id": "HOUSE-SECURITY-MD",
       "digest": "<claim digest>",
+      "namespace": "RISE/House Policy Example",
+      "pack_id": "house-policy",
+      "requirement_id": "HOUSE-SECURITY-MD",
+      "requirement_digest": "<recorded requirement digest>",
+      "actual_digest": "<current requirement digest>",
+      "binding": "match",
       "status": "pass",
       "checks": [
         { "index": 0, "check": "exist", "args": { "paths": ["SECURITY.md"] }, "status": "pass" }

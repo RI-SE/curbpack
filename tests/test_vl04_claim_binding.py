@@ -9,14 +9,15 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from checks.run import build_run_result
 from claims.bind import build_claim, rebind, sign_claim
 from common.canonical import version_digest
 from common.errors import ModelError
-from common.jsonio import read_json
+from common.jsonio import read_json, write_json
 from common.signing import generate_keypair
-from common.store import load_requirement, save_requirement
-from common.validate import validate_claim
-from requirements.extract.pipeline import extract_annex_vii_risk
+from common.store import load_requirement, load_run_result, save_pack, save_requirement
+from common.validate import validate_claim, validate_run_result
+from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
 from tests.test_claims_binding_ui import _edit_claim, _get, _new_claim, _post, _seed_two_requirements
 
 
@@ -198,3 +199,95 @@ class _server:
         self._httpd.server_close()
         self._tmp.cleanup()
         return False
+
+
+class RunResultBindingTest(unittest.TestCase):
+    def test_match_stale_and_missing_stay_beside_a_passing_check(self):
+        requirement = extract_annex_vii_risk()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            pack = draft_pack()
+            pack["id"] = requirement["pack_id"]
+            pack["namespace"] = requirement["namespace"]
+            pack_dir = repo / "curbpack" / "packs" / pack["id"] / "0.1.0"
+            save_pack(pack_dir, pack)
+            save_requirement(pack_dir, requirement)
+            stored = load_requirement(pack_dir / f"{requirement['id']}.json")
+            (repo / "docs").mkdir()
+            (repo / "docs" / "present.md").write_text("present\n", encoding="utf-8")
+            write_json(
+                repo / "curbpack.json",
+                {
+                    "packs": [pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+            match = _bound_claim("claim-match", stored, evidence)
+            stale = _bound_claim("claim-stale", stored, evidence)
+            stale["requirement_digest"] = "recorded-other-digest"
+            missing = _bound_claim("claim-missing", stored, evidence)
+            missing["namespace"] = "OTHER/Pack"
+            result = build_run_result(repo, [match, stale, missing], [{"id": pack["id"], "version": "0.1.0", "digest": "pack"}])
+            rows = {row["id"]: row for row in result["claims"]}
+            self.assertEqual(rows["claim-match"]["binding"], "match")
+            self.assertEqual(rows["claim-stale"]["binding"], "stale")
+            self.assertEqual(rows["claim-missing"]["binding"], "missing")
+            self.assertNotIn("actual_digest", rows["claim-missing"])
+            for claim in (match, stale, missing):
+                row = rows[claim["id"]]
+                self.assertEqual(row["status"], "pass")
+                self.assertEqual(row["digest"], version_digest(claim))
+                self.assertEqual(row["checks"][0]["status"], "pass")
+                self.assertNotIn("binding", row["checks"][0])
+                self.assertNotIn("namespace", row["checks"][0])
+                self.assertNotIn("requirement_digest", row["checks"][0])
+            self.assertEqual(rows["claim-match"]["actual_digest"], version_digest(stored))
+            self.assertEqual(rows["claim-stale"]["actual_digest"], version_digest(stored))
+            self.assertEqual(rows["claim-match"]["requirement_digest"], version_digest(stored))
+            self.assertEqual(rows["claim-missing"]["namespace"], "OTHER/Pack")
+
+    def test_a_historical_run_result_loads_without_being_rewritten(self):
+        historical = {
+            "tool": "curbcheck",
+            "tool_version": "0.0.1a",
+            "packs": [{"id": "house", "version": "0.1.0", "digest": "pack"}],
+            "claims": [
+                {
+                    "id": "claim-old",
+                    "digest": "claim",
+                    "status": "pass",
+                    "checks": [
+                        {"index": 0, "check": "exist", "args": {"paths": ["a.md"]}, "status": "pass"}
+                    ],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "run-result.json"
+            write_json(path, historical)
+            before = path.read_bytes()
+            loaded = load_run_result(path)
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(set(loaded["claims"][0]), {"id", "digest", "status", "checks"})
+        leaked = dict(historical)
+        leaked["claims"] = [dict(historical["claims"][0])]
+        leaked["claims"][0]["checks"] = [dict(historical["claims"][0]["checks"][0], binding="stale")]
+        with self.assertRaises(ModelError):
+            validate_run_result(leaked)
+
+
+def _bound_claim(claim_id: str, requirement: dict, checks: list) -> dict:
+    return build_claim(
+        claim_id=claim_id,
+        requirement=requirement,
+        source="documents",
+        args={"path": "docs/present.md"},
+        checks=checks,
+        description="The file is the evidence for this Requirement.",
+    )

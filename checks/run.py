@@ -118,6 +118,49 @@ def _check_row(index: int, item: dict, outcome: dict) -> dict:
     return row
 
 
+def _claim_result(repo: Path, claim: dict, results: list[dict], status: str) -> dict:
+    row = {
+        "id": claim["id"],
+        "digest": version_digest(claim),
+        "status": status,
+        "checks": results,
+        "namespace": claim.get("namespace"),
+        "pack_id": claim.get("pack_id"),
+        "requirement_id": claim.get("requirement_id"),
+        "requirement_digest": claim.get("requirement_digest"),
+    }
+    resolved = _resolve_requirement(repo, claim)
+    if resolved is None:
+        row["binding"] = "missing"
+        return row
+    actual = version_digest(resolved)
+    row["actual_digest"] = actual
+    row["binding"] = "match" if actual == claim.get("requirement_digest") else "stale"
+    return row
+
+
+def _resolve_requirement(repo: Path, claim: dict) -> dict | None:
+    """The Requirement named by the Claim, or None when that identity does not resolve."""
+    pack_id = claim.get("pack_id")
+    if not isinstance(pack_id, str) or not pack_id.strip():
+        return None
+    try:
+        from common.store import load_pack
+        from discovery.door import repo_pack_requirements
+
+        directory = _pack_version_dir(packs_dir(repo), pack_id)
+        pack = load_pack(directory / "pack.json")
+        requirements = repo_pack_requirements(repo, pack_id)
+    except (ModelError, OSError, ValueError):
+        return None
+    if claim.get("namespace") != pack.get("namespace"):
+        return None
+    for item in requirements:
+        if item.get("id") == claim.get("requirement_id") and item.get("namespace") == claim.get("namespace"):
+            return item
+    return None
+
+
 def _aggregate(checks: list[dict]) -> str:
     statuses = [item["status"] for item in checks]
     if "fail" in statuses:
@@ -135,12 +178,7 @@ def run_claim(repo: Path, claim: dict) -> dict:
     for index, item in enumerate(configured):
         outcome = _execute_check(repo, item["check"], item["args"])
         results.append(_check_row(index, item, outcome))
-    return {
-        "id": claim["id"],
-        "digest": version_digest(claim),
-        "status": _aggregate(results),
-        "checks": results,
-    }
+    return _claim_result(repo, claim, results, _aggregate(results))
 
 
 def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip: dict[str, str] | None = None) -> dict:
@@ -159,12 +197,7 @@ def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip:
                 for index, item in enumerate(claim["checks"])
             ]
             rows.append(
-                {
-                    "id": claim["id"],
-                    "digest": version_digest(claim),
-                    "status": "skipped",
-                    "checks": results,
-                }
+                _claim_result(repo, claim, results, "skipped")
             )
             continue
         rows.append(run_claim(repo, claim))

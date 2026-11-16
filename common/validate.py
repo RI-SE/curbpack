@@ -452,12 +452,34 @@ def _validate_run_row(row: object, index: int) -> None:
     where = f"run result.claims[{index}]"
     if not isinstance(row, dict):
         _expect("run result", f"claims[{index}]", "object")
-    _reject_unknown(row, where, {"id", "digest", "status", "checks"})
+    binding_fields = {
+        "namespace",
+        "pack_id",
+        "requirement_id",
+        "requirement_digest",
+        "binding",
+        "actual_digest",
+    }
+    _reject_unknown(row, where, {"id", "digest", "status", "checks"} | binding_fields)
     for field in ("id", "digest", "status"):
         _nonempty_str(row, where, field, required=True)
     status = row.get("status")
     if status not in ("pass", "fail", "skipped"):
         _expect("run result", f"claims[{index}].status", "pass, fail, or skipped")
+    recorded = set(row) & binding_fields
+    if recorded:
+        required = {"namespace", "pack_id", "requirement_id", "requirement_digest", "binding"}
+        if not required <= recorded:
+            _expect("run result", f"claims[{index}].binding", "the Requirement identity, digest, and binding")
+        for field in ("namespace", "pack_id", "requirement_id", "requirement_digest"):
+            _nonempty_str(row, where, field, required=True)
+        if row.get("binding") not in ("match", "stale", "missing"):
+            _expect("run result", f"claims[{index}].binding", "match, stale, or missing")
+        if row.get("binding") == "missing":
+            if "actual_digest" in row:
+                _expect("run result", f"claims[{index}].actual_digest", "absent when binding is missing")
+        else:
+            _nonempty_str(row, where, "actual_digest", required=True)
     checks = row.get("checks")
     if not isinstance(checks, list) or not checks:
         _expect("run result", f"claims[{index}].checks", "one result per configured check")
