@@ -348,7 +348,10 @@ def _chain_fields(chain: dict | None) -> dict:
         "differences": requirement.get("differences") if isinstance(requirement.get("differences"), list) else [],
         "claim_location": str(claim.get("location") or ""),
         "claim_commit": str(claim.get("commit") or ""),
-        "claim_current_digest": str(claim.get("current_digest") or ""),
+        "claim_recorded_digest": str(claim.get("digest") or ""),
+        "claim_recovered_digest": str(claim.get("digest") or "") if claim.get("location") == "historical" else "",
+        "claim_current_digest": str(claim.get("current_digest") or "")
+        or (str(claim.get("digest") or "") if claim.get("location") == "current" else ""),
         "claim_signature_method": str((claim.get("signature") or {}).get("method") or "") if isinstance(claim.get("signature"), dict) else "",
         "claim_signature_status": str((claim.get("signature") or {}).get("status") or "") if isinstance(claim.get("signature"), dict) else "",
         "chain_binding": str(chain.get("binding") or ""),

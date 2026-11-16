@@ -469,8 +469,50 @@ class ChainReviewFixTest(unittest.TestCase):
             ).decode()
             self.assertIn('data-claim-location="historical"', page)
             self.assertIn(f'data-claim-commit="{recorded_commit}"', page)
+            self.assertIn(f'data-claim-recorded-digest="{recorded_claim}"', page)
+            self.assertIn(f'data-claim-recovered-digest="{recorded_claim}"', page)
             self.assertIn(f'data-claim-current-digest="{version_digest(claim)}"', page)
+            self.assertNotEqual(recorded_claim, version_digest(claim))
             self.assertIn('data-chain-binding="match"', page)
+
+    def test_review_shows_the_recorded_claim_digest_when_it_equals_the_current_one(self):
+        """The recorded Claim digest stays readable when it matches the current Claim."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-same",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            digest = version_digest(claim)
+            row = _row(stored, claim, version_digest(stored))
+            chain = resolve_chain(root, {"claims": [row]})
+            presentation = present_raw_run(
+                run_result={"claims": [row]},
+                claims_by_id={claim["id"]: claim},
+                requirements_by_id={stored["id"]: stored},
+                claim_readings={},
+                requirement_readings={},
+                expanded=None,
+                chain=chain,
+            )
+            page = review_page(
+                {"run_result": {"claims": []}, "claims": []},
+                None,
+                door={"presentation": presentation, "repo_id": "alpha"},
+            ).decode()
+            self.assertIn(f'data-claim-recorded-digest="{digest}"', page)
+            self.assertIn(f'data-claim-current-digest="{digest}"', page)
+            self.assertEqual(page.count(f'data-claim-recorded-digest="{digest}"'), 1)
+            self.assertEqual(page.count(f'data-claim-current-digest="{digest}"'), 1)
 
 
 def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:

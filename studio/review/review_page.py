@@ -402,6 +402,8 @@ def _chain_html(claim: dict) -> str:
         ("data-signature-status", "signature_status"),
         ("data-claim-location", "claim_location"),
         ("data-claim-commit", "claim_commit"),
+        ("data-claim-recorded-digest", "claim_recorded_digest"),
+        ("data-claim-recovered-digest", "claim_recovered_digest"),
         ("data-claim-current-digest", "claim_current_digest"),
         ("data-claim-signature-method", "claim_signature_method"),
         ("data-claim-signature-status", "claim_signature_status"),
