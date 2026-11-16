@@ -346,6 +346,12 @@ def _chain_fields(chain: dict | None) -> dict:
         "signature_method": str(signature.get("method") or ""),
         "signature_status": str(signature.get("status") or ""),
         "differences": requirement.get("differences") if isinstance(requirement.get("differences"), list) else [],
+        "claim_location": str(claim.get("location") or ""),
+        "claim_commit": str(claim.get("commit") or ""),
+        "claim_current_digest": str(claim.get("current_digest") or ""),
+        "claim_signature_method": str((claim.get("signature") or {}).get("method") or "") if isinstance(claim.get("signature"), dict) else "",
+        "claim_signature_status": str((claim.get("signature") or {}).get("status") or "") if isinstance(claim.get("signature"), dict) else "",
+        "chain_binding": str(chain.get("binding") or ""),
     }
 
 

@@ -400,6 +400,12 @@ def _chain_html(claim: dict) -> str:
         ("data-current-digest", "current_digest"),
         ("data-signature-method", "signature_method"),
         ("data-signature-status", "signature_status"),
+        ("data-claim-location", "claim_location"),
+        ("data-claim-commit", "claim_commit"),
+        ("data-claim-current-digest", "claim_current_digest"),
+        ("data-claim-signature-method", "claim_signature_method"),
+        ("data-claim-signature-status", "claim_signature_status"),
+        ("data-chain-binding", "chain_binding"),
     ):
         value = str(claim.get(key) or "")
         if not value:

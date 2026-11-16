@@ -26,14 +26,15 @@ _GIT_ENV_DROP = (
 )
 
 
-def resolve_chain(repo: Path, run_result: dict) -> dict:
-    """Return the current objects whose identity and digest match the run. Nothing is written."""
+def resolve_chain(repo: Path, run_result: dict, trust: dict | None = None) -> dict:
+    """Return the recorded objects. A current file is not substituted for a different digest."""
     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
     requirements = _current_requirements(repo, config)
     claims = _current_claims(repo, config)
+    known = trust or {}
     return {
         "claims": [
-            _resolve_row(repo, row, requirements, claims)
+            _resolve_row(repo, row, requirements, claims, known)
             for row in run_result.get("claims") or []
             if isinstance(row, dict)
         ]
@@ -64,29 +65,30 @@ def _current_claims(repo: Path, config: dict) -> list[dict]:
     return claims
 
 
-def _resolve_row(repo: Path, row: dict, requirements: list, claims: list[dict]) -> dict:
-    requirement = _requirement_result(repo, row, requirements)
-    claim_result, claim = _claim_result(repo, row, claims)
+def _resolve_row(repo: Path, row: dict, requirements: list, claims: list[dict], trust: dict) -> dict:
+    requirement = _requirement_result(repo, row, requirements, trust)
+    claim_result, claim = _claim_result(repo, row, claims, trust)
     return {
         "requirement": requirement,
         "claim": claim_result,
         "checks": _checks(claim, row),
+        "binding": _row_binding(claim, row),
     }
 
 
-def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
+def _requirement_result(repo: Path, row: dict, loaded: list, trust: dict) -> dict:
     recorded = row.get("requirement_digest")
     current = _matching_requirement(row, loaded)
     identity = _identity_requirement(row, loaded)
     if current is not None:
-        return _with_signature(repo, _found("current", recorded, current))
+        return _with_signature(repo, _found("current", recorded, current), trust, kind="requirement")
     found = _historical_requirement(repo, row)
     if found == "unavailable":
         result = _found("unresolved", recorded, None)
         result["history"] = "unavailable"
-        return _with_signature(repo, result)
+        return _with_signature(repo, result, trust, kind="requirement")
     if found is None:
-        return _with_signature(repo, _found("unresolved", recorded, None))
+        return _with_signature(repo, _found("unresolved", recorded, None), trust, kind="requirement")
     commit, obj = found
     result = _found("historical", recorded, obj)
     result["commit"] = commit
@@ -95,21 +97,21 @@ def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
         if actual != recorded:
             result["current_digest"] = actual
         result["differences"] = _requirement_differences(obj, identity)
-    return _with_signature(repo, result)
+    return _with_signature(repo, result, trust, kind="requirement")
 
 
-def _claim_result(repo: Path, row: dict, claims: list[dict]):
+def _claim_result(repo: Path, row: dict, claims: list[dict], trust: dict):
     recorded = row.get("digest")
     current = _matching_claim(row, claims)
     if current is not None:
-        return _with_signature(repo, _found("current", recorded, current)), current
+        return _with_signature(repo, _found("current", recorded, current), trust, kind="claim"), current
     found = _historical_claim(repo, row)
     if found == "unavailable":
         result = _found("unresolved", recorded, None)
         result["history"] = "unavailable"
-        return _with_signature(repo, result), None
+        return _with_signature(repo, result, trust, kind="claim"), None
     if found is None:
-        return _with_signature(repo, _found("unresolved", recorded, None)), None
+        return _with_signature(repo, _found("unresolved", recorded, None), trust, kind="claim"), None
     commit, obj = found
     result = _found("historical", recorded, obj)
     result["commit"] = commit
@@ -118,7 +120,7 @@ def _claim_result(repo: Path, row: dict, claims: list[dict]):
         actual = version_digest(same_id)
         if actual != recorded:
             result["current_digest"] = actual
-    return _with_signature(repo, result), obj
+    return _with_signature(repo, result, trust, kind="claim"), obj
 
 
 def _historical_requirement(repo: Path, row: dict):
@@ -237,18 +239,24 @@ def _requirement_differences(historical: dict, current: dict) -> list[dict]:
     return fields
 
 
-def _with_signature(repo: Path, result: dict) -> dict:
-    result["signature"] = _signature(result.get("object"), repo, result.get("commit"))
+def _with_signature(repo: Path, result: dict, trust: dict, *, kind: str) -> dict:
+    result["signature"] = _signature(
+        result.get("object"), repo, result.get("commit"), trust, kind=kind, current=result.get("location") == "current"
+    )
     return result
 
 
-def _signature(obj: object, repo: Path, commit: object) -> dict:
+def _signature(obj: object, repo: Path, commit: object, trust: dict, *, kind: str, current: bool) -> dict:
     if isinstance(obj, dict) and isinstance(obj.get("signed"), dict):
-        reading = verify_object(version_digest(obj), obj.get("signed"), {})
+        reading = verify_object(version_digest(obj), obj.get("signed"), trust)
         reading["verifiable"] = reading.get("status") == "valid"
         return reading
     if isinstance(commit, str) and commit:
         git_reading = _commit_signature(repo, commit)
+        if git_reading is not None:
+            return git_reading
+    if current and isinstance(obj, dict):
+        git_reading = _current_file_signature(repo, obj, kind)
         if git_reading is not None:
             return git_reading
     return {
@@ -256,6 +264,31 @@ def _signature(obj: object, repo: Path, commit: object) -> dict:
         "method": "none",
         "verifiable": False,
         "reason": "No signed block and no signed Git commit. The object is unsigned.",
+    }
+
+
+def _current_file_signature(repo: Path, obj: dict, kind: str):
+    from review.gitseal import git_commit_signature
+
+    try:
+        config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+        if kind == "claim":
+            path = claims_dir(repo, config) / f"{obj.get('id')}.json"
+        else:
+            path = _pack_version_dir(packs_dir(repo, config), str(obj.get("pack_id") or "")) / f"{obj.get('id')}.json"
+        relative = str(path.resolve().relative_to(repo.resolve()))
+    except (ModelError, OSError, ValueError):
+        return None
+    reading = git_commit_signature(repo, relative)
+    if reading is None:
+        return None
+    verifiable = bool(reading.get("verifiable"))
+    return {
+        "status": "valid" if verifiable else "invalid",
+        "method": "git",
+        "signer": reading.get("who"),
+        "version": reading.get("version"),
+        "verifiable": verifiable,
     }
 
 
@@ -323,15 +356,13 @@ def _found(location: str, digest: object, obj: dict | None) -> dict:
 
 
 def _checks(claim: dict | None, row: dict) -> list[dict]:
-    if claim is None:
-        return []
     recorded = {
         item.get("index"): item
         for item in row.get("checks") or []
         if isinstance(item, dict)
     }
     compared = []
-    for index, item in enumerate(claim.get("checks") or []):
+    for index, item in enumerate((claim or {}).get("checks") or []):
         found = recorded.get(index)
         corresponds = (
             isinstance(found, dict)
@@ -346,4 +377,28 @@ def _checks(claim: dict | None, row: dict) -> list[dict]:
                 "corresponds": corresponds,
             }
         )
+    seen = {item["index"] for item in compared}
+    for index, found in recorded.items():
+        if index in seen or not isinstance(index, int):
+            continue
+        compared.append(
+            {
+                "index": index,
+                "check": found.get("check"),
+                "args": found.get("args"),
+                "corresponds": False,
+            }
+        )
     return compared
+
+
+def _row_binding(claim: dict | None, row: dict) -> str:
+    if claim is None or not row.get("requirement_digest"):
+        return "unresolved"
+    same = (
+        claim.get("namespace") == row.get("namespace")
+        and claim.get("pack_id") == row.get("pack_id")
+        and claim.get("requirement_id") == row.get("requirement_id")
+        and claim.get("requirement_digest") == row.get("requirement_digest")
+    )
+    return "match" if same else "mismatch"

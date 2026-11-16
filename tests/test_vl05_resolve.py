@@ -7,8 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claims.bind import build_claim, write_claim
+from claims.bind import build_claim, sign_claim, write_claim
 from common.canonical import version_digest
+from common.signing import generate_keypair
 from common.jsonio import write_json
 from common.store import load_requirement, save_pack, save_requirement
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
@@ -363,6 +364,113 @@ class RequirementComparisonTest(unittest.TestCase):
             self.assertNotIn('data-difference="status"', page)
             self.assertNotIn('data-difference="signed"', page)
             self.assertEqual(path.read_bytes(), before)
+
+
+class ChainReviewFixTest(unittest.TestCase):
+    def test_a_trusted_seal_is_valid_and_an_unsigned_object_is_not(self):
+        """VL-05 GWT-07. The workspace trust store decides an object seal."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        private, public = generate_keypair()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-sealed",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            sealed = sign_claim(claim, name="QA", private_key=private, at="2026-11-16T12:00:00Z")
+            write_claim(root / "curbpack" / "claims", sealed)
+            chain = resolve_chain(root, {"claims": [_row(stored, sealed, version_digest(stored))]}, trust={"QA": public})
+            signature = chain["claims"][0]["claim"]["signature"]
+            self.assertEqual(signature["method"], "object")
+            self.assertEqual(signature["status"], "valid")
+            requirement_signature = chain["claims"][0]["requirement"]["signature"]
+            self.assertEqual(requirement_signature["method"], "none")
+            self.assertNotEqual(requirement_signature["status"], "valid")
+
+    def test_a_claim_that_names_another_requirement_stays_visible(self):
+        """VL-05 GWT-04. The binding disagreement is separate from the resolved objects."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-other",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = "other-digest"
+            write_claim(root / "curbpack" / "claims", claim)
+            row = _row(stored, claim, version_digest(stored))
+            row["checks"].append(
+                {"index": 1, "check": "exist", "args": {"paths": ["docs/extra.md"]}, "status": "pass"}
+            )
+            chain = resolve_chain(root, {"claims": [row]})
+            item = chain["claims"][0]
+            self.assertEqual(item["requirement"]["location"], "current")
+            self.assertEqual(item["claim"]["location"], "current")
+            self.assertEqual(item["binding"], "mismatch")
+            self.assertEqual(item["checks"][0]["corresponds"], True)
+            self.assertEqual(item["checks"][1]["corresponds"], False)
+            self.assertEqual(item["checks"][1]["index"], 1)
+
+    def test_review_shows_a_historical_claim_beside_the_requirement(self):
+        """The Claim commit and current digest are separate from the Requirement facts."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-edited",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "init")
+            _git(root, "add", "curbpack.json", "curbpack")
+            _git(root, "commit", "-m", "record the claim")
+            recorded_commit = _git(root, "rev-parse", "HEAD").strip()
+            recorded_claim = version_digest(claim)
+            claim["description"] = "The description changed after the run."
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "add", "curbpack")
+            _git(root, "commit", "-m", "change the claim")
+            row = _row(stored, claim, version_digest(stored))
+            row["digest"] = recorded_claim
+            chain = resolve_chain(root, {"claims": [row]})
+            presentation = present_raw_run(
+                run_result={"claims": [row]},
+                claims_by_id={claim["id"]: claim},
+                requirements_by_id={stored["id"]: stored},
+                claim_readings={},
+                requirement_readings={},
+                expanded=None,
+                chain=chain,
+            )
+            page = review_page(
+                {"run_result": {"claims": []}, "claims": []},
+                None,
+                door={"presentation": presentation, "repo_id": "alpha"},
+            ).decode()
+            self.assertIn('data-claim-location="historical"', page)
+            self.assertIn(f'data-claim-commit="{recorded_commit}"', page)
+            self.assertIn(f'data-claim-current-digest="{version_digest(claim)}"', page)
+            self.assertIn('data-chain-binding="match"', page)
 
 
 def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:
