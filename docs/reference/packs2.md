@@ -255,9 +255,9 @@ The same Claim JSON object is used for saving, editing, publishing, checking, si
 | --- | --- |
 | `id` | Stable Claim identity within the product's Claim collection. |
 | `requirement_id` | The one Requirement this Claim supports. |
-| `namespace` | Namespace of the Requirement this Claim was assessed against. Part of the signed payload. |
-| `pack_id` | Pack id of that Requirement. Part of the signed payload. |
-| `requirement_digest` | Version digest of that Requirement payload at bind time. Part of the signed payload. |
+| `namespace` | Required. Namespace of the Requirement this Claim was assessed against. Part of the signed payload. |
+| `pack_id` | Required. Pack id of that Requirement. Part of the signed payload. |
+| `requirement_digest` | Required. Version digest of that Requirement payload at bind time. Part of the signed payload. |
 | `source` | Source adapter identifier, such as `documents` or `git`. |
 | `args` | Source-specific arguments identifying the evidence and, where applicable, the regions supporting the Claim. |
 | `description` | The human rationale explaining how the identified evidence supports the Requirement. |
@@ -329,7 +329,7 @@ A Claim with one or more schema-valid Checks may be saved, published and tested 
 
 Human approval is recorded by signing the Claim after reviewing the evidence and its configured Checks.
 
-A Claim signature covers the Claim JSON, including `source`, source `args`, `description`, `checks`, and, when recorded, `namespace`, `pack_id`, and `requirement_digest`. It does not automatically seal the external evidence artefact's contents.
+A Claim signature covers the Claim JSON, including `source`, source `args`, `description`, `checks`, `namespace`, `pack_id`, and `requirement_digest`. A Claim includes those three binding fields. It does not automatically seal the external evidence artefact's contents.
 
 A subsequent Check failure indicates that a monitored condition may no longer hold and that the Claim may need human reassessment. It neither silently revokes the signature nor automatically establishes non-compliance.
 

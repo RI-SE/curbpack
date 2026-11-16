@@ -147,7 +147,15 @@ def _cli(argv: list[str] | None) -> int:
     if result.get("worktree") == "dirty":
         print("worktree dirty: this result is not verification of that commit's exact content")
     for row in result["claims"]:
-        print(f"{row['status']:7} {row['id']}")
+        binding = row.get("binding")
+        binding_text = f" binding {binding}" if binding in {"match", "stale", "missing"} else ""
+        print(f"{row['status']:7} {row['id']}{binding_text}")
+        if binding == "stale":
+            print(f"  requirement {row.get('requirement_digest')} actual {row.get('actual_digest')}")
+        elif binding == "missing":
+            print(
+                f"  requirement {row.get('namespace')} {row.get('pack_id')} {row.get('requirement_id')}"
+            )
         for item in row.get("checks") or []:
             detail = f" — {item['detail']}" if item.get("detail") else ""
             print(f"  {item['status']:7} [{item['index']}] {item['check']}{detail}")

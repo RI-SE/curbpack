@@ -118,7 +118,7 @@ def _check_row(index: int, item: dict, outcome: dict) -> dict:
     return row
 
 
-def _claim_result(repo: Path, claim: dict, results: list[dict], status: str) -> dict:
+def _claim_result(claim: dict, results: list[dict], status: str, requirements: list) -> dict:
     row = {
         "id": claim["id"],
         "digest": version_digest(claim),
@@ -129,7 +129,7 @@ def _claim_result(repo: Path, claim: dict, results: list[dict], status: str) -> 
         "requirement_id": claim.get("requirement_id"),
         "requirement_digest": claim.get("requirement_digest"),
     }
-    resolved = _resolve_requirement(repo, claim)
+    resolved = _resolve_requirement(claim, requirements)
     if resolved is None:
         row["binding"] = "missing"
         return row
@@ -139,26 +139,39 @@ def _claim_result(repo: Path, claim: dict, results: list[dict], status: str) -> 
     return row
 
 
-def _resolve_requirement(repo: Path, claim: dict) -> dict | None:
-    """The Requirement named by the Claim, or None when that identity does not resolve."""
+def _resolve_requirement(claim: dict, requirements: list) -> dict | None:
+    """The Requirement this run loaded for the Claim, or None when that identity is absent."""
     pack_id = claim.get("pack_id")
+    namespace = claim.get("namespace")
     if not isinstance(pack_id, str) or not pack_id.strip():
         return None
-    try:
-        from common.store import load_pack
-        from discovery.door import repo_pack_requirements
-
-        directory = _pack_version_dir(packs_dir(repo), pack_id)
-        pack = load_pack(directory / "pack.json")
-        requirements = repo_pack_requirements(repo, pack_id)
-    except (ModelError, OSError, ValueError):
-        return None
-    if claim.get("namespace") != pack.get("namespace"):
-        return None
-    for item in requirements:
-        if item.get("id") == claim.get("requirement_id") and item.get("namespace") == claim.get("namespace"):
-            return item
+    for pack, items in requirements:
+        if not isinstance(pack, dict):
+            continue
+        if pack.get("id") != pack_id or pack.get("namespace") != namespace:
+            continue
+        for item in items:
+            if item.get("id") == claim.get("requirement_id") and item.get("namespace") == namespace:
+                return item
     return None
+
+
+def _requirements_in_repo(repo: Path, packs: list[dict]) -> list:
+    """Packs named by a direct run, read from the repository packs directory."""
+    try:
+        root = packs_dir(repo)
+    except (ModelError, OSError, ValueError):
+        return []
+    loaded = []
+    for row in packs:
+        pack_id = row.get("id") if isinstance(row, dict) else None
+        if not isinstance(pack_id, str) or not pack_id.strip():
+            continue
+        try:
+            loaded.append(load_pack_directory(_pack_version_dir(root, pack_id)))
+        except (ModelError, OSError, ValueError):
+            continue
+    return loaded
 
 
 def _aggregate(checks: list[dict]) -> str:
@@ -170,7 +183,7 @@ def _aggregate(checks: list[dict]) -> str:
     return "pass"
 
 
-def run_claim(repo: Path, claim: dict) -> dict:
+def run_claim(repo: Path, claim: dict, *, requirements: list | None = None) -> dict:
     configured = claim.get("checks") or []
     if not configured:
         raise ModelError(f"claim {claim.get('id', '?')}", "checks", "one or more checks to execute")
@@ -178,11 +191,22 @@ def run_claim(repo: Path, claim: dict) -> dict:
     for index, item in enumerate(configured):
         outcome = _execute_check(repo, item["check"], item["args"])
         results.append(_check_row(index, item, outcome))
-    return _claim_result(repo, claim, results, _aggregate(results))
+    loaded = requirements if requirements is not None else _requirements_in_repo(
+        repo, [{"id": claim.get("pack_id")}]
+    )
+    return _claim_result(claim, results, _aggregate(results), loaded)
 
 
-def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip: dict[str, str] | None = None) -> dict:
+def build_run_result(
+    repo: Path,
+    claims: list[dict],
+    packs: list[dict],
+    *,
+    skip: dict[str, str] | None = None,
+    requirements: list | None = None,
+) -> dict:
     skip = skip or {}
+    loaded = requirements if requirements is not None else _requirements_in_repo(repo, packs)
     rows = []
     for claim in claims:
         if not claim.get("checks"):
@@ -196,11 +220,9 @@ def build_run_result(repo: Path, claims: list[dict], packs: list[dict], *, skip:
                 _check_row(index, item, {"status": "skipped", "detail": detail})
                 for index, item in enumerate(claim["checks"])
             ]
-            rows.append(
-                _claim_result(repo, claim, results, "skipped")
-            )
+            rows.append(_claim_result(claim, results, "skipped", loaded))
             continue
-        rows.append(run_claim(repo, claim))
+        rows.append(run_claim(repo, claim, requirements=loaded))
     result = {
         "packs": packs,
         "tool": TOOL,
@@ -310,7 +332,7 @@ def run_repository(
         for claim in load_claims(claims_dir(repo, config))
         if claim["requirement_id"] in selected
     ]
-    result = build_run_result(repo, claims, pack_rows, skip=skip)
+    result = build_run_result(repo, claims, pack_rows, skip=skip, requirements=loaded)
     return result, process_exit_code(result)
 
 
@@ -335,7 +357,7 @@ def run_pack_directories(
                 "requirement_id",
                 "a requirement selected in curbpack.json",
             )
-    result = build_run_result(repo, claims, pack_rows, skip=skip)
+    result = build_run_result(repo, claims, pack_rows, skip=skip, requirements=loaded)
     return result, process_exit_code(result)
 
 

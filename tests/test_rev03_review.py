@@ -22,7 +22,7 @@ from checks.run import reports_dir, results_dir
 from claims.bind import build_claim, write_claim
 from common.canonical import version_digest
 from common.jsonio import read_json, write_json
-from common.store import save_pack, save_requirement
+from common.store import load_requirement, save_pack, save_requirement
 from common.validate import validate_curbpack_config
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
@@ -321,7 +321,17 @@ class ReviewGroupingTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
             _pack(repo, "REQ-SHARED")
-            claim = _exist_claim("kept-note", "REQ-SHARED", "kept.md")
+            requirement = load_requirement(
+                repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"] / "REQ-SHARED.json"
+            )
+            claim = build_claim(
+                claim_id="kept-note",
+                requirement=requirement,
+                source="documents",
+                args={"path": "kept.md"},
+                checks=[{"check": "exist", "args": {"paths": ["kept.md"]}}],
+                description="The file is the reviewed evidence.",
+            )
             write_claim(repo / "kept" / "claims", claim)
             run = _matching_run(repo, [claim])
             row = run["claims"][0]
@@ -330,6 +340,7 @@ class ReviewGroupingTest(unittest.TestCase):
             row["requirement_id"] = claim["requirement_id"]
             row["requirement_digest"] = claim["requirement_digest"]
             row["binding"] = "missing"
+            self.assertEqual(claim["requirement_digest"], version_digest(requirement))
             path = next((repo / "runs" / "out").glob("run-result_*.json"))
             write_json(path, run)
             with _serve(workspace) as base:

@@ -88,16 +88,25 @@ The runner does not read `discovery_hints`, `note`, `remediation_hint`, or the C
 
 ## What the run prints
 
-Stdout is always the text summary, including when no JSON file is written. Claim status is padded to seven characters. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one. A `wrote {path}` line is printed only for each JSON file this run actually wrote.
+Stdout is always the text summary, including when no JSON file is written. Claim status is padded to seven characters. A row that carries `binding` prints that word on the same line. `stale` then prints the recorded Requirement digest and the digest of the Requirement this run loaded. `missing` prints the unresolved namespace, pack id, and requirement id. The process exit code stays the Check result. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one. A `wrote {path}` line is printed only for each JSON file this run actually wrote.
 
-A passing Claim with `-o /path/to/run.json`:
+A passing Claim whose Requirement matches, with `-o /path/to/run.json`:
 
 ```text
 wrote /path/to/run.json
 claims 1 exit 0
-pass    HOUSE-SECURITY-MD
+pass    HOUSE-SECURITY-MD binding match
   pass    [0] exist
   pass    [1] contents
+```
+
+A passing Check whose Requirement digest has changed:
+
+```text
+claims 1 exit 0
+pass    HOUSE-SECURITY-MD binding stale
+  requirement <recorded digest> actual <loaded digest>
+  pass    [0] exist
 ```
 
 A Claim whose file exists and whose content probes do not:
@@ -105,7 +114,7 @@ A Claim whose file exists and whose content probes do not:
 ```text
 wrote /path/to/run.json
 claims 1 exit 1
-fail    HOUSE-SECURITY-MD
+fail    HOUSE-SECURITY-MD binding match
   pass    [0] exist
   fail    [1] contents — SECURITY.md is 17 bytes, not >= 80; SECURITY.md has 3 words, not >= 20
 ```

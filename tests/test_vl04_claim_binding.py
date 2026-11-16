@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import io
 import tempfile
 import threading
 import unittest
+from contextlib import redirect_stdout
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
-from checks.run import build_run_result
-from claims.bind import build_claim, rebind, sign_claim
+from checks.__main__ import main
+from checks.run import build_run_result, run_and_write, run_pack_directories
+from claims.bind import build_claim, rebind, sign_claim, write_claim
 from common.canonical import version_digest
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
@@ -251,6 +254,98 @@ class RunResultBindingTest(unittest.TestCase):
             self.assertEqual(rows["claim-stale"]["actual_digest"], version_digest(stored))
             self.assertEqual(rows["claim-match"]["requirement_digest"], version_digest(stored))
             self.assertEqual(rows["claim-missing"]["namespace"], "OTHER/Pack")
+
+    def test_binding_uses_the_pack_directory_this_run_loaded(self):
+        """A packs root other than curbpack.json still supplies the Requirement that was checked."""
+        requirement = extract_annex_vii_risk()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            repo.mkdir()
+            pack = draft_pack()
+            pack["id"] = requirement["pack_id"]
+            pack["namespace"] = requirement["namespace"]
+            external = root / "packs" / pack["id"] / pack["version"]
+            save_pack(external, pack)
+            save_requirement(external, requirement)
+            stored = load_requirement(external / f"{requirement['id']}.json")
+            other = dict(stored)
+            other["note"] = "A different copy in the repository packs directory."
+            repo_pack = repo / "curbpack" / "packs" / pack["id"] / pack["version"]
+            save_pack(repo_pack, pack)
+            save_requirement(repo_pack, other)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "present.md").write_text("present\n", encoding="utf-8")
+            write_json(
+                repo / "curbpack.json",
+                {
+                    "packs": [pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            claim = _bound_claim(
+                "claim-loaded",
+                stored,
+                [{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+            )
+            write_claim(repo / "curbpack" / "claims", claim)
+            result, code = run_and_write(repo, root / "packs", repo / "out.json")
+            self.assertEqual(code, 0)
+            self.assertEqual(result["claims"][0]["status"], "pass")
+            self.assertEqual(result["claims"][0]["binding"], "match")
+            self.assertEqual(result["claims"][0]["actual_digest"], version_digest(stored))
+            write_claim(repo / "claims", claim)
+            listed, listed_code = run_pack_directories(repo, [external])
+            self.assertEqual(listed_code, 0)
+            self.assertEqual(listed["claims"][0]["binding"], "match")
+            self.assertEqual(listed["claims"][0]["actual_digest"], version_digest(stored))
+
+    def test_stdout_names_a_stale_binding_beside_a_passing_check(self):
+        """The text summary shows the binding. The exit code stays the Check result."""
+        requirement = extract_annex_vii_risk()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            pack = draft_pack()
+            pack["id"] = requirement["pack_id"]
+            pack["namespace"] = requirement["namespace"]
+            pack_dir = repo / "curbpack" / "packs" / pack["id"] / pack["version"]
+            save_pack(pack_dir, pack)
+            save_requirement(pack_dir, requirement)
+            stored = load_requirement(pack_dir / f"{requirement['id']}.json")
+            (repo / "docs").mkdir()
+            (repo / "docs" / "present.md").write_text("present\n", encoding="utf-8")
+            write_json(
+                repo / "curbpack.json",
+                {
+                    "packs": [pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            claim = _bound_claim(
+                "claim-stale",
+                stored,
+                [{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+            )
+            claim["requirement_digest"] = "recorded-other-digest"
+            write_claim(repo / "curbpack" / "claims", claim)
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                code = main(["--repo", str(repo)])
+            text = buf.getvalue()
+            self.assertEqual(code, 0)
+            self.assertIn("pass    claim-stale binding stale", text)
+            self.assertIn(f"requirement recorded-other-digest actual {version_digest(stored)}", text)
+            self.assertNotIn("run-result_", text)
 
     def test_a_historical_run_result_loads_without_being_rewritten(self):
         historical = {
