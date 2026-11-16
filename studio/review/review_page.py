@@ -295,8 +295,14 @@ def _review_requirement_card(
             else ""
         )
         claim_facts = _seal_line(claim.get("seal")) if isinstance(claim.get("seal"), dict) else ""
+        binding = str(claim.get("binding") or "")
+        binding_html = (
+            f' <span data-binding="{html.escape(binding)}">{html.escape(binding)}</span>'
+            if binding
+            else ""
+        )
         claim_header.append(
-            f' claim {html.escape(claim_id)}{claim_label_html}{claim_facts}'
+            f" claim {html.escape(claim_id)}{claim_label_html}{binding_html}{claim_facts}"
         )
         claims_html.append(
             _review_claim_card(claim, open_ids, repo, document)
@@ -325,6 +331,12 @@ def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: st
     claim_id = str(claim.get("id") or "")
     status = str(claim.get("status") or "")
     klass = ' class="pill-bad"' if status == "fail" else ""
+    binding = str(claim.get("binding") or "")
+    binding_html = (
+        f'<span data-binding="{html.escape(binding)}">{html.escape(binding)}</span>'
+        if binding
+        else ""
+    )
     requirement_id = str(claim.get("requirement_id") or "")
     requirement_html = (
         f'<p class="muted">Unresolved requirement <code>{html.escape(requirement_id)}</code></p>'
@@ -368,7 +380,7 @@ def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: st
         f'<div class="card claim-card" data-claim="{html.escape(claim_id)}">'
         f'<div class="header" style="margin-bottom:.35rem">'
         f"<div><h3>Claim <code>{html.escape(claim_id)}</code></h3></div>"
-        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span></div>'
+        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>{binding_html}</div>'
         f"</div>"
         f"{requirement_html}{sentences}{unchanged_html}"
         f"{table}"

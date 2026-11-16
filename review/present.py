@@ -305,6 +305,7 @@ def _claim_item(
     return {
         "id": str(row.get("id") or ""),
         "status": str(row.get("status") or ""),
+        "binding": row.get("binding") if row.get("binding") in {"match", "stale", "missing"} else "",
         "changed": changed,
         "requirement_id": "",
         "sentences": sentences,
@@ -341,6 +342,8 @@ def _attention(claims: list[dict], seal: dict | None = None) -> bool:
     if seal_forces_open(seal):
         return True
     for claim in claims:
+        if claim.get("binding") in {"stale", "missing"}:
+            return True
         if claim.get("changed") or claim.get("status") in {"fail", "skipped"}:
             return True
         if seal_forces_open(claim.get("seal")):

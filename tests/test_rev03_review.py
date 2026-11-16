@@ -316,6 +316,32 @@ class ReviewGroupingTest(unittest.TestCase):
             self.assertNotIn('data-requirement="claim-missing"', page)
             self.assertNotIn("the repository passes", page)
 
+    def test_review_shows_binding_signature_and_check_outcome_separately(self):
+        """VL-04 GWT-08. The page reads the stored Claim row and does not decide the binding."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("kept-note", "REQ-SHARED", "kept.md")
+            write_claim(repo / "kept" / "claims", claim)
+            run = _matching_run(repo, [claim])
+            row = run["claims"][0]
+            row["namespace"] = claim["namespace"]
+            row["pack_id"] = claim["pack_id"]
+            row["requirement_id"] = claim["requirement_id"]
+            row["requirement_digest"] = claim["requirement_digest"]
+            row["binding"] = "missing"
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            group = _details(page, "REQ-SHARED")
+            self.assertIn('data-binding="missing"', group)
+            self.assertIn('data-status="pass"', group)
+            self.assertIn('data-claim-seal="Unsigned"', group)
+            self.assertNotIn('data-status="missing"', group)
+            self.assertNotIn('data-binding="pass"', group)
+            self.assertNotIn('data-binding="match"', group)
+
     def test_fail_opens_and_skipped_stays_distinct(self):
         """REV-03 scenarios 13 and 14. REV-R04."""
         with tempfile.TemporaryDirectory() as tmp:
