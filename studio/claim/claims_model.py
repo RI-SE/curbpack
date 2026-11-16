@@ -12,6 +12,7 @@ from claims.bind import (
     read_claim,
     read_claim_seal,
     rebind_from_fields,
+    rebind_requirement,
     require_requirement_id,
     retire_claim,
     sign_claim,
@@ -139,6 +140,21 @@ def _create_claim(ws: Workspace, form: dict) -> str:
     if destination.is_file():
         raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
     write_claim(claims_dir, claim)
+    return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+
+
+def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_lookup, _claims_redirect
+
+    known = _claims_lookup(ws, form)
+    requirement_id = require_requirement_id(
+        (form.get("requirement_id") or [""])[0],
+        list(known),
+    )
+    directory = _claims_directory(ws, form)
+    claim = read_claim(directory / f"{claim_id}.json")
+    updated = rebind_requirement(claim, known[requirement_id])
+    write_claim(directory, updated)
     return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
 
 

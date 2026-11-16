@@ -64,6 +64,19 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 <textarea name="checks">{html.escape(checks)}</textarea>
 <button type="submit">Save claim</button>
 </form>
+<form method="post" action="/claims/{html.escape(claim_id)}/rebind">
+{hidden}
+<label>Requirement</label>
+<select name="requirement_id">
+{"".join(
+    f'<option value="{html.escape(str(req_id))}"'
+    f'{" selected" if str(req_id) == requirement_id else ""}>'
+    f"{html.escape(str(req_id))}</option>"
+    for req_id in model.get("requirement_ids") or []
+)}
+</select>
+<button type="submit">Rebind</button>
+</form>
 {sign_form}
 {warning_html}
 <form method="post" action="/claims/{html.escape(claim_id)}/retire"

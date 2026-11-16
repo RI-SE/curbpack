@@ -340,12 +340,20 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     if not excerpt:
         excerpt = "No excerpt stored for this finding."
     suggestion_row = "" if item.get("has_claim") else " suggestion-row"
+    rebind = ""
+    if item.get("has_claim"):
+        rebind = (
+            '<form method="post" action="/discover/claims/rebind">'
+            f"{_hidden(model, requirement_id)}"
+            f'<input type="hidden" name="claim_id" value="{html.escape(str(item.get("claim_id") or ""))}">'
+            '<button type="submit">Rebind</button></form>'
+        )
     return f"""
 <tr class="hit-row{suggestion_row}{vote_class}{covered_class}" data-hit="{hit_id}" data-path="{html.escape(path)}">
   <td class="col-toggle">▸</td>
   <td class="col-file">{_evidence_cell(model, requirement_id, item)}{covered_note}</td>
   <td class="col-score">{_score(item)}</td>
-  <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}</div></td>
+  <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}{rebind}</div></td>
   <td class="col-checks"><div class="checks-wrap">{chips}
     <button type="button" class="check-open check-pick">Add check</button>
     <dialog class="checks"{_reopen(model, path)}>

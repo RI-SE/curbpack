@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from claims.bind import create_configured_claims, read_claim, read_claims, rebind, suggest_claim_id, write_claim
+from claims.bind import (
+    create_configured_claims,
+    read_claim,
+    read_claims,
+    rebind,
+    rebind_requirement,
+    suggest_claim_id,
+    write_claim,
+)
 from claims.ui.coverage import covered_paths, load_run
 from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
@@ -81,6 +89,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         "/discover/feedback/add",
         "/discover/feedback/motivation",
         "/discover/claims/create",
+        "/discover/claims/rebind",
     }:
         return None
     context = _context(root, form, sources)
@@ -97,6 +106,13 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         path=file_path,
         known_ids=known,
     )
+    if path == "/discover/claims/rebind":
+        claim_id = _one(form, "claim_id").strip()
+        if not claim_id:
+            raise ModelError("claim", "id", "the Claim to rebind")
+        claim = read_claim(context["claims_dir"] / f"{claim_id}.json")
+        write_claim(context["claims_dir"], rebind_requirement(claim, requirement))
+        return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/vote":
         save_vote(**common, vote=_one(form, "vote"))
         return _back(context, requirement_id, return_to=_one(form, "return_to"))

@@ -118,6 +118,14 @@ def rebind(
     return validate_claim(out)
 
 
+def rebind_requirement(claim: dict, requirement: dict) -> dict:
+    """Explicit rebind. A changed binding drops the previous seal."""
+    out = record_binding(claim, requirement)
+    if version_digest(out) != version_digest(claim):
+        out.pop("signed", None)
+    return validate_claim(out)
+
+
 def rebind_from_fields(
     claim: dict,
     *,

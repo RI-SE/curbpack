@@ -88,7 +88,14 @@ from review.compile import (
 )
 from studio.check.check_model import _check_editor_model, _check_report, _run_check
 from studio.check.check_page import check_page
-from studio.claim.claims_model import _claims_model, _create_claim, _retire_claim, _sign_claim, _update_claim
+from studio.claim.claims_model import (
+    _claims_model,
+    _create_claim,
+    _rebind_claim,
+    _retire_claim,
+    _sign_claim,
+    _update_claim,
+)
 from studio.claim.claims_page import claims_page
 from studio.claim.discover_model import _abort_discover, _add_discover_repo, _discover_model, _start_discover
 from studio.claim.discover_page import discover_page
@@ -684,6 +691,10 @@ def make_handler(ws: Workspace):
             if path.startswith("/claims/") and path.endswith("/sign"):
                 claim_id = path[len("/claims/") : -len("/sign")]
                 self._redirect(_sign_claim(ws, claim_id, form))
+                return
+            if path.startswith("/claims/") and path.endswith("/rebind"):
+                claim_id = path[len("/claims/") : -len("/rebind")]
+                self._redirect(_rebind_claim(ws, claim_id, form))
                 return
             if path.startswith("/claims/"):
                 claim_id = path[len("/claims/") :]
