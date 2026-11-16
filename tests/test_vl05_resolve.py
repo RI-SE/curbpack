@@ -307,6 +307,64 @@ class ReviewChainDisplayTest(unittest.TestCase):
             self.assertNotIn("git -C", source)
 
 
+class RequirementComparisonTest(unittest.TestCase):
+    def test_the_existing_comparison_lists_the_note_and_writes_nothing(self):
+        """VL-05 GWT-09. The Compare field list is read-only."""
+        requirement = extract_annex_vii_risk()
+        requirement["note"] = "historical note"
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-current",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "init")
+            _git(root, "add", "curbpack.json", "curbpack")
+            _git(root, "commit", "-m", "record the requirement")
+            recorded = version_digest(stored)
+            pack_dir = root / "curbpack" / "packs" / stored["pack_id"] / "0.1.0"
+            changed = load_requirement(pack_dir / f"{stored['id']}.json")
+            changed["note"] = "current note"
+            save_requirement(pack_dir, changed)
+            _git(root, "add", "curbpack")
+            _git(root, "commit", "-m", "change the requirement")
+            path = pack_dir / f"{stored['id']}.json"
+            before = path.read_bytes()
+            chain = resolve_chain(root, {"claims": [_row(stored, claim, recorded)]})
+            differences = chain["claims"][0]["requirement"]["differences"]
+            self.assertEqual([item["name"] for item in differences], ["note"])
+            self.assertEqual(differences[0]["historical"], "historical note")
+            self.assertEqual(differences[0]["current"], "current note")
+            presentation = present_raw_run(
+                run_result={"claims": [_row(stored, claim, recorded)]},
+                claims_by_id={claim["id"]: claim},
+                requirements_by_id={stored["id"]: changed},
+                claim_readings={},
+                requirement_readings={},
+                expanded=None,
+                chain=chain,
+            )
+            page = review_page(
+                {"run_result": {"claims": []}, "claims": []},
+                None,
+                door={"presentation": presentation, "repo_id": "alpha"},
+            ).decode()
+            self.assertIn('data-difference="note"', page)
+            self.assertIn("historical note", page)
+            self.assertIn("current note", page)
+            self.assertNotIn('data-difference="status"', page)
+            self.assertNotIn('data-difference="signed"', page)
+            self.assertEqual(path.read_bytes(), before)
+
+
 def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:
     return {
         "id": claim["id"],
