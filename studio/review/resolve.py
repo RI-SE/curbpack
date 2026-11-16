@@ -65,10 +65,10 @@ def _current_claims(repo: Path, config: dict) -> list[dict]:
 
 def _resolve_row(repo: Path, row: dict, requirements: list, claims: list[dict]) -> dict:
     requirement = _requirement_result(repo, row, requirements)
-    claim = _matching_claim(row, claims)
+    claim_result, claim = _claim_result(repo, row, claims)
     return {
         "requirement": requirement,
-        "claim": _found("current", row.get("digest"), claim),
+        "claim": claim_result,
         "checks": _checks(claim, row),
     }
 
@@ -91,10 +91,52 @@ def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
     return result
 
 
+def _claim_result(repo: Path, row: dict, claims: list[dict]):
+    recorded = row.get("digest")
+    current = _matching_claim(row, claims)
+    if current is not None:
+        return _found("current", recorded, current), current
+    found = _historical_claim(repo, row)
+    if found == "unavailable":
+        result = _found("unresolved", recorded, None)
+        result["history"] = "unavailable"
+        return result, None
+    if found is None:
+        return _found("unresolved", recorded, None), None
+    commit, obj = found
+    result = _found("historical", recorded, obj)
+    result["commit"] = commit
+    return result, obj
+
+
 def _historical_requirement(repo: Path, row: dict):
     requirement_id = row.get("requirement_id")
     if not isinstance(requirement_id, str) or "/" in requirement_id or not requirement_id.strip():
         return None
+
+    def accept(obj: dict) -> bool:
+        return (
+            obj.get("namespace") == row.get("namespace")
+            and obj.get("pack_id") == row.get("pack_id")
+            and obj.get("id") == requirement_id
+            and version_digest(obj) == row.get("requirement_digest")
+        )
+
+    return _historical_object(repo, f"/{requirement_id}.json", _requirement_blob, accept)
+
+
+def _historical_claim(repo: Path, row: dict):
+    claim_id = row.get("id")
+    if not isinstance(claim_id, str) or "/" in claim_id or not claim_id.strip():
+        return None
+
+    def accept(obj: dict) -> bool:
+        return obj.get("id") == claim_id and version_digest(obj) == row.get("digest")
+
+    return _historical_object(repo, f"/{claim_id}.json", _claim_blob, accept)
+
+
+def _historical_object(repo: Path, suffix: str, parse, accept):
     log = _git(repo, "log", "--all", "--pretty=format:%H", "--name-only")
     if log is None:
         return "unavailable"
@@ -107,31 +149,43 @@ def _historical_requirement(repo: Path, row: dict):
         if len(text) == 40 and all(char in "0123456789abcdef" for char in text):
             commit = text
             continue
-        if commit is None or not text.endswith(f"/{requirement_id}.json"):
+        if commit is None or not text.endswith(suffix):
             continue
         raw = _git(repo, "show", f"{commit}:{text}", decode=False)
         if raw is None:
             continue
-        obj = _requirement_blob(raw)
-        if obj is None:
-            continue
-        if obj.get("namespace") != row.get("namespace") or obj.get("pack_id") != row.get("pack_id"):
-            continue
-        if obj.get("id") != requirement_id or version_digest(obj) != row.get("requirement_digest"):
-            continue
-        return commit, obj
+        obj = parse(raw)
+        if obj is not None and accept(obj):
+            return commit, obj
     return None
 
 
 def _requirement_blob(raw: bytes):
-    try:
-        parsed = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    parsed = _parsed_blob(raw)
+    if parsed is None:
         return None
     try:
         return validate_requirement(parsed)
     except ModelError:
         return None
+
+
+def _claim_blob(raw: bytes):
+    parsed = _parsed_blob(raw)
+    if parsed is None:
+        return None
+    try:
+        return validate_claim(parsed)
+    except ModelError:
+        return None
+
+
+def _parsed_blob(raw: bytes):
+    try:
+        parsed = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _git(repo: Path, *args: str, decode: bool = True):

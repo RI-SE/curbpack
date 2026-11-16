@@ -169,6 +169,79 @@ class HistoricalRequirementTest(unittest.TestCase):
             self.assertIsNone(chain["claims"][1]["requirement"]["object"])
 
 
+class HistoricalClaimTest(unittest.TestCase):
+    def test_a_changed_claim_is_recovered_and_a_missing_requirement_stays_separate(self):
+        """VL-05 GWT-03 and GWT-08. One unresolved Requirement does not drop the Claim that resolves."""
+        requirement = extract_annex_vii_risk()
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-edited",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            kept = build_claim(
+                claim_id="claim-kept",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="This Claim stays current.",
+            )
+            stored = _repo(root, requirement, claim)
+            for item in (claim, kept):
+                item["requirement_digest"] = version_digest(stored)
+                write_claim(root / "curbpack" / "claims", item)
+            _git(root, "init")
+            _git(root, "add", "curbpack.json", "curbpack")
+            _git(root, "commit", "-m", "record the claims")
+            recorded_commit = _git(root, "rev-parse", "HEAD").strip()
+            recorded_claim = version_digest(claim)
+            claim["description"] = "The description changed after the run."
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "add", "curbpack")
+            _git(root, "commit", "-m", "change the claim")
+            claim_path = root / "curbpack" / "claims" / "claim-edited.json"
+            historical = _row(stored, claim, version_digest(stored))
+            historical["digest"] = recorded_claim
+            kept_row = _row(stored, kept, "missing-digest")
+            bare = {
+                "id": "claim-edited",
+                "digest": recorded_claim,
+                "status": "pass",
+                "checks": historical["checks"],
+            }
+            result_path = root / "run-result.json"
+            write_json(result_path, {"claims": [bare]})
+            before = claim_path.read_bytes()
+            result_before = result_path.read_bytes()
+            status_before = _git(root, "status", "--porcelain")
+            chain = resolve_chain(root, {"claims": [historical, kept_row, bare]})
+            found, partial, old = chain["claims"]
+            self.assertEqual(found["claim"]["location"], "historical")
+            self.assertEqual(found["claim"]["commit"], recorded_commit)
+            self.assertEqual(version_digest(found["claim"]["object"]), recorded_claim)
+            self.assertEqual(found["claim"]["object"]["description"], "The file is the evidence for this Requirement.")
+            self.assertEqual(
+                found["checks"],
+                [{"index": 0, "check": "exist", "args": {"paths": ["docs/present.md"]}, "corresponds": True}],
+            )
+            self.assertEqual(partial["requirement"]["location"], "unresolved")
+            self.assertIsNone(partial["requirement"]["object"])
+            self.assertEqual(partial["claim"]["location"], "current")
+            self.assertEqual(partial["claim"]["object"]["id"], "claim-kept")
+            self.assertEqual(old["requirement"]["location"], "unresolved")
+            self.assertIsNone(old["requirement"]["object"])
+            self.assertEqual(old["claim"]["location"], "historical")
+            self.assertEqual(claim_path.read_bytes(), before)
+            self.assertEqual(result_path.read_bytes(), result_before)
+            self.assertEqual(_git(root, "status", "--porcelain"), status_before)
+
+
 def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:
     return {
         "id": claim["id"],
