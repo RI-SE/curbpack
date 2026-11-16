@@ -43,10 +43,32 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 <button type="submit">Sign claim</button>
 </form>
 """
+        proposed = model.get("proposed_requirement") if isinstance(model.get("proposed_requirement"), dict) else {}
+        proposed_html = ""
+        target_html = ""
+        if proposed:
+            proposed_html = (
+                f'<p data-proposed-namespace="{html.escape(str(proposed.get("namespace") or ""))}"'
+                f' data-proposed-pack="{html.escape(str(proposed.get("pack_id") or ""))}"'
+                f' data-proposed-requirement="{html.escape(str(proposed.get("id") or ""))}"'
+                f' data-proposed-digest="{html.escape(str(proposed.get("digest") or ""))}"></p>'
+            )
+            target_html = (
+                f'<input type="hidden" name="namespace" value="{html.escape(str(proposed.get("namespace") or ""))}">'
+                f'<input type="hidden" name="pack_id" value="{html.escape(str(proposed.get("pack_id") or ""))}">'
+            )
+        recorded_html = (
+            f'<p data-recorded-namespace="{html.escape(str(claim.get("namespace") or ""))}"'
+            f' data-recorded-pack="{html.escape(str(claim.get("pack_id") or ""))}"'
+            f' data-recorded-requirement="{html.escape(str(claim.get("requirement_id") or ""))}"'
+            f' data-recorded-digest="{html.escape(str(claim.get("requirement_digest") or ""))}"></p>'
+        )
         blocks.append(
             f"""<div class="card" id="claim-{html.escape(claim_id)}">
 {seal_html}
 <p><code>{html.escape(claim_id)}</code> → <code>{html.escape(requirement_id)}</code></p>
+{recorded_html}
+{proposed_html}
 {law_html}
 {save_note}
 <form method="post" action="/claims/{html.escape(claim_id)}">
@@ -66,6 +88,7 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 </form>
 <form method="post" action="/claims/{html.escape(claim_id)}/rebind">
 {hidden}
+{target_html}
 <label>Requirement</label>
 <select name="requirement_id">
 {"".join(

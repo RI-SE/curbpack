@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import inspect
+import json
 import tempfile
 import threading
 import unittest
@@ -13,7 +14,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
-from claims.bind import build_claim, write_claim
+from claims.bind import build_claim, sign_claim, write_claim
+from common.signing import generate_keypair
 from claims.impact import claims_affected_by_requirement
 from common.canonical import version_digest
 from common.jsonio import write_json
@@ -176,6 +178,102 @@ class RequirementPageImpactTest(unittest.TestCase):
             compare_ts = Path("studio/pack/pages/compare_form.ts").read_text(encoding="utf-8")
             self.assertNotIn("claims_affected_by_requirement", compare_ts)
             self.assertNotIn("requirement_digest", compare_ts)
+
+
+class EditorRebindTest(unittest.TestCase):
+    def test_rebind_uses_the_namespace_and_pack_and_keeps_the_checks(self):
+        """VL-06 VL06-03. The editor shows both bindings, and rebind selects the named Pack."""
+        source = _pack("source-pack", "Source Pack")
+        owned = _pack("owned-pack", "Owned Pack")
+        source_requirement = extract_annex_vii_risk()
+        source_requirement["namespace"] = source["namespace"]
+        source_requirement["pack_id"] = source["id"]
+        owned_requirement = apply_edits(source_requirement, {"note": "Owned note."})
+        owned_requirement["namespace"] = owned["namespace"]
+        owned_requirement["pack_id"] = owned["id"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            product = root / "product"
+            stored_source = _store(product, source, source_requirement)
+            stored_owned = _store(product, owned, owned_requirement)
+            claim = build_claim(
+                claim_id="claim-move",
+                requirement=stored_source,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+                description="The file is the evidence for this Requirement.",
+            )
+            private, _public = generate_keypair()
+            sealed = sign_claim(claim, name="QA", private_key=private, at="2026-11-16T12:00:00Z")
+            write_claim(product / "curbpack" / "claims", sealed)
+            write_json(
+                product / "curbpack.json",
+                {
+                    "packs": [source["id"], owned["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="alpha", path="product"))
+            set_open_repo(root, "alpha")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            query = urllib.parse.urlencode(
+                {
+                    "repo": "alpha",
+                    "namespace": stored_owned["namespace"],
+                    "pack_id": stored_owned["pack_id"],
+                    "requirement_id": stored_owned["id"],
+                }
+            )
+            try:
+                page = _get(base + "/claims?" + query)
+                self.assertIn(f'data-recorded-namespace="{stored_source["namespace"]}"', page)
+                self.assertIn(f'data-recorded-pack="{stored_source["pack_id"]}"', page)
+                self.assertIn(f'data-recorded-digest="{version_digest(stored_source)}"', page)
+                self.assertIn(f'data-proposed-namespace="{stored_owned["namespace"]}"', page)
+                self.assertIn(f'data-proposed-pack="{stored_owned["pack_id"]}"', page)
+                self.assertIn(f'data-proposed-digest="{version_digest(stored_owned)}"', page)
+                _post(
+                    base + "/claims/claim-move/rebind",
+                    {
+                        "repo": "alpha",
+                        "namespace": stored_owned["namespace"],
+                        "pack_id": stored_owned["pack_id"],
+                        "requirement_id": stored_owned["id"],
+                    },
+                )
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            saved = json.loads((product / "curbpack" / "claims" / "claim-move.json").read_text(encoding="utf-8"))
+            self.assertEqual(saved["namespace"], stored_owned["namespace"])
+            self.assertEqual(saved["pack_id"], stored_owned["pack_id"])
+            self.assertEqual(saved["requirement_digest"], version_digest(stored_owned))
+            self.assertNotIn("signed", saved)
+            self.assertEqual(saved["checks"], sealed["checks"])
+
+
+def _pack(pack_id: str, name: str) -> dict:
+    pack = draft_pack()
+    pack["id"] = pack_id
+    pack["name"] = name
+    pack["namespace"] = f"RISE/{name}"
+    return pack
+
+
+def _store(product: Path, pack: dict, requirement: dict) -> dict:
+    directory = product / "curbpack" / "packs" / pack["id"] / pack["version"]
+    save_pack(directory, pack)
+    save_requirement(directory, requirement)
+    return load_requirement(directory / f"{requirement['id']}.json")
 
 
 def _post(url: str, form: dict) -> str:

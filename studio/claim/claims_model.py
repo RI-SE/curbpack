@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from claims.bind import (
@@ -62,6 +63,12 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
                     "retire_warning": retire_warning(claim, claims, run_result),
                 }
             )
+    proposed = _proposed_requirement(
+        repo,
+        _query_value(query, "namespace"),
+        _query_value(query, "pack_id"),
+        _query_value(query, "requirement_id"),
+    )
     prefill_requirement_id = (query.get("requirement_id") or [""])[0].strip()
     prefill_path = (query.get("path") or [""])[0].strip()
     prefill_passages: list[str] = []
@@ -91,6 +98,7 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
     return {
         "claims": rows,
         "requirement_ids": known_ids,
+        "proposed_requirement": proposed,
         "prefill_requirement_id": prefill_requirement_id,
         "prefill_path": prefill_path,
         "prefill_source": prefill_source,
@@ -109,6 +117,22 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "source_id": _query_value(query, "source_id"),
         "timestamp": _query_value(query, "timestamp"),
         "return_to": _query_value(query, "return_to"),
+    }
+
+
+def _proposed_requirement(repo: Path, namespace: str, pack_id: str, requirement_id: str) -> dict | None:
+    from claims.impact import requirement_for_binding
+
+    if not namespace or not pack_id or not requirement_id:
+        return None
+    requirement = requirement_for_binding(repo, namespace, pack_id, requirement_id)
+    if requirement is None:
+        return None
+    return {
+        "namespace": requirement.get("namespace"),
+        "pack_id": requirement.get("pack_id"),
+        "id": requirement.get("id"),
+        "digest": version_digest(requirement),
     }
 
 
@@ -144,16 +168,27 @@ def _create_claim(ws: Workspace, form: dict) -> str:
 
 
 def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
-    from app.server import _claims_directory, _claims_lookup, _claims_redirect
+    from app.server import _claims_directory, _claims_lookup, _claims_redirect, _claims_repo
+    from claims.impact import requirement_for_binding
 
-    known = _claims_lookup(ws, form)
-    requirement_id = require_requirement_id(
-        (form.get("requirement_id") or [""])[0],
-        list(known),
-    )
+    namespace = (form.get("namespace") or [""])[0].strip()
+    pack_id = (form.get("pack_id") or [""])[0].strip()
+    requirement_id = (form.get("requirement_id") or [""])[0].strip()
+    if namespace and pack_id:
+        requirement = requirement_for_binding(_claims_repo(ws, form), namespace, pack_id, requirement_id)
+        if requirement is None:
+            raise ModelError(
+                "claim",
+                "requirement_id",
+                "the Requirement named by namespace, pack id, and requirement id",
+            )
+    else:
+        known = _claims_lookup(ws, form)
+        requirement_id = require_requirement_id(requirement_id, list(known))
+        requirement = known[requirement_id]
     directory = _claims_directory(ws, form)
     claim = read_claim(directory / f"{claim_id}.json")
-    updated = rebind_requirement(claim, known[requirement_id])
+    updated = rebind_requirement(claim, requirement)
     write_claim(directory, updated)
     return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
 
