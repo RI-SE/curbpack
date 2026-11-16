@@ -141,15 +141,18 @@ def _summary(content, report):
     claim_by_id = {claim['id']: claim for claim in report['claims']}
     attention = []
     for row in rows:
-        if row['status'] == 'pass':
+        if not _needs_attention(row):
             continue
         claim = claim_by_id[row['id']]
         assertion = claim['description']
         excerpt = assertion if len(assertion) <= 220 else assertion[:217] + '…'
         reference = references[claim['requirement_id']]
         position = [item['id'] for item in report['claims'] if item['requirement_id'] == claim['requirement_id']].index(claim['id']) + 1
-        attention.append([excerpt, 'Needs follow-up' if row['status'] == 'fail' else 'Not performed',
-                          f'Finding {len(attention) + 1} / {reference}, item {position}'])
+        detail = f'Finding {len(attention) + 1} / {reference}, item {position}'
+        identity = _binding_identity(row)
+        if identity:
+            detail = f'{detail}; {identity}'
+        attention.append([excerpt, _attention_outcome(row), detail])
     if attention:
         content.paragraph('The statements below are recorded assertions, not conclusions drawn by this report. '
                           'Review the supporting evidence and check settings, address the cause, then run the checks again.')
@@ -173,12 +176,13 @@ def _findings(content, report):
     claims = {claim['id']: claim for claim in report['claims']}
     requirements = {item['id']: item for item in report['requirements']}
     refs = {item['id']: f'B.{n}' for n, item in enumerate(report['requirements'], 1)}
-    attention = [row for row in report['run_result']['claims'] if row['status'] != 'pass']
+    attention = [row for row in report['run_result']['claims'] if _needs_attention(row)]
     for number, row in enumerate(attention, 1):
         claim = claims[row['id']]
         requirement = requirements[claim['requirement_id']]
-        content.paragraph(f'Finding {number} — ' + ('Check failed' if row['status'] == 'fail' else 'Check not performed'), 'claim')
+        content.paragraph(f'Finding {number} — {_finding_title(row)}', 'claim')
         content.field('Recorded assertion', claim['description'])
+        _binding_fields(content, row)
         source = requirement['source']['instrument']
         locators = ', '.join(ref['locator'] for ref in requirement['references'])
         content.field('Related source', f'{source}, {locators}')
@@ -238,7 +242,11 @@ def _requirements(content, report):
         row = rows[claim['id']]
         totals = Counter(check['status'] for check in row['checks'])
         outcomes = ' / '.join(f'{status.upper()} {totals[status]}' for status in ('pass', 'fail', 'skipped'))
-        reviewed.append([claim['requirement_id'], claim['id'], f"{row['status'].upper()}; checks: {outcomes}", refs[claim['requirement_id']]])
+        recorded = f"{row['status'].upper()}; checks: {outcomes}"
+        label = _binding_label(row)
+        if label:
+            recorded = f'{recorded}; {label}'
+        reviewed.append([claim['requirement_id'], claim['id'], recorded, refs[claim['requirement_id']]])
     content.paragraph('Reviewed items — recorded outcomes', 'claim')
     content.table(['Requirement', 'Claim', 'Claim / Check outcomes', 'Details'], reviewed, [46, 50, 54, 20])
     for number, requirement in enumerate(report['requirements'], 1):
@@ -255,9 +263,18 @@ def _requirements(content, report):
         claims = [claim for claim in report['claims'] if claim['requirement_id'] == requirement['id']]
         for item, claim in enumerate(claims, 1):
             row = rows[claim['id']]
-            content.paragraph(f"Item {item}  /  {row['status'].upper()}  /  Claim {claim['id']}", 'claim')
+            label = _binding_label(row)
+            heading = f"Item {item}  /  {row['status'].upper()}  /  Claim {claim['id']}"
+            if label:
+                heading = f"{heading}  /  {label}"
+            content.paragraph(heading, 'claim')
             fields = [['Rationale', claim['description']], ['Evidence source', claim['source']],
                       ['Evidence address / args', _json(claim['args'])], ['Executed Claim digest', row['digest']]]
+            if label:
+                fields.append(['Requirement binding', label])
+                identity = _binding_identity(row)
+                if identity:
+                    fields.append(['Requirement identity', identity])
             if 'severity' in claim:
                 fields.append(['Product triage', claim['severity']])
             content.table(['Claim field', 'Recorded value'], fields, [38, 132])
@@ -286,6 +303,62 @@ def _review(content, report):
                         version_digest(obj), 'Recorded; not verified' if signed else 'No JSON signature recorded'])
     content.table(['Seal object', 'Who / When', 'Version digest', 'Recorded state'], records, [43, 35, 61, 31])
     content.paragraph('A signature on the JSON report does not sign the PDF bytes. Keep the original JSON report for verification.', 'small')
+
+
+def _needs_attention(row):
+    return row['status'] != 'pass' or row.get('binding') in {'stale', 'missing'}
+
+
+def _binding_label(row):
+    binding = row.get('binding')
+    if binding not in {'match', 'stale', 'missing'}:
+        return ''
+    return f'binding {binding}'
+
+
+def _binding_identity(row):
+    if row.get('binding') not in {'stale', 'missing'}:
+        return ''
+    parts = [str(row.get(key) or '') for key in ('namespace', 'pack_id', 'requirement_id')]
+    text = ' '.join(part for part in parts if part)
+    recorded = str(row.get('requirement_digest') or '')
+    if recorded:
+        text = f'{text} requirement {recorded}'.strip()
+    if row.get('binding') == 'stale' and row.get('actual_digest'):
+        text = f'{text} actual {row["actual_digest"]}'.strip()
+    return text
+
+
+def _attention_outcome(row):
+    if row['status'] == 'fail':
+        outcome = 'Needs follow-up'
+    elif row['status'] == 'skipped':
+        outcome = 'Not performed'
+    else:
+        outcome = 'Check passed'
+    label = _binding_label(row)
+    return f'{outcome}; {label}' if label else outcome
+
+
+def _finding_title(row):
+    if row['status'] == 'fail':
+        title = 'Check failed'
+    elif row['status'] != 'pass':
+        title = 'Check not performed'
+    else:
+        title = 'Check passed'
+    label = _binding_label(row)
+    return f'{title}; {label}' if label else title
+
+
+def _binding_fields(content, row):
+    label = _binding_label(row)
+    if not label:
+        return
+    content.field('Requirement binding', label)
+    identity = _binding_identity(row)
+    if identity:
+        content.field('Requirement identity', identity)
 
 
 def _footer(canvas, doc):

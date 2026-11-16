@@ -11,6 +11,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from app.server import Workspace, make_handler
+from studio.check.check_page import check_page
 from checks.__main__ import main
 from checks.run import build_run_result, run_and_write, run_pack_directories
 from claims.bind import build_claim, rebind, sign_claim, write_claim
@@ -375,6 +376,77 @@ class RunResultBindingTest(unittest.TestCase):
         leaked["claims"][0]["checks"] = [dict(historical["claims"][0]["checks"][0], binding="stale")]
         with self.assertRaises(ModelError):
             validate_run_result(leaked)
+
+
+class CheckPageBindingTest(unittest.TestCase):
+    def test_a_passing_check_still_shows_stale_and_missing_bindings(self):
+        """The Check page copies the stored binding. It does not replace the Check status."""
+        result = {
+            "claims": [
+                {
+                    "id": "claim-stale",
+                    "status": "pass",
+                    "binding": "stale",
+                    "namespace": "RISE/Stale Pack",
+                    "pack_id": "stale-pack",
+                    "requirement_id": "REQ-STALE",
+                    "requirement_digest": "recorded-stale-digest",
+                    "actual_digest": "actual-stale-digest",
+                    "checks": [
+                        {"index": 0, "check": "exist", "args": {"paths": ["a.md"]}, "status": "pass"}
+                    ],
+                },
+                {
+                    "id": "claim-missing",
+                    "status": "pass",
+                    "binding": "missing",
+                    "namespace": "RISE/Missing Pack",
+                    "pack_id": "missing-pack",
+                    "requirement_id": "REQ-MISSING",
+                    "requirement_digest": "recorded-missing-digest",
+                    "checks": [
+                        {"index": 0, "check": "exist", "args": {"paths": ["a.md"]}, "status": "pass"}
+                    ],
+                },
+                {
+                    "id": "claim-match",
+                    "status": "pass",
+                    "binding": "match",
+                    "checks": [
+                        {"index": 0, "check": "exist", "args": {"paths": ["a.md"]}, "status": "pass"}
+                    ],
+                },
+                {
+                    "id": "claim-old",
+                    "status": "pass",
+                    "checks": [
+                        {"index": 0, "check": "exist", "args": {"paths": ["a.md"]}, "status": "pass"}
+                    ],
+                },
+            ]
+        }
+        page = check_page(result, 0).decode()
+        self.assertEqual(page.count("data-binding="), 3)
+        stale = page[page.index('data-binding="stale"'):page.index('data-binding="missing"')]
+        self.assertLess(
+            stale.index("requirement recorded-stale-digest"),
+            stale.index("actual actual-stale-digest"),
+        )
+        self.assertIn("RISE/Stale Pack", stale)
+        self.assertIn("stale-pack", stale)
+        self.assertIn("REQ-STALE", stale)
+        missing = page[page.index('data-binding="missing"'):page.index('data-binding="match"')]
+        self.assertIn("requirement recorded-missing-digest", missing)
+        self.assertIn("RISE/Missing Pack", missing)
+        self.assertIn("missing-pack", missing)
+        self.assertIn("REQ-MISSING", missing)
+        self.assertNotIn("actual ", missing)
+        match = page[page.index('data-binding="match"'):page.index("</td>", page.index('data-binding="match"'))]
+        self.assertTrue(match.endswith(">match"))
+        self.assertNotIn("requirement", match)
+        self.assertNotIn("actual", match)
+        self.assertNotIn('data-binding="pass"', page)
+        self.assertEqual(page.count('data-check-status="pass"'), 4)
 
 
 def _bound_claim(claim_id: str, requirement: dict, checks: list) -> dict:

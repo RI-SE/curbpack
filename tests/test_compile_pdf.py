@@ -223,6 +223,57 @@ class CompilePdfTest(unittest.TestCase):
         self.assertIn('PASS [1]', second_group)
         self.assertIn('second.md', second_group)
 
+    def test_a_passing_check_still_reports_stale_and_missing_bindings(self):
+        """VL-04. The PDF keeps Check status pass and still shows the stored binding."""
+        report = report_fixture()
+        report['claims'] = report['claims'][:2]
+        report['run_result']['claims'] = report['run_result']['claims'][:2]
+        report['appendix'] = report['appendix'][:2]
+        bindings = (
+            {
+                'binding': 'stale',
+                'namespace': 'RISE/Stale Pack',
+                'pack_id': 'stale-pack',
+                'requirement_id': 'REQ-STALE',
+                'requirement_digest': 'recorded-stale-digest',
+                'actual_digest': 'actual-stale-digest',
+            },
+            {
+                'binding': 'missing',
+                'namespace': 'RISE/Missing Pack',
+                'pack_id': 'missing-pack',
+                'requirement_id': 'REQ-MISSING',
+                'requirement_digest': 'recorded-missing-digest',
+            },
+        )
+        for row, binding in zip(report['run_result']['claims'], bindings):
+            row['status'] = 'pass'
+            row['checks'][0]['status'] = 'pass'
+            row['checks'][0].pop('detail', None)
+            row.update(binding)
+        self.save(report)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = self.text().replace('\n', ' ')
+        self.assertIn('All recorded checks passed', text)
+        self.assertIn('binding stale', text)
+        self.assertIn('RISE/Stale Pack', text)
+        self.assertIn('stale-pack', text)
+        self.assertIn('REQ-STALE', text)
+        self.assertIn('recorded-stale-digest', text)
+        self.assertIn('actual-stale-digest', text)
+        self.assertIn('binding missing', text)
+        self.assertIn('RISE/Missing Pack', text)
+        self.assertIn('missing-pack', text)
+        self.assertIn('REQ-MISSING', text)
+        self.assertIn('recorded-missing-digest', text)
+        self.assertNotIn('Check failed', text)
+        findings = text.split('Review findings', 1)[1].split('Appendix A', 1)[0]
+        self.assertIn('binding stale', findings)
+        self.assertIn('actual-stale-digest', findings)
+        self.assertIn('binding missing', findings)
+        self.assertNotIn('actual-stale-digest', findings[findings.index('binding missing'):])
+
     def test_empty_run_is_not_described_as_success(self):
         report = report_fixture()
         for key in ('claims', 'requirements', 'appendix'):

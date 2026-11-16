@@ -32,7 +32,7 @@ def check_page(
                     "<tr>"
                     f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
                     f"<td></td><td></td>"
-                    f"<td>{html.escape(row.get('status', ''))}</td><td></td>"
+                    f"{_status_cell(row.get('status', ''))}{_binding_cell(row)}<td></td>"
                     "</tr>"
                 )
             for item in nested:
@@ -41,12 +41,12 @@ def check_page(
                     f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
                     f"<td>{item.get('index', '')}</td>"
                     f"<td>{html.escape(check_caption(item))}</td>"
-                    f"<td>{html.escape(item.get('status', ''))}</td>"
+                    f"{_status_cell(item.get('status', ''))}{_binding_cell(row)}"
                     f"<td>{html.escape(item.get('detail') or '')}</td>"
                     "</tr>"
                 )
         table = "<p>No claim rows. This is not a successful verification.</p>" if not rows else (
-            "<table><tr><th>Claim</th><th>Index</th><th>Check</th><th>Status</th><th>Detail</th></tr>"
+            "<table><tr><th>Claim</th><th>Index</th><th>Check</th><th>Status</th><th>Binding</th><th>Detail</th></tr>"
             + "".join(rows)
             + "</table>"
         )
@@ -69,6 +69,27 @@ Edit paths on <a href="/project">Project</a>.</p>
 <div class="card">{shown}</div>
 """
     return page("Check", body)
+
+
+def _status_cell(status: object) -> str:
+    text = html.escape(str(status or ""))
+    return f'<td data-check-status="{text}">{text}</td>'
+
+
+def _binding_cell(row: dict) -> str:
+    binding = row.get("binding")
+    if binding not in {"match", "stale", "missing"}:
+        return "<td></td>"
+    lines = [html.escape(str(binding))]
+    if binding in {"stale", "missing"}:
+        lines.extend(
+            html.escape(str(row.get(key) or ""))
+            for key in ("namespace", "pack_id", "requirement_id")
+        )
+        lines.append("requirement " + html.escape(str(row.get("requirement_digest") or "")))
+    if binding == "stale":
+        lines.append("actual " + html.escape(str(row.get("actual_digest") or "")))
+    return f'<td data-binding="{html.escape(str(binding))}">{"<br>".join(lines)}</td>'
 
 
 def _curbpack_editor(editor: dict) -> str:
