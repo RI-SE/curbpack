@@ -94,6 +94,7 @@ def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
         actual = version_digest(identity)
         if actual != recorded:
             result["current_digest"] = actual
+        result["differences"] = _requirement_differences(obj, identity)
     return _with_signature(repo, result)
 
 
@@ -216,6 +217,24 @@ def _git(repo: Path, *args: str, decode: bool = True):
     if decode:
         return result.stdout.decode("utf-8", errors="replace")
     return result.stdout
+
+
+def _requirement_differences(historical: dict, current: dict) -> list[dict]:
+    from requirements.compare import _changed_fields
+    from requirements.editing import EDITABLE
+
+    fields = []
+    for name in _changed_fields(historical, current):
+        if name not in EDITABLE:
+            continue
+        fields.append(
+            {
+                "name": name,
+                "historical": historical.get(name),
+                "current": current.get(name),
+            }
+        )
+    return fields
 
 
 def _with_signature(repo: Path, result: dict) -> dict:

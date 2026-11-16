@@ -345,6 +345,7 @@ def _chain_fields(chain: dict | None) -> dict:
         "current_digest": str(requirement.get("current_digest") or ""),
         "signature_method": str(signature.get("method") or ""),
         "signature_status": str(signature.get("status") or ""),
+        "differences": requirement.get("differences") if isinstance(requirement.get("differences"), list) else [],
     }
 
 

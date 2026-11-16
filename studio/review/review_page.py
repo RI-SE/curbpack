@@ -406,6 +406,15 @@ def _chain_html(claim: dict) -> str:
             continue
         text = html.escape(value)
         parts.append(f'<span {attr}="{text}">{text}</span>')
+    for item in claim.get("differences") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "")
+        if not name:
+            continue
+        historical = html.escape(str(item.get("historical") or ""))
+        current = html.escape(str(item.get("current") or ""))
+        parts.append(f'<span data-difference="{html.escape(name)}">{historical} {current}</span>')
     return "".join(parts)
 
 
