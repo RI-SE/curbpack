@@ -3,15 +3,26 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import tempfile
+import threading
 import unittest
+import urllib.parse
+import urllib.request
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from claims.bind import build_claim
+from app.server import Workspace, make_handler
+from claims.bind import build_claim, write_claim
 from claims.impact import claims_affected_by_requirement
 from common.canonical import version_digest
+from common.jsonio import write_json
+from common.store import load_requirement, save_pack, save_requirement
+from discovery.door import set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 from requirements.editing import apply_edits
-from requirements.extract.pipeline import extract_annex_vii_risk
+from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
+from studio.pack.pages import editor_page
 
 
 class AffectedClaimsTest(unittest.TestCase):
@@ -84,3 +95,96 @@ class AffectedClaimsTest(unittest.TestCase):
             claims_affected_by_requirement([claim], requirement, changed)
             self.assertEqual(run_result.read_bytes(), run_bytes)
             self.assertEqual(report.read_bytes(), report_bytes)
+
+
+class RequirementPageImpactTest(unittest.TestCase):
+    def test_the_requirement_page_shows_the_affected_claim_after_save_and_reopen(self):
+        """VL-06 VL06-04 and VL06-05. The page shows the Claim and writes nothing but the Requirement."""
+        requirement = extract_annex_vii_risk()
+        pack = draft_pack()
+        requirement["namespace"] = pack["namespace"]
+        requirement["pack_id"] = pack["id"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            product = root / "product"
+            pack_dir = product / "curbpack" / "packs" / pack["id"] / pack["version"]
+            save_pack(pack_dir, pack)
+            save_requirement(pack_dir, requirement)
+            stored = load_requirement(pack_dir / f"{requirement['id']}.json")
+            claim = build_claim(
+                claim_id="claim-bound",
+                requirement=stored,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+                description="The file is the evidence for this Requirement.",
+            )
+            write_claim(product / "curbpack" / "claims", claim)
+            write_json(
+                product / "curbpack.json",
+                {
+                    "packs": [pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="alpha", path="product"))
+            set_open_repo(root, "alpha")
+            claim_path = product / "curbpack" / "claims" / "claim-bound.json"
+            claim_bytes = claim_path.read_bytes()
+            recorded = claim["requirement_digest"]
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            try:
+                page = _post(
+                    base + f"/requirements/requirement/{stored['id']}",
+                    {
+                        "present": "note",
+                        "note": "The note changed.",
+                        "expected_digest": version_digest(stored),
+                        "repo": "alpha",
+                        "pack": pack["id"],
+                    },
+                )
+                current = version_digest(load_requirement(pack_dir / f"{stored['id']}.json"))
+                self.assertNotEqual(recorded, current)
+                self.assertIn('data-affected-claim="claim-bound"', page)
+                self.assertIn(f'data-claim-recorded-digest="{recorded}"', page)
+                self.assertIn(f'data-claim-current-digest="{current}"', page)
+                self.assertIn('href="/claims?repo=alpha', page)
+                self.assertIn("#claim-claim-bound", page)
+                self.assertIn(f'href="/discover/claims/{stored["id"]}?repo=alpha&amp;pack={pack["id"]}"', page)
+                self.assertIn('data-later="1"', page)
+                self.assertNotIn("<form", page[page.index('data-later="1"') : page.index('data-later="1"') + 80])
+                reopened = _get(base + f"/requirements/requirement/{stored['id']}?repo=alpha&pack={pack['id']}")
+                self.assertIn('data-affected-claim="claim-bound"', reopened)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+                self.assertFalse(any("queue" in path.name for path in product.rglob("*")))
+                editor = _get(base + "/claims?repo=alpha")
+                self.assertIn("claim-bound", editor)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            self.assertNotIn("version_digest", inspect.getsource(editor_page))
+            compare_ts = Path("studio/pack/pages/compare_form.ts").read_text(encoding="utf-8")
+            self.assertNotIn("claims_affected_by_requirement", compare_ts)
+            self.assertNotIn("requirement_digest", compare_ts)
+
+
+def _post(url: str, form: dict) -> str:
+    data = urllib.parse.urlencode(form).encode("utf-8")
+    request = urllib.request.Request(url, data=data, method="POST")
+    with urllib.request.urlopen(request) as response:
+        return response.read().decode("utf-8")
+
+
+def _get(url: str) -> str:
+    with urllib.request.urlopen(url) as response:
+        return response.read().decode("utf-8")

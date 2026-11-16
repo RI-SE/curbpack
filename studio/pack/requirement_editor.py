@@ -80,12 +80,47 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         ],
         "repo_id": (query.get("repo") or [""])[0].strip(),
         "bound_pack": (query.get("pack") or [""])[0].strip(),
+        "affected_claims": _affected_claims(ws, query, requirement),
+        "claims_repo_id": (query.get("repo") or [""])[0].strip() or (_open_repo(ws) or ""),
         "list_href": (
             "/requirements/copy?" + _pack_query(query)
             if _pack_query(query)
             else "/requirements/copy"
         ),
     }
+
+
+def _open_repo(ws: Workspace) -> str:
+    from discovery.door import open_repo_id
+
+    return open_repo_id(ws.root) or ""
+
+
+def _affected_claims(ws: Workspace, query: dict, requirement: dict) -> list[dict]:
+    from claims.impact import claims_unresolved_for_requirement
+    from common.validate import validate_claim
+    from discovery.door import repo_claims_dir
+    from discovery.repos import find_repo, load_repos, resolve_repo_path
+
+    repo_id = (query.get("repo") or [""])[0].strip() or _open_repo(ws)
+    if not repo_id:
+        return []
+    row = find_repo(load_repos(ws.root), repo_id)
+    if row is None:
+        return []
+    try:
+        repo = resolve_repo_path(ws.root, str(row.get("path") or ""))
+        folder = repo_claims_dir(repo)
+    except (ModelError, OSError, ValueError):
+        return []
+    claims = []
+    if folder.is_dir():
+        for path in sorted(folder.glob("*.json")):
+            try:
+                claims.append(validate_claim(read_json(path)))
+            except (ModelError, OSError, ValueError):
+                continue
+    return claims_unresolved_for_requirement(claims, requirement)
 
 
 def _editor_message(query: dict) -> str:

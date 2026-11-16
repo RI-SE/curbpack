@@ -1182,6 +1182,52 @@ def ownership_confirmation_page(
     return page("Take ownership of this Pack?", body)
 
 
+def _affected_claims_html(model: dict) -> str:
+    from urllib.parse import quote, urlencode
+
+    blocks = []
+    repo = str(model.get("claims_repo_id") or model.get("repo_id") or "")
+    pack = str(model.get("bound_pack") or "")
+    for item in model.get("affected_claims") or []:
+        if not isinstance(item, dict):
+            continue
+        claim_id = str(item.get("id") or "")
+        recorded = item.get("recorded") if isinstance(item.get("recorded"), dict) else {}
+        current = item.get("current") if isinstance(item.get("current"), dict) else {}
+        requirement_id = str(current.get("requirement_id") or recorded.get("requirement_id") or "")
+        review = "/claims?" + urlencode(
+            {
+                "repo": repo,
+                "namespace": str(recorded.get("namespace") or ""),
+                "pack_id": str(recorded.get("pack_id") or ""),
+                "requirement_id": requirement_id,
+            }
+        ) + "#" + quote(f"claim-{claim_id}", safe="")
+        discovery = (
+            "/discover/claims/"
+            + quote(requirement_id, safe="")
+            + "?"
+            + urlencode({"repo": repo, "pack": pack})
+        )
+        later = "/requirements/requirement/" + quote(requirement_id, safe="")
+        if repo or pack:
+            later += "?" + urlencode({"repo": repo, "pack": pack})
+        recorded_digest = html.escape(str(recorded.get("requirement_digest") or ""))
+        current_digest = html.escape(str(current.get("digest") or ""))
+        blocks.append(
+            f'<p data-affected-claim="{html.escape(claim_id)}">'
+            f'<span data-claim-recorded-digest="{recorded_digest}">{recorded_digest}</span>'
+            f'<span data-claim-current-digest="{current_digest}">{current_digest}</span>'
+            f'<a href="{html.escape(review)}">Review Claim</a>'
+            f'<a href="{html.escape(discovery)}">Discovery</a>'
+            f'<a data-later="1" href="{html.escape(later)}">Later</a>'
+            f"</p>"
+        )
+    if not blocks:
+        return ""
+    return "<section>" + "".join(blocks) + "</section>"
+
+
 def editor_page(model: dict) -> bytes:
     requirement = model.get("requirement")
     if not isinstance(requirement, dict):
@@ -1199,6 +1245,7 @@ def editor_page(model: dict) -> bytes:
         if err
         else _flash(str(model.get("message") or ""))
     )
+    affected = _affected_claims_html(model)
     banner = '<p id="unsaved" hidden>Unsaved edits. The saved version is unchanged.</p>'
     # Clean: nothing to save. Dirty: Save+Cancel on, Sign off; signed badge flips.
     script = """
@@ -1271,6 +1318,7 @@ if (fields) {
 {_copy_line(model, requirement)}
 {_identity_lines(model, requirement)}
 {flash}
+{affected}
 {banner}
 <form method="post" action="/requirements/requirement/{html.escape(str(requirement.get("id")))}">
 <fieldset id="edit-fields">

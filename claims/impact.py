@@ -36,6 +36,41 @@ def claims_affected_by_requirement(claims: list, before: dict, after: dict) -> l
     return found
 
 
+def claims_unresolved_for_requirement(claims: list, requirement: dict) -> list[dict]:
+    """Claims for this Requirement whose recorded digest is not the current payload."""
+    current = version_digest(requirement)
+    found = []
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        if claim.get("namespace") != requirement.get("namespace"):
+            continue
+        if claim.get("pack_id") != requirement.get("pack_id"):
+            continue
+        if claim.get("requirement_id") != requirement.get("id"):
+            continue
+        if claim.get("requirement_digest") == current:
+            continue
+        found.append(
+            {
+                "id": claim.get("id"),
+                "recorded": {
+                    "namespace": claim.get("namespace"),
+                    "pack_id": claim.get("pack_id"),
+                    "requirement_id": claim.get("requirement_id"),
+                    "requirement_digest": claim.get("requirement_digest"),
+                },
+                "current": {
+                    "namespace": requirement.get("namespace"),
+                    "pack_id": requirement.get("pack_id"),
+                    "requirement_id": requirement.get("id"),
+                    "digest": current,
+                },
+            }
+        )
+    return found
+
+
 def _bound_to(claim: dict, requirement: dict) -> bool:
     return (
         claim.get("namespace") == requirement.get("namespace")
