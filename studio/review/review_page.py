@@ -380,7 +380,7 @@ def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: st
         f'<div class="card claim-card" data-claim="{html.escape(claim_id)}">'
         f'<div class="header" style="margin-bottom:.35rem">'
         f"<div><h3>Claim <code>{html.escape(claim_id)}</code></h3></div>"
-        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>{binding_html}</div>'
+        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span>{binding_html}{_chain_html(claim)}</div>'
         f"</div>"
         f"{requirement_html}{sentences}{unchanged_html}"
         f"{table}"
@@ -389,6 +389,24 @@ def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: st
         f'<div class="actions">{"".join(actions)}</div>'
         f"</div>"
     )
+
+
+def _chain_html(claim: dict) -> str:
+    parts = []
+    for attr, key in (
+        ("data-requirement-location", "requirement_location"),
+        ("data-requirement-commit", "requirement_commit"),
+        ("data-recorded-digest", "recorded_digest"),
+        ("data-current-digest", "current_digest"),
+        ("data-signature-method", "signature_method"),
+        ("data-signature-status", "signature_status"),
+    ):
+        value = str(claim.get(key) or "")
+        if not value:
+            continue
+        text = html.escape(value)
+        parts.append(f'<span {attr}="{text}">{text}</span>')
+    return "".join(parts)
 
 
 def _review_claim_checks(

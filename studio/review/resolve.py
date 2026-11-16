@@ -12,6 +12,7 @@ from checks.run import _pack_version_dir, claims_dir, packs_dir
 from common.canonical import version_digest
 from common.errors import ModelError
 from common.jsonio import read_json
+from common.signing import verify_object
 from common.store import load_pack_directory
 from common.validate import validate_claim, validate_curbpack_config, validate_requirement
 
@@ -76,37 +77,47 @@ def _resolve_row(repo: Path, row: dict, requirements: list, claims: list[dict]) 
 def _requirement_result(repo: Path, row: dict, loaded: list) -> dict:
     recorded = row.get("requirement_digest")
     current = _matching_requirement(row, loaded)
+    identity = _identity_requirement(row, loaded)
     if current is not None:
-        return _found("current", recorded, current)
+        return _with_signature(repo, _found("current", recorded, current))
     found = _historical_requirement(repo, row)
     if found == "unavailable":
         result = _found("unresolved", recorded, None)
         result["history"] = "unavailable"
-        return result
+        return _with_signature(repo, result)
     if found is None:
-        return _found("unresolved", recorded, None)
+        return _with_signature(repo, _found("unresolved", recorded, None))
     commit, obj = found
     result = _found("historical", recorded, obj)
     result["commit"] = commit
-    return result
+    if identity is not None:
+        actual = version_digest(identity)
+        if actual != recorded:
+            result["current_digest"] = actual
+    return _with_signature(repo, result)
 
 
 def _claim_result(repo: Path, row: dict, claims: list[dict]):
     recorded = row.get("digest")
     current = _matching_claim(row, claims)
     if current is not None:
-        return _found("current", recorded, current), current
+        return _with_signature(repo, _found("current", recorded, current)), current
     found = _historical_claim(repo, row)
     if found == "unavailable":
         result = _found("unresolved", recorded, None)
         result["history"] = "unavailable"
-        return result, None
+        return _with_signature(repo, result), None
     if found is None:
-        return _found("unresolved", recorded, None), None
+        return _with_signature(repo, _found("unresolved", recorded, None)), None
     commit, obj = found
     result = _found("historical", recorded, obj)
     result["commit"] = commit
-    return result, obj
+    same_id = next((item for item in claims if item.get("id") == row.get("id")), None)
+    if same_id is not None:
+        actual = version_digest(same_id)
+        if actual != recorded:
+            result["current_digest"] = actual
+    return _with_signature(repo, result), obj
 
 
 def _historical_requirement(repo: Path, row: dict):
@@ -205,6 +216,61 @@ def _git(repo: Path, *args: str, decode: bool = True):
     if decode:
         return result.stdout.decode("utf-8", errors="replace")
     return result.stdout
+
+
+def _with_signature(repo: Path, result: dict) -> dict:
+    result["signature"] = _signature(result.get("object"), repo, result.get("commit"))
+    return result
+
+
+def _signature(obj: object, repo: Path, commit: object) -> dict:
+    if isinstance(obj, dict) and isinstance(obj.get("signed"), dict):
+        reading = verify_object(version_digest(obj), obj.get("signed"), {})
+        reading["verifiable"] = reading.get("status") == "valid"
+        return reading
+    if isinstance(commit, str) and commit:
+        git_reading = _commit_signature(repo, commit)
+        if git_reading is not None:
+            return git_reading
+    return {
+        "status": "unsigned",
+        "method": "none",
+        "verifiable": False,
+        "reason": "No signed block and no signed Git commit. The object is unsigned.",
+    }
+
+
+def _commit_signature(repo: Path, commit: str):
+    text = _git(repo, "log", "-1", "--format=%G?%n%GS%n%H", commit)
+    if not isinstance(text, str):
+        return None
+    lines = text.splitlines()
+    if len(lines) < 3:
+        return None
+    status, signer, found = lines[0], lines[1], lines[2]
+    if status == "N" or not signer.strip():
+        return None
+    verifiable = status == "G"
+    return {
+        "status": "valid" if verifiable else "invalid",
+        "method": "git",
+        "signer": signer.strip(),
+        "version": found.strip(),
+        "verifiable": verifiable,
+    }
+
+
+def _identity_requirement(row: dict, loaded: list):
+    namespace = row.get("namespace")
+    pack_id = row.get("pack_id")
+    requirement_id = row.get("requirement_id")
+    for pack, items in loaded:
+        if pack.get("id") != pack_id or pack.get("namespace") != namespace:
+            continue
+        for item in items:
+            if item.get("id") == requirement_id and item.get("namespace") == namespace:
+                return item
+    return None
 
 
 def _matching_requirement(row: dict, loaded: list):

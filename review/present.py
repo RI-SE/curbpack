@@ -105,16 +105,19 @@ def present_raw_run(
     requirement_readings: dict,
     expanded: set[str] | None,
     repo: Path | None = None,
+    chain: dict | None = None,
 ) -> dict:
     grouped: dict[str, list[dict]] = {}
     order: list[str] = []
     unresolved: list[dict] = []
-    for row in run_result.get("claims") or []:
+    links = list(chain.get("claims") or []) if isinstance(chain, dict) else []
+    for index, row in enumerate(run_result.get("claims") or []):
         if not isinstance(row, dict):
             continue
         claim_id = str(row.get("id") or "")
         current = claims_by_id.get(claim_id)
-        item = _claim_item(row, current, claim_readings.get(claim_id), repo=repo)
+        link = links[index] if index < len(links) else None
+        item = _claim_item(row, current, claim_readings.get(claim_id), repo=repo, chain=link)
         if current is None:
             unresolved.append(item)
             continue
@@ -165,6 +168,7 @@ def present_compiled_report(
     expanded: set[str] | None,
     report_reading: dict | None = None,
     repo: Path | None = None,
+    chain: dict | None = None,
 ) -> dict:
     run_result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
     embedded_claims = {
@@ -180,13 +184,17 @@ def present_compiled_report(
     grouped: dict[str, list[dict]] = {}
     order: list[str] = []
     unresolved: list[dict] = []
-    for row in run_result.get("claims") or []:
+    links = list(chain.get("claims") or []) if isinstance(chain, dict) else []
+    for index, row in enumerate(run_result.get("claims") or []):
         if not isinstance(row, dict):
             continue
         claim_id = str(row.get("id") or "")
         embedded = embedded_claims.get(claim_id)
         current = current_claims_by_id.get(claim_id)
-        item = _claim_item(row, current, claim_readings.get(claim_id), embedded=embedded, repo=repo)
+        link = links[index] if index < len(links) else None
+        item = _claim_item(
+            row, current, claim_readings.get(claim_id), embedded=embedded, repo=repo, chain=link
+        )
         if embedded is None:
             unresolved.append(item)
             continue
@@ -241,9 +249,13 @@ def _claim_item(
     *,
     embedded: dict | None = None,
     repo: Path | None = None,
+    chain: dict | None = None,
 ) -> dict:
     changed = False
     sentences: list[str] = []
+    requirement_location = ""
+    if isinstance(chain, dict) and isinstance(chain.get("requirement"), dict):
+        requirement_location = str(chain["requirement"].get("location") or "")
     if current is not None:
         changed = version_digest(current) != row.get("digest")
         if embedded is not None:
@@ -259,7 +271,9 @@ def _claim_item(
             else:
                 sentences = [UNCHANGED]
         elif changed:
-            sentences = [CHANGED, NEW_RUN, PREVIOUS_UNKNOWN]
+            sentences = [CHANGED, NEW_RUN]
+            if requirement_location not in {"current", "historical"}:
+                sentences.append(PREVIOUS_UNKNOWN)
         else:
             sentences = [UNCHANGED]
     digest_matches = current is not None and version_digest(current) == row.get("digest")
@@ -312,6 +326,25 @@ def _claim_item(
         "seal": reading,
         "seal_label": seal_label(reading),
         "checks": checks,
+        **_chain_fields(chain),
+    }
+
+
+def _chain_fields(chain: dict | None) -> dict:
+    if not isinstance(chain, dict):
+        return {}
+    requirement = chain.get("requirement") if isinstance(chain.get("requirement"), dict) else {}
+    claim = chain.get("claim") if isinstance(chain.get("claim"), dict) else {}
+    signature = requirement.get("signature") if isinstance(requirement.get("signature"), dict) else {}
+    if not signature and isinstance(claim.get("signature"), dict):
+        signature = claim["signature"]
+    return {
+        "requirement_location": str(requirement.get("location") or ""),
+        "requirement_commit": str(requirement.get("commit") or ""),
+        "recorded_digest": str(requirement.get("digest") or ""),
+        "current_digest": str(requirement.get("current_digest") or ""),
+        "signature_method": str(signature.get("method") or ""),
+        "signature_status": str(signature.get("status") or ""),
     }
 
 

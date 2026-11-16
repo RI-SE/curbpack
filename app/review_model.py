@@ -196,6 +196,7 @@ def _raw_presentation(ws: Workspace, repo: Path, config: dict, run_result: dict,
         requirement_readings=requirement_readings,
         expanded=_expanded_query(query),
         repo=repo,
+        chain=_chain_for(repo, run_result),
     )
 
 
@@ -233,7 +234,17 @@ def _report_presentation(
         expanded=_expanded_query(query),
         report_reading=report_reading,
         repo=repo,
+        chain=_chain_for(repo, report.get("run_result") if isinstance(report.get("run_result"), dict) else {}),
     )
+
+
+def _chain_for(repo: Path, run_result: dict) -> dict:
+    from studio.review.resolve import resolve_chain
+
+    try:
+        return resolve_chain(repo, run_result)
+    except (ModelError, OSError, ValueError):
+        return {"claims": []}
 
 
 def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:

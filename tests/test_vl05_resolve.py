@@ -12,7 +12,9 @@ from common.canonical import version_digest
 from common.jsonio import write_json
 from common.store import load_requirement, save_pack, save_requirement
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
+from review.present import PREVIOUS_UNKNOWN, present_raw_run
 from studio.review.resolve import resolve_chain
+from studio.review.review_page import review_page
 
 
 def _repo(root: Path, requirement: dict, claim: dict) -> dict:
@@ -240,6 +242,69 @@ class HistoricalClaimTest(unittest.TestCase):
             self.assertEqual(claim_path.read_bytes(), before)
             self.assertEqual(result_path.read_bytes(), result_before)
             self.assertEqual(_git(root, "status", "--porcelain"), status_before)
+
+
+class ReviewChainDisplayTest(unittest.TestCase):
+    def test_review_shows_the_historical_match_apart_from_the_current_requirement(self):
+        """VL-05 GWT-06, GWT-07, and GWT-11. The page copies the resolver and does not call Git."""
+        requirement = extract_annex_vii_risk()
+        requirement["note"] = "historical note"
+        evidence = [{"check": "exist", "args": {"paths": ["docs/present.md"]}}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            claim = build_claim(
+                claim_id="claim-current",
+                requirement=requirement,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=evidence,
+                description="The file is the evidence for this Requirement.",
+            )
+            stored = _repo(root, requirement, claim)
+            claim["requirement_digest"] = version_digest(stored)
+            write_claim(root / "curbpack" / "claims", claim)
+            _git(root, "init")
+            _git(root, "add", "curbpack.json", "curbpack")
+            _git(root, "commit", "-m", "record the requirement")
+            recorded_commit = _git(root, "rev-parse", "HEAD").strip()
+            recorded = version_digest(stored)
+            pack_dir = root / "curbpack" / "packs" / stored["pack_id"] / "0.1.0"
+            changed = load_requirement(pack_dir / f"{stored['id']}.json")
+            changed["note"] = "current note"
+            save_requirement(pack_dir, changed)
+            _git(root, "add", "curbpack")
+            _git(root, "commit", "-m", "change the requirement")
+            current = load_requirement(pack_dir / f"{stored['id']}.json")
+            historical = _row(stored, claim, recorded)
+            missing = _row(stored, claim, "missing-digest")
+            missing["id"] = "claim-current"
+            missing["digest"] = "different-digest"
+            run = {"tool": "curbcheck", "tool_version": "0.0.1a", "packs": [], "claims": [historical, missing]}
+            chain = resolve_chain(root, run)
+            presentation = present_raw_run(
+                run_result=run,
+                claims_by_id={claim["id"]: claim},
+                requirements_by_id={current["id"]: current},
+                claim_readings={},
+                requirement_readings={},
+                expanded=None,
+                chain=chain,
+            )
+            page = review_page(
+                {"run_result": run, "claims": []},
+                None,
+                door={"presentation": presentation, "repo_id": "alpha"},
+            ).decode()
+            self.assertIn('data-requirement-location="historical"', page)
+            self.assertIn(f'data-requirement-commit="{recorded_commit}"', page)
+            self.assertIn(f'data-recorded-digest="{recorded}"', page)
+            self.assertIn(f'data-current-digest="{version_digest(current)}"', page)
+            self.assertIn('data-signature-method="none"', page)
+            self.assertNotIn('data-signature-status="valid"', page)
+            self.assertIn(PREVIOUS_UNKNOWN, page)
+            source = Path("studio/review/review_page.py").read_text(encoding="utf-8")
+            self.assertNotIn("subprocess", source)
+            self.assertNotIn("git -C", source)
 
 
 def _row(stored: dict, claim: dict, requirement_digest: str) -> dict:
