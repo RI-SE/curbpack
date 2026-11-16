@@ -25,6 +25,19 @@ export function selectAll(names, side) {
         selected[name] = side;
     return selected;
 }
+export function paint(root, choices) {
+    for (const node of root.querySelectorAll("details[data-choice]")) {
+        const field = node.parentElement?.getAttribute("data-field") || "";
+        const side = choices[field] === "new" ? "new" : "old";
+        node.setAttribute("data-choice", side);
+        const current = node.querySelector("summary .choice-current");
+        const source = node.querySelector(`button[data-side="${side}"] pre`);
+        if (!current || !source)
+            continue;
+        current.textContent = source.textContent ?? "";
+        current.className = `choice-current choice-${side}`;
+    }
+}
 export function changeOne(state, name, side) {
     return { ...state, [name]: side };
 }
@@ -53,7 +66,7 @@ function renderField(field, current, proposed) {
 function renderDisclosure(name, oldText, newText) {
     return (`<section data-field="${escapeHtml(name)}">`
         + '<details data-choice="old">'
-        + `<summary>${escapeHtml(name)}</summary>`
+        + `<summary><pre class="choice-current choice-old">${escapeHtml(oldText)}</pre></summary>`
         + `<button type="button" data-side="old"><pre class="choice-old">${escapeHtml(oldText)}</pre></button>`
         + `<button type="button" data-side="new"><pre class="choice-new">${escapeHtml(newText)}</pre></button>`
         + "</details></section>");
@@ -101,25 +114,22 @@ function mount() {
             if (field)
                 choices[field] = "old";
         });
-        const paint = (next) => {
+        const paintChoices = (next) => {
             for (const [name, side] of Object.entries(next))
                 choices[name] = side;
-            root.querySelectorAll("details[data-choice]").forEach((node) => {
-                const field = node.parentElement?.getAttribute("data-field") || "";
-                node.setAttribute("data-choice", choices[field] || "old");
-            });
+            paint(root, choices);
         };
         document.getElementById("select-all-old")?.addEventListener("click", () => {
-            paint(selectAll(Object.keys(choices), "old"));
+            paintChoices(selectAll(Object.keys(choices), "old"));
         });
         document.getElementById("select-all-new")?.addEventListener("click", () => {
-            paint(selectAll(Object.keys(choices), "new"));
+            paintChoices(selectAll(Object.keys(choices), "new"));
         });
         root.querySelectorAll("button[data-side]").forEach((button) => {
             button.addEventListener("click", () => {
                 const field = button.closest("[data-field]")?.getAttribute("data-field") || "";
                 const side = button.getAttribute("data-side") === "new" ? "new" : "old";
-                paint(changeOne(choices, field, side));
+                paintChoices(changeOne(choices, field, side));
             });
         });
         const form = document.createElement("form");
