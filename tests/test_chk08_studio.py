@@ -226,9 +226,26 @@ class CurbcheckApiTest(unittest.TestCase):
 
         self.assertIs(api, engine)
         source = inspect.getsource(_run_check)
-        self.assertIn("from curbcheck.api import run_and_write", source)
-        before_api = source.split("from curbcheck.api import run_and_write", 1)[0]
-        self.assertNotIn("run_and_write", before_api)
+        api_import = next(line for line in source.splitlines() if "from curbcheck.api import" in line)
+        self.assertIn("run_and_write", api_import)
+        self.assertNotIn("checks.run", source)
+
+    def test_studio_check_result_path_uses_the_public_api(self):
+        import inspect
+
+        from checks.run import new_run_result_path as engine_path
+        from checks.run import results_dir as engine_dir
+        from curbcheck.api import new_run_result_path as api_path
+        from curbcheck.api import results_dir as api_dir
+        from studio.check.check_model import _run_check
+
+        self.assertIs(api_path, engine_path)
+        self.assertIs(api_dir, engine_dir)
+        source = inspect.getsource(_run_check)
+        api_import = next(line for line in source.splitlines() if "from curbcheck.api import" in line)
+        self.assertIn("new_run_result_path", api_import)
+        self.assertIn("results_dir", api_import)
+        self.assertNotIn("checks.run", source)
 
     def test_studio_check_exit_code_uses_the_public_api(self):
         import inspect
