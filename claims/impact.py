@@ -114,8 +114,23 @@ def _identity_row(claim: dict) -> dict:
     }
 
 
-def requirement_for_binding(repo: Path, namespace: str, pack_id: str, requirement_id: str) -> dict | None:
-    """The Requirement with this namespace, pack id, and requirement id. None when it is absent."""
+def requirement_for_binding(
+    repo: Path,
+    namespace: str,
+    pack_id: str,
+    requirement_id: str,
+    *,
+    workspace: Path | None = None,
+    timestamp: str = "",
+) -> dict | None:
+    """The Requirement with this namespace, pack id, and requirement id. None when it is absent.
+
+    A timestamp names the working copy that was just saved. That copy is not in the
+    repository packs directory, so it is not interchangeable with another Requirement
+    that happens to share the id.
+    """
+    if timestamp:
+        return _requirement_in_working_copy(workspace, pack_id, timestamp, namespace, requirement_id)
     from checks.run import _pack_version_dir, packs_dir
     from common.store import load_pack_directory
 
@@ -142,6 +157,33 @@ def requirement_for_binding(repo: Path, namespace: str, pack_id: str, requiremen
                 and item.get("pack_id") == pack_id
             ):
                 return item
+    return None
+
+
+def _requirement_in_working_copy(
+    workspace: Path | None,
+    pack_id: str,
+    timestamp: str,
+    namespace: str,
+    requirement_id: str,
+) -> dict | None:
+    if workspace is None:
+        return None
+    from requirements.workspace import load_working_copy, select_working_copy
+
+    try:
+        directory = select_working_copy(workspace, pack_id, timestamp)
+        _pack, requirements = load_working_copy(directory)
+    except (ModelError, OSError, ValueError):
+        return None
+    for item in requirements:
+        if (
+            isinstance(item, dict)
+            and item.get("id") == requirement_id
+            and item.get("namespace") == namespace
+            and item.get("pack_id") == pack_id
+        ):
+            return item
     return None
 
 

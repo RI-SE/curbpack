@@ -1182,40 +1182,61 @@ def ownership_confirmation_page(
     return page("Take ownership of this Pack?", body)
 
 
+def _review_target(model: dict) -> dict:
+    """The Requirement open on this page, including its working-copy timestamp."""
+    requirement = model.get("requirement") if isinstance(model.get("requirement"), dict) else {}
+    target = {
+        "repo": str(model.get("claims_repo_id") or model.get("repo_id") or ""),
+        "namespace": str(requirement.get("namespace") or ""),
+        "pack_id": str(requirement.get("pack_id") or model.get("pack_id") or ""),
+        "requirement_id": str(requirement.get("id") or ""),
+    }
+    if not str(model.get("bound_pack") or "").strip():
+        timestamp = str(model.get("copy_timestamp") or "")
+        if timestamp:
+            target["timestamp"] = timestamp
+    return target
+
+
 def _affected_claims_html(model: dict) -> str:
     from urllib.parse import quote, urlencode
 
     blocks = []
-    repo = str(model.get("claims_repo_id") or model.get("repo_id") or "")
-    pack = str(model.get("bound_pack") or "")
+    target = _review_target(model)
+    pack = target["pack_id"]
+    requirement_id = target["requirement_id"]
+    review_query = {
+        "repo": target["repo"],
+        "namespace": target["namespace"],
+        "pack_id": pack,
+        "requirement_id": requirement_id,
+    }
+    discovery_query = {"repo": target["repo"], "pack": pack}
+    if target.get("timestamp"):
+        review_query["timestamp"] = target["timestamp"]
+        discovery_query["timestamp"] = target["timestamp"]
     for item in model.get("affected_claims") or []:
         if not isinstance(item, dict):
             continue
         claim_id = str(item.get("id") or "")
         recorded = item.get("recorded") if isinstance(item.get("recorded"), dict) else {}
         current = item.get("current") if isinstance(item.get("current"), dict) else {}
-        requirement_id = str(current.get("requirement_id") or recorded.get("requirement_id") or "")
-        review = "/claims?" + urlencode(
-            {
-                "repo": repo,
-                "namespace": str(recorded.get("namespace") or ""),
-                "pack_id": str(recorded.get("pack_id") or ""),
-                "requirement_id": requirement_id,
-            }
-        ) + "#" + quote(f"claim-{claim_id}", safe="")
+        review = "/claims?" + urlencode(review_query) + "#" + quote(f"claim-{claim_id}", safe="")
         discovery = (
             "/discover/claims/"
             + quote(requirement_id, safe="")
             + "?"
-            + urlencode({"repo": repo, "pack": pack})
+            + urlencode(discovery_query)
         )
         later = "/requirements/requirement/" + quote(requirement_id, safe="")
-        if repo or pack:
-            later += "?" + urlencode({"repo": repo, "pack": pack})
+        later_pack = str(model.get("bound_pack") or "")
+        if target["repo"] or later_pack:
+            later += "?" + urlencode({"repo": target["repo"], "pack": later_pack})
         recorded_digest = html.escape(str(recorded.get("requirement_digest") or ""))
         current_digest = html.escape(str(current.get("digest") or ""))
         blocks.append(
             f'<p data-affected-claim="{html.escape(claim_id)}">'
+            f"<span>{html.escape(claim_id)}</span>"
             f'<span data-claim-recorded-digest="{recorded_digest}">{recorded_digest}</span>'
             f'<span data-claim-current-digest="{current_digest}">{current_digest}</span>'
             f'<a href="{html.escape(review)}">Review Claim</a>'
@@ -1232,15 +1253,15 @@ def _ownership_claims_html(model: dict) -> str:
     from urllib.parse import quote, urlencode
 
     groups = model.get("ownership_claims") if isinstance(model.get("ownership_claims"), dict) else {}
-    requirement = model.get("requirement") if isinstance(model.get("requirement"), dict) else {}
-    repo = str(model.get("claims_repo_id") or model.get("repo_id") or "")
+    target = _review_target(model)
     blocks = []
     review = "/claims?" + urlencode(
         {
-            "repo": repo,
-            "namespace": str(requirement.get("namespace") or ""),
-            "pack_id": str(requirement.get("pack_id") or ""),
-            "requirement_id": str(requirement.get("id") or ""),
+            "repo": target["repo"],
+            "namespace": target["namespace"],
+            "pack_id": target["pack_id"],
+            "requirement_id": target["requirement_id"],
+            **({"timestamp": target["timestamp"]} if target.get("timestamp") else {}),
         }
     )
     for item in groups.get("source") or []:
@@ -1250,6 +1271,7 @@ def _ownership_claims_html(model: dict) -> str:
         blocks.append(
             f'<p data-source-claim="{html.escape(claim_id)}"'
             f' data-source-namespace="{html.escape(str(item.get("namespace") or ""))}">'
+            f"<span>{html.escape(claim_id)}</span>"
             f'<a href="{html.escape(review + "#" + quote("claim-" + claim_id, safe=""))}">Review Claim</a>'
             f"</p>"
         )

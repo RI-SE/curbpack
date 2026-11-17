@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import html
 import inspect
 import json
 import tempfile
@@ -323,9 +324,25 @@ class CompareApplyImpactTest(unittest.TestCase):
                 current_digest = version_digest(load_requirement(destination / "CRA-ANNEX-VII-RISK.json"))
                 self.assertNotEqual(current_digest, claim["requirement_digest"])
                 self.assertIn('data-affected-claim="claim-bound"', changed)
+                self.assertIn(">claim-bound<", changed)
                 self.assertIn(f'data-claim-recorded-digest="{claim["requirement_digest"]}"', changed)
                 self.assertIn(f'data-claim-current-digest="{current_digest}"', changed)
                 self.assertEqual(claim_path.read_bytes(), claim_bytes)
+                review = _get(base + _href(changed, "Review Claim"))
+                self.assertIn("claim-bound", review)
+                self.assertIn(f"Recorded binding", review)
+                self.assertIn(claim["requirement_digest"], review)
+                self.assertIn("Proposed binding", review)
+                self.assertIn(current_digest, review)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+                discovery = _get(base + _href(changed, "Discovery"))
+                self.assertIn("CRA-ANNEX-VII-RISK", discovery)
+                self.assertNotIn("an id in this pack", discovery)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+                self.assertEqual(
+                    list((product / "curbpack" / "claims").glob("*.json")),
+                    [claim_path],
+                )
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -408,11 +425,21 @@ class TakeOwnershipImpactTest(unittest.TestCase):
                     },
                 )
                 self.assertIn('data-source-claim="claim-source"', page)
+                self.assertIn(">claim-source<", page)
                 self.assertIn('data-source-namespace="OTHER/Imported"', page)
                 source_at = page.index('data-source-claim="claim-source"')
                 self.assertNotIn("stale", page[source_at : source_at + 500])
                 self.assertIn('data-owned-claim="claim-owned"', page)
                 self.assertNotIn('data-binding="stale"', page)
+                review = _get(base + _href(page[source_at:], "Review Claim"))
+                self.assertIn("Recorded binding", review)
+                self.assertIn("OTHER/Imported", review)
+                self.assertIn("Proposed binding", review)
+                self.assertIn("RISE/Imported", review)
+                self.assertEqual(
+                    (product / "curbpack" / "claims" / "claim-source.json").read_bytes(),
+                    source_bytes,
+                )
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -448,3 +475,10 @@ def _post(url: str, form: dict) -> str:
 def _get(url: str) -> str:
     with urllib.request.urlopen(url) as response:
         return response.read().decode("utf-8")
+
+
+def _href(page: str, label: str) -> str:
+    marker = f">{label}</a>"
+    end = page.index(marker)
+    start = page.rindex('href="', 0, end)
+    return html.unescape(page[start + 6 : page.index('"', start + 6)])

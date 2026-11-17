@@ -51,7 +51,11 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
                 f'<p data-proposed-namespace="{html.escape(str(proposed.get("namespace") or ""))}"'
                 f' data-proposed-pack="{html.escape(str(proposed.get("pack_id") or ""))}"'
                 f' data-proposed-requirement="{html.escape(str(proposed.get("id") or ""))}"'
-                f' data-proposed-digest="{html.escape(str(proposed.get("digest") or ""))}"></p>'
+                f' data-proposed-digest="{html.escape(str(proposed.get("digest") or ""))}">'
+                f'Proposed binding {html.escape(str(proposed.get("namespace") or ""))}'
+                f' {html.escape(str(proposed.get("pack_id") or ""))}'
+                f' {html.escape(str(proposed.get("id") or ""))}'
+                f' {html.escape(str(proposed.get("digest") or ""))}</p>'
             )
             target_html = (
                 f'<input type="hidden" name="namespace" value="{html.escape(str(proposed.get("namespace") or ""))}">'
@@ -61,7 +65,11 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
             f'<p data-recorded-namespace="{html.escape(str(claim.get("namespace") or ""))}"'
             f' data-recorded-pack="{html.escape(str(claim.get("pack_id") or ""))}"'
             f' data-recorded-requirement="{html.escape(str(claim.get("requirement_id") or ""))}"'
-            f' data-recorded-digest="{html.escape(str(claim.get("requirement_digest") or ""))}"></p>'
+            f' data-recorded-digest="{html.escape(str(claim.get("requirement_digest") or ""))}">'
+            f'Recorded binding {html.escape(str(claim.get("namespace") or ""))}'
+            f' {html.escape(str(claim.get("pack_id") or ""))}'
+            f' {html.escape(str(claim.get("requirement_id") or ""))}'
+            f' {html.escape(str(claim.get("requirement_digest") or ""))}</p>'
         )
         blocks.append(
             f"""<div class="card" id="claim-{html.escape(claim_id)}">

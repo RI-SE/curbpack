@@ -21,7 +21,7 @@ from discovery.present import overview_rows, signing_label
 from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
-from requirements.workspace import resolve_copy_ref
+from requirements.workspace import load_working_copy, resolve_copy_ref, select_working_copy
 from studio.claim import researcher
 
 
@@ -219,6 +219,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
 def _context(root: Path, bag: dict, sources: list) -> dict:
     repo_id = _one(bag, "repo") or _one(bag, "repo_id")
     pack_id = _one(bag, "pack") or _one(bag, "pack_id")
+    timestamp = _one(bag, "timestamp")
+    if pack_id and timestamp and timestamp != CURBPACK_COPY:
+        return _working_copy_context(root, repo_id, pack_id, timestamp)
     if pack_id:
         return _pack_context(root, repo_id, pack_id)
     source_id = _one(bag, "source") or _one(bag, "source_id")
@@ -250,6 +253,38 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
         "claims_dir": folder,
         "requirements": requirements,
         "workspace": root,
+        "job": job,
+        "feedback": feedback,
+        "claims": claims,
+    }
+
+
+def _working_copy_context(root: Path, repo_id: str, pack_id: str, timestamp: str) -> dict:
+    """Requirements from the working copy Compare or Take Ownership just saved."""
+    row = find_repo(load_repos(root), repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    repo = resolve_repo_path(root, str(row.get("path") or ""))
+    directory = select_working_copy(root, pack_id, timestamp)
+    _pack, requirements = load_working_copy(directory)
+    folder = repo_claims_dir(repo)
+    claims = read_claims(folder) if folder.is_dir() else []
+    job = latest_job(root / "jobs", repo_id=repo_id, source_id=pack_id, timestamp=timestamp)
+    feedback = load_feedback(root, repo_id, pack_id, timestamp)
+    return {
+        "repo_id": repo_id,
+        "repo_name": str(row.get("name") or repo_id),
+        "source_id": pack_id,
+        "pack_id": pack_id,
+        "section_name": pack_id,
+        "section_id": "",
+        "timestamp": timestamp,
+        "repo": repo,
+        "workspace": root,
+        "claims_dir": folder,
+        "requirements": [
+            item for item in requirements if isinstance(item, dict) and isinstance(item.get("id"), str)
+        ],
         "job": job,
         "feedback": feedback,
         "claims": claims,

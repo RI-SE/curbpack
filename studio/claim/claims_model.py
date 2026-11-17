@@ -63,16 +63,21 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
                     "retire_warning": retire_warning(claim, claims, run_result),
                 }
             )
+    proposed_namespace = _query_value(query, "namespace")
+    proposed_pack_id = _query_value(query, "pack_id")
     proposed = _proposed_requirement(
+        ws,
         repo,
-        _query_value(query, "namespace"),
-        _query_value(query, "pack_id"),
+        proposed_namespace,
+        proposed_pack_id,
         _query_value(query, "requirement_id"),
+        _query_value(query, "timestamp"),
     )
     prefill_requirement_id = (query.get("requirement_id") or [""])[0].strip()
     prefill_path = (query.get("path") or [""])[0].strip()
     prefill_passages: list[str] = []
-    if prefill_requirement_id:
+    proposing = bool(proposed_namespace and proposed_pack_id and prefill_requirement_id)
+    if prefill_requirement_id and not proposing:
         # Validate query context when Discovery (or the user) named a Requirement.
         # Unknown ids must not fall back to a demo Requirement.
         if prefill_requirement_id not in lookup:
@@ -120,12 +125,26 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
     }
 
 
-def _proposed_requirement(repo: Path, namespace: str, pack_id: str, requirement_id: str) -> dict | None:
+def _proposed_requirement(
+    ws: Workspace,
+    repo: Path,
+    namespace: str,
+    pack_id: str,
+    requirement_id: str,
+    timestamp: str,
+) -> dict | None:
     from claims.impact import requirement_for_binding
 
     if not namespace or not pack_id or not requirement_id:
         return None
-    requirement = requirement_for_binding(repo, namespace, pack_id, requirement_id)
+    requirement = requirement_for_binding(
+        repo,
+        namespace,
+        pack_id,
+        requirement_id,
+        workspace=ws.root,
+        timestamp=timestamp,
+    )
     if requirement is None:
         return None
     return {
@@ -174,8 +193,16 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
     namespace = (form.get("namespace") or [""])[0].strip()
     pack_id = (form.get("pack_id") or [""])[0].strip()
     requirement_id = (form.get("requirement_id") or [""])[0].strip()
+    timestamp = (form.get("timestamp") or [""])[0].strip()
     if namespace and pack_id:
-        requirement = requirement_for_binding(_claims_repo(ws, form), namespace, pack_id, requirement_id)
+        requirement = requirement_for_binding(
+            _claims_repo(ws, form),
+            namespace,
+            pack_id,
+            requirement_id,
+            workspace=ws.root,
+            timestamp=timestamp,
+        )
         if requirement is None:
             raise ModelError(
                 "claim",
