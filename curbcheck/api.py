@@ -10,6 +10,7 @@ from checks.run import (
     new_run_result_path,
     packs_dir,
     process_exit_code,
+    reports_dir,
     results_dir,
     run_and_write,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "new_run_result_path",
     "packs_dir",
     "process_exit_code",
+    "reports_dir",
     "results_dir",
     "run_and_write",
 ]

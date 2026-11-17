@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from checks.run import _pack_version_dir, claims_dir, packs_dir, reports_dir, results_dir
+from curbcheck.api import _pack_version_dir, claims_dir, packs_dir, reports_dir, results_dir
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from discovery.door import created_curbpack, set_open_repo
