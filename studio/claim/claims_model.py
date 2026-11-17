@@ -89,6 +89,11 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         prefill_passages = law_passages(lookup[prefill_requirement_id])
         if prefill_path:
             exist_args_for_path(prefill_path)
+    rebind_requirements = _working_copy_choices(
+        ws.root,
+        proposed_pack_id,
+        _query_value(query, "timestamp"),
+    )
     prefill_source = ""
     if prefill_requirement_id and prefill_requirement_id in lookup:
         hints = lookup[prefill_requirement_id].get("discovery_hints") or {}
@@ -103,6 +108,7 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
     return {
         "claims": rows,
         "requirement_ids": known_ids,
+        "rebind_requirements": rebind_requirements,
         "proposed_requirement": proposed,
         "prefill_requirement_id": prefill_requirement_id,
         "prefill_path": prefill_path,
@@ -123,6 +129,32 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         "timestamp": _query_value(query, "timestamp"),
         "return_to": _query_value(query, "return_to"),
     }
+
+
+def _working_copy_choices(workspace: Path, pack_id: str, timestamp: str) -> list[dict]:
+    """Requirements in the working copy named by the Review link. Empty for a repository pack."""
+    from discovery.jobs import CURBPACK_COPY
+    from requirements.workspace import load_working_copy, select_working_copy
+
+    if not pack_id or not timestamp or timestamp == CURBPACK_COPY:
+        return []
+    try:
+        directory = select_working_copy(workspace, pack_id, timestamp)
+        _pack, requirements = load_working_copy(directory)
+    except (ModelError, OSError, ValueError):
+        return []
+    choices = []
+    for item in requirements:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        choices.append(
+            {
+                "namespace": str(item.get("namespace") or ""),
+                "pack_id": str(item.get("pack_id") or pack_id),
+                "id": str(item.get("id")),
+            }
+        )
+    return choices
 
 
 def _proposed_requirement(

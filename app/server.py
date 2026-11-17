@@ -1477,7 +1477,7 @@ def _claims_redirect(form: dict, extra: str, *, claim_changed: bool = False) -> 
             return f"{return_to}{join}claim_changed=1"
         return return_to
     parts = [extra]
-    for key in ("repo_id", "source_id", "timestamp"):
+    for key in ("repo_id", "source_id", "timestamp", "namespace", "pack_id"):
         value = _query_value(form, key)
         if value:
             parts.append(f"{key}={quote(value)}")

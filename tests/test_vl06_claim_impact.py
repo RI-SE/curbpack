@@ -343,6 +343,66 @@ class CompareApplyImpactTest(unittest.TestCase):
                     list((product / "curbpack" / "claims").glob("*.json")),
                     [claim_path],
                 )
+                saved_requirement = load_requirement(destination / "CRA-ANNEX-VII-RISK.json")
+                identity = (
+                    f'{saved_requirement["namespace"]} '
+                    f'{saved_requirement["pack_id"]} '
+                    f'{saved_requirement["id"]}'
+                )
+                self.assertIn(f"selected>{identity}<", review)
+                stamp = "2026-10-13T090000Z"
+                _assert_copy_stamp(_href(discovery, "← Claims"), stamp)
+                evidence = product / "docs" / "present.md"
+                evidence.parent.mkdir(parents=True)
+                evidence.write_text("The present file.\n", encoding="utf-8")
+                kept = _post_discovery(
+                    base,
+                    discovery,
+                    "/discover/feedback/add",
+                    {"path": "docs/present.md", "rationale": "Names the risk."},
+                )
+                _assert_copy_stamp(_href(kept, "← Claims"), stamp)
+                _assert_copy_stamp(_attr(kept, 'class="file-link" href="'), stamp)
+                voted = _post_discovery(
+                    base,
+                    kept,
+                    "/discover/feedback/vote",
+                    {"path": "docs/present.md", "vote": "useful"},
+                )
+                _assert_copy_stamp(_href(voted, "← Claims"), stamp)
+                _assert_copy_stamp(_attr(voted, 'class="file-link" href="'), stamp)
+                motivated = _post_discovery(
+                    base,
+                    voted,
+                    "/discover/feedback/motivation",
+                    {"path": "docs/present.md", "choice": "keep", "why": "Names the risk."},
+                )
+                _assert_copy_stamp(_href(motivated, "← Claims"), stamp)
+                checked = _post_discovery(
+                    base,
+                    motivated,
+                    "/discover/feedback/checks",
+                    {"path": "docs/present.md", "check": "exist", "claim_source": "documents"},
+                )
+                _assert_copy_stamp(_href(checked, "← Claims"), stamp)
+                _assert_copy_stamp(_attr(checked, 'class="file-link" href="'), stamp)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+                _post(
+                    base + "/claims/claim-bound/rebind",
+                    {
+                        "repo": "alpha",
+                        "namespace": saved_requirement["namespace"],
+                        "pack_id": saved_requirement["pack_id"],
+                        "requirement_id": saved_requirement["id"],
+                        "timestamp": stamp,
+                    },
+                )
+                rebound = json.loads(claim_path.read_text(encoding="utf-8"))
+                self.assertEqual(rebound["namespace"], saved_requirement["namespace"])
+                self.assertEqual(rebound["pack_id"], saved_requirement["pack_id"])
+                self.assertEqual(rebound["requirement_id"], saved_requirement["id"])
+                self.assertEqual(rebound["requirement_digest"], current_digest)
+                self.assertEqual(rebound["checks"], claim["checks"])
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -482,3 +542,32 @@ def _href(page: str, label: str) -> str:
     end = page.index(marker)
     start = page.rindex('href="', 0, end)
     return html.unescape(page[start + 6 : page.index('"', start + 6)])
+
+
+def _attr(page: str, marker: str) -> str:
+    start = page.index(marker) + len(marker)
+    return html.unescape(page[start : page.index('"', start)])
+
+
+def _input(page: str, name: str) -> str:
+    marker = f'name="{name}" value="'
+    start = page.index(marker) + len(marker)
+    return html.unescape(page[start : page.index('"', start)])
+
+
+def _assert_copy_stamp(href: str, stamp: str) -> None:
+    plain = urllib.parse.unquote(href)
+    if f"timestamp={stamp}" not in plain or "pack=cra-baseline" not in plain:
+        raise AssertionError(href)
+
+
+def _post_discovery(base: str, page: str, path: str, fields: dict) -> str:
+    form = {
+        "repo_id": _input(page, "repo_id"),
+        "source_id": _input(page, "source_id"),
+        "timestamp": _input(page, "timestamp"),
+        "pack": _input(page, "pack"),
+        "requirement_id": _input(page, "requirement_id"),
+    }
+    form.update(fields)
+    return _post(base + path, form)

@@ -416,11 +416,15 @@ def _split(path: str) -> tuple[str, str]:
 def _back(context: dict, requirement_id: str, **extra: str) -> str:
     from urllib.parse import quote
 
-    repo = quote(context["repo_id"])
     pack_id = str(context.get("pack_id") or "")
     if pack_id:
-        query = f"repo={repo}&pack={quote(pack_id)}"
+        query = researcher._pack_query(
+            context["repo_id"],
+            pack_id,
+            str(context.get("timestamp") or ""),
+        )
     else:
+        repo = quote(context["repo_id"])
         query = (
             f"repo={repo}&source={quote(context['source_id'])}"
             f"&timestamp={quote(context['timestamp'])}"

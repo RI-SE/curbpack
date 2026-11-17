@@ -9,6 +9,7 @@ from urllib.parse import quote
 from app.pages import page
 from checks.labels import CAPTIONS, check_caption
 from claims.bind import law_passages
+from discovery.jobs import CURBPACK_COPY
 from discovery.present import merge_findings
 
 COLUMN_HELP = {
@@ -41,7 +42,7 @@ def overview_page(model: dict) -> bytes:
         href = _req_href(model, item["id"])
         rows.append(
             "<tr>"
-            f'<td><a href="{href}"><code>{html.escape(item["id"])}</code></a></td>'
+            f'<td><a href="{html.escape(href)}"><code>{html.escape(item["id"])}</code></a></td>'
             f"<td>{html.escape(item.get('locator') or '')}</td>"
             f"<td>{findings}</td>"
             f"<td>{int(item.get('claims') or 0)}</td>"
@@ -133,7 +134,7 @@ def requirement_page(model: dict) -> bytes:
     outcomes = _outcomes(model.get("outcomes") or [])
     body = f"""
 <div class="req-desk">
-<p class="muted"><a href="{_overview_href(model)}">← Claims</a> · <code>{html.escape(str(model.get('repo_id') or ''))}</code></p>
+<p class="muted"><a href="{html.escape(_overview_href(model))}">← Claims</a> · <code>{html.escape(str(model.get('repo_id') or ''))}</code></p>
 <div class="req-head">
   <div>
     <h1>Claims Editor</h1>
@@ -297,7 +298,7 @@ def file_page(model: dict) -> bytes:
     body = f"""
 <h1><code>{html.escape(title)}</code></h1>
 <p>{html.escape(note)}</p>
-<p><a href="{_req_href(model, model.get('requirement_id') or '')}">Back to findings</a></p>
+<p><a href="{html.escape(_req_href(model, model.get('requirement_id') or ''))}">Back to findings</a></p>
 <pre>{rendered}</pre>
 """
     return page(title, body)
@@ -586,7 +587,7 @@ def _evidence_cell(model: dict, requirement_id: str, item: dict) -> str:
     links = []
     for path in paths:
         links.append(
-            f'<a class="file-link" href="{_file_href(model, requirement_id, path)}">'
+            f'<a class="file-link" href="{html.escape(_file_href(model, requirement_id, path))}">'
             f"<code>{html.escape(path)}</code></a>"
         )
     return "<br>".join(links)
@@ -863,14 +864,22 @@ def _hidden(model: dict, requirement_id: str) -> str:
     )
 
 
+def _pack_query(repo: str, pack_id: str, timestamp: str) -> str:
+    """Repository pack, plus the working-copy timestamp when this is not the pack sentinel."""
+    query = f"repo={quote(repo)}&pack={quote(pack_id)}"
+    if timestamp and timestamp != CURBPACK_COPY:
+        query += f"&timestamp={quote(timestamp)}"
+    return query
+
+
 def _q(model: dict) -> str:
-    repo = quote(str(model.get("repo_id") or ""))
+    repo = str(model.get("repo_id") or "")
     pack_id = str(model.get("pack_id") or "")
     if pack_id:
-        query = f"repo={repo}&pack={quote(pack_id)}"
+        query = _pack_query(repo, pack_id, str(model.get("timestamp") or ""))
     else:
         query = (
-            f"repo={repo}"
+            f"repo={quote(repo)}"
             f"&source={quote(str(model.get('source_id') or ''))}"
             f"&timestamp={quote(str(model.get('timestamp') or ''))}"
         )

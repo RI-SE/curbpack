@@ -99,12 +99,7 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 {target_html}
 <label>Requirement</label>
 <select name="requirement_id">
-{"".join(
-    f'<option value="{html.escape(str(req_id))}"'
-    f'{" selected" if str(req_id) == requirement_id else ""}>'
-    f"{html.escape(str(req_id))}</option>"
-    for req_id in model.get("requirement_ids") or []
-)}
+{_rebind_options(model, requirement_id, proposed)}
 </select>
 <button type="submit">Rebind</button>
 </form>
@@ -139,6 +134,26 @@ Editing a sealed Claim clears its seal.</p>
 {''.join(blocks) or empty}
 """
     return page("Claim editor", body)
+
+
+def _rebind_options(model: dict, requirement_id: str, proposed: dict) -> str:
+    choices = [
+        item for item in (model.get("rebind_requirements") or []) if isinstance(item, dict)
+    ]
+    if not choices:
+        choices = [{"id": req_id} for req_id in model.get("requirement_ids") or []]
+    selected_id = str(proposed.get("id") or requirement_id)
+    options = []
+    for choice in choices:
+        req_id = str(choice.get("id") or "")
+        namespace = str(choice.get("namespace") or "")
+        pack_id = str(choice.get("pack_id") or "")
+        label = f"{namespace} {pack_id} {req_id}".strip() if namespace and pack_id else req_id
+        selected = " selected" if req_id == selected_id else ""
+        options.append(
+            f'<option value="{html.escape(req_id)}"{selected}>{html.escape(label)}</option>'
+        )
+    return "".join(options)
 
 
 def _claim_context(model: dict) -> str:
