@@ -24,6 +24,7 @@ from discovery.door import set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.editing import apply_edits
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
+from requirements.workspace import create_extraction_copy
 from studio.pack.pages import editor_page
 
 
@@ -259,6 +260,167 @@ class EditorRebindTest(unittest.TestCase):
             self.assertEqual(saved["requirement_digest"], version_digest(stored_owned))
             self.assertNotIn("signed", saved)
             self.assertEqual(saved["checks"], sealed["checks"])
+
+
+class CompareApplyImpactTest(unittest.TestCase):
+    def test_compare_apply_shows_the_claim_only_when_the_digest_changes(self):
+        """VL-06 VL06-01. Compare Apply uses the Requirement page list and does not write the Claim."""
+        base_requirement = extract_annex_vii_risk()
+        current = apply_edits(base_requirement, {"note": "Current note."})
+        proposed = apply_edits(base_requirement, {"note": "Proposed note."})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            destination = create_extraction_copy(root, "cra-baseline", draft_pack(), at="2026-10-13T090000Z")
+            proposal = create_extraction_copy(root, "cra-baseline", draft_pack(), at="2026-10-13T143000Z")
+            save_requirement(destination, current)
+            save_requirement(proposal, proposed)
+            stored = load_requirement(destination / "CRA-ANNEX-VII-RISK.json")
+            claim = build_claim(
+                claim_id="claim-bound",
+                requirement=stored,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+                description="The file is the evidence for this Requirement.",
+            )
+            product = root / "product"
+            write_claim(product / "curbpack" / "claims", claim)
+            write_json(
+                product / "curbpack.json",
+                {
+                    "packs": ["cra-baseline"],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="alpha", path="product"))
+            set_open_repo(root, "alpha")
+            claim_path = product / "curbpack" / "claims" / "claim-bound.json"
+            claim_bytes = claim_path.read_bytes()
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            form = {
+                "requirement": "CRA-ANNEX-VII-RISK",
+                "proposal": "2026-10-13T143000Z",
+                "destination": "2026-10-13T090000Z",
+            }
+            try:
+                unchanged = _post(
+                    base + "/requirements/compare/form/apply",
+                    {**form, "choice": json.dumps({"note": "old"})},
+                )
+                self.assertNotIn('data-affected-claim="claim-bound"', unchanged)
+                changed = _post(
+                    base + "/requirements/compare/form/apply",
+                    {**form, "choice": json.dumps({"note": "new"})},
+                )
+                current_digest = version_digest(load_requirement(destination / "CRA-ANNEX-VII-RISK.json"))
+                self.assertNotEqual(current_digest, claim["requirement_digest"])
+                self.assertIn('data-affected-claim="claim-bound"', changed)
+                self.assertIn(f'data-claim-recorded-digest="{claim["requirement_digest"]}"', changed)
+                self.assertIn(f'data-claim-current-digest="{current_digest}"', changed)
+                self.assertEqual(claim_path.read_bytes(), claim_bytes)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            compare_apply = Path("studio/pack/pack_compare.py").read_text(encoding="utf-8")
+            self.assertNotIn("claims.impact", compare_apply)
+            self.assertNotIn("claims_affected_by_requirement", compare_apply)
+
+
+class TakeOwnershipImpactTest(unittest.TestCase):
+    def test_take_ownership_keeps_the_source_claim_distinct_and_unchanged(self):
+        """VL-06 VL06-06 and VL06-07. The source binding is not stale and no historical file changes."""
+        pack = draft_pack()
+        pack["name"] = "Imported"
+        pack["namespace"] = "OTHER/Imported"
+        requirement = extract_annex_vii_risk()
+        requirement["namespace"] = pack["namespace"]
+        requirement["pack_id"] = pack["id"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stamp = "2026-10-13T090000Z"
+            source = create_extraction_copy(root, pack["id"], pack, at=stamp)
+            save_requirement(source, requirement)
+            stored = load_requirement(source / f"{requirement['id']}.json")
+            source_claim = build_claim(
+                claim_id="claim-source",
+                requirement=stored,
+                source="documents",
+                args={"path": "docs/present.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/present.md"]}}],
+                description="The file is the evidence for the source Requirement.",
+            )
+            owned_requirement = dict(stored)
+            owned_requirement["namespace"] = "RISE/Imported"
+            owned_claim = build_claim(
+                claim_id="claim-owned",
+                requirement=owned_requirement,
+                source="documents",
+                args={"path": "docs/owned.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/owned.md"]}}],
+                description="The file is the evidence for the owned Requirement.",
+            )
+            product = root / "product"
+            write_claim(product / "curbpack" / "claims", source_claim)
+            write_claim(product / "curbpack" / "claims", owned_claim)
+            write_json(
+                product / "curbpack.json",
+                {
+                    "packs": [pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            run_result = product / "curbpack" / "results" / "run-result.json"
+            report = product / "curbpack" / "reports" / "review-report.json"
+            run_result.parent.mkdir(parents=True)
+            report.parent.mkdir(parents=True)
+            run_result.write_text('{"claims":[]}\n', encoding="utf-8")
+            report.write_text('{"decision":"recorded"}\n', encoding="utf-8")
+            run_bytes = run_result.read_bytes()
+            report_bytes = report.read_bytes()
+            save_repos(root, add_repo(root, load_repos(root), name="alpha", path="product"))
+            set_open_repo(root, "alpha")
+            source_bytes = (product / "curbpack" / "claims" / "claim-source.json").read_bytes()
+            owned_bytes = (product / "curbpack" / "claims" / "claim-owned.json").read_bytes()
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            try:
+                page = _post(
+                    base + f"/requirements/requirement/{stored['id']}",
+                    {
+                        "timestamp": stamp,
+                        "expected_digest": version_digest(stored),
+                        "take_ownership": "1",
+                    },
+                )
+                self.assertIn('data-source-claim="claim-source"', page)
+                self.assertIn('data-source-namespace="OTHER/Imported"', page)
+                source_at = page.index('data-source-claim="claim-source"')
+                self.assertNotIn("stale", page[source_at : source_at + 500])
+                self.assertIn('data-owned-claim="claim-owned"', page)
+                self.assertNotIn('data-binding="stale"', page)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            self.assertEqual((product / "curbpack" / "claims" / "claim-source.json").read_bytes(), source_bytes)
+            self.assertEqual((product / "curbpack" / "claims" / "claim-owned.json").read_bytes(), owned_bytes)
+            self.assertEqual(run_result.read_bytes(), run_bytes)
+            self.assertEqual(report.read_bytes(), report_bytes)
+            self.assertFalse(any("queue" in path.name for path in root.rglob("*")))
 
 
 def _pack(pack_id: str, name: str) -> dict:

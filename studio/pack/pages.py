@@ -1228,6 +1228,40 @@ def _affected_claims_html(model: dict) -> str:
     return "<section>" + "".join(blocks) + "</section>"
 
 
+def _ownership_claims_html(model: dict) -> str:
+    from urllib.parse import quote, urlencode
+
+    groups = model.get("ownership_claims") if isinstance(model.get("ownership_claims"), dict) else {}
+    requirement = model.get("requirement") if isinstance(model.get("requirement"), dict) else {}
+    repo = str(model.get("claims_repo_id") or model.get("repo_id") or "")
+    blocks = []
+    review = "/claims?" + urlencode(
+        {
+            "repo": repo,
+            "namespace": str(requirement.get("namespace") or ""),
+            "pack_id": str(requirement.get("pack_id") or ""),
+            "requirement_id": str(requirement.get("id") or ""),
+        }
+    )
+    for item in groups.get("source") or []:
+        if not isinstance(item, dict):
+            continue
+        claim_id = str(item.get("id") or "")
+        blocks.append(
+            f'<p data-source-claim="{html.escape(claim_id)}"'
+            f' data-source-namespace="{html.escape(str(item.get("namespace") or ""))}">'
+            f'<a href="{html.escape(review + "#" + quote("claim-" + claim_id, safe=""))}">Review Claim</a>'
+            f"</p>"
+        )
+    for item in groups.get("owned") or []:
+        if not isinstance(item, dict):
+            continue
+        blocks.append(f'<p data-owned-claim="{html.escape(str(item.get("id") or ""))}"></p>')
+    if not blocks:
+        return ""
+    return "<section>" + "".join(blocks) + "</section>"
+
+
 def editor_page(model: dict) -> bytes:
     requirement = model.get("requirement")
     if not isinstance(requirement, dict):
@@ -1246,6 +1280,7 @@ def editor_page(model: dict) -> bytes:
         else _flash(str(model.get("message") or ""))
     )
     affected = _affected_claims_html(model)
+    ownership = _ownership_claims_html(model)
     banner = '<p id="unsaved" hidden>Unsaved edits. The saved version is unchanged.</p>'
     # Clean: nothing to save. Dirty: Save+Cancel on, Sign off; signed badge flips.
     script = """
@@ -1319,6 +1354,7 @@ if (fields) {
 {_identity_lines(model, requirement)}
 {flash}
 {affected}
+{ownership}
 {banner}
 <form method="post" action="/requirements/requirement/{html.escape(str(requirement.get("id")))}">
 <fieldset id="edit-fields">

@@ -81,6 +81,7 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         "repo_id": (query.get("repo") or [""])[0].strip(),
         "bound_pack": (query.get("pack") or [""])[0].strip(),
         "affected_claims": _affected_claims(ws, query, requirement),
+        "ownership_claims": _ownership_claims(ws, query, requirement),
         "claims_repo_id": (query.get("repo") or [""])[0].strip() or (_open_repo(ws) or ""),
         "list_href": (
             "/requirements/copy?" + _pack_query(query)
@@ -96,8 +97,7 @@ def _open_repo(ws: Workspace) -> str:
     return open_repo_id(ws.root) or ""
 
 
-def _affected_claims(ws: Workspace, query: dict, requirement: dict) -> list[dict]:
-    from claims.impact import claims_unresolved_for_requirement
+def _open_claims(ws: Workspace, query: dict) -> list[dict]:
     from common.validate import validate_claim
     from discovery.door import repo_claims_dir
     from discovery.repos import find_repo, load_repos, resolve_repo_path
@@ -120,7 +120,19 @@ def _affected_claims(ws: Workspace, query: dict, requirement: dict) -> list[dict
                 claims.append(validate_claim(read_json(path)))
             except (ModelError, OSError, ValueError):
                 continue
-    return claims_unresolved_for_requirement(claims, requirement)
+    return claims
+
+
+def _affected_claims(ws: Workspace, query: dict, requirement: dict) -> list[dict]:
+    from claims.impact import claims_unresolved_for_requirement
+
+    return claims_unresolved_for_requirement(_open_claims(ws, query), requirement)
+
+
+def _ownership_claims(ws: Workspace, query: dict, requirement: dict) -> dict:
+    from claims.impact import claims_after_ownership
+
+    return claims_after_ownership(_open_claims(ws, query), requirement)
 
 
 def _editor_message(query: dict) -> str:

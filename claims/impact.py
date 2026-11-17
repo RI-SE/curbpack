@@ -76,6 +76,44 @@ def claims_unresolved_for_requirement(claims: list, requirement: dict) -> list[d
     return found
 
 
+def claims_after_ownership(claims: list, owned: dict) -> dict:
+    """Source Claims stay bound to origin. Claims for the new Pack stay in their own list."""
+    origin = owned.get("origin") if isinstance(owned.get("origin"), dict) else {}
+    source_namespace = origin.get("namespace")
+    source_pack = origin.get("pack")
+    source_requirement = origin.get("requirement")
+    source = []
+    owned_rows = []
+    if not source_namespace or not source_pack or not source_requirement:
+        return {"source": [], "owned": []}
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        if (
+            claim.get("namespace") == source_namespace
+            and claim.get("pack_id") == source_pack
+            and claim.get("requirement_id") == source_requirement
+        ):
+            source.append(_identity_row(claim))
+        elif (
+            claim.get("namespace") == owned.get("namespace")
+            and claim.get("pack_id") == owned.get("pack_id")
+            and claim.get("requirement_id") == owned.get("id")
+        ):
+            owned_rows.append(_identity_row(claim))
+    return {"source": source, "owned": owned_rows}
+
+
+def _identity_row(claim: dict) -> dict:
+    return {
+        "id": claim.get("id"),
+        "namespace": claim.get("namespace"),
+        "pack_id": claim.get("pack_id"),
+        "requirement_id": claim.get("requirement_id"),
+        "requirement_digest": claim.get("requirement_digest"),
+    }
+
+
 def requirement_for_binding(repo: Path, namespace: str, pack_id: str, requirement_id: str) -> dict | None:
     """The Requirement with this namespace, pack id, and requirement id. None when it is absent."""
     from checks.run import _pack_version_dir, packs_dir
