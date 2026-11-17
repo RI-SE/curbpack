@@ -197,7 +197,7 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
 def _namespace_base_for_edit(ws: Workspace, form: dict) -> tuple[str, Path]:
     """Publisher base and that repository's packs directory. A missing file is an error."""
     from app.server import _registered_repo_path
-    from checks.run import packs_dir
+    from curbcheck.api import packs_dir
     from common.validate import validate_curbpack_config
     from discovery.door import open_repo_id
 

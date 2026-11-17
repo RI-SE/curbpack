@@ -278,6 +278,20 @@ class CurbcheckApiTest(unittest.TestCase):
         for module in (package, model, page):
             self.assertNotIn("checks.run", inspect.getsource(module))
 
+    def test_requirement_editor_pack_directory_uses_the_public_api(self):
+        import inspect
+
+        import studio.pack.requirement_editor as editor
+        from checks.run import packs_dir as engine
+        from curbcheck.api import packs_dir as api
+        from studio.pack.requirement_editor import _namespace_base_for_edit
+
+        self.assertIs(api, engine)
+        source = inspect.getsource(_namespace_base_for_edit)
+        self.assertIn("from curbcheck.api import packs_dir", source)
+        self.assertNotIn("checks.run", source)
+        self.assertNotIn("checks.run", inspect.getsource(editor))
+
 
 class InventoryTest(unittest.TestCase):
     def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):
