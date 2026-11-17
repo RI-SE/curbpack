@@ -438,6 +438,27 @@ class CurbcheckApiTest(unittest.TestCase):
         self.assertIn("from curbcheck.api import selected_requirement_ids", stripped)
         self.assertNotIn("checks.run", inspect.getsource(review))
 
+    def test_http_server_pack_directories_use_the_public_api(self):
+        import inspect
+
+        import app.server as server
+        from checks.run import _pack_version_dir as engine_version
+        from checks.run import claims_dir as engine_claims
+        from checks.run import packs_dir as engine_packs
+        from curbcheck.api import _pack_version_dir as api_version
+        from curbcheck.api import claims_dir as api_claims
+        from curbcheck.api import packs_dir as api_packs
+
+        self.assertIs(api_packs, engine_packs)
+        self.assertIs(api_claims, engine_claims)
+        self.assertIs(api_version, engine_version)
+        source = inspect.getsource(server)
+        block = source.split("from curbcheck.api import (", 1)[1].split(")", 1)[0]
+        self.assertIn("_pack_version_dir", block)
+        self.assertIn("claims_dir", block)
+        self.assertIn("packs_dir", block)
+        self.assertNotIn("checks.run", source)
+
 
 class InventoryTest(unittest.TestCase):
     def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):

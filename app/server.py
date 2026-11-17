@@ -24,7 +24,7 @@ from app.scaffold_page import scaffold_page
 from app.scaffold_write import _write_scaffold
 from app.studio_model import _save_studio, _studio_model
 from app.studio_page import studio_page
-from checks.run import (
+from curbcheck.api import (
     _pack_version_dir,
     claims_dir,
     packs_dir,
