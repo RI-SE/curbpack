@@ -260,6 +260,24 @@ class CurbcheckApiTest(unittest.TestCase):
         before_api = source.split("from curbcheck.api import process_exit_code", 1)[0]
         self.assertNotIn("process_exit_code", before_api)
 
+    def test_studio_check_pack_list_uses_the_public_api(self):
+        import inspect
+
+        import studio.check as package
+        import studio.check.check_model as model
+        import studio.check.check_page as page
+        from checks.run import _pack_version_dir as engine_version
+        from checks.run import packs_dir as engine_packs
+        from curbcheck.api import _pack_version_dir as api_version
+        from curbcheck.api import packs_dir as api_packs
+
+        self.assertIs(api_packs, engine_packs)
+        self.assertIs(api_version, engine_version)
+        model_source = inspect.getsource(model)
+        self.assertIn("from curbcheck.api import _pack_version_dir, packs_dir", model_source)
+        for module in (package, model, page):
+            self.assertNotIn("checks.run", inspect.getsource(module))
+
 
 class InventoryTest(unittest.TestCase):
     def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):

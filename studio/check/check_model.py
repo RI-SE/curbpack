@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from checks.run import _pack_version_dir, packs_dir
+from curbcheck.api import _pack_version_dir, packs_dir
 from common.errors import ModelError
 from common.jsonio import read_json
 from common.store import load_run_result
