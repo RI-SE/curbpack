@@ -13,6 +13,7 @@ from checks.run import (
     reports_dir,
     results_dir,
     run_and_write,
+    selected_requirement_ids,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "reports_dir",
     "results_dir",
     "run_and_write",
+    "selected_requirement_ids",
 ]

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from checks.run import _pack_version_dir, packs_dir, reports_dir, results_dir
+from curbcheck.api import _pack_version_dir, packs_dir, reports_dir, results_dir
 from common.errors import ModelError
 from common.jsonio import read_json
 from common.keystore import load_or_create_key, trust_store
@@ -252,7 +252,7 @@ def _chain_for(repo: Path, run_result: dict, trust: dict) -> dict:
 
 
 def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
-    from checks.run import selected_requirement_ids
+    from curbcheck.api import selected_requirement_ids
 
     loaded = []
     root = packs_dir(repo, config)
