@@ -8,7 +8,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from checks.run import _pack_version_dir, claims_dir, packs_dir
+from curbcheck.api import _pack_version_dir, claims_dir, packs_dir
 from common.canonical import version_digest
 from common.errors import ModelError
 from common.jsonio import read_json

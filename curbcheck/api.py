@@ -1,11 +1,12 @@
 """Public Check operations.
 
-Studio Check calls this module. Each name is the existing function in
+Callers use this module. Each name is the existing function in
 ``checks.run``. This module does not run Checks a second way.
 """
 
 from checks.run import (
     _pack_version_dir,
+    claims_dir,
     new_run_result_path,
     packs_dir,
     process_exit_code,
@@ -15,6 +16,7 @@ from checks.run import (
 
 __all__ = [
     "_pack_version_dir",
+    "claims_dir",
     "new_run_result_path",
     "packs_dir",
     "process_exit_code",
