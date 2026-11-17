@@ -292,6 +292,20 @@ class CurbcheckApiTest(unittest.TestCase):
         self.assertNotIn("checks.run", source)
         self.assertNotIn("checks.run", inspect.getsource(editor))
 
+    def test_coverage_mark_reads_results_through_the_public_api(self):
+        import inspect
+
+        import claims.ui.coverage as coverage
+        from checks.run import results_dir as engine
+        from claims.ui.coverage import load_run
+        from curbcheck.api import results_dir as api
+
+        self.assertIs(api, engine)
+        source = inspect.getsource(load_run)
+        self.assertIn("from curbcheck.api import results_dir", source)
+        self.assertNotIn("checks.run", source)
+        self.assertNotIn("checks.run", inspect.getsource(coverage))
+
 
 class InventoryTest(unittest.TestCase):
     def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):

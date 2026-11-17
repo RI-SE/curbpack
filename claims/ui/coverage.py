@@ -18,7 +18,7 @@ def load_run(repo: Path) -> dict | None:
     if not config_path.is_file():
         return None
     try:
-        from checks.run import results_dir
+        from curbcheck.api import results_dir
         from common.jsonio import read_json
         from common.validate import validate_curbpack_config
 
