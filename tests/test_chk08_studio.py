@@ -216,6 +216,21 @@ class ReviewCompileTest(unittest.TestCase):
                 httpd.server_close()
 
 
+class CurbcheckApiTest(unittest.TestCase):
+    def test_studio_check_runs_through_the_public_api(self):
+        import inspect
+
+        from checks.run import run_and_write as engine
+        from curbcheck.api import run_and_write as api
+        from studio.check.check_model import _run_check
+
+        self.assertIs(api, engine)
+        source = inspect.getsource(_run_check)
+        self.assertIn("from curbcheck.api import run_and_write", source)
+        before_api = source.split("from curbcheck.api import run_and_write", 1)[0]
+        self.assertNotIn("run_and_write", before_api)
+
+
 class InventoryTest(unittest.TestCase):
     def test_listed_studio_tests_do_not_pass_a_packs_directory_packs_root(self):
         root = Path(__file__).resolve().parents[1]

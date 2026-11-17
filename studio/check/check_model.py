@@ -117,8 +117,9 @@ def _run_check(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
     from app.server import _registered_repo_path
-    from checks.run import new_run_result_path, results_dir, run_and_write
+    from checks.run import new_run_result_path, results_dir
     from common.validate import validate_curbpack_config
+    from curbcheck.api import run_and_write
     from discovery.door import set_open_repo
 
     repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
