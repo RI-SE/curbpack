@@ -131,7 +131,7 @@ def requirement_for_binding(
     """
     if timestamp:
         return _requirement_in_working_copy(workspace, pack_id, timestamp, namespace, requirement_id)
-    from checks.run import _pack_version_dir, packs_dir
+    from curbcheck.api import _pack_version_dir, packs_dir
     from common.store import load_pack_directory
 
     path = repo / "curbpack.json"
