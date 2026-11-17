@@ -1111,6 +1111,16 @@ def _pack_query(params: dict) -> str:
     return f"repo={quote(repo, safe='')}&pack={quote(pack, safe='')}"
 
 
+def _open_copy_query(params: dict) -> str:
+    """Working-copy timestamp when this request is not aimed at a repository pack."""
+    if (params.get("pack") or [""])[0].strip():
+        return ""
+    stamp = (params.get("timestamp") or [""])[0].strip()
+    if not stamp:
+        return ""
+    return f"timestamp={quote(stamp, safe='')}"
+
+
 def _locate_repo_pack(ws: Workspace, pack_id: str, repo_id: str = "") -> tuple[str, Path, dict] | None:
     """Pack named in a registered repo's curbpack.json, with its pack.json."""
     if not pack_id:
@@ -1436,7 +1446,7 @@ def _requirement_editor_for_error(exc: ModelError, form: dict | None = None) -> 
     params = [f"error={quote(message, safe='')}"]
     if field in form_fields:
         params.append(f"invalid={quote(field, safe='')}")
-    extra = _pack_query(form or {})
+    extra = _pack_query(form or {}) or _open_copy_query(form or {})
     if extra:
         params.append(extra)
     return f"/requirements/requirement/{quote(requirement_id, safe='')}?{'&'.join(params)}"

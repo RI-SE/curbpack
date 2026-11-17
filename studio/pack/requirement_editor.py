@@ -146,7 +146,7 @@ def _editor_message(query: dict) -> str:
 def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> str | bytes:
     from urllib.parse import quote
 
-    from app.server import _open_requirement, _pack_query
+    from app.server import _open_copy_query, _open_requirement, _pack_query
     from requirements.ownership import in_target_namespace, take_ownership
     from requirements.workspace import mark_selected
     from studio.pack.pages import ownership_confirmation_page
@@ -157,7 +157,7 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
     namespace_base, packs = _namespace_base_for_edit(ws, form)
     if not in_target_namespace(pack, namespace_base):
         if (form.get("take_ownership") or [""])[0] != "1":
-            query = _pack_query(form)
+            query = _pack_query(form) or _open_copy_query(form)
             cancel = f"/requirements/requirement/{quote(requirement_id, safe='')}"
             if query:
                 cancel = f"{cancel}?{query}"
@@ -189,7 +189,7 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
         edited,
         expected_digest=(form.get("expected_digest") or [""])[0],
     )
-    extra = _pack_query(form)
+    extra = _pack_query(form) or _open_copy_query(form)
     suffix = f"?{extra}&saved=1" if extra else "?saved=1"
     return f"/requirements/requirement/{requirement_id}{suffix}"
 

@@ -590,6 +590,16 @@ def _bound_pack_fields(model: dict) -> str:
     )
 
 
+def _working_copy_identity(model: dict) -> str:
+    """The open working copy, so the save POST checks that copy's digest."""
+    if str(model.get("bound_pack") or "").strip():
+        return ""
+    stamp = str(model.get("copy_timestamp") or "").strip()
+    if not stamp:
+        return ""
+    return f'<input type="hidden" name="timestamp" value="{html.escape(stamp)}">'
+
+
 def _pack_edit_form(model: dict) -> str:
     repo = str(model.get("edit_repo") or "")
     pack = str(model.get("edit_pack") or "")
@@ -1385,6 +1395,7 @@ if (fields) {
 {_source_fields(source, invalid)}
 {_hint_fields(hints)}
 <input type="hidden" name="expected_digest" value="{html.escape(str(model.get("expected_digest") or ""))}">
+{_working_copy_identity(model)}
 {_bound_pack_fields(model)}
 </fieldset>
 <p class="actions editor-actions">

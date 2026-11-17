@@ -25,7 +25,7 @@ from discovery.door import set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.editing import apply_edits
 from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
-from requirements.workspace import create_extraction_copy
+from requirements.workspace import create_extraction_copy, mark_selected
 from studio.pack.pages import editor_page
 
 
@@ -508,6 +508,120 @@ class TakeOwnershipImpactTest(unittest.TestCase):
             self.assertEqual(run_result.read_bytes(), run_bytes)
             self.assertEqual(report.read_bytes(), report_bytes)
             self.assertFalse(any("queue" in path.name for path in root.rglob("*")))
+
+    def test_save_posts_the_open_working_copy_not_the_selected_one(self):
+        """The save form names the open copy, and its digest is checked against that copy."""
+        selected_pack = draft_pack()
+        foreign_pack = draft_pack()
+        foreign_pack["name"] = "Imported"
+        foreign_pack["namespace"] = "OTHER/Imported"
+        selected_requirement = extract_annex_vii_risk()
+        selected_requirement["namespace"] = selected_pack["namespace"]
+        selected_requirement["pack_id"] = selected_pack["id"]
+        selected_requirement["note"] = "Selected note."
+        foreign_requirement = extract_annex_vii_risk()
+        foreign_requirement["namespace"] = foreign_pack["namespace"]
+        foreign_requirement["pack_id"] = foreign_pack["id"]
+        foreign_requirement["note"] = "Foreign note."
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selected_stamp = "2026-10-13T090000Z"
+            foreign_stamp = "2026-10-13T080000Z"
+            selected = create_extraction_copy(root, selected_pack["id"], selected_pack, at=selected_stamp)
+            foreign = create_extraction_copy(root, foreign_pack["id"], foreign_pack, at=foreign_stamp)
+            save_requirement(selected, selected_requirement)
+            save_requirement(foreign, foreign_requirement)
+            mark_selected(root, selected_pack["id"], selected_stamp)
+            stored = load_requirement(foreign / f"{foreign_requirement['id']}.json")
+            claim = build_claim(
+                claim_id="claim-source",
+                requirement=stored,
+                source="documents",
+                args={"path": "docs/source.md"},
+                checks=[{"check": "exist", "args": {"paths": ["docs/source.md"]}}],
+                description="The file is the evidence for the source Requirement.",
+            )
+            product = root / "product"
+            write_claim(product / "curbpack" / "claims", claim)
+            write_json(
+                product / "curbpack.json",
+                {
+                    "packs": [foreign_pack["id"]],
+                    "packs_dir": "curbpack/packs",
+                    "claims_dir": "curbpack/claims",
+                    "results_dir": "curbpack/results",
+                    "reports_dir": "curbpack/reports",
+                    "namespace_base": "RISE",
+                    "search_hints": {},
+                },
+            )
+            save_repos(root, add_repo(root, load_repos(root), name="alpha", path="product"))
+            set_open_repo(root, "alpha")
+            selected_bytes = _file_bytes(selected)
+            foreign_bytes = _file_bytes(foreign)
+            claim_bytes = (product / "curbpack" / "claims" / "claim-source.json").read_bytes()
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            try:
+                page = _get(
+                    base
+                    + f"/requirements/requirement/{stored['id']}?timestamp={foreign_stamp}"
+                )
+                form = _save_form(page)
+                self.assertEqual(_input(form, "timestamp"), foreign_stamp)
+                self.assertEqual(_input(form, "expected_digest"), version_digest(stored))
+                asked = _post(
+                    base + f"/requirements/requirement/{stored['id']}",
+                    {
+                        "present": "note",
+                        "note": "Ownership note.",
+                        "timestamp": _input(form, "timestamp"),
+                        "expected_digest": _input(form, "expected_digest"),
+                    },
+                )
+                self.assertIn("Take ownership of this Pack?", asked)
+                self.assertIn(f'timestamp={foreign_stamp}', html.unescape(_href(asked, "Cancel")))
+                confirmation = _save_form(asked)
+                self.assertEqual(_input(confirmation, "timestamp"), foreign_stamp)
+                self.assertEqual(_input(confirmation, "expected_digest"), version_digest(stored))
+                self.assertEqual(_input(confirmation, "take_ownership"), "1")
+                rejected = _post(
+                    base + f"/requirements/requirement/{stored['id']}",
+                    {
+                        "present": "note",
+                        "note": "Ownership note.",
+                        "timestamp": foreign_stamp,
+                        "expected_digest": "0" * 64,
+                        "take_ownership": "1",
+                    },
+                )
+                self.assertIn("Field Version: expected the digest read before this save", rejected)
+                self.assertIn("Namespace <code>OTHER/Imported</code>", rejected)
+                self.assertEqual(_input(_save_form(rejected), "timestamp"), foreign_stamp)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            self.assertEqual(_file_bytes(selected), selected_bytes)
+            self.assertEqual(_file_bytes(foreign), foreign_bytes)
+            self.assertEqual(
+                (product / "curbpack" / "claims" / "claim-source.json").read_bytes(),
+                claim_bytes,
+            )
+
+
+def _file_bytes(directory: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(directory).as_posix(): path.read_bytes()
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _save_form(page: str) -> str:
+    start = page.index('<form method="post" action="/requirements/requirement/')
+    return page[start : page.index("</form>", start)]
 
 
 def _pack(pack_id: str, name: str) -> dict:
