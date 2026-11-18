@@ -434,6 +434,19 @@ class ReviewPresentTest(unittest.TestCase):
             self.assertIs(backend, kept)
             self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
 
+    def test_report_inspection_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.compile import same_run as kept_same
+        from review.compile import unchecked_requirement_ids as kept_unchecked
+        from studio.review.impl.present import same_run as backend_same
+        from studio.review.impl.present import unchecked_requirement_ids as backend_unchecked
+
+        self.assertIs(backend_same, kept_same)
+        self.assertIs(backend_unchecked, kept_unchecked)
+        for function in (backend_same, backend_unchecked):
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(function).replace("\\", "/"))
+
 
 if __name__ == "__main__":
     unittest.main()

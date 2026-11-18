@@ -19,6 +19,7 @@ from studio.review.impl import (
     save_report_signature,
     sign_report,
 )
+from studio.review.impl.present import same_run, unchecked_requirement_ids
 
 NOT_A_LEGAL_CONCLUSION = "A passing check does not mean the legal requirement is fulfilled."
 NO_CRA_FIELD = "This report has no field for a conclusion that the product meets CRA."
@@ -38,18 +39,3 @@ def worktree_sentence(run_result: dict) -> str:
     if run_result.get("worktree") == "clean":
         return "The worktree was clean."
     return ""
-
-
-def same_run(report: dict, run_result: dict) -> bool:
-    if not isinstance(report, dict) or not isinstance(run_result, dict):
-        return False
-    return report.get("run_result") == run_result
-
-
-def unchecked_requirement_ids(selected_ids: list[str], report: dict) -> list[str]:
-    checked = {
-        claim.get("requirement_id")
-        for claim in (report.get("claims") or [])
-        if isinstance(claim, dict) and isinstance(claim.get("requirement_id"), str)
-    }
-    return [requirement_id for requirement_id in selected_ids if requirement_id not in checked]

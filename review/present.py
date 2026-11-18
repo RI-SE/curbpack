@@ -22,8 +22,10 @@ from studio.review.impl.present import (
     path_state,
     present_compiled_report,
     present_raw_run,
+    same_run,
     seal_forces_open,
     seal_label,
+    unchecked_requirement_ids,
 )
 
 __all__ = [
@@ -45,6 +47,8 @@ __all__ = [
     "path_state",
     "present_compiled_report",
     "present_raw_run",
+    "same_run",
     "seal_forces_open",
     "seal_label",
+    "unchecked_requirement_ids",
 ]

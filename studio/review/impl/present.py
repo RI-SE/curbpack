@@ -26,6 +26,21 @@ NO_SIGNED = "No signed block and no signed Git commit"
 BYTES_CHANGED = "The current bytes are not the digest that was signed"
 
 
+def same_run(report: dict, run_result: dict) -> bool:
+    if not isinstance(report, dict) or not isinstance(run_result, dict):
+        return False
+    return report.get("run_result") == run_result
+
+
+def unchecked_requirement_ids(selected_ids: list[str], report: dict) -> list[str]:
+    checked = {
+        claim.get("requirement_id")
+        for claim in (report.get("claims") or [])
+        if isinstance(claim, dict) and isinstance(claim.get("requirement_id"), str)
+    }
+    return [requirement_id for requirement_id in selected_ids if requirement_id not in checked]
+
+
 def seal_label(reading: dict | None) -> str:
     if not isinstance(reading, dict):
         return ""
