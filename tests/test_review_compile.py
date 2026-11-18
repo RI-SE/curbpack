@@ -411,5 +411,29 @@ class CompileImplTest(unittest.TestCase):
             self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
 
 
+class ReviewPresentTest(unittest.TestCase):
+    def test_review_read_model_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.present import PREVIOUS_UNKNOWN as kept_unknown
+        from review.present import present_compiled_report as kept_compiled
+        from review.present import present_raw_run as kept_raw
+        from review.present import seal_label as kept_label
+        from studio.review.impl.present import PREVIOUS_UNKNOWN as backend_unknown
+        from studio.review.impl.present import present_compiled_report as backend_compiled
+        from studio.review.impl.present import present_raw_run as backend_raw
+        from studio.review.impl.present import seal_label as backend_label
+
+        self.assertIs(backend_unknown, kept_unknown)
+        pairs = (
+            (backend_label, kept_label),
+            (backend_raw, kept_raw),
+            (backend_compiled, kept_compiled),
+        )
+        for backend, kept in pairs:
+            self.assertIs(backend, kept)
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
+
+
 if __name__ == "__main__":
     unittest.main()
