@@ -167,5 +167,16 @@ class ClaimsTest(unittest.TestCase):
         self.assertEqual(loaded["requirement_digest"], "recorded-digest")
 
 
+class BindBackendTest(unittest.TestCase):
+    def test_binding_lives_in_the_claim_backend(self):
+        import inspect
+
+        from claims.bind import build_claim as kept
+        from studio.claim.impl.bind import build_claim as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/claim/impl/bind.py", inspect.getsourcefile(backend).replace("\\", "/"))
+
+
 if __name__ == "__main__":
     unittest.main()
