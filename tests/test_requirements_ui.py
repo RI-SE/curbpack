@@ -265,7 +265,7 @@ class RequirementsUiTest(unittest.TestCase):
                     _post(base + "/requirements/publish", {"version": "0.1.0"})
                 self.assertEqual(_bytes(created["copy"]), copy_after_publish)
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _fake_model_complete,
                 ):
                     page = _post(
@@ -307,7 +307,7 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertEqual(stages, {"interpret", "discovery_hints"})
                 release_before = _bytes(release)
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _failing_complete,
                 ):
                     failed_page = _post(
@@ -741,7 +741,7 @@ class RepoPackSectionsTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _fake_model_complete,
                 ):
                     page = _post(

@@ -227,3 +227,17 @@ class WorkingCopySelectionTest(unittest.TestCase):
         self.assertEqual(self.selected_copy(root, "cra-baseline"), second)
         second.rename(second.parent / "gone")
         self.assertIsNone(self.selected_copy(root, "cra-baseline"))
+
+
+class ExtractBackendTest(unittest.TestCase):
+    def test_extract_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.extract.adapter import load_adapter as kept
+        from studio.pack.impl.extract.adapter import load_adapter as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/extract/adapter.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )
