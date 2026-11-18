@@ -364,9 +364,17 @@ class CompileImplTest(unittest.TestCase):
 
         self.assertIs(backend_compile, engine_compile)
         self.assertIs(backend_write, engine_write)
+        for function in (backend_compile, backend_write):
+            self.assertIn("studio/compile/impl/", inspect.getsourcefile(function).replace("\\", "/"))
         source = inspect.getsource(_compile_review)
         self.assertIn("from studio.compile.impl import compile_report, write_report", source)
         self.assertNotIn("review.compile", source)
+        kept = inspect.getsource(__import__("review.compile", fromlist=["record_decision"]))
+        self.assertNotIn("def compile_report", kept)
+        self.assertNotIn("def write_report", kept)
+        self.assertNotIn("def validate_report", kept)
+        self.assertIn("def record_decision", kept)
+        self.assertIn("def sign_report", kept)
 
 
 if __name__ == "__main__":
