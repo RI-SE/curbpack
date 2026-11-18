@@ -382,8 +382,33 @@ class CompileImplTest(unittest.TestCase):
         self.assertNotIn("def validate_report", kept)
         self.assertNotIn("def load_report", kept)
         self.assertNotIn("def replace_saved_report", kept)
-        self.assertIn("def record_decision", kept)
-        self.assertIn("def sign_report", kept)
+        self.assertNotIn("def record_decision", kept)
+        self.assertNotIn("def sign_report", kept)
+
+    def test_review_decision_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.compile import read_report_signature as kept_read
+        from review.compile import record_decision as kept_decision
+        from review.compile import save_report_decision as kept_save_decision
+        from review.compile import save_report_signature as kept_save_signature
+        from review.compile import sign_report as kept_sign
+        from studio.review.impl import read_report_signature as backend_read
+        from studio.review.impl import record_decision as backend_decision
+        from studio.review.impl import save_report_decision as backend_save_decision
+        from studio.review.impl import save_report_signature as backend_save_signature
+        from studio.review.impl import sign_report as backend_sign
+
+        pairs = (
+            (backend_decision, kept_decision),
+            (backend_sign, kept_sign),
+            (backend_save_decision, kept_save_decision),
+            (backend_save_signature, kept_save_signature),
+            (backend_read, kept_read),
+        )
+        for backend, kept in pairs:
+            self.assertIs(backend, kept)
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
 
 
 if __name__ == "__main__":
