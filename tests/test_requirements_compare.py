@@ -403,3 +403,14 @@ class ExtractReviewPageTest(unittest.TestCase):
         self.assertEqual(saved["note"], "from extraction")
         self.assertEqual(saved["remediation_hint"], "keep this")
         self.assertEqual(read_selection(root)["timestamp"], working.name)
+
+
+class CompareBackendTest(unittest.TestCase):
+    def test_compare_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.compare import compare_copies as kept
+        from studio.pack.impl.compare import compare_copies as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/pack/impl/compare.py", inspect.getsourcefile(backend).replace("\\", "/"))
