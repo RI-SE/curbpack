@@ -7,7 +7,7 @@ from pathlib import Path
 
 from common.canonical import version_digest
 from common.errors import ModelError
-from common.jsonio import write_json
+from common.jsonio import read_json, write_json
 from common.validate import validate_claim, validate_requirement, validate_run_result
 from review.gitseal import read_claim_signature
 
@@ -79,6 +79,17 @@ def validate_report(obj: object) -> dict:
 
 def write_report(path: Path, report: dict) -> None:
     write_json(path, validate_report(report))
+
+
+def load_report(path: Path) -> dict:
+    return validate_report(read_json(path))
+
+
+def replace_saved_report(path: Path, report: dict, *, confirm: bool) -> None:
+    """Write an unsigned report. An existing file is replaced only after confirmation."""
+    if path.is_file() and not confirm:
+        raise ModelError("review report", "confirm", "confirmation before replacing the saved report")
+    write_report(path, report)
 
 
 def signature_appendix(

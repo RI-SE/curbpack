@@ -364,7 +364,14 @@ class CompileImplTest(unittest.TestCase):
 
         self.assertIs(backend_compile, engine_compile)
         self.assertIs(backend_write, engine_write)
-        for function in (backend_compile, backend_write):
+        from review.compile import load_report as kept_load
+        from review.compile import replace_saved_report as kept_replace
+        from studio.compile.impl import load_report as backend_load
+        from studio.compile.impl import replace_saved_report as backend_replace
+
+        self.assertIs(backend_load, kept_load)
+        self.assertIs(backend_replace, kept_replace)
+        for function in (backend_compile, backend_write, backend_load, backend_replace):
             self.assertIn("studio/compile/impl/", inspect.getsourcefile(function).replace("\\", "/"))
         source = inspect.getsource(_compile_review)
         self.assertIn("from studio.compile.impl import compile_report, write_report", source)
@@ -373,6 +380,8 @@ class CompileImplTest(unittest.TestCase):
         self.assertNotIn("def compile_report", kept)
         self.assertNotIn("def write_report", kept)
         self.assertNotIn("def validate_report", kept)
+        self.assertNotIn("def load_report", kept)
+        self.assertNotIn("def replace_saved_report", kept)
         self.assertIn("def record_decision", kept)
         self.assertIn("def sign_report", kept)
 

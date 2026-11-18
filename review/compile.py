@@ -6,10 +6,15 @@ import copy
 from pathlib import Path
 
 from common.errors import ModelError
-from common.jsonio import read_json
 from common.signing import read_signature, sign_object
 from review.gitseal import git_commit_signature
-from studio.compile.impl import compile_report, validate_report, write_report
+from studio.compile.impl import (
+    compile_report,
+    load_report,
+    replace_saved_report,
+    validate_report,
+    write_report,
+)
 from studio.compile.impl.report import signature_appendix
 
 NOT_A_LEGAL_CONCLUSION = "A passing check does not mean the legal requirement is fulfilled."
@@ -32,21 +37,10 @@ def worktree_sentence(run_result: dict) -> str:
     return ""
 
 
-def load_report(path: Path) -> dict:
-    return validate_report(read_json(path))
-
-
 def same_run(report: dict, run_result: dict) -> bool:
     if not isinstance(report, dict) or not isinstance(run_result, dict):
         return False
     return report.get("run_result") == run_result
-
-
-def replace_saved_report(path: Path, report: dict, *, confirm: bool) -> None:
-    """Write an unsigned report. An existing file is replaced only after confirmation."""
-    if path.is_file() and not confirm:
-        raise ModelError("review report", "confirm", "confirmation before replacing the saved report")
-    write_report(path, report)
 
 
 def save_report_decision(path: Path, text: str) -> dict:
