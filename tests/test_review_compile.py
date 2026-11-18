@@ -410,6 +410,23 @@ class CompileImplTest(unittest.TestCase):
             self.assertIs(backend, kept)
             self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
 
+    def test_durable_report_path_lives_in_review(self):
+        import inspect
+
+        from review.compile import durable_report_path as kept_path
+        from studio.review.impl.path import durable_report_path as review_path
+
+        self.assertIs(review_path, kept_path)
+        self.assertIn(
+            "studio/review/impl/path.py",
+            inspect.getsourcefile(review_path).replace("\\", "/"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(
+                review_path(Path(tmp)),
+                Path(tmp) / "docs" / "reports" / "review-report.json",
+            )
+
 
 class ReviewPresentTest(unittest.TestCase):
     def test_review_read_model_lives_in_the_review_backend(self):

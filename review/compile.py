@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from studio.compile.impl import (
     compile_report,
     load_report,
@@ -20,9 +18,5 @@ from studio.review.impl import (
     sign_report,
 )
 from studio.common.presentation import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
+from studio.review.impl.path import durable_report_path
 from studio.review.impl.present import same_run, unchecked_requirement_ids
-
-
-def durable_report_path(repo: Path) -> Path:
-    """Conventional product-repo report. Not a configuration setting."""
-    return Path(repo) / "docs" / "reports" / "review-report.json"
