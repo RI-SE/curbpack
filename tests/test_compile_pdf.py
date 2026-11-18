@@ -284,6 +284,15 @@ class CompilePdfTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('No Checks executed', self.text())
 
+    def test_pdf_renderer_lives_in_the_compile_backend(self):
+        import inspect
+
+        from compile.pdf import compile_pdf as entry
+        from studio.compile.impl.pdf import compile_pdf as backend
+
+        self.assertIs(entry, backend)
+        self.assertIn('studio/compile/impl/', inspect.getsourcefile(backend).replace('\\', '/'))
+
 
 if __name__ == '__main__':
     unittest.main()
