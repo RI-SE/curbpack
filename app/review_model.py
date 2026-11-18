@@ -19,6 +19,7 @@ from review.compile import (
     save_report_signature,
     unchecked_requirement_ids,
 )
+from studio.review.impl.saved import _confined_review_report_path, _dated_entries
 
 if TYPE_CHECKING:
     from app.server import Workspace
@@ -117,14 +118,6 @@ def _review_file_view(repo: Path, requested: str) -> dict | None:
     except UnicodeDecodeError:
         text = path.read_bytes().decode("utf-8", errors="replace")
     return {"path": wanted, "state": "present", "text": text}
-
-
-def _dated_entries(folder: Path, prefix: str) -> list[dict]:
-    rows = []
-    for path in sorted(folder.glob(f"{prefix}_*.json")):
-        if path.is_file():
-            rows.append({"name": path.name, "path": str(path.resolve())})
-    return rows
 
 
 def _same_as_latest_run(results_folder: Path, report: dict):
@@ -311,25 +304,6 @@ def _compile_review(ws: Workspace, form: dict) -> str:
         f"/review?repo={quote(repo_id, safe='')}&compiled=1"
         f"&report={quote(str(out.resolve()), safe='')}"
     )
-
-
-def _confined_review_report_path(reports_folder: str, requested: str) -> str:
-    if not reports_folder:
-        return ""
-    folder = Path(reports_folder).resolve()
-    wanted = (requested or "").strip()
-    if wanted:
-        path = Path(wanted).resolve()
-        try:
-            path.relative_to(folder)
-        except ValueError:
-            path = None
-        if path is not None and path.is_file() and path.name.startswith("review-report_") and path.name.endswith(".json"):
-            return str(path)
-    dated = sorted(folder.glob("review-report_*.json"))
-    if dated:
-        return str(dated[-1].resolve())
-    return ""
 
 
 def _save_review_decision(ws: Workspace, form: dict) -> str:

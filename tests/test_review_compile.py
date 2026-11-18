@@ -449,6 +449,37 @@ class CompileImplTest(unittest.TestCase):
 
 
 class ReviewPresentTest(unittest.TestCase):
+    def test_saved_report_selection_lives_in_review(self):
+        import inspect
+
+        from app.review_model import _confined_review_report_path
+        from app.review_model import _dated_entries
+        from app.review_model import _review_view
+        from studio.review.impl.saved import _confined_review_report_path as review_confine
+        from studio.review.impl.saved import _dated_entries as review_entries
+
+        self.assertIs(review_entries, _dated_entries)
+        self.assertIs(review_confine, _confined_review_report_path)
+        for function in (review_entries, review_confine):
+            self.assertIn(
+                "studio/review/impl/saved.py",
+                inspect.getsourcefile(function).replace("\\", "/"),
+            )
+        self.assertIn("_dated_entries", inspect.getsource(_review_view))
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            older = folder / "review-report_20260101T000000Z.json"
+            newer = folder / "review-report_20260101T000001Z.json"
+            other = folder / "run-result_20260101T000000Z.json"
+            older.write_text("{}\n", encoding="utf-8")
+            newer.write_text("{}\n", encoding="utf-8")
+            other.write_text("{}\n", encoding="utf-8")
+            listed = review_entries(folder, "review-report")
+            self.assertEqual([row["name"] for row in listed], [older.name, newer.name])
+            self.assertEqual(review_confine(str(folder), str(older)), str(older.resolve()))
+            self.assertEqual(review_confine(str(folder), str(folder.parent / newer.name)), str(newer.resolve()))
+            self.assertEqual(review_confine("", str(newer)), "")
+
     def test_review_read_model_lives_in_the_review_backend(self):
         import inspect
 
