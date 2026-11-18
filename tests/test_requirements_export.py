@@ -326,7 +326,7 @@ class ExportRefusalTest(unittest.TestCase):
         self.assertFalse(any(path.name.startswith(".export-tmp-") for path in self.destination.iterdir()))
 
     def test_failed_overwrite_placement_restores_the_previous_directory(self):
-        from requirements import workspace
+        from studio.pack.impl import workspace
 
         final = self.destination / "cra-baseline"
         final.mkdir()

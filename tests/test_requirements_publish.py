@@ -368,3 +368,17 @@ class PublishPackTest(unittest.TestCase):
             draft_pack(),
             at=at,
         )
+
+
+class WorkspaceBackendTest(unittest.TestCase):
+    def test_workspace_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.workspace import publish_pack as kept
+        from studio.pack.impl.workspace import publish_pack as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/workspace.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )
