@@ -164,6 +164,20 @@ class RequirementsCatalogTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
 
+    def test_catalog_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.catalog import load_catalog as kept
+        from studio.pack.impl.catalog import load_catalog as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/catalog.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(backend(Path(tmp)), {"documents": [], "sources": []})
+
 
 def _get(url: str) -> str:
     with urllib.request.urlopen(url) as response:
