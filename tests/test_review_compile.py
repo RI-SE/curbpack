@@ -453,12 +453,12 @@ class ReviewPresentTest(unittest.TestCase):
         import inspect
 
         from app.review_model import _confined_review_report_path
-        from app.review_model import _dated_entries
-        from app.review_model import _review_view
+        from studio.review.model import _dated_entries as used_entries
+        from studio.review.model import _review_view
         from studio.review.impl.saved import _confined_review_report_path as review_confine
         from studio.review.impl.saved import _dated_entries as review_entries
 
-        self.assertIs(review_entries, _dated_entries)
+        self.assertIs(review_entries, used_entries)
         self.assertIs(review_confine, _confined_review_report_path)
         for function in (review_entries, review_confine):
             self.assertIn(
@@ -479,6 +479,25 @@ class ReviewPresentTest(unittest.TestCase):
             self.assertEqual(review_confine(str(folder), str(older)), str(older.resolve()))
             self.assertEqual(review_confine(str(folder), str(folder.parent / newer.name)), str(newer.resolve()))
             self.assertEqual(review_confine("", str(newer)), "")
+
+    def test_review_page_model_lives_in_review(self):
+        import inspect
+
+        from app.review_model import _review_get
+        from app.review_model import _review_view as kept_view
+        from studio.review.model import _review_file_view
+        from studio.review.model import _review_view as review_view
+
+        self.assertIs(review_view, kept_view)
+        self.assertIn("studio/review/model.py", inspect.getsourcefile(review_view).replace("\\", "/"))
+        self.assertIn("_review_view", inspect.getsource(_review_get))
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "note.txt").write_text("hello\n", encoding="utf-8")
+            self.assertIsNone(_review_file_view(repo, "  "))
+            self.assertEqual(_review_file_view(repo, "/etc/passwd")["state"], "invalid")
+            self.assertEqual(_review_file_view(repo, "missing.txt")["state"], "missing")
+            self.assertEqual(_review_file_view(repo, "note.txt")["text"], "hello\n")
 
     def test_review_read_model_lives_in_the_review_backend(self):
         import inspect

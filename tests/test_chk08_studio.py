@@ -431,12 +431,17 @@ class CurbcheckApiTest(unittest.TestCase):
         self.assertIs(api_version, engine_version)
         self.assertIs(api_selected, engine_selected)
         stripped = [line.strip() for line in inspect.getsource(review).splitlines()]
+        self.assertIn("from curbcheck.api import reports_dir, results_dir", stripped)
+        self.assertNotIn("checks.run", inspect.getsource(review))
+        import studio.review.model as page
+
+        page_lines = [line.strip() for line in inspect.getsource(page).splitlines()]
         self.assertIn(
             "from curbcheck.api import _pack_version_dir, packs_dir, reports_dir, results_dir",
-            stripped,
+            page_lines,
         )
-        self.assertIn("from curbcheck.api import selected_requirement_ids", stripped)
-        self.assertNotIn("checks.run", inspect.getsource(review))
+        self.assertIn("from curbcheck.api import selected_requirement_ids", page_lines)
+        self.assertNotIn("checks.run", inspect.getsource(page))
 
     def test_http_server_pack_directories_use_the_public_api(self):
         import inspect
