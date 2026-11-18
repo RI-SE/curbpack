@@ -293,6 +293,15 @@ class CompilePdfTest(unittest.TestCase):
         self.assertIs(entry, backend)
         self.assertIn('studio/compile/impl/', inspect.getsourcefile(backend).replace('\\', '/'))
 
+    def test_pdf_command_lives_in_the_compile_backend(self):
+        import inspect
+
+        from compile.cli import main as entry
+        from studio.compile.cli import main as backend
+
+        self.assertIs(entry, backend)
+        self.assertIn('studio/compile/cli.py', inspect.getsourcefile(backend).replace('\\', '/'))
+
 
 if __name__ == '__main__':
     unittest.main()
