@@ -427,6 +427,26 @@ class CompileImplTest(unittest.TestCase):
                 Path(tmp) / "docs" / "reports" / "review-report.json",
             )
 
+    def test_compiled_report_path_lives_in_compile(self):
+        import inspect
+
+        from app.review_model import _compile_review
+        from studio.compile.impl.path import _new_review_report_path
+
+        self.assertIn(
+            "studio/compile/impl/path.py",
+            inspect.getsourcefile(_new_review_report_path).replace("\\", "/"),
+        )
+        source = inspect.getsource(_compile_review)
+        self.assertIn("from studio.compile.impl.path import _new_review_report_path", source)
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "reports"
+            path = _new_review_report_path(folder)
+            self.assertEqual(path.parent, folder)
+            self.assertRegex(path.name, r"^review-report_\d{8}T\d{6}Z\.json$")
+            self.assertTrue(folder.is_dir())
+            self.assertFalse(path.exists())
+
 
 class ReviewPresentTest(unittest.TestCase):
     def test_review_read_model_lives_in_the_review_backend(self):

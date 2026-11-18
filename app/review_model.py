@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -274,26 +272,13 @@ def _unchecked_for_repo(repo: Path, config: dict, report: dict) -> list[str]:
     return unchecked_requirement_ids(selected, report)
 
 
-def _new_dated_json(folder: Path, prefix: str) -> Path:
-    folder.mkdir(parents=True, exist_ok=True)
-    while True:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = folder / f"{prefix}_{stamp}.json"
-        if not path.exists():
-            return path
-        time.sleep(1)
-
-
-def _new_review_report_path(folder: Path) -> Path:
-    return _new_dated_json(folder, "review-report")
-
-
 def _compile_review(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
     from app.server import _registered_repo_path, _report_sources_for_repo, _requested_dated, _sync_open_repo
     from common.validate import validate_curbpack_config
     from studio.compile.impl import compile_report, write_report
+    from studio.compile.impl.path import _new_review_report_path
 
     repo_id = _sync_open_repo(ws, form)
     if not repo_id:
