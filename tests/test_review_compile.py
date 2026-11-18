@@ -447,6 +447,26 @@ class ReviewPresentTest(unittest.TestCase):
         for function in (backend_same, backend_unchecked):
             self.assertIn("studio/review/impl/", inspect.getsourcefile(function).replace("\\", "/"))
 
+    def test_shared_sentences_live_outside_the_report(self):
+        import inspect
+
+        from review.compile import NO_CRA_FIELD as kept_field
+        from review.compile import NOT_A_LEGAL_CONCLUSION as kept_conclusion
+        from review.compile import worktree_sentence as kept_sentence
+        from studio.common.presentation import NO_CRA_FIELD as shared_field
+        from studio.common.presentation import NOT_A_LEGAL_CONCLUSION as shared_conclusion
+        from studio.common.presentation import worktree_sentence as shared_sentence
+
+        self.assertIs(shared_conclusion, kept_conclusion)
+        self.assertIs(shared_field, kept_field)
+        self.assertIs(shared_sentence, kept_sentence)
+        self.assertIn(
+            "studio/common/presentation.py",
+            inspect.getsourcefile(shared_sentence).replace("\\", "/"),
+        )
+        self.assertEqual(shared_sentence({"worktree": "clean"}), "The worktree was clean.")
+        self.assertIn("not verification of that commit", shared_sentence({"worktree": "dirty"}))
+
 
 if __name__ == "__main__":
     unittest.main()

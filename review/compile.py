@@ -19,23 +19,10 @@ from studio.review.impl import (
     save_report_signature,
     sign_report,
 )
+from studio.common.presentation import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 from studio.review.impl.present import same_run, unchecked_requirement_ids
-
-NOT_A_LEGAL_CONCLUSION = "A passing check does not mean the legal requirement is fulfilled."
-NO_CRA_FIELD = "This report has no field for a conclusion that the product meets CRA."
 
 
 def durable_report_path(repo: Path) -> Path:
     """Conventional product-repo report. Not a configuration setting."""
     return Path(repo) / "docs" / "reports" / "review-report.json"
-
-
-def worktree_sentence(run_result: dict) -> str:
-    """Page copy. It is not stored on the report."""
-    if not isinstance(run_result, dict):
-        return ""
-    if run_result.get("worktree") == "dirty":
-        return "This result is not verification of that commit's content."
-    if run_result.get("worktree") == "clean":
-        return "The worktree was clean."
-    return ""
