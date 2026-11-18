@@ -14,14 +14,12 @@ from common.keystore import load_or_create_key, trust_store
 from common.store import load_claims, load_pack_directory, load_run_result
 from discovery.door import claim_file_relative, repo_claims_dir
 from review.compile import (
-    compile_report,
     load_report,
     read_report_signature,
     same_run,
     save_report_decision,
     save_report_signature,
     unchecked_requirement_ids,
-    write_report,
 )
 
 if TYPE_CHECKING:
@@ -295,6 +293,7 @@ def _compile_review(ws: Workspace, form: dict) -> str:
 
     from app.server import _registered_repo_path, _report_sources_for_repo, _requested_dated, _sync_open_repo
     from common.validate import validate_curbpack_config
+    from studio.compile.impl import compile_report, write_report
 
     repo_id = _sync_open_repo(ws, form)
     if not repo_id:

@@ -352,5 +352,22 @@ def _run(claim: dict, *, worktree: str | None = None, digest_suffix: str | None 
     return run
 
 
+class CompileImplTest(unittest.TestCase):
+    def test_review_compile_calls_the_compile_backend(self):
+        import inspect
+
+        from app.review_model import _compile_review
+        from review.compile import compile_report as engine_compile
+        from review.compile import write_report as engine_write
+        from studio.compile.impl import compile_report as backend_compile
+        from studio.compile.impl import write_report as backend_write
+
+        self.assertIs(backend_compile, engine_compile)
+        self.assertIs(backend_write, engine_write)
+        source = inspect.getsource(_compile_review)
+        self.assertIn("from studio.compile.impl import compile_report, write_report", source)
+        self.assertNotIn("review.compile", source)
+
+
 if __name__ == "__main__":
     unittest.main()
