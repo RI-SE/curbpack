@@ -16,7 +16,7 @@ PF-18 and PF-19 are not in this file. Their product effects stay in `../ctam/doc
 
 Pack ids `house-policy`, `cra-baseline`, and `medtech-iec62304`.
 
-The carried cases use this id. The files are `docs/reference/test-packs/<pack-id>/pack.json` and the requirement files next to it. Claim files for the seven carried cases are copied into the temporary repo's `curbpack/claims/` directory. They are not inside the pack directory.
+The carried cases use this id. On the pinned product the pack files and the claim files are the ones `curbpack.json` names. They are not copied into another directory for the positive run.
 
 ## PF-02
 

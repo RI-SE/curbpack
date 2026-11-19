@@ -43,7 +43,7 @@ _dt_claim_map() {
 }
 
 _dt_all_pass() {
-	jq -e 'all(.claims[]; .status == "pass") and (.claims | length) == 7' "$1" >/dev/null
+	jq -e 'all(.claims[]; .status == "pass") and (.claims | length) == 13' "$1" >/dev/null
 }
 
 dt_001() {
@@ -107,7 +107,7 @@ dt_003() {
 		echo "DT-003 SETUP 6"
 		return 1
 	fi
-	# setup.sh R2 refuses a dirty tree; PF-01 files are untracked until removed.
+	# setup.sh R2 refuses a dirty tree. The product curbpack.json stays.
 	remove_pf01
 
 	dt_003_r2_output=$(SUT=curbpack ./external_test/curbpack/setup.sh R2 --commit)

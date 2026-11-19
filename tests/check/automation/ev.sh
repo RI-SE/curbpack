@@ -50,7 +50,9 @@ ev_001() {
 	if ! printf '%s\n' "$ev_001_check_output" | jq -e '
 		(([.claims[].id] | sort) == [
 			"CRA-ANNEX-VII-MANUAL","CRA-ANNEX-VII-RISK","CRA-ANNEX-VII-SUPPORT",
-			"CRA-ART14-PATH","HOUSE-ANTI-PLACEHOLDER","HOUSE-SECURITY-MD","HOUSE-SECURITY-TXT"
+			"CRA-ART14-PATH","HOUSE-ANTI-PLACEHOLDER","HOUSE-DEP-AXIOS-PIN",
+			"HOUSE-SECRET-PATHS","HOUSE-SECURITY-MD","HOUSE-SECURITY-TXT",
+			"MD-ANTI-PLACEHOLDER","MD-PROBLEM-RESOLUTION","MD-SOUP","MD-SW-CLASS"
 		])
 		and all(.claims[]; .status == "pass")
 	' >/dev/null; then

@@ -70,23 +70,13 @@ _install_studio_packs() {
 	_install_versioned_packs "${CURBPACK_ROOT:?}/docs/reference/test-packs" "$_product/curbpack/packs" "$@"
 }
 
+# The pinned product already carries curbpack.json, packs, and claims.
 install_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	_fixture=$_product/external_test/curbpack
-	_install_versioned_packs "$_fixture/packs" "$_product/curbpack/packs" cra-baseline house-policy medtech-iec62304
-	_write_curbpack "$_product" '{"packs":["cra-baseline","house-policy","medtech-iec62304"]}'
-	mkdir -p "$_product/curbpack/claims"
-	for _cid in \
-		CRA-ANNEX-VII-MANUAL \
-		CRA-ANNEX-VII-RISK \
-		CRA-ANNEX-VII-SUPPORT \
-		CRA-ART14-PATH \
-		HOUSE-ANTI-PLACEHOLDER \
-		HOUSE-SECURITY-MD \
-		HOUSE-SECURITY-TXT
-	do
-		cp "$_fixture/claims/$_cid.json" "$_product/curbpack/claims/$_cid.json"
-	done
+	if [ ! -f "$_product/curbpack.json" ]; then
+		echo "error: reference product has no curbpack.json" >&2
+		return 1
+	fi
 }
 
 # Three house-policy claims. R4 and R5 delete the clone's fixture, so the
@@ -252,21 +242,18 @@ install_house_secret_paths() {
 	done
 }
 
-# Commit PF-01 files so Git reports a clean worktree (PV-001).
+# PF-01 is already committed on the pin. A clean tree needs no extra commit.
 commit_pf01() {
 	_product=${REFERENCE_PRODUCT_ROOT:?}
-	git -C "$_product" add curbpack.json curbpack/claims curbpack/packs
-	git -C "$_product" \
-		-c user.email=curbpack-test@example.com \
-		-c user.name=curbpack-test \
-		commit -m "studio pf01 selection and claims" >/dev/null
+	if [ -n "$(git -C "$_product" status --porcelain)" ]; then
+		echo "error: PF-01 left the reference product dirty" >&2
+		return 1
+	fi
 }
 
-# Drop untracked PF-01 files so setup.sh R2 can require a clean tree.
+# The product file is tracked. Do not delete it between R states.
 remove_pf01() {
-	_product=${REFERENCE_PRODUCT_ROOT:?}
-	rm -f "$_product/curbpack.json"
-	rm -rf "$_product/curbpack/claims" "$_product/curbpack/packs"
+	:
 }
 
 # Run curbcheck; print only the Packs v2 run-result JSON on stdout (summary goes to stderr).
