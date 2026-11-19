@@ -61,6 +61,11 @@ const LABELS = {
     "discovery_hints.path_hints": "Path hints",
     "discovery_hints.sources": "Sources",
 };
+export function compareActionsHtml(cancelHref) {
+    const href = escapeHtml(cancelHref || "/requirements/copy");
+    return ('<button type="submit">Apply</button>' +
+        '<button type="button" class="secondary" data-cancel="' + href + '">Cancel</button>');
+}
 export function renderCompareForm(model) {
     const controls = ('<p><button type="button" id="select-all-old">Select all old</button> '
         + '<button type="button" id="select-all-new">Select all new</button></p>');
@@ -211,10 +216,13 @@ function mount() {
             input.value = value;
             form.append(input);
         }
-        const submit = document.createElement("button");
-        submit.type = "submit";
-        submit.textContent = "Apply";
-        form.append(submit);
+        const actions = document.createElement("p");
+        actions.className = "actions";
+        actions.innerHTML = compareActionsHtml(root.getAttribute("data-cancel"));
+        form.append(actions);
+        actions.querySelector("button[data-cancel]")?.addEventListener("click", () => {
+            location.assign(actions.querySelector("button[data-cancel]").getAttribute("data-cancel"));
+        });
         form.addEventListener("submit", () => {
             const posted = { ...choices };
             if (addition) {

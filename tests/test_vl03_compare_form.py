@@ -305,8 +305,11 @@ class CompareFormPageTest(unittest.TestCase):
             + "/requirements/compare/form?requirement=CRA-ANNEX-VII-RISK"
             + "&proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
         ).read().decode("utf-8")
-        self.assertIn('href="/requirements/copy?proposal=2026-10-13T143000Z&amp;destination=2026-10-13T090000Z"', form)
-        self.assertIn(">Cancel</a>", form)
+        self.assertIn(
+            'data-cancel="/requirements/copy?proposal=2026-10-13T143000Z&amp;destination=2026-10-13T090000Z"',
+            form,
+        )
+        self.assertNotIn(">Cancel</a>", form)
         before = (destination / "CRA-ANNEX-VII-RISK.json").read_bytes()
         urllib.request.urlopen(base + "/requirements/copy?proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z").read()
         self.assertEqual((destination / "CRA-ANNEX-VII-RISK.json").read_bytes(), before)

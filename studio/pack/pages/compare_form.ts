@@ -63,6 +63,16 @@ export function changeOne(
   return { ...state, [name]: side };
 }
 
+export function compareActionsHtml(cancelHref: string): string {
+  const href = escapeHtml(cancelHref || "/requirements/copy");
+  return (
+    '<button type="submit">Apply</button>' +
+    '<button type="button" class="secondary" data-cancel="' +
+    href +
+    '">Cancel</button>'
+  );
+}
+
 export function renderCompareForm(model: {
   current?: Requirement;
   proposed?: Requirement;
@@ -179,10 +189,14 @@ function mount(): void {
         input.value = value;
         form.append(input);
       }
-      const submit = document.createElement("button");
-      submit.type = "submit";
-      submit.textContent = "Apply";
-      form.append(submit);
+      const actions = document.createElement("p");
+      actions.className = "actions";
+      actions.innerHTML = compareActionsHtml(root.getAttribute("data-cancel") || "");
+      form.append(actions);
+      actions.querySelector("button[data-cancel]")?.addEventListener("click", () => {
+        const target = actions.querySelector("button[data-cancel]")?.getAttribute("data-cancel");
+        if (target) location.assign(target);
+      });
       form.addEventListener("submit", () => {
         choice.value = JSON.stringify(choices);
       });

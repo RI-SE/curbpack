@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { changeOne, paint, renderCompareForm, selectAll } from "../studio/pack/pages/compare_form.js";
+import { changeOne, compareActionsHtml, paint, renderCompareForm, selectAll } from "../studio/pack/pages/compare_form.js";
 
 const model = {
   current: {
@@ -159,6 +159,21 @@ function formTree() {
     choice("remediation_hint", "keep this hint", "take this hint"),
   ]);
 }
+
+test("cancel is a button to the right of apply", () => {
+  const html = compareActionsHtml(
+    "/requirements/copy?pack=cra-baseline&repo=cyberready-test-product&section=VII",
+  );
+  const apply = html.indexOf('<button type="submit">Apply</button>');
+  const cancel = html.indexOf('<button type="button" class="secondary" data-cancel="');
+  assert.ok(apply >= 0);
+  assert.ok(cancel > apply);
+  assert.match(
+    html,
+    /data-cancel="\/requirements\/copy\?pack=cra-baseline&amp;repo=cyberready-test-product&amp;section=VII">Cancel<\/button>/,
+  );
+  assert.doesNotMatch(html, /<a[\s>]/);
+});
 
 test("an added requirement is the editor fields, not one JSON blob", () => {
   const html = renderCompareForm({

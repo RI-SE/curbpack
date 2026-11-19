@@ -1119,8 +1119,8 @@ def compare_form_document(query: dict) -> bytes:
         cancel += "?" + urlencode(pairs)
     requirement = html.escape((query.get("requirement") or [""])[0])
     body = (
-        f'<p><a href="{html.escape(cancel)}">Cancel</a></p>'
-        f'<div id="compare-form" data-requirement="{requirement}"></div>'
+        f'<div id="compare-form" data-requirement="{requirement}" '
+        f'data-cancel="{html.escape(cancel)}"></div>'
         '<script type="module" src="/requirements/compare/form.js"></script>'
     )
     return page("Compare", body)

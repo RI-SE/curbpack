@@ -372,7 +372,9 @@ class ExtractReviewPageTest(unittest.TestCase):
             + "/requirements/compare/form?requirement=CRA-ANNEX-VII-RISK"
             + "&proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
         ).read().decode("utf-8")
-        self.assertIn(">Cancel</a>", form_page)
+        self.assertIn('data-cancel="/requirements/copy?proposal=', form_page)
+        self.assertIn("destination=2026-10-13T090000Z", form_page)
+        self.assertNotIn(">Cancel</a>", form_page)
         self.assertIn("/requirements/compare/form.js", form_page)
         payload = json.loads(
             urllib.request.urlopen(
