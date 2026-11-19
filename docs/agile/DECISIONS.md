@@ -70,6 +70,7 @@ The current scope is VR-00 and VL-00 through VL-06.
 Agreed principles:
 
 - Pack and Requirement identities are namespace-qualified.
+- One active, editable copy per qualified Pack identity `(namespace, pack_id)` in the workspace. Curbpack does not keep a parallel version catalog as its own history. Git holds the history of committed content. Curbpack performs no automatic Git operations.
 - `origin` records declared provenance; it is not automatically verified lineage.
 - Editing a Pack from another namespace requires explicit acceptance of ownership of a new local Pack copy.
 - `draft` / `reviewed` status is independent of signing.
@@ -159,6 +160,7 @@ Security defects and confirmed blockers are handled according to their severity 
 
 The following remain undecided and must not be resolved implicitly by coding agents:
 
+- The exact path format of the one active, editable copy per `(namespace, pack_id)`.
 - The exact relationship between editable workspace, Git working tree and branch, including any future user interface.
 - The precise semantics of source rows versus adapter-enumerated legal sections where current behavior does not already establish them.
 - Whether one Extract operation should support multiple sections.
