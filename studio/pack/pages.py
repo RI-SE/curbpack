@@ -930,7 +930,11 @@ def copy_page(model: dict) -> bytes:
         new_cell = ""
         if model.get("comparison"):
             href = str(item.get("changes_href") or "")
-            link = f'<a href="{html.escape(href)}">Changes</a>' if href else ""
+            if href:
+                label = "New" if item.get("changes_only") else "Updates"
+                link = f'<a href="{html.escape(href)}">{label}</a>'
+            else:
+                link = ""
             new_cell = f"<td>{link}</td>"
         rows.append(
             "<tr>"
@@ -942,7 +946,7 @@ def copy_page(model: dict) -> bytes:
         )
     listed = (
         "<table><thead><tr><th>Requirement</th><th>Source references</th><th>Signature</th>"
-        + ("<th>New</th>" if model.get("comparison") else "")
+        + ("<th>Changes</th>" if model.get("comparison") else "")
         + "</tr></thead>"
         "<tbody>"
         + "".join(rows)

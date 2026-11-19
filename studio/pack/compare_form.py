@@ -51,7 +51,8 @@ def comparison_list(ws: Workspace, query: dict) -> dict | None:
     _pack, requirements = load_working_copy(destination)
     _proposal_pack, proposed = load_working_copy(proposal)
     linked = {str(item.get("id") or "") for item in review["updates"]}
-    linked.update(str(item.get("id") or "") for item in review["additions"])
+    addition_ids = {str(item.get("id") or "") for item in review["additions"]}
+    linked.update(addition_ids)
     by_id = {item.get("id"): item for item in requirements}
     for item in proposed:
         if item.get("id") in linked and item.get("id") not in by_id:
@@ -64,6 +65,7 @@ def comparison_list(ws: Workspace, query: dict) -> dict | None:
             for requirement_id in linked
             if requirement_id
         },
+        "additions": addition_ids,
     }
 
 

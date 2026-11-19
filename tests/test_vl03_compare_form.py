@@ -115,13 +115,13 @@ class CompareFormPageTest(unittest.TestCase):
             base
             + "/requirements/copy?proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
         ).read().decode("utf-8")
-        self.assertIn("<th>New</th>", listed)
+        self.assertIn("<th>Changes</th>", listed)
         self.assertIn(
             'href="/requirements/compare/form?requirement=CRA-ANNEX-VII-RISK'
             '&amp;proposal=2026-10-13T143000Z&amp;destination=2026-10-13T090000Z"',
             listed,
         )
-        self.assertIn(">Changes</a>", listed)
+        self.assertIn(">Updates</a>", listed)
         same_row = listed.split("REQ-SAME", 1)[1].split("</tr>", 1)[0]
         self.assertNotIn("Changes", same_row)
         compare = urllib.request.urlopen(base + "/requirements/compare").read().decode("utf-8")
@@ -168,9 +168,9 @@ class CompareFormPageTest(unittest.TestCase):
         self.assertIn("proposal=", location)
         self.assertIn("destination=2026-10-13T090000Z", location)
         imported_list = urllib.request.urlopen(base + location).read().decode("utf-8")
-        self.assertIn("<th>New</th>", imported_list)
+        self.assertIn("<th>Changes</th>", imported_list)
         self.assertIn("CRA-ANNEX-VII-RISK", imported_list)
-        self.assertIn(">Changes</a>", imported_list)
+        self.assertIn(">Updates</a>", imported_list)
         self.assertIn(
             'href="/requirements/requirement/CRA-ANNEX-VII-RISK?timestamp=2026-10-13T090000Z&amp;proposal=',
             imported_list,

@@ -206,10 +206,13 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
 
         rows = _signature_rows(directory, shown_pack, shown_requirements, trust)
     listed = _requirement_rows(directory, requirements, trust)
+    addition_ids = (compared or {}).get("additions") or set()
     for item in listed:
         href = (compared or {}).get("links", {}).get(item["id"], "") if compared else ""
         if href:
             item["changes_href"] = href
+            if item["id"] in addition_ids:
+                item["changes_only"] = True
     pack_query = (_query.get("pack") or [""])[0].strip()
     repo_query = (_query.get("repo") or [""])[0].strip()
     if compared is not None and pack_query:

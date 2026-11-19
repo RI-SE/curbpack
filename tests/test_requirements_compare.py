@@ -363,8 +363,8 @@ class ExtractReviewPageTest(unittest.TestCase):
         )
         self.assertIn("/requirements/copy?", page.geturl())
         body = page.read().decode("utf-8")
-        self.assertIn("<th>New</th>", body)
-        self.assertIn(">Changes</a>", body)
+        self.assertIn("<th>Changes</th>", body)
+        self.assertIn(">Updates</a>", body)
         self.assertNotIn("/vendor/jsondiffpatch.js", body)
         self.assertNotIn("Use the new definition", body)
         form_page = urllib.request.urlopen(

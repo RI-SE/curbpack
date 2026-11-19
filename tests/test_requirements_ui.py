@@ -788,7 +788,8 @@ class RepoPackSectionsTest(unittest.TestCase):
                 listing = _get(
                     base + "/requirements/copy?pack=cra&repo=fixture-product&section=VII"
                 )
-                self.assertIn("<th>New</th>", listing)
+                self.assertIn("<th>Changes</th>", listing)
+                self.assertIn(">New</a>", listing)
                 self.assertIn("Drop Extracted Data", listing)
                 hrefs = re.findall(r'href="(/requirements/compare/form\?[^"]+)"', listing)
                 self.assertTrue(hrefs)
