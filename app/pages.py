@@ -44,7 +44,10 @@ label{display:block;font-size:.78rem;color:var(--muted);margin:.6rem 0 .2rem}
 .ro-field strong,.ro-field a{display:block;margin-top:.15rem;font-size:1rem;font-weight:700;color:var(--ink)}
 .ro-field a{font-weight:400;color:var(--accent);word-break:break-all}
 .identity-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
-.req-identity .identity-bar .field-grid{flex:1;margin:0 0 .75rem;grid-template-columns:repeat(3,max-content);justify-content:start}
+.req-identity .req-kind{margin:0;font-size:1rem}
+.req-identity .req-id{margin:.15rem 0 0}
+.req-identity .identity-bar{margin-bottom:.75rem}
+.req-identity .identity-bar .field-grid{flex:1;margin:0;grid-template-columns:repeat(3,max-content);justify-content:start}
 a.details{display:inline-block;background:#fff;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:.45rem .75rem;text-decoration:none;white-space:nowrap}
 a.details:hover{background:#ecfdf5}
 .req-identity .ref-law{margin:0 0 .75rem}

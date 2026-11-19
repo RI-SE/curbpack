@@ -92,6 +92,7 @@ def requirement_page(model: dict) -> bytes:
     instrument = str(source.get("instrument") or "").strip()
     identifier = str(source.get("identifier") or "").strip()
     law = "\n\n".join(law_passages(requirement))
+    note = str(requirement.get("note") or "").strip()
     findings = _with_claims(
         _ordered(merge_findings(model.get("candidates") or [], model.get("marks") or {})),
         model.get("claims") or [],
@@ -144,7 +145,7 @@ def requirement_page(model: dict) -> bytes:
     <span class="pill">{html.escape(str(model.get('model') or 'not scored'))}</span>
   </div>
 </div>
-{_identity_card(model, instrument, identifier, locator, requirement_id, law, source_url)}
+{_identity_card(model, instrument, identifier, locator, requirement_id, law, note, source_url)}
 {notice}
 {outcomes}
 <h2>Claims ({claim_count})</h2>
@@ -341,20 +342,12 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     if not excerpt:
         excerpt = "No excerpt stored for this finding."
     suggestion_row = "" if item.get("has_claim") else " suggestion-row"
-    rebind = ""
-    if item.get("has_claim"):
-        rebind = (
-            '<form method="post" action="/discover/claims/rebind">'
-            f"{_hidden(model, requirement_id)}"
-            f'<input type="hidden" name="claim_id" value="{html.escape(str(item.get("claim_id") or ""))}">'
-            '<button type="submit">Rebind</button></form>'
-        )
     return f"""
 <tr class="hit-row{suggestion_row}{vote_class}{covered_class}" data-hit="{hit_id}" data-path="{html.escape(path)}">
   <td class="col-toggle">▸</td>
   <td class="col-file">{_evidence_cell(model, requirement_id, item)}{covered_note}</td>
   <td class="col-score">{_score(item)}</td>
-  <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}{rebind}</div></td>
+  <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}</div></td>
   <td class="col-checks"><div class="checks-wrap">{chips}
     <button type="button" class="check-open check-pick">Add check</button>
     <dialog class="checks"{_reopen(model, path)}>
@@ -946,6 +939,7 @@ def _identity_card(
     locator: str,
     requirement_id: str,
     law: str,
+    note: str,
     source_url: str,
 ) -> str:
     fields = "".join(
@@ -957,9 +951,10 @@ def _identity_card(
         )
     )
     law_html = html.escape(law) if law else "No law text on this Requirement."
+    note_html = html.escape(note) if note else "No note on this Requirement."
     url_html = _source_url_field(model, requirement_id, source_url)
     ident = (
-        f'<p class="muted"><code>{html.escape(requirement_id)}</code></p>'
+        f'<p class="req-id"><code>{html.escape(requirement_id)}</code></p>'
         if requirement_id
         else ""
     )
@@ -974,12 +969,17 @@ def _identity_card(
     return (
         '<div class="card req-identity">'
         '<div class="identity-bar">'
-        f'<div class="field-grid">{fields}</div>'
+        "<div>"
+        '<h2 class="req-kind">Requirement</h2>'
+        f"{ident}"
+        "</div>"
         f"{details}"
         "</div>"
-        f"{ident}"
+        f'<div class="field-grid">{fields}</div>'
         '<div class="ref-law-head muted">Law text</div>'
         f'<pre class="ref-law law-flow">{law_html}</pre>'
+        '<div class="ref-law-head muted">Note</div>'
+        f'<pre class="ref-law law-flow">{note_html}</pre>'
         f"{url_html}"
         "</div>"
     )

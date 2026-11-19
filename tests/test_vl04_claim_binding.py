@@ -129,7 +129,7 @@ class ClaimRebindTest(unittest.TestCase):
         self.assertEqual(rebound["pack_id"], changed["pack_id"])
         self.assertEqual(rebound["requirement_id"], changed["id"])
 
-    def test_save_does_not_rebind_and_both_pages_call_rebind(self):
+    def test_save_keeps_the_binding_and_findings_do_not_offer_rebind(self):
         with _server() as (root, base):
             _post(base + "/claims", _new_claim("claim-keep", "REQ-A", "docs/risk-a.md", "Evidence for A."))
             _post(base + "/claims/claim-keep/sign", {"name": "Pilot Reviewer"})
@@ -154,7 +154,8 @@ class ClaimRebindTest(unittest.TestCase):
                 + "/discover/claims/REQ-B?repo=sample-product&source=cra-xml-vii"
                 + "&timestamp=2026-10-14T080000Z"
             )
-            self.assertIn('action="/discover/claims/rebind"', page)
+            self.assertNotIn('action="/discover/claims/rebind"', page)
+            self.assertNotIn(">Rebind</button>", page)
             product_b = next((root / "product").rglob("REQ-B.json"))
             changed = load_requirement(product_b)
             changed["note"] = "Assessed again."

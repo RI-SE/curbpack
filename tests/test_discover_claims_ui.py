@@ -176,7 +176,11 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn(">Instrument</span><strong>CRA</strong>", page)
         self.assertIn(">Identifier</span><strong>CELEX:32024R2847</strong>", page)
         self.assertIn(">Locator</span><strong>VII.3</strong>", page)
+        self.assertIn('<h2 class="req-kind">Requirement</h2>', page)
         self.assertIn("Law text", page)
+        self.assertIn(">Note</div>", page)
+        self.assertIn("No note on this Requirement.", page)
+        self.assertNotIn(">Rebind</button>", page)
         self.assertIn('class="ref-law law-flow"', page)
         self.assertIn('href="/requirements/requirement/REQ-A">Details</a>', page)
         self.assertNotIn("<h2>Requirement text</h2>", page)
@@ -228,6 +232,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                             "law_text": "No placeholder patterns in required security docs.",
                         }
                     ],
+                    "note": "House rule for security documents.",
                     "source": {"url": "file://policies/house-policy.md"},
                 },
                 "candidates": [],
@@ -242,6 +247,8 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             page,
         )
         self.assertIn(">file://policies/house-policy.md</a>", page)
+        self.assertIn("House rule for security documents.", page)
+        self.assertIn('<h2 class="req-kind">Requirement</h2>', page)
         self.assertNotIn('target="_blank"', page)
 
     def test_an_http_url_stays_outside_the_file_viewer(self):
