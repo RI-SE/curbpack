@@ -109,6 +109,7 @@ from studio.pack.extract_abort import _abort_extract
 from studio.pack.extract_review import _apply_extraction_review
 from studio.pack.compare_form import apply_compare_form, compare_form_model, copy_list_target
 from studio.pack.extract_start import _start_extract
+from studio.pack.section_extract import _drop_section_extract
 from studio.pack.inspect_model import _inspect_model, _select_source
 from studio.pack.pack_compare import _apply_compare_form, _compare_model
 from studio.pack.pack_consolidate import _apply_consolidation_form, _consolidate_model
@@ -602,6 +603,9 @@ def make_handler(ws: Workspace):
                 return
             if path == "/requirements/select":
                 self._redirect(_select_working_copy(ws, form))
+                return
+            if path == "/requirements/extract/drop":
+                self._redirect(_drop_section_extract(ws, form))
                 return
             if path == "/requirements/extract":
                 self._redirect(_start_extract(ws, form))

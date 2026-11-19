@@ -172,7 +172,7 @@ class CompareFormPageTest(unittest.TestCase):
         self.assertIn("CRA-ANNEX-VII-RISK", imported_list)
         self.assertIn(">Changes</a>", imported_list)
         self.assertIn(
-            'href="/requirements/requirement/CRA-ANNEX-VII-RISK?timestamp=2026-10-13T090000Z"',
+            'href="/requirements/requirement/CRA-ANNEX-VII-RISK?timestamp=2026-10-13T090000Z&amp;proposal=',
             imported_list,
         )
 
@@ -435,3 +435,79 @@ class CompareFormPageTest(unittest.TestCase):
         self.assertEqual(sorted(path.name for path in destination.glob("*.json")), before)
         copies = list((self.root / "cra-baseline").glob("*/CRA-ANNEX-VII-EXTRA.json"))
         self.assertEqual(len(copies), 2)
+
+    def test_saving_a_current_requirement_returns_to_the_extract_list(self):
+        import urllib.parse
+        import urllib.request
+
+        from common.canonical import version_digest
+        from common.jsonio import write_json
+        from common.store import load_requirement, save_pack, save_requirement
+        from discovery.door import created_curbpack, set_open_repo
+        from discovery.repos import add_repo, load_repos, save_repos
+        from requirements.extract.pipeline import draft_pack, extract_annex_vii_risk
+        from requirements.workspace import create_extraction_copy
+
+        current = extract_annex_vii_risk()
+        extracted = dict(current)
+        extracted["id"] = "REQ-EXTRACTED"
+        extracted["note"] = "From the extract."
+        pack = draft_pack()
+        repo = self.root / "product"
+        repo.mkdir()
+        write_json(
+            repo / "curbpack.json",
+            created_curbpack(namespace_base="RISE", packs=["cra-baseline"]),
+        )
+        pack_dir = repo / "curbpack" / "packs" / "cra-baseline" / pack["version"]
+        save_pack(pack_dir, pack)
+        save_requirement(pack_dir, current)
+        proposal = create_extraction_copy(self.root, "cra-baseline", pack, at="2026-11-19T132441Z")
+        save_requirement(proposal, current)
+        save_requirement(proposal, extracted)
+        save_repos(
+            self.root,
+            add_repo(self.root, load_repos(self.root), name="Product", path=str(repo)),
+        )
+        set_open_repo(self.root, "product")
+        base = self._serve()
+        query = "proposal=2026-11-19T132441Z&pack=cra-baseline&repo=product"
+        listing = urllib.request.urlopen(base + "/requirements/copy?" + query).read().decode("utf-8")
+        self.assertIn("REQ-EXTRACTED", listing)
+        self.assertIn(
+            'href="/requirements/requirement/CRA-ANNEX-VII-RISK?pack=cra-baseline&amp;repo=product&amp;proposal=2026-11-19T132441Z"',
+            listing,
+        )
+        editor = urllib.request.urlopen(
+            base
+            + "/requirements/requirement/CRA-ANNEX-VII-RISK?pack=cra-baseline&repo=product&proposal=2026-11-19T132441Z"
+        ).read().decode("utf-8")
+        self.assertIn(
+            'href="/requirements/copy?proposal=2026-11-19T132441Z&amp;pack=cra-baseline&amp;repo=product"',
+            editor,
+        )
+        digest = version_digest(load_requirement(pack_dir / "CRA-ANNEX-VII-RISK.json"))
+        saved = urllib.request.urlopen(
+            urllib.request.Request(
+                base + "/requirements/requirement/CRA-ANNEX-VII-RISK",
+                data=urllib.parse.urlencode(
+                    {
+                        "repo": "product",
+                        "pack": "cra-baseline",
+                        "proposal": "2026-11-19T132441Z",
+                        "present": "note",
+                        "note": "Edited after extract.",
+                        "expected_digest": digest,
+                    }
+                ).encode("utf-8"),
+                method="POST",
+            )
+        ).read().decode("utf-8")
+        self.assertIn("Saved.", saved)
+        self.assertIn(
+            'href="/requirements/copy?proposal=2026-11-19T132441Z&amp;pack=cra-baseline&amp;repo=product"',
+            saved,
+        )
+        again = urllib.request.urlopen(base + "/requirements/copy?" + query).read().decode("utf-8")
+        self.assertIn("REQ-EXTRACTED", again)
+        self.assertIn("CRA-ANNEX-VII-RISK", again)

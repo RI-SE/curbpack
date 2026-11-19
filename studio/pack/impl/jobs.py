@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -11,6 +12,7 @@ from common.jsonio import read_json, write_json
 from requirements.extract.adapter import load_adapter, section_provisions
 from requirements.extract.produce import proposals_from_producers
 from requirements.workspace import extract_section, mark_selected, mark_source_adapter, selected_copy
+from studio.pack.section_extract import commit_section_extract, open_incoming_section_extract
 
 _LOCK = threading.Lock()
 
@@ -60,7 +62,18 @@ def start_extract_job(
     _save(jobs_dir, job_id, started)
     threading.Thread(
         target=_run_extract,
-        args=(jobs_dir, job_id, root, adapter_dir, section_id, pack, proposals, complete),
+        args=(
+            jobs_dir,
+            job_id,
+            root,
+            adapter_dir,
+            section_id,
+            pack,
+            proposals,
+            complete,
+            dest_repo,
+            dest_pack,
+        ),
         name=f"extract-{job_id}",
         daemon=True,
     ).start()
@@ -105,9 +118,12 @@ def _run_extract(
     pack: dict,
     proposals: list[dict] | None,
     complete: CompleteFn | None,
+    dest_repo: str = "",
+    dest_pack: str = "",
 ) -> None:
     if not _advance(jobs_dir, job_id, stage="start", progress=0.2, line=f"extract {section_id}"):
         return
+    committed = None
     try:
         adapter = load_adapter(adapter_dir / "adapter.json")
         llm_notes = None
@@ -126,6 +142,9 @@ def _run_extract(
             )
         if not _advance(jobs_dir, job_id, stage="assemble", progress=0.8, line="stage 04 assemble"):
             return
+        incoming = None
+        if dest_repo and dest_pack:
+            incoming = open_incoming_section_extract(root, dest_repo, dest_pack, section_id)
         result = extract_section(
             root,
             adapter_dir,
@@ -134,7 +153,12 @@ def _run_extract(
             proposals,
             pack,
             llm_notes=llm_notes,
+            slot=incoming,
         )
+        if incoming is not None:
+            when = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+            final = commit_section_extract(result["copy"], when)
+            committed = (final, when)
     except Exception as exc:
         failed = read_job(jobs_dir, job_id)
         if failed.get("status") == "aborted":
@@ -150,7 +174,6 @@ def _run_extract(
     if read_job(jobs_dir, job_id).get("status") == "aborted":
         return
     mark_source_adapter(root, str(adapter["id"]))
-    base = selected_copy(root, pack["id"])
     done = read_job(jobs_dir, job_id)
     if done.get("status") == "aborted":
         return
@@ -159,13 +182,21 @@ def _run_extract(
     done["activity"] = _ACTIVITY["done"]
     done["progress"] = 1.0
     done.pop("error", None)
-    done["copy_timestamp"] = result["copy"].name
     done["adapter_id"] = adapter["id"]
-    if base is None:
-        mark_selected(root, pack["id"], result["copy"].name)
+    if committed is not None:
+        final, when = committed
+        done["section_extract"] = True
+        done["section_id"] = section_id
+        done["extracted_at"] = when
+        done["log_tail"] = list(done.get("log_tail") or []) + [f"wrote {final}"]
     else:
-        done["base_timestamp"] = base.name
-    done["log_tail"] = list(done.get("log_tail") or []) + [f"wrote {result['copy'].name}"]
+        base = selected_copy(root, pack["id"])
+        done["copy_timestamp"] = result["copy"].name
+        if base is None:
+            mark_selected(root, pack["id"], result["copy"].name)
+        else:
+            done["base_timestamp"] = base.name
+        done["log_tail"] = list(done.get("log_tail") or []) + [f"wrote {result['copy'].name}"]
     _save(jobs_dir, job_id, done)
 
 

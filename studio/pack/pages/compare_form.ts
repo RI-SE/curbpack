@@ -133,7 +133,7 @@ function mount(): void {
   if (!root) return;
   const params = new URLSearchParams(location.search);
   const query = new URLSearchParams();
-  for (const key of ["requirement", "proposal", "destination", "pack", "repo"]) {
+  for (const key of ["requirement", "proposal", "destination", "pack", "repo", "section"]) {
     const value = params.get(key);
     if (value) query.set(key, value);
   }
@@ -170,7 +170,7 @@ function mount(): void {
       choice.type = "hidden";
       choice.name = "choice";
       form.append(choice);
-      for (const key of ["requirement", "proposal", "destination", "pack", "repo"]) {
+      for (const key of ["requirement", "proposal", "destination", "pack", "repo", "section"]) {
         const value = params.get(key);
         if (!value) continue;
         const input = document.createElement("input");

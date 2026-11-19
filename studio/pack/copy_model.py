@@ -86,21 +86,79 @@ def _repo_pack_copy_model(ws: Workspace, query: dict, pack_id: str) -> dict:
     query_string = _pack_query({"repo": [found_repo], "pack": [pack_id]})
     if section:
         query_string = f"{query_string}&section={quote(section, safe='')}"
+    extracted_at = ""
+    links: dict[str, str] = {}
+    addition_ids: set[str] = set()
+    if section:
+        extracted_at, links, addition_ids = _overlay_section_extract(
+            ws, found_repo, pack_id, section, pack_dir, requirements
+        )
+    rows = _requirement_rows(pack_dir, requirements, trust)
+    for item in rows:
+        href = links.get(str(item.get("id") or ""), "")
+        if href:
+            item["changes_href"] = href
+            if item["id"] in addition_ids:
+                item["changes_only"] = True
     return {
         "adapter_id": "",
         "timestamp": pack_id,
         "pack_dir": str(pack_dir.resolve()),
         "pack_kind": "pack",
         "read_only": False,
-        "requirements": _requirement_rows(pack_dir, requirements, trust),
+        "requirements": rows,
+        "comparison": any(item.get("changes_href") for item in rows),
         "coverage_detail": None,
         "message": "",
         "document_id": pack_id,
         "document_name": str(pack.get("name") or pack_id),
         "repo_id": found_repo,
         "pack_id": pack_id,
+        "section": section,
+        "extracted_at": extracted_at,
         "requirement_query": f"?{query_string}",
     }
+
+
+def _overlay_section_extract(
+    ws: Workspace,
+    repo_id: str,
+    pack_id: str,
+    section: str,
+    pack_dir: Path,
+    requirements: list,
+) -> tuple[str, dict[str, str], set[str]]:
+    """Add this section's latest extract beside the pack requirements."""
+    from app.server import _registered_repo_path
+    from requirements.compare import extraction_review
+    from requirements.workspace import load_working_copy
+    from studio.pack.section_extract import read_section_extract
+
+    found = read_section_extract(_registered_repo_path(ws, repo_id), pack_id, section)
+    if found is None:
+        return "", {}, set()
+    slot, extracted_at = found
+    review = extraction_review(pack_dir, slot)
+    addition_ids = {str(item.get("id") or "") for item in review.get("additions") or []}
+    present = {item.get("id") for item in requirements if isinstance(item, dict)}
+    _proposal_pack, proposed = load_working_copy(slot)
+    for item in proposed:
+        if isinstance(item, dict) and item.get("id") in addition_ids and item.get("id") not in present:
+            requirements.append(item)
+    links = {}
+    for kind in ("updates", "additions"):
+        for item in review.get(kind) or []:
+            requirement_id = str(item.get("id") or "")
+            if requirement_id:
+                links[requirement_id] = "/requirements/compare/form?" + urlencode(
+                    [
+                        ("requirement", requirement_id),
+                        ("pack", pack_id),
+                        ("repo", repo_id),
+                        ("section", section),
+                    ]
+                )
+    return extracted_at, links, addition_ids
 
 
 def _copy_model(ws: Workspace, _query: dict) -> dict:
@@ -155,11 +213,23 @@ def _copy_model(ws: Workspace, _query: dict) -> dict:
     pack_query = (_query.get("pack") or [""])[0].strip()
     repo_query = (_query.get("repo") or [""])[0].strip()
     if compared is not None and pack_query:
-        identity = "?" + urlencode([("pack", pack_query)] + ([("repo", repo_query)] if repo_query else []))
+        pairs = [("pack", pack_query)]
+        if repo_query:
+            pairs.append(("repo", repo_query))
+        for key in ("proposal", "destination"):
+            value = (_query.get(key) or [""])[0].strip()
+            if value:
+                pairs.append((key, value))
+        identity = "?" + urlencode(pairs)
         shown_dir = str(directory.resolve())
         shown_kind = "pack"
     elif compared is not None:
-        identity = "?" + urlencode([("timestamp", directory.name)])
+        pairs = [("timestamp", directory.name)]
+        for key in ("proposal", "destination"):
+            value = (_query.get(key) or [""])[0].strip()
+            if value:
+                pairs.append((key, value))
+        identity = "?" + urlencode(pairs)
         shown_dir = str(directory.resolve())
         shown_kind = "working"
     else:

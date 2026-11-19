@@ -160,7 +160,7 @@ function mount() {
         return;
     const params = new URLSearchParams(location.search);
     const query = new URLSearchParams();
-    for (const key of ["requirement", "proposal", "destination", "pack", "repo"]) {
+    for (const key of ["requirement", "proposal", "destination", "pack", "repo", "section"]) {
         const value = params.get(key);
         if (value)
             query.set(key, value);
@@ -201,7 +201,7 @@ function mount() {
         choice.type = "hidden";
         choice.name = "choice";
         form.append(choice);
-        for (const key of ["requirement", "proposal", "destination", "pack", "repo"]) {
+        for (const key of ["requirement", "proposal", "destination", "pack", "repo", "section"]) {
             const value = params.get(key);
             if (!value)
                 continue;

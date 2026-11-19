@@ -457,8 +457,13 @@ def extract_section(
     *,
     at: str | None = None,
     llm_notes: list | None = None,
+    slot: Path | None = None,
 ) -> dict:
-    """Atomize one ready section into a new working copy. A stub raises first."""
+    """Atomize one ready section into a new working copy. A stub raises first.
+
+    ``slot`` writes that directory instead of allocating a dated workspace copy.
+    The caller supplies an empty directory and publishes it when this returns.
+    """
     extracted = section_provisions(adapter_dir, adapter, section_id)
     provisions = [
         {"locus": item["locus"], "law_text": item["law_text"]}
@@ -466,7 +471,11 @@ def extract_section(
     ]
     source_diagnostics = list(extracted.get("diagnostics") or [])
     requirements, exclusions = assemble_requirements(provisions, proposals, adapter=adapter)
-    copy = create_extraction_copy(root, pack["id"], pack, at=at)
+    if slot is None:
+        copy = create_extraction_copy(root, pack["id"], pack, at=at)
+    else:
+        copy = slot
+        save_pack(copy, pack)
     work = work_directory(copy)
     try:
         for requirement in requirements:

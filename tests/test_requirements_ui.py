@@ -773,28 +773,37 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertEqual(job["status"], "done", job)
                 self.assertEqual(job.get("dest_pack"), "cra")
                 self.assertEqual(job.get("dest_repo"), "fixture-product")
-                self.assertTrue(job.get("copy_timestamp"))
+                self.assertTrue(job.get("section_extract"))
+                self.assertEqual(job.get("section_id"), "VII")
+                self.assertTrue(job.get("extracted_at"))
+                self.assertFalse(job.get("copy_timestamp"))
+                self.assertFalse((root / "selection.json").is_file())
+                slot = repo / ".curbpack" / "extract" / "cra" / "VII"
+                self.assertTrue((slot / "pack.json").is_file())
+                self.assertEqual(
+                    (slot / "extracted-at.txt").read_text(encoding="utf-8").strip(),
+                    job["extracted_at"],
+                )
                 self.assertEqual([path.name for path in pack.glob("*.json")], ["pack.json"])
                 listing = _get(
-                    base
-                    + "/requirements/copy?proposal="
-                    + urllib.parse.quote(job["copy_timestamp"])
-                    + "&pack=cra&repo=fixture-product"
+                    base + "/requirements/copy?pack=cra&repo=fixture-product&section=VII"
                 )
                 self.assertIn("<th>New</th>", listing)
+                self.assertIn("Drop Extracted Data", listing)
                 hrefs = re.findall(r'href="(/requirements/compare/form\?[^"]+)"', listing)
                 self.assertTrue(hrefs)
                 accepted = ""
                 for href in hrefs:
                     query = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query)
+                    self.assertEqual(query["section"][0], "VII")
+                    self.assertNotIn("proposal", query)
                     accepted = _post_form(
                         base + "/requirements/compare/form/apply",
                         {
                             "requirement": query["requirement"][0],
-                            "proposal": query["proposal"][0],
-                            "destination": (query.get("destination") or [""])[0],
                             "pack": query["pack"][0],
                             "repo": query["repo"][0],
+                            "section": query["section"][0],
                             "choice": '{"requirement": "new"}',
                         },
                         doseq=False,
@@ -804,6 +813,14 @@ class RepoPackSectionsTest(unittest.TestCase):
                 saved = json.loads(written[0].read_text(encoding="utf-8"))
                 self.assertEqual(saved["pack_id"], "cra")
                 self.assertIn(">Sign</button>", accepted)
+                self.assertFalse((root / "selection.json").is_file())
+                dropped = _post(
+                    base + "/requirements/extract/drop",
+                    {"repo": "fixture-product", "pack": "cra", "section": "VII"},
+                )
+                self.assertFalse(slot.exists())
+                self.assertNotIn("Drop Extracted Data", dropped)
+                self.assertTrue(written[0].is_file())
             finally:
                 httpd.shutdown()
                 httpd.server_close()

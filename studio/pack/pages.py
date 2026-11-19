@@ -644,12 +644,17 @@ def _section_add_dialog(adapters: list, document: dict) -> str:
 def _bound_pack_fields(model: dict) -> str:
     repo = str(model.get("repo_id") or "")
     pack = str(model.get("bound_pack") or "")
-    if not repo or not pack:
-        return ""
-    return (
-        f'<input type="hidden" name="repo" value="{html.escape(repo)}">'
-        f'<input type="hidden" name="pack" value="{html.escape(pack)}">'
-    )
+    fields = []
+    if repo and pack:
+        fields.append(f'<input type="hidden" name="repo" value="{html.escape(repo)}">')
+        fields.append(f'<input type="hidden" name="pack" value="{html.escape(pack)}">')
+    for key in ("proposal", "destination", "section"):
+        value = str(model.get(key) or "").strip()
+        if value:
+            fields.append(
+                f'<input type="hidden" name="{key}" value="{html.escape(value)}">'
+            )
+    return "".join(fields)
 
 
 def _working_copy_identity(model: dict) -> str:
@@ -911,6 +916,11 @@ def copy_page(model: dict) -> bytes:
             badge = '<button type="button" class="sign-bad" disabled>unsigned</button>'
         if read_only:
             id_cell = f"<code>{html.escape(requirement_id)}</code>"
+        elif item.get("changes_only") and item.get("changes_href"):
+            id_cell = (
+                f'<a href="{html.escape(str(item.get("changes_href") or ""))}">'
+                f"<code>{html.escape(requirement_id)}</code></a>"
+            )
         else:
             query = html.escape(str(model.get("requirement_query") or ""))
             id_cell = (
@@ -956,6 +966,7 @@ def copy_page(model: dict) -> bytes:
 <p class="muted"><a href="/requirements">Pack Sources</a>{_sections_crumb(model)}
  · <code>{html.escape(str(model.get("adapter_id") or ""))}</code></p>
 <h1>Requirements</h1>
+{_drop_extracted(model)}
 {path_line}
 {report}
 {_flash(str(model.get("message") or ""))}
@@ -964,6 +975,25 @@ def copy_page(model: dict) -> bytes:
 """
     return page("Requirements", body)
 
+
+
+def _drop_extracted(model: dict) -> str:
+    """Drop clears the latest section extract. Requirements already saved in the pack stay."""
+    when = str(model.get("extracted_at") or "").strip()
+    section = str(model.get("section") or "").strip()
+    pack = str(model.get("pack_id") or "").strip()
+    if not when or not section or not pack:
+        return ""
+    repo = html.escape(str(model.get("repo_id") or ""))
+    return (
+        '<form method="post" action="/requirements/extract/drop">'
+        f'<input type="hidden" name="repo" value="{repo}">'
+        f'<input type="hidden" name="pack" value="{html.escape(pack)}">'
+        f'<input type="hidden" name="section" value="{html.escape(section)}">'
+        f'<p class="muted">Latest extraction {html.escape(when)}</p>'
+        '<p><button type="submit">Drop Extracted Data</button></p>'
+        "</form>"
+    )
 
 
 def _flash(message: str) -> str:
@@ -1076,7 +1106,7 @@ def compare_form_document(query: dict) -> bytes:
     from urllib.parse import urlencode
 
     pairs = []
-    for key in ("proposal", "destination", "pack", "repo"):
+    for key in ("proposal", "destination", "pack", "repo", "section"):
         value = (query.get(key) or [""])[0]
         if value:
             pairs.append((key, value))
@@ -1527,7 +1557,12 @@ function showJob(job) {{
   const closeButton = document.getElementById("job-close");
   const abortForm = document.getElementById("job-abort");
     if (job.status === "done") {{
-    if (job.dest_pack && job.copy_timestamp) {{
+    if (job.section_extract && job.dest_pack && job.section_id) {{
+      let review = "/requirements/copy?pack=" + encodeURIComponent(job.dest_pack)
+        + "&section=" + encodeURIComponent(job.section_id);
+      if (job.dest_repo) review += "&repo=" + encodeURIComponent(job.dest_repo);
+      location.assign(review);
+    }} else if (job.dest_pack && job.copy_timestamp) {{
       let review = "/requirements/copy?proposal=" + encodeURIComponent(job.copy_timestamp)
         + "&pack=" + encodeURIComponent(job.dest_pack);
       if (job.dest_repo) review += "&repo=" + encodeURIComponent(job.dest_repo);

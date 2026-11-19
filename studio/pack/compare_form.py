@@ -17,14 +17,26 @@ if TYPE_CHECKING:
 
 def copy_list_target(query: dict) -> str:
     """The Requirements list for this Extract or Import pair."""
+    if not comparison_return_pairs(query) and not _query_value(query, "pack"):
+        return "/requirements/copy"
+    return "/requirements/copy?" + urlencode(comparison_return_pairs(query))
+
+
+def comparison_return_pairs(query: dict) -> list[tuple[str, str]]:
+    """Proposal, destination, pack, and repo, in that order, when the request has them."""
     pairs = []
-    for key in ("proposal", "destination", "pack", "repo"):
-        value = (query.get(key) or [""])[0]
+    for key in ("proposal", "destination", "pack", "repo", "section"):
+        value = _query_value(query, key)
         if value:
             pairs.append((key, value))
-    if not pairs:
-        return "/requirements/copy"
-    return "/requirements/copy?" + urlencode(pairs)
+    return pairs
+
+
+def _query_value(query: dict, key: str) -> str:
+    raw = query.get(key) or [""]
+    if isinstance(raw, list):
+        return str(raw[0] if raw else "").strip()
+    return str(raw).strip()
 
 
 def comparison_list(ws: Workspace, query: dict) -> dict | None:
@@ -180,6 +192,9 @@ def _editor_href(ws: Workspace, form: dict, requirement_id: str, destination, pa
         pairs = [("pack", pack_query)]
         if repo_id:
             pairs.append(("repo", repo_id))
+        section_id = (form.get("section") or [""])[0].strip()
+        if section_id:
+            pairs.append(("section", section_id))
         return f"/requirements/requirement/{requirement_id}?" + urlencode(pairs)
     mark_selected(ws.root, str(pack["id"]), destination.name)
     return f"/requirements/requirement/{requirement_id}"
@@ -187,7 +202,7 @@ def _editor_href(ws: Workspace, form: dict, requirement_id: str, destination, pa
 
 def _list_href(form: dict) -> str:
     pairs = []
-    for key in ("proposal", "destination", "pack", "repo"):
+    for key in ("proposal", "destination", "pack", "repo", "section"):
         value = (form.get(key) or [""])[0]
         if value:
             pairs.append((key, value))
@@ -263,13 +278,25 @@ def compare_form_model(ws: Workspace, query: dict) -> dict:
 
 def _pair(ws: Workspace, query: dict):
     """The same destination and proposal directories extract review already uses."""
-    from app.server import _active_adapter, _locate_repo_pack
+    from app.server import _active_adapter, _locate_repo_pack, _registered_repo_path
 
     adapter = _active_adapter(ws)
-    proposal_name = (query.get("proposal") or [""])[0]
+    proposal_name = (query.get("proposal") or [""])[0].strip()
     destination_name = (query.get("destination") or [""])[0]
     pack_id = (query.get("pack") or [""])[0].strip()
     repo_id = (query.get("repo") or [""])[0].strip()
+    section_id = (query.get("section") or [""])[0].strip()
+    if pack_id and section_id and not proposal_name:
+        from studio.pack.section_extract import read_section_extract
+
+        found = _locate_repo_pack(ws, pack_id, repo_id)
+        if found is None:
+            raise ModelError("pack", "id", f"a pack named in curbpack.json, not {pack_id}")
+        found_repo, destination, _pack = found
+        slot = read_section_extract(_registered_repo_path(ws, found_repo), pack_id, section_id)
+        if slot is None:
+            raise ModelError("extract", "section", "a latest extraction for this section")
+        return destination, slot[0]
     proposal = select_working_copy(ws.root, adapter["pack_id"], proposal_name)
     if pack_id:
         found = _locate_repo_pack(ws, pack_id, repo_id)

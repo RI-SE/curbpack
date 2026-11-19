@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
-    from app.server import _open_requirement, _pack_query
+    from app.server import _open_requirement
 
     directory, pack, requirement = _open_requirement(ws, requirement_id, query)
     if requirement is None or directory is None or pack is None:
@@ -80,15 +80,31 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         ],
         "repo_id": (query.get("repo") or [""])[0].strip(),
         "bound_pack": (query.get("pack") or [""])[0].strip(),
+        "proposal": (query.get("proposal") or [""])[0].strip(),
+        "destination": (query.get("destination") or [""])[0].strip(),
+        "section": (query.get("section") or [""])[0].strip(),
         "affected_claims": _affected_claims(ws, query, requirement),
         "ownership_claims": _ownership_claims(ws, query, requirement),
         "claims_repo_id": (query.get("repo") or [""])[0].strip() or (_open_repo(ws) or ""),
-        "list_href": (
-            "/requirements/copy?" + _pack_query(query)
-            if _pack_query(query)
-            else "/requirements/copy"
-        ),
+        "list_href": _list_href(query),
     }
+
+
+def _list_href(query: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _pack_query
+    from studio.pack.compare_form import copy_list_target
+
+    section = (query.get("section") or [""])[0].strip()
+    if (query.get("proposal") or [""])[0].strip():
+        return copy_list_target(query)
+    packed = _pack_query(query)
+    if packed:
+        if section:
+            return f"/requirements/copy?{packed}&section={quote(section, safe='')}"
+        return "/requirements/copy?" + packed
+    return "/requirements/copy"
 
 
 def _open_repo(ws: Workspace) -> str:
@@ -190,6 +206,13 @@ def _save_requirement_form(ws: Workspace, requirement_id: str, form: dict) -> st
         expected_digest=(form.get("expected_digest") or [""])[0],
     )
     extra = _pack_query(form) or _open_copy_query(form)
+    kept = []
+    for key in ("proposal", "destination", "section"):
+        value = (form.get(key) or [""])[0].strip()
+        if value:
+            kept.append(f"{key}={quote(value, safe='')}")
+    if kept:
+        extra = f"{extra}&{'&'.join(kept)}" if extra else "&".join(kept)
     suffix = f"?{extra}&saved=1" if extra else "?saved=1"
     return f"/requirements/requirement/{requirement_id}{suffix}"
 
