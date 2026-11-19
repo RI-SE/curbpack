@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
-from app.pages import _flash, page
+from app.pages import _flash, page, repo_config_panel
+
+_CONFIG_FIELDS = ("config", "packs", "claims", "results", "reports")
 
 
-def cover(_model: dict, message: str = "", error: str = "") -> bytes:
+def cover(model: dict, message: str = "", error: str = "") -> bytes:
+    selected = bool(model.get("repo_id"))
+    panel = repo_config_panel(
+        model,
+        show=_CONFIG_FIELDS if selected else (),
+        title="Current Project",
+        blanks=selected,
+    )
     body = f"""
 <h1>Curbpack Studio</h1>
 <p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
@@ -19,4 +28,4 @@ check regularly → review the result and fix what failed.</p>
 <p><a href="/review">Review — compile and sign review</a></p>
 </div>
 """
-    return page("Curbpack Studio", body)
+    return page("Curbpack Studio", body, banner=panel)

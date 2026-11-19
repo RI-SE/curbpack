@@ -62,13 +62,12 @@ def check_page(
 <p class="muted">Check reads this repository's <code>curbpack.json</code>.
 The file is not signed. A green check row is not a legal conclusion.
 Edit paths on <a href="/project">Project</a>.</p>
-{panel}
 {_flash(message, error)}
 {_curbpack_editor(door)}
 <h2>Report</h2>
 <div class="card">{shown}</div>
 """
-    return page("Check", body)
+    return page("Check", body, banner=panel)
 
 
 def _status_cell(status: object) -> str:

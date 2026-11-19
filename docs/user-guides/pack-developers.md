@@ -16,12 +16,12 @@ Open **Pack Editor** from the Studio cover page.
 
 Create a Pack from source material such as legislation, a standard, or a company policy.
 
-Choose **Add document**.
+Choose **Add Pack Source**.
 
 Enter the information requested by Studio, including:
 
-- a name for the source;
-- its official name;
+- a Pack name, after the namespace prefix from `curbpack.json`;
+- its official document name;
 - the source URL;
 - the adapter used to read it.
 

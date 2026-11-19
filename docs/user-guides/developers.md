@@ -24,9 +24,9 @@ Studio reads `curbpack.json`. A file named `.curbpack.json` is not the selection
 
 ## 2. Select the Pack and repository configuration
 
-Pack Editor (`/requirements`) lists editable Packs. **Add document** asks for the adapter, the document name, the official name and the URL. Saving that document does not extract, sign, or publish. The page says the adapter cannot be changed later. A second adapter means a second document.
+Pack Editor (`/requirements`) lists editable Packs by Pack name, official name and adapter. The Pack name shown is the namespace. **Add Pack Source** asks for the adapter, the Pack name and the official document name and the URL. The Pack name field shows `namespace_base` from `curbpack.json` in front of the name. That prefix is not editable. A Pack name whose namespace or id is already listed in that file is refused. Saving does not extract, sign, or publish. A second adapter means a second Pack.
 
-**Edit** opens that Pack's sources. **Add section** registers a section from the adapter. Registering a section does not extract it. **Extract** runs on the selected source and produces unsigned Requirement candidates in a dated working copy. Failure must not replace Requirements you already accepted. **Compare** and **Consolidate** are how a later extraction is applied: you see additions, modifications and possible removals, and you choose what to write. Cancel leaves the working copy as it was.
+**Edit Pack Source** opens that Pack's fields. **Edit Sections** opens that Pack's sources. **Add section** registers a section from the adapter. Registering a section does not extract it. **Extract** runs on the selected source and produces unsigned Requirement candidates in a dated working copy. Failure must not replace Requirements you already accepted. **Compare** and **Consolidate** are how a later extraction is applied: you see additions, modifications and possible removals, and you choose what to write. Cancel leaves the working copy as it was.
 
 A product repository selects Packs by writing `curbpack.json`:
 

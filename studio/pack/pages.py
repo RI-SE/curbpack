@@ -19,7 +19,7 @@ def documents_page(model: dict) -> bytes:
     elif rows:
         table = (
             "<table><thead><tr>"
-            "<th>Document name</th><th>Official name</th><th>Adapter</th><th>URL</th><th>Actions</th>"
+            "<th>Pack Name</th><th>Official name</th><th>Adapter</th><th>URL</th><th>Actions</th>"
             "</tr></thead><tbody>"
             + "".join(rows)
             + "</tbody></table>"
@@ -45,14 +45,45 @@ def documents_page(model: dict) -> bytes:
     import_zip = ""
     if repo_id and not file_absent:
         import_zip = """
-<form method="post" action="/requirements" enctype="multipart/form-data">
-<label>Import ZIP <input type="file" name="archive" accept=".zip,application/zip"></label>
-<button type="submit">Import ZIP</button>
+<form method="post" action="/requirements" enctype="multipart/form-data" class="import-zip">
+<input type="file" name="archive" accept=".zip,application/zip" aria-label="ZIP file">
+<button type="button">Import From zipped Pack</button>
 </form>
+<script>
+(function () {
+  const form = document.querySelector("form.import-zip");
+  const input = form.querySelector('input[name="archive"]');
+  form.querySelector("button").addEventListener("click", function () { input.click(); });
+  input.addEventListener("change", function () {
+    if (input.files && input.files.length) form.submit();
+  });
+})();
+</script>
 """
-    dialog = _document_add_dialog(model.get("adapters") or [], repo_id) if add else ""
+    source_actions = ""
+    if add or import_zip:
+        source_actions = f'<div class="actions source-actions">{add}{import_zip}</div>'
+    taken = [
+        {"id": str(item.get("id") or ""), "namespace": str(item.get("namespace") or "")}
+        for item in (model.get("documents") or [])
+        if isinstance(item, dict)
+    ]
+    dialog = (
+        _document_add_dialog(
+            model.get("adapters") or [],
+            repo_id,
+            namespace_base=str((model.get("curbpack_fields") or {}).get("namespace_base") or ""),
+            taken=taken,
+        )
+        if add
+        else ""
+    )
     edit_dialog = (
-        _document_edit_dialog(model.get("edit_adapters") or model.get("adapters") or [], repo_id)
+        _document_edit_dialog(
+            model.get("edit_adapters") or model.get("adapters") or [],
+            repo_id,
+            namespace_base=str((model.get("curbpack_fields") or {}).get("namespace_base") or ""),
+        )
         if add
         else ""
     )
@@ -61,11 +92,9 @@ def documents_page(model: dict) -> bytes:
 <h1>Pack Sources</h1>
 <p class="muted">Pack Sources reads the Packs named in this repository's curbpack.json.
 Change project from the top bar.</p>
-{config_panel}
 {_start_empty_form(show=not repo_id)}
 {claims_line}
-{add}
-{import_zip}
+{source_actions}
 {flash}
 <div class="card">{table}</div>
 {dialog}
@@ -74,7 +103,7 @@ Change project from the top bar.</p>
 """
     if model.get("job"):
         body += job_fragment(model["job"]).decode("utf-8")
-    return page("Pack Sources", body)
+    return page("Pack Sources", body, banner=config_panel)
 
 
 def export_page(model: dict) -> bytes:
@@ -153,9 +182,8 @@ def catalog_page(model: dict) -> bytes:
 <p class="muted"><a href="/requirements">Pack Sources</a></p>
 <h1>Pack Editor</h1>
 <p class="muted">Choose a repo to work with.</p>
-{repo_config_panel(model, action="/requirements")}
 """
-        return page("Pack Editor", body)
+        return page("Pack Editor", body, banner=repo_config_panel(model, action="/requirements"))
     document = model.get("document") or {}
     name = str(document.get("name") or "")
     rows = [_source_row(source) for source in model.get("sources") or []]
@@ -179,17 +207,21 @@ def catalog_page(model: dict) -> bytes:
     body = f"""
 <p class="muted"><a href="{back}">Pack Sources</a></p>
 <h1>Pack Editor</h1>
-{repo_config_panel(model, action="/requirements", beside=add)}
 <p class="muted">Sections of <strong>{html.escape(name)}</strong>.
 <strong>Extract</strong>, when available, does not overwrite your current Requirement automatically. You choose which updates to keep. Fields you leave out stay as they are.
 Humans must review, <strong>Edit</strong>, and <strong>Sign</strong> each Requirement.</p>
 {flash}
+{add}
 <div class="card">{table}</div>
 {dialog}
 """
     if model.get("job"):
         body += job_fragment(model["job"], document_id=str(document.get("id") or "")).decode("utf-8")
-    return page("Pack Editor", body)
+    return page(
+        "Pack Editor",
+        body,
+        banner=repo_config_panel(model, action="/requirements"),
+    )
 
 
 def _start_empty_form(*, show: bool) -> str:
@@ -205,16 +237,13 @@ def _start_empty_form(*, show: bool) -> str:
 
 
 def _add_toolbar() -> str:
-    return (
-        '<p class="actions">'
-        '<button type="button" id="add-open">Add</button>'
-        "</p>"
-    )
+    return '<button type="button" id="add-open">Add Pack Source</button>'
 
 
 def _document_row(document: dict) -> str:
     doc_id = str(document.get("id") or "")
     name = str(document.get("name") or "")
+    namespace = str(document.get("namespace") or "")
     official = str(document.get("official_name") or "")
     adapter_id = str(document.get("adapter_id") or "")
     url = str(document.get("url") or "")
@@ -239,11 +268,11 @@ def _document_row(document: dict) -> str:
         f' data-url="{html.escape(url)}"'
         f' data-adapter="{html.escape(adapter_id or "manual")}"'
         f' data-extract="{"1" if document.get("extract_enabled") else "0"}"'
-        ">Edit</button>"
+        ">Edit Pack Source</button>"
         '<form method="get" action="/requirements">'
         f'<input type="hidden" name="document" value="{html.escape(doc_id)}">'
         f"{repo_field}"
-        '<button type="submit">Sections</button></form>'
+        '<button type="submit">Edit Sections</button></form>'
     )
     if not document.get("missing"):
         actions += (
@@ -254,7 +283,7 @@ def _document_row(document: dict) -> str:
         )
     return (
         f'<tr data-document="{html.escape(doc_id)}" data-adapter="{html.escape(adapter_id)}">'
-        f"<td>{html.escape(name)}</td>"
+        f"<td><code>{html.escape(namespace)}</code></td>"
         f'<td class="muted">{html.escape(official)}</td>'
         f"<td><code>{html.escape(adapter_id)}</code></td>"
         f"<td>{url_cell}</td>"
@@ -319,7 +348,13 @@ def _curbpack_dialog(model: dict) -> str:
 """
 
 
-def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
+def _document_add_dialog(
+    adapters: list,
+    repo_id: str = "",
+    *,
+    namespace_base: str = "",
+    taken: list | None = None,
+) -> str:
     options = []
     for item in adapters:
         adapter_id = str(item.get("id") or "")
@@ -330,31 +365,49 @@ def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
         )
     return f"""
 <dialog id="add-dialog">
-<div class="head"><h2>Add document</h2>
-<button type="button" id="add-cancel" class="secondary">Cancel</button></div>
+<div class="head"><h2>Add Pack Source</h2></div>
 <div class="body">
 <form method="post" action="/requirements/documents" id="add-form">
 <input type="hidden" name="repo" value="{html.escape(repo_id)}">
 <label>Adapter<select name="adapter_id" id="add-adapter" required>{"".join(options)}</select></label>
-<p class="muted">Edit on the pack row can change the adapter later.</p>
-<label>Document name<input type="text" name="name" id="add-name" required autocomplete="off"></label>
-<label>Official name<input type="text" name="official_name" id="add-official" autocomplete="off"></label>
-<label>URL<input type="text" name="url" id="add-url" required autocomplete="off"></label>
+<label>Pack name<span class="name-with-namespace"><span class="namespace-prefix" id="add-namespace">{html.escape(namespace_base)}/</span><input type="text" name="name" id="add-name" required autocomplete="off"></span></label>
+<p class="name-conflict" id="add-name-conflict" hidden>This Pack name is already in curbpack.json.</p>
+<label>Official Document Name<input type="text" name="official_name" id="add-official" autocomplete="off"></label>
+<label>URL<span class="url-with-open"><input type="text" name="url" id="add-url" required autocomplete="off"><button type="button" class="secondary" id="add-url-open">Open</button></span></label>
 <p class="actions">
-<button type="button" id="add-cancel-footer" class="secondary">Cancel</button>
 <button type="submit" id="add-save">Save</button>
+<button type="button" id="add-cancel" class="secondary">Cancel</button>
 </p>
 </form>
 </div>
 </dialog>
 <script type="application/json" id="add-adapters">{json.dumps(adapters)}</script>
+<script type="application/json" id="add-taken">{json.dumps(taken or [])}</script>
 <script>
 (function () {{
   const adapters = JSON.parse(document.getElementById("add-adapters").textContent || "[]");
+  const taken = JSON.parse(document.getElementById("add-taken").textContent || "[]");
   const dialog = document.getElementById("add-dialog");
   const adapterEl = document.getElementById("add-adapter");
   const nameEl = document.getElementById("add-name");
   const urlEl = document.getElementById("add-url");
+  const saveEl = document.getElementById("add-save");
+  const conflictEl = document.getElementById("add-name-conflict");
+  const namespaceBase = (document.getElementById("add-namespace").textContent || "").replace(/\\/$/, "");
+  function packId(name) {{
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return slug || "document";
+  }}
+  function refreshName() {{
+    const name = nameEl.value.trim();
+    const namespace = namespaceBase ? namespaceBase + "/" + name : name;
+    const id = packId(name);
+    const conflict = name !== "" && taken.some((item) => item.namespace === namespace || item.id === id);
+    nameEl.classList.toggle("conflict", conflict);
+    nameEl.setAttribute("aria-invalid", conflict ? "true" : "false");
+    saveEl.disabled = conflict;
+    conflictEl.hidden = !conflict;
+  }}
   function currentAdapter() {{
     return adapters.find((item) => item.id === adapterEl.value) || null;
   }}
@@ -363,6 +416,7 @@ def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
     if (!adapter) return;
     urlEl.value = adapter.url || "";
     if (nameEl.dataset.touched !== "1") nameEl.value = adapter.instrument || "";
+    refreshName();
   }}
   document.getElementById("add-open").addEventListener("click", () => {{
     nameEl.dataset.touched = "";
@@ -371,16 +425,22 @@ def _document_add_dialog(adapters: list, repo_id: str = "") -> str:
   }});
   function closeAdd() {{ dialog.close(); }}
   document.getElementById("add-cancel").addEventListener("click", closeAdd);
-  document.getElementById("add-cancel-footer").addEventListener("click", closeAdd);
   adapterEl.addEventListener("change", fillFromAdapter);
-  nameEl.addEventListener("input", () => {{ nameEl.dataset.touched = "1"; }});
+  nameEl.addEventListener("input", () => {{
+    nameEl.dataset.touched = "1";
+    refreshName();
+  }});
+  document.getElementById("add-url-open").addEventListener("click", () => {{
+    const url = urlEl.value.trim();
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }});
   fillFromAdapter();
 }})();
 </script>
 """
 
 
-def _document_edit_dialog(adapters: list, repo_id: str) -> str:
+def _document_edit_dialog(adapters: list, repo_id: str, *, namespace_base: str = "") -> str:
     """Edit one pack row. Saving a URL that turns Extract on asks before writing pack.json."""
     options = ['<option value="manual">Manual Content</option>']
     choices = [{"id": "manual", "instrument": "Manual Content", "url": ""}]
@@ -397,20 +457,19 @@ def _document_edit_dialog(adapters: list, repo_id: str) -> str:
         )
     return f"""
 <dialog id="edit-pack-dialog">
-<div class="head"><h2>Edit pack</h2>
-<button type="button" id="edit-pack-cancel" class="secondary">Cancel</button></div>
+<div class="head"><h2>Edit Pack Source</h2></div>
 <div class="body">
 <form method="post" action="/requirements/documents" id="edit-pack-form">
 <input type="hidden" name="repo" value="{html.escape(repo_id)}">
 <input type="hidden" name="action" value="update">
 <input type="hidden" name="pack" id="edit-pack-id" value="">
 <label>Adapter<select name="adapter_id" id="edit-adapter" required>{"".join(options)}</select></label>
-<label>Document name<input type="text" name="name" id="edit-name" required autocomplete="off"></label>
-<label>Official name<input type="text" name="official_name" id="edit-official" autocomplete="off"></label>
-<label>URL<input type="text" name="url" id="edit-url" autocomplete="off"></label>
+<label>Pack name<span class="name-with-namespace"><span class="namespace-prefix" id="edit-namespace">{html.escape(namespace_base)}/</span><input type="text" name="name" id="edit-name" required autocomplete="off"></span></label>
+<label>Official Document Name<input type="text" name="official_name" id="edit-official" autocomplete="off"></label>
+<label>URL<span class="url-with-open"><input type="text" name="url" id="edit-url" autocomplete="off"><button type="button" class="secondary" id="edit-url-open">Open</button></span></label>
 <p class="actions">
-<button type="button" id="edit-pack-cancel-footer" class="secondary">Cancel</button>
 <button type="submit" id="edit-pack-save">Save</button>
+<button type="button" id="edit-pack-cancel" class="secondary">Cancel</button>
 </p>
 </form>
 </div>
@@ -482,7 +541,10 @@ def _document_edit_dialog(adapters: list, repo_id: str) -> str:
     }}
   }});
   document.getElementById("edit-pack-cancel").addEventListener("click", closeEdit);
-  document.getElementById("edit-pack-cancel-footer").addEventListener("click", closeEdit);
+  document.getElementById("edit-url-open").addEventListener("click", () => {{
+    const url = urlEl.value.trim();
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }});
   form.addEventListener("submit", (event) => {{
     if (form.dataset.confirmed === "1") return;
     if (rowChanged() && extractOn()) {{

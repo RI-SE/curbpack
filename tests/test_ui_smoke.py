@@ -34,7 +34,8 @@ class UiSmokeTest(unittest.TestCase):
                 self.assertNotIn('href="/claims"', cover)
                 self.assertNotIn('href="/scaffold"', cover)
                 # Sample Prepare lives under packs/; it is not the active pilot Pack.
-                self.assertIn("author packs from law text", cover)
+                self.assertIn("Registered projects", cover)
+                self.assertIn("Choose the product repository", cover)
                 self.assertNotIn("CRA-ANNEX-VII-RISK", cover)
                 requirement = _get(base + "/requirement")
                 self.assertIn("cybersecurity risks", requirement)

@@ -16,7 +16,7 @@ _LOG = logging.getLogger("poc2.app")
 from app import pages
 from app import project_selector
 from app.cover import cover
-from app.home_model import _home_model, _select_pack
+from app.home_model import _select_pack
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
 from app.review_model import _compile_review, _review_get, _save_review_decision, _sign_review
@@ -157,13 +157,14 @@ DEFAULT_WORKSPACE = default_workspace()
 
 
 def _requires_open_project(path: str) -> bool:
-    """Product doors and the cover need an open project.
+    """Product doors and the start page need an open project.
 
     Pack-editor routes under /requirements/... (export, extract, try-discovery)
     stay reachable without one. Exact /requirements is Pack Sources and does not.
     """
     if path in {
         "/",
+        "/home",
         "/requirements",
         "/studio",
         "/discover",
@@ -240,6 +241,7 @@ def make_handler(ws: Workspace):
             return
 
         def _send(self, status: int, body: bytes) -> None:
+            body = _with_project_panel(ws, body)
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -489,17 +491,10 @@ def make_handler(ws: Workspace):
             )
             if researcher is not None:
                 return researcher
-            if path == "/project":
-                message = ""
-                if (query.get("added") or [""])[0]:
-                    message = "Project added."
-                if (query.get("saved") or [""])[0]:
-                    message = "Saved curbpack.json in the repo."
-                return project_selector.project_page(
-                    project_selector.project_model(ws.root, message=message)
-                )
-            if path == "/":
-                return cover(_home_model(ws), message=_home_message(query))
+            if path == "/home":
+                return cover(_home_chrome(ws), message=_home_message(query))
+            if path in {"/", "/project"}:
+                return _project_page_bytes(ws, query, home=path == "/")
             if path == "/requirements":
                 document_id = (query.get("document") or [""])[0].strip()
                 if document_id:
@@ -761,6 +756,18 @@ def _home_message(query: dict) -> str:
     if (query.get("prepared") or [""])[0]:
         return "Sample workspace prepared. It is not the active Pack unless you select it."
     return ""
+
+
+def _project_page_bytes(ws: Workspace, query: dict, *, home: bool) -> bytes:
+    """Start page and /project are the same project screen."""
+    message = _home_message(query) if home else ""
+    if (query.get("added") or [""])[0]:
+        message = "Project added."
+    if (query.get("saved") or [""])[0]:
+        message = "Saved curbpack.json in the repo."
+    return project_selector.project_page(
+        project_selector.project_model(ws.root, message=message)
+    )
 
 
 def _sync_adapter_for_pack(ws: Workspace, pack_id: str) -> None:
@@ -1026,6 +1033,64 @@ def _door_chrome(ws: Workspace, query: dict | None = None) -> dict:
     repo_id = _sync_open_repo(ws, query)
     fields = _door_path_fields(ws, repo_id) if repo_id else {}
     return {"repos": _listed_repos(ws), "repo_id": repo_id, **fields}
+
+
+def _with_project_panel(ws: Workspace, body: bytes) -> bytes:
+    """Put the open project's path panel directly under the top bar.
+
+    Pages that already render their own panel keep that panel's fields.
+    """
+    if b'class="config-panel"' in body or b"</header>" not in body:
+        return body
+    chrome = _home_chrome(ws)
+    selected = bool(chrome.get("repo_id"))
+    panel = pages.repo_config_panel(
+        chrome,
+        show=("config", "packs", "claims", "results", "reports") if selected else (),
+        title="Current Project",
+        blanks=selected,
+    )
+    return body.replace(b"</header>", b"</header>\n" + panel.encode("utf-8"), 1)
+
+
+def _home_chrome(ws: Workspace) -> dict:
+    repo_id = open_repo_id(ws.root) or ""
+    chrome = {"repos": _listed_repos(ws), "repo_id": repo_id}
+    if not repo_id:
+        return chrome
+    try:
+        chrome.update(_door_path_fields(ws, repo_id))
+    except (ModelError, ValueError, OSError):
+        chrome.update(_raw_config_fields(ws, repo_id))
+    return chrome
+
+
+def _raw_config_fields(ws: Workspace, repo_id: str) -> dict:
+    try:
+        repo = _registered_repo_path(ws, repo_id)
+    except ModelError:
+        return {}
+    config_path = repo / "curbpack.json"
+    fields = {
+        "curbpack_file": str(config_path),
+        "packs_dir_value": "",
+        "claims_dir_value": "",
+        "results_dir_value": "",
+        "reports_dir_value": "",
+    }
+    if not config_path.is_file():
+        return fields
+    fields["curbpack_file"] = str(config_path.resolve())
+    try:
+        raw = read_json(config_path)
+    except (OSError, ValueError):
+        return fields
+    if isinstance(raw, dict):
+        fields["packs_dir_value"] = str(raw.get("packs_dir") or "")
+        fields["claims_dir_value"] = str(raw.get("claims_dir") or "")
+        fields["results_dir_value"] = str(raw.get("results_dir") or "")
+        fields["reports_dir_value"] = str(raw.get("reports_dir") or "")
+    return fields
 
 
 def _door_path_fields(ws: Workspace, repo_id: str) -> dict:

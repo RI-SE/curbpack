@@ -112,7 +112,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
                 httpd.server_close()
             self.assertEqual(report_path.read_bytes(), before_bytes)
 
-        before, _sep, rest = page.partition("<dialog ")
+        before, _sep, rest = page.partition('<dialog id="review-discover-')
         dialog, _end, after = rest.partition("</dialog>")
         self.assertIn('data-claim="claim-old"', before)
         self.assertIn('data-requirement="R1"', before)

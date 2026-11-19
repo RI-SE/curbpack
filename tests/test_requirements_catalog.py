@@ -104,7 +104,7 @@ class RequirementsCatalogTest(unittest.TestCase):
                 before = _get(base + "/requirements")
                 self.assertIn("Pack Sources", before)
                 self.assertIn('id="add-open"', before)
-                self.assertIn("Official name", before)
+                self.assertIn("Official Document Name", before)
                 self.assertNotIn("Section<select", before)
                 data = urllib.parse.urlencode(
                     {
@@ -121,7 +121,10 @@ class RequirementsCatalogTest(unittest.TestCase):
                 with urllib.request.urlopen(request) as response:
                     page = response.read().decode("utf-8")
                 self.assertIn("Pack added", page)
-                self.assertIn("CRA Annex V", page)
+                self.assertIn("<th>Pack Name</th>", page)
+                self.assertNotIn("<th>Document name</th>", page)
+                self.assertNotIn("<th>Namespace</th>", page)
+                self.assertIn("<code>RISE/CRA Annex V</code>", page)
                 self.assertIn("EU declaration of conformity", page)
                 self.assertIn('data-document="cra-annex-v"', page)
                 pack_file = (

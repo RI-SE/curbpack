@@ -23,7 +23,8 @@ a{color:var(--accent)}
 .topbar .crumbs a{margin:0}
 .topbar .crumbs .here{color:var(--ink)}
 .repo-current{font-size:.92rem;margin-right:.5rem}
-.repo-current strong{font-weight:600}
+button.link{background:none;border:0;border-radius:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:.12em}
+button.link:hover{color:#115e59}
 form.inline{display:inline}
 button.secondary{background:#fff;color:var(--ink);border:1px solid #cbd5e1}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
@@ -60,6 +61,14 @@ a.details:hover{background:#ecfdf5}
 .ref-law-head{margin:0 0 .25rem;font-size:.78rem}
 .ref-law{margin:0;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:.85rem;line-height:1.4;color:var(--ink);background:transparent;border:0;padding:0}
 input[type=text],textarea{width:100%;font:inherit;padding:.4rem .5rem;border:1px solid #cbd5e1;border-radius:6px}
+.name-with-namespace{display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+.name-with-namespace .namespace-prefix{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.name-with-namespace input[type=text]{width:auto;flex:1;min-width:0}
+.url-with-open{display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+.url-with-open input[type=text]{width:auto;flex:1;min-width:0}
+.url-with-open button{white-space:nowrap}
+input.conflict{border-color:var(--bad);background:#fef2f2}
+p.name-conflict{color:var(--bad);font-size:.85rem;margin:.35rem 0 0}
 input::placeholder,textarea::placeholder{color:#94a3b8;opacity:1}
 textarea{min-height:6rem;font-family:ui-monospace,Menlo,monospace;font-size:.85rem}
 button{font:inherit;background:#0f766e;color:#fff;border:0;border-radius:6px;padding:.45rem .75rem;cursor:pointer}
@@ -75,6 +84,9 @@ button.sign-ok:disabled,button.sign-bad:disabled{opacity:1;cursor:default}
 button.secondary{background:#fff;color:var(--accent);border:1px solid var(--accent)}
 button.secondary:hover{background:#ecfdf5}
 .actions{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.source-actions{margin:0 0 .75rem}
+form.import-zip{margin:0}
+form.import-zip input[type=file]{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .actions form{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
 .editor-actions{margin-top:.85rem;align-items:center}
 .editor-actions dialog{position:fixed}
@@ -108,9 +120,11 @@ a.edit-review[hidden]{display:none}
 .repo-row .repo-picker label{display:flex;align-items:center;gap:.5rem;margin:0}
 .repo-row .actions{margin:0}
 .config-panel{background:transparent;border:1px solid #cbd5e1;border-radius:10px;padding:.85rem 1rem;margin:.25rem 0 .75rem}
-.config-panel .repo-row{margin-bottom:.35rem}
+.config-panel .repo-row{margin:0}
 .config-panel label{margin:.45rem 0 0}
 .config-panel input[readonly]{background:#fff;color:var(--ink);cursor:text}
+dialog.config-all{max-width:40rem;width:calc(100% - 2rem)}
+dialog.config-all .config-panel{border:0;padding:0;margin:0}
 .discover-wrap .repo-picker{margin:0 0 .75rem}
 .discover-wrap table{width:100%}
 .discover-wrap .path-cell{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -219,7 +233,13 @@ pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;
 """
 
 
-def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> bytes:
+def page(
+    title: str,
+    body: str,
+    crumbs: list[tuple[str, str]] | None = None,
+    *,
+    banner: str = "",
+) -> bytes:
     crumb_html = ""
     if crumbs:
         parts = []
@@ -239,7 +259,11 @@ def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> 
 </a>
 <nav>
 <a href="/project">Change Project</a>
-<a href="/">Home</a>
+<a href="/home">Home</a>
+<a href="/requirements">Pack Editor</a>
+<a href="/discover">Discover</a>
+<a href="/check">Check</a>
+<a href="/review">Review</a>
 {crumb_html}
 </nav>
 </header>
@@ -251,6 +275,7 @@ def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 <style>{CSS}</style></head><body><main>
 {topbar}
+{banner}
 {body}
 </main></body></html>"""
     return doc.encode("utf-8")
@@ -363,42 +388,86 @@ _PATH_FIELDS = (
 )
 
 
-def repo_config_panel(model: dict, *, action: str = "", show: tuple[str, ...] = (), beside: str = "") -> str:
-    """Readonly curbpack path banner for the fields named in show.
+def repo_config_panel(
+    model: dict,
+    *,
+    action: str = "",
+    show: tuple[str, ...] = (),
+    beside: str = "",
+    title: str = "Current Project",
+    blanks: bool = False,
+) -> str:
+    """Project name under the top bar. The name opens the path fields.
 
-    show is a subset of config, packs, claims, results, reports.
-    action is unused (kept for call-site compatibility); change project via topbar.
+    show and blanks stay for call-site compatibility. The compact panel does not
+    list path fields. A selected project name opens every field in the dialog.
+    With no project, NONE links to Change Project. action is unused.
     """
-    del action
-    wanted = set(show)
+    del action, show, blanks
+    current = _current_project_label(model, title=title)
+    dialog = _config_all_dialog(model) if model.get("repo_id") else ""
+    return (
+        '<section class="config-panel">'
+        f'<div class="repo-row">{current}{beside}</div>'
+        "</section>"
+        f"{dialog}"
+    )
+
+
+def _path_inputs(model: dict, wanted: set[str], *, blanks: bool) -> list[str]:
     fields = []
     for key, label, source in _PATH_FIELDS:
         if key not in wanted:
             continue
         value = str(model.get(source) or "")
-        if not value:
+        if not value and not blanks:
             continue
         fields.append(
             f"<label>{html.escape(label)} "
             f'<input type="text" readonly value="{html.escape(value)}"></label>'
         )
-    current = _current_project_label(model)
+    return fields
+
+
+def _config_all_dialog(model: dict) -> str:
+    """Full path panel. The project name (id config-all-open) opens it."""
+    fields = _path_inputs(
+        model,
+        {key for key, _label, _source in _PATH_FIELDS},
+        blanks=True,
+    )
     return (
-        '<section class="config-panel">'
-        f'<div class="repo-row">{current}{beside}</div>'
-        f'{"".join(fields)}'
-        "</section>"
+        '<dialog id="config-all" class="config-all">'
+        '<div class="head"><h2>Current Project</h2>'
+        '<button type="button" id="config-all-close">Close</button></div>'
+        f'<div class="body"><div class="config-panel">{"".join(fields)}</div></div>'
+        "</dialog>"
+        "<script>"
+        '(function(){var open=document.getElementById("config-all-open");'
+        'var dialog=document.getElementById("config-all");'
+        'if(!open||!dialog)return;'
+        'open.addEventListener("click",function(){dialog.showModal();});'
+        'document.getElementById("config-all-close").addEventListener("click",function(){dialog.close();});'
+        "})();"
+        "</script>"
     )
 
 
-def _current_project_label(model: dict) -> str:
+def _current_project_label(model: dict, title: str = "Project") -> str:
     repo_id = str(model.get("repo_id") or "")
     name = repo_id
     for repo in model.get("repos") or []:
         if isinstance(repo, dict) and str(repo.get("id") or "") == repo_id:
             name = str(repo.get("name") or repo_id)
             break
+    label = html.escape(title)
     if not repo_id:
-        return '<span class="repo-current muted">No project selected.</span>'
-    # Change lives on Project / top bar, not in this panel.
-    return f'<span class="repo-current">Project <strong>{html.escape(name)}</strong></span>'
+        return (
+            f'<span class="repo-current">{label} '
+            f'<a href="/project">NONE</a></span>'
+        )
+    return (
+        f'<span class="repo-current">{label} '
+        f'<button type="button" class="link" id="config-all-open">{html.escape(name)}</button>'
+        "</span>"
+    )

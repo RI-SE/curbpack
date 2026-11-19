@@ -129,11 +129,10 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 <p class="muted">Edit, sign, or retire Claims already in the product repo.
 New Claims come from <a href="/discover">Discovery &amp; Claims</a>.
 Editing a sealed Claim clears its seal.</p>
-{panel}
 {_flash(message, error)}
 {''.join(blocks) or empty}
 """
-    return page("Claim editor", body)
+    return page("Claim editor", body, banner=panel)
 
 
 def _rebind_options(model: dict, requirement_id: str, proposed: dict) -> str:

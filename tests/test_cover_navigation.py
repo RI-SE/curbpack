@@ -107,7 +107,10 @@ class CoverNavigationTest(unittest.TestCase):
                     self.assertIn(f'href="{href}"', cover)
                 listed = _get(base + "/requirements")
                 self.assertIn("<h1>Pack Sources</h1>", listed)
-                self.assertIn("House Rules", listed)
+                self.assertIn("<th>Pack Name</th>", listed)
+                self.assertNotIn("<th>Document name</th>", listed)
+                self.assertNotIn("<th>Namespace</th>", listed)
+                self.assertIn("<code>RISE/House Rules</code>", listed)
                 self.assertEqual(catalog_path.read_bytes(), before)
                 self.assertFalse((root / "selection.json").exists())
                 self.assertEqual(

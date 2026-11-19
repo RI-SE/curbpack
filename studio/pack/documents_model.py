@@ -63,6 +63,7 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
                         {
                             "id": pack_id,
                             "name": pack_id,
+                            "namespace": "",
                             "missing": True,
                             "adapter_id": "manual",
                             "extract_enabled": False,
@@ -84,6 +85,7 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
                     {
                         "id": pack_id,
                         "name": str(pack.get("name") or pack_id),
+                        "namespace": str(pack.get("namespace") or ""),
                         "official_name": str(source.get("instrument") or ""),
                         "url": url,
                         "adapter_id": str(adapter.get("id") or "") if adapter else "manual",
@@ -97,6 +99,10 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
         "repos": repos,
         "repo_id": repo_id,
         "curbpack_file": curbpack_file,
+        "packs_dir_value": str(config.get("packs_dir") or "") if config else "",
+        "claims_dir_value": str(config.get("claims_dir") or "") if config else "",
+        "results_dir_value": str(config.get("results_dir") or "") if config else "",
+        "reports_dir_value": str(config.get("reports_dir") or "") if config else "",
         "directory": directory,
         "claims_dir": claims_directory,
         "results_dir": str(results_dir(_registered_repo_path(ws, repo_id), config)) if repo_id and config else "",

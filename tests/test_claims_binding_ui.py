@@ -122,7 +122,11 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 finished = _get(base + "/discover?job=" + found.group(1))
                 self.assertIn(">OK<", finished)
                 self.assertNotIn("Open claims", finished)
-                self.assertNotIn(">Close<", finished)
+                without_config = finished.replace(
+                    '<button type="button" id="config-all-close">Close</button>',
+                    "",
+                )
+                self.assertNotIn(">Close<", without_config)
                 self.assertNotIn("Use path", finished)
                 self.assertNotIn(">Edit<", finished)
                 self.assertIn(

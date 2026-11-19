@@ -68,6 +68,7 @@ def project_model(workspace: Path, *, message: str = "", error: str = "") -> dic
         "path": "",
         "name": "",
     }
+    load_error = ""
     if repo_id:
         row = find_repo(data, repo_id) or {}
         editor["name"] = str(row.get("name") or repo_id)
@@ -83,17 +84,22 @@ def project_model(workspace: Path, *, message: str = "", error: str = "") -> dic
             editor["results_dir_value"] = str(defaults["results_dir"])
             editor["reports_dir_value"] = str(defaults["reports_dir"])
         else:
-            config = validate_curbpack_config(read_json(config_path))
-            editor["packs_dir_value"] = str(config["packs_dir"])
-            editor["claims_dir_value"] = str(config["claims_dir"])
-            editor["results_dir_value"] = str(config["results_dir"])
-            editor["reports_dir_value"] = str(config["reports_dir"])
+            raw = read_json(config_path)
+            config = raw if isinstance(raw, dict) else {}
+            try:
+                config = validate_curbpack_config(raw)
+            except ModelError as exc:
+                load_error = str(exc)
+            editor["packs_dir_value"] = str(config.get("packs_dir") or "")
+            editor["claims_dir_value"] = str(config.get("claims_dir") or "")
+            editor["results_dir_value"] = str(config.get("results_dir") or "")
+            editor["reports_dir_value"] = str(config.get("reports_dir") or "")
     return {
         "repos": repos,
         "repo_id": repo_id,
         "editor": editor,
         "message": message,
-        "error": error,
+        "error": error or load_error,
     }
 
 
@@ -164,7 +170,7 @@ def handle_project_post(workspace: Path, form: dict) -> str:
     if action == "select":
         repo_id = (form.get("repo_id") or [""])[0].strip()
         set_open_repo(workspace, repo_id)
-        return "/"
+        return "/home"
     if action == "add":
         data = load_repos(workspace)
         add_repo(

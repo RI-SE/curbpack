@@ -175,7 +175,6 @@ def review_page(
 <p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
 </div>
 </div>
-{panel}
 {chrome}
 {_review_lists(door)}
 {_flash(message, error)}
@@ -186,7 +185,7 @@ def review_page(
 {dialogs}
 </div>
 """
-    return page("Review", body)
+    return page("Review", body, banner=panel)
 
 
 def _review_groups(presentation: dict, door: dict) -> str:

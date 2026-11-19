@@ -37,13 +37,12 @@ def discover_page(model: dict) -> bytes:
 <h1>Discovery &amp; Claims</h1>
 {intro}
 {flash}
-{panel}
 <div class="card discover-wrap">{_pack_table(model)}</div>
 """
     body += _section_script(list(model.get("reviewable") or []))
     if model.get("job"):
         body += _job_dialog(model["job"])
-    return page("Discovery & Claims", body)
+    return page("Discovery & Claims", body, banner=panel)
 
 
 def _pack_table(model: dict) -> str:
