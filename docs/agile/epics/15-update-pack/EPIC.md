@@ -38,6 +38,8 @@ User supplies newer RISE/CRA 1.1 ZIP or existing local directory
 - **Minimize rework, not traceability:** Keep independent categories: source delta, locally adopted delta, exact Claim-binding state (`match`, `stale`, `missing`), suggested review scope, Check outcomes and signature state. Never silently update `requirement_digest` or reuse a signature on changed bytes.
 - **Provenance is a claim:** `origin` records an assertion. A nominated source Pack plus a verified signature supports authentic source identification and an auditable comparison, not proof that the derivative author used that source or was authorized. Missing/untrusted material is shown explicitly; no automatic trust laundering.
 - **Reuse:** Existing VL-01 Take Ownership, VL-02 ZIP Import/Export, VL-03 field-level Compare/Apply, VL-04 binding and Curbcheck status, VL-05 historical resolver and VL-06 affected-Claim actions remain authoritative and are reused. No duplicate comparison or Claim editor.
+- **Git status informs; it does not steer:** Update shows whether the open product repository is clean, has uncommitted changes, or Git status is unavailable. That reading is separate from Git status recorded on an earlier Check run. Neither uncommitted changes nor unavailable status blocks Update. Studio does not commit, stash, branch, or push. The customer keeps their own Git process.
+- **Extract is additive:** An extraction result may add new Requirements. It does not delete or overwrite an existing Requirement. A Requirement that does not appear in a new extraction stays unchanged. An overlap or conflict is handled in the existing Compare flow, and only an explicit user decision there changes the existing Requirement.
 
 ## Stories
 
@@ -79,11 +81,13 @@ The dashboard must report actual counts: `unchanged`, `publisher changed`, `loca
 - Exactly unchanged Claims and Requirements are preserved byte-for-byte; only structurally affected Claims are shown for action. No Claims, seals, Run Results or signed Review Reports are rewritten by Update.
 - Every apparent `match`, provenance-verification outcome, signature and Check outcome is justified by the correct exact identity/version/digest, not by display name or unqualified ID.
 - The UI makes an intelligible case that only a subset of the Claims requires human attention, and a test measures the selected subset against a known fixture (including hints-only change and local conflicts).
+- The Update view shows the open product repository's current Git status as clean, uncommitted changes, or unavailable, distinct from Git status recorded on a previous Check run. That status does not block Update. Update performs no commit, stash, branch, or push.
+- Extract is additive. A new extraction may add Requirements. It does not delete or overwrite existing Requirements. Requirements absent from that extraction stay unchanged. Overlaps and conflicts are decided in existing Compare, by an explicit user decision.
 - Existing Import/Compare/Take Ownership/Claims/Check/Review and entire pilot regression suite remain passing. User-level installed-package smoke test is part of pilot acceptance, not a reason to widen this epic.
 
 ## Excluded
 
-Automatic legal interpretation, automatic Claim approval or silent rebinding, auto-downloading updates, central namespace authority, PKI/trust marketplace, blockchain, history database, mandatory Publish, update notifications, full EP-02 migration, new Check engine, generalized diff/merge framework, and rewriting original upstream artifacts.
+Automatic legal interpretation, automatic Claim approval or silent rebinding, auto-downloading updates, central namespace authority, PKI/trust marketplace, blockchain, history database, mandatory Publish, update notifications, full EP-02 migration, new Check engine, generalized diff/merge framework, rewriting original upstream artifacts, automatic Git operations (commit, stash, branch, or push), Git workflow automation, and deleting or overwriting existing Requirements solely from an extraction result. That automation may later be a separate optional module.
 
 ## Delivery and pause point
 

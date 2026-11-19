@@ -1,10 +1,10 @@
 # Agreed design decisions and open questions
 
-**Updated:** 2026-11-11
+**Updated:** 2026-11-19
 
 This document records decisions that govern ongoing and future Curbpack work. It is not a replacement for normative contracts, architecture specifications, user stories or acceptance tests.
 
-Completed stories remain historical records. Later decisions take precedence for subsequent work without retroactively changing those stories.
+Completed stories remain historical records. Later decisions take precedence for subsequent work without retroactively changing those stories. See [decision addendum](DECISIONS_ADDENDUM_2026-11-19.md) for agreed examples and boundaries.
 
 ## 1. Authority and documentation
 
@@ -65,14 +65,14 @@ EP-09 does not establish an alternative application architecture, HTTP ownership
 
 The revised **EP-11 — Pack identity, exchange and traceability** supersedes the former Pack version lifecycle epic and its retired stories.
 
-The current scope is VR-00 and VL-00 through VL-06.
+The scope VR-00 and VL-00 through VL-06 is reported complete (2026-11-19).
 
 Agreed principles:
 
-- Pack and Requirement identities are namespace-qualified.
+- Pack and Requirement identities are namespace-qualified. Packs with the same `pack_id` but different namespaces may coexist and be selected in one product.
 - One active, editable copy per qualified Pack identity `(namespace, pack_id)` in the workspace. Curbpack does not keep a parallel version catalog as its own history. Git holds the history of committed content. Curbpack performs no automatic Git operations.
-- `origin` records declared provenance; it is not automatically verified lineage.
-- Editing a Pack from another namespace requires explicit acceptance of ownership of a new local Pack copy.
+- `origin` records declared provenance; it is not automatically verified lineage. It references the latest explicitly accepted source at Take Ownership or Update, not every source of copied fields. Do not add `sources[]` or silently rewrite `origin`.
+- Editing a Pack from another namespace requires explicit Take Ownership of a new local Pack copy. The accepting organization owns the result and uses its own namespace; selective cross-namespace field transfer uses Compare.
 - `draft` / `reviewed` status is independent of signing.
 - Embedded signatures and trusted signed Git commits are supported verification mechanisms.
 - Signature validity must be reported explicitly. Signing does not imply approval or compliance.
@@ -80,13 +80,13 @@ Agreed principles:
 - A Claim binds to the exact Requirement identity and payload digest.
 - Curbcheck executes configured Checks even when a Requirement binding is stale or missing; the discrepancy is reported separately.
 - Run Results and Review preserve the information needed to identify and resolve historical Requirements, Claims and Check results.
-- Local Git history may be used to recover exact historical objects by identity and digest.
+- Local Git history may be used to recover exact historical objects by identity and digest. A claimed `origin` is checked against the identified local source when available, otherwise a user-selected source; missing/unverifiable origins are reported without blocking Import or Update.
 
 Any corresponding changes to Packs v2 and workspace configuration must be explicitly incorporated into `docs/reference/packs2.md` and `docs/reference/workspace.md`.
 
 The previously proposed persistent `has_update` queue, separate Publish lifecycle and SQLite version index are not current EP-11 requirements.
 
-Packs v2 files remain the system of record. Git provides repository history.
+Packs v2 files remain the system of record. Git provides repository history. Curbpack does not impose branch, commit, stash or push workflows; optional Git automation may be added separately.
 
 ## 5. Export and Import
 
@@ -119,8 +119,8 @@ These decisions describe established behavior and remain applicable unless expli
 ### Extraction and review
 
 - Extract uses the selected source and adapter.
-- A repeated extraction produces proposed changes, not automatic replacements.
-- Users explicitly review and apply or discard differences.
+- Extraction is additive: it proposes new Requirements and uses Compare for identified overlaps; absent results never remove existing or locally authored Requirements.
+- Users explicitly review and apply or discard differences, including field-level Compare decisions.
 - Unchanged Requirement content and unrelated fields are preserved.
 - Requirements retain traceability to their original regulatory documents, editions and supporting passages.
 - Changes to signed payloads require renewed signing.
@@ -133,17 +133,17 @@ These decisions describe established behavior and remain applicable unless expli
 - Studio application configuration belongs in `curbpack-studio.json`.
 - The established directory concepts include Packs, Claims, Run Results and Review Reports.
 - `docs/reference/workspace.md` remains authoritative for concrete configuration fields and path resolution until amended by an accepted contract change.
-- New namespace and identity requirements from VL-00 must be incorporated into that document.
+- New namespace and identity requirements from VL-00 must be incorporated into that document. Persisted Extract/Discovery jobs and feedback are normal repository files; only disposable caches need not be retained. Studio may show current Git clean/dirty/unavailable status without performing Git operations.
 
 ### Human responsibility
 
 Curbpack evaluates configured technical checks and provides evidence for human review. It does not issue conformity assessments or CE decisions.
 
-Signature validity, review status, technical Check outcomes and organizational release decisions are distinct facts.
+Signature validity, review status, technical Check outcomes and organizational release decisions are distinct facts. The organization controls who may approve, sign and distribute; Curbpack verifies technical facts rather than organizational mandates. Run Results and Review Reports are immutable historical snapshots.
 
 ## 7. Implementation sequence
 
-The intended sequence is:
+Previously agreed implementation sequence (historical plan):
 
 1. Reconcile the open backlog and architecture documents with these decisions.
 2. Implement VR-00 — signature verification.
@@ -151,6 +151,10 @@ The intended sequence is:
 4. Continue EP-02 — behavior-preserving architecture migration. EP-02 does not implement EP-11 behavior.
 5. Implement VL-01–VL-06 under the placement rule in EP-11: target component ownership, headless backend, and Pydantic models of the approved Packs v2 contracts; new pages in TypeScript; the existing HTTP server as a thin adapter until FastAPI is introduced. Existing Python pages change only where required to expose that functionality. No new business logic in Python pages.
 6. Complete remaining EP-09 standalone CLI work.
+
+**Current checkpoint (2026-11-19):** EP-11 VR-00/VL-00–VL-06 and EP-02 stages 0–3 are reported complete. Pause EP-02 before stage 4; prioritize packaging and end-to-end verification for the next pilot. EP-15 Update Pack remains a draft, not authorized implementation.
+
+**EP-15 (draft):** Update Pack will compare BASE/LOCAL/NEW, reuse field-level Compare and explicit Apply, and identify affected Requirements/Claims without automatic rebinding or Check execution. Exact Requirement digests and `match`/`stale`/`missing` remain authoritative; metadata-only or Discovery-hint changes may be suggested for explicit rebind without substantive Claim re-review. Upstream removals are resolved per Requirement (keep/remove), with Claims unchanged automatically. Historical reports are never rewritten. A future bulk replace option is not part of the initial Update workflow.
 
 Independent epics may proceed when their own prerequisites are satisfied.
 
@@ -161,14 +165,11 @@ Security defects and confirmed blockers are handled according to their severity 
 The following remain undecided and must not be resolved implicitly by coding agents:
 
 - The exact path format of the one active, editable copy per `(namespace, pack_id)`.
-- The exact relationship between editable workspace, Git working tree and branch, including any future user interface.
 - The precise semantics of source rows versus adapter-enumerated legal sections where current behavior does not already establish them.
 - Whether one Extract operation should support multiple sections.
-- The explicit user workflow for a Requirement that disappears during re-extraction.
-- Whether a separate organizational release-policy evaluator is required, and what decisions it may enforce.
 - Public repository visibility and authorization for remote publication.
 
-These questions do not authorize new features.
+These questions do not authorize new features. Git workflow automation, organizational authorization enforcement and a separate release-policy evaluator are deferred, not required for the current pilot.
 
 ## 9. Deferred ideas
 

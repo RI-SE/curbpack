@@ -16,6 +16,7 @@ Add a **thin TypeScript Update Pack page** owned by `studio/pack/pages/`, linked
 4. Pre-apply result and **Review affected Claims** list recalculated as choices change; show `match/stale/missing` separately from 'Review suggested' and Check outcome.
 5. Explicit Confirm Apply, Cancel; a new local copy and clear return links to Requirement editor, Claims Review/Rebind, Discovery and Check/Review.
 6. No update polling, no update status database, no implicit trust/approval or auto-run Checks.
+7. Current Git status of the open product repository, as **clean**, **uncommitted changes**, or **unavailable** when that status cannot be read. The reading is information about the repository now. It is a different fact from Git status recorded on an earlier Check run, and the view must not present the two as the same fact. Uncommitted changes, and unavailable status, do not block version selection, preview, Confirm Apply, or the links onward. Update does not commit, stash, branch, or push. The customer keeps their own Git process.
 
 Screen text must never label the 'unaffected Claims count' as legal proof, nor imply that an unreviewed stale Claim is a current binding. Failure/errors must preserve entered selections, originals and context. On small screens the list remains usable; accessibility includes keyboard controls and readable long law-text differences.
 
@@ -51,4 +52,17 @@ Screen text must never label the 'unaffected Claims count' as legal proof, nor i
 **When** focused backend, HTTP/browser integration and full `make test` run, followed by pilot package smoke tests where supported  
 **Then** verified outcomes are recorded; existing Extract/Import/Compare/Take Ownership/Claims/Discovery/Curbcheck/Review and packaging remain functional.
 
-**Done when:** A real user can complete RISE 1.0→1.1 update with an A-local copy, understand the exact consequences and process only the affected Claims without hidden artifact mutation.
+### GWT-07 — Current product Git status
+**Given** an open product repository that is clean, has uncommitted changes, or whose Git status cannot be read  
+**And** zero or more earlier Check runs recorded their own Git status for that repository  
+**When** the user opens Update  
+**Then** the view shows the current status as clean, uncommitted changes, or unavailable  
+**And** that reading is identified as the open product repository now, not as the Git status recorded on a Check run.
+
+### GWT-08 — Git status does not gate Update
+**Given** the open product repository has uncommitted changes, or its Git status is unavailable  
+**When** the user selects versions, previews, and confirms Apply  
+**Then** those steps stay available  
+**And** Update does not commit, stash, branch, or push.
+
+**Done when:** A real user can complete RISE 1.0→1.1 update with an A-local copy, understand the exact consequences and process only the affected Claims without hidden artifact mutation. Uncommitted product changes are reported and do not block that path.
