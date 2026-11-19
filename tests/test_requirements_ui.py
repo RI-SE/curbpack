@@ -519,7 +519,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     base + "/requirements?document=fresh-nis&repo=fixture-product"
                 )
                 self.assertIn('id="add-open"', fresh_page)
-                self.assertIn("No sections yet. Click Add.", fresh_page)
+                self.assertIn("No sections yet. Click Add Section.", fresh_page)
                 self.assertNotIn(">Extract</button>", fresh_page)
                 added = _post(
                     base + "/requirements/catalog",
@@ -547,7 +547,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                 )
                 self.assertIn("<code>manual</code>", house_page)
                 self.assertIn("Security docs", house_page)
-                self.assertNotIn("No sections yet. Click Add.", house_page)
+                self.assertNotIn("No sections yet. Click Add Section.", house_page)
                 self.assertNotIn("HOUSE-SECURITY-MD", house_page)
                 self.assertIn('disabled>Extract</button>', house_page)
                 self.assertIn('name="section" value="Security docs"', house_page)

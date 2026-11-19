@@ -179,7 +179,7 @@ def _signature_report(rows: list) -> str:
 def catalog_page(model: dict) -> bytes:
     if not str(model.get("repo_id") or ""):
         body = f"""
-<p class="muted"><a href="/requirements">Pack Sources</a></p>
+<p class="muted">Go back: <a href="/requirements">Pack Sources</a></p>
 <h1>Pack Editor</h1>
 <p class="muted">Choose a repo to work with.</p>
 """
@@ -197,15 +197,15 @@ def catalog_page(model: dict) -> bytes:
             + "</tbody></table>"
         )
     else:
-        table = '<p class="muted">No sections yet. Click Add.</p>'
+        table = '<p class="muted">No sections yet. Click Add Section.</p>'
     err = str(model.get("error") or "")
     flash = f'<p class="err">{html.escape(err)}</p>' if err else _flash(str(model.get("message") or ""))
     repo = str(model.get("repo_id") or "")
     back = "/requirements" + (f"?repo={html.escape(repo)}" if repo else "")
-    add = '<p class="actions"><button type="button" id="add-open">Add</button></p>'
+    add = '<p class="actions"><button type="button" id="add-open">Add Section</button></p>'
     dialog = _section_add_dialog(model.get("adapters") or [], document)
     body = f"""
-<p class="muted"><a href="{back}">Pack Sources</a></p>
+<p class="muted">Go back: <a href="{back}">Pack Sources</a></p>
 <h1>Pack Editor</h1>
 <p class="muted">Sections of <strong>{html.escape(name)}</strong>.
 <strong>Extract</strong>, when available, does not overwrite your current Requirement automatically. You choose which updates to keep. Fields you leave out stay as they are.
