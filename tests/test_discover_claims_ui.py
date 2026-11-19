@@ -212,6 +212,62 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertNotIn('name="choice" value="keep"', page)
         self.assertNotIn('name="choice" value="take"', page)
 
+    def test_a_file_url_opens_the_file_viewer(self):
+        from studio.claim.researcher import requirement_page
+
+        page = requirement_page(
+            {
+                "repo_id": "sample-product",
+                "source_id": "house-policy",
+                "timestamp": "2026-10-14T080000Z",
+                "requirement": {
+                    "id": "HOUSE-NO-PLACEHOLDER-SECURITY-DOCS",
+                    "references": [
+                        {
+                            "locator": "Security docs",
+                            "law_text": "No placeholder patterns in required security docs.",
+                        }
+                    ],
+                    "source": {"url": "file://policies/house-policy.md"},
+                },
+                "candidates": [],
+                "marks": {},
+                "claims": [],
+            }
+        ).decode()
+        self.assertIn(
+            'href="/discover/claims/HOUSE-NO-PLACEHOLDER-SECURITY-DOCS/file?'
+            "repo=sample-product&amp;source=house-policy&amp;timestamp=2026-10-14T080000Z"
+            '&amp;path=policies/house-policy.md"',
+            page,
+        )
+        self.assertIn(">file://policies/house-policy.md</a>", page)
+        self.assertNotIn('target="_blank"', page)
+
+    def test_an_http_url_stays_outside_the_file_viewer(self):
+        from studio.claim.researcher import requirement_page
+
+        page = requirement_page(
+            {
+                "repo_id": "sample-product",
+                "source_id": "cra-xml-vii",
+                "timestamp": "2026-10-14T080000Z",
+                "requirement": {
+                    "id": "REQ-A",
+                    "references": [{"locator": "VII.3"}],
+                    "source": {"url": "https://eur-lex.europa.eu/example"},
+                },
+                "candidates": [],
+                "marks": {},
+                "claims": [],
+            }
+        ).decode()
+        self.assertIn(
+            'href="https://eur-lex.europa.eu/example" target="_blank" rel="noopener"',
+            page,
+        )
+        self.assertNotIn("/file?", page)
+
     def test_clicking_keeps_the_claim_or_copies_the_sentence(self):
         import tempfile
 

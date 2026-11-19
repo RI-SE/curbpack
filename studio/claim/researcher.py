@@ -901,6 +901,35 @@ def _file_href(model: dict, requirement_id: str, path: str) -> str:
     return f"/discover/claims/{quote(requirement_id)}/file?{_q(model)}&path={quote(path)}"
 
 
+def _repo_file_url(source_url: str) -> str:
+    """A file:// URL names a repo path for the file viewer. It is not a browser file URL."""
+    prefix = "file://"
+    if not source_url.startswith(prefix):
+        return ""
+    path = source_url[len(prefix):].lstrip("/")
+    parts = path.replace("\\", "/").split("/")
+    if not path or any(part in {"", ".", ".."} for part in parts):
+        return ""
+    return "/".join(parts)
+
+
+def _source_url_field(model: dict, requirement_id: str, source_url: str) -> str:
+    if not source_url:
+        return ""
+    repo_path = _repo_file_url(source_url)
+    if repo_path and requirement_id:
+        href = html.escape(_file_href(model, requirement_id, repo_path))
+        return (
+            '<div class="ro-field"><span>URL</span>'
+            f'<a class="file-link" href="{href}">{html.escape(source_url)}</a></div>'
+        )
+    return (
+        '<div class="ro-field"><span>URL</span>'
+        f'<a href="{html.escape(source_url)}" target="_blank" rel="noopener">'
+        f"{html.escape(source_url)}</a></div>"
+    )
+
+
 def _ro_field(label: str, value: str) -> str:
     if not value:
         return ""
@@ -928,13 +957,7 @@ def _identity_card(
         )
     )
     law_html = html.escape(law) if law else "No law text on this Requirement."
-    url_html = ""
-    if source_url:
-        url_html = (
-            '<div class="ro-field"><span>URL</span>'
-            f'<a href="{html.escape(source_url)}" target="_blank" rel="noopener">'
-            f"{html.escape(source_url)}</a></div>"
-        )
+    url_html = _source_url_field(model, requirement_id, source_url)
     ident = (
         f'<p class="muted"><code>{html.escape(requirement_id)}</code></p>'
         if requirement_id
