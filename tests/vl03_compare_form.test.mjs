@@ -159,3 +159,32 @@ function formTree() {
     choice("remediation_hint", "keep this hint", "take this hint"),
   ]);
 }
+
+test("an added requirement is the editor fields, not one JSON blob", () => {
+  const html = renderCompareForm({
+    addition: true,
+    proposed: {
+      id: "CRA-PROD-DESC-PURPOSE",
+      references: [{ locator: "VII.1(a)", law_text: "its intended purpose" }],
+      discovery_hints: {
+        concepts: ["product description", "intended purpose"],
+        sources: [{ source: "documents" }],
+      },
+      source: { framework: "EU", instrument: "CRA" },
+    },
+  });
+  assert.match(html, /<h1>CRA-PROD-DESC-PURPOSE<\/h1>/);
+  assert.doesNotMatch(html, /data-field="requirement"/);
+  assert.doesNotMatch(html, /\{"discovery_hints"/);
+  const references = html.split('data-field="references"')[1].split('data-field=')[0];
+  assert.match(references, /References/);
+  assert.match(references, /VII\.1\(a\)\nits intended purpose/);
+  assert.match(references, /choice-old">\(empty\)/);
+  assert.match(references, /choice-new">VII\.1\(a\)/);
+  const concepts = html.split('data-field="discovery_hints.concepts"')[1].split('data-field=')[0];
+  assert.match(concepts, /Concepts/);
+  assert.match(concepts, /product description\nintended purpose/);
+  const sources = html.split('data-field="discovery_hints.sources"')[1].split('data-field=')[0];
+  assert.match(sources, /documents/);
+  assert.doesNotMatch(sources, /\{"source"/);
+});

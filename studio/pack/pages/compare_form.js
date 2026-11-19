@@ -41,35 +41,78 @@ export function paint(root, choices) {
 export function changeOne(state, name, side) {
     return { ...state, [name]: side };
 }
+const LABELS = {
+    references: "References",
+    note: "Note",
+    remediation_hint: "Remediation hint",
+    strength: "Strength",
+    responsible: "Responsible",
+    applicability: "Applicability",
+    exceptions: "Exceptions",
+    scope: "Scope",
+    "source.framework": "Framework",
+    "source.instrument": "Instrument",
+    "source.identifier": "Identifier",
+    "source.edition": "Edition",
+    "source.language": "Language",
+    "source.url": "URL",
+    "discovery_hints.concepts": "Concepts",
+    "discovery_hints.expected_evidence": "Expected evidence",
+    "discovery_hints.path_hints": "Path hints",
+    "discovery_hints.sources": "Sources",
+};
 export function renderCompareForm(model) {
     const controls = ('<p><button type="button" id="select-all-old">Select all old</button> '
         + '<button type="button" id="select-all-new">Select all new</button></p>');
     const style = ("<style>.choice-old{color:#991b1b;text-decoration:line-through}.choice-new{color:#15803d}"
         + 'details[data-choice="old"] button[data-side="old"]{outline:2px solid #991b1b}'
-        + 'details[data-choice="new"] button[data-side="new"]{outline:2px solid #15803d}</style>');
-    if (model.addition) {
-        return style + controls + renderDisclosure("requirement", "", textOf(model.proposed ?? {}));
-    }
+        + 'details[data-choice="new"] button[data-side="new"]{outline:2px solid #15803d}'
+        + "#compare-form pre{white-space:pre-wrap;margin:0}"
+        + "#compare-form .field-label{display:block;font-size:.78rem;color:#64748b;margin:.85rem 0 .2rem}"
+        + "#compare-form .choice-caption{display:block;font-size:.75rem;font-weight:600;margin:0 0 .25rem;color:#64748b;text-decoration:none}"
+        + "#compare-form button[data-side]{display:block;width:100%;margin:.35rem 0 0;padding:.55rem .7rem;background:#fff;color:inherit;border:1px solid #e2e8f0;border-radius:8px;text-align:left}"
+        + "#compare-form details[open]>summary{display:none}"
+        + "</style>");
     const current = model.current ?? {};
     const proposed = model.proposed ?? {};
     const blocks = FIELDS.map((field) => renderField(field, current, proposed));
-    return style + controls + blocks.join("");
+    return style + heading(model) + controls + blocks.join("");
+}
+function heading(model) {
+    const proposed = model.proposed ?? {};
+    const current = model.current ?? {};
+    const id = String(proposed.id || current.id || model.id || "");
+    const title = id ? `<h1>${escapeHtml(id)}</h1>` : "";
+    if (!model.addition)
+        return title;
+    return (title
+        + '<p class="muted">This requirement is not in the current pack. '
+        + "Select all new adds it. Select all old leaves it out.</p>");
 }
 function renderField(field, current, proposed) {
     const oldText = textOf(field.read(current));
     const newText = textOf(field.read(proposed));
+    const label = `<span class="field-label">${escapeHtml(LABELS[field.name] || field.name)}</span>`;
     if (oldText === newText) {
-        return `<section data-field="${escapeHtml(field.name)}"><p>${escapeHtml(oldText)}</p></section>`;
+        if (!oldText) {
+            return `<section data-field="${escapeHtml(field.name)}" hidden></section>`;
+        }
+        const shown = `<pre class="field-value">${escapeHtml(oldText)}</pre>`;
+        return `<section data-field="${escapeHtml(field.name)}">${label}${shown}</section>`;
     }
-    return renderDisclosure(field.name, oldText, newText);
+    return (`<section data-field="${escapeHtml(field.name)}">${label}`
+        + renderDisclosure(shown(oldText), shown(newText))
+        + "</section>");
 }
-function renderDisclosure(name, oldText, newText) {
-    return (`<section data-field="${escapeHtml(name)}">`
-        + '<details data-choice="old">'
+function renderDisclosure(oldText, newText) {
+    return ('<details open data-choice="old">'
         + `<summary><pre class="choice-current choice-old">${escapeHtml(oldText)}</pre></summary>`
-        + `<button type="button" data-side="old"><pre class="choice-old">${escapeHtml(oldText)}</pre></button>`
-        + `<button type="button" data-side="new"><pre class="choice-new">${escapeHtml(newText)}</pre></button>`
-        + "</details></section>");
+        + `<button type="button" data-side="old"><span class="choice-caption">Old</span><pre class="choice-old">${escapeHtml(oldText)}</pre></button>`
+        + `<button type="button" data-side="new"><span class="choice-caption">New</span><pre class="choice-new">${escapeHtml(newText)}</pre></button>`
+        + "</details>");
+}
+function shown(value) {
+    return value ? value : "(empty)";
 }
 function child(requirement, parent, key) {
     const value = requirement[parent];
@@ -83,9 +126,27 @@ function textOf(value) {
     if (typeof value === "string")
         return value;
     if (Array.isArray(value)) {
-        return value.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join("\n");
+        const parts = value.map((item) => textOfItem(item)).filter((item) => item);
+        const gap = parts.some((item) => item.includes("\n")) ? "\n\n" : "\n";
+        return parts.join(gap);
     }
-    return JSON.stringify(value);
+    return textOfItem(value);
+}
+function textOfItem(value) {
+    if (value == null)
+        return "";
+    if (typeof value === "string")
+        return value;
+    if (typeof value !== "object")
+        return String(value);
+    if ("law_text" in value || "locator" in value) {
+        const locator = value.locator ? String(value.locator) : "";
+        const law = value.law_text ? String(value.law_text) : "";
+        return locator && law ? `${locator}\n${law}` : locator || law;
+    }
+    if (typeof value.source === "string" && Object.keys(value).length === 1)
+        return value.source;
+    return JSON.stringify(value, null, 2);
 }
 function escapeHtml(value) {
     return value
@@ -108,6 +169,7 @@ function mount() {
         .then((response) => response.json())
         .then((model) => {
         root.innerHTML = renderCompareForm(model);
+        const addition = Boolean(model.addition);
         const choices = {};
         root.querySelectorAll("details[data-choice]").forEach((node) => {
             const field = node.parentElement?.getAttribute("data-field");
@@ -154,7 +216,12 @@ function mount() {
         submit.textContent = "Apply";
         form.append(submit);
         form.addEventListener("submit", () => {
-            choice.value = JSON.stringify(choices);
+            const posted = { ...choices };
+            if (addition) {
+                const sides = Object.values(choices);
+                posted.requirement = sides.length && sides.every((side) => side === "new") ? "new" : "old";
+            }
+            choice.value = JSON.stringify(posted);
         });
         root.append(form);
     });
