@@ -102,8 +102,16 @@ details.requirement > summary{list-style:none;pointer-events:none}
 details.requirement > summary::-webkit-details-marker{display:none}
 details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
 dialog{border:1px solid var(--line);border-radius:12px;padding:0;max-width:36rem;width:calc(100% - 2rem)}
-dialog.overlap{max-width:min(48rem,calc(100% - 2rem))}
+dialog.overlap{max-width:min(52rem,calc(100% - 2rem))}
 dialog.overlap[open]{position:fixed;top:8vh;left:50%;transform:translateX(-50%);z-index:20;max-height:80vh;overflow:auto}
+dialog.overlap table{width:100%;border-collapse:collapse}
+dialog.overlap th,dialog.overlap td{text-align:left;vertical-align:top;padding:.4rem .55rem;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+dialog.overlap th{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#57534e}
+dialog.overlap button.overlap-detail{background:none;border:0;padding:0;color:#0f766e;font:inherit;text-decoration:underline;cursor:pointer}
+dialog.check-detail{white-space:normal}
+dialog.check-detail dl{margin:0}
+dialog.check-detail dt{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#57534e}
+dialog.check-detail dd{margin:0 0 .7rem;overflow-wrap:anywhere}
 dialog.try-discovery{max-width:min(56rem,calc(100% - 2rem))}
 dialog.try-discovery .body{max-height:70vh;overflow:auto}
 dialog.review-discover{max-width:min(72rem,calc(100% - 2rem));width:calc(100% - 2rem)}

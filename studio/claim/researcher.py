@@ -204,6 +204,12 @@ document.querySelectorAll(".check-edit").forEach((button) => {{
 document.querySelectorAll(".check-close").forEach((button) => {{
   button.addEventListener("click", () => button.closest("dialog").close());
 }});
+document.querySelectorAll("button.overlap-detail").forEach((button) => {{
+  button.addEventListener("click", () => {{
+    const dialog = button.nextElementSibling;
+    if (dialog && dialog.tagName === "DIALOG") dialog.showModal();
+  }});
+}});
 const addDialog = document.getElementById("add-candidate");
 document.querySelectorAll(".add-open").forEach((button) => {{
   button.addEventListener("click", () => {{ if (addDialog) addDialog.showModal(); }});
@@ -456,10 +462,12 @@ def _tip(text: str) -> str:
 
 
 def _with_claims(findings: list, claims: list, requirement_id: str) -> list:
-    """Saved claims first (multi-path above single-path), then candidates beside them.
+    """Saved claims first, then candidates that are not already a Claim.
 
-    Pilot: no merge. A Claim and a discovery candidate for the same file stay as
-    separate rows; new checks on a candidate still get their own Claim id.
+    Saving a check on a discovered file writes a Claim for that file. That
+    candidate is no longer listed, so the file and its checks appear once.
+    A Claim that names the file among several others does not remove the
+    candidate.
     """
     owned = [
         claim
@@ -473,9 +481,16 @@ def _with_claims(findings: list, claims: list, requirement_id: str) -> list:
         label = paths[0] if paths else str(claim.get("id") or "")
         return (multi, label, str(claim.get("id") or ""))
 
+    claimed_files = set()
+    for claim in owned:
+        paths = _claim_paths(claim)
+        if len(paths) == 1:
+            claimed_files.add(paths[0])
     rows = [_claim_row(claim) for claim in sorted(owned, key=claim_sort_key)]
     for item in findings:
         if not isinstance(item, dict):
+            continue
+        if str(item.get("path") or "") in claimed_files:
             continue
         row = dict(item)
         row["has_claim"] = False
@@ -710,19 +725,17 @@ def _overlap_dialog(model: dict) -> str:
     rows = overlap.get("rows") or []
     if not rows:
         return ""
-    items = []
+    body = []
     for row in rows:
         if not isinstance(row, dict):
             continue
-        sources = ", ".join(html.escape(str(path)) for path in row.get("sources") or [])
-        checks = "".join(
-            f"<li>{html.escape(str(line))}</li>" for line in row.get("checks") or []
-        )
-        items.append(
-            "<li>"
-            f"<code>{html.escape(str(row.get('id') or ''))}</code> "
-            f"for <code>{html.escape(str(row.get('requirement_id') or ''))}</code> "
-            f"shares {sources}<ul>{checks}</ul></li>"
+        checks = "<br>".join(_overlap_check(entry) for entry in row.get("checks") or [])
+        body.append(
+            "<tr>"
+            f"<td>{html.escape(str(row.get('file') or ''))}</td>"
+            f"<td>{html.escape(str(row.get('requirement_id') or ''))}</td>"
+            f"<td>{checks}</td>"
+            "</tr>"
         )
     fields = "".join(
         f'<input type="hidden" name="{html.escape(str(field.get("name") or ""))}" '
@@ -736,7 +749,10 @@ def _overlap_dialog(model: dict) -> str:
   <div class="head"><h2>Another Claim already uses a file in this save</h2></div>
   <div class="body">
     <p>Saving leaves those Claims unchanged. Read their checks before keeping this one.</p>
-    <ul>{"".join(items)}</ul>
+    <table>
+      <thead><tr><th>File</th><th>Requirement</th><th>Checks</th></tr></thead>
+      <tbody>{"".join(body)}</tbody>
+    </table>
     <form method="post" action="/discover/feedback/checks">
       {fields}
       <input type="hidden" name="overlap_confirm" value="1">
@@ -746,6 +762,29 @@ def _overlap_dialog(model: dict) -> str:
   </div>
 </dialog>
 """
+
+
+def _overlap_check(entry: object) -> str:
+    """One check name. Its dialog prints the arguments the save already listed."""
+    if not isinstance(entry, dict):
+        return html.escape(str(entry))
+    caption = html.escape(str(entry.get("caption") or ""))
+    fields = []
+    for field in entry.get("fields") or []:
+        if not isinstance(field, dict):
+            continue
+        fields.append(
+            f"<dt>{html.escape(str(field.get('label') or ''))}</dt>"
+            f"<dd>{html.escape(str(field.get('value') or ''))}</dd>"
+        )
+    body = f"<dl>{''.join(fields)}</dl>" if fields else ""
+    return (
+        f'<button type="button" class="overlap-detail">{caption}</button>'
+        f'<dialog class="check-detail"><div class="head"><h2>{caption}</h2></div>'
+        f'<div class="body">{body}'
+        '<p class="actions"><button type="button" class="secondary check-close">Close</button></p>'
+        "</div></dialog>"
+    )
 
 
 def _outcomes(outcomes: list) -> str:

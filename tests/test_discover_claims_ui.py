@@ -239,7 +239,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn("SECURITY.md", page)
         self.assertIn(".well-known/security.txt", page)
         self.assertIn("The reviewed file documents the product risks.", page)
-        self.assertIn("Names the risk.", page)
+        self.assertNotIn("Names the risk.", page)
         self.assertIn("Mentions security practices.", page)
         self.assertIn("Only a candidate.", page)
         self.assertIn("docs/kept.md", page)
@@ -248,11 +248,11 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         multi = page.index("Required house-policy documents contain no secret-like patterns.")
         kept = page.index("This claim stays when discovery misses the file.")
         single = page.index("The reviewed file documents the product risks.")
-        candidate = page.index("Names the risk.")
+        candidate = page.index("Mentions security practices.")
         self.assertLess(multi, kept)
         self.assertLess(kept, single)
         self.assertLess(single, candidate)
-        self.assertEqual(page.count('data-path="docs/risk-a.md"'), 2)
+        self.assertEqual(page.count('data-path="docs/risk-a.md"'), 1)
         self.assertEqual(page.count('data-path="SECURITY.md"'), 1)
         self.assertIn('name="claim_id" value="HOUSE-SECRET-PATHS"', page)
         self.assertIn(
@@ -375,8 +375,13 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             try:
                 _post(base + "/discover/repos", {"name": "sample-product", "path": str(root / "product")})
                 warned = _post(base + "/discover/feedback/checks", form)
-                self.assertIn("REQ-A-SECURITY.md", warned)
-                self.assertIn("File is present — SECURITY.md", warned)
+                self.assertIn("<th>File</th><th>Requirement</th><th>Checks</th>", warned)
+                self.assertIn(
+                    '<td>SECURITY.md</td><td>REQ-A</td><td><button type="button" class="overlap-detail">File is present</button>',
+                    warned,
+                )
+                self.assertIn("<h2>File is present</h2>", warned)
+                self.assertIn(">Close</button>", warned)
                 self.assertIn("Save anyway", warned)
                 self.assertEqual(read_json(claims / "HOUSE-SECRET-PATHS.json")["checks"], several["checks"])
                 _post(base + "/discover/feedback/checks", {**form, "overlap_confirm": "1"})
@@ -594,6 +599,8 @@ class DiscoverClaimsUiTest(unittest.TestCase):
                 self.assertEqual(claim["checks"], [{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}])
                 self.assertEqual(claim["description"], "Names the risk.")
                 self.assertNotIn("signed", claim)
+                self.assertEqual(saved.count('data-path="docs/risk-a.md"'), 1)
+                self.assertEqual(saved.count(">File is present</button>"), 1)
                 before = claim_files[0].read_bytes()
                 _post(
                     base + "/discover/feedback/checks",

@@ -27,3 +27,42 @@ def check_caption(entry: dict) -> str:
         if kinds == {"placeholder"}:
             return CAPTIONS["anti_placeholder"]
     return CAPTIONS.get(check, check)
+
+
+def check_detail(entry: dict) -> dict:
+    """Caption plus the arguments a person reads. File names are left out."""
+    args = entry.get("args") if isinstance(entry.get("args"), dict) else {}
+    fields: list[dict] = []
+    for probe in args.get("probes") or []:
+        if not isinstance(probe, dict):
+            continue
+        kind = probe.get("kind")
+        if kind == "size" and probe.get("bytes") is not None:
+            fields.append({"label": "Min bytes", "value": str(probe["bytes"])})
+        elif kind == "words" and probe.get("n") is not None:
+            fields.append({"label": "Min words", "value": str(probe["n"])})
+        elif kind == "headers":
+            headers = [str(item) for item in probe.get("headers") or [] if str(item).strip()]
+            if headers:
+                fields.append({"label": "Require headers", "value": ", ".join(headers)})
+        elif kind == "pattern":
+            fields.append({"label": "Pattern", "value": str(probe.get("pattern") or "")})
+        elif kind == "token":
+            fields.append({"label": "Bind repo token", "value": "yes"})
+    for key, label in (
+        ("package", "Package"),
+        ("banned_versions", "Banned versions"),
+        ("max_age_days", "Max age days"),
+        ("since_ref", "Since ref"),
+        ("email", "Require git author email"),
+        ("name", "Require git author name"),
+    ):
+        value = args.get(key)
+        if value is None or value == "" or value == []:
+            continue
+        if isinstance(value, list):
+            value = ", ".join(str(item) for item in value)
+        fields.append({"label": label, "value": str(value)})
+    if args.get("bind_repo_token") is True:
+        fields.append({"label": "Bind repo token", "value": "yes"})
+    return {"caption": check_caption(entry), "fields": fields}

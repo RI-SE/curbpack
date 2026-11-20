@@ -307,27 +307,40 @@ def claims_sharing_a_source(claim: dict, claims: list) -> list[dict]:
 
 
 def source_overlap(claim: dict, claims: list) -> list[dict]:
-    """Rows a page can print: the other Claim, the shared files, and its checks."""
-    from checks.labels import check_caption
+    """One row per shared file: the file, the other Requirement, and its checks there.
+
+    Sorted by file name, then Requirement. A check is listed when it names that
+    file, or when it names no file and the Claim's evidence includes it.
+    """
+    from checks.labels import check_detail
 
     mine = set(_claim_sources(claim))
     rows = []
     for other in claims_sharing_a_source(claim, claims):
-        shared = [path for path in _claim_sources(other) if path in mine]
-        checks = []
-        for entry in _check_entries(other):
-            caption = check_caption(entry)
-            paths = _paths(entry.get("args"))
-            checks.append(f"{caption} — {', '.join(paths)}" if paths else caption)
-        rows.append(
-            {
-                "id": str(other.get("id") or ""),
-                "requirement_id": str(other.get("requirement_id") or ""),
-                "sources": shared,
-                "checks": checks,
-            }
-        )
+        requirement_id = str(other.get("requirement_id") or "")
+        for path in _claim_sources(other):
+            if path not in mine:
+                continue
+            rows.append(
+                {
+                    "file": path,
+                    "requirement_id": requirement_id,
+                    "checks": [
+                        check_detail(entry)
+                        for entry in _check_entries(other)
+                        if _check_covers(other, entry, path)
+                    ],
+                }
+            )
+    rows.sort(key=lambda row: (row["file"].casefold(), row["requirement_id"].casefold()))
     return rows
+
+
+def _check_covers(claim: dict, entry: dict, path: str) -> bool:
+    named = _paths(entry.get("args"))
+    if named:
+        return path in named
+    return path in _claim_sources(claim)
 
 
 def _claim_sources(claim: dict) -> list[str]:
