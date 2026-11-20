@@ -77,9 +77,10 @@ class UiSmokeTest(unittest.TestCase):
                     },
                 )
                 check = _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
-                self.assertIn("claim-risk", check)
+                self.assertIn("Checks performed", check)
                 self.assertIn("fail", check)
                 self.assertIn("not a legal conclusion", check)
+                self.assertIn("/review?", check)
                 run = next((root / "product").rglob("run-result_*.json"))
                 review = _get(
                     base
@@ -87,7 +88,7 @@ class UiSmokeTest(unittest.TestCase):
                     + urllib.parse.quote(str(run.resolve()), safe="")
                 )
                 self.assertIn("not saved", review)
-                self.assertIn("Compile writes the report", review)
+                self.assertIn("Save decision and review-sign need a report file", review)
                 self.assertIn("no field for a conclusion that the product meets CRA", review)
                 self.assertIn("not verification of that commit", review)
                 self.assertIn("claim-risk", review)
@@ -108,7 +109,7 @@ class UiSmokeTest(unittest.TestCase):
                 )
                 reports = sorted(reports_dir.glob("review-report_*.json"))
                 self.assertEqual(len(reports), 1)
-                self.assertNotIn("Compile writes the report", compiled)
+                self.assertNotIn("Save decision and review-sign need a report file", compiled)
                 self.assertNotIn("not saved", compiled)
                 self.assertIn("no field for a conclusion that the product meets CRA", compiled)
                 self.assertIn("not verification of that commit", compiled)

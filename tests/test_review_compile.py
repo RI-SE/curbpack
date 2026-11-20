@@ -292,7 +292,8 @@ class ReviewPageTest(unittest.TestCase):
         self.assertIn('data-same-run="yes"', preview)
         self.assertNotIn('name="confirm"', preview)
         self.assertNotIn('name="decision"', preview)
-        self.assertIn(">Compile</button>", preview)
+        self.assertIn(">Create new Report</button>", preview)
+        self.assertNotIn("Compile writes a new unsigned report", preview)
 
 
 def _claim(claim_id: str, path: str) -> dict:

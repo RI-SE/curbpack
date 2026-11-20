@@ -682,8 +682,10 @@ class CheckIoTest(unittest.TestCase):
                 self.assertIn("runs/out", project)
                 self.assertIn("signed/reports", project)
                 check_page = _get(base + "/check")
-                self.assertIn("cra-baseline", check_page)
-                self.assertIn("OTHER-REQ", check_page)
+                self.assertIn("Checks performed", check_page)
+                self.assertIn("Check → Result → Review → Report", check_page)
+                self.assertIn("CRA baseline", check_page)
+                self.assertIn(">Claims</th>", check_page)
                 self.assertNotIn("Read it", check_page)
                 self.assertNotIn("Start empty", check_page)
                 self.assertNotIn("hidden-pack", check_page)
@@ -707,7 +709,7 @@ class CheckIoTest(unittest.TestCase):
                 results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
                 self.assertEqual(len(results), 1)
                 self.assertRegex(results[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
-                self.assertIn(str(results[0].resolve()), ran)
+                self.assertIn(urllib.parse.quote(str(results[0].resolve()), safe=""), ran)
                 first = results[0].read_bytes()
                 result = json.loads(first.decode("utf-8"))
                 self.assertEqual([row["id"] for row in result["claims"]], ["claim-readme"])
@@ -716,7 +718,7 @@ class CheckIoTest(unittest.TestCase):
                 results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
                 self.assertEqual(len(results), 2)
                 self.assertEqual(results[0].read_bytes(), first)
-                self.assertIn(str(results[1].resolve()), ran_again)
+                self.assertIn(urllib.parse.quote(str(results[1].resolve()), safe=""), ran_again)
                 outsider = workspace / "run-result_20990101T000000Z.json"
                 write_json(
                     outsider,
@@ -754,7 +756,7 @@ class CheckIoTest(unittest.TestCase):
                 )
                 write_json(repo / "curbpack.json", include)
                 included = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                self.assertIn("requirements CRA-PURPOSE", included)
+                self.assertIn("Checks performed", included)
                 self.assertNotIn("exclude_requirements", included)
                 newest = sorted((repo / "runs" / "out").glob("run-result_*.json"))[-1]
                 listed = [row["id"] for row in read_json(newest)["claims"]]

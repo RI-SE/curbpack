@@ -51,6 +51,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         errors.append(f"Reports directory {config['reports_dir']} cannot be used.")
     else:
         extra["review_reports"] = _dated_entries(reports_folder, "review-report")
+    _mark_latest(extra)
     requested_report = (query.get("report") or [""])[0]
     requested_result = (query.get("result") or [""])[0]
     if requested_report.strip():
@@ -74,6 +75,9 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         same = _same_as_latest_run(results_folder, report)
         extra["presentation"] = _report_presentation(ws, repo, config, report, query, reading)
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
+        extra["source_result"] = _matching_run_path(results_folder, report)
+        embedded = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
+        extra["run_reports"] = _reports_for_run(reports_folder, embedded)
         return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
     if requested_result.strip():
         status, chosen = _requested_dated(results_folder, requested_result, "run-result")
@@ -86,11 +90,61 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             errors.append(f"{Path(chosen).name} is not a readable run result.")
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_result"] = chosen
+        extra["run_reports"] = _reports_for_run(reports_folder, loaded)
         report = {"run_result": loaded, "claims": [], "appendix": []}
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra
     return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _reports_for_run(folder: Path, run_result: dict) -> list[dict]:
+    if not isinstance(run_result, dict) or not folder.is_dir():
+        return []
+    rows = []
+    for path in sorted(folder.glob("review-report_*.json")):
+        if not path.is_file():
+            continue
+        try:
+            report = load_report(path)
+        except (ModelError, ValueError):
+            continue
+        if not same_run(report, run_result):
+            continue
+        signed = report.get("signed") if isinstance(report.get("signed"), dict) else None
+        rows.append(
+            {
+                "name": path.name,
+                "path": str(path.resolve()),
+                "decision": str(report.get("decision") or "").strip(),
+                "signed": signed is not None,
+                "signer": str(signed.get("name") or "") if signed else "",
+            }
+        )
+    rows.reverse()
+    return rows
+
+
+def _mark_latest(extra: dict) -> None:
+    rows = extra.get("run_results") or []
+    if rows and isinstance(rows[-1], dict):
+        extra["latest_result"] = str(rows[-1].get("path") or "")
+
+
+def _matching_run_path(folder: Path, report: dict) -> str:
+    if not folder.is_dir():
+        return ""
+    found = ""
+    for path in sorted(folder.glob("run-result_*.json")):
+        if not path.is_file():
+            continue
+        try:
+            loaded = load_run_result(path)
+        except (ModelError, ValueError):
+            continue
+        if same_run(report, loaded):
+            found = str(path.resolve())
+    return found
 
 
 def _review_file_view(repo: Path, requested: str) -> dict | None:

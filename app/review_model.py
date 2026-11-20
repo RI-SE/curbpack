@@ -34,12 +34,12 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
     requested = (form.get("result") or [""])[0]
     if not requested.strip():
-        raise ModelError("review", "compile", "a selected run result")
+        raise ModelError("review", "report", "a selected run result")
     status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
     if status != "ok":
         raise ModelError(
             "review",
-            "compile",
+            "report",
             "a run-result file under that repository's results_dir",
         )
     folder = repo_claims_dir(repo)
@@ -117,7 +117,7 @@ def _sign_review(ws: Workspace, form: dict) -> str:
 
 def _review_message(query: dict) -> str:
     if (query.get("compiled") or [""])[0]:
-        return "Report compiled."
+        return "Report created."
     if (query.get("saved") or [""])[0]:
         return "Decision saved."
     if (query.get("signed") or [""])[0]:

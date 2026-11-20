@@ -109,7 +109,7 @@ class CheckRunTest(unittest.TestCase):
                 results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
                 self.assertEqual(len(results), 1)
                 self.assertRegex(results[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
-                self.assertIn(str(results[0].resolve()), ran)
+                self.assertIn(urllib.parse.quote(str(results[0].resolve()), safe=""), ran)
                 self.assertFalse((repo / "runs" / "out" / "run-result.json").exists())
                 first = results[0].read_bytes()
                 result = load_run_result(results[0])
@@ -120,7 +120,7 @@ class CheckRunTest(unittest.TestCase):
                 results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
                 self.assertEqual(len(results), 2)
                 self.assertEqual(results[0].read_bytes(), first)
-                self.assertIn(str(results[1].resolve()), ran_again)
+                self.assertIn(urllib.parse.quote(str(results[1].resolve()), safe=""), ran_again)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

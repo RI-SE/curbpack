@@ -129,10 +129,20 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
 <p class="muted">Edit, sign, or retire Claims already in the product repo.
 New Claims come from <a href="/discover">Discovery &amp; Claims</a>.
 Editing a sealed Claim clears its seal.</p>
+{_review_return_link(model)}
 {_flash(message, error)}
 {''.join(blocks) or empty}
 """
     return page("Claim editor", body, banner=panel)
+
+
+def _review_return_link(model: dict) -> str:
+    value = str(model.get("return_to") or "").strip()
+    if value != "/review" and not value.startswith("/review?"):
+        return ""
+    if value.startswith("//") or any(ch in value for ch in "\\\n\r<>\"'"):
+        return ""
+    return f'<p><a href="{html.escape(value, quote=True)}">Back to Review</a></p>'
 
 
 def _rebind_options(model: dict, requirement_id: str, proposed: dict) -> str:

@@ -13,7 +13,7 @@ from studio.compile.impl import load_report, write_report
 
 def save_report_decision(path: Path, text: str) -> dict:
     if not path.is_file():
-        raise ModelError("review report", "path", "a saved report; compile writes the file")
+        raise ModelError("review report", "path", "a saved report; create a report first")
     decided = record_decision(load_report(path), text)
     write_report(path, decided)
     return decided
@@ -21,7 +21,7 @@ def save_report_decision(path: Path, text: str) -> dict:
 
 def save_report_signature(path: Path, *, name: str, private_key: bytes, at: str) -> dict:
     if not path.is_file():
-        raise ModelError("review report", "path", "a saved report; compile writes the file")
+        raise ModelError("review report", "path", "a saved report; create a report first")
     current = load_report(path)
     sealed = sign_report(current, name=name, private_key=private_key, at=at)
     write_report(path, sealed)
@@ -29,6 +29,7 @@ def save_report_signature(path: Path, *, name: str, private_key: bytes, at: str)
 
 
 def record_decision(report: dict, text: str) -> dict:
+    _reject_if_signed(report)
     if not isinstance(text, str) or not text.strip():
         raise ModelError("review report", "decision", "the reviewer's own words")
     out = copy.deepcopy(report)
@@ -38,11 +39,22 @@ def record_decision(report: dict, text: str) -> dict:
 
 
 def sign_report(report: dict, *, name: str, private_key: bytes, at: str) -> dict:
+    _reject_if_signed(report)
     if not isinstance(report.get("decision"), str) or not report["decision"].strip():
         raise ModelError("review report", "decision", "words recorded before review-sign")
     if "run_result" not in report:
         raise ModelError("review report", "run_result", "the run result that was reviewed")
     return sign_object(report, name=name, private_key=private_key, at=at)
+
+
+def _reject_if_signed(report: dict) -> None:
+    """A review-sign locks that file. A later decision is a new compiled report."""
+    if isinstance(report, dict) and isinstance(report.get("signed"), dict):
+        raise ModelError(
+            "review report",
+            "signed",
+            "a new report; this signed report is unchanged",
+        )
 
 
 def read_report_signature(

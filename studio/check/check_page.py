@@ -6,7 +6,6 @@ import html
 from urllib.parse import quote
 
 from app.pages import _flash, page, repo_config_panel
-from checks.labels import check_caption
 
 
 def check_page(
@@ -16,41 +15,7 @@ def check_page(
     error: str = "",
     editor: dict | None = None,
 ) -> bytes:
-    if result is None:
-        shown = "<p>No run yet.</p>"
-    else:
-        git = ""
-        if result.get("worktree") == "dirty":
-            git = "<p class=\"err\">The worktree was dirty. This result is not verification of that commit's exact content.</p>"
-        elif result.get("commit"):
-            git = f"<p class=\"muted\">commit <code>{html.escape(result['commit'])}</code> · worktree {html.escape(result['worktree'])}</p>"
-        rows = []
-        for row in result.get("claims") or []:
-            nested = row.get("checks") or []
-            if not nested:
-                rows.append(
-                    "<tr>"
-                    f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
-                    f"<td></td><td></td>"
-                    f"{_status_cell(row.get('status', ''))}{_binding_cell(row)}<td></td>"
-                    "</tr>"
-                )
-            for item in nested:
-                rows.append(
-                    "<tr>"
-                    f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
-                    f"<td>{item.get('index', '')}</td>"
-                    f"<td>{html.escape(check_caption(item))}</td>"
-                    f"{_status_cell(item.get('status', ''))}{_binding_cell(row)}"
-                    f"<td>{html.escape(item.get('detail') or '')}</td>"
-                    "</tr>"
-                )
-        table = "<p>No claim rows. This is not a successful verification.</p>" if not rows else (
-            "<table><tr><th>Claim</th><th>Index</th><th>Check</th><th>Status</th><th>Binding</th><th>Detail</th></tr>"
-            + "".join(rows)
-            + "</table>"
-        )
-        shown = git + f"<p>exit {exit_code}</p>" + table
+    del result, exit_code
     door = editor or {}
     panel = repo_config_panel(
         door,
@@ -59,78 +24,45 @@ def check_page(
     )
     body = f"""
 <h1>Check</h1>
-<p class="muted">Check reads this repository's <code>curbpack.json</code>.
-The file is not signed. A green check row is not a legal conclusion.
-Edit paths on <a href="/project">Project</a>.</p>
+<p>Check writes a Result. Review reads that Result and can write a Report.</p>
+<p>Check → Result → Review → Report</p>
+<p class="muted">A passing Result is not a legal conclusion.</p>
 {_flash(message, error)}
-{_curbpack_editor(door)}
-<h2>Report</h2>
-<div class="card">{shown}</div>
+{_pack_card(door)}
+<h2>Checks performed</h2>
+{_performed_table(door)}
 """
     return page("Check", body, banner=panel)
 
 
-def _status_cell(status: object) -> str:
-    text = html.escape(str(status or ""))
-    return f'<td data-check-status="{text}">{text}</td>'
-
-
-def _binding_cell(row: dict) -> str:
-    binding = row.get("binding")
-    if binding not in {"match", "stale", "missing"}:
-        return "<td></td>"
-    lines = [html.escape(str(binding))]
-    if binding in {"stale", "missing"}:
-        lines.extend(
-            html.escape(str(row.get(key) or ""))
-            for key in ("namespace", "pack_id", "requirement_id")
-        )
-        lines.append("requirement " + html.escape(str(row.get("requirement_digest") or "")))
-    if binding == "stale":
-        lines.append("actual " + html.escape(str(row.get("actual_digest") or "")))
-    return f'<td data-binding="{html.escape(str(binding))}">{"<br>".join(lines)}</td>'
-
-
-def _curbpack_editor(editor: dict) -> str:
+def _pack_card(editor: dict) -> str:
     repo_id = str(editor.get("repo_id") or "")
     if not repo_id:
-        return (
-            '<div class="card discover-wrap">'
-            '<p class="muted">Select a project to run Check.</p></div>'
-        )
+        return '<p class="muted">Select a project to run Check.</p>'
     rows = []
     for pack in editor.get("packs") or []:
         if not isinstance(pack, dict):
             continue
-        pack_id = str(pack.get("id") or "")
-        state = "present" if pack.get("present") else "missing"
+        name = str(pack.get("name") or pack.get("id") or "")
+        label = html.escape(name)
+        if not pack.get("present"):
+            label += ' <span class="muted">missing</span>'
         rows.append(
             "<tr>"
-            f"<td><code>{html.escape(pack_id)}</code></td>"
-            f"<td>{html.escape(state)}</td>"
-            f"<td><code>{html.escape(str(pack.get('pack_dir') or ''))}</code></td>"
+            f"<td>{label}</td>"
+            f'<td class="num">{int(pack.get("claims") or 0)}</td>'
             "</tr>"
         )
     if not rows:
-        rows.append('<tr><td colspan="3" class="muted">No packs named in curbpack.json.</td></tr>')
-    selection = str(editor.get("selection") or "")
-    selection_html = (
-        f"<p>Selection <code>{html.escape(selection)}</code></p>" if selection else ""
+        rows.append('<tr><td colspan="2" class="muted">No packs named in curbpack.json.</td></tr>')
+    table = (
+        "<table><thead><tr><th>Pack</th><th class=\"num\">Claims</th></tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
     )
-    result_path = str(editor.get("run_result_path") or "")
-    result_html = ""
-    if result_path:
-        result_html = f"<p>Run result <code>{html.escape(result_path)}</code></p>"
-        if repo_id:
-            href = f"/review?repo={quote(repo_id, safe='')}&result={quote(result_path, safe='')}"
-            result_html += f'<p><a href="{html.escape(href)}">Review this run</a></p>'
     return f"""
-<div class="card discover-wrap">
-{selection_html}
-{result_html}
-<table><thead><tr><th>Pack</th><th>Status</th><th>Path</th></tr></thead><tbody>
-{"".join(rows)}
-</tbody></table>
+<div class="card discover-wrap check-run">
+{table}
 <form method="post" action="/check">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
 <p class="actions">
@@ -139,3 +71,49 @@ def _curbpack_editor(editor: dict) -> str:
 </form>
 </div>
 """
+
+
+def _performed_table(editor: dict) -> str:
+    repo_id = str(editor.get("repo_id") or "")
+    runs = [row for row in (editor.get("runs") or []) if isinstance(row, dict)]
+    if not runs:
+        return "<p>No checks performed yet.</p>"
+    body = []
+    for run in runs:
+        when = str(run.get("when") or run.get("name") or "")
+        path = str(run.get("path") or "")
+        label = html.escape(when)
+        if repo_id and path:
+            href = html.escape(
+                f"/review?repo={quote(repo_id, safe='')}&result={quote(path, safe='')}"
+            )
+            label = f'<a href="{href}">{label}</a>'
+        body.append(
+            "<tr>"
+            f"<td>{label}</td>"
+            f"<td>{html.escape(_outcome(run))}</td>"
+            "</tr>"
+        )
+    return (
+        "<table><thead><tr><th>When</th><th>Result</th></tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def _outcome(run: dict) -> str:
+    if run.get("unreadable"):
+        return "unreadable"
+    text = (
+        f'{int(run.get("fail") or 0)} fail · '
+        f'{int(run.get("pass") or 0)} pass · '
+        f'{int(run.get("skipped") or 0)} skipped'
+    )
+    extras = []
+    for name in ("stale", "missing"):
+        count = int(run.get(name) or 0)
+        if count:
+            extras.append(f"{count} {name}")
+    if extras:
+        text += " · " + " · ".join(extras)
+    return text

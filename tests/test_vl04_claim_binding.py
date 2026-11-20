@@ -382,7 +382,7 @@ class RunResultBindingTest(unittest.TestCase):
 
 class CheckPageBindingTest(unittest.TestCase):
     def test_a_passing_check_still_shows_stale_and_missing_bindings(self):
-        """The Check page copies the stored binding. It does not replace the Check status."""
+        """A Check row keeps the passing counts and names stale or missing beside them."""
         result = {
             "claims": [
                 {
@@ -427,28 +427,31 @@ class CheckPageBindingTest(unittest.TestCase):
                 },
             ]
         }
-        page = check_page(result, 0).decode()
-        self.assertEqual(page.count("data-binding="), 3)
-        stale = page[page.index('data-binding="stale"'):page.index('data-binding="missing"')]
-        self.assertLess(
-            stale.index("requirement recorded-stale-digest"),
-            stale.index("actual actual-stale-digest"),
-        )
-        self.assertIn("RISE/Stale Pack", stale)
-        self.assertIn("stale-pack", stale)
-        self.assertIn("REQ-STALE", stale)
-        missing = page[page.index('data-binding="missing"'):page.index('data-binding="match"')]
-        self.assertIn("requirement recorded-missing-digest", missing)
-        self.assertIn("RISE/Missing Pack", missing)
-        self.assertIn("missing-pack", missing)
-        self.assertIn("REQ-MISSING", missing)
-        self.assertNotIn("actual ", missing)
-        match = page[page.index('data-binding="match"'):page.index("</td>", page.index('data-binding="match"'))]
-        self.assertTrue(match.endswith(">match"))
-        self.assertNotIn("requirement", match)
-        self.assertNotIn("actual", match)
+        from studio.check.check_model import _outcome_counts
+
+        counts = _outcome_counts(result)
+        self.assertEqual(counts["pass"], 4)
+        self.assertEqual(counts["fail"], 0)
+        self.assertEqual(counts["stale"], 1)
+        self.assertEqual(counts["missing"], 1)
+        self.assertEqual(counts["match"], 1)
+        page = check_page(
+            None,
+            None,
+            editor={
+                "repo_id": "alpha",
+                "runs": [
+                    {
+                        "name": "run-result_20260101T000000Z.json",
+                        "path": "/tmp/runs/run-result_20260101T000000Z.json",
+                        "when": "2026-01-01 00:00 UTC",
+                        **counts,
+                    }
+                ],
+            },
+        ).decode()
+        self.assertIn("0 fail · 4 pass · 0 skipped · 1 stale · 1 missing", page)
         self.assertNotIn('data-binding="pass"', page)
-        self.assertEqual(page.count('data-check-status="pass"'), 4)
 
 
 def _bound_claim(claim_id: str, requirement: dict, checks: list) -> dict:

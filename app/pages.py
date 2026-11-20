@@ -143,6 +143,10 @@ dialog.config-all .config-panel{border:0;padding:0;margin:0}
 .discover-wrap .path-cell{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .discover-wrap select.copy-select{max-width:16rem}
 .discover-wrap th.num,.discover-wrap td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.check-run{display:flex;align-items:stretch;gap:1.25rem}
+.check-run > table{width:auto;flex:1 1 auto;margin:0}
+.check-run > form{margin:0;flex:0 0 auto;display:flex;align-items:flex-end}
+.check-run .actions{margin:0}
 .discover-wrap th.num.wrap{white-space:normal;line-height:1.2;max-width:6.5rem}
 body:has(.req-desk) main{max-width:min(1400px,100%)}
 .req-head{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:center;justify-content:space-between;margin:0 0 .35rem}
@@ -219,6 +223,10 @@ pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;
 .review-board h2{font-size:1.15rem;margin:1.4rem 0 .55rem}
 .review-board h3{font-size:1rem;margin:0 0 .4rem;font-family:ui-sans-serif,system-ui,sans-serif}
 .review-board .topline{border-left:4px solid var(--accent);font-size:1.05rem}
+.review-board [data-selected="run"] h2{margin:.85rem 0 .35rem;font-size:1.05rem}
+.review-board [data-selected="run"] .topline{border-left:0;padding:0;font-size:1rem}
+.review-board [data-selected="run"] button.link code{font-size:1rem}
+dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board .header{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:baseline;justify-content:space-between;margin-bottom:1.1rem}
 .review-board .pill{display:inline-block;font-size:.75rem;padding:.15rem .45rem;border-radius:999px;background:var(--line);color:var(--ink);border:0;margin:0}
 .review-board .pill-bad{background:#fee2e2;color:#991b1b}

@@ -154,6 +154,7 @@ def present_raw_run(
                 claims,
                 requirement_readings.get(requirement_id),
                 expanded,
+                passages=_passages(requirements_by_id.get(requirement_id)),
             )
         )
     if unresolved:
@@ -233,6 +234,7 @@ def present_compiled_report(
                 requirement_readings.get(requirement_id),
                 expanded,
                 force_open=force_open,
+                passages=_passages(embedded_requirements.get(requirement_id)),
             )
         )
     if unresolved:
@@ -291,6 +293,8 @@ def _claim_item(
                 sentences.append(PREVIOUS_UNKNOWN)
         else:
             sentences = [UNCHANGED]
+    described = embedded if isinstance(embedded, dict) else current
+    description = str(described.get("description") or "") if isinstance(described, dict) else ""
     digest_matches = current is not None and version_digest(current) == row.get("digest")
     current_checks = current.get("checks") if isinstance(current, dict) else None
     if not isinstance(current_checks, list):
@@ -334,6 +338,7 @@ def _claim_item(
     return {
         "id": str(row.get("id") or ""),
         "status": str(row.get("status") or ""),
+        "description": description,
         "binding": row.get("binding") if row.get("binding") in {"match", "stale", "missing"} else "",
         "changed": changed,
         "requirement_id": "",
@@ -373,6 +378,20 @@ def _chain_fields(chain: dict | None) -> dict:
     }
 
 
+def _passages(requirement: dict | None) -> list[dict]:
+    if not isinstance(requirement, dict):
+        return []
+    rows = []
+    for ref in requirement.get("references") or []:
+        if not isinstance(ref, dict):
+            continue
+        text = str(ref.get("law_text") or "").strip()
+        if not text:
+            continue
+        rows.append({"locator": str(ref.get("locator") or ""), "law_text": text})
+    return rows
+
+
 def _group(
     group_id: str,
     claims: list[dict],
@@ -381,6 +400,7 @@ def _group(
     initially_open: bool = False,
     *,
     force_open: bool = False,
+    passages: list | None = None,
 ) -> dict:
     if expanded is None:
         opened = initially_open or force_open or _attention(claims, seal)
@@ -392,6 +412,7 @@ def _group(
         "seal": seal,
         "seal_label": seal_label(seal),
         "result_summary": "Result " + _result_summary(claims),
+        "passages": passages or [],
         "claims": claims,
     }
 

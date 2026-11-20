@@ -57,18 +57,12 @@ class ReviewDocumentListsTest(unittest.TestCase):
                 self.assertIn('value="claims/here"', page)
                 self.assertIn('value="runs/out"', page)
                 self.assertIn('value="signed/reports"', page)
-                runs = _section(page, "run-results")
-                reports = _section(page, "review-reports")
-                self.assertIn("Run result", runs)
-                self.assertIn(one.name, runs)
-                self.assertIn(two.name, runs)
-                self.assertNotIn(first.name, runs)
-                self.assertNotIn(second.name, runs)
-                self.assertIn("Review report", reports)
-                self.assertIn(first.name, reports)
-                self.assertIn(second.name, reports)
-                self.assertNotIn(one.name, reports)
-                self.assertNotIn(two.name, reports)
+                self.assertNotIn("<h2>Run results</h2>", page)
+                self.assertNotIn("<h2>Review reports</h2>", page)
+                self.assertIn(two.name, page)
+                self.assertNotIn(one.name, page)
+                self.assertNotIn(first.name, page)
+                self.assertNotIn(second.name, page)
                 self.assertNotIn("claim-one", page)
                 self.assertNotIn("claim-two", page)
                 self.assertEqual(_files(repo), before)
@@ -159,8 +153,8 @@ class ReviewDocumentListsTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
                 self.assertIn("blocked-results", page)
-                runs = _section(page, "run-results")
-                self.assertNotIn(report.name, runs)
+                self.assertNotIn("<h2>Run results</h2>", page)
+                self.assertNotIn(report.name, page)
 
     def test_an_unusable_reports_directory_is_named_and_results_are_not_its_fallback(self):
         """REV-03 scenario 40. REV-R02."""
@@ -174,8 +168,7 @@ class ReviewDocumentListsTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
                 self.assertIn("blocked-reports", page)
-                reports = _section(page, "review-reports")
-                self.assertNotIn(run.name, reports)
+                self.assertNotIn("<h2>Review reports</h2>", page)
                 self.assertEqual(_files(repo), before)
 
     def test_no_run_result_is_an_empty_state_and_not_a_passing_review(self):
@@ -1012,7 +1005,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             self.assertIn("changed.md", json.dumps(current))
 
     def test_rediscover_button_text_and_dialog(self):
-        """REV-03 scenario 32 open/close. REV-R09."""
+        """REV-03 scenario 32. Without a Discovery job, Re-Discover opens Discover."""
         with tempfile.TemporaryDirectory() as tmp:
             workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
             _pack(repo, "REQ-SHARED")
@@ -1047,8 +1040,10 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             run_before = run_path.read_bytes()
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            self.assertIn(">Re-Discover</button>", page)
-            self.assertIn("Re-Discover —", page)
+            self.assertIn('href="/discover?repo=alpha"', page)
+            self.assertIn(">Re-Discover</a>", page)
+            self.assertNotIn(">Re-Discover</button>", page)
+            self.assertNotIn('class="review-discover"', page)
             self.assertEqual((repo / "kept" / "claims" / "fail-note.json").read_bytes(), claim_before)
             self.assertEqual(run_path.read_bytes(), run_before)
 
@@ -1225,7 +1220,7 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
             self.assertEqual(len(later), 2)
             self.assertEqual(later[0].read_bytes(), first_bytes)
             self.assertEqual(run_path.read_bytes(), run_before)
-            self.assertIn("Report compiled.", page)
+            self.assertIn("Report created.", page)
 
     def test_compile_stops_when_a_claim_is_missing_or_digest_differs(self):
         """REV-03 scenario 34. REV-R10."""

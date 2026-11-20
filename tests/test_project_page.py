@@ -56,7 +56,7 @@ class ProjectPageTest(unittest.TestCase):
                 self.assertIn("Change Project", cover)
                 self.assertLess(cover.index("</header>"), cover.index('class="config-panel"'))
                 self.assertLess(cover.index('class="config-panel"'), cover.index("<h1>Curbpack Studio</h1>"))
-                self.assertLess(cover.index('class="config-panel"'), cover.index("Review — compile"))
+                self.assertLess(cover.index('class="config-panel"'), cover.index("Review — write and sign"))
                 self.assertIn("Current Project", cover)
                 self.assertIn('id="config-all-open">demo-product</button>', cover)
                 self.assertNotIn("Show Configuration", cover)

@@ -23,9 +23,9 @@ Studio does not write a separate findings file, an executive summary, an SBOM, a
 
 ## 2. Start with the page
 
-Open `/review`. Read the status, the selected run, `commit`, `worktree`, and the warnings before you write a decision.
+Open `/review`. The page names the latest Check run and does not open it until you choose that run, an earlier run, or a report. Read the status, `commit`, `worktree`, and the warnings before you write a decision.
 
-When a saved report and a current run result are both loaded, the page says `same run: yes` or `same run: no. This saved report is an older run.` Do not describe an older report as the current result. Compile over that file requires the checkbox `Replace the saved report. The previous decision is not copied.`
+When a saved report is open, the page says `same run: yes` or `same run: no. This saved report is an older run.` That compares the report with the newest Check run. Do not describe an older report as the current result. Compile writes a new `review-report_<UTC>.json` and leaves the earlier report in place. An unsigned draft can still be edited. After review-sign, that file is read-only: a new decision is a new report.
 
 The two sentences on the page are part of reading it: a passing Check does not mean the legal requirement is fulfilled, and the report has no field for a conclusion that the product meets CRA.
 

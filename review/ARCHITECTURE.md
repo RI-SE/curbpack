@@ -23,9 +23,9 @@ Review uses `studio/app.py` only for router registration. No Review domain logic
 |---|---|
 | Open Run Result / report | Read exact selected persisted records; do not assume newest means same run |
 | Inspect Claim and Requirement | Display what the run actually evaluated, including Check arguments and recorded outcomes |
-| Record decision | Explicit human text on the selected review report; invalidates a prior report signature when changed |
+| Record decision | Explicit human text on an unsigned draft. A report that already has `signed` is unchanged; the operation is rejected. A later decision is a newly compiled report. |
 | Verify signatures | Reuse VR-00's independent embedded/Git reading, never imply approval from a seal |
-| Sign report | Sign the explicit saved review content under Packs v2; do not sign Requirements or Claims implicitly |
+| Sign report | Sign an unsigned draft that already has a decision. A second signature on that file is rejected. Signing does not sign Requirements or Claims. |
 | Resolve historical chain (VL-05) | Backend-only read-only exact identity/digest lookup, local Git fallback, report every missing/stale link and verification method |
 
 Compile and Review are **separate components**. `compile_report`, `write_report` and PDF rendering move to Compile. `record_decision`, `sign_report` and signature inspection remain Review operations. Review may call Compile's public backend operation at the user's explicit request to create an unsigned report; it does not own that implementation.
@@ -77,7 +77,7 @@ For a report that compile returns:
 
 Compile must not silently embed a Claim different from the one recorded in the run. Historical resolution under VL-05 can recover the exact earlier object and report an unresolved link when history is absent. A previous report file is never silently destroyed. This is a Compile input rule, not Review-owned compilation logic.
 
-`record_decision` requires non-empty words, strips them, and removes the report's `signed` only. Embedded `signed` blocks stay. `sign_report` requires `decision` and `run_result`, then calls `sign_object`. An empty signer name fails before a write, the same way the other seals do.
+`record_decision` requires non-empty words and strips them. It rejects a report that already has `signed` and does not write. On an unsigned draft it sets `decision`. Embedded Requirement and Claim `signed` blocks stay. `sign_report` requires `decision` and `run_result`, rejects a report that already has `signed`, then calls `sign_object`. An empty signer name fails before a write, the same way the other seals do.
 
 `load_report` runs `validate_report` and, when `decision` or `signed` is present, requires a non-empty `decision`. A `signed` block is the usual seal check.
 
@@ -121,15 +121,15 @@ The page renders the report and posts the decision and the signer name. It does 
 | Action | Function | Result on the page |
 | --- | --- | --- |
 | Compile | Call the `studio/compile/` operation explicitly. | A new unsigned report, without a decision. |
-| Save decision | Review-owned decision operation and shared persisted report IO. | The decision is saved and a prior report signature invalidated if content changes. |
-| review-sign | Review-owned signing operation and shared report IO. | Report signature reading; Requirement and Claim signatures unchanged. |
+| Save decision | Review-owned decision operation and shared persisted report IO. | The decision is saved on an unsigned draft. A signed report is rejected and left unchanged. |
+| review-sign | Review-owned signing operation and shared report IO. | Report signature reading; Requirement and Claim signatures unchanged. A signed report cannot be signed again. |
 | Open the Claim | Navigation. | Claims Editor for this Claim; Return preserves the Review context. |
-| Discover again | UI opens the existing one-Requirement Discovery as a popup. | The failed Claim and its original Check statuses remain visible in the underlying Review context. No mutation on open/close. |
+| Discover again | When the page has a Discovery source and timestamp, the UI opens the existing one-Requirement Discovery as a popup. Otherwise it links to Discover. | The failed Claim and its original Check statuses remain visible. No mutation on open or on following the link. |
 | Run checks | Navigation. | The check page; a new result must be rendered before claiming a replacement passes. |
 
 `ModelError` and `SigningUnavailable` are the red error. A failed sign leaves the file unchanged. Unsaved decision text is the textarea. The file changes only after `write_report` returns.
 
-The inputs for `check` and `args` are not on this page. A verified report is shown with the decision as text until the person compiles again or saves a new decision.
+The inputs for `check` and `args` are not on this page. A signed report shows the decision as text. Compile writes a new unsigned file and leaves the signed report unchanged.
 
 ### Review a failed Claim by discovering replacement evidence
 

@@ -46,7 +46,8 @@ class ReviewRenderStructureTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
 
-            self.assertIn('class="card topline"', page)
+            self.assertIn("<h2>Summary</h2>", page)
+            self.assertIn('class="topline"', page)
             self.assertIn("review-board", page)
             self.assertIn("need attention", page.lower())
 

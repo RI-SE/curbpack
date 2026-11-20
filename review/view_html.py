@@ -50,7 +50,7 @@ def render_review_board(presentation: dict, *, repo_id: str, selected_result: st
         f"Expand a row to inspect paths and Checks, then Edit or Re-Discover as needed.</p>"
         f'<p class="muted" style="margin:.65rem 0 0">'
         f"{open_count} open · {total - open_count} collapsed · "
-        f"Compile writes the review report; decision and seal stay separate.</p>"
+        f"The report, the decision, and the seal stay separate.</p>"
         f"</div>"
     )
     repo = quote(str(repo_id or ""), safe="")
