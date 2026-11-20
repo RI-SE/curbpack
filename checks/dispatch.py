@@ -70,5 +70,9 @@ def _result(command: str, completed: subprocess.CompletedProcess) -> dict:
     if isinstance(parsed, dict) and parsed.get("status") == "fail":
         detail = parsed.get("detail")
         if isinstance(detail, str) and detail.strip():
-            return {"status": "fail", "detail": detail}
+            result = {"status": "fail", "detail": detail}
+            hint = parsed.get("remediation_hint")
+            if isinstance(hint, str) and hint.strip():
+                result["remediation_hint"] = hint
+            return result
     return {"status": "fail", "detail": f"check tool {command!r} failed"}

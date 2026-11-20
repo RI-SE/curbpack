@@ -115,6 +115,9 @@ def _check_row(index: int, item: dict, outcome: dict) -> dict:
     }
     if outcome["status"] != "pass":
         row["detail"] = outcome["detail"]
+    hint = outcome.get("remediation_hint")
+    if outcome["status"] == "fail" and isinstance(hint, str) and hint.strip():
+        row["remediation_hint"] = hint
     return row
 
 

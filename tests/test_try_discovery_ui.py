@@ -123,6 +123,11 @@ class TryDiscoveryUiTest(unittest.TestCase):
                 self.assertIn('id="try-job"', started)
                 self.assertIn('class="log"', started)
                 self.assertIn("class=\"progress\"", started)
+                self.assertIn(
+                    'data-done="/requirements/requirement/CRA-ANNEX-VII-RISK?try_repo=sample&amp;try_open=1"',
+                    started,
+                )
+                self.assertNotIn("/discover/claims/", started)
                 job_id = None
                 for part in started.split('data-poll="')[1:]:
                     poll = part.split('"', 1)[0]
@@ -225,6 +230,69 @@ class TryDiscoveryUiTest(unittest.TestCase):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+
+
+class TryJobDestinationTest(unittest.TestCase):
+    def test_a_named_product_pack_still_opens_the_hit_popup(self):
+        from studio.claim.try_discovery import _job_dialog
+
+        page = _job_dialog(
+            {
+                "job_id": "try-1",
+                "repo_id": "sample",
+                "pack_id": "cra-xml-baseline",
+                "editor_query": "repo=sample&pack=cra-xml-baseline",
+                "status": "done",
+            },
+            "CRA-ANNEX-VII-RISK",
+        )
+        self.assertIn(
+            "/requirements/requirement/CRA-ANNEX-VII-RISK?try_repo=sample&amp;try_open=1"
+            "&amp;repo=sample&amp;pack=cra-xml-baseline",
+            page,
+        )
+        self.assertNotIn("/discover/claims/", page)
+
+
+class UnknownProductPackTest(unittest.TestCase):
+    def test_a_pack_editor_id_opens_this_projects_discover_page(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            product = root / "product"
+            product.mkdir()
+            (product / "curbpack.json").write_text(
+                json.dumps(
+                    {
+                        "packs": [],
+                        "search_hints": {"sources": [], "exclude_path_globs": [], "prefer_path_globs": []},
+                        "packs_dir": "curbpack/packs",
+                        "claims_dir": "curbpack/claims",
+                        "results_dir": ".curbpack",
+                        "reports_dir": "curbpack/reports",
+                        "namespace_base": "RISE",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            data = load_repos(root)
+            add_repo(root, data, name="Parliament", path=str(product))
+            save_repos(root, data)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            try:
+                page = _get(
+                    base
+                    + "/discover/claims/CRA-ANNEX-VII-RISK?repo=parliament&pack=cra-baseline"
+                )
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            self.assertIn("Discovery &amp; Claims", page)
+            self.assertIn("Pack cra-baseline is not named in curbpack.json for this project.", page)
+            self.assertIn("No packs named in curbpack.json.", page)
+            self.assertNotIn("field pack_id", page)
 
 
 if __name__ == "__main__":

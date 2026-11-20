@@ -236,6 +236,23 @@ def _report_sources_for_repo(repo: Path, config: dict) -> tuple[list[dict], list
     return packs, requirements
 
 
+def _discover_unknown_pack(path: str, query: dict, exc: ModelError) -> str:
+    """A product Discover link named a pack this project's curbpack.json does not list."""
+    if not path.startswith("/discover/claims"):
+        return ""
+    if exc.object_name != "discover" or exc.field != "pack_id":
+        return ""
+    if "named in curbpack.json" not in exc.expected:
+        return ""
+    pack = (query.get("pack") or query.get("pack_id") or [""])[0].strip()
+    repo = (query.get("repo") or query.get("repo_id") or [""])[0].strip()
+    message = f"Pack {pack} is not named in curbpack.json for this project."
+    target = f"/discover?error={quote(message, safe='')}"
+    if repo:
+        target += f"&repo={quote(repo, safe='')}"
+    return target
+
+
 def make_handler(ws: Workspace):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt: str, *args) -> None:
@@ -344,6 +361,12 @@ def make_handler(ws: Workspace):
                     return
                 body = self._get(parsed.path, query)
                 self._send(200, body)
+            except ModelError as exc:
+                location = _discover_unknown_pack(parsed.path, query, exc)
+                if location:
+                    self._redirect(location)
+                    return
+                self._fail(exc)
             except Exception as exc:
                 self._fail(exc)
 

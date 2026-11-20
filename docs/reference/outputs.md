@@ -64,6 +64,7 @@ A new Claim row carries the Requirement identity, the recorded Requirement diges
 | `args` | The configured arguments used for this Check. Shapes are defined in Packs v2 §4 and the Check registry. |
 | `status` | `pass`, `fail`, or `skipped`. |
 | `detail` | Explanation, required and non-empty for `fail` and `skipped`; omitted for `pass`. |
+| `remediation_hint` | Optional guidance from the Check tool. A non-empty string on `fail` only. Omitted on `pass` and `skipped`. The runner copies the tool's string and does not invent, trim, or apply it. This is not the Requirement's `remediation_hint`. |
 
 ### Example structure
 
@@ -105,7 +106,7 @@ A failed Check also carries `detail`, for example `"detail": "SECURITY.md is abs
 
 There is **one result entry per executed Claim**, with a `checks[]` result for **each configured Check**, including passes. Each Check result includes `index`, `check`, the `args` used, `status`, and a `detail` when required. `index` disambiguates repeated Check ids and is interpreted only together with the Claim `id` and `digest`.
 
-Each Check status is `pass`, `fail`, or `skipped`. A missing required file is `fail`; unavailable/unsupported execution must be explicit and non-passing. `detail` is omitted for `pass`, required for `skipped`, and included for `fail` to explain the cause. `skipped` is never `pass`.
+Each Check status is `pass`, `fail`, or `skipped`. A missing required file is `fail`; unavailable/unsupported execution must be explicit and non-passing. `detail` is omitted for `pass`, required for `skipped`, and included for `fail` to explain the cause. `skipped` is never `pass`. `remediation_hint` does not change that status. A historical result that omits it remains valid.
 
 The enclosing Claim status is **`fail` if any Check fails; otherwise `skipped` if any Check is skipped; otherwise `pass`**. No Claim with empty Checks is evaluated or reported as a passing Claim. Process exit is 0 only when at least one Check actually executed and every included Claim and Check passed. Otherwise it is nonzero; exit code is not a JSON field. These are mechanical Check outcomes, not legal compliance judgments.
 
@@ -167,7 +168,15 @@ or:
 {"status": "fail", "detail": "SECURITY.md is absent"}
 ```
 
-These responses have no Claim id, digest, index, or copied arguments. The runner adds that context in the [Check result](#check-results). `skipped` is produced by the runner for a skipped Claim, rather than by these tool handlers.
+A failing response may also carry the tool's own guidance:
+
+```json
+{"status": "fail", "detail": "SECURITY.md is absent", "remediation_hint": "Add SECURITY.md."}
+```
+
+`remediation_hint` is optional. When present it is a non-empty string. The runner copies that string onto the fail row, including surrounding spaces. A blank, whitespace-only, or non-string value is omitted. The Check still fails with the tool's `detail`. A pass response that includes the key is stored as `{"status": "pass"}`. Any other extra key is ignored. The runner does not write a hint of its own when the tool is missing, the response is unusable, or the arguments are invalid.
+
+These responses have no Claim id, digest, index, or copied arguments. The runner adds that context in the [Check result](#check-results). `skipped` is produced by the runner for a skipped Claim, rather than by these tool handlers. A skip does not carry `remediation_hint`.
 
 The shipped tool wrapper exits 0 after writing either response; argument-parser errors exit 2. The runner accepts a pass only with both `status: pass` and process exit 0. A failed response with a non-empty `detail` is preserved. An unavailable command, invalid JSON, or other unusable response becomes a failed Check. The implementation is `checks/toolmain.py` and `checks/dispatch.py`. Repository-level exit codes are defined in the CLI reference.
 

@@ -366,9 +366,10 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
     if not isinstance(config, dict):
         config = {}
     hunt = {"search_hints": config.get("search_hints") or {}}
-    pack_id = (form.get("pack") or [""])[0].strip() or _pack_id_for_requirement(
-        repo, str(requirement.get("id") or "")
-    )
+    # The editor's pack field is the pack being edited. Product Discover only
+    # accepts a pack named in this repo's curbpack.json.
+    pack_id = _pack_id_for_requirement(repo, str(requirement.get("id") or ""))
+    editor_query = _pack_query(form)
     job_id = f"try-{secrets.token_hex(4)}"
     start_try_job(
         ws.root / "jobs",
@@ -379,6 +380,7 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
         hunt=hunt,
         assess_limit=assess_limit,
         pack_id=pack_id,
+        editor_query=editor_query,
         complete=getattr(ws, "discover_complete", None),
     )
     extra = _pack_query(form)

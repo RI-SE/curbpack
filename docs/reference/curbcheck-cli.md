@@ -84,7 +84,7 @@ For each selected pack id, the runner loads `<packs_dir>/<id>/<pack-version>/pac
 
 Claims are the `*.json` files directly inside `claims_dir`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection is omitted; selected Claims still run. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
 
-The runner does not read `discovery_hints`, `note`, `remediation_hint`, or the Claim `description` to decide pass or fail. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
+The runner does not read `discovery_hints`, `note`, the Requirement's `remediation_hint`, or the Claim `description` to decide pass or fail. A Check tool may return its own optional `remediation_hint` on a failure. The runner copies that string onto the Check result and does not use it to choose status, binding, or whether the Check runs. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
 
 ## What the run prints
 

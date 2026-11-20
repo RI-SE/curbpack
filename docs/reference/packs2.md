@@ -337,7 +337,7 @@ Editing a signed Claim changes its digest and requires renewed approval and sign
 
 **Field boundaries**
 
-Legal text, `discovery_hints` and `remediation_hint` remain on the Requirement.
+Legal text, `discovery_hints` and `remediation_hint` remain on the Requirement. A failed Check result may carry a separate optional `remediation_hint` written by the Check tool. That string is defined with the run result in [Outputs](outputs.md#check-results). It is not this Requirement field, and it is not part of the Requirement or Claim digest.
 
 `expected`, `remediation`, `settlement`, `retired`, retrieval scores, model rationales and Useful/Poor votes are not Claim fields. Operational Discovery feedback remains separate from the signed Claim.
 

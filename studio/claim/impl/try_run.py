@@ -41,6 +41,7 @@ def start_try_job(
     hunt: dict,
     assess_limit: int = 5,
     pack_id: str = "",
+    editor_query: str = "",
     complete=None,
 ) -> str:
     """Run retrieval+assessment on a daemon thread. Return the job id."""
@@ -73,6 +74,7 @@ def start_try_job(
             "repo_id": repo_id,
             "requirement_id": requirement_id,
             "pack_id": pack_id,
+            "editor_query": editor_query,
             "assess_limit": assess_limit,
         },
     )

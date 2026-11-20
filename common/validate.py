@@ -491,7 +491,7 @@ def _validate_check_result(item: object, claim_index: int, check_index: int) -> 
     where = f"run result.claims[{claim_index}].checks[{check_index}]"
     if not isinstance(item, dict):
         _expect("run result", f"claims[{claim_index}].checks[{check_index}]", "object")
-    _reject_unknown(item, where, {"index", "check", "args", "status", "detail"})
+    _reject_unknown(item, where, {"index", "check", "args", "status", "detail", "remediation_hint"})
     if item.get("index") != check_index:
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].index", str(check_index))
     _nonempty_str(item, where, "check", required=True)
@@ -504,3 +504,11 @@ def _validate_check_result(item: object, claim_index: int, check_index: int) -> 
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].detail", "absent when status is pass")
     if status in ("fail", "skipped") and (not isinstance(item.get("detail"), str) or not item["detail"].strip()):
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].detail", "non-empty string")
+    if status != "fail" and "remediation_hint" in item:
+        _expect(
+            "run result",
+            f"claims[{claim_index}].checks[{check_index}].remediation_hint",
+            "absent unless status is fail",
+        )
+    if "remediation_hint" in item:
+        _nonempty_str(item, where, "remediation_hint", required=True)

@@ -151,13 +151,12 @@ def _job_dialog(job: dict, requirement_id: str) -> str:
     job_id = html.escape(str(job.get("job_id") or ""))
     repo_id = quote(str(job.get("repo_id") or ""), safe="")
     req = quote(requirement_id, safe="")
-    pack_id = str(job.get("pack_id") or "").strip()
-    if pack_id:
-        done_href = (
-            f"/discover/claims/{req}?repo={repo_id}&pack={quote(pack_id, safe='')}"
-        )
-    else:
-        done_href = f"/requirements/requirement/{req}?try_repo={repo_id}&try_open=1"
+    # A finished test stays on this popup's hit table. The Claims editor is a
+    # different page, with Checks and Review.
+    done_href = f"/requirements/requirement/{req}?try_repo={repo_id}&try_open=1"
+    editor_query = str(job.get("editor_query") or "").strip().lstrip("&")
+    if editor_query:
+        done_href += "&" + editor_query
     status = str(job.get("status") or "")
     if status == "running":
         dismiss = '<button type="button" class="secondary" disabled>Running…</button>'
