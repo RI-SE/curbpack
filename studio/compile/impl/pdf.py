@@ -20,6 +20,7 @@ from reportlab.platypus import HRFlowable, LongTable, PageBreak, Paragraph, Simp
 
 from common.canonical import version_digest
 from review.compile import NOT_A_LEGAL_CONCLUSION, load_report, worktree_sentence
+from studio.compile.impl.report import assessment_identity, recorded_deviations
 
 REVIEW_STATEMENT = 'Prepares evidence for human review — not a conformity assessment.'
 
@@ -174,29 +175,49 @@ def _findings(content, report):
     content.paragraph('Review findings', 'heading')
     content.paragraph('Use these points to review the material. The recorded assertions and results are not decisions by the PDF exporter.', 'small')
     claims = {claim['id']: claim for claim in report['claims']}
-    requirements = {item['id']: item for item in report['requirements']}
     refs = {item['id']: f'B.{n}' for n, item in enumerate(report['requirements'], 1)}
-    attention = [row for row in report['run_result']['claims'] if _needs_attention(row)]
-    for number, row in enumerate(attention, 1):
-        claim = claims[row['id']]
-        requirement = requirements[claim['requirement_id']]
-        content.paragraph(f'Finding {number} — {_finding_title(row)}', 'claim')
-        content.field('Recorded assertion', claim['description'])
-        _binding_fields(content, row)
-        source = requirement['source']['instrument']
-        locators = ', '.join(ref['locator'] for ref in requirement['references'])
-        content.field('Related source', f'{source}, {locators}')
+    saved = {}
+    for item in report.get('assessments') or []:
+        saved[assessment_identity(item)] = item
+    outstanding = []
+    accepted = []
+    for deviation in recorded_deviations(report['run_result']):
+        assessment = saved.get(assessment_identity(deviation))
+        if assessment and assessment.get('disposition') == 'accept':
+            accepted.append((deviation, assessment))
+        else:
+            outstanding.append((deviation, assessment))
+    content.paragraph('Outstanding deviations requiring correction', 'claim')
+    if outstanding:
+        for number, (deviation, assessment) in enumerate(outstanding, 1):
+            _deviation_finding(content, report, claims, refs, number, deviation, assessment)
+    elif report['run_result']['claims']:
+        content.paragraph('No outstanding deviations are recorded.')
+    else:
+        content.paragraph('No evidence was checked. The report cannot support a successful verification.')
+    content.paragraph('Accepted deviations', 'claim')
+    if accepted:
+        for number, (deviation, assessment) in enumerate(accepted, 1):
+            _deviation_finding(content, report, claims, refs, number, deviation, assessment)
+    else:
+        content.paragraph('No deviations were accepted.')
+    content.paragraph('Passing checks', 'claim')
+    passing = []
+    for row in report['run_result']['claims']:
+        claim = claims.get(row['id'])
+        if claim is None:
+            continue
         for check in row['checks']:
             if check['status'] == 'pass':
-                continue
-            content.field('Recorded result', f"{check['status'].upper()} · {check['check']} · check {check['index']}")
-            content.field('Reason reported by the checker', check['detail'])
-        content.paragraph('Human review: does the configured check represent the intended requirement? '
-                          'Is the evidence sufficient, and does this result call for a change to the evidence or to the check settings?')
-        content.field('Full technical record', f"{refs[claim['requirement_id']]} / {claim['id']}", small=True)
-    if not attention:
-        content.paragraph('No failed or skipped checks are recorded.' if report['run_result']['claims'] else
-                          'No evidence was checked. The report cannot support a successful verification.')
+                passing.append((claim, row, check))
+    if passing:
+        for claim, row, check in passing:
+            content.field(
+                'Passing check',
+                f"PASS · {check['check']} · check {check['index']} · {claim['id']}",
+            )
+    elif report['run_result']['claims']:
+        content.paragraph('No passing checks are recorded.')
     content.heading('Limits to this review')
     if report['run_result'].get('worktree') == 'dirty':
         content.paragraph('The checked files included uncommitted changes. The saved revision does not capture the full checked state.')
@@ -303,6 +324,72 @@ def _review(content, report):
                         version_digest(obj), 'Recorded; not verified' if signed else 'No JSON signature recorded'])
     content.table(['Seal object', 'Who / When', 'Version digest', 'Recorded state'], records, [43, 35, 61, 31])
     content.paragraph('A signature on the JSON report does not sign the PDF bytes. Keep the original JSON report for verification.', 'small')
+
+
+def _deviation_finding(content, report, claims, refs, number, deviation, assessment):
+    claim = claims[deviation['claim_id']]
+    row = next(item for item in report['run_result']['claims'] if item['id'] == deviation['claim_id'])
+    content.paragraph(f'Finding {number} — {_deviation_title(deviation, assessment)}', 'claim')
+    content.field('Recorded assertion', claim['description'])
+    _binding_fields(content, row)
+    requirement = next(
+        (item for item in report['requirements'] if item['id'] == claim['requirement_id']),
+        None,
+    )
+    if requirement is not None:
+        source = requirement['source']['instrument']
+        locators = ', '.join(ref['locator'] for ref in requirement['references'])
+        content.field('Related source', f'{source}, {locators}')
+    if deviation['kind'] == 'check':
+        content.field(
+            'Recorded result',
+            f"{deviation['status'].upper()} · {deviation['check']} · check {deviation['index']}",
+        )
+        content.field('Reason reported by the checker', deviation['detail'])
+        if deviation.get('remediation_hint'):
+            content.field('Check remediation', deviation['remediation_hint'])
+    else:
+        content.field('Requirement binding', f"binding {deviation['binding']}")
+    hint = _recorded_requirement_hint(requirement, claim)
+    if hint is None:
+        content.field('Requirement remediation', 'Unavailable for the Requirement version recorded on this run.')
+    elif hint:
+        content.field('Requirement remediation', hint)
+    if assessment and assessment.get('disposition') == 'must_fix':
+        content.field('Required correction', assessment['text'])
+    elif assessment and assessment.get('disposition') == 'accept':
+        content.field('Accepted justification', assessment['text'])
+    else:
+        content.field('Reviewer assessment', 'Not assessed')
+    content.paragraph('Human review: does the configured check represent the intended requirement? '
+                      'Is the evidence sufficient, and does this result call for a change to the evidence or to the check settings?')
+    content.field('Full technical record', f"{refs[claim['requirement_id']]} / {claim['id']}", small=True)
+
+
+def _recorded_requirement_hint(requirement, claim):
+    if not isinstance(requirement, dict):
+        return None
+    recorded = claim.get('requirement_digest')
+    if not isinstance(recorded, str) or not recorded:
+        return None
+    if version_digest(requirement) != recorded:
+        return None
+    hint = requirement.get('remediation_hint')
+    return hint if isinstance(hint, str) else ''
+
+
+def _deviation_title(deviation, assessment):
+    if deviation['kind'] == 'binding':
+        title = f"Requirement binding {deviation['binding']}"
+    elif deviation['status'] == 'fail':
+        title = 'Check failed'
+    else:
+        title = 'Check not performed'
+    if assessment and assessment.get('disposition') == 'must_fix':
+        return f'{title}; must be fixed'
+    if assessment and assessment.get('disposition') == 'accept':
+        return f'{title}; accepted'
+    return f'{title}; not assessed'
 
 
 def _needs_attention(row):

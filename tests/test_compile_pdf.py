@@ -86,9 +86,15 @@ class CompilePdfTest(unittest.TestCase):
             self.assertIn(expected, main)
         for technical_value in ('Product commit', 'worktree',
                                 'digest', 'Check arguments', 'https://', 'REQ-A',
-                                'claim-0', 'No trusted certificate available.',
+                                'No trusted certificate available.',
                                 report['run_result']['commit'], version_digest(report)):
             self.assertNotIn(technical_value, main)
+        summary, findings = main.split('Review findings', 1)
+        self.assertNotIn('claim-0', summary)
+        self.assertIn('Passing checks', findings)
+        self.assertLess(findings.index('Outstanding deviations requiring correction'), findings.index('Accepted deviations'))
+        self.assertLess(findings.index('Accepted deviations'), findings.index('Passing checks'))
+        self.assertLess(findings.index('Passing checks'), findings.index('claim-0'))
         self.assertIn('Reason reported by the checker', main)
         self.assertIn('Evidence missing', main)
         self.assertIn('Changes since the run', main)

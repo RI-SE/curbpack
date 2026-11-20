@@ -11,6 +11,7 @@ from urllib.parse import quote
 from app.pages import _flash, _reading, page, repo_config_panel
 from checks.labels import check_caption
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
+from studio.compile.impl.report import assessment_identity
 
 
 def review_page(
@@ -31,6 +32,7 @@ def review_page(
     run_facts = ""
     run_summary = ""
     run_preamble = ""
+    signed_report = isinstance(report, dict) and isinstance(report.get("signed"), dict)
     if report is None:
         if str((door or {}).get("latest_result") or ""):
             body_report = "<p>Choose a Check run. Nothing is reviewed until you open one.</p>"
@@ -112,7 +114,13 @@ def review_page(
         dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
         reading_html = _reading(reading) if saved else "<p>not saved</p>"
         if door and door.get("presentation"):
-            run_facts, run_summary, queue = _review_groups(door["presentation"], door, discover_href)
+            run_facts, run_summary, queue = _review_groups(
+                door["presentation"],
+                door,
+                discover_href,
+                assessments=_assessment_index(report),
+                editable=not signed_report,
+            )
             queue_html = queue + appendix_html
         else:
             run_facts = ""
@@ -143,7 +151,7 @@ def review_page(
         hidden += f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
     if report_value:
         hidden += f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
-    signed = bool(report) and isinstance(report.get("signed"), dict)
+    signed = signed_report
     if saved and signed:
         decision_forms = f"""
 <p data-decision>{html.escape(decision)}</p>
@@ -152,13 +160,13 @@ def review_page(
     elif saved:
         decision_forms = f"""
 <p class="muted">Review decision. One set of words for this whole run. Saving writes them on this draft. Check results stay as recorded.</p>
-<form method="post" action="/review">
+<form method="post" action="/review" data-include-assessments>
 {hidden}
 <label>Decision</label>
 <textarea name="decision">{html.escape(decision)}</textarea>
 <button type="submit">Save decision</button>
 </form>
-<form method="post" action="/review/sign">
+<form method="post" action="/review/sign" data-include-assessments>
 {hidden}
 <label>Signer name</label>
 <input type="text" name="name" placeholder="External Reviewer">
@@ -169,11 +177,9 @@ def review_page(
         decision_forms = (
             '<p class="muted">Save decision and review-sign need a report file.</p>'
         )
-    compile_form = _compile_form(door, report, saved, repo_id)
     if not repo_id and report is None:
         body_report = "<p>No repository is chosen.</p>"
         decision_forms = ""
-        compile_form = ""
     chrome = _review_report_line(door)
     if report is None:
         shown = f"<div class=\"card\">{body_report}</div>"
@@ -205,16 +211,22 @@ def review_page(
 {_flash(message, error)}
 {detail}
 {shown}
-{compile_form}
-<p><a href="/check">Run checks</a></p>
 {decision_forms}
+{_review_actions(door, report, saved, repo_id)}
 {dialogs}
 </div>
 """
     return page("Review", body, banner=panel)
 
 
-def _review_groups(presentation: dict, door: dict, discover_href: str = "") -> tuple[str, str, str]:
+def _review_groups(
+    presentation: dict,
+    door: dict,
+    discover_href: str = "",
+    *,
+    assessments: dict | None = None,
+    editable: bool = False,
+) -> tuple[str, str, str]:
     header = presentation.get("header") if isinstance(presentation.get("header"), dict) else {}
     packs = " ".join(
         f"{html.escape(str(pack.get('id') or ''))} {html.escape(str(pack.get('version') or ''))}"
@@ -265,7 +277,9 @@ def _review_groups(presentation: dict, door: dict, discover_href: str = "") -> t
     attention_parts = []
     collapsed_parts = []
     for group in groups:
-        block = _review_requirement_card(group, open_ids, repo, document, discover_href)
+        block = _review_requirement_card(
+            group, open_ids, repo, document, discover_href, assessments or {}, editable
+        )
         if group.get("open"):
             attention_parts.append(block)
         else:
@@ -286,6 +300,8 @@ def _review_requirement_card(
     repo: str,
     document: str,
     discover_href: str = "",
+    assessments: dict | None = None,
+    editable: bool = False,
 ) -> str:
     group_id = str(group.get("id") or "")
     if group.get("open"):
@@ -329,7 +345,9 @@ def _review_requirement_card(
             f" claim {html.escape(claim_id)}{claim_label_html}{binding_html}{claim_facts}"
         )
         claims_html.append(
-            _review_claim_card(claim, open_ids, repo, document, discover_href)
+            _review_claim_card(
+                claim, open_ids, repo, document, discover_href, assessments or {}, editable
+            )
         )
     note = _review_attention_note(group)
     note_html = f'<p class="note">{html.escape(note)}</p>' if note else ""
@@ -353,7 +371,13 @@ def _review_requirement_card(
 
 
 def _review_claim_card(
-    claim: dict, open_ids: list[str], repo: str, document: str, discover_href: str = ""
+    claim: dict,
+    open_ids: list[str],
+    repo: str,
+    document: str,
+    discover_href: str = "",
+    assessments: dict | None = None,
+    editable: bool = False,
 ) -> str:
     claim_id = str(claim.get("id") or "")
     status = str(claim.get("status") or "")
@@ -415,6 +439,7 @@ def _review_claim_card(
         f"{html.escape(status)}</span></span>{binding_html}</div>"
         f"</div>"
         f"{description_html}{requirement_html}{sentences}{unchanged_html}"
+        f"{_deviation_html(claim, assessments or {}, editable)}"
         f"{table}"
         f"{tech_block}"
         f'<ul class="review-check-list" aria-hidden="true">{"".join(check_items)}</ul>'
@@ -496,12 +521,12 @@ def _review_claim_checks(
                 f"#claim-{quote(claim_id, safe='')}"
             )
             edit_html = (
-                f'<a class="edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
+                f'<a class="edit-review" data-leave="1" data-edit-check="{html.escape(str(check.get("index")))}" '
                 f'href="{html.escape(edit_href)}">Edit</a>'
             )
             if not action_edit_added:
                 actions.append(
-                    f'<a class="btn primary edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
+                    f'<a class="btn primary edit-review" data-leave="1" data-edit-check="{html.escape(str(check.get("index")))}" '
                     f'href="{html.escape(edit_href)}">Edit <code>{html.escape(claim_id)}</code></a>'
                 )
                 action_edit_added = True
@@ -528,10 +553,30 @@ def _review_claim_checks(
             f'<details class="technical"><summary>Technical details</summary>{tech_inner}</details>'
             f"</li>"
         )
+    inspect_id = str(claim.get("inspect_requirement_id") or "")
+    if inspect_id and repo:
+        pack = quote(str(claim.get("pack_id") or ""), safe="")
+        inspect_href = f"/requirements/requirement/{quote(inspect_id, safe='')}?repo={repo}"
+        if pack:
+            inspect_href += f"&pack={pack}"
+        actions.append(
+            f'<a class="btn" data-leave="1" href="{html.escape(inspect_href)}">Inspect Requirement</a>'
+        )
+    if str(claim.get("binding") or "") in {"stale", "missing"} and claim_id and repo:
+        return_to = (
+            f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
+        )
+        rebind_href = (
+            f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
+            f"#claim-{quote(claim_id, safe='')}"
+        )
+        actions.append(
+            f'<a class="btn" data-leave="1" href="{html.escape(rebind_href)}">Rebind</a>'
+        )
     if status in {"fail", "skipped"} and claim_id:
         if discover_href:
             actions.append(
-                f'<a class="btn discover-again" href="{html.escape(discover_href)}">Re-Discover</a>'
+                f'<a class="btn discover-again" data-leave="1" href="{html.escape(discover_href)}">Re-Discover</a>'
             )
         else:
             actions.append(
@@ -641,7 +686,7 @@ def _review_attention_note(group: dict) -> str:
             for path in check.get("paths") or []:
                 if isinstance(path, dict) and path.get("state") == "missing":
                     notes.append(
-                        f"Path {path.get('path')} is missing; restore it or re-point the Check."
+                        f"Path {path.get('path')} is missing in the working tree now."
                     )
     seen: set[str] = set()
     ordered: list[str] = []
@@ -704,34 +749,235 @@ def _review_file_dialog(door: dict) -> str:
     )
 
 
+def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) -> str:
+    if not repo_id or report is None:
+        return ""
+    rerun = f"""
+<form method="post" action="/check">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<input type="hidden" name="action" value="check">
+<input type="hidden" name="return_to" value="/review">
+<p class="actions"><button type="submit" data-leave="1">Re-run Checks</button></p>
+</form>
+"""
+    back = (
+        f'<p><a class="btn" data-leave="1" href="/claims?repo_id={quote(repo_id, safe="")}">'
+        "Back to Claims</a></p>"
+    )
+    return (
+        f'<div class="review-actions">{rerun}{_compile_form(door, report, saved, repo_id)}{back}</div>'
+        f"{_unsaved_script()}"
+    )
+
+
+def _assessment_index(report: dict | None) -> dict:
+    found = {}
+    if not isinstance(report, dict):
+        return found
+    for item in report.get("assessments") or []:
+        if isinstance(item, dict):
+            found[assessment_identity(item)] = item
+    return found
+
+
+def _deviation_html(claim: dict, assessments: dict, editable: bool) -> str:
+    blocks = []
+    hint_from = str(claim.get("requirement_hint_from") or "")
+    hint = str(claim.get("requirement_hint") or "")
+    if hint_from == "unresolved":
+        requirement_hint = (
+            '<p data-requirement-remediation data-hint-from="unresolved">'
+            "Requirement remediation for this run is unavailable.</p>"
+        )
+    elif hint:
+        requirement_hint = (
+            f'<p data-requirement-remediation data-hint-from="{html.escape(hint_from)}">'
+            f"Requirement remediation: {html.escape(hint)}</p>"
+        )
+    else:
+        requirement_hint = ""
+    for check in claim.get("checks") or []:
+        if not isinstance(check, dict) or str(check.get("status") or "") not in {"fail", "skipped"}:
+            continue
+        detail = str(check.get("detail") or "")
+        check_hint = str(check.get("remediation_hint") or "")
+        check_hint_html = (
+            f'<p data-check-remediation>Check remediation: {html.escape(check_hint)}</p>'
+            if check_hint
+            else ""
+        )
+        identity = {
+            "kind": "check",
+            "claim_id": claim.get("id"),
+            "claim_digest": claim.get("digest"),
+            "index": check.get("index"),
+        }
+        blocks.append(
+            "<section class=\"deviation\" "
+            f'data-deviation="check" data-claim="{html.escape(str(claim.get("id") or ""))}" '
+            f'data-index="{html.escape(str(check.get("index")))}">'
+            f"<p>Check <code>{html.escape(str(check.get('check') or ''))}</code> "
+            f"is {html.escape(str(check.get('status') or ''))}.</p>"
+            f"<p data-detail>{html.escape(detail)}</p>"
+            f"{check_hint_html}{requirement_hint}"
+            f"{_assessment_controls(identity, claim, assessments, editable)}"
+            "</section>"
+        )
+    if str(claim.get("binding") or "") in {"stale", "missing"}:
+        identity = {
+            "kind": "binding",
+            "claim_id": claim.get("id"),
+            "claim_digest": claim.get("digest"),
+            "namespace": claim.get("namespace"),
+            "pack_id": claim.get("pack_id"),
+            "requirement_id": claim.get("recorded_requirement_id"),
+            "requirement_digest": claim.get("requirement_digest"),
+            "binding": claim.get("binding"),
+        }
+        blocks.append(
+            "<section class=\"deviation\" "
+            f'data-deviation="binding" data-claim="{html.escape(str(claim.get("id") or ""))}" '
+            f'data-binding="{html.escape(str(claim.get("binding") or ""))}">'
+            f"<p>Requirement binding is {html.escape(str(claim.get('binding') or ''))}. "
+            "The Check status is unchanged.</p>"
+            f"{requirement_hint}"
+            f"{_assessment_controls(identity, claim, assessments, editable)}"
+            "</section>"
+        )
+    if not blocks:
+        return ""
+    paths = any(
+        isinstance(check, dict) and check.get("paths")
+        for check in claim.get("checks") or []
+    )
+    working_tree = (
+        '<p class="muted">Evidence paths are the working tree now. They are not a recorded Check result.</p>'
+        if paths
+        else ""
+    )
+    return f'<div class="deviations">{working_tree}{"".join(blocks)}</div>'
+
+
+def _assessment_controls(identity: dict, claim: dict, assessments: dict, editable: bool) -> str:
+    saved = assessments.get(assessment_identity(identity))
+    disposition = str(saved.get("disposition") or "") if isinstance(saved, dict) else ""
+    text = str(saved.get("text") or "") if isinstance(saved, dict) else ""
+    if not editable:
+        if disposition == "accept":
+            label = f"Accept deviation. {text}"
+        elif disposition == "must_fix":
+            label = f"Must be fixed. {text}"
+        else:
+            label = "Not assessed"
+        carried = _assessment_hidden(identity, claim) + (
+            f'<input type="hidden" name="assess_disposition" form="review-compile" data-assessment-field '
+            f'value="{html.escape(disposition)}">'
+            f'<input type="hidden" name="assess_text" form="review-compile" data-assessment-field '
+            f'value="{html.escape(text)}">'
+        )
+        return (
+            f'{carried}<p data-disposition="{html.escape(disposition or "not_assessed")}">'
+            f"{html.escape(label)}</p>"
+        )
+    selected = {
+        "": " selected" if disposition == "" else "",
+        "accept": " selected" if disposition == "accept" else "",
+        "must_fix": " selected" if disposition == "must_fix" else "",
+    }
+    fields = _assessment_hidden(identity, claim)
+    return f"""
+{fields}
+<label>Assessment
+<select name="assess_disposition" form="review-compile" data-assessment data-assessment-field>
+<option value=""{selected[""]}>Not assessed</option>
+<option value="accept"{selected["accept"]}>Accept deviation</option>
+<option value="must_fix"{selected["must_fix"]}>Must be fixed</option>
+</select>
+</label>
+<label>Justification or required correction
+<textarea name="assess_text" form="review-compile" data-assessment data-assessment-field>{html.escape(text)}</textarea>
+</label>
+"""
+
+
+def _assessment_hidden(identity: dict, claim: dict) -> str:
+    kind = str(identity.get("kind") or "")
+    values = {
+        "assess_kind": kind,
+        "assess_claim_id": str(identity.get("claim_id") or ""),
+        "assess_claim_digest": str(identity.get("claim_digest") or claim.get("digest") or ""),
+        "assess_index": "" if kind != "check" else str(identity.get("index")),
+        "assess_namespace": str(identity.get("namespace") or ""),
+        "assess_pack_id": str(identity.get("pack_id") or ""),
+        "assess_requirement_id": str(identity.get("requirement_id") or ""),
+        "assess_requirement_digest": str(identity.get("requirement_digest") or ""),
+        "assess_binding": str(identity.get("binding") or ""),
+    }
+    return "".join(
+        f'<input type="hidden" name="{name}" form="review-compile" data-assessment-field '
+        f'value="{html.escape(value)}">'
+        for name, value in values.items()
+    )
+
+
+def _unsaved_script() -> str:
+    return """
+<script>
+(function() {
+  function dirty() {
+    return Array.prototype.some.call(document.querySelectorAll("[data-assessment]"), function(field) {
+      return field.value !== (field.getAttribute("data-initial") || "");
+    });
+  }
+  document.querySelectorAll("[data-assessment]").forEach(function(field) {
+    field.setAttribute("data-initial", field.value);
+  });
+  document.querySelectorAll("[data-leave]").forEach(function(node) {
+    node.addEventListener("click", function(event) {
+      if (dirty() && !window.confirm("Unsaved assessments will be lost.")) event.preventDefault();
+    });
+  });
+  document.querySelectorAll("form[data-include-assessments]").forEach(function(form) {
+    form.addEventListener("submit", function() {
+      document.querySelectorAll("[data-assessment-field]").forEach(function(field) {
+        var hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = field.name;
+        hidden.value = field.value;
+        form.appendChild(hidden);
+      });
+    });
+  });
+})();
+</script>
+"""
+
+
 def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) -> str:
     if not repo_id:
         return ""
     signed = bool(report) and isinstance(report.get("signed"), dict)
-    source_result = str(door.get("source_result") or "")
-    if saved and signed and source_result:
-        return f"""
-<form method="post" action="/review/compile">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<input type="hidden" name="result" value="{html.escape(source_result)}">
-<p class="muted">This writes a new unsigned report from the same Check run. The signed report stays unchanged.</p>
-<p class="actions"><button type="submit">Create new Report</button></p>
-</form>
-"""
-    selected_result = str(door.get("selected_result") or "")
+    result_path = str(door.get("selected_result") or "") or str(door.get("source_result") or "")
     preview = report is not None and not saved and not str(door.get("selected_report") or "")
-    if not selected_result and not preview:
+    if not result_path and not preview:
         return ""
-    result_input = ""
-    if selected_result:
-        result_input = (
-            f'<input type="hidden" name="result" value="{html.escape(selected_result)}">'
+    note = ""
+    if saved and signed:
+        note = (
+            "<p class=\"muted\">This writes a new unsigned report from the same Check run. "
+            "The signed report stays unchanged.</p>"
         )
+    report_input = ""
+    report_value = str(door.get("report_path") or "")
+    if report_value and not signed:
+        report_input = f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
     return f"""
-<form method="post" action="/review/compile">
+<form id="review-compile" method="post" action="/review/compile">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-{result_input}
-<p class="actions"><button type="submit">Create new Report</button></p>
+<input type="hidden" name="result" value="{html.escape(result_path)}">
+{report_input}
+{note}
+<p class="actions"><button type="submit">Create New Report</button></p>
 </form>
 """
 

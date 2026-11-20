@@ -233,6 +233,12 @@ def _run_check(ws: Workspace, form: dict) -> str:
         config = validate_curbpack_config(read_json(repo / "curbpack.json"))
         out = new_run_result_path(results_dir(repo, config))
         result, code = run_and_write(repo, None, out)
+        return_to = (form.get("return_to") or [""])[0].strip()
+        if return_to.startswith("/review") and not return_to.startswith("//") and "\\" not in return_to:
+            return (
+                f"/review?repo={quote(repo_id, safe='')}"
+                f"&result={quote(str(out.resolve()), safe='')}"
+            )
         return (
             f"/check?repo={quote(repo_id, safe='')}&exit={code}"
             f"&result={quote(str(out.resolve()), safe='')}"

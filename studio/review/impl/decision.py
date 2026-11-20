@@ -8,7 +8,7 @@ from pathlib import Path
 from common.errors import ModelError
 from common.signing import read_signature, sign_object
 from review.gitseal import git_commit_signature
-from studio.compile.impl import load_report, write_report
+from studio.compile.impl import load_report, validate_report, write_report
 
 
 def save_report_decision(path: Path, text: str) -> dict:
@@ -19,13 +19,62 @@ def save_report_decision(path: Path, text: str) -> dict:
     return decided
 
 
-def save_report_signature(path: Path, *, name: str, private_key: bytes, at: str) -> dict:
+def save_report_assessments(path: Path, assessments: list[dict]) -> dict:
+    if not path.is_file():
+        raise ModelError("review report", "path", "a saved report; create a report first")
+    updated = record_assessments(load_report(path), assessments)
+    write_report(path, updated)
+    return updated
+
+
+def save_report_update(
+    path: Path,
+    *,
+    decision: str,
+    assessments: list[dict] | None,
+) -> dict:
+    """Write decision and assessments together. A failed check leaves the file unchanged."""
+    if not path.is_file():
+        raise ModelError("review report", "path", "a saved report; create a report first")
+    updated = record_review_update(load_report(path), decision=decision, assessments=assessments)
+    write_report(path, updated)
+    return updated
+
+
+def save_report_signature(
+    path: Path,
+    *,
+    name: str,
+    private_key: bytes,
+    at: str,
+    assessments: list[dict] | None = None,
+) -> dict:
     if not path.is_file():
         raise ModelError("review report", "path", "a saved report; create a report first")
     current = load_report(path)
+    if assessments is not None:
+        current = record_assessments(current, assessments)
+        validate_report(current)
     sealed = sign_report(current, name=name, private_key=private_key, at=at)
     write_report(path, sealed)
     return sealed
+
+
+def record_review_update(report: dict, *, decision: str, assessments: list[dict] | None) -> dict:
+    """Apply a decision and assessments in memory. Does not write."""
+    _reject_if_signed(report)
+    out = copy.deepcopy(report)
+    out.pop("signed", None)
+    if assessments is not None:
+        if assessments:
+            out["assessments"] = assessments
+        else:
+            out.pop("assessments", None)
+    if isinstance(decision, str) and decision.strip():
+        out["decision"] = decision.strip()
+    elif assessments is None:
+        raise ModelError("review report", "decision", "the reviewer's own words")
+    return out
 
 
 def record_decision(report: dict, text: str) -> dict:
@@ -36,6 +85,80 @@ def record_decision(report: dict, text: str) -> dict:
     out.pop("signed", None)
     out["decision"] = text.strip()
     return out
+
+
+def record_assessments(report: dict, assessments: list[dict]) -> dict:
+    """Replace assessments on an unsigned report. An empty list clears them."""
+    _reject_if_signed(report)
+    out = copy.deepcopy(report)
+    out.pop("signed", None)
+    if assessments:
+        out["assessments"] = assessments
+    else:
+        out.pop("assessments", None)
+    return out
+
+
+def assessments_from_form(form: dict) -> list[dict] | None:
+    """Read posted deviation assessments. Absent fields mean the form did not include them."""
+    if "assess_kind" not in form:
+        return None
+    names = (
+        "assess_kind",
+        "assess_claim_id",
+        "assess_claim_digest",
+        "assess_index",
+        "assess_namespace",
+        "assess_pack_id",
+        "assess_requirement_id",
+        "assess_requirement_digest",
+        "assess_binding",
+        "assess_disposition",
+        "assess_text",
+    )
+    columns = {name: [str(value) for value in (form.get(name) or [])] for name in names}
+    count = len(columns["assess_kind"])
+    if any(len(values) != count for values in columns.values()):
+        raise ModelError("review report", "assessments", "one value for each deviation field")
+    built = []
+    for index in range(count):
+        disposition = columns["assess_disposition"][index].strip()
+        text = columns["assess_text"][index].strip()
+        if disposition == "":
+            if text:
+                raise ModelError(
+                    "review report",
+                    "assessments",
+                    "Not assessed, or Accept deviation / Must be fixed with text",
+                )
+            continue
+        kind = columns["assess_kind"][index].strip()
+        shared = {
+            "claim_id": columns["assess_claim_id"][index].strip(),
+            "claim_digest": columns["assess_claim_digest"][index].strip(),
+            "disposition": disposition,
+            "text": text,
+        }
+        if kind == "check":
+            raw_index = columns["assess_index"][index].strip()
+            if not raw_index.isdigit():
+                raise ModelError("review report", "assessments", "the Check index on the run")
+            built.append({"kind": "check", "index": int(raw_index), **shared})
+        elif kind == "binding":
+            built.append(
+                {
+                    "kind": "binding",
+                    "namespace": columns["assess_namespace"][index].strip(),
+                    "pack_id": columns["assess_pack_id"][index].strip(),
+                    "requirement_id": columns["assess_requirement_id"][index].strip(),
+                    "requirement_digest": columns["assess_requirement_digest"][index].strip(),
+                    "binding": columns["assess_binding"][index].strip(),
+                    **shared,
+                }
+            )
+        else:
+            raise ModelError("review report", "assessments", "check or binding")
+    return built
 
 
 def sign_report(report: dict, *, name: str, private_key: bytes, at: str) -> dict:

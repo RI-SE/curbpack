@@ -133,14 +133,20 @@ def present_raw_run(
         current = claims_by_id.get(claim_id)
         link = links[index] if index < len(links) else None
         item = _claim_item(row, current, claim_readings.get(claim_id), repo=repo, chain=link)
-        if current is None:
+        recorded_id = str(row.get("requirement_id") or "")
+        live_id = str(current.get("requirement_id") or "") if isinstance(current, dict) else ""
+        requirement_id = recorded_id or live_id
+        fallback = requirements_by_id.get(requirement_id) if requirement_id else None
+        _apply_requirement_context(item, row, link, fallback if isinstance(fallback, dict) else None)
+        if current is None and not recorded_id:
             unresolved.append(item)
             continue
-        requirement_id = str(current.get("requirement_id") or "")
-        if requirement_id not in requirements_by_id:
+        if not requirement_id or (requirement_id not in requirements_by_id and not recorded_id):
             item["requirement_id"] = requirement_id
             unresolved.append(item)
             continue
+        if requirement_id not in requirements_by_id:
+            item["requirement_id"] = requirement_id
         if requirement_id not in grouped:
             grouped[requirement_id] = []
             order.append(requirement_id)
@@ -154,7 +160,7 @@ def present_raw_run(
                 claims,
                 requirement_readings.get(requirement_id),
                 expanded,
-                passages=_passages(requirements_by_id.get(requirement_id)),
+                passages=_group_passages(claims, requirements_by_id.get(requirement_id)),
             )
         )
     if unresolved:
@@ -211,6 +217,9 @@ def present_compiled_report(
         item = _claim_item(
             row, current, claim_readings.get(claim_id), embedded=embedded, repo=repo, chain=link
         )
+        requirement_id_for_hint = str(embedded.get("requirement_id") or "") if isinstance(embedded, dict) else ""
+        fallback = embedded_requirements.get(requirement_id_for_hint)
+        _apply_requirement_context(item, row, link, fallback if isinstance(fallback, dict) else None)
         if embedded is None:
             unresolved.append(item)
             continue
@@ -234,7 +243,7 @@ def present_compiled_report(
                 requirement_readings.get(requirement_id),
                 expanded,
                 force_open=force_open,
-                passages=_passages(embedded_requirements.get(requirement_id)),
+                passages=_group_passages(claims, embedded_requirements.get(requirement_id)),
             )
         )
     if unresolved:
@@ -332,14 +341,25 @@ def _claim_item(
             "paths": paths,
             "edit": edit,
         }
+        hint = check.get("remediation_hint")
+        if isinstance(hint, str) and hint:
+            entry["remediation_hint"] = hint
         if "dep_ban" in adapted:
             entry["dep_ban"] = adapted["dep_ban"]
         checks.append(entry)
+    described_pack = str(described.get("pack_id") or "") if isinstance(described, dict) else ""
+    described_requirement = str(described.get("requirement_id") or "") if isinstance(described, dict) else ""
     return {
         "id": str(row.get("id") or ""),
+        "digest": str(row.get("digest") or ""),
         "status": str(row.get("status") or ""),
         "description": description,
         "binding": row.get("binding") if row.get("binding") in {"match", "stale", "missing"} else "",
+        "namespace": str(row.get("namespace") or ""),
+        "pack_id": str(row.get("pack_id") or described_pack),
+        "recorded_requirement_id": str(row.get("requirement_id") or ""),
+        "inspect_requirement_id": str(row.get("requirement_id") or described_requirement),
+        "requirement_digest": str(row.get("requirement_digest") or ""),
         "changed": changed,
         "requirement_id": "",
         "sentences": sentences,
@@ -376,6 +396,58 @@ def _chain_fields(chain: dict | None) -> dict:
         "claim_signature_status": str((claim.get("signature") or {}).get("status") or "") if isinstance(claim.get("signature"), dict) else "",
         "chain_binding": str(chain.get("binding") or ""),
     }
+
+
+def _apply_requirement_context(item: dict, row: dict, chain: dict | None, fallback: dict | None) -> None:
+    """Attach the Requirement hint and passages from the version this run recorded."""
+    recorded = row.get("requirement_digest")
+    if not isinstance(recorded, str) or not recorded:
+        described = fallback if isinstance(fallback, dict) else None
+        recorded = ""
+        if isinstance(described, dict):
+            try:
+                recorded = version_digest(described)
+            except (TypeError, ValueError):
+                recorded = ""
+    found = chain.get("requirement") if isinstance(chain, dict) else None
+    obj = found.get("object") if isinstance(found, dict) and isinstance(found.get("object"), dict) else None
+    location = str(found.get("location") or "") if isinstance(found, dict) else ""
+    chosen = None
+    chosen_from = ""
+    if isinstance(recorded, str) and recorded:
+        if obj is not None and version_digest(obj) == recorded:
+            chosen = obj
+            chosen_from = location or "historical"
+        elif isinstance(fallback, dict):
+            try:
+                if version_digest(fallback) == recorded:
+                    chosen = fallback
+                    chosen_from = "current"
+            except (TypeError, ValueError):
+                chosen = None
+    else:
+        chosen = obj if obj is not None else fallback if isinstance(fallback, dict) else None
+        chosen_from = location if obj is not None else ("current" if isinstance(chosen, dict) else "")
+    if chosen is None:
+        item["requirement_hint"] = ""
+        item["requirement_hint_from"] = "unresolved" if row.get("requirement_digest") else ""
+        item["requirement_passages"] = []
+        return
+    hint = chosen.get("remediation_hint")
+    item["requirement_hint"] = hint if isinstance(hint, str) else ""
+    item["requirement_hint_from"] = chosen_from
+    item["requirement_passages"] = _passages(chosen)
+
+
+def _group_passages(claims: list[dict], fallback: dict | None) -> list:
+    contextual = [claim for claim in claims if "requirement_hint_from" in claim]
+    if not contextual:
+        return _passages(fallback if isinstance(fallback, dict) else None)
+    for claim in contextual:
+        if claim.get("requirement_hint_from") == "unresolved":
+            continue
+        return claim.get("requirement_passages") or []
+    return []
 
 
 def _passages(requirement: dict | None) -> list[dict]:

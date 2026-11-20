@@ -22,7 +22,7 @@ from checks.run import claims_dir, packs_dir, reports_dir, results_dir, run_and_
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from common.store import save_pack, save_requirement
-from common.validate import validate_curbpack_config
+from common.validate import validate_curbpack_config, validate_requirement
 from discovery.door import created_curbpack, open_paths, open_repo_id, save_directory_fields, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
@@ -953,7 +953,14 @@ class ReviewIoTest(unittest.TestCase):
             (repo / "README.md").write_text("hello from widget\n", encoding="utf-8")
             write_claim(
                 repo / "kept" / "claims",
-                _exist_claim("claim-readme", "CRA-PURPOSE", "README.md"),
+                build_claim(
+                    claim_id="claim-readme",
+                    requirement=validate_requirement(_requirement("CRA-PURPOSE")),
+                    source="documents",
+                    args={"path": "README.md"},
+                    checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],
+                    description="The file is the reviewed evidence.",
+                ),
             )
             write_json(
                 repo / "curbpack.json",

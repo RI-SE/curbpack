@@ -5,17 +5,27 @@ objects. This module does not decide or sign a second way.
 """
 
 from studio.review.impl.decision import (
+    assessments_from_form,
     read_report_signature,
+    record_assessments,
     record_decision,
+    record_review_update,
+    save_report_assessments,
     save_report_decision,
     save_report_signature,
+    save_report_update,
     sign_report,
 )
 
 __all__ = [
+    "assessments_from_form",
     "read_report_signature",
+    "record_assessments",
     "record_decision",
+    "record_review_update",
+    "save_report_assessments",
     "save_report_decision",
     "save_report_signature",
+    "save_report_update",
     "sign_report",
 ]

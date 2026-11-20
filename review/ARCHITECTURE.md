@@ -43,6 +43,7 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
   "run_result": { },
   "requirements": [ ],
   "claims": [ ],
+  "assessments": [],
   "decision": "the reviewer's own words",
   "signed": { "at": "…", "name": "…", "signature": "…" }
 }
@@ -55,7 +56,8 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
 | `run_result` | The result that was reviewed. Compile copies it. Review does not produce another. |
 | `requirements` | `law_text` and the Requirement seal. One object per `requirement_id` on the embedded Claims, in the order those ids first appear. |
 | `claims` | The Claim seal and the args. One object per run-result row, in row order. |
-| `decision` | The reviewer's words. Inside the version digest. |
+| `assessments` | Optional. One `accept` or `must_fix` entry per recorded deviation on this run, with the reviewer's text. Absent means Not assessed. Inside the version digest. Not copied to another run. |
+| `decision` | The reviewer's words for the whole report. Inside the version digest. |
 | `signed` | `review-sign`. Same shape as every other seal. |
 
 `run_result.packs` contains recorded Pack identity and version/digest data defined by the currently approved output contract (extended by VL-00/VL-04 where specified). The report does not embed `pack.json`. When the pack directory is available, the page calls `read_pack_seal`. The collection identity on the report is the run result's `packs` entry.
@@ -142,7 +144,7 @@ This is the required **PoC1-style follow-up**, implemented using the existing Cl
 5. The human may **explicitly delete/retire** the replaced old Claim in Claims Editor after confirming replacement. Any not-yet-verified replacement is identified as such. Canceling, an empty search, or an Add failure leaves the old Claim intact. A prior signed report remains evidence of its original run and is never rewritten.
 6. Run Checks again and inspect the new result. Review and sign the new Claim(s) separately in Claims; then Compile/Review can record and sign the **new human decision** for that new run. Neither operation silently copies the old report decision or turns a Check outcome into a claim of conformity.
 
-**No automatic Keep/Re-hunt history is required for this pilot workflow.** The visible Check failures and ordinary persisted Claims supply the actionable state, while the review report retains only its existing free-text human `decision`. This explicitly does **not** reproduce PoC1's historical per-item action marks across sessions. The product owner chose the simpler, operationally sufficient workflow; do not resurrect `state.json` or extend Packs v2 to simulate parity. Do not infer human-review currency solely from pass, worktree cleanliness or signatures.
+The visible Check failures and ordinary persisted Claims supply the actionable state. The review report retains the free-text `decision` and may retain `assessments` for the deviations of that run. Those assessments are not a second queue and are not stored in `state.json`. Do not infer human-review currency solely from pass, worktree cleanliness or signatures.
 
 ## PoC1
 
@@ -157,7 +159,7 @@ PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. T
 | Look for evidence again after a red check | **Retain and simplify** | Open the existing one-Requirement Discovery in a popup, grey already-checked evidence through a presentation hook, add one or more replacement Claims, explicitly retire the old Claim, rerun Checks, then sign. No new finder. |
 | Change `check` or `args` from the review card | Drop | Claims Editor writes the Claim. This page links there. |
 | Rewrite a path to a `_new` suffix as a re-point | Drop | `rehunt_repoint_path` only renames a demo string. The person edits `args` in the Claims editor. |
-| Persist individual Keep/Re-hunt marks across runs | **Deferred by explicit product decision** | The pilot uses visible Check results, unchanged failing Claims until explicit deletion, and the normal signed report decision. It does not promise per-item history. Do not recreate `state.json`. |
+| Persist individual Keep/Re-hunt marks across runs | Recorded on the review report as `assessments` | Accept, Must be fixed, and Not assessed apply to deviations of the selected run. There is no `state.json`, no review queue, and no copy of those assessments onto another run. |
 | Toggle a signed flag on the Requirement | Drop | The Requirement seal and the Claim seal are the other activities. |
 | Prepared `scan.json` and the SCAN theatre | Drop | The check runner writes the run result. |
 | Remedy page | Drop | The signed report is what the reviewer can hand on. |

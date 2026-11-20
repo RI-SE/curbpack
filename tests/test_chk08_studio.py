@@ -14,6 +14,7 @@ from pathlib import Path
 from app.server import Workspace, make_handler
 from claims.bind import build_claim, write_claim
 from common.jsonio import write_json
+from common.validate import validate_requirement
 from common.store import load_run_result, save_pack, save_requirement
 from discovery.door import created_curbpack
 from discovery.repos import add_repo, load_repos, save_repos
@@ -52,7 +53,7 @@ def _requirement(requirement_id: str, pack_id: str = "cra-baseline") -> dict:
 def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement={"id": requirement_id, "namespace": "RISE/Example", "pack_id": "example"},
+        requirement=validate_requirement(_requirement(requirement_id)),
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],

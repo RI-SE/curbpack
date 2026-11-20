@@ -123,12 +123,15 @@ Compile copies an existing run result into one JSON object together with the Req
 | `requirements` | Requirements named by the Claims that ran, in the order their ids first appear. |
 | `claims` | The Claims that ran, one per run-result row, in row order. |
 | `appendix` | List of evaluated Claims that are unsigned or whose signature does not verify. Each entry has `id`, `requirement_id`, and `reason`. |
-| `decision` | The reviewer's words. Absent until saved. |
-| `signed` | Report signature, absent until signed. Same `at`, `name`, and `signature` shape as Packs v2 §2.6. |
+| `assessments` | Optional list of reviewer assessments for recorded deviations on this run. Absent means every deviation is Not assessed. Each entry is one failed or skipped Check, or one `stale` or `missing` binding. A Check entry has `kind` `check`, `claim_id`, `claim_digest`, `index`, `disposition`, and `text`. A binding entry has `kind` `binding`, `claim_id`, `claim_digest`, `namespace`, `pack_id`, `requirement_id`, `requirement_digest`, `binding`, `disposition`, and `text`. `disposition` is `accept` or `must_fix`. `text` is the justification or the required correction. An assessment does not change Check status, binding, or the embedded run result. |
+| `decision` | The reviewer's words for the whole report. Absent until saved. |
+| `signed` | Report signature, absent until signed. Same `at`, `name`, and `signature` shape as Packs v2 §2.6. The signature covers `assessments` because they are part of the report. |
 
 Unknown report keys are rejected. A report may contain a run with failed or skipped Checks. Producing the report does not turn that run into a pass.
 
-Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
+Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. The embedded Requirement is the version whose digest is the Claim's `requirement_digest`. A current Requirement with the same id and a different digest is not substituted. When that version is not in the supplied Requirements, Compile recovers it from local Git history. If it cannot be recovered, Compile fails and names the recorded digest. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
+
+Assessments submitted with Compile are stored on the new report only. They are not copied onto another run. A report that has no `assessments` field remains valid. An unsigned report can be given a new `assessments` list. A signed report is unchanged.
 
 ### Verified compilation
 
@@ -142,7 +145,7 @@ python3 compile-pdf.py --report /path/to/review-report.json --out /path/to/revie
 
 Install runtime dependencies from `requirements.txt` first. The output parent directory must exist. Exit 0 means the PDF was written, 1 means rendering or input failed, and 2 means invalid command-line arguments. An existing output is refused and left unchanged.
 
-The PDF opens with a plain-language management summary: compact run identity, scope and counts, items needing follow-up, separate approval gaps, and the recorded reviewer decision. Review findings show a failed or skipped Check, and a passing Check whose stored binding is `stale` or `missing`. They include the checker's recorded reasons, the stored Requirement identity and digests, neutral questions for human review, and references to the detailed records. A passing Check stays `pass`. The PDF does not invent business risk, ownership, deadlines, or decisions.
+The PDF opens with a plain-language management summary: compact run identity, scope and counts, items needing follow-up, separate approval gaps, and the recorded reviewer decision. Review findings then list outstanding deviations that must be fixed or are not assessed, accepted deviations with their justification, and passing Checks. A finding shows a failed or skipped Check, or a passing Check whose stored binding is `stale` or `missing`. It includes the checker's recorded reasons, a Check `remediation_hint` when the result has one, the Requirement `remediation_hint` when the embedded Requirement is the recorded version, the stored Requirement identity and digests, neutral questions for human review, and references to the detailed records. A passing Check stays `pass`. The PDF does not invent business risk, ownership, deadlines, or decisions.
 
 Technical details follow on new pages in appendix tables: A — run metadata and loaded Pack versions/digests; B — a compact reviewed-item index, embedded Requirements/source passages, Claims/evidence, the stored binding, and indexed Check arguments/outcomes; C — recorded signature gaps and seal metadata. Tables repeat headers and split long records across pages. Everything is monochrome and visible without controls. The input JSON and historical grouping are unchanged; the exporter does not open live evidence or run Checks. Changes since the run and unresolved current evidence are explicitly not assessed.
 
@@ -199,7 +202,7 @@ The export directory currently has no version segment. The product Pack-tree con
 | --- | --- |
 | `curbcheck` | Prints a text summary. `-j` adds a new dated JSON file under `results_dir`; `-o PATH` writes the same object to that path. Both flags may be used together. |
 | Check page | Writes a new dated run-result JSON under the selected product's `results_dir`. Leaves existing review reports in place. |
-| Compile | Reads the posted run-result path and writes a new dated report under `reports_dir`. Writes nothing when that path is absent. Does not re-run Checks or overwrite the previous dated report. |
+| Compile | Reads the posted run-result path and writes a new dated report under `reports_dir`, including posted `assessments` for that run. Writes nothing when that path is absent. Does not re-run Checks or overwrite a previous dated report. |
 | Open Review | Lists the dated run results and review reports, and opens only the requested document. Opening the page does not write a report. |
 | Save decision | Updates the selected report's `decision` and removes that report's `signed` block. Embedded Claim and Requirement signatures remain. |
 | review-sign | Requires a saved decision and signs that same report. |

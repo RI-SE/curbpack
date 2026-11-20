@@ -11,7 +11,28 @@ from common.jsonio import read_json, write_json
 from common.validate import validate_claim, validate_requirement, validate_run_result
 from review.gitseal import read_claim_signature
 
-REPORT_FIELDS = {"run_result", "requirements", "claims", "appendix", "decision", "signed"}
+REPORT_FIELDS = {
+    "run_result",
+    "requirements",
+    "claims",
+    "appendix",
+    "assessments",
+    "decision",
+    "signed",
+}
+_CHECK_ASSESSMENT = {"kind", "claim_id", "claim_digest", "index", "disposition", "text"}
+_BINDING_ASSESSMENT = {
+    "kind",
+    "claim_id",
+    "claim_digest",
+    "namespace",
+    "pack_id",
+    "requirement_id",
+    "requirement_digest",
+    "binding",
+    "disposition",
+    "text",
+}
 
 
 def compile_report(
@@ -21,6 +42,7 @@ def compile_report(
     claims: list[dict],
     trust: dict[str, bytes] | None = None,
     repo: Path | None = None,
+    assessments: list[dict] | None = None,
 ) -> dict:
     checked = copy.deepcopy(validate_run_result(run_result))
     embedded_claims = [
@@ -28,10 +50,12 @@ def compile_report(
     ]
     report = {
         "run_result": checked,
-        "requirements": _requirements_for_claims(embedded_claims, requirements),
+        "requirements": _requirements_for_claims(embedded_claims, requirements, repo=repo),
         "claims": embedded_claims,
         "appendix": signature_appendix(checked, embedded_claims, trust or {}, repo=repo),
     }
+    if assessments:
+        report["assessments"] = assessments
     return validate_report(report)
 
 
@@ -68,6 +92,8 @@ def validate_report(obj: object) -> dict:
         validate_requirement(requirement)
     for index, item in enumerate(appendix):
         _validate_appendix_item(item, index)
+    if "assessments" in obj:
+        _validate_assessments(obj["assessments"], run_result)
     if "decision" in obj and (not isinstance(obj["decision"], str) or not obj["decision"].strip()):
         raise ModelError("review report", "decision", "the reviewer's own words")
     if "signed" in obj:
@@ -145,22 +171,184 @@ def _claims_for_rows(run_result: dict, claims: list[dict]) -> list[dict]:
     return ordered
 
 
-def _requirements_for_claims(claims: list[dict], requirements: list[dict]) -> list[dict]:
-    by_id: dict[str, dict] = {}
-    for requirement in requirements:
-        if isinstance(requirement, dict) and isinstance(requirement.get("id"), str):
-            by_id.setdefault(requirement["id"], requirement)
+def _requirements_for_claims(
+    claims: list[dict],
+    requirements: list[dict],
+    *,
+    repo: Path | None = None,
+) -> list[dict]:
+    """Embed the Requirement version each Claim recorded.
+
+    A current Requirement with the same id and a different digest is not a substitute.
+    """
     chosen = []
     for requirement_id in _first_requirement_ids(claims):
-        requirement = by_id.get(requirement_id)
-        if not isinstance(requirement, dict):
+        bound = [claim for claim in claims if claim.get("requirement_id") == requirement_id]
+        digests = []
+        for claim in bound:
+            digest = claim.get("requirement_digest")
+            if isinstance(digest, str) and digest not in digests:
+                digests.append(digest)
+        if len(digests) != 1:
             raise ModelError(
                 f"requirement {requirement_id}",
-                "id",
-                "the Requirement named by a Claim that ran",
+                "requirement_digest",
+                "one recorded Requirement version for this Requirement id",
             )
-        chosen.append(validate_requirement(copy.deepcopy(requirement)))
+        recorded = digests[0]
+        match = _supplied_requirement(requirements, requirement_id, recorded)
+        if match is None and repo is not None:
+            match = _recovered_requirement(repo, bound[0], recorded)
+        if match is None or version_digest(match) != recorded:
+            raise ModelError(
+                f"requirement {requirement_id}",
+                "requirement_digest",
+                f"Requirement version {recorded} recorded on the Claim. "
+                "The current Requirement is a different version and was not substituted. "
+                "Recover that version in this repository, or bind the Claim to the current "
+                "Requirement and run Checks again.",
+            )
+        chosen.append(validate_requirement(copy.deepcopy(match)))
     return chosen
+
+
+def _supplied_requirement(requirements: list[dict], requirement_id: str, recorded: str) -> dict | None:
+    for requirement in requirements:
+        if not isinstance(requirement, dict) or requirement.get("id") != requirement_id:
+            continue
+        try:
+            if version_digest(requirement) == recorded:
+                return requirement
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _recovered_requirement(repo: Path, claim: dict, recorded: str) -> dict | None:
+    from studio.review.resolve import resolve_chain
+
+    row = {
+        "id": claim.get("id"),
+        "digest": version_digest(claim),
+        "namespace": claim.get("namespace"),
+        "pack_id": claim.get("pack_id"),
+        "requirement_id": claim.get("requirement_id"),
+        "requirement_digest": recorded,
+        "status": "pass",
+        "checks": [
+            {
+                "index": index,
+                "check": item.get("check"),
+                "args": item.get("args") if isinstance(item.get("args"), dict) else {},
+                "status": "pass",
+            }
+            for index, item in enumerate(claim.get("checks") or [])
+            if isinstance(item, dict)
+        ],
+    }
+    try:
+        chain = resolve_chain(repo, {"claims": [row]})
+    except (ModelError, OSError, ValueError):
+        return None
+    links = chain.get("claims") or []
+    if not links or not isinstance(links[0], dict):
+        return None
+    requirement = links[0].get("requirement")
+    if not isinstance(requirement, dict):
+        return None
+    obj = requirement.get("object")
+    if isinstance(obj, dict) and version_digest(obj) == recorded:
+        return obj
+    return None
+
+
+def recorded_deviations(run_result: dict) -> list[dict]:
+    """Failed and skipped Checks, and stale or missing bindings, in run order."""
+    deviations = []
+    for row in run_result.get("claims") or []:
+        if not isinstance(row, dict):
+            continue
+        for check in row.get("checks") or []:
+            if not isinstance(check, dict) or check.get("status") not in {"fail", "skipped"}:
+                continue
+            deviations.append(
+                {
+                    "kind": "check",
+                    "claim_id": row.get("id"),
+                    "claim_digest": row.get("digest"),
+                    "index": check.get("index"),
+                    "check": check.get("check"),
+                    "status": check.get("status"),
+                    "detail": check.get("detail") or "",
+                    "remediation_hint": check.get("remediation_hint") or "",
+                }
+            )
+        if row.get("binding") in {"stale", "missing"}:
+            deviations.append(
+                {
+                    "kind": "binding",
+                    "claim_id": row.get("id"),
+                    "claim_digest": row.get("digest"),
+                    "namespace": row.get("namespace"),
+                    "pack_id": row.get("pack_id"),
+                    "requirement_id": row.get("requirement_id"),
+                    "requirement_digest": row.get("requirement_digest"),
+                    "binding": row.get("binding"),
+                    "actual_digest": row.get("actual_digest") or "",
+                }
+            )
+    return deviations
+
+
+def assessment_identity(item: dict) -> tuple:
+    if item.get("kind") == "binding":
+        return (
+            "binding",
+            item.get("claim_id"),
+            item.get("claim_digest"),
+            item.get("namespace"),
+            item.get("pack_id"),
+            item.get("requirement_id"),
+            item.get("requirement_digest"),
+            item.get("binding"),
+        )
+    return ("check", item.get("claim_id"), item.get("claim_digest"), item.get("index"))
+
+
+def _validate_assessments(assessments: object, run_result: dict) -> None:
+    if not isinstance(assessments, list):
+        raise ModelError("review report", "assessments", "list")
+    known = {assessment_identity(item): item for item in recorded_deviations(run_result)}
+    seen: set[tuple] = set()
+    for index, item in enumerate(assessments):
+        where = f"assessments[{index}]"
+        if not isinstance(item, dict):
+            raise ModelError("review report", where, "object")
+        kind = item.get("kind")
+        expected = _CHECK_ASSESSMENT if kind == "check" else _BINDING_ASSESSMENT if kind == "binding" else None
+        if expected is None:
+            raise ModelError("review report", f"{where}.kind", "check or binding")
+        unknown = sorted(set(item) - expected)
+        if unknown:
+            raise ModelError("review report", f"{where}.{unknown[0]}", "absent")
+        for field in expected - {"index"}:
+            value = item.get(field)
+            if not isinstance(value, str) or not value.strip():
+                raise ModelError("review report", f"{where}.{field}", "non-empty string")
+        if kind == "check" and not isinstance(item.get("index"), int):
+            raise ModelError("review report", f"{where}.index", "the Check index on the run")
+        if item.get("disposition") not in {"accept", "must_fix"}:
+            raise ModelError("review report", f"{where}.disposition", "accept or must_fix")
+        identity = assessment_identity(item)
+        if identity in seen:
+            raise ModelError("review report", where, "one assessment for each recorded deviation")
+        if identity not in known:
+            raise ModelError(
+                "review report",
+                where,
+                "a failed or skipped Check, or a stale or missing binding, on this run",
+            )
+        seen.add(identity)
 
 
 def _first_requirement_ids(claims: list[dict]) -> list[str]:

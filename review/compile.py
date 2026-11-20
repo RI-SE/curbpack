@@ -11,10 +11,15 @@ from studio.compile.impl import (
 )
 from studio.compile.impl.report import signature_appendix
 from studio.review.impl import (
+    assessments_from_form,
     read_report_signature,
+    record_assessments,
     record_decision,
+    record_review_update,
+    save_report_assessments,
     save_report_decision,
     save_report_signature,
+    save_report_update,
     sign_report,
 )
 from studio.common.presentation import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence

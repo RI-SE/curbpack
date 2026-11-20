@@ -126,7 +126,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             ]
             risk = build_claim(
                 claim_id="claim-risk",
-                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
+                requirement=published,
                 source="documents",
                 args={"path": risk_path},
                 checks=[
@@ -138,7 +138,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             )
             readme_claim = build_claim(
                 claim_id="claim-readme",
-                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
+                requirement=published,
                 source="documents",
                 args={"path": "README.md"},
                 checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],
@@ -147,7 +147,7 @@ class AnnexViiScenarioTest(unittest.TestCase):
             )
             proposal = build_claim(
                 claim_id="claim-proposal",
-                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
+                requirement=published,
                 source="documents",
                 args={"path": "marketing.md"},
                 checks=[],

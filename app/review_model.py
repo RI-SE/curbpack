@@ -11,7 +11,11 @@ from common.jsonio import read_json
 from common.keystore import load_or_create_key, trust_store
 from common.store import load_claims, load_run_result
 from discovery.door import repo_claims_dir
-from review.compile import save_report_decision, save_report_signature
+from review.compile import (
+    assessments_from_form,
+    save_report_signature,
+    save_report_update,
+)
 from studio.review.impl.saved import _confined_review_report_path
 from studio.review.model import _review_view
 
@@ -51,6 +55,7 @@ def _compile_review(ws: Workspace, form: dict) -> str:
         claims=claims,
         trust=trust_store(ws.keys),
         repo=repo,
+        assessments=assessments_from_form(form),
     )
     out = _new_review_report_path(reports_dir(repo, config))
     write_report(out, report)
@@ -77,7 +82,12 @@ def _save_review_decision(ws: Workspace, form: dict) -> str:
     )
     if not report_path:
         raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
-    save_report_decision(Path(report_path), (form.get("decision") or [""])[0])
+    path = Path(report_path)
+    save_report_update(
+        path,
+        decision=(form.get("decision") or [""])[0],
+        assessments=assessments_from_form(form),
+    )
     return (
         f"/review?repo={quote(repo_id, safe='')}&saved=1"
         f"&report={quote(report_path, safe='')}"
@@ -108,6 +118,7 @@ def _sign_review(ws: Workspace, form: dict) -> str:
         name=name,
         private_key=private,
         at=_now(),
+        assessments=assessments_from_form(form),
     )
     return (
         f"/review?repo={quote(repo_id, safe='')}&signed=1"

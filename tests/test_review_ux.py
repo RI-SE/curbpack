@@ -85,7 +85,7 @@ class ReviewStartTest(unittest.TestCase):
             self.assertIn("Check <span data-status=", page)
             self.assertIn('data-law-text="its intended purpose"', page)
             self.assertIn('data-claim-description="The file is the reviewed evidence."', page)
-            self.assertIn(">Create new Report</button>", page)
+            self.assertIn(">Create New Report</button>", page)
             self.assertNotIn("Compile writes a new unsigned report", page)
             self.assertIn("not saved", page)
             self.assertIn('data-selected="run"', page)
@@ -97,7 +97,7 @@ class ReviewStartTest(unittest.TestCase):
     def test_only_reports_for_the_open_run_show_decision_and_signature(self):
         claim = build_claim(
             claim_id="claim-a",
-            requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
+            requirement=_requirement("REQ-A"),
             source="documents",
             args={"path": "docs/a.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -105,7 +105,7 @@ class ReviewStartTest(unittest.TestCase):
         )
         other = build_claim(
             claim_id="claim-b",
-            requirement={"id": "REQ-B", "namespace": "RISE/Example", "pack_id": "example"},
+            requirement=_requirement("REQ-B"),
             source="documents",
             args={"path": "docs/b.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/b.md"]}}],
@@ -226,7 +226,7 @@ class SignedReportLockTest(unittest.TestCase):
         private, _public = generate_keypair()
         claim = build_claim(
             claim_id="claim-a",
-            requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
+            requirement=_requirement("REQ-A"),
             source="documents",
             args={"path": "docs/a.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -312,7 +312,7 @@ class SignedReportLockTest(unittest.TestCase):
                 self.assertIn("First reading.", sealed_page)
                 self.assertNotIn('name="decision"', sealed_page)
                 self.assertNotIn(">review-sign</button>", sealed_page)
-                self.assertIn(">Create new Report</button>", sealed_page)
+                self.assertIn(">Create New Report</button>", sealed_page)
                 self.assertIn(
                     f'name="result" value="{run_path.resolve()}"',
                     sealed_page,
@@ -488,7 +488,7 @@ class SignedReportFileTest(unittest.TestCase):
         private, _public = generate_keypair()
         claim = build_claim(
             claim_id="claim-a",
-            requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
+            requirement=_requirement("REQ-A"),
             source="documents",
             args={"path": "docs/a.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],

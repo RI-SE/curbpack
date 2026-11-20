@@ -32,7 +32,7 @@ _HINT = "Add the missing file."
 def _claim(checks: list[dict] | None = None) -> dict:
     return build_claim(
         claim_id="claim-hint",
-        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
+        requirement=_requirement(),
         source="documents",
         args={"path": "docs/a.md"},
         checks=checks or [{"check": "exist", "args": {"paths": ["docs/a.md"]}}],

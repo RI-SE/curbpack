@@ -23,7 +23,7 @@ from claims.bind import build_claim, write_claim
 from common.canonical import version_digest
 from common.jsonio import read_json, write_json
 from common.store import load_requirement, save_pack, save_requirement
-from common.validate import validate_curbpack_config
+from common.validate import validate_curbpack_config, validate_requirement
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
@@ -1368,7 +1368,7 @@ class ReviewCompiledReportTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = build_claim(
                 claim_id="checked-note",
-                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
+                requirement=validate_requirement(_requirement("REQ-SHARED")),
                 source="documents",
                 args={"path": "one.md"},
                 checks=[
@@ -1589,9 +1589,10 @@ def _run(claim_id: str) -> dict:
 
 
 def _report(claim_id: str, decision: str) -> dict:
+    requirement = _requirement("CRA-PURPOSE")
     claim = build_claim(
         claim_id=claim_id,
-        requirement={"id": "CRA-PURPOSE", "namespace": "RISE/Example", "pack_id": "example"},
+        requirement=requirement,
         source="documents",
         args={"path": "README.md"},
         checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],
@@ -1612,7 +1613,7 @@ def _report(claim_id: str, decision: str) -> dict:
                 }
             ],
         },
-        requirements=[_requirement("CRA-PURPOSE")],
+        requirements=[requirement],
         claims=[claim],
     )
     return record_decision(report, decision)
@@ -1637,7 +1638,7 @@ def _requirement(requirement_id: str) -> dict:
 def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement={"id": requirement_id, "namespace": "RISE/Example", "pack_id": "example"},
+        requirement=validate_requirement(_requirement(requirement_id)),
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],
@@ -1790,7 +1791,7 @@ def _compiled(
         if requirement["id"] in seen:
             continue
         seen.add(requirement["id"])
-        unique.append(requirement)
+        unique.append(validate_requirement(requirement))
     report = compile_report(run_result=run, requirements=unique, claims=claims, repo=repo)
     if decision:
         report = record_decision(report, decision)
@@ -1896,9 +1897,22 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
     product = root / "product"
     claims_dir = product / "curbpack" / "claims"
     claims_dir.mkdir(parents=True, exist_ok=True)
+    recorded_requirement = {
+        "id": "REQ-A",
+        "pack_id": "cra-xml-baseline",
+        "namespace": "RISE/cra-xml extract",
+        "source": {
+            "framework": "EU",
+            "instrument": "CRA",
+            "identifier": "CELEX:32024R2847",
+            "language": "en",
+            "url": "https://example.invalid/cra",
+        },
+        "references": [{"nr": 1, "locator": "VII.3", "law_text": "law passage for A"}],
+    }
     claim = build_claim(
         claim_id="claim-old",
-        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
+        requirement=recorded_requirement,
         source="documents",
         args={"path": "docs/risk-a.md"},
         checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
@@ -1935,21 +1949,7 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
     write_json(run_path, run)
     report = compile_report(
         run_result=run,
-        requirements=[
-            {
-                "id": "REQ-A",
-                "pack_id": "cra-xml-baseline",
-                "namespace": "RISE/cra-xml extract",
-                "source": {
-                    "framework": "EU",
-                    "instrument": "CRA",
-                    "identifier": "CELEX:32024R2847",
-                    "language": "en",
-                    "url": "https://example.invalid/cra",
-                },
-                "references": [{"nr": 1, "locator": "VII.3", "law_text": "law passage for A"}],
-            }
-        ],
+        requirements=[recorded_requirement],
         claims=[claim],
         repo=product,
     )
