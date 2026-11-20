@@ -79,6 +79,7 @@ def studio_page(model: dict, message: str = "") -> bytes:
 <label>model.temperature <input type="text" name="model_temperature" value="{html.escape(str(values.get("model_temperature") or ""))}" required autocomplete="off"></label>
 <label>prompts.interpret <input type="text" name="prompt_interpret" value="{html.escape(str(values.get("prompt_interpret") or ""))}" autocomplete="off"></label>
 <label>prompts.discovery_hints <input type="text" name="prompt_discovery_hints" value="{html.escape(str(values.get("prompt_discovery_hints") or ""))}" autocomplete="off"></label>
+<label class="check-inline"><input type="checkbox" name="researcher_mode" value="true"{' checked' if values.get('researcher_mode') == 'true' else ''}> researcher_mode — hide the Review column</label>
 <label>paths.temp_dir <input type="text" name="path_temp_dir" value="{html.escape(str(values.get("path_temp_dir") or ""))}" required autocomplete="off"></label>
 <label>paths.extract_work_dir <input type="text" name="path_extract_work_dir" value="{html.escape(str(values.get("path_extract_work_dir") or ""))}" required autocomplete="off"></label>
 <label>paths.keys_file <input type="text" name="path_keys_file" value="{html.escape(str(values.get("path_keys_file") or ""))}" autocomplete="off"></label>

@@ -13,12 +13,14 @@ from claims.bind import (
     suggest_claim_id,
     write_claim,
 )
+from studio.claim.impl.bind import source_overlap
 from claims.ui.coverage import covered_paths, load_run
 from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
 from discovery.jobs import CURBPACK_COPY, latest_job
 from discovery.present import overview_rows, signing_label
 from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements
+from discovery.studio import researcher_mode
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
 from requirements.workspace import load_working_copy, resolve_copy_ref, select_working_copy
@@ -45,7 +47,7 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
                 if isinstance(claim, dict)
             }
             rows = [row for row in rows if row.get("id") not in claimed]
-        model = {**_ids(context), "rows": rows, "gap": gap}
+        model = {**_ids(context), "rows": rows, "gap": gap, "researcher_mode": researcher_mode(context["repo"])}
         return_to = _safe_review_return(_one(query, "return_to"))
         if return_to:
             model["return_to"] = return_to
@@ -120,10 +122,30 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         wrote_claim = False
         try:
             check, args, label = _check_from_form(file_path, form)
-            # Explicit Check edit updates the existing Claim. A plain save still
-            # goes through feedback + suggest_claim_id so a differently named
-            # Claim for the same path can be created (SYS-03 Discover).
-            if _one(form, "edit_index").isdigit() and _claim_for_path(
+            if _one(form, "overlap_confirm") != "1":
+                rows = source_overlap(
+                    _claim_being_saved(context, requirement_id, file_path, form, check, args),
+                    context["claims"],
+                )
+                if rows:
+                    model = _with_signing(context, requirement, form, trust)
+                    return_to = _safe_review_return(_one(form, "return_to"))
+                    if return_to:
+                        model["return_to"] = return_to
+                    model["overlap"] = {
+                        "rows": rows,
+                        "fields": _posted_fields(form),
+                        "cancel_href": _back(context, requirement_id, return_to=_one(form, "return_to")),
+                    }
+                    return researcher.requirement_page(model)
+            # A row that already is a Claim names that Claim. The same file can
+            # belong to another Claim, so the path alone is not the identity.
+            claim_id = _one(form, "claim_id").strip()
+            if claim_id:
+                wrote_claim = _update_named_claim(
+                    context, claim_id, requirement_id, form, check, args, label
+                )
+            elif _one(form, "edit_index").isdigit() and _claim_for_path(
                 context["claims"], requirement_id, file_path
             ) is not None:
                 wrote_claim = _update_claim_check(
@@ -377,6 +399,7 @@ def _requirement_model(context: dict, requirement: dict, bag: dict) -> dict:
         "notice": _one(bag, "notice"),
         "open_checks": _one(bag, "open_checks"),
         "repo_files": _repo_files(context["repo"]),
+        "researcher_mode": researcher_mode(context["repo"]),
     }
 
 
@@ -593,6 +616,74 @@ def _choose_motivation(
     return True
 
 
+def _claim_being_saved(
+    context: dict,
+    requirement_id: str,
+    file_path: str,
+    form: dict,
+    check: str,
+    args: dict,
+) -> dict:
+    """The Claim this save would write, including the check, before it is stored."""
+    existing = None
+    claim_id = _one(form, "claim_id").strip()
+    if claim_id:
+        file = context["claims_dir"] / f"{claim_id}.json"
+        if file.is_file():
+            loaded = read_claim(file)
+            if loaded.get("requirement_id") == requirement_id and str(loaded.get("id") or "") == claim_id:
+                existing = loaded
+    if existing is None and _one(form, "edit_index").isdigit():
+        existing = _claim_for_path(context["claims"], requirement_id, file_path)
+    checks = [item for item in (existing or {}).get("checks") or [] if isinstance(item, dict)]
+    proposed = {"check": check, "args": args}
+    raw = _one(form, "edit_index")
+    if raw.isdigit() and 0 <= int(raw) < len(checks):
+        checks = [*checks]
+        checks[int(raw)] = proposed
+    else:
+        checks = [*checks, proposed]
+    stored = (existing or {}).get("args")
+    if not isinstance(stored, dict):
+        stored = {"path": file_path}
+    return {
+        "id": str((existing or {}).get("id") or ""),
+        "requirement_id": requirement_id,
+        "args": stored,
+        "checks": checks,
+    }
+
+
+def _posted_fields(form: dict) -> list[dict]:
+    fields = []
+    for key, value in form.items():
+        if key == "overlap_confirm":
+            continue
+        text = value[0] if isinstance(value, list) else value
+        fields.append({"name": str(key), "value": "" if text is None else str(text)})
+    return fields
+
+
+def _update_named_claim(
+    context: dict,
+    claim_id: str,
+    requirement_id: str,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
+    """Append or replace one check on the Claim the row named."""
+    folder = context["claims_dir"]
+    file = folder / f"{claim_id}.json"
+    if not file.is_file():
+        raise ModelError("claim", "id", "a saved claim")
+    claim = read_claim(file)
+    if claim.get("requirement_id") != requirement_id or str(claim.get("id") or "") != claim_id:
+        raise ModelError("claim", "id", "a claim for this requirement")
+    return _store_check(context, claim, form, check, args, label)
+
+
 def _update_claim_check(
     context: dict,
     requirement_id: str,
@@ -606,6 +697,17 @@ def _update_claim_check(
     claim = _claim_for_path(context["claims"], requirement_id, file_path)
     if claim is None:
         return False
+    return _store_check(context, claim, form, check, args, label)
+
+
+def _store_check(
+    context: dict,
+    claim: dict,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
     proposed = {"check": check, "args": args}
     if label:
         proposed["label"] = label

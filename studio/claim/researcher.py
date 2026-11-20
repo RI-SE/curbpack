@@ -48,9 +48,12 @@ def overview_page(model: dict) -> bytes:
             f"<td>{int(item.get('claims') or 0)}</td>"
             f"<td>{high}</td>"
             f"<td>{_signature_cell(str(item.get('signing') or ''))}</td>"
-            f"<td>{item.get('useful') or 0}</td>"
-            f"<td>{item.get('poor') or 0}</td>"
-            "</tr>"
+            + (
+                f"<td>{item.get('useful') or 0}</td><td>{item.get('poor') or 0}</td>"
+                if not model.get("researcher_mode")
+                else ""
+            )
+            + "</tr>"
         )
     section = html.escape(str(model.get("section_name") or model.get("source_id") or "this section"))
     repo = html.escape(str(model.get("repo_name") or model.get("repo_id") or ""))
@@ -64,6 +67,7 @@ def overview_page(model: dict) -> bytes:
         if model.get("gap")
         else ""
     )
+    review = "" if model.get("researcher_mode") else "<th>Useful</th><th>Poor</th>"
     body = f"""
 <p class="muted"><a href="/discover">Discovery &amp; Claims</a></p>
 <h1>{section}</h1>
@@ -76,7 +80,7 @@ A human <strong>signs</strong> each Claim. <strong>Signature</strong> is that se
 {gap}
 {model.get('error_html') or ''}
 <table>
-<thead><tr><th>Requirement</th><th>Source reference</th><th>Findings</th><th># Claims</th><th>High</th><th>Signature</th><th>Useful</th><th>Poor</th></tr></thead>
+<thead><tr><th>Requirement</th><th>Source reference</th><th>Findings</th><th># Claims</th><th>High</th><th>Signature</th>{review}</tr></thead>
 <tbody>{''.join(rows) or '<tr><td colspan="8">No requirements in this working copy.</td></tr>'}</tbody>
 </table>
 """
@@ -104,15 +108,17 @@ def requirement_page(model: dict) -> bytes:
         rows.append(_hit_row(model, requirement_id, item, index))
     claim_count = sum(1 for item in findings if isinstance(item, dict) and item.get("has_claim"))
     has_candidates = any(isinstance(item, dict) and not item.get("has_claim") for item in findings)
-    # Saved Claims stay visible. Candidates are opt-in so Discover noise does not hide them.
-    checked = ""
-    table_class = "hits-table"
+    # Saved Claims stay first. Candidates start visible; the box hides them.
+    checked = " checked"
+    table_class = "hits-table show-suggestions" if has_candidates else "hits-table"
     candidate_toggle = ""
     if has_candidates:
         candidate_toggle = (
             f'<label class="show-suggestions"><input type="checkbox" id="show-suggestions"{checked}> '
             "Show discovered claim candidates</label>"
         )
+    show_review = not model.get("researcher_mode")
+    review_head = f"<th>Review{_tip(COLUMN_HELP['Review'])}</th>" if show_review else ""
     hits = (
         f"{candidate_toggle}"
         f'<div class="hits"><table class="{table_class}"><thead><tr>'
@@ -120,7 +126,7 @@ def requirement_page(model: dict) -> bytes:
         f"<th>Score{_tip(SCORE_HELP)}</th>"
         f"<th>Motivation{_tip(COLUMN_HELP['Motivation'])}</th>"
         f"<th>Checks{_tip(COLUMN_HELP['Checks'])}</th>"
-        f"<th>Review{_tip(COLUMN_HELP['Review'])}</th>"
+        f"{review_head}"
         "</tr></thead><tbody>"
         + "".join(rows)
         + _add_row(model, requirement_id)
@@ -135,18 +141,13 @@ def requirement_page(model: dict) -> bytes:
     outcomes = _outcomes(model.get("outcomes") or [])
     body = f"""
 <div class="req-desk">
-<p class="muted"><a href="{html.escape(_overview_href(model))}">← Claims</a> · <code>{html.escape(str(model.get('repo_id') or ''))}</code></p>
+<p class="muted"><a href="{html.escape(_overview_href(model))}">← Claims</a></p>
 <div class="req-head">
-  <div>
-    <h1>Claims Editor</h1>
-  </div>
-  <div class="req-badges">
-    {_seal(str(model.get('signing') or ''))}
-    <span class="pill">{html.escape(str(model.get('model') or 'not scored'))}</span>
-  </div>
+  <h1>Claims Editor</h1>
 </div>
 {_identity_card(model, instrument, identifier, locator, requirement_id, law, note, source_url)}
 {notice}
+{_overlap_dialog(model)}
 {outcomes}
 <h2>Claims ({claim_count})</h2>
 <p class="muted">Saved Claims for this requirement are listed first. Discovered claim candidates come from Discover for the same requirement; they are suggestions, not Claims, until you add a check.</p>
@@ -186,6 +187,9 @@ document.querySelectorAll(".check-open").forEach((button) => {{
     const dialog = button.parentElement.querySelector("dialog.checks");
     const form = dialog.querySelector("form.check-form");
     fillCheckForm(form, null, null);
+    const extra = form.dataset.evidencePaths || "";
+    const paths = form.querySelector('[name="require_tree_paths"]');
+    if (paths) paths.value = extra;
     dialog.showModal();
   }});
 }});
@@ -342,6 +346,29 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     if not excerpt:
         excerpt = "No excerpt stored for this finding."
     suggestion_row = "" if item.get("has_claim") else " suggestion-row"
+    claim_id = str(item.get("claim_id") or "")
+    claim_field = (
+        f'<input type="hidden" name="claim_id" value="{html.escape(claim_id)}">'
+        if claim_id
+        else ""
+    )
+    evidence = ", ".join(
+        item_path
+        for item_path in (str(entry) for entry in (item.get("paths") or []))
+        if item_path.strip() and item_path != path
+    )
+    review_cell = ""
+    if not model.get("researcher_mode"):
+        review_cell = f"""
+  <td class="col-vote"><div class="votes">
+    <form method="post" action="/discover/feedback/vote">
+      {_hidden(model, requirement_id)}
+      <input type="hidden" name="path" value="{html.escape(path)}">
+      <button class="{up}" name="vote" value="useful" type="submit">Useful</button>
+      <button class="{down}" name="vote" value="poor" type="submit">Poor</button>
+    </form>
+  </div></td>"""
+    span = "5" if model.get("researcher_mode") else "6"
     return f"""
 <tr class="hit-row{suggestion_row}{vote_class}{covered_class}" data-hit="{hit_id}" data-path="{html.escape(path)}">
   <td class="col-toggle">▸</td>
@@ -353,10 +380,11 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
     <dialog class="checks"{_reopen(model, path)}>
       <div class="head"><h2>What to check for {html.escape(path)}</h2></div>
       <div class="body">
-        <form method="post" action="/discover/feedback/checks" class="check-form"{_check_confirm(item)}>
+        <form method="post" action="/discover/feedback/checks" class="check-form" data-evidence-paths="{html.escape(evidence)}"{_check_confirm(item)}>
           {_hidden(model, requirement_id)}
           {_source_fields(model.get("source_ids") or [])}
           <input type="hidden" name="path" value="{html.escape(path)}">
+          {claim_field}
           <input type="hidden" name="edit_index" value="">
           {_unsign_field(item)}
           <label>Check
@@ -371,7 +399,7 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
             <label class="check-inline"><input type="checkbox" name="fp_bind_repo_token" value="1"{_checked(model, path, "fp_bind_repo_token")}> Bind repo token</label>
           </div>
           <div data-for="exist contents" hidden>
-            <label>Also require paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{_val(model, path, "require_tree_paths")}"></label>
+            <label>Also require paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{_tree_paths_value(model, path, evidence)}"></label>
           </div>
           <div data-for="text_forbid" hidden>
             <label>Pattern<input type="text" name="pattern" placeholder="regular expression" value="{_val(model, path, "pattern")}" class="{_bad(model, path, "pattern")}"></label>
@@ -398,17 +426,10 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
       </div>
     </dialog>
   </div></td>
-  <td class="col-vote"><div class="votes">
-    <form method="post" action="/discover/feedback/vote">
-      {_hidden(model, requirement_id)}
-      <input type="hidden" name="path" value="{html.escape(path)}">
-      <button class="{up}" name="vote" value="useful" type="submit">Useful</button>
-      <button class="{down}" name="vote" value="poor" type="submit">Poor</button>
-    </form>
-  </div></td>
+  {review_cell}
 </tr>
 <tr class="detail-row{suggestion_row}" id="{hit_id}" hidden>
-  <td colspan="6"><div class="detail-inner"><pre class="excerpt">{html.escape(excerpt)}</pre></div></td>
+  <td colspan="{span}"><div class="detail-inner"><pre class="excerpt">{html.escape(excerpt)}</pre></div></td>
 </tr>
 """
 
@@ -683,6 +704,50 @@ def _ordered(findings: list) -> list:
     return sorted(findings, key=key)
 
 
+def _overlap_dialog(model: dict) -> str:
+    """Print the overlap rows the save already computed. It does not decide them."""
+    overlap = model.get("overlap") or {}
+    rows = overlap.get("rows") or []
+    if not rows:
+        return ""
+    items = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        sources = ", ".join(html.escape(str(path)) for path in row.get("sources") or [])
+        checks = "".join(
+            f"<li>{html.escape(str(line))}</li>" for line in row.get("checks") or []
+        )
+        items.append(
+            "<li>"
+            f"<code>{html.escape(str(row.get('id') or ''))}</code> "
+            f"for <code>{html.escape(str(row.get('requirement_id') or ''))}</code> "
+            f"shares {sources}<ul>{checks}</ul></li>"
+        )
+    fields = "".join(
+        f'<input type="hidden" name="{html.escape(str(field.get("name") or ""))}" '
+        f'value="{html.escape(str(field.get("value") or ""))}">'
+        for field in overlap.get("fields") or []
+        if isinstance(field, dict) and field.get("name") != "overlap_confirm"
+    )
+    cancel = html.escape(str(overlap.get("cancel_href") or ""))
+    return f"""
+<dialog class="overlap" open>
+  <div class="head"><h2>Another Claim already uses a file in this save</h2></div>
+  <div class="body">
+    <p>Saving leaves those Claims unchanged. Read their checks before keeping this one.</p>
+    <ul>{"".join(items)}</ul>
+    <form method="post" action="/discover/feedback/checks">
+      {fields}
+      <input type="hidden" name="overlap_confirm" value="1">
+      <p class="actions"><button type="submit">Save anyway</button>
+      <a class="details" href="{cancel}">Cancel</a></p>
+    </form>
+  </div>
+</dialog>
+"""
+
+
 def _outcomes(outcomes: list) -> str:
     if not outcomes:
         return ""
@@ -779,9 +844,10 @@ def _empty_findings(model: dict) -> str:
 
 
 def _add_row(model: dict, requirement_id: str) -> str:
+    span = "5" if model.get("researcher_mode") else "6"
     return f"""
 <tr class="add-row">
-  <td colspan="6">
+  <td colspan="{span}">
     <button type="button" class="add-open" title="Add an evidence source candidate">+</button>
   </td>
 </tr>
@@ -825,6 +891,12 @@ def _selected(model: dict, path: str, key: str) -> str:
 def _val(model: dict, path: str, name: str) -> str:
     values = _check_error(model, path).get("values") or {}
     return html.escape(str(values.get(name) or ""))
+
+
+def _tree_paths_value(model: dict, path: str, evidence: str) -> str:
+    if _check_error(model, path):
+        return _val(model, path, "require_tree_paths")
+    return html.escape(evidence)
 
 
 def _bad(model: dict, path: str, name: str) -> str:

@@ -87,6 +87,47 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertIn("no evidence to claim", page)
         self.assertNotIn("Run Discover, or add one with +.", page)
 
+    def test_researcher_mode_hides_review_marks(self):
+        from studio.claim.researcher import overview_page, requirement_page
+
+        model = {
+            "repo_name": "sample-product",
+            "repo_id": "sample-product",
+            "section_name": "CRA Annex VII",
+            "source_id": "cra-xml-vii",
+            "timestamp": "2026-10-14T080000Z",
+            "rows": [
+                {
+                    "id": "REQ-A",
+                    "locator": "VII.3",
+                    "findings": 1,
+                    "claims": 1,
+                    "high": 0,
+                    "signing": "signed",
+                    "useful": 2,
+                    "poor": 1,
+                }
+            ],
+            "requirement": {
+                "id": "REQ-A",
+                "references": [{"locator": "VII.3"}],
+                "source": {},
+            },
+            "candidates": [{"path": "docs/risk-a.md", "why": "Names the risk.", "score": 0.4}],
+            "marks": {},
+            "claims": [],
+            "researcher_mode": True,
+        }
+        overview = overview_page(model).decode()
+        page = requirement_page(model).decode()
+        self.assertNotIn(">Useful</th>", overview)
+        self.assertNotIn(">Poor</th>", overview)
+        self.assertIn('href="/review"', page)
+        self.assertNotIn(">Review <span", page)
+        self.assertNotIn(">Useful</button>", page)
+        self.assertNotIn(">Poor</button>", page)
+        self.assertIn('colspan="5"', page)
+
     def test_saved_claims_list_first_beside_candidates_without_merging(self):
         from studio.claim.researcher import requirement_page
 
@@ -171,6 +212,8 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             }
         ).decode()
         self.assertIn("<h1>Claims Editor</h1>", page)
+        self.assertIn(">← Claims</a></p>", page)
+        self.assertNotIn("← Claims</a> · <code>", page)
         self.assertIn("<h2>Claims (3)</h2>", page)
         self.assertIn("Saved Claims for this requirement are listed first.", page)
         self.assertIn(">Instrument</span><strong>CRA</strong>", page)
@@ -186,11 +229,9 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertNotIn("<h2>Requirement text</h2>", page)
         self.assertIn('class="check-chip check-edit"', page)
         self.assertIn('data-index="0"', page)
-        self.assertIn('id="show-suggestions"', page)
-        self.assertNotIn('id="show-suggestions" checked', page)
+        self.assertIn('id="show-suggestions" checked', page)
         self.assertIn("Show discovered claim candidates", page)
-        self.assertIn('class="hits-table"', page)
-        self.assertNotIn('class="hits-table show-suggestions"', page)
+        self.assertIn('class="hits-table show-suggestions"', page)
         self.assertIn("suggestion-row", page)
         self.assertIn(">Motivation ", page)
         self.assertIn("Required house-policy documents contain no secret-like patterns.", page)
@@ -213,6 +254,11 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         self.assertLess(single, candidate)
         self.assertEqual(page.count('data-path="docs/risk-a.md"'), 2)
         self.assertEqual(page.count('data-path="SECURITY.md"'), 1)
+        self.assertIn('name="claim_id" value="HOUSE-SECRET-PATHS"', page)
+        self.assertIn(
+            'data-evidence-paths="SECURITY.md, .well-known/security.txt"',
+            page,
+        )
         self.assertNotIn('name="choice" value="keep"', page)
         self.assertNotIn('name="choice" value="take"', page)
 
@@ -274,6 +320,93 @@ class DiscoverClaimsUiTest(unittest.TestCase):
             page,
         )
         self.assertNotIn("/file?", page)
+
+    def test_add_check_updates_the_open_claim_and_defaults_exist_to_its_files(self):
+        import tempfile
+
+        from claims.bind import build_claim, write_claim
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _seed_two_requirements(root)
+            requirement = {"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"}
+            several = build_claim(
+                claim_id="HOUSE-SECRET-PATHS",
+                requirement=requirement,
+                source="documents",
+                args={"paths": ["README.md", "SECURITY.md", ".well-known/security.txt"]},
+                checks=[
+                    {
+                        "check": "contents",
+                        "args": {
+                            "paths": ["SECURITY.md", ".well-known/security.txt"],
+                            "probes": [{"kind": "placeholder"}],
+                        },
+                    }
+                ],
+                description="No placeholder text in the security documents.",
+            )
+            single = build_claim(
+                claim_id="REQ-A-SECURITY.md",
+                requirement=requirement,
+                source="documents",
+                args={"path": "SECURITY.md"},
+                checks=[{"check": "exist", "args": {"paths": ["SECURITY.md"]}}],
+                description="SECURITY.md is present.",
+            )
+            claims = root / "product" / "curbpack" / "claims"
+            write_claim(claims, several)
+            write_claim(claims, single)
+            workspace = Workspace(root)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(workspace))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://{httpd.server_address[0]}:{httpd.server_address[1]}"
+            form = {
+                "repo_id": "sample-product",
+                "source_id": "cra-xml-vii",
+                "timestamp": "2026-10-14T080000Z",
+                "requirement_id": "REQ-A",
+                "claim_id": "HOUSE-SECRET-PATHS",
+                "path": "README.md",
+                "check": "exist",
+                "require_tree_paths": "SECURITY.md, .well-known/security.txt",
+            }
+            try:
+                _post(base + "/discover/repos", {"name": "sample-product", "path": str(root / "product")})
+                warned = _post(base + "/discover/feedback/checks", form)
+                self.assertIn("REQ-A-SECURITY.md", warned)
+                self.assertIn("File is present — SECURITY.md", warned)
+                self.assertIn("Save anyway", warned)
+                self.assertEqual(read_json(claims / "HOUSE-SECRET-PATHS.json")["checks"], several["checks"])
+                _post(base + "/discover/feedback/checks", {**form, "overlap_confirm": "1"})
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+            updated = read_json(claims / "HOUSE-SECRET-PATHS.json")
+            untouched = read_json(claims / "REQ-A-SECURITY.md.json")
+            self.assertEqual(
+                updated["args"],
+                {"paths": ["README.md", "SECURITY.md", ".well-known/security.txt"]},
+            )
+            self.assertEqual(
+                [(item["check"], item["args"]) for item in updated["checks"]],
+                [
+                    (
+                        "contents",
+                        {
+                            "paths": ["SECURITY.md", ".well-known/security.txt"],
+                            "probes": [{"kind": "placeholder"}],
+                        },
+                    ),
+                    (
+                        "exist",
+                        {"paths": ["README.md", "SECURITY.md", ".well-known/security.txt"]},
+                    ),
+                ],
+            )
+            self.assertEqual(untouched["checks"], single["checks"])
+            self.assertEqual(untouched["args"], {"path": "SECURITY.md"})
 
     def test_clicking_keeps_the_claim_or_copies_the_sentence(self):
         import tempfile

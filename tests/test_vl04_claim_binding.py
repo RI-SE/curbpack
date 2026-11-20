@@ -87,6 +87,7 @@ class ClaimBindingCreateTest(unittest.TestCase):
                     "requirement_id": "REQ-A",
                     "path": "docs/risk-a.md",
                     "check": "exist",
+                    "overlap_confirm": "1",
                 },
             )
             claim_files = list((root / "product" / "curbpack" / "claims").glob("*.json"))

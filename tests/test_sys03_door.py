@@ -858,6 +858,7 @@ class DiscoverIoTest(unittest.TestCase):
                         "requirement_id": "REQ-A",
                         "path": "docs/risk-a.md",
                         "check": "exist",
+                        "overlap_confirm": "1",
                     },
                 )
                 saved = sorted((repo / "kept" / "claims").glob("*.json"))
@@ -1056,6 +1057,7 @@ class StudioConfigTest(unittest.TestCase):
                 self.assertIn(".curbpack/tmp", page)
                 self.assertIn(".curbpack/extract", page)
                 self.assertIn("$CURBPACK_MODEL_API_KEY", page)
+                self.assertIn('name="researcher_mode"', page)
                 self.assertFalse(studio_file.exists())
                 cancelled_create = _post(base + "/studio", {"repo_id": "widget", "action": "cancel"})
                 self.assertIn("curbpack-studio.json", cancelled_create)
@@ -1109,6 +1111,7 @@ class StudioConfigTest(unittest.TestCase):
                 self.assertIsNone(written["prompts"]["interpret"])
                 self.assertEqual(written["paths"]["temp_dir"], ".curbpack/tmp")
                 self.assertIsNone(written["paths"]["keys_file"])
+                self.assertIs(written["researcher_mode"], False)
                 self.assertIn(".curbpack/tmp", saved)
                 before = studio_file.read_bytes()
                 editing = _get(base + "/studio?repo=widget")
@@ -1133,10 +1136,12 @@ class StudioConfigTest(unittest.TestCase):
                         "path_temp_dir": "scratch/tmp",
                         "path_extract_work_dir": ".curbpack/extract",
                         "path_keys_file": "",
+                        "researcher_mode": "true",
                     },
                 )
                 self.assertEqual(read_json(studio_file)["bind"]["port"], 8771)
                 self.assertEqual(read_json(studio_file)["paths"]["temp_dir"], "scratch/tmp")
+                self.assertIs(read_json(studio_file)["researcher_mode"], True)
                 self.assertIn("scratch/tmp", updated)
                 (repo / ".env").write_text("CURBPACK_MODEL_API_KEY=secret-from-env\n", encoding="utf-8")
                 from discovery.studio import load_studio_config
@@ -1157,6 +1162,30 @@ class StudioConfigTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
             self.assertFalse((product / "curbpack-studio.json").exists())
+
+    def test_researcher_mode_is_an_optional_boolean(self):
+        from discovery.studio import created_studio_config, validate_studio_config
+
+        document = created_studio_config()
+        self.assertIs(document["researcher_mode"], False)
+        del document["researcher_mode"]
+        self.assertIs(validate_studio_config(document)["researcher_mode"], False)
+        document["researcher_mode"] = True
+        self.assertIs(validate_studio_config(document)["researcher_mode"], True)
+        document["researcher_mode"] = "true"
+        with self.assertRaises(ModelError) as caught:
+            validate_studio_config(document)
+        self.assertIn("researcher_mode", str(caught.exception))
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            write_json(
+                repo / "curbpack-studio.json",
+                {**created_studio_config(), "researcher_mode": True},
+            )
+            from discovery.studio import researcher_mode
+
+            self.assertIs(researcher_mode(repo), True)
+            self.assertIs(researcher_mode(repo / "missing"), False)
 
 
 def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:

@@ -30,6 +30,7 @@ CREATED_STUDIO = {
         "extract_work_dir": ".curbpack/extract",
         "keys_file": None,
     },
+    "researcher_mode": False,
 }
 
 
@@ -44,7 +45,7 @@ def created_studio_config() -> dict:
 def validate_studio_config(obj: object) -> dict:
     if not isinstance(obj, dict):
         raise ModelError(STUDIO_NAME, "(root)", "object")
-    unknown = sorted(set(obj) - set(_BLOCKS))
+    unknown = sorted(set(obj) - set(_BLOCKS) - {"researcher_mode"})
     if unknown:
         raise ModelError(STUDIO_NAME, unknown[0], f"one of {list(_BLOCKS)}")
     missing = [key for key in _BLOCKS if key not in obj]
@@ -79,6 +80,9 @@ def validate_studio_config(obj: object) -> dict:
     keys_file = paths["keys_file"]
     if keys_file is not None and not _repo_relative(keys_file):
         raise ModelError(STUDIO_NAME, "paths.keys_file", "a relative path or null")
+    mode = obj.get("researcher_mode", False)
+    if not isinstance(mode, bool):
+        raise ModelError(STUDIO_NAME, "researcher_mode", "true or false")
     return {
         "bind": {"host": host.strip(), "port": port},
         "model": {
@@ -93,6 +97,7 @@ def validate_studio_config(obj: object) -> dict:
             "extract_work_dir": str(paths["extract_work_dir"]).strip(),
             "keys_file": None if keys_file is None else str(keys_file).strip(),
         },
+        "researcher_mode": mode,
     }
 
 
@@ -103,6 +108,24 @@ def load_studio_config(repo: Path) -> dict | None:
     document = validate_studio_config(read_json(path))
     env = _read_env(repo / _ENV_NAME)
     return _substitute(document, env)
+
+
+def researcher_mode(repo: Path) -> bool:
+    """True hides the Review column. Absent file or key keeps the column.
+
+    Reads the flag directly. Claims stay usable when the model key in .env
+    is not filled in yet.
+    """
+    path = studio_file(repo)
+    if not path.is_file():
+        return False
+    document = read_json(path)
+    if not isinstance(document, dict):
+        raise ModelError(STUDIO_NAME, "(root)", "object")
+    mode = document.get("researcher_mode", False)
+    if not isinstance(mode, bool):
+        raise ModelError(STUDIO_NAME, "researcher_mode", "true or false")
+    return mode
 
 
 def save_studio_config(repo: Path, document: dict) -> dict:
@@ -143,6 +166,7 @@ def studio_from_form(form: dict) -> dict:
                 "extract_work_dir": field("path_extract_work_dir"),
                 "keys_file": field("path_keys_file") or None,
             },
+            "researcher_mode": field("researcher_mode") == "true",
         }
     )
 
@@ -164,6 +188,7 @@ def editor_values(document: dict) -> dict:
         "path_temp_dir": str(paths.get("temp_dir") or ""),
         "path_extract_work_dir": str(paths.get("extract_work_dir") or ""),
         "path_keys_file": "" if paths.get("keys_file") is None else str(paths.get("keys_file")),
+        "researcher_mode": "true" if document.get("researcher_mode") is True else "",
     }
 
 

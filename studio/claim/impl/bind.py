@@ -275,3 +275,84 @@ def read_claim_seal(
     from review.gitseal import read_claim_signature
 
     return read_claim_signature(claim, trust, repo=repo, relative=relative)
+
+
+def claims_sharing_a_source(claim: dict, claims: list) -> list[dict]:
+    """Other Claims that name a file this Claim also names.
+
+    A file counts when the Claim or one of its checks names it in `path` or
+    `paths`. The Claim itself is omitted. The function does not decide whether
+    the checks agree.
+    """
+    mine = set(_claim_sources(claim))
+    if not mine:
+        return []
+    own_id = str(claim.get("id") or "")
+    found: list[dict] = []
+    seen: set[str] = set()
+    for other in claims:
+        if not isinstance(other, dict) or other is claim:
+            continue
+        other_id = str(other.get("id") or "")
+        if own_id and other_id == own_id:
+            continue
+        if mine.isdisjoint(_claim_sources(other)):
+            continue
+        key = other_id or str(id(other))
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(other)
+    return found
+
+
+def source_overlap(claim: dict, claims: list) -> list[dict]:
+    """Rows a page can print: the other Claim, the shared files, and its checks."""
+    from checks.labels import check_caption
+
+    mine = set(_claim_sources(claim))
+    rows = []
+    for other in claims_sharing_a_source(claim, claims):
+        shared = [path for path in _claim_sources(other) if path in mine]
+        checks = []
+        for entry in _check_entries(other):
+            caption = check_caption(entry)
+            paths = _paths(entry.get("args"))
+            checks.append(f"{caption} — {', '.join(paths)}" if paths else caption)
+        rows.append(
+            {
+                "id": str(other.get("id") or ""),
+                "requirement_id": str(other.get("requirement_id") or ""),
+                "sources": shared,
+                "checks": checks,
+            }
+        )
+    return rows
+
+
+def _claim_sources(claim: dict) -> list[str]:
+    sources = _paths(claim.get("args"))
+    for entry in _check_entries(claim):
+        for path in _paths(entry.get("args")):
+            if path not in sources:
+                sources.append(path)
+    return sources
+
+
+def _check_entries(claim: dict) -> list[dict]:
+    return [entry for entry in claim.get("checks") or [] if isinstance(entry, dict)]
+
+
+def _paths(args: object) -> list[str]:
+    if not isinstance(args, dict):
+        return []
+    found: list[str] = []
+    single = args.get("path")
+    if isinstance(single, str) and single.strip():
+        found.append(single.strip())
+    listed = args.get("paths")
+    if isinstance(listed, list):
+        for item in listed:
+            if isinstance(item, str) and item.strip() and item.strip() not in found:
+                found.append(item.strip())
+    return found

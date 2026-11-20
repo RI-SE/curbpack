@@ -159,7 +159,8 @@ Studio may offer to create the file. The created values match today's:
     "temp_dir": ".curbpack/tmp",
     "extract_work_dir": ".curbpack/extract",
     "keys_file": null
-  }
+  },
+  "researcher_mode": false
 }
 ```
 
@@ -174,6 +175,7 @@ Studio may offer to create the file. The created values match today's:
 | `paths.temp_dir` | Scratch under the product repo. |
 | `paths.extract_work_dir` | Extract work trees. |
 | `paths.keys_file` | Signing keys JSON, or `null` for the pilot workspace `keys/keys.json`. |
+| `researcher_mode` | Optional boolean. `true` hides the Review column on a requirement and the Useful and Poor columns on the Claims list. Omitted or `false` keeps those columns. |
 
 ```env
 CURBPACK_MODEL_API_KEY=
