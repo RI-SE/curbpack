@@ -1028,7 +1028,10 @@ def _listed_repos(ws: Workspace) -> list[dict]:
 
 
 def _studio_message(query: dict) -> str:
-    if (query.get("saved") or [""])[0]:
+    saved = (query.get("saved") or [""])[0]
+    if saved == "user":
+        return "Saved ~/.curbpack/curbpack-studio.json."
+    if saved == "project":
         return "Saved curbpack-studio.json in the repo."
     return ""
 
@@ -1693,15 +1696,22 @@ def serve(root: Path, host: str = "127.0.0.1", port: int = 8770) -> None:
     httpd.serve_forever()
 
 
-def main() -> None:
+def argument_parser():
     import argparse
 
     parser = argparse.ArgumentParser(description="PoC2 demonstration UI")
     parser.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE)
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8770)
-    args = parser.parse_args()
-    serve(args.workspace, args.host, args.port)
+    parser.add_argument("--host", default=None)
+    parser.add_argument("--port", type=int, default=None)
+    return parser
+
+
+def main() -> None:
+    from discovery.studio import listen_bind
+
+    args = argument_parser().parse_args()
+    host, port = listen_bind(args.host, args.port)
+    serve(args.workspace, host, port)
 
 
 if __name__ == "__main__":

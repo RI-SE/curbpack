@@ -117,10 +117,14 @@ def _default_complete(prompt_text: str, settings: dict) -> str:
         "options": {"temperature": settings["temperature"]},
         "messages": [{"role": "user", "content": prompt_text}],
     }
+    headers = {"Content-Type": "application/json"}
+    api_key = settings.get("api_key")
+    if isinstance(api_key, str) and api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     request = urllib.request.Request(
         f'{str(settings["endpoint"]).rstrip("/")}/api/chat',
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:

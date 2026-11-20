@@ -24,6 +24,17 @@ if TYPE_CHECKING:
     from app.server import Workspace
 
 
+def _model_call(repo, ws) -> tuple[str, str, str]:
+    from discovery.studio import effective_studio
+
+    chosen = effective_studio(repo, getattr(ws, "studio_home", None))
+    return (
+        chosen["model"]["name"]["value"],
+        chosen["model"]["endpoint"]["value"],
+        chosen["api_key_for_call"],
+    )
+
+
 def _discover_model(ws: Workspace, query: dict, *, product: bool = False) -> dict:
     from app.server import _door_path_fields, _listed_repos, _sync_open_repo
 
@@ -159,6 +170,7 @@ def _start_pack_discover(ws: Workspace, repo_id: str, pack_id: str, form: dict) 
     name = pack_display_name(repo, pack_id)
     title = f"Discover — {row.get('name') or repo_id} / {name}"
     job_id = f"discover-{secrets.token_hex(4)}"
+    model_name, endpoint, api_key = _model_call(repo, ws)
     start_discover_job(
         ws.root / "jobs",
         job_id=job_id,
@@ -172,6 +184,9 @@ def _start_pack_discover(ws: Workspace, repo_id: str, pack_id: str, form: dict) 
         timestamp=CURBPACK_COPY,
         pack_id=pack_id,
         assess_limit=int(raw_limit),
+        model=model_name,
+        endpoint=endpoint,
+        api_key=api_key,
         complete=getattr(ws, "discover_complete", None),
     )
     return job_id
@@ -211,6 +226,7 @@ def _start_discover(ws: Workspace, form: dict) -> str:
     if not raw_limit.isdigit():
         raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
     job_id = f"discover-{secrets.token_hex(4)}"
+    model_name, endpoint, api_key = _model_call(repo, ws)
     start_discover_job(
         ws.root / "jobs",
         job_id=job_id,
@@ -223,6 +239,9 @@ def _start_discover(ws: Workspace, form: dict) -> str:
         source_id=source_id,
         timestamp=timestamp,
         assess_limit=int(raw_limit),
+        model=model_name,
+        endpoint=endpoint,
+        api_key=api_key,
         complete=getattr(ws, "discover_complete", None),
     )
     return f"/discover?job={job_id}"

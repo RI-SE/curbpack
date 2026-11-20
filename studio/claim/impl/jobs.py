@@ -49,6 +49,7 @@ def start_discover_job(
     assess: AssessFn | None = None,
     model: str = DEFAULT_MODEL,
     endpoint: str = DEFAULT_ENDPOINT,
+    api_key: str = "",
     complete=None,
 ) -> str:
     """Search every requirement on a daemon thread and return the job id."""
@@ -94,6 +95,7 @@ def start_discover_job(
             "assess": assess or assess_candidates,
             "model": model,
             "endpoint": endpoint,
+            "api_key": api_key,
             "complete": complete,
         },
         name=f"discover-{job_id}",
@@ -218,6 +220,7 @@ def _run(
     assess: AssessFn | None = None,
     model: str = DEFAULT_MODEL,
     endpoint: str = DEFAULT_ENDPOINT,
+    api_key: str = "",
     complete=None,
 ) -> None:
     try:
@@ -277,6 +280,7 @@ def _run(
                         prior=prior_rows,
                         model=model,
                         endpoint=endpoint,
+                        api_key=api_key,
                     )
                     scored = scored_rows[0] if scored_rows else dict(candidate)
                     state = scored.get("assessment_state")

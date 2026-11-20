@@ -1024,6 +1024,26 @@ class ReviewIoTest(unittest.TestCase):
                 httpd.server_close()
 
 
+def _user_fields(**overrides) -> dict:
+    fields = {
+        "repo_id": "widget",
+        "action": "save_user",
+        "bind_host": "127.0.0.1",
+        "bind_port": "8770",
+        "model_endpoint": "http://127.0.0.1:11434",
+        "model_api_key": "",
+        "model_name": "qwen3-coder:30b",
+        "model_temperature": "0.2",
+        "prompt_interpret": "",
+        "prompt_discovery_hints": "",
+        "path_temp_dir": ".curbpack/tmp",
+        "path_extract_work_dir": ".curbpack/extract",
+        "path_keys_file": "",
+    }
+    fields.update(overrides)
+    return fields
+
+
 class StudioConfigTest(unittest.TestCase):
     def test_studio_page_creates_and_edits_curbpack_studio_json(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1034,11 +1054,14 @@ class StudioConfigTest(unittest.TestCase):
             write_json(product / "curbpack.json", created_curbpack())
             _register(workspace, "Widget", repo)
             write_json(repo / "curbpack.json", created_curbpack())
-            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(workspace)))
+            ws = Workspace(workspace)
+            ws.studio_home = workspace / "home"
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(ws))
             thread = threading.Thread(target=httpd.serve_forever, daemon=True)
             thread.start()
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             studio_file = repo / "curbpack-studio.json"
+            user_file = ws.studio_home / ".curbpack" / "curbpack-studio.json"
             try:
                 empty = _get(base + "/studio")
                 self.assertIn("Registered projects", empty)
@@ -1046,9 +1069,12 @@ class StudioConfigTest(unittest.TestCase):
                 page = _get(base + "/studio?repo=widget")
                 self.assertEqual(open_repo_id(workspace), "widget")
                 self.assertIn("curbpack-studio.json", page)
+                self.assertIn("Effective", page)
+                self.assertIn("built-in", page)
                 self.assertIn("Packs directory", page)
                 self.assertIn("Claims directory", page)
-                self.assertIn("Save", page)
+                self.assertIn("Save user settings", page)
+                self.assertIn("Save project overrides", page)
                 self.assertIn("Cancel", page)
                 self.assertIn('name="bind_host"', page)
                 self.assertIn("127.0.0.1", page)
@@ -1056,108 +1082,63 @@ class StudioConfigTest(unittest.TestCase):
                 self.assertIn("qwen3-coder:30b", page)
                 self.assertIn(".curbpack/tmp", page)
                 self.assertIn(".curbpack/extract", page)
-                self.assertIn("$CURBPACK_MODEL_API_KEY", page)
+                self.assertIn("The API key is not sent.", page)
                 self.assertIn('name="researcher_mode"', page)
                 self.assertFalse(studio_file.exists())
+                self.assertFalse(user_file.exists())
                 cancelled_create = _post(base + "/studio", {"repo_id": "widget", "action": "cancel"})
                 self.assertIn("curbpack-studio.json", cancelled_create)
                 self.assertFalse(studio_file.exists())
+                self.assertFalse(user_file.exists())
                 try:
-                    _post(
-                        base + "/studio",
-                        {
-                            "repo_id": "widget",
-                            "action": "save",
-                            "bind_host": "127.0.0.1",
-                            "bind_port": "8770",
-                            "model_endpoint": "http://127.0.0.1:11434",
-                            "model_api_key": "$CURBPACK_MODEL_API_KEY",
-                            "model_name": "qwen3-coder:30b",
-                            "model_temperature": "0.2",
-                            "prompt_interpret": "",
-                            "prompt_discovery_hints": "",
-                            "path_temp_dir": "/tmp/studio-out",
-                            "path_extract_work_dir": ".curbpack/extract",
-                            "path_keys_file": "",
-                        },
-                    )
+                    _post(base + "/studio", _user_fields(path_temp_dir="/tmp/studio-out"))
                     self.fail("absolute studio paths must be rejected")
                 except urllib.error.HTTPError as exc:
                     self.assertEqual(exc.code, 400)
                 self.assertFalse(studio_file.exists())
-                saved = _post(
-                    base + "/studio",
-                    {
-                        "repo_id": "widget",
-                        "action": "save",
-                        "bind_host": "127.0.0.1",
-                        "bind_port": "8770",
-                        "model_endpoint": "http://127.0.0.1:11434",
-                        "model_api_key": "$CURBPACK_MODEL_API_KEY",
-                        "model_name": "qwen3-coder:30b",
-                        "model_temperature": "0.2",
-                        "prompt_interpret": "",
-                        "prompt_discovery_hints": "",
-                        "path_temp_dir": ".curbpack/tmp",
-                        "path_extract_work_dir": ".curbpack/extract",
-                        "path_keys_file": "",
-                    },
-                )
-                self.assertTrue(studio_file.is_file())
-                written = read_json(studio_file)
+                self.assertFalse(user_file.exists())
+                saved = _post(base + "/studio", _user_fields(model_api_key="$CURBPACK_MODEL_API_KEY"))
+                self.assertFalse(studio_file.exists())
+                self.assertTrue(user_file.is_file())
+                written = read_json(user_file)
                 self.assertEqual(written["bind"], {"host": "127.0.0.1", "port": 8770})
                 self.assertEqual(written["model"]["name"], "qwen3-coder:30b")
                 self.assertEqual(written["model"]["api_key"], "$CURBPACK_MODEL_API_KEY")
                 self.assertIsNone(written["prompts"]["interpret"])
                 self.assertEqual(written["paths"]["temp_dir"], ".curbpack/tmp")
                 self.assertIsNone(written["paths"]["keys_file"])
-                self.assertIs(written["researcher_mode"], False)
-                self.assertIn(".curbpack/tmp", saved)
-                before = studio_file.read_bytes()
-                editing = _get(base + "/studio?repo=widget")
-                self.assertIn("qwen3-coder:30b", editing)
-                self.assertIn(".curbpack/tmp", editing)
+                self.assertIn("$CURBPACK_MODEL_API_KEY", saved)
+                self.assertNotIn("secret-from-env", saved)
+                self.assertIn("user", saved)
+                (ws.studio_home / ".curbpack" / ".env").write_text(
+                    "CURBPACK_MODEL_API_KEY=secret-from-env\n", encoding="utf-8"
+                )
+                with_key = _get(base + "/studio?repo=widget")
+                self.assertIn("$CURBPACK_MODEL_API_KEY", with_key)
+                self.assertNotIn("secret-from-env", with_key)
+                self.assertIn("The API key is sent with the user endpoint.", with_key)
+                before = user_file.read_bytes()
                 cancelled = _post(base + "/studio", {"repo_id": "widget", "action": "cancel"})
-                self.assertEqual(studio_file.read_bytes(), before)
+                self.assertEqual(user_file.read_bytes(), before)
                 self.assertIn("qwen3-coder:30b", cancelled)
                 updated = _post(
                     base + "/studio",
                     {
                         "repo_id": "widget",
-                        "action": "save",
-                        "bind_host": "127.0.0.1",
-                        "bind_port": "8771",
-                        "model_endpoint": "http://127.0.0.1:11434",
-                        "model_api_key": "$CURBPACK_MODEL_API_KEY",
-                        "model_name": "qwen3-coder:30b",
-                        "model_temperature": "0.2",
-                        "prompt_interpret": "",
-                        "prompt_discovery_hints": "",
-                        "path_temp_dir": "scratch/tmp",
-                        "path_extract_work_dir": ".curbpack/extract",
-                        "path_keys_file": "",
+                        "action": "save_project",
+                        "use_model_name": "true",
+                        "project_model_name": "project-model",
                         "researcher_mode": "true",
                     },
                 )
-                self.assertEqual(read_json(studio_file)["bind"]["port"], 8771)
-                self.assertEqual(read_json(studio_file)["paths"]["temp_dir"], "scratch/tmp")
-                self.assertIs(read_json(studio_file)["researcher_mode"], True)
-                self.assertIn("scratch/tmp", updated)
-                (repo / ".env").write_text("CURBPACK_MODEL_API_KEY=secret-from-env\n", encoding="utf-8")
-                from discovery.studio import load_studio_config
-
-                loaded = load_studio_config(repo)
-                self.assertEqual(loaded["model"]["api_key"], "secret-from-env")
-                self.assertEqual(loaded["bind"]["port"], 8771)
-                studio_file.write_text(
-                    studio_file.read_text(encoding="utf-8").replace(
-                        "$CURBPACK_MODEL_API_KEY", "$MISSING_STUDIO_KEY"
-                    ),
-                    encoding="utf-8",
-                )
-                with self.assertRaises(ModelError) as caught:
-                    load_studio_config(repo)
-                self.assertIn("MISSING_STUDIO_KEY", str(caught.exception))
+                self.assertEqual(user_file.read_bytes(), before)
+                project = read_json(studio_file)
+                self.assertEqual(project["model"], {"name": "project-model"})
+                self.assertNotIn("bind", project)
+                self.assertNotIn("api_key", project.get("model", {}))
+                self.assertIs(project["researcher_mode"], True)
+                self.assertIn("project", updated)
+                self.assertIn("project-model", updated)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -1178,14 +1159,271 @@ class StudioConfigTest(unittest.TestCase):
         self.assertIn("researcher_mode", str(caught.exception))
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            write_json(
-                repo / "curbpack-studio.json",
-                {**created_studio_config(), "researcher_mode": True},
-            )
+            write_json(repo / "curbpack-studio.json", {"researcher_mode": True})
             from discovery.studio import researcher_mode
 
             self.assertIs(researcher_mode(repo), True)
             self.assertIs(researcher_mode(repo / "missing"), False)
+
+    def test_a_product_file_names_fields_that_belong_in_the_user_file(self):
+        from discovery.studio import created_studio_config, load_project_studio, user_studio_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            document = created_studio_config()
+            document["model"]["api_key"] = "$CURBPACK_MODEL_API_KEY"
+            write_json(repo / "curbpack-studio.json", document)
+            before = (repo / "curbpack-studio.json").read_bytes()
+            with self.assertRaises(ModelError) as caught:
+                load_project_studio(repo)
+            text = str(caught.exception)
+            for name in ("bind", "model.api_key", "paths.temp_dir", "paths.keys_file", "user file"):
+                self.assertIn(name, text)
+            self.assertEqual((repo / "curbpack-studio.json").read_bytes(), before)
+            self.assertFalse(user_studio_file(home).exists())
+
+    def test_api_key_follows_only_the_user_endpoint(self):
+        from discovery.studio import (
+            created_studio_config,
+            effective_studio,
+            save_project_studio,
+            save_user_studio,
+            user_studio_dir,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            bare = effective_studio(repo, home)
+            self.assertEqual(bare["model"]["endpoint"]["source"], "built-in")
+            self.assertEqual(bare["api_key_for_call"], "")
+            document = created_studio_config()
+            document["model"]["api_key"] = "$CURBPACK_MODEL_API_KEY"
+            save_user_studio(document, home)
+            (user_studio_dir(home) / ".env").write_text(
+                "CURBPACK_MODEL_API_KEY=secret-from-env\n", encoding="utf-8"
+            )
+            user = effective_studio(repo, home)
+            self.assertEqual(user["model"]["endpoint"]["source"], "user")
+            self.assertEqual(user["api_key_for_call"], "secret-from-env")
+            save_project_studio(
+                repo,
+                {"model": {"endpoint": "http://127.0.0.1:11434"}, "researcher_mode": False},
+            )
+            project = effective_studio(repo, home)
+            self.assertEqual(project["model"]["endpoint"]["source"], "project")
+            self.assertEqual(project["api_key_for_call"], "")
+            self.assertEqual(project["model"]["api_key"]["value"], "secret-from-env")
+
+    def test_project_save_leaves_the_user_file_and_the_other_repo(self):
+        from discovery.studio import created_studio_config, save_project_studio, save_user_studio, user_studio_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo_a = Path(tmp) / "a"
+            repo_b = Path(tmp) / "b"
+            repo_a.mkdir()
+            repo_b.mkdir()
+            save_user_studio(created_studio_config(), home)
+            before = user_studio_file(home).read_bytes()
+            write_json(repo_b / "curbpack-studio.json", {"model": {"name": "kept"}})
+            before_b = (repo_b / "curbpack-studio.json").read_bytes()
+            save_project_studio(repo_a, {"model": {"name": "other-model"}, "researcher_mode": False})
+            self.assertEqual(user_studio_file(home).read_bytes(), before)
+            self.assertEqual((repo_b / "curbpack-studio.json").read_bytes(), before_b)
+            self.assertEqual(read_json(repo_a / "curbpack-studio.json")["model"]["name"], "other-model")
+
+    def test_literal_api_key_is_not_written(self):
+        from discovery.studio import created_studio_config, save_user_studio, user_studio_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            document = created_studio_config()
+            document["model"]["api_key"] = "sk-live"
+            with self.assertRaises(ModelError) as caught:
+                save_user_studio(document, home)
+            self.assertIn("model.api_key", str(caught.exception))
+            self.assertFalse(user_studio_file(home).exists())
+
+    def test_omitted_cli_bind_uses_the_user_file(self):
+        from app.server import argument_parser
+        from discovery.studio import created_studio_config, listen_bind, save_user_studio
+
+        args = argument_parser().parse_args([])
+        self.assertIsNone(args.host)
+        self.assertIsNone(args.port)
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            document = created_studio_config()
+            document["bind"]["port"] = 18771
+            save_user_studio(document, home)
+            self.assertEqual(listen_bind(None, None, home=home), ("127.0.0.1", 18771))
+            self.assertEqual(listen_bind(None, 8770, home=home), ("127.0.0.1", 8770))
+
+    def test_extract_work_dir_comes_from_the_project_file(self):
+        from discovery.studio import created_studio_config, save_project_studio, save_user_studio
+        from studio.pack.section_extract import extract_work_root
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            user = created_studio_config()
+            user["paths"]["extract_work_dir"] = "user-extract"
+            save_user_studio(user, home)
+            self.assertEqual(extract_work_root(repo, home), (repo / "user-extract").resolve())
+            save_project_studio(repo, {"paths": {"extract_work_dir": "scratch/extract"}})
+            self.assertEqual(extract_work_root(repo, home), (repo / "scratch/extract").resolve())
+            self.assertFalse((repo / ".env").exists())
+            with self.assertRaises(ModelError):
+                save_project_studio(repo, {"paths": {"extract_work_dir": "../outside"}})
+
+    def test_prompts_and_extract_temperature_follow_the_effective_value(self):
+        from requirements.extract.adapter import ADAPTERS
+        from requirements.extract.produce import proposals_from_producers
+        from discovery.studio import (
+            created_studio_config,
+            effective_studio,
+            prompt_file,
+            save_project_studio,
+            save_user_studio,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            save_user_studio(created_studio_config(), home)
+            save_project_studio(
+                repo,
+                {
+                    "model": {"temperature": 0.4},
+                    "prompts": {"interpret": None},
+                    "researcher_mode": False,
+                },
+            )
+            chosen = effective_studio(repo, home)
+            self.assertEqual(chosen["model"]["temperature"], {"value": 0.4, "source": "project"})
+            self.assertIsNone(chosen["prompts"]["interpret"]["value"])
+            self.assertIsNone(prompt_file(repo, chosen["prompts"]["interpret"]["value"]))
+            seen = {}
+
+            def complete(prompt, settings):
+                seen["prompt"] = prompt
+                seen["temperature"] = settings["temperature"]
+                seen["api_key"] = settings.get("api_key", "")
+                raise ModelError("produce", "stop", "captured")
+
+            with self.assertRaises(ModelError):
+                proposals_from_producers(
+                    [{"locus": "1", "law_text": "text"}],
+                    adapter_dir=ADAPTERS / "cra",
+                    complete=complete,
+                    temperature=chosen["model"]["temperature"]["value"],
+                    api_key=chosen["api_key_for_call"],
+                    interpret_guidance=prompt_file(repo, chosen["prompts"]["interpret"]["value"]),
+                )
+            adapter = (ADAPTERS / "cra" / "prompts" / "interpret.txt").read_text(encoding="utf-8")
+            self.assertIn(adapter[:40], seen["prompt"])
+            self.assertEqual(seen["temperature"], 0.4)
+            self.assertEqual(seen["api_key"], "")
+            (repo / "local-prompt.txt").write_text("UNIQUE-PROMPT\n", encoding="utf-8")
+            save_project_studio(
+                repo,
+                {
+                    "model": {"temperature": 0.4},
+                    "prompts": {"interpret": "local-prompt.txt"},
+                    "researcher_mode": False,
+                },
+            )
+            chosen = effective_studio(repo, home)
+            guidance = prompt_file(repo, chosen["prompts"]["interpret"]["value"])
+            self.assertEqual(guidance, (repo / "local-prompt.txt").resolve())
+            seen.clear()
+            with self.assertRaises(ModelError):
+                proposals_from_producers(
+                    [{"locus": "1", "law_text": "text"}],
+                    adapter_dir=ADAPTERS / "cra",
+                    complete=complete,
+                    temperature=chosen["model"]["temperature"]["value"],
+                    interpret_guidance=guidance,
+                )
+            self.assertIn("UNIQUE-PROMPT", seen["prompt"])
+            self.assertEqual(seen["temperature"], 0.4)
+
+    def test_assess_keeps_temperature_zero(self):
+        from studio.claim.impl.assess import assess_candidates
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "a.md").write_text("hello\n", encoding="utf-8")
+            seen = {}
+
+            def complete(_prompt, settings):
+                seen.update(settings)
+                return '{"score": 0.2, "rank": "Low", "why": "because", "excerpt": ""}'
+
+            requirement = {"id": "R", "references": [{"law_text": "State the risk."}]}
+            assess_candidates(
+                repo,
+                requirement,
+                [{"path": "a.md"}],
+                complete=complete,
+                model="custom",
+                endpoint="http://project.example",
+                api_key="",
+            )
+            self.assertEqual(seen["temperature"], 0)
+            self.assertNotIn("api_key", seen)
+            assess_candidates(
+                repo,
+                requirement,
+                [{"path": "a.md"}],
+                complete=complete,
+                model="custom",
+                endpoint="http://127.0.0.1:11434",
+                api_key="secret-from-env",
+            )
+            self.assertEqual(seen["temperature"], 0)
+            self.assertEqual(seen["api_key"], "secret-from-env")
+
+    def test_default_complete_sends_the_key_only_when_present(self):
+        from unittest.mock import patch
+
+        from studio.pack.impl.extract.call import _default_complete
+
+        class _Response:
+            def read(self):
+                return b'{"message": {"content": "ok"}}'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        captured = {}
+
+        def fake_urlopen(request, timeout=0):
+            captured["header"] = request.get_header("Authorization")
+            return _Response()
+
+        with patch("studio.pack.impl.extract.call.urllib.request.urlopen", fake_urlopen):
+            _default_complete("prompt", {"model": "m", "temperature": 0.2, "endpoint": "http://127.0.0.1:9"})
+            self.assertIsNone(captured["header"])
+            _default_complete(
+                "prompt",
+                {
+                    "model": "m",
+                    "temperature": 0.2,
+                    "endpoint": "http://127.0.0.1:9",
+                    "api_key": "secret-from-env",
+                },
+            )
+            self.assertEqual(captured["header"], "Bearer secret-from-env")
 
 
 def _discover_requirement(requirement_id: str, locator: str, hint: str) -> dict:

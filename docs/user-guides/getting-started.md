@@ -2,7 +2,7 @@
 
 Start Curbpack Studio with [Install](install.md) and open the local URL printed by the program.
 
-If you run Extract or Discovery assessment, Studio expects a local [Ollama](https://ollama.com) at `http://127.0.0.1:11434` with the model `qwen3-coder:30b` (`ollama pull qwen3-coder:30b`). This walkthrough's Check and Review path does not call it. The defaults live in `curbpack-studio.json` when that file is present; see [Configuration](../reference/configuration.md).
+If you run Extract or Discovery assessment, Studio expects a local [Ollama](https://ollama.com) at `http://127.0.0.1:11434` with the model `qwen3-coder:30b` (`ollama pull qwen3-coder:30b`). This walkthrough's Check and Review path does not call it. Those defaults are the built-in values until `~/.curbpack/curbpack-studio.json` sets them; a product `curbpack-studio.json` can override the model and prompts for that repository. See [Configuration](../reference/configuration.md).
 
 This walkthrough uses the Curbpack reference product. It is deliberately prepared so that you can first see a passing Check, then remove known evidence and see the same Check fail. The reference product has previously been used for this purpose: `SECURITY.md` is part of its expected evidence, and removing it changes the corresponding result.
 

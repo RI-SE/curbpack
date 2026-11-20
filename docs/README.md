@@ -168,7 +168,7 @@ After this initial setup, Check can run directly whenever the configuration, sel
 
 Importing a Pack and accepting an extracted Pack ultimately produce the same kind of persistent Pack data. They are two ways of obtaining a Pack, not two separate downstream workflows.
 
-Optional `curbpack-studio.json` contains Studio-specific settings such as bind, model and temporary-file configuration.
+Studio installation settings live in `~/.curbpack/curbpack-studio.json`. A product repository's `curbpack-studio.json` holds only the allowed project overrides, such as model and prompt paths.
 
 ## Start here
 

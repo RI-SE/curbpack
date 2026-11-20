@@ -53,6 +53,7 @@ def assess_candidates(
     prior: list[dict] | None = None,
     model: str = DEFAULT_MODEL,
     endpoint: str = DEFAULT_ENDPOINT,
+    api_key: str = "",
 ) -> list[dict]:
     """Assess up to assess_limit candidates. Retrieval rows are never dropped."""
     if not isinstance(assess_limit, int) or isinstance(assess_limit, bool) or not 0 <= assess_limit <= 20:
@@ -125,6 +126,8 @@ def assess_candidates(
             "endpoint": endpoint,
             "timeout": 600,
         }
+        if api_key:
+            settings["api_key"] = api_key
         try:
             raw = caller(prompt, settings)
         except Exception as exc:

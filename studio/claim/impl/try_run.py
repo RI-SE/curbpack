@@ -53,6 +53,9 @@ def start_try_job(
         raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
     if not repo.is_dir():
         raise ModelError("try discovery", "repo", f"an existing directory, not {repo}")
+    from discovery.studio import effective_studio
+
+    chosen = effective_studio(repo)
     jobs_dir.mkdir(parents=True, exist_ok=True)
     title = f"Discovery test run — {requirement_id}"
     _save(
@@ -83,6 +86,9 @@ def start_try_job(
             "requirement": requirement,
             "hunt": hunt,
             "assess_limit": assess_limit,
+            "model": chosen["model"]["name"]["value"],
+            "endpoint": chosen["model"]["endpoint"]["value"],
+            "api_key": chosen["api_key_for_call"],
             "complete": complete,
         },
         name=f"try-discovery-{job_id}",
@@ -124,6 +130,9 @@ def _run(
     requirement: dict,
     hunt: dict,
     assess_limit: int,
+    model: str,
+    endpoint: str,
+    api_key: str,
     complete,
 ) -> None:
     requirement_id = str(requirement.get("id") or "")
@@ -167,6 +176,9 @@ def _run(
                 [candidate],
                 complete=complete,
                 assess_limit=1 if index < assess_limit else 0,
+                model=model,
+                endpoint=endpoint,
+                api_key=api_key,
             )
             row = scored_rows[0] if scored_rows else dict(candidate)
             state = row.get("assessment_state")

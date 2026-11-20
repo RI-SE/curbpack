@@ -1,4 +1,4 @@
-"""Product-repo curbpack-studio.json. Bind/model/prompt/temp live here, not in curbpack.json."""
+"""Studio settings. The user file holds installation values. The product file holds allowed overrides."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ CREATED_STUDIO = {
     "bind": {"host": "127.0.0.1", "port": 8770},
     "model": {
         "endpoint": "http://127.0.0.1:11434",
-        "api_key": "$CURBPACK_MODEL_API_KEY",
+        "api_key": "",
         "name": "qwen3-coder:30b",
         "temperature": 0.2,
     },
@@ -38,8 +38,32 @@ def studio_file(repo: Path) -> Path:
     return Path(repo) / STUDIO_NAME
 
 
+def user_studio_dir(home: Path | None = None) -> Path:
+    return (Path.home() if home is None else Path(home)) / ".curbpack"
+
+
+def user_studio_file(home: Path | None = None) -> Path:
+    return user_studio_dir(home) / STUDIO_NAME
+
+
+def _env_file(home: Path | None = None) -> Path:
+    return user_studio_dir(home) / _ENV_NAME
+
+
 def created_studio_config() -> dict:
     return validate_studio_config(copy.deepcopy(CREATED_STUDIO))
+
+
+def _api_key(value: object) -> str:
+    if value == "":
+        return ""
+    if isinstance(value, str) and _env_placeholder(value.strip()):
+        return value.strip()
+    raise ModelError(STUDIO_NAME, "model.api_key", "empty or a $NAME placeholder")
+
+
+def _env_placeholder(value: str) -> bool:
+    return value.startswith("$") and len(value) > 1 and value[1:].replace("_", "").isalnum()
 
 
 def validate_studio_config(obj: object) -> dict:
@@ -59,10 +83,11 @@ def validate_studio_config(obj: object) -> dict:
     if not isinstance(port, int) or isinstance(port, bool) or port < 1:
         raise ModelError(STUDIO_NAME, "bind.port", "a TCP port")
     model = _object_block(obj["model"], "model", _MODEL)
-    for key in ("endpoint", "api_key", "name"):
+    for key in ("endpoint", "name"):
         value = model[key]
         if not isinstance(value, str) or not value.strip():
             raise ModelError(STUDIO_NAME, f"model.{key}", "a string")
+    api_key = _api_key(model["api_key"])
     temperature = model["temperature"]
     if not isinstance(temperature, (int, float)) or isinstance(temperature, bool):
         raise ModelError(STUDIO_NAME, "model.temperature", "a number")
@@ -87,7 +112,7 @@ def validate_studio_config(obj: object) -> dict:
         "bind": {"host": host.strip(), "port": port},
         "model": {
             "endpoint": str(model["endpoint"]).strip(),
-            "api_key": str(model["api_key"]).strip(),
+            "api_key": api_key,
             "name": str(model["name"]).strip(),
             "temperature": float(temperature),
         },
@@ -101,42 +126,166 @@ def validate_studio_config(obj: object) -> dict:
     }
 
 
-def load_studio_config(repo: Path) -> dict | None:
-    path = studio_file(repo)
+_PROJECT_TOP = {"model", "prompts", "paths", "researcher_mode"}
+_PROJECT_MODEL = {"endpoint", "name", "temperature"}
+_PROJECT_PROMPTS = {"interpret", "discovery_hints"}
+_PROJECT_PATHS = {"extract_work_dir"}
+_USER_FILE = "the user file ~/.curbpack/curbpack-studio.json"
+
+
+def load_user_studio(home: Path | None = None) -> dict | None:
+    path = user_studio_file(home)
     if not path.is_file():
         return None
     document = validate_studio_config(read_json(path))
-    env = _read_env(repo / _ENV_NAME)
-    return _substitute(document, env)
+    key = document["model"]["api_key"]
+    if _env_placeholder(key):
+        document["model"]["api_key"] = _read_env(_env_file(home)).get(key[1:], "")
+    return document
 
 
-def researcher_mode(repo: Path) -> bool:
-    """True hides the Review column. Absent file or key keeps the column.
-
-    Reads the flag directly. Claims stay usable when the model key in .env
-    is not filled in yet.
-    """
+def load_project_studio(repo: Path | None) -> dict | None:
+    if repo is None:
+        return None
     path = studio_file(repo)
     if not path.is_file():
-        return False
-    document = read_json(path)
-    if not isinstance(document, dict):
+        return None
+    return validate_project_studio(read_json(path))
+
+
+def validate_project_studio(obj: object) -> dict:
+    if not isinstance(obj, dict):
         raise ModelError(STUDIO_NAME, "(root)", "object")
-    mode = document.get("researcher_mode", False)
-    if not isinstance(mode, bool):
-        raise ModelError(STUDIO_NAME, "researcher_mode", "true or false")
-    return mode
+    disallowed = _disallowed_project_fields(obj)
+    if disallowed:
+        raise ModelError(STUDIO_NAME, ", ".join(disallowed), f"those fields in {_USER_FILE}")
+    model = _partial_block(obj.get("model"), "model", _PROJECT_MODEL)
+    if "endpoint" in model:
+        _nonempty(model["endpoint"], "model.endpoint", "a string")
+    if "name" in model:
+        _nonempty(model["name"], "model.name", "a string")
+    if "temperature" in model:
+        temperature = model["temperature"]
+        if not isinstance(temperature, (int, float)) or isinstance(temperature, bool):
+            raise ModelError(STUDIO_NAME, "model.temperature", "a number")
+        model["temperature"] = float(temperature)
+    prompts = _partial_block(obj.get("prompts"), "prompts", _PROJECT_PROMPTS)
+    for key in list(prompts):
+        value = prompts[key]
+        if value is None:
+            continue
+        if not _repo_relative(value):
+            raise ModelError(STUDIO_NAME, f"prompts.{key}", "a repo-relative path or null")
+        prompts[key] = str(value).strip()
+    paths = _partial_block(obj.get("paths"), "paths", _PROJECT_PATHS)
+    if "extract_work_dir" in paths and not _repo_relative(paths["extract_work_dir"]):
+        raise ModelError(STUDIO_NAME, "paths.extract_work_dir", "a relative directory")
+    if "extract_work_dir" in paths:
+        paths["extract_work_dir"] = str(paths["extract_work_dir"]).strip()
+    document: dict = {}
+    if model:
+        document["model"] = model
+    if prompts:
+        document["prompts"] = prompts
+    if paths:
+        document["paths"] = paths
+    if "researcher_mode" in obj:
+        if not isinstance(obj["researcher_mode"], bool):
+            raise ModelError(STUDIO_NAME, "researcher_mode", "true or false")
+        document["researcher_mode"] = obj["researcher_mode"]
+    return document
 
 
-def save_studio_config(repo: Path, document: dict) -> dict:
+def save_user_studio(document: dict, home: Path | None = None) -> dict:
     written = validate_studio_config(document)
+    path = user_studio_file(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(path, written)
+    return written
+
+
+def save_project_studio(repo: Path, document: dict) -> dict:
+    written = validate_project_studio(document)
     write_json(studio_file(repo), written)
     return written
 
 
-def studio_from_form(form: dict) -> dict:
+def effective_studio(repo: Path | None, home: Path | None = None) -> dict:
+    """One value per field. A project key wins. The API key follows only a user endpoint."""
+    user = load_user_studio(home)
+    base = created_studio_config() if user is None else user
+    origin = "built-in" if user is None else "user"
+    project = load_project_studio(repo) or {}
+
+    def pick(block: str, key: str) -> dict:
+        current = project.get(block)
+        if isinstance(current, dict) and key in current:
+            return {"value": current[key], "source": "project"}
+        return {"value": base[block][key], "source": origin}
+
+    endpoint = pick("model", "endpoint")
+    api_key = base["model"]["api_key"]
+    send = endpoint["source"] == "user" and bool(api_key)
+    if "researcher_mode" in project:
+        mode = {"value": project["researcher_mode"], "source": "project"}
+    else:
+        mode = {"value": False, "source": "built-in"}
+    return {
+        "bind": {
+            "host": {"value": base["bind"]["host"], "source": origin},
+            "port": {"value": base["bind"]["port"], "source": origin},
+        },
+        "model": {
+            "endpoint": endpoint,
+            "name": pick("model", "name"),
+            "temperature": pick("model", "temperature"),
+            "api_key": {"value": api_key, "source": origin},
+        },
+        "prompts": {
+            "interpret": pick("prompts", "interpret"),
+            "discovery_hints": pick("prompts", "discovery_hints"),
+        },
+        "paths": {
+            "temp_dir": {"value": base["paths"]["temp_dir"], "source": origin},
+            "extract_work_dir": pick("paths", "extract_work_dir"),
+            "keys_file": {"value": base["paths"]["keys_file"], "source": origin},
+        },
+        "researcher_mode": mode,
+        "api_key_for_call": api_key if send else "",
+    }
+
+
+def listen_bind(cli_host: str | None, cli_port: int | None, *, home: Path | None = None) -> tuple[str, int]:
+    chosen = effective_studio(None, home)["bind"]
+    host = chosen["host"]["value"] if cli_host is None else cli_host
+    port = chosen["port"]["value"] if cli_port is None else cli_port
+    return host, port
+
+
+def prompt_file(repo: Path, relative: str | None) -> Path | None:
+    """A repo-relative prompt file. Null keeps the adapter prompt."""
+    if relative is None:
+        return None
+    if not _repo_relative(relative):
+        raise ModelError(STUDIO_NAME, "prompts", "a repo-relative path or null")
+    path = (Path(repo) / relative).resolve()
+    root = Path(repo).resolve()
+    if path != root and root not in path.parents:
+        raise ModelError(STUDIO_NAME, "prompts", "a file inside the repository")
+    return path
+
+
+def researcher_mode(repo: Path) -> bool:
+    """True hides the Review column. Absent file or key keeps the column."""
+    document = load_project_studio(repo)
+    if document is None:
+        return False
+    return document.get("researcher_mode") is True
+
+
+def user_from_form(form: dict) -> dict:
     def field(name: str) -> str:
-        return (form.get(name) or [""])[0].strip() if isinstance(form.get(name), list) else str(form.get(name) or "").strip()
+        return _form_field(form, name)
 
     port_text = field("bind_port")
     try:
@@ -166,9 +315,41 @@ def studio_from_form(form: dict) -> dict:
                 "extract_work_dir": field("path_extract_work_dir"),
                 "keys_file": field("path_keys_file") or None,
             },
-            "researcher_mode": field("researcher_mode") == "true",
+            "researcher_mode": False,
         }
     )
+
+
+def project_from_form(form: dict) -> dict:
+    def field(name: str) -> str:
+        return _form_field(form, name)
+
+    def enabled(name: str) -> bool:
+        return field(f"use_{name}") == "true"
+
+    document: dict = {"researcher_mode": field("researcher_mode") == "true"}
+    model = {}
+    if enabled("model_endpoint"):
+        model["endpoint"] = field("project_model_endpoint")
+    if enabled("model_name"):
+        model["name"] = field("project_model_name")
+    if enabled("model_temperature"):
+        try:
+            model["temperature"] = float(field("project_model_temperature"))
+        except ValueError:
+            raise ModelError(STUDIO_NAME, "model.temperature", "a number")
+    if model:
+        document["model"] = model
+    prompts = {}
+    if enabled("prompt_interpret"):
+        prompts["interpret"] = field("project_prompt_interpret") or None
+    if enabled("prompt_discovery_hints"):
+        prompts["discovery_hints"] = field("project_prompt_discovery_hints") or None
+    if prompts:
+        document["prompts"] = prompts
+    if enabled("extract_work_dir"):
+        document["paths"] = {"extract_work_dir": field("project_extract_work_dir")}
+    return validate_project_studio(document)
 
 
 def editor_values(document: dict) -> dict:
@@ -228,14 +409,41 @@ def _read_env(path: Path) -> dict[str, str]:
     return values
 
 
-def _substitute(value, env: dict[str, str], field: str = "(root)"):
-    if isinstance(value, dict):
-        return {key: _substitute(item, env, key if field == "(root)" else f"{field}.{key}") for key, item in value.items()}
+def _form_field(form: dict, name: str) -> str:
+    value = form.get(name)
     if isinstance(value, list):
-        return [_substitute(item, env, field) for item in value]
-    if isinstance(value, str) and value.startswith("$") and len(value) > 1 and value[1:].replace("_", "").isalnum():
-        name = value[1:]
-        if name not in env:
-            raise ModelError(STUDIO_NAME, field, f"${name} from .env")
-        return env[name]
-    return value
+        return (value or [""])[0].strip()
+    return str(value or "").strip()
+
+
+def _disallowed_project_fields(obj: dict) -> list[str]:
+    names: list[str] = []
+    for key in sorted(obj):
+        if key == "bind":
+            names.append("bind")
+        elif key == "model" and isinstance(obj["model"], dict):
+            names.extend(f"model.{field}" for field in sorted(obj["model"]) if field not in _PROJECT_MODEL)
+        elif key == "prompts" and isinstance(obj["prompts"], dict):
+            names.extend(
+                f"prompts.{field}" for field in sorted(obj["prompts"]) if field not in _PROJECT_PROMPTS
+            )
+        elif key == "paths" and isinstance(obj["paths"], dict):
+            names.extend(f"paths.{field}" for field in sorted(obj["paths"]) if field not in _PROJECT_PATHS)
+        elif key not in _PROJECT_TOP:
+            names.append(key)
+        elif key in {"model", "prompts", "paths"} and not isinstance(obj[key], dict):
+            names.append(key)
+    return names
+
+
+def _partial_block(value: object, name: str, allowed: set[str]) -> dict:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ModelError(STUDIO_NAME, name, "object")
+    return {key: value[key] for key in allowed if key in value}
+
+
+def _nonempty(value: object, field: str, expected: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ModelError(STUDIO_NAME, field, expected)

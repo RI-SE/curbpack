@@ -40,6 +40,12 @@ def start_extract_job(
     complete: CompleteFn | None = None,
     dest_repo: str = "",
     dest_pack: str = "",
+    model: str | None = None,
+    temperature: float | None = None,
+    endpoint: str | None = None,
+    api_key: str = "",
+    interpret_guidance: Path | None = None,
+    hints_guidance: Path | None = None,
 ) -> str:
     """Run extract on a daemon thread and return the job id.
 
@@ -74,6 +80,14 @@ def start_extract_job(
             dest_repo,
             dest_pack,
         ),
+        kwargs={
+            "model": model,
+            "temperature": temperature,
+            "endpoint": endpoint,
+            "api_key": api_key,
+            "interpret_guidance": interpret_guidance,
+            "hints_guidance": hints_guidance,
+        },
         name=f"extract-{job_id}",
         daemon=True,
     ).start()
@@ -120,6 +134,13 @@ def _run_extract(
     complete: CompleteFn | None,
     dest_repo: str = "",
     dest_pack: str = "",
+    *,
+    model: str | None = None,
+    temperature: float | None = None,
+    endpoint: str | None = None,
+    api_key: str = "",
+    interpret_guidance: Path | None = None,
+    hints_guidance: Path | None = None,
 ) -> None:
     if not _advance(jobs_dir, job_id, stage="start", progress=0.2, line=f"extract {section_id}"):
         return
@@ -135,11 +156,20 @@ def _run_extract(
                 {"locus": item["locus"], "law_text": item["law_text"]}
                 for item in extracted["provisions"]
             ]
-            proposals, llm_notes = proposals_from_producers(
-                provisions,
-                adapter_dir=adapter_dir,
-                complete=complete,
-            )
+            call = {"adapter_dir": adapter_dir, "complete": complete}
+            if model is not None:
+                call["model"] = model
+            if temperature is not None:
+                call["temperature"] = temperature
+            if endpoint is not None:
+                call["endpoint"] = endpoint
+            if api_key:
+                call["api_key"] = api_key
+            if interpret_guidance is not None:
+                call["interpret_guidance"] = interpret_guidance
+            if hints_guidance is not None:
+                call["hints_guidance"] = hints_guidance
+            proposals, llm_notes = proposals_from_producers(provisions, **call)
         if not _advance(jobs_dir, job_id, stage="assemble", progress=0.8, line="stage 04 assemble"):
             return
         incoming = None

@@ -153,8 +153,11 @@ Studio operator config for the chosen repository ([workspace.md](../../../../ref
 **And** the editor has **Save** and **Cancel**  
 
 **Given** that editor with values filled  
-**When** the person chooses **Save**  
-**Then** Studio writes `<repository>/curbpack-studio.json`  
+**When** the person saves user settings  
+**Then** Studio writes `~/.curbpack/curbpack-studio.json` and does not change the open repository's file
+
+**When** the person saves project overrides  
+**Then** Studio writes `<repository>/curbpack-studio.json` with only the allowed project fields and does not change the user file  
 
 **Given** that editor  
 **When** the person chooses **Cancel**  
@@ -165,7 +168,7 @@ Studio operator config for the chosen repository ([workspace.md](../../../../ref
 **Then** the editor shows the file’s current values  
 **And** **Save** updates that file  
 
-While the file is absent, today’s pilot bind/model/temp wiring stays until Save creates it.
+While the user file is absent, today's pilot bind and model values stay. A present user file supplies bind unless `--host` or `--port` is given. The product file overrides only its allowed fields.
 
 ---
 

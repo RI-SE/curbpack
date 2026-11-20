@@ -17,13 +17,11 @@ from common.errors import ModelError
 _SECTION_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
-def extract_work_root(repo: Path) -> Path:
+def extract_work_root(repo: Path, home: Path | None = None) -> Path:
     """The configured extract directory, confined to the repository."""
-    from discovery.studio import created_studio_config, load_studio_config
+    from discovery.studio import effective_studio
 
-    loaded = load_studio_config(repo)
-    config = loaded if loaded is not None else created_studio_config()
-    relative = str(config["paths"]["extract_work_dir"]).strip()
+    relative = str(effective_studio(repo, home)["paths"]["extract_work_dir"]["value"]).strip()
     root = (repo / relative).resolve()
     repo_root = repo.resolve()
     if repo_root not in root.parents:

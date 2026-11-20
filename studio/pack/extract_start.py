@@ -84,6 +84,10 @@ def _start_extract(ws: Workspace, form: dict) -> str:
         if found is not None:
             dest_repo = found[0]
             dest_pack = document_id
+    from discovery.studio import effective_studio, prompt_file
+
+    home = getattr(ws, "studio_home", None)
+    chosen = effective_studio(repo_path, home)
     job_id = f"extract-{secrets.token_hex(4)}"
     start_extract_job(
         ws.root / "jobs",
@@ -94,6 +98,12 @@ def _start_extract(ws: Workspace, form: dict) -> str:
         pack=_pack_for_adapter(adapter, _namespace_base_at(repo_path)),
         dest_repo=dest_repo,
         dest_pack=dest_pack,
+        model=chosen["model"]["name"]["value"],
+        temperature=chosen["model"]["temperature"]["value"],
+        endpoint=chosen["model"]["endpoint"]["value"],
+        api_key=chosen["api_key_for_call"],
+        interpret_guidance=prompt_file(repo_path, chosen["prompts"]["interpret"]["value"]) if repo_path else None,
+        hints_guidance=prompt_file(repo_path, chosen["prompts"]["discovery_hints"]["value"]) if repo_path else None,
     )
     located = f"document={document_id}&" if document_id else ""
     repo_id = (form.get("repo") or [""])[0].strip()

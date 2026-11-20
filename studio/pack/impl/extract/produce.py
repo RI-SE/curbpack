@@ -40,6 +40,7 @@ def interpret(
     temperature: float = _DEFAULT_TEMPERATURE,
     endpoint: str = _DEFAULT_ENDPOINT,
     guidance: Path,
+    api_key: str = "",
     max_rounds: int | None = None,
     complete: CompleteFn | None = None,
     trace_dir: Path | None = None,
@@ -55,6 +56,7 @@ def interpret(
         model=model,
         temperature=temperature,
         endpoint=endpoint,
+        api_key=api_key,
         guidance=guidance,
         max_rounds=max_rounds,
         complete=complete,
@@ -72,6 +74,7 @@ def discovery_hints(
     temperature: float = _DEFAULT_TEMPERATURE,
     endpoint: str = _DEFAULT_ENDPOINT,
     guidance: Path,
+    api_key: str = "",
     max_rounds: int | None = None,
     complete: CompleteFn | None = None,
     trace_dir: Path | None = None,
@@ -87,6 +90,7 @@ def discovery_hints(
         model=model,
         temperature=temperature,
         endpoint=endpoint,
+        api_key=api_key,
         guidance=guidance,
         max_rounds=max_rounds,
         complete=complete,
@@ -105,17 +109,16 @@ def proposals_from_producers(
     model: str = _DEFAULT_MODEL,
     temperature: float = _DEFAULT_TEMPERATURE,
     endpoint: str = _DEFAULT_ENDPOINT,
+    api_key: str = "",
+    interpret_guidance: Path | None = None,
+    hints_guidance: Path | None = None,
     max_rounds: int | None = None,
     trace_dir: Path | None = None,
     should_abort: Callable[[], bool] | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Run stages 02 and 03 and merge proposals. Notes are concatenated in call order."""
-    interpret_guidance = adapter_dir / "prompts" / "interpret.txt"
-    hints_guidance = adapter_dir / "prompts" / "discovery_hints.txt"
-    if not interpret_guidance.is_file():
-        raise ModelError("produce", "guidance", f"an interpret prompt at {interpret_guidance}")
-    if not hints_guidance.is_file():
-        raise ModelError("produce", "guidance", f"a discovery_hints prompt at {hints_guidance}")
+    interpret_guidance = _prompt_path(adapter_dir, "interpret.txt", interpret_guidance)
+    hints_guidance = _prompt_path(adapter_dir, "discovery_hints.txt", hints_guidance)
     trace = None
     if trace_dir is not None or should_abort is not None or max_rounds is not None:
         if strategy != "propose_critique_revise":
@@ -135,6 +138,7 @@ def proposals_from_producers(
             model=model,
             temperature=temperature,
             endpoint=endpoint,
+            api_key=api_key,
             guidance=interpret_guidance,
             max_rounds=max_rounds,
             complete=complete,
@@ -147,6 +151,7 @@ def proposals_from_producers(
             model=model,
             temperature=temperature,
             endpoint=endpoint,
+            api_key=api_key,
             guidance=hints_guidance,
             max_rounds=max_rounds,
             complete=complete,
@@ -168,6 +173,7 @@ def _produce(
     model: str,
     temperature: float,
     endpoint: str,
+    api_key: str,
     guidance: Path,
     max_rounds: int | None,
     complete: CompleteFn | None,
@@ -190,7 +196,7 @@ def _produce(
     elif should_abort is not None:
         raise ModelError("produce", "should_abort", "absent unless propose_critique_revise")
 
-    complete_fn = complete or _default_complete
+    complete_fn = _with_api_key(complete or _default_complete, api_key)
     guidance_files = _guidance_files(guidance, strategy)
     provisions_text = json.dumps(provisions, ensure_ascii=False, sort_keys=True)
     if strategy == "single_call":
@@ -246,6 +252,23 @@ def _produce(
             if own_trace:
                 trace.finish()
     raise ModelError("produce", "strategy", f"one of {sorted(_STRATEGIES)}")
+
+
+def _prompt_path(adapter_dir: Path, filename: str, override: Path | None) -> Path:
+    path = override if override is not None else adapter_dir / "prompts" / filename
+    if not path.is_file():
+        raise ModelError("produce", "guidance", f"a {filename} prompt at {path}")
+    return path
+
+
+def _with_api_key(complete_fn: CompleteFn, api_key: str) -> CompleteFn:
+    if not api_key:
+        return complete_fn
+
+    def call(prompt_text: str, settings: dict) -> str:
+        return complete_fn(prompt_text, {**settings, "api_key": api_key})
+
+    return call
 
 
 def _guidance_files(guidance: Path, strategy: str) -> list[Path]:
