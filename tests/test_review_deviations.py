@@ -444,6 +444,10 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertIn('aria-label="Requirement remediation"', page)
         self.assertNotIn("Requirement remediation:", page)
         self.assertIn("Use the requirement version from this run.", page)
+        for row in page.split("<tr>"):
+            self.assertFalse(
+                "Add docs/a.md." in row and "Use the requirement version from this run." in row
+            )
         self.assertIn('class="comment-mark"', page)
         self.assertNotIn("comment-mark has-comment", page)
         commented = review_page(

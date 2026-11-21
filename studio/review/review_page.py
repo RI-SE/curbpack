@@ -308,16 +308,30 @@ def _review_queue(
                             )
         if not queued:
             continue
-        requirement_span = sum(len(item[1]) for item in queued)
+        requirement_span = sum(
+            _claim_row_count(claim, deviations) for claim, deviations in queued
+        )
         requirement_written = False
         requirement_id = str(group.get("id") or "")
         group_rows: list[str] = []
         for claim, deviations in queued:
             claim_count += 1
             deviation_count += len(deviations)
-            claim_span = len(deviations)
-            dialog_id = ""
-            for index, deviation in enumerate(deviations):
+            passes = _passing_checks(claim)
+            requirement_tip = _requirement_remedy(claim)
+            claim_rows: list[tuple[str, object]] = []
+            if passes:
+                claim_rows.append(("passes", passes))
+            claim_rows.extend(("deviation", deviation) for deviation in deviations)
+            if requirement_tip:
+                claim_rows.append(("requirement", requirement_tip))
+            claim_span = len(claim_rows)
+            dialog_id, update_dialog = _failed_check_dialog(
+                claim, repo, document, open_ids, requirement_id
+            )
+            if update_dialog:
+                dialogs.append(update_dialog)
+            for index, (kind, payload) in enumerate(claim_rows):
                 cells = []
                 if not requirement_written:
                     cells.append(
@@ -326,25 +340,30 @@ def _review_queue(
                     )
                     requirement_written = True
                 if index == 0:
-                    dialog_id, update_dialog = _failed_check_dialog(
-                        claim, repo, document, open_ids, requirement_id
-                    )
-                    if update_dialog:
-                        dialogs.append(update_dialog)
                     cells.append(
                         f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
                         f"{_file_cell(claim, open_ids, repo, document, discover_href)}</td>"
                     )
-                cells.append(
-                    "<td>"
-                    + _deviation_checks(claim, deviation, dialog_id, include_passes=index == 0)
-                    + "</td>"
-                )
-                remedy, verdict, comment, dialog = _deviation_cells(
-                    claim, deviation, assessments, editable, index == 0
-                )
-                dialogs.append(dialog)
-                cells.extend((f"<td>{remedy}</td>", f"<td>{verdict}</td>", f"<td>{comment}</td>"))
+                if kind == "passes":
+                    cells.append(
+                        "<td>"
+                        + " ".join(
+                            _check_span(claim, check, dialog_id)
+                            for check in payload
+                            if isinstance(check, dict)
+                        )
+                        + "</td><td></td><td></td><td></td>"
+                    )
+                elif kind == "requirement":
+                    cells.append(f"<td></td><td>{payload}</td><td></td><td></td>")
+                else:
+                    deviation = payload if isinstance(payload, dict) else {}
+                    cells.append("<td>" + _deviation_checks(claim, deviation, dialog_id) + "</td>")
+                    remedy, verdict, comment, dialog = _deviation_cells(
+                        claim, deviation, assessments, editable
+                    )
+                    dialogs.append(dialog)
+                    cells.extend((f"<td>{remedy}</td>", f"<td>{verdict}</td>", f"<td>{comment}</td>"))
                 group_rows.append("<tr>" + "".join(cells) + "</tr>")
         body_rows.append(
             f'<tbody data-requirement="{html.escape(requirement_id)}">'
@@ -479,15 +498,25 @@ def _claim_edit_href(claim: dict, open_ids: list[str], repo: str, document: str)
     return ""
 
 
-def _deviation_checks(
-    claim: dict, deviation: dict, dialog_id: str, *, include_passes: bool
-) -> str:
-    """One queue row. Passing checks stay with the first deviation of the Claim."""
+def _passing_checks(claim: dict) -> list[dict]:
+    return [
+        check
+        for check in claim.get("checks") or []
+        if isinstance(check, dict) and str(check.get("status") or "") == "pass"
+    ]
+
+
+def _claim_row_count(claim: dict, deviations: list[dict]) -> int:
+    return (
+        len(deviations)
+        + (1 if _passing_checks(claim) else 0)
+        + (1 if _requirement_remedy(claim) else 0)
+    )
+
+
+def _deviation_checks(claim: dict, deviation: dict, dialog_id: str) -> str:
+    """The check or binding pill for one deviation row."""
     pills = []
-    if include_passes:
-        for check in claim.get("checks") or []:
-            if isinstance(check, dict) and str(check.get("status") or "") == "pass":
-                pills.append(_check_span(claim, check, dialog_id))
     if deviation.get("kind") == "check":
         check = deviation.get("check")
         if isinstance(check, dict):
@@ -574,7 +603,7 @@ def _secondary_details(presentation: dict) -> str:
 
 
 def _deviation_cells(
-    claim: dict, deviation: dict, assessments: dict, editable: bool, show_requirement_hint: bool
+    claim: dict, deviation: dict, assessments: dict, editable: bool
 ) -> tuple[str, str, str, str]:
     if deviation["kind"] == "check":
         check = deviation["check"]
@@ -604,8 +633,6 @@ def _deviation_cells(
             "binding": claim.get("binding"),
         }
         remedy = _binding_remedy(str(claim.get("binding") or ""))
-    if show_requirement_hint:
-        remedy += _requirement_remedy(claim)
     dialog_id = "comment-" + "-".join(
         str(part or "")
         for part in (

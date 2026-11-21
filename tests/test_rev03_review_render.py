@@ -165,6 +165,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertIn('class="check fail" title="Banned package version">Banned · fail<', group)
             self.assertIn('class="check fail" title="custom_probe">custom_probe · fail<', group)
             for row in group.split("<tr>"):
+                self.assertFalse("Exists · pass" in row and "Contents · fail" in row)
                 self.assertFalse("Contents · fail" in row and "Forbidden text · fail" in row)
                 self.assertFalse("Forbidden text · fail" in row and "Banned · fail" in row)
             self.assertIn("too short", group)
