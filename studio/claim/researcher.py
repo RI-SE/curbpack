@@ -167,43 +167,7 @@ document.querySelectorAll("tr.hit-row").forEach((row) => {{
     if (mark) mark.textContent = opening ? "▾" : "▸";
   }});
 }});
-function fillCheckForm(form, values, index) {{
-  const stored = form.querySelector('[name="edit_index"]');
-  if (stored) stored.value = index == null ? "" : String(index);
-  const kind = form.querySelector(".check-kind");
-  if (kind) kind.value = (values && values.check) || kind.options[0].value;
-  form.querySelectorAll("input[name]").forEach((input) => {{
-    if (input.type === "hidden") return;
-    if (input.type === "checkbox") {{
-      input.checked = !!(values && values[input.name] === "1");
-      return;
-    }}
-    input.value = (values && values[input.name]) || "";
-  }});
-  syncCheckForm(form);
-}}
-document.querySelectorAll(".check-open").forEach((button) => {{
-  button.addEventListener("click", () => {{
-    const dialog = button.parentElement.querySelector("dialog.checks");
-    const form = dialog.querySelector("form.check-form");
-    fillCheckForm(form, null, null);
-    const extra = form.dataset.evidencePaths || "";
-    const paths = form.querySelector('[name="require_tree_paths"]');
-    if (paths) paths.value = extra;
-    dialog.showModal();
-  }});
-}});
-document.querySelectorAll(".check-edit").forEach((button) => {{
-  button.addEventListener("click", () => {{
-    const dialog = button.closest(".checks-wrap").querySelector("dialog.checks");
-    const form = dialog.querySelector("form.check-form");
-    fillCheckForm(form, JSON.parse(button.dataset.values || "{{}}"), button.dataset.index);
-    dialog.showModal();
-  }});
-}});
-document.querySelectorAll(".check-close").forEach((button) => {{
-  button.addEventListener("click", () => button.closest("dialog").close());
-}});
+{check_form_script()}
 document.querySelectorAll("button.overlap-detail").forEach((button) => {{
   button.addEventListener("click", () => {{
     const dialog = button.nextElementSibling;
@@ -217,83 +181,12 @@ document.querySelectorAll(".add-open").forEach((button) => {{
 document.querySelectorAll(".add-close").forEach((button) => {{
   button.addEventListener("click", () => button.closest("dialog").close());
 }});
-function syncCheckForm(form) {{
-  const check = form.querySelector(".check-kind");
-  const selected = check ? check.value : "";
-  form.querySelectorAll("[data-for]").forEach((el) => {{
-    el.hidden = !el.dataset.for.split(/\\s+/).includes(selected);
-  }});
-}}
-document.querySelectorAll("form.check-form").forEach((form) => {{
-  syncCheckForm(form);
-  form.addEventListener("change", () => syncCheckForm(form));
-  form.addEventListener("input", (event) => {{
-    if (event.target.classList) event.target.classList.remove("invalid");
-  }});
-  form.addEventListener("submit", (event) => {{
-    form.querySelectorAll("input.invalid").forEach((el) => el.classList.remove("invalid"));
-    const bad = illegalCheckFields(form);
-    if (!bad.length) return;
-    event.preventDefault();
-    bad.forEach((input) => input.classList.add("invalid"));
-    bad[0].focus();
-  }});
-}});
-document.querySelectorAll("dialog.checks[data-reopen]").forEach((dialog) => dialog.showModal());
 const suggestions = document.getElementById("show-suggestions");
 const hitsTable = document.querySelector(".hits-table");
 if (suggestions && hitsTable) {{
   suggestions.addEventListener("change", () => {{
     hitsTable.classList.toggle("show-suggestions", suggestions.checked);
   }});
-}}
-function illegalCheckFields(form) {{
-  const kind = form.querySelector(".check-kind").value;
-  const field = (name) => form.querySelector('[name="' + name + '"]');
-  const shown = (name) => {{
-    const input = field(name);
-    if (!input) return null;
-    const group = input.closest("[data-for]");
-    if (group && group.hidden) return null;
-    return input;
-  }};
-  const bad = [];
-  const integer = (name) => {{
-    const input = shown(name);
-    if (!input || !input.value.trim()) return false;
-    if (!/^-?\\d+$/.test(input.value.trim())) {{
-      bad.push(input);
-      return false;
-    }}
-    return true;
-  }};
-  if (kind === "text_forbid") {{
-    const input = shown("pattern");
-    let ok = input && input.value.trim().length > 0;
-    if (ok) {{
-      try {{ new RegExp(input.value); }} catch (error) {{ ok = false; }}
-    }}
-    if (!ok && input) bad.push(input);
-  }}
-  if (kind === "contents") {{
-    const bytes = integer("min_bytes");
-    const words = integer("min_words");
-    const headers = shown("require_headers");
-    const token = field("fp_bind_repo_token");
-    const hasToken = token && token.checked && shown("fp_bind_repo_token");
-    if (!bytes && !words && !(headers && headers.value.trim()) && !hasToken && !bad.length) {{
-      ["min_bytes", "min_words", "require_headers"].forEach((name) => {{
-        const input = shown(name);
-        if (input) bad.push(input);
-      }});
-    }}
-  }}
-  if (kind === "fresh") integer("max_age_days");
-  if (kind === "dep_ban") {{
-    const input = shown("package");
-    if (input && !input.value.trim()) bad.push(input);
-  }}
-  return bad;
 }}
 </script>
 """
@@ -313,6 +206,227 @@ def file_page(model: dict) -> bytes:
 <pre>{rendered}</pre>
 """
     return page(title, body)
+
+
+def check_editor_dialog(
+    *,
+    path: str,
+    hidden: str,
+    evidence: str = "",
+    tree_paths: str = "",
+    confirm: str = "",
+    reopen: str = "",
+    values: dict | None = None,
+    selected: str = "",
+    invalid: set | None = None,
+    submit_label: str = "Save check",
+    cancel_label: str = "Close",
+    dialog_id: str = "",
+) -> str:
+    """The check form used when a Claim is created. Callers choose the buttons."""
+    stored = values or {}
+    bad = invalid or set()
+
+    def field(name: str) -> str:
+        return html.escape(str(stored.get(name) or ""))
+
+    def marked(name: str) -> str:
+        return " checked" if str(stored.get(name) or "") in {"1", "true", "on"} else ""
+
+    def fault(name: str) -> str:
+        return "invalid" if name in bad else ""
+
+    options = "".join(
+        f'<option value="{html.escape(key)}"'
+        f'{" selected" if selected == key else ""}>{html.escape(CAPTIONS[key])}</option>'
+        for key in (
+            "exist",
+            "contents",
+            "text_forbid",
+            "anti_placeholder",
+            "fresh",
+            "owned",
+            "dep_ban",
+        )
+    )
+    identity = f' id="{html.escape(dialog_id)}"' if dialog_id else ""
+    return f"""
+<dialog class="checks"{identity}{reopen}>
+  <div class="head"><h2>What to check for <span data-check-path>{html.escape(path)}</span></h2></div>
+  <div class="body">
+    <form method="post" action="/discover/feedback/checks" class="check-form" data-evidence-paths="{html.escape(evidence)}"{confirm}>
+      {hidden}
+      <input type="hidden" name="path" value="{html.escape(path)}">
+      <label>Check
+        <select name="check" class="check-kind">
+          {options}
+        </select>
+      </label>
+      <div data-for="contents" hidden>
+        <label>Min bytes<input type="text" name="min_bytes" inputmode="numeric" value="{field("min_bytes")}" class="{fault("min_bytes")}"></label>
+        <label>Min words<input type="text" name="min_words" inputmode="numeric" value="{field("min_words")}" class="{fault("min_words")}"></label>
+        <label>Require headers<input type="text" name="require_headers" placeholder="# Title, ## Section" value="{field("require_headers")}" class="{fault("require_headers")}"></label>
+        <label class="check-inline"><input type="checkbox" name="fp_bind_repo_token" value="1"{marked("fp_bind_repo_token")}> Bind repo token</label>
+      </div>
+      <div data-for="exist contents" hidden>
+        <label>Also require paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{html.escape(tree_paths)}"></label>
+      </div>
+      <div data-for="text_forbid" hidden>
+        <label>Pattern<input type="text" name="pattern" placeholder="regular expression" value="{field("pattern")}" class="{fault("pattern")}"></label>
+      </div>
+      <div data-for="dep_ban" hidden>
+        <p class="muted">Running checks does not evaluate this yet.</p>
+        <label>Package<input type="text" name="package" value="{field("package")}" class="{fault("package")}"></label>
+        <label>Banned versions<input type="text" name="banned_versions" placeholder="1.2.3, 2.0.0" value="{field("banned_versions")}"></label>
+      </div>
+      <div data-for="fresh" hidden>
+        <p class="muted">Running checks does not evaluate this yet.</p>
+        <label>Max age days<input type="text" name="max_age_days" inputmode="numeric" value="{field("max_age_days")}" class="{fault("max_age_days")}"></label>
+        <label>Since ref<input type="text" name="since_ref" placeholder="HEAD or a ref" value="{field("since_ref")}"></label>
+      </div>
+      <div data-for="owned" hidden>
+        <p class="muted">Running checks does not evaluate this yet.</p>
+        <label class="check-inline"><input type="checkbox" name="owned_bind_repo_token" value="1"{marked("owned_bind_repo_token")}> Bind repo token</label>
+        <label>Require git author email<input type="text" name="require_git_author_email" value="{field("require_git_author_email")}"></label>
+        <label>Require git author name<input type="text" name="require_git_author_name" value="{field("require_git_author_name")}"></label>
+      </div>
+      <p class="actions"><button type="submit" class="save-check">{html.escape(submit_label)}</button>
+      <button type="button" class="secondary check-close">{html.escape(cancel_label)}</button></p>
+    </form>
+  </div>
+</dialog>
+"""
+
+
+def check_form_script() -> str:
+    """Open, fill, and validate the shared check dialog."""
+    return """
+function fillCheckForm(form, values, index) {
+  const stored = form.querySelector('[name="edit_index"]');
+  if (stored) stored.value = index == null ? "" : String(index);
+  const kind = form.querySelector(".check-kind");
+  if (kind) kind.value = (values && values.check) || kind.options[0].value;
+  form.querySelectorAll("input[name]").forEach((input) => {
+    if (input.type === "hidden") return;
+    if (input.type === "checkbox") {
+      input.checked = !!(values && values[input.name] === "1");
+      return;
+    }
+    input.value = (values && values[input.name]) || "";
+  });
+  syncCheckForm(form);
+}
+function syncCheckForm(form) {
+  const check = form.querySelector(".check-kind");
+  const selected = check ? check.value : "";
+  form.querySelectorAll("[data-for]").forEach((el) => {
+    el.hidden = !el.dataset.for.split(/\\s+/).includes(selected);
+  });
+}
+function illegalCheckFields(form) {
+  const kind = form.querySelector(".check-kind").value;
+  const field = (name) => form.querySelector('[name="' + name + '"]');
+  const shown = (name) => {
+    const input = field(name);
+    if (!input) return null;
+    const group = input.closest("[data-for]");
+    if (group && group.hidden) return null;
+    return input;
+  };
+  const bad = [];
+  const integer = (name) => {
+    const input = shown(name);
+    if (!input || !input.value.trim()) return false;
+    if (!/^-?\\d+$/.test(input.value.trim())) {
+      bad.push(input);
+      return false;
+    }
+    return true;
+  };
+  if (kind === "text_forbid") {
+    const input = shown("pattern");
+    let ok = input && input.value.trim().length > 0;
+    if (ok) {
+      try { new RegExp(input.value); } catch (error) { ok = false; }
+    }
+    if (!ok && input) bad.push(input);
+  }
+  if (kind === "contents") {
+    const bytes = integer("min_bytes");
+    const words = integer("min_words");
+    const headers = shown("require_headers");
+    const token = field("fp_bind_repo_token");
+    const hasToken = token && token.checked && shown("fp_bind_repo_token");
+    if (!bytes && !words && !(headers && headers.value.trim()) && !hasToken && !bad.length) {
+      ["min_bytes", "min_words", "require_headers"].forEach((name) => {
+        const input = shown(name);
+        if (input) bad.push(input);
+      });
+    }
+  }
+  if (kind === "fresh") integer("max_age_days");
+  if (kind === "dep_ban") {
+    const input = shown("package");
+    if (input && !input.value.trim()) bad.push(input);
+  }
+  return bad;
+}
+function openCheckDialog(button) {
+  const dialog = button.dataset.checkDialog
+    ? document.getElementById(button.dataset.checkDialog)
+    : button.closest(".checks-wrap").querySelector("dialog.checks");
+  if (!dialog) return;
+  const form = dialog.querySelector("form.check-form");
+  fillCheckForm(form, JSON.parse(button.dataset.values || "{}"), button.dataset.index);
+  if (button.dataset.path) {
+    const input = form.querySelector('[name="path"]');
+    if (input) input.value = button.dataset.path;
+    const title = dialog.querySelector("[data-check-path]");
+    if (title) title.textContent = button.dataset.path;
+  }
+  dialog.showModal();
+}
+document.querySelectorAll(".check-open").forEach((button) => {
+  button.addEventListener("click", () => {
+    const dialog = button.parentElement.querySelector("dialog.checks");
+    const form = dialog.querySelector("form.check-form");
+    fillCheckForm(form, null, null);
+    const extra = form.dataset.evidencePaths || "";
+    const paths = form.querySelector('[name="require_tree_paths"]');
+    if (paths) paths.value = extra;
+    dialog.showModal();
+  });
+});
+document.querySelectorAll(".check-edit, [data-check-dialog]").forEach((button) => {
+  button.addEventListener("click", () => openCheckDialog(button));
+});
+document.querySelectorAll(".check-close").forEach((button) => {
+  button.addEventListener("click", () => button.closest("dialog").close());
+});
+document.querySelectorAll("form.check-form").forEach((form) => {
+  syncCheckForm(form);
+  form.addEventListener("change", () => syncCheckForm(form));
+  form.addEventListener("input", (event) => {
+    if (event.target.classList) event.target.classList.remove("invalid");
+  });
+  form.addEventListener("submit", (event) => {
+    form.querySelectorAll("input.invalid").forEach((el) => el.classList.remove("invalid"));
+    const bad = illegalCheckFields(form);
+    if (!bad.length) return;
+    event.preventDefault();
+    bad.forEach((input) => input.classList.add("invalid"));
+    bad[0].focus();
+  });
+});
+document.querySelectorAll("dialog.checks[data-reopen]").forEach((dialog) => dialog.showModal());
+"""
+
+
+def _raw_tree_paths(model: dict, path: str, evidence: str) -> str:
+    error = _check_error(model, path)
+    if error:
+        return str((error.get("values") or {}).get("require_tree_paths") or "")
+    return evidence
 
 
 def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
@@ -336,18 +450,6 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
         f"{html.escape(check_caption(entry))}</button>"
         for index, entry in enumerate(checks)
     ) or '<span class="muted">—</span>'
-    options = "".join(
-        f'<option value="{html.escape(key)}"{_selected(model, path, key)}>{html.escape(CAPTIONS[key])}</option>'
-        for key in (
-            "exist",
-            "contents",
-            "text_forbid",
-            "anti_placeholder",
-            "fresh",
-            "owned",
-            "dep_ban",
-        )
-    )
     excerpt = str(item.get("model_excerpt") or item.get("excerpt") or "")
     if not excerpt:
         excerpt = "No excerpt stored for this finding."
@@ -383,54 +485,25 @@ def _hit_row(model: dict, requirement_id: str, item: dict, index: int) -> str:
   <td class="col-why"><div class="why-cell">{_motivation(model, requirement_id, item)}</div></td>
   <td class="col-checks"><div class="checks-wrap">{chips}
     <button type="button" class="check-open check-pick">Add check</button>
-    <dialog class="checks"{_reopen(model, path)}>
-      <div class="head"><h2>What to check for {html.escape(path)}</h2></div>
-      <div class="body">
-        <form method="post" action="/discover/feedback/checks" class="check-form" data-evidence-paths="{html.escape(evidence)}"{_check_confirm(item)}>
-          {_hidden(model, requirement_id)}
-          {_source_fields(model.get("source_ids") or [])}
-          <input type="hidden" name="path" value="{html.escape(path)}">
-          {claim_field}
-          <input type="hidden" name="edit_index" value="">
-          {_unsign_field(item)}
-          <label>Check
-            <select name="check" class="check-kind">
-              {options}
-            </select>
-          </label>
-          <div data-for="contents" hidden>
-            <label>Min bytes<input type="text" name="min_bytes" inputmode="numeric" value="{_val(model, path, "min_bytes")}" class="{_bad(model, path, "min_bytes")}"></label>
-            <label>Min words<input type="text" name="min_words" inputmode="numeric" value="{_val(model, path, "min_words")}" class="{_bad(model, path, "min_words")}"></label>
-            <label>Require headers<input type="text" name="require_headers" placeholder="# Title, ## Section" value="{_val(model, path, "require_headers")}" class="{_bad(model, path, "require_headers")}"></label>
-            <label class="check-inline"><input type="checkbox" name="fp_bind_repo_token" value="1"{_checked(model, path, "fp_bind_repo_token")}> Bind repo token</label>
-          </div>
-          <div data-for="exist contents" hidden>
-            <label>Also require paths<input type="text" name="require_tree_paths" placeholder="docs/a.md, docs/b.md" value="{_tree_paths_value(model, path, evidence)}"></label>
-          </div>
-          <div data-for="text_forbid" hidden>
-            <label>Pattern<input type="text" name="pattern" placeholder="regular expression" value="{_val(model, path, "pattern")}" class="{_bad(model, path, "pattern")}"></label>
-          </div>
-          <div data-for="dep_ban" hidden>
-            <p class="muted">Running checks does not evaluate this yet.</p>
-            <label>Package<input type="text" name="package" value="{_val(model, path, "package")}" class="{_bad(model, path, "package")}"></label>
-            <label>Banned versions<input type="text" name="banned_versions" placeholder="1.2.3, 2.0.0" value="{_val(model, path, "banned_versions")}"></label>
-          </div>
-          <div data-for="fresh" hidden>
-            <p class="muted">Running checks does not evaluate this yet.</p>
-            <label>Max age days<input type="text" name="max_age_days" inputmode="numeric" value="{_val(model, path, "max_age_days")}" class="{_bad(model, path, "max_age_days")}"></label>
-            <label>Since ref<input type="text" name="since_ref" placeholder="HEAD or a ref" value="{_val(model, path, "since_ref")}"></label>
-          </div>
-          <div data-for="owned" hidden>
-            <p class="muted">Running checks does not evaluate this yet.</p>
-            <label class="check-inline"><input type="checkbox" name="owned_bind_repo_token" value="1"{_checked(model, path, "owned_bind_repo_token")}> Bind repo token</label>
-            <label>Require git author email<input type="text" name="require_git_author_email" value="{_val(model, path, "require_git_author_email")}"></label>
-            <label>Require git author name<input type="text" name="require_git_author_name" value="{_val(model, path, "require_git_author_name")}"></label>
-          </div>
-          <p class="actions"><button type="submit" class="save-check">Save check</button>
-          <button type="button" class="secondary check-close">Close</button></p>
-        </form>
-      </div>
-    </dialog>
+    {check_editor_dialog(
+        path=path,
+        hidden=(
+            _hidden(model, requirement_id)
+            + _source_fields(model.get("source_ids") or [])
+            + claim_field
+            + '<input type="hidden" name="edit_index" value="">'
+            + _unsign_field(item)
+        ),
+        evidence=evidence,
+        tree_paths=_raw_tree_paths(model, path, evidence),
+        confirm=_check_confirm(item),
+        reopen=_reopen(model, path),
+        values=(_check_error(model, path).get("values") or {}),
+        selected=str(_check_error(model, path).get("check") or ""),
+        invalid=set(_check_error(model, path).get("invalid") or []),
+        submit_label="Save check",
+        cancel_label="Close",
+    )}
   </div></td>
   {review_cell}
 </tr>

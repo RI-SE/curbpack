@@ -44,6 +44,12 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertIn("<th>Requirement</th>", page)
             self.assertIn("<th>File</th>", page)
             self.assertIn("<th>Checks</th>", page)
+            self.assertIn(
+                '<th class="tips" title="Wrench: tip from the Claim. '
+                'Scroll: tip from the Requirement.">Tips</th>',
+                page,
+            )
+            self.assertNotIn("<th>Remedy</th>", page)
             self.assertIn("<th>Verdict</th>", page)
             self.assertIn("1 claim · 1 deviation", page)
 

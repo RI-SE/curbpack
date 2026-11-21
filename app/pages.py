@@ -233,6 +233,7 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board .note{font-size:.88rem;color:var(--muted);margin:.35rem 0 .55rem}
 .review-board .seal-facts{display:block;font-size:.72rem;color:var(--muted);margin-top:.35rem;line-height:1.3;max-height:2.7em;overflow:hidden}
 .review-board .check{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board button.check{cursor:pointer;line-height:1.2}
 .review-board .check.pass{background:#dcfce7;color:#166534;border-color:#86efac}
 .review-board .check.fail{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .review-board .check.skipped{background:#fef3c7;color:#92400e;border-color:#fcd34d}
@@ -258,6 +259,7 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board .review-meta{color:var(--muted);margin:.15rem 0 .9rem}
 .review-board table.review-queue{width:100%;border-collapse:collapse;background:var(--card);font-size:.92rem}
 .review-board table.review-queue th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:.4rem .45rem;border-bottom:1px solid var(--line)}
+.review-board table.review-queue th.tips{cursor:help}
 .review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
 .review-board table.review-queue p{margin:.15rem 0}
 .review-board select.verdict{font:inherit;max-width:11rem}

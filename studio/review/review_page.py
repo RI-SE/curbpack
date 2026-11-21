@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from app.pages import _flash, _reading, page, repo_config_panel
 from checks.labels import check_caption, check_short_label
+from studio.claim.researcher import check_editor_dialog, check_form_script, _check_editor_values
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 from review.present import UNCHANGED
 from studio.compile.impl.report import assessment_identity
@@ -324,12 +325,17 @@ def _review_queue(
                     )
                     requirement_written = True
                 if index == 0:
+                    dialog_id, update_dialog = _failed_check_dialog(
+                        claim, repo, document, open_ids, requirement_id
+                    )
+                    if update_dialog:
+                        dialogs.append(update_dialog)
                     cells.append(
                         f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
                         f"{_file_cell(claim, open_ids, repo, document, discover_href)}</td>"
                     )
                     cells.append(
-                        f'<td rowspan="{claim_span}">{_checks_cell(claim)}</td>'
+                        f'<td rowspan="{claim_span}">{_checks_cell(claim, dialog_id)}</td>'
                     )
                 remedy, verdict, comment, dialog = _deviation_cells(
                     claim, deviation, assessments, editable, index == 0
@@ -358,7 +364,9 @@ def _review_queue(
         table = (
             '<table class="review-queue"><thead><tr>'
             "<th>Requirement</th><th>File</th><th>Checks</th>"
-            "<th>Remedy</th><th>Verdict</th><th>Comment</th>"
+            '<th class="tips" title="Wrench: tip from the Claim. '
+            'Scroll: tip from the Requirement.">Tips</th>'
+            "<th>Verdict</th><th>Comment</th>"
             "</tr></thead>"
             + "".join(body_rows)
             + "</table>"
@@ -370,7 +378,10 @@ def _review_queue(
         )
     note_lines.extend(notes)
     changed_note = "".join(f'<p class="muted">{html.escape(line)}</p>' for line in note_lines)
-    return meta + table + changed_note + "".join(dialogs) + _comment_script()
+    script = _comment_script()
+    if any("check-form" in item for item in dialogs):
+        script += "<script>\n" + check_form_script() + "\n</script>"
+    return meta + table + changed_note + "".join(dialogs) + script
 
 
 def _claim_deviations(claim: dict) -> list[dict]:
@@ -419,29 +430,14 @@ def _file_cell(
             seen.add(visible)
             links.append(visible)
     if not links:
-        if edit_href:
-            links.append(
-                f'<a class="edit-review" data-leave="1" href="{html.escape(edit_href)}">'
-                f"{html.escape(claim_id)}</a>"
-            )
-        else:
-            links.append(f"<code>{html.escape(claim_id)}</code>")
+        links.append(f"<code>{html.escape(claim_id)}</code>")
     extras = []
-    edit_index = ""
     unsafe = False
     for check in claim.get("checks") or []:
         if not isinstance(check, dict):
             continue
-        edit = str(check.get("edit") or "")
-        if edit == "ok" and not edit_index:
-            edit_index = str(check.get("index"))
-        elif edit == "unsafe":
+        if str(check.get("edit") or "") == "unsafe":
             unsafe = True
-    if edit_href:
-        extras.append(
-            f'<a class="edit-review" data-leave="1" data-edit-check="{html.escape(edit_index)}" '
-            f'href="{html.escape(edit_href)}">Edit</a>'
-        )
     if unsafe:
         extras.append(
             '<span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
@@ -480,16 +476,17 @@ def _claim_edit_href(claim: dict, open_ids: list[str], repo: str, document: str)
     return ""
 
 
-def _checks_cell(claim: dict) -> str:
+def _checks_cell(claim: dict, dialog_id: str = "") -> str:
     pills = []
     for check in claim.get("checks") or []:
         if not isinstance(check, dict):
             continue
         status = str(check.get("status") or "")
         name = str(check.get("check") or "")
+        opener = _check_opener(claim, check, dialog_id) if status == "fail" else ""
         pills.append(
             f'<span data-check="{html.escape(name)}" data-status="{html.escape(status)}">'
-            f"{_check_pill(check, status)}{_unlinked_args(check)}</span>"
+            f"{_check_pill(check, status, opener)}{_unlinked_args(check)}</span>"
         )
     binding = str(claim.get("binding") or "")
     if binding in {"stale", "missing"}:
@@ -1145,13 +1142,93 @@ def _review_path_cell(
     return " ".join(visible), path_bits
 
 
-def _check_pill(check: dict, status: str) -> str:
+def _check_pill(check: dict, status: str, opener: str = "") -> str:
     kind = status if status in {"pass", "fail", "skipped"} else "fail"
     entry = check if isinstance(check, dict) else {"check": str(check or "")}
-    return (
-        f'<span class="check {html.escape(kind)}" title="{html.escape(check_caption(entry))}">'
-        f"{html.escape(check_short_label(entry))} · {html.escape(status)}</span>"
+    label = (
+        f'{html.escape(check_short_label(entry))} · {html.escape(status)}'
     )
+    title = html.escape(check_caption(entry))
+    if opener:
+        return (
+            f'<button type="button" class="check {html.escape(kind)}" title="{title}" {opener}>'
+            f"{label}</button>"
+        )
+    return (
+        f'<span class="check {html.escape(kind)}" title="{title}">'
+        f"{label}</span>"
+    )
+
+
+def _check_opener(claim: dict, check: dict, dialog_id: str) -> str:
+    if not dialog_id or str(check.get("edit") or "") != "ok":
+        return ""
+    index = check.get("index")
+    if not isinstance(index, int):
+        return ""
+    path = _check_file(check)
+    values = json.dumps(_check_editor_values(check, path))
+    return (
+        f'data-check-dialog="{html.escape(dialog_id)}" data-index="{index}" '
+        f'data-path="{html.escape(path)}" data-values="{html.escape(values)}"'
+    )
+
+
+def _check_file(check: dict) -> str:
+    args = check.get("args") if isinstance(check.get("args"), dict) else {}
+    single = args.get("path")
+    if isinstance(single, str) and single.strip():
+        return single.strip()
+    listed = args.get("paths")
+    if isinstance(listed, list):
+        for item in listed:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+    for entry in check.get("paths") or []:
+        if isinstance(entry, dict) and str(entry.get("path") or "").strip():
+            return str(entry["path"]).strip()
+    return ""
+
+
+def _failed_check_dialog(
+    claim: dict, repo: str, document: str, open_ids: list[str], requirement_id: str
+) -> tuple[str, str]:
+    claim_id = str(claim.get("id") or "")
+    pack_id = str(claim.get("pack_id") or "")
+    requirement = str(claim.get("recorded_requirement_id") or requirement_id or "")
+    if not claim_id or not repo or not pack_id or not requirement or requirement == "Unresolved Claims":
+        return "", ""
+    editable = [
+        check
+        for check in claim.get("checks") or []
+        if isinstance(check, dict)
+        and str(check.get("status") or "") == "fail"
+        and str(check.get("edit") or "") == "ok"
+        and isinstance(check.get("index"), int)
+    ]
+    if not editable:
+        return "", ""
+    dialog_id = "check-update-" + re.sub(r"[^A-Za-z0-9_-]", "-", claim_id)
+    path = _check_file(editable[0])
+    return_to = (
+        f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
+    )
+    hidden = (
+        f'<input type="hidden" name="repo_id" value="{html.escape(repo)}">'
+        f'<input type="hidden" name="pack" value="{html.escape(pack_id)}">'
+        f'<input type="hidden" name="requirement_id" value="{html.escape(requirement)}">'
+        f'<input type="hidden" name="claim_id" value="{html.escape(claim_id)}">'
+        '<input type="hidden" name="edit_index" value="">'
+        f'<input type="hidden" name="return_to" value="{html.escape(return_to)}">'
+    )
+    dialog = check_editor_dialog(
+        path=path,
+        hidden=hidden,
+        submit_label="Update",
+        cancel_label="Cancel",
+        dialog_id=dialog_id,
+    )
+    return dialog_id, dialog
 
 
 def _review_check_counts(group: dict) -> dict[str, int]:

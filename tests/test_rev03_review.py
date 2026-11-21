@@ -930,11 +930,17 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                         safe="",
                     )
                 )
-            self.assertIn(">Edit</a>", page)
-            self.assertIn('data-edit-check="0"', page)
-            self.assertIn("return_to=", page.replace("&amp;", "&"))
-            self.assertNotIn('name="check"', page)
+            self.assertNotIn(">Edit</a>", page)
+            self.assertIn('data-check-dialog="check-update-edit-note"', page)
+            self.assertIn(">Exists · fail</button>", page)
+            self.assertIn(">Update</button>", page)
+            self.assertIn(">Cancel</button>", page)
+            self.assertIn('class="check-kind"', page)
+            self.assertIn('name="claim_id" value="edit-note"', page)
+            self.assertIn('name="edit_index"', page)
+            self.assertIn('name="return_to" value="/review?repo=alpha', page)
             self.assertNotIn('name="args"', page)
+            self.assertNotIn('name="checks"', page)
             self.assertIn('id="claim-edit-note"', claims)
             self.assertIn("exist", html.unescape(claims))
             self.assertIn("edit.md", html.unescape(claims))
@@ -945,6 +951,8 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             with _serve(workspace) as base:
                 unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
             self.assertNotIn(">Edit</a>", unsafe)
+            self.assertNotIn(">Update</button>", unsafe)
+            self.assertNotIn("data-check-dialog", unsafe)
             self.assertIn("cannot be matched safely", unsafe)
 
     def test_claims_editor_save_returns_to_review_and_leaves_run_bytes(self):
