@@ -496,7 +496,8 @@ def _deviation_checks(claim: dict, deviation: dict, dialog_id: str) -> str:
         binding = str(claim.get("binding") or "")
         if binding in {"stale", "missing"}:
             bind_id = _binding_dialog_id(claim)
-            label = f"Binding {html.escape(binding)}"
+            name = "Requirement Binding" if binding == "stale" else f"Binding {binding}"
+            label = f'{_status_mark("fail", f"Binding {binding}")}{html.escape(name)}'
             if bind_id:
                 pills.append(
                     f'<button type="button" class="check fail" data-binding="{html.escape(binding)}" '
@@ -716,17 +717,28 @@ def _requirement_remedy(claim: dict) -> str:
     )
 
 
-def _icon_svg(body: str, *, label: str = "", css: str) -> str:
+def _icon_svg(body: str, *, label: str = "", css: str, size: int = 16) -> str:
     named = (
         f' role="img" aria-label="{html.escape(label)}" title="{html.escape(label)}"'
         if label
         else ' aria-hidden="true"'
     )
     return (
-        f'<svg class="{css}" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        f'<svg class="{css}" viewBox="0 0 24 24" width="{size}" height="{size}" fill="none" '
         f'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
         f"{named}>{body}</svg>"
     )
+
+
+def _status_mark(status: str, label: str = "") -> str:
+    """A check before a passing check, a cross before a failed one."""
+    if status == "pass":
+        body = '<path d="M20 6 9 17l-5-5"/>'
+    elif status == "fail":
+        body = '<path d="M18 6 6 18"/><path d="M6 6l12 12"/>'
+    else:
+        return ""
+    return _icon_svg(body, label=label or status, css="mark", size=14)
 
 
 def _remedy_icon(kind: str, label: str) -> str:
@@ -1233,9 +1245,9 @@ def _review_path_cell(
 def _check_pill(check: dict, status: str, opener: str = "") -> str:
     kind = status if status in {"pass", "fail", "skipped"} else "fail"
     entry = check if isinstance(check, dict) else {"check": str(check or "")}
-    label = (
-        f'{html.escape(check_short_label(entry))} · {html.escape(status)}'
-    )
+    name = html.escape(check_short_label(entry))
+    mark = _status_mark(status)
+    label = f"{mark}{name}" if mark else f"{name} · {html.escape(status)}"
     title = html.escape(check_caption(entry))
     if opener:
         return (

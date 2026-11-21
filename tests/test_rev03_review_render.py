@@ -149,27 +149,43 @@ class ReviewRenderStructureTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-LABELS")
-            self.assertIn('class="check pass" title="File is present">Exists · pass<', group)
+            self.assertIn('class="check pass" title="File is present"><svg class="mark"', group)
+            self.assertIn('aria-label="pass"', group)
+            self.assertIn('d="M20 6 9 17l-5-5"', group)
+            self.assertIn("</svg>Exists</span>", group)
             self.assertIn(
-                'class="check fail" title="File has the expected content">Contents · fail<',
+                'class="check fail" title="File has the expected content"><svg class="mark"',
                 group,
             )
+            self.assertIn('aria-label="fail"', group)
+            self.assertIn('d="M18 6 6 18"', group)
+            self.assertIn("</svg>Contents</span>", group)
             self.assertIn(
-                'class="check fail" title="File must not contain this text">Forbidden text · fail<',
+                'class="check fail" title="File must not contain this text"><svg class="mark"',
                 group,
             )
+            self.assertIn("</svg>Forbidden text</span>", group)
             self.assertIn(
                 'class="check skipped" title="File is not a placeholder">Anti-placeholder · skipped<',
                 group,
             )
-            self.assertIn('class="check pass" title="File is recent enough">Fresh · pass<', group)
-            self.assertIn('class="check pass" title="Written by the claimed author">Owned · pass<', group)
-            self.assertIn('class="check fail" title="Banned package version">Banned · fail<', group)
-            self.assertIn('class="check fail" title="custom_probe">custom_probe · fail<', group)
+            self.assertIn('class="check pass" title="File is recent enough"><svg class="mark"', group)
+            self.assertIn("</svg>Fresh</span>", group)
+            self.assertIn(
+                'class="check pass" title="Written by the claimed author"><svg class="mark"',
+                group,
+            )
+            self.assertIn("</svg>Owned</span>", group)
+            self.assertIn('class="check fail" title="Banned package version"><svg class="mark"', group)
+            self.assertIn("</svg>Banned</span>", group)
+            self.assertIn('class="check fail" title="custom_probe"><svg class="mark"', group)
+            self.assertIn("</svg>custom_probe</span>", group)
+            self.assertNotIn(" · pass<", group)
+            self.assertNotIn(" · fail<", group)
             for row in group.split("<tr>"):
-                self.assertFalse("Exists · pass" in row and "Contents · fail" in row)
-                self.assertFalse("Contents · fail" in row and "Forbidden text · fail" in row)
-                self.assertFalse("Forbidden text · fail" in row and "Banned · fail" in row)
+                self.assertFalse("</svg>Exists" in row and "</svg>Contents" in row)
+                self.assertFalse("</svg>Contents" in row and "</svg>Forbidden text" in row)
+                self.assertFalse("</svg>Forbidden text" in row and "</svg>Banned" in row)
             self.assertIn("too short", group)
             self.assertIn("Add a paragraph.", group)
             self.assertIn("found TODO", group)
@@ -199,7 +215,12 @@ class ReviewRenderStructureTest(unittest.TestCase):
         ).decode()
         self.assertNotIn(">Rebind</a>", page)
         self.assertIn('data-binding-dialog="binding-claim-a"', page)
-        self.assertIn(">Binding stale</button>", page)
+        self.assertIn('aria-label="Binding stale"', page)
+        self.assertIn("Requirement Binding</button>", page)
+        self.assertNotIn(">Binding stale<", page)
+        button = page.split('data-binding-dialog="binding-claim-a"', 1)[1].split("</button>", 1)[0]
+        self.assertIn('d="M18 6 6 18"', button)
+        self.assertNotIn('d="M20 6 9 17l-5-5"', button)
         self.assertIn(
             "The Requirement has changed since this Claim was bound to it. "
             "Click the check to rebind this Claim.",
@@ -270,7 +291,9 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         ).decode()
         rows = re.findall(r"<tr>(.*?)</tr>", page, re.S)
-        exist = next(row for row in rows if "Exists · fail" in row)
+        exist = next(
+            row for row in rows if 'data-check="exist"' in row and 'data-status="fail"' in row
+        )
         cells = re.findall(r"<td\b.*?</td>", exist, re.S)
         file_cell = next(cell for cell in cells if "data-claim=" in cell)
         self.assertIn("(missing)", file_cell)
@@ -282,14 +305,14 @@ class ReviewRenderStructureTest(unittest.TestCase):
         )
         self.assertIn('aria-label="Check remediation"', cells[3])
         self.assertNotIn("is absent", page)
-        forbidden = [row for row in rows if "Forbidden text · fail" in row]
+        forbidden = [row for row in rows if "Forbidden text</" in row]
         self.assertEqual(len(forbidden), 2)
         absent = next(row for row in forbidden if "matches forbidden pattern" not in row)
         matched = next(row for row in forbidden if "matches forbidden pattern" in row)
         self.assertIn("Find the file first.", absent)
         self.assertIn("Remove the forbidden text.", matched)
         self.assertNotIn("Find the file first.", matched)
-        placeholder = next(row for row in rows if "Anti-placeholder · fail" in row)
+        placeholder = next(row for row in rows if "Anti-placeholder</" in row)
         self.assertIn("Replace the placeholder text.", placeholder)
         self.assertIn("contains placeholder text", placeholder)
 

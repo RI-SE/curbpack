@@ -232,7 +232,8 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board .pill-bad{background:#fee2e2;color:#991b1b}
 .review-board .note{font-size:.88rem;color:var(--muted);margin:.35rem 0 .55rem}
 .review-board .seal-facts{display:block;font-size:.72rem;color:var(--muted);margin-top:.35rem;line-height:1.3;max-height:2.7em;overflow:hidden}
-.review-board .check{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board .check{display:inline-flex;align-items:center;gap:.25rem;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board .check .mark{display:block;flex:none}
 .review-board button.check{cursor:pointer;line-height:1.2}
 .review-board .check.pass{background:#dcfce7;color:#166534;border-color:#86efac}
 .review-board .check.fail{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
