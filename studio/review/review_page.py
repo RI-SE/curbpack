@@ -11,6 +11,7 @@ from urllib.parse import quote
 from app.pages import _flash, _reading, page, repo_config_panel
 from checks.labels import check_caption
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
+from review.present import UNCHANGED
 from studio.compile.impl.report import assessment_identity
 
 
@@ -155,11 +156,9 @@ def review_page(
     if saved and signed:
         decision_forms = f"""
 <p data-decision>{html.escape(decision)}</p>
-<p class="muted">Review decision. These words cover the whole run. Check results stay as recorded.</p>
 """
     elif saved:
         decision_forms = f"""
-<p class="muted">Review decision. One set of words for this whole run. Saving writes them on this draft. Check results stay as recorded.</p>
 <form method="post" action="/review" data-include-assessments>
 {hidden}
 <label>Decision</label>
@@ -247,51 +246,490 @@ def _review_groups(
         f"<p>{packs}</p>"
         f"{report_label_html}"
         "</section>"
+        f"{_secondary_details(presentation)}"
     )
-    groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
-    open_ids = [str(group.get("id") or "") for group in groups if group.get("open")]
-    open_count = len(open_ids)
-    total = len(groups)
-    fail_open = sum(1 for group in groups if group.get("open") and "fail" in str(group.get("result_summary") or ""))
-    topline = (
-        f'<div class="topline">'
-        f"<p style=\"margin:0\">{open_count} of {total} requirements need attention. "
-        f"{'Failed Checks remain visible for review. ' if fail_open else ''}"
-        f"Passed Requirements stay collapsed. "
-        f"Expand a row to inspect paths and Checks, then Edit or Re-Discover as needed.</p>"
-        f'<p class="muted" style="margin:.65rem 0 0">'
-        f"{open_count} open · {total - open_count} collapsed · "
-        f"The report, the decision, and the seal stay separate.</p>"
-        f'<p class="muted" style="margin:.65rem 0 0">'
-        f"Check is the machine result (pass, fail, or skipped). "
-        f"Requirement binding is whether this run loaded the Requirement version the Claim recorded. "
-        f"The review decision is written on a report, separately.</p>"
-        f"</div>"
+    queue = _review_queue(
+        presentation, door, discover_href, assessments or {}, editable
     )
+    return header_html, "", queue
+
+
+def _review_queue(
+    presentation: dict,
+    door: dict,
+    discover_href: str,
+    assessments: dict,
+    editable: bool,
+) -> str:
+    """Attention queue. Passing Claims stay out of the table."""
     repo = quote(str(door.get("repo_id") or ""), safe="")
     selected_result = quote(str(door.get("selected_result") or ""), safe="")
     selected_report = quote(str(door.get("selected_report") or ""), safe="")
-    document = (
-        f"report={selected_report}" if selected_report else f"result={selected_result}"
-    )
-    attention_parts = []
-    collapsed_parts = []
-    for group in groups:
-        block = _review_requirement_card(
-            group, open_ids, repo, document, discover_href, assessments or {}, editable
+    document = f"report={selected_report}" if selected_report else f"result={selected_result}"
+    open_ids = [
+        str(group.get("id") or "")
+        for group in presentation.get("groups") or []
+        if isinstance(group, dict) and group.get("open")
+    ]
+    body_rows: list[str] = []
+    dialogs: list[str] = []
+    notes: list[str] = []
+    claim_count = 0
+    deviation_count = 0
+    changed = 0
+
+    def remember(text: str) -> None:
+        if text and text != UNCHANGED and text not in notes:
+            notes.append(text)
+
+    for group in presentation.get("groups") or []:
+        if not isinstance(group, dict):
+            continue
+        queued = []
+        for claim in group.get("claims") or []:
+            if not isinstance(claim, dict):
+                continue
+            deviations = _claim_deviations(claim)
+            if deviations:
+                queued.append((claim, deviations))
+            else:
+                if _claim_changed(claim):
+                    changed += 1
+                    for line in claim.get("sentences") or []:
+                        remember(str(line))
+                for check in claim.get("checks") or []:
+                    if not isinstance(check, dict):
+                        continue
+                    for entry in check.get("paths") or []:
+                        if isinstance(entry, dict) and entry.get("state") == "missing":
+                            remember(
+                                f"Path {entry.get('path')} is missing in the working tree now."
+                            )
+        if not queued:
+            continue
+        requirement_span = sum(len(item[1]) for item in queued)
+        requirement_written = False
+        requirement_id = str(group.get("id") or "")
+        group_rows: list[str] = []
+        for claim, deviations in queued:
+            claim_count += 1
+            deviation_count += len(deviations)
+            claim_span = len(deviations)
+            for index, deviation in enumerate(deviations):
+                cells = []
+                if not requirement_written:
+                    cells.append(
+                        f'<td rowspan="{requirement_span}">'
+                        f"{_requirement_link(claim, requirement_id, repo)}</td>"
+                    )
+                    requirement_written = True
+                if index == 0:
+                    cells.append(
+                        f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
+                        f"{_file_cell(claim, open_ids, repo, document, discover_href)}</td>"
+                    )
+                    cells.append(
+                        f'<td rowspan="{claim_span}">{_checks_cell(claim)}</td>'
+                    )
+                remedy, verdict, comment, dialog = _deviation_cells(
+                    claim, deviation, assessments, editable, index == 0
+                )
+                dialogs.append(dialog)
+                cells.extend((f"<td>{remedy}</td>", f"<td>{verdict}</td>", f"<td>{comment}</td>"))
+                group_rows.append("<tr>" + "".join(cells) + "</tr>")
+        body_rows.append(
+            f'<tbody data-requirement="{html.escape(requirement_id)}">'
+            + "".join(group_rows)
+            + "</tbody>"
         )
-        if group.get("open"):
-            attention_parts.append(block)
+    when = _reviewed_when(door)
+    def _plural(count: int, word: str) -> str:
+        return f"{count} {word}" + ("" if count == 1 else "s")
+
+    count = (
+        f"{_plural(claim_count, 'claim')} · {_plural(deviation_count, 'deviation')}"
+        if claim_count
+        else "No claims need attention"
+    )
+    meta = f'<p class="review-meta">{html.escape(when + " · " if when else "")}{html.escape(count)}</p>'
+    if not body_rows:
+        table = "<p>No claims need attention.</p>"
+    else:
+        table = (
+            '<table class="review-queue"><thead><tr>'
+            "<th>Requirement</th><th>File</th><th>Checks</th>"
+            "<th>Remedy</th><th>Verdict</th><th>Comment</th>"
+            "</tr></thead>"
+            + "".join(body_rows)
+            + "</table>"
+        )
+    note_lines = []
+    if changed:
+        note_lines.append(
+            f"{changed} {'claim' if changed == 1 else 'claims'} changed since this run."
+        )
+    note_lines.extend(notes)
+    changed_note = "".join(f'<p class="muted">{html.escape(line)}</p>' for line in note_lines)
+    return meta + table + changed_note + "".join(dialogs) + _comment_script()
+
+
+def _claim_deviations(claim: dict) -> list[dict]:
+    found = []
+    for check in claim.get("checks") or []:
+        if isinstance(check, dict) and str(check.get("status") or "") in {"fail", "skipped"}:
+            found.append({"kind": "check", "check": check})
+    if str(claim.get("binding") or "") in {"stale", "missing"}:
+        found.append({"kind": "binding"})
+    return found
+
+
+def _claim_changed(claim: dict) -> bool:
+    if claim.get("changed"):
+        return True
+    return any(
+        "relationship changed" in str(line).lower()
+        for line in claim.get("sentences") or []
+    )
+
+
+def _requirement_link(claim: dict, requirement_id: str, repo: str) -> str:
+    label = html.escape(requirement_id or "Unresolved")
+    inspect_id = str(claim.get("inspect_requirement_id") or "")
+    if not inspect_id or not repo or requirement_id == "Unresolved Claims":
+        return f"<code>{label}</code>"
+    pack = quote(str(claim.get("pack_id") or ""), safe="")
+    href = f"/requirements/requirement/{quote(inspect_id, safe='')}?repo={repo}"
+    if pack:
+        href += f"&pack={pack}"
+    return f'<a data-leave="1" href="{html.escape(href)}"><code>{label}</code></a>'
+
+
+def _file_cell(
+    claim: dict, open_ids: list[str], repo: str, document: str, discover_href: str
+) -> str:
+    claim_id = str(claim.get("id") or "")
+    links = []
+    seen = set()
+    edit_href = _claim_edit_href(claim, open_ids, repo, document)
+    for check in claim.get("checks") or []:
+        if not isinstance(check, dict):
+            continue
+        visible, _bits = _review_path_cell(check, open_ids, repo, document)
+        if visible and visible not in seen:
+            seen.add(visible)
+            links.append(visible)
+    if not links:
+        if edit_href:
+            links.append(
+                f'<a class="edit-review" data-leave="1" href="{html.escape(edit_href)}">'
+                f"{html.escape(claim_id)}</a>"
+            )
         else:
-            collapsed_parts.append(block)
-    attention = ""
-    if attention_parts:
-        attention = "<h2>Requirements needing attention</h2>" + "".join(attention_parts)
-    collapsed = ""
-    if collapsed_parts:
-        collapsed = "<h2>Passed / unchanged</h2>" + "".join(collapsed_parts)
-    summary = "<h2>Summary</h2>" + topline
-    return header_html, summary, attention + collapsed
+            links.append(f"<code>{html.escape(claim_id)}</code>")
+    extras = []
+    edit_index = ""
+    unsafe = False
+    for check in claim.get("checks") or []:
+        if not isinstance(check, dict):
+            continue
+        edit = str(check.get("edit") or "")
+        if edit == "ok" and not edit_index:
+            edit_index = str(check.get("index"))
+        elif edit == "unsafe":
+            unsafe = True
+    if edit_href:
+        extras.append(
+            f'<a class="edit-review" data-leave="1" data-edit-check="{html.escape(edit_index)}" '
+            f'href="{html.escape(edit_href)}">Edit</a>'
+        )
+    if unsafe:
+        extras.append(
+            '<span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
+        )
+    if str(claim.get("binding") or "") in {"stale", "missing"} and edit_href:
+        extras.append(f'<a data-leave="1" href="{html.escape(edit_href)}">Rebind</a>')
+    status = str(claim.get("status") or "")
+    if status in {"fail", "skipped"} and claim_id:
+        if discover_href:
+            extras.append(
+                f'<a class="discover-again" data-leave="1" href="{html.escape(discover_href)}">Re-Discover</a>'
+            )
+        else:
+            extras.append(
+                f'<button type="button" class="link discover-again" '
+                f'data-dialog="{html.escape(_dialog_id(claim_id))}">Re-Discover</button>'
+            )
+    extra = f'<div class="file-actions">{"".join(extras)}</div>' if extras else ""
+    return "".join(links) + extra
+
+
+def _claim_edit_href(claim: dict, open_ids: list[str], repo: str, document: str) -> str:
+    claim_id = str(claim.get("id") or "")
+    if not claim_id or not repo:
+        return ""
+    for check in claim.get("checks") or []:
+        if isinstance(check, dict) and str(check.get("edit") or "") == "ok":
+            return_to = (
+                f"/review?repo={repo}&{document}"
+                f"&expanded={quote(','.join(open_ids), safe='')}"
+            )
+            return (
+                f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
+                f"#claim-{quote(claim_id, safe='')}"
+            )
+    return ""
+
+
+def _checks_cell(claim: dict) -> str:
+    pills = []
+    for check in claim.get("checks") or []:
+        if not isinstance(check, dict):
+            continue
+        status = str(check.get("status") or "")
+        name = str(check.get("check") or "")
+        pills.append(
+            f'<span data-check="{html.escape(name)}" data-status="{html.escape(status)}">'
+            f"{_check_pill(name, status)}{_unlinked_args(check)}</span>"
+        )
+    binding = str(claim.get("binding") or "")
+    if binding in {"stale", "missing"}:
+        pills.append(
+            f'<span class="check fail" data-binding="{html.escape(binding)}">'
+            f"Binding {html.escape(binding)}</span>"
+        )
+    return " ".join(pills)
+
+
+def _unlinked_args(check: dict) -> str:
+    """Show path arguments for a Check that has no file link. Do not invent a link."""
+    if check.get("paths") or check.get("dep_ban"):
+        return ""
+    args = check.get("args") if isinstance(check.get("args"), dict) else {}
+    names: list[str] = []
+    path = args.get("path")
+    if isinstance(path, str) and path:
+        names.append(path)
+    paths = args.get("paths")
+    if isinstance(paths, list):
+        names.extend(item for item in paths if isinstance(item, str) and item and item not in names)
+    if not names:
+        return ""
+    return " " + " ".join(f"<code>{html.escape(name)}</code>" for name in names)
+
+
+def _secondary_details(presentation: dict) -> str:
+    """Seal readings and Check arguments stay out of the queue."""
+    seals = []
+    arguments = []
+    for group in presentation.get("groups") or []:
+        if not isinstance(group, dict):
+            continue
+        label = str(group.get("seal_label") or "")
+        seal = group.get("seal") if isinstance(group.get("seal"), dict) else None
+        if label or seal:
+            line = _seal_line(seal) if seal else ""
+            seals.append(
+                f'<p data-seal-label="{html.escape(label)}">{html.escape(label)}{line}</p>'
+            )
+        for claim in group.get("claims") or []:
+            if not isinstance(claim, dict):
+                continue
+            chain = _chain_html(claim)
+            if chain:
+                seals.append(f'<p class="muted">{chain}</p>')
+            claim_label = str(claim.get("seal_label") or "")
+            claim_seal = claim.get("seal") if isinstance(claim.get("seal"), dict) else None
+            if claim_label or claim_seal:
+                line = _seal_line(claim_seal) if claim_seal else ""
+                seals.append(
+                    f'<p data-claim-seal="{html.escape(claim_label)}">'
+                    f"{html.escape(str(claim.get('id') or ''))}{line}</p>"
+                )
+            for check in claim.get("checks") or []:
+                if not isinstance(check, dict):
+                    continue
+                args = check.get("args") if isinstance(check.get("args"), dict) else {}
+                if not args:
+                    continue
+                arguments.append(
+                    '<details class="technical"><summary>Technical details</summary>'
+                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></details>"
+                )
+    body = "".join(seals) + "".join(arguments)
+    if not body:
+        return ""
+    return f'<section data-secondary>{body}</section>'
+
+
+def _deviation_cells(
+    claim: dict, deviation: dict, assessments: dict, editable: bool, show_requirement_hint: bool
+) -> tuple[str, str, str, str]:
+    if deviation["kind"] == "check":
+        check = deviation["check"]
+        identity = {
+            "kind": "check",
+            "claim_id": claim.get("id"),
+            "claim_digest": claim.get("digest"),
+            "index": check.get("index"),
+        }
+        detail = str(check.get("detail") or "")
+        hint = str(check.get("remediation_hint") or "")
+        remedy = f'<p data-detail>{html.escape(detail)}</p>' if detail else ""
+        if hint:
+            remedy += (
+                f'<p data-check-remediation>Check remediation: {html.escape(hint)}</p>'
+            )
+    else:
+        identity = {
+            "kind": "binding",
+            "claim_id": claim.get("id"),
+            "claim_digest": claim.get("digest"),
+            "namespace": claim.get("namespace"),
+            "pack_id": claim.get("pack_id"),
+            "requirement_id": claim.get("recorded_requirement_id"),
+            "requirement_digest": claim.get("requirement_digest"),
+            "binding": claim.get("binding"),
+        }
+        remedy = (
+            f'<p data-binding="{html.escape(str(claim.get("binding") or ""))}">'
+            f'Requirement binding is {html.escape(str(claim.get("binding") or ""))}. '
+            "The Check status is unchanged.</p>"
+        )
+    if show_requirement_hint:
+        remedy += _requirement_remedy(claim)
+    dialog_id = "comment-" + "-".join(
+        str(part or "")
+        for part in (
+            identity.get("kind"),
+            identity.get("claim_id"),
+            identity.get("index"),
+            identity.get("binding"),
+        )
+    )
+    dialog_id = re.sub(r"[^A-Za-z0-9_-]", "-", dialog_id)
+    verdict, comment, dialog = _verdict_controls(
+        identity, claim, assessments, editable, dialog_id
+    )
+    return remedy, verdict, comment, dialog
+
+
+def _requirement_remedy(claim: dict) -> str:
+    hint_from = str(claim.get("requirement_hint_from") or "")
+    hint = str(claim.get("requirement_hint") or "")
+    if hint_from == "unresolved":
+        return (
+            '<p data-requirement-remediation data-hint-from="unresolved">'
+            "Requirement remediation for this run is unavailable.</p>"
+        )
+    if not hint:
+        return ""
+    return (
+        f'<p data-requirement-remediation data-hint-from="{html.escape(hint_from)}">'
+        f"Requirement remediation: {html.escape(hint)}</p>"
+    )
+
+
+def _verdict_controls(
+    identity: dict, claim: dict, assessments: dict, editable: bool, dialog_id: str
+) -> tuple[str, str, str]:
+    saved = assessments.get(assessment_identity(identity))
+    disposition = str(saved.get("disposition") or "") if isinstance(saved, dict) else ""
+    text = str(saved.get("text") or "") if isinstance(saved, dict) else ""
+    hidden = _assessment_hidden(identity, claim)
+    if not editable:
+        if disposition == "accept":
+            label = "Accept"
+        elif disposition == "must_fix":
+            label = "Must be fixed"
+        else:
+            label = "Not assessed"
+        carried = hidden + (
+            f'<input type="hidden" name="assess_disposition" form="review-compile" data-assessment-field '
+            f'value="{html.escape(disposition)}">'
+            f'<input type="hidden" name="assess_text" form="review-compile" data-assessment-field '
+            f'value="{html.escape(text)}">'
+        )
+        verdict = (
+            f'{carried}<span data-disposition="{html.escape(disposition or "not_assessed")}">'
+            f"{html.escape(label)}</span>"
+        )
+    else:
+        selected = {
+            "": " selected" if disposition == "" else "",
+            "accept": " selected" if disposition == "accept" else "",
+            "must_fix": " selected" if disposition == "must_fix" else "",
+        }
+        verdict = f"""
+{hidden}
+<select class="verdict" name="assess_disposition" form="review-compile" data-assessment data-assessment-field>
+<option value=""{selected[""]}>Not assessed</option>
+<option value="accept"{selected["accept"]}>Accept</option>
+<option value="must_fix"{selected["must_fix"]}>Must be fixed</option>
+</select>
+"""
+    mark = " has-comment" if text.strip() else ""
+    comment = (
+        f'<button type="button" class="comment-mark{mark}" data-comment-for="{html.escape(dialog_id)}" '
+        f'aria-label="Comment">✎</button>'
+    )
+    if editable:
+        editor = (
+            f'<textarea name="assess_text" form="review-compile" data-assessment data-assessment-field>'
+            f"{html.escape(text)}</textarea>"
+        )
+    else:
+        editor = f"<p>{html.escape(text or 'No comment.')}</p>"
+    dialog = (
+        f'<dialog id="{html.escape(dialog_id)}" class="comment-editor">'
+        "<p>Comment</p>"
+        f"{editor}"
+        '<p><button type="button" class="secondary" data-close-comment>Close</button></p>'
+        "</dialog>"
+    )
+    return verdict, comment, dialog
+
+
+def _reviewed_when(door: dict) -> str:
+    for key in ("selected_result", "source_result", "selected_report"):
+        name = Path(str(door.get(key) or "")).name
+        stamp = name
+        for prefix in ("run-result_", "review-report_"):
+            if stamp.startswith(prefix):
+                stamp = stamp.removeprefix(prefix)
+        stamp = stamp.removesuffix(".json")
+        if (
+            len(stamp) == 16
+            and stamp.endswith("Z")
+            and stamp[8] == "T"
+            and stamp[:8].isdigit()
+            and stamp[9:15].isdigit()
+        ):
+            return (
+                f"{stamp[0:4]}-{stamp[4:6]}-{stamp[6:8]} "
+                f"{stamp[9:11]}:{stamp[11:13]}:{stamp[13:15]} UTC"
+            )
+    return ""
+
+
+def _comment_script() -> str:
+    return """
+<script>
+(function() {
+  document.querySelectorAll("[data-comment-for]").forEach(function(button) {
+    button.addEventListener("click", function() {
+      var dialog = document.getElementById(button.getAttribute("data-comment-for"));
+      if (dialog && dialog.showModal) dialog.showModal();
+    });
+  });
+  document.querySelectorAll("[data-close-comment]").forEach(function(button) {
+    button.addEventListener("click", function() {
+      var dialog = button.closest("dialog");
+      if (dialog) dialog.close();
+    });
+  });
+})();
+</script>
+"""
 
 
 def _review_requirement_card(
@@ -1003,15 +1441,7 @@ def _review_start(door: dict, report: dict | None) -> str:
 
 
 def _review_intro(door: dict, report: dict | None) -> str:
-    if report is None:
-        return ""
-    if not (
-        str(door.get("selected_result") or "")
-        or str(door.get("selected_report") or "")
-        or str(door.get("source_result") or "")
-    ):
-        return ""
-    return '<p class="muted">These are the items that need attention for this Check run.</p>'
+    return ""
 
 
 def _run_file_name(door: dict, saved: bool) -> str:
@@ -1022,13 +1452,10 @@ def _run_file_name(door: dict, saved: bool) -> str:
 def _current_run_card(door: dict, report: dict | None, saved: bool, summary: str = "") -> str:
     if report is None:
         return ""
-    name = _run_file_name(door, saved)
-    label = f"Check run <code>{html.escape(name)}</code>" if name else "Check run"
     return (
-        '<div class="card" data-selected="run">'
-        f'<p><button type="button" class="link" id="run-detail-open">{label}</button></p>'
+        '<p data-selected="run"><button type="button" class="link" id="run-detail-open">'
+        "Technical details</button></p>"
         f"{summary}"
-        "</div>"
     )
 
 

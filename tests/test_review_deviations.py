@@ -441,7 +441,7 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertIn('data-hint-from="historical"', page)
         self.assertIn("Use the requirement version from this run.", page)
         self.assertNotIn("Current working-copy guidance.", page)
-        self.assertIn(">Accept deviation</option>", page)
+        self.assertIn(">Accept</option>", page)
         self.assertIn(">Must be fixed</option>", page)
         self.assertIn(">Not assessed</option>", page)
         self.assertIn(">Re-run Checks</button>", page)

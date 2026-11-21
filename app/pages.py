@@ -255,6 +255,17 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board ul.review-check-list{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .review-board .path-mark{color:#b91c1c;font-weight:700}
 .review-board .claim-technical{margin-top:.5rem}
+.review-board .review-meta{color:var(--muted);margin:.15rem 0 .9rem}
+.review-board table.review-queue{width:100%;border-collapse:collapse;background:var(--card);font-size:.92rem}
+.review-board table.review-queue th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:.4rem .45rem;border-bottom:1px solid var(--line)}
+.review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
+.review-board table.review-queue p{margin:.15rem 0}
+.review-board select.verdict{font:inherit;max-width:11rem}
+.review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;line-height:1}
+.review-board button.comment-mark.has-comment{background:var(--accent);color:#fff;border-color:var(--accent)}
+.review-board dialog.comment-editor{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
+.review-board .file-actions{margin-top:.25rem;font-size:.8rem}
 """
 
 

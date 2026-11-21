@@ -1,13 +1,7 @@
-"""Focused Review rendering structure for REV-03 presentation correction.
-
-Does not rewrite contract or scenario tests. Asserts the PoC-shaped layout:
-topline, requirement cards, Path/Checks table, check pills, actions, and
-Technical details for raw args / full seal dump.
-"""
+"""Review queue rendering: attention rows, check pills, and secondary details."""
 
 from __future__ import annotations
 
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,7 +16,6 @@ from tests.test_rev03_review import (
     _open_run,
     _pack,
     _serve,
-    _summary,
     _workspace,
 )
 
@@ -46,35 +39,25 @@ class ReviewRenderStructureTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
 
-            self.assertIn("<h2>Summary</h2>", page)
-            self.assertIn('class="topline"', page)
             self.assertIn("review-board", page)
-            self.assertIn("need attention", page.lower())
+            self.assertIn("<h1>Review</h1>", page)
+            self.assertIn("<th>Requirement</th>", page)
+            self.assertIn("<th>File</th>", page)
+            self.assertIn("<th>Checks</th>", page)
+            self.assertIn("<th>Verdict</th>", page)
+            self.assertIn("1 claim · 1 deviation", page)
 
             failed_group = _details(page, "REQ-FAIL")
-            self.assertIn(" open", failed_group[: failed_group.index(">") + 1])
-            self.assertIn("card", failed_group[: failed_group.index(">") + 1])
-            self.assertIn('class="note"', failed_group)
             self.assertIn("broke here", failed_group)
-            self.assertIn("<th>Path</th>", failed_group)
-            self.assertIn("<th>Checks</th>", failed_group)
             self.assertIn('class="check fail"', failed_group)
-            self.assertIn('class="actions"', failed_group)
-            self.assertIn("Technical details", failed_group)
-            self.assertIn('class="technical"', failed_group)
-            # Raw args live under Technical details, not as a primary dump beside the pill.
-            tech = failed_group[failed_group.index('class="technical"') :]
-            self.assertIn("&quot;paths&quot;", tech)
-            primary = failed_group[: failed_group.index('class="technical"')]
-            self.assertNotIn("&quot;paths&quot;", primary)
-            self.assertNotIn('"paths"', primary)
+            self.assertIn("bad.md", failed_group)
+            self.assertNotIn("Technical details", failed_group)
+            self.assertNotIn("&quot;paths&quot;", failed_group)
+            self.assertIn("Technical details", page)
+            self.assertIn("&quot;paths&quot;", page.split('<section data-secondary>', 1)[1])
 
-            passed_group = _details(page, "REQ-PASS")
-            self.assertIsNone(
-                re.search(r'<details[^>]*data-requirement="REQ-PASS"[^>]*\bopen\b', page)
-            )
-            self.assertIn("REQ-PASS", _summary(page, "REQ-PASS"))
-            self.assertIn("Result pass", _summary(page, "REQ-PASS"))
+            self.assertNotIn('data-requirement="REQ-PASS"', page)
+            self.assertNotIn("passed-note", page.split('<section data-secondary>', 1)[0])
 
     def test_check_pills_cover_pass_fail_and_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
