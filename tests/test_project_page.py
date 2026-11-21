@@ -78,6 +78,42 @@ class ProjectPageTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
 
+    def test_selecting_a_repo_without_curbpack_opens_the_config_editor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+            workspace.mkdir()
+            fresh = workspace / "fresh-product"
+            fresh.mkdir()
+            data = load_repos(workspace)
+            add_repo(workspace, data, name="Fresh", path=str(fresh))
+            save_repos(workspace, data)
+            repo_id = str(data["repos"][-1]["id"])
+
+            httpd = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                make_handler(Workspace(workspace)),
+            )
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _post(
+                    base + "/project",
+                    {"action": "select", "repo_id": repo_id},
+                )
+                self.assertEqual(open_repo_id(workspace), repo_id)
+                self.assertFalse((fresh / "curbpack.json").exists())
+                self.assertIn("Create curbpack.json", page)
+                self.assertIn('name="packs_dir"', page)
+                self.assertIn('value="curbpack/packs"', page)
+                self.assertIn('value="curbpack/claims"', page)
+                self.assertIn('value=".curbpack"', page)
+                self.assertIn('value="curbpack/reports"', page)
+                self.assertNotIn("<h1>Curbpack Studio</h1>", page)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
     def test_invalid_curbpack_still_shows_registered_projects(self):
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp) / "workspace"

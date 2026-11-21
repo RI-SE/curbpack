@@ -170,6 +170,10 @@ def handle_project_post(workspace: Path, form: dict) -> str:
     if action == "select":
         repo_id = (form.get("repo_id") or [""])[0].strip()
         set_open_repo(workspace, repo_id)
+        row = find_repo(load_repos(workspace), repo_id) or {}
+        repo = resolve_repo_path(workspace, str(row.get("path") or ""))
+        if not (repo / "curbpack.json").is_file():
+            return "/project"
         return "/home"
     if action == "add":
         data = load_repos(workspace)
