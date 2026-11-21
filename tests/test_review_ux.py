@@ -78,7 +78,8 @@ class ReviewStartTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             self.assertIn(path.name, page)
-            self.assertIn("This is the Check result under review.", page)
+            self.assertIn("Execution", page)
+            self.assertNotIn("This is the Check result under review.", page)
             self.assertIn(">Create New Report</button>", page)
             self.assertNotIn("Compile writes a new unsigned report", page)
             self.assertIn("not saved", page)
@@ -86,7 +87,8 @@ class ReviewStartTest(unittest.TestCase):
             self.assertIn("No claims need attention", page)
             queue = page.split('<section data-secondary>', 1)[0]
             self.assertNotIn("purpose-note", queue)
-            self.assertIn("No report for this run yet.", page)
+            self.assertNotIn("Reports for this run", page)
+            self.assertNotIn("No report for this run yet.", page)
             self.assertNotIn("<h2>Run results</h2>", page)
             self.assertNotIn("no field for meeting CRA", page)
 
@@ -172,9 +174,10 @@ class ReviewStartTest(unittest.TestCase):
             },
         ).decode()
         self.assertIn('data-selected="run"', page)
-        self.assertIn("First reading.", page)
-        self.assertIn("Signed by Ada Reviewer", page)
+        self.assertNotIn("First reading.", page)
+        self.assertNotIn("Signed by Ada Reviewer", page)
         self.assertNotIn("Other run.", page)
+        self.assertNotIn("Reports for this run", page)
         self.assertNotIn("<h2>Review reports</h2>", page)
 
     def test_rediscover_without_discovery_context_links_to_discover(self):
@@ -310,8 +313,7 @@ class SignedReportLockTest(unittest.TestCase):
                     },
                 )
                 signed_bytes = report_path.read_bytes()
-                self.assertIn('data-report-state="signed"', sealed_page)
-                self.assertIn("read-only", sealed_page)
+                self.assertNotIn("Reports for this run", sealed_page)
                 self.assertIn("First reading.", sealed_page)
                 self.assertNotIn('name="decision"', sealed_page)
                 self.assertNotIn(">review-sign</button>", sealed_page)
@@ -373,7 +375,7 @@ class SignedReportLockTest(unittest.TestCase):
                         "decision": "Still a draft.",
                     },
                 )
-            self.assertIn('data-report-state="draft"', page)
+            self.assertNotIn("Reports for this run", page)
             self.assertIn('name="decision"', page)
             self.assertIn(">review-sign</button>", page)
             self.assertEqual(read_json(report_path)["decision"], "Still a draft.")

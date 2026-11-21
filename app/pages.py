@@ -227,6 +227,13 @@ pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;
 .review-board [data-selected="run"] .topline{border-left:0;padding:0;font-size:1rem}
 .review-board [data-selected="run"] button.link code{font-size:1rem}
 dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
+dialog.run-detail h3{font-size:1rem;margin:1rem 0 .35rem}
+dialog.run-detail h4{font-size:.85rem;margin:.7rem 0 .2rem}
+dialog.run-detail dl{display:grid;grid-template-columns:minmax(8rem,12rem) 1fr;gap:.15rem .75rem;margin:.25rem 0 .5rem}
+dialog.run-detail dt{color:var(--muted);margin:0}
+dialog.run-detail dd{margin:0;overflow-wrap:anywhere}
+dialog.run-detail details{margin:.35rem 0}
+dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem}
 .review-board .header{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:baseline;justify-content:space-between;margin-bottom:1.1rem}
 .review-board .pill{display:inline-block;font-size:.75rem;padding:.15rem .45rem;border-radius:999px;background:var(--line);color:var(--ink);border:0;margin:0}
 .review-board .pill-bad{background:#fee2e2;color:#991b1b}

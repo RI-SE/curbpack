@@ -466,8 +466,9 @@ class ReviewGroupingTest(unittest.TestCase):
             self.assertIn("0.0.1a", header)
             self.assertIn("abc123", header)
             self.assertIn("dirty", header)
-            self.assertIn("cra-baseline", header)
-            self.assertIn(draft_pack()["version"], header)
+            packs = page[page.index("data-packs"): page.index("</section>", page.index("data-packs"))]
+            self.assertIn("cra-baseline", packs)
+            self.assertIn(draft_pack()["version"], packs)
             self.assertIn(html.escape(worktree_sentence(run)), page)
             self.assertNotIn('data-check="worktree"', page)
             self.assertNotIn('data-status="dirty"', group)
@@ -1422,7 +1423,8 @@ class ReviewCompiledReportTest(unittest.TestCase):
             self.assertIn("0.0.1a", header)
             self.assertIn("abc123", header)
             self.assertIn("dirty", header)
-            self.assertIn("cra-baseline", header)
+            packs = page[page.index("data-packs") : page.index("</section>", page.index("data-packs"))]
+            self.assertIn("cra-baseline", packs)
             self.assertIn(html.escape(worktree_sentence(report["run_result"])), page)
             self.assertIn(NOT_A_LEGAL_CONCLUSION, page)
             self.assertIn(NO_CRA_FIELD, page)

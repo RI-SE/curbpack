@@ -11,9 +11,9 @@ from urllib.parse import quote
 from app.pages import _flash, _reading, page, repo_config_panel
 from checks.labels import check_caption, check_remediation, check_short_label
 from studio.claim.researcher import check_editor_dialog, check_form_script, _check_editor_values
-from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 from review.present import UNCHANGED
 from studio.compile.impl.report import assessment_identity
+from studio.review.technical_details import render_technical_details
 
 
 def review_page(
@@ -31,9 +31,6 @@ def review_page(
 ) -> bytes:
     dialogs = ""
     decision = ""
-    run_facts = ""
-    run_summary = ""
-    run_preamble = ""
     signed_report = isinstance(report, dict) and isinstance(report.get("signed"), dict)
     if report is None:
         if str((door or {}).get("latest_result") or ""):
@@ -43,20 +40,6 @@ def review_page(
     else:
         decision = report.get("decision") or ""
         result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
-        note = worktree_sentence(result)
-        limits = "".join(
-            f"<li>{html.escape(item)}</li>" for item in (NOT_A_LEGAL_CONCLUSION, NO_CRA_FIELD)
-        )
-        if same_run_value is True:
-            same_html = '<p data-same-run="yes">same run: yes</p>'
-        elif same_run_value is False:
-            same_html = '<p data-same-run="no">same run: no. This saved report is an older run.</p>'
-        else:
-            same_html = ""
-        unchecked_html = ""
-        if unchecked:
-            codes = ", ".join(f"<code>{html.escape(item)}</code>" for item in unchecked)
-            unchecked_html = f"<p>These selected Requirements were not checked: {codes}</p>"
         claims_by_id = {
             claim["id"]: claim
             for claim in (report.get("claims") or [])
@@ -114,30 +97,17 @@ def review_page(
                 '<p class="muted">No unsigned or unverifiable Claims in this run.</p>'
             )
         dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
-        reading_html = _reading(reading) if saved else "<p>not saved</p>"
         if door and door.get("presentation"):
-            run_facts, run_summary, queue = _review_groups(
+            queue = _review_queue(
                 door["presentation"],
                 door,
-                assessments=_assessment_index(report),
-                editable=not signed_report,
+                _assessment_index(report),
+                not signed_report,
             )
             queue_html = queue + appendix_html
         else:
-            run_facts = ""
-            run_summary = ""
-            queue_html = (
-                f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}"
-                f"<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>"
-            )
+            queue_html = f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}"
         file_dialog = _review_file_dialog(door or {})
-        run_preamble = f"""
-{reading_html}
-{same_html}
-<p>{html.escape(note)}</p>
-<ul>{limits}</ul>
-{unchecked_html}
-"""
         body_report = file_dialog + queue_html
     door = door or {}
     panel = repo_config_panel(
@@ -179,21 +149,24 @@ def review_page(
     if not repo_id and report is None:
         body_report = "<p>No repository is chosen.</p>"
         decision_forms = ""
-    chrome = _review_report_line(door)
     if report is None:
         shown = f"<div class=\"card\">{body_report}</div>"
         detail = ""
     else:
         shown = body_report
+        presentation = door.get("presentation") if isinstance(door.get("presentation"), dict) else None
         detail = _run_detail_dialog(
             door,
             report,
             saved,
-            preamble=run_preamble,
-            facts=run_facts,
-            reports=_run_reports_card(door),
-            banner=_selected_banner(door, report, saved),
-            chrome=chrome,
+            body=render_technical_details(
+                report,
+                door=door,
+                saved=saved,
+                same_run_value=same_run_value,
+                unchecked=unchecked,
+                verification=_current_verification(presentation, reading, saved),
+            ),
         )
     body = f"""
 <div class="review-board">
@@ -205,7 +178,7 @@ def review_page(
 </div>
 </div>
 {_review_start(door, report)}
-{_current_run_card(door, report, saved, run_summary)}
+{_current_run_card(door, report, saved)}
 {_review_empty(door)}
 {_flash(message, error)}
 {detail}
@@ -216,39 +189,6 @@ def review_page(
 </div>
 """
     return page("Review", body, banner=panel)
-
-
-def _review_groups(
-    presentation: dict,
-    door: dict,
-    *,
-    assessments: dict | None = None,
-    editable: bool = False,
-) -> tuple[str, str, str]:
-    header = presentation.get("header") if isinstance(presentation.get("header"), dict) else {}
-    packs = " ".join(
-        f"{html.escape(str(pack.get('id') or ''))} {html.escape(str(pack.get('version') or ''))}"
-        for pack in header.get("packs") or []
-        if isinstance(pack, dict)
-    )
-    report_label = str(presentation.get("report_seal_label") or "")
-    report_label_html = (
-        f'<p data-report-seal="{html.escape(report_label)}">{html.escape(report_label)}</p>'
-        if report_label
-        else ""
-    )
-    header_html = (
-        '<section class="card" data-run-header>'
-        f"<p>{html.escape(str(header.get('tool') or ''))} {html.escape(str(header.get('tool_version') or ''))}</p>"
-        f"<p>commit {html.escape(str(header.get('commit') or ''))}</p>"
-        f"<p>worktree {html.escape(str(header.get('worktree') or ''))}</p>"
-        f"<p>{packs}</p>"
-        f"{report_label_html}"
-        "</section>"
-        f"{_secondary_details(presentation)}"
-    )
-    queue = _review_queue(presentation, door, assessments or {}, editable)
-    return header_html, "", queue
 
 
 def _review_queue(
@@ -578,10 +518,29 @@ def _unlinked_args(check: dict) -> str:
     return " " + " ".join(f"<code>{html.escape(name)}</code>" for name in names)
 
 
+def _current_verification(presentation: dict | None, reading: dict | None, saved: bool) -> str:
+    """Live seal readings. They are not the recorded Check."""
+    parts = []
+    if isinstance(presentation, dict):
+        label = str(presentation.get("report_seal_label") or "")
+        if label:
+            parts.append(f'<p data-report-seal="{html.escape(label)}">{html.escape(label)}</p>')
+        parts.append(_secondary_details(presentation))
+    if saved:
+        parts.append(_reading(reading))
+    body = "".join(part for part in parts if part)
+    if not body:
+        return ""
+    return (
+        "<details><summary>Current verification</summary>"
+        '<p class="muted">Read from the repository now. This is not the recorded Check.</p>'
+        f"{body}</details>"
+    )
+
+
 def _secondary_details(presentation: dict) -> str:
-    """Seal readings and Check arguments stay out of the queue."""
+    """Seal readings stay out of the queue. Check arguments are recorded separately."""
     seals = []
-    arguments = []
     for group in presentation.get("groups") or []:
         if not isinstance(group, dict):
             continue
@@ -597,7 +556,7 @@ def _secondary_details(presentation: dict) -> str:
                 continue
             chain = _chain_html(claim)
             if chain:
-                seals.append(f'<p class="muted">{chain}</p>')
+                seals.append(f'<div class="muted">{chain}</div>')
             claim_label = str(claim.get("seal_label") or "")
             claim_seal = claim.get("seal") if isinstance(claim.get("seal"), dict) else None
             if claim_label or claim_seal:
@@ -606,20 +565,7 @@ def _secondary_details(presentation: dict) -> str:
                     f'<p data-claim-seal="{html.escape(claim_label)}">'
                     f"{html.escape(str(claim.get('id') or ''))}{line}</p>"
                 )
-            for check in claim.get("checks") or []:
-                if not isinstance(check, dict):
-                    continue
-                args = check.get("args") if isinstance(check.get("args"), dict) else {}
-                if not args:
-                    continue
-                arguments.append(
-                    '<details class="technical"><summary>Technical details</summary>'
-                    f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></details>"
-                )
-    body = "".join(seals) + "".join(arguments)
-    if not body:
-        return ""
-    return f'<section data-secondary>{body}</section>'
+    return "".join(seals)
 
 
 def _only_absent(detail: str) -> bool:
@@ -1053,28 +999,29 @@ def _review_claim_card(
 
 
 def _chain_html(claim: dict) -> str:
-    parts = []
-    for attr, key in (
-        ("data-requirement-location", "requirement_location"),
-        ("data-requirement-commit", "requirement_commit"),
-        ("data-recorded-digest", "recorded_digest"),
-        ("data-current-digest", "current_digest"),
-        ("data-signature-method", "signature_method"),
-        ("data-signature-status", "signature_status"),
-        ("data-claim-location", "claim_location"),
-        ("data-claim-commit", "claim_commit"),
-        ("data-claim-recorded-digest", "claim_recorded_digest"),
-        ("data-claim-recovered-digest", "claim_recovered_digest"),
-        ("data-claim-current-digest", "claim_current_digest"),
-        ("data-claim-signature-method", "claim_signature_method"),
-        ("data-claim-signature-status", "claim_signature_status"),
-        ("data-chain-binding", "chain_binding"),
+    rows = []
+    for attr, key, label in (
+        ("data-requirement-location", "requirement_location", "Requirement location"),
+        ("data-requirement-commit", "requirement_commit", "Requirement commit"),
+        ("data-recorded-digest", "recorded_digest", "Recorded requirement digest"),
+        ("data-current-digest", "current_digest", "Current requirement digest"),
+        ("data-signature-method", "signature_method", "Requirement signature method"),
+        ("data-signature-status", "signature_status", "Requirement signature status"),
+        ("data-claim-location", "claim_location", "Claim location"),
+        ("data-claim-commit", "claim_commit", "Claim commit"),
+        ("data-claim-recorded-digest", "claim_recorded_digest", "Recorded claim digest"),
+        ("data-claim-recovered-digest", "claim_recovered_digest", "Recovered claim digest"),
+        ("data-claim-current-digest", "claim_current_digest", "Current claim digest"),
+        ("data-claim-signature-method", "claim_signature_method", "Claim signature method"),
+        ("data-claim-signature-status", "claim_signature_status", "Claim signature status"),
+        ("data-chain-binding", "chain_binding", "Binding"),
     ):
         value = str(claim.get(key) or "")
         if not value:
             continue
         text = html.escape(value)
-        parts.append(f'<span {attr}="{text}">{text}</span>')
+        rows.append(f"<dt>{html.escape(label)}</dt><dd><span {attr}=\"{text}\">{text}</span></dd>")
+    differences = []
     for item in claim.get("differences") or []:
         if not isinstance(item, dict):
             continue
@@ -1083,8 +1030,13 @@ def _chain_html(claim: dict) -> str:
             continue
         historical = html.escape(str(item.get("historical") or ""))
         current = html.escape(str(item.get("current") or ""))
-        parts.append(f'<span data-difference="{html.escape(name)}">{historical} {current}</span>')
-    return "".join(parts)
+        differences.append(
+            f'<p><span data-difference="{html.escape(name)}">{html.escape(name)} {historical} {current}</span></p>'
+        )
+    if not rows and not differences:
+        return ""
+    listed = f"<dl>{''.join(rows)}</dl>" if rows else ""
+    return listed + "".join(differences)
 
 
 def _review_claim_checks(
@@ -1707,11 +1659,7 @@ def _run_detail_dialog(
     report: dict | None,
     saved: bool,
     *,
-    preamble: str,
-    facts: str,
-    reports: str,
-    banner: str,
-    chrome: str,
+    body: str,
 ) -> str:
     if report is None:
         return ""
@@ -1724,12 +1672,7 @@ def _run_detail_dialog(
     <button type="button" class="secondary" data-close>Close</button>
   </div>
   <div class="body">
-    <p>This is the Check result under review. A new report copies this run and does not change it.</p>
-    {banner}
-    {reports}
-    {chrome}
-    {preamble}
-    {facts}
+    {body}
   </div>
 </dialog>
 <script>
@@ -1746,42 +1689,6 @@ def _run_detail_dialog(
 """
 
 
-def _run_reports_card(door: dict) -> str:
-    if not (str(door.get("selected_result") or "") or str(door.get("selected_report") or "")):
-        return ""
-    repo = quote(str(door.get("repo_id") or ""), safe="")
-    items = []
-    for entry in door.get("run_reports") or []:
-        if not isinstance(entry, dict):
-            continue
-        name = str(entry.get("name") or "")
-        path = str(entry.get("path") or "")
-        href = f"/review?repo={repo}&report={quote(path, safe='')}" if repo and path else ""
-        label = html.escape(name)
-        if href:
-            label = f'<a href="{html.escape(href)}">{label}</a>'
-        decision = str(entry.get("decision") or "").strip() or "No decision yet."
-        if entry.get("signed"):
-            signer = str(entry.get("signer") or "").strip()
-            state = f"Signed by {signer}" if signer else "Signed"
-            marker = "signed"
-        else:
-            state = "Unsigned"
-            marker = "draft"
-        items.append(
-            "<li>"
-            f"{label}"
-            f"<p>{html.escape(decision)}</p>"
-            f'<p data-report-state="{marker}">{html.escape(state)}</p>'
-            "</li>"
-        )
-    if not items:
-        body = "<p>No report for this run yet.</p>"
-    else:
-        body = "<ul>" + "".join(items) + "</ul>"
-    return f'<div class="card" data-run-reports><h2>Reports for this run</h2>{body}</div>'
-
-
 def _review_empty(door: dict) -> str:
     if str(door.get("selected_result") or "") or str(door.get("selected_report") or ""):
         return ""
@@ -1789,26 +1696,6 @@ def _review_empty(door: dict) -> str:
     if not notice:
         return ""
     return f"<p>{html.escape(notice)}</p>"
-
-
-def _selected_banner(door: dict, report: dict | None, saved: bool) -> str:
-    if report is None or not saved:
-        return ""
-    path = str(door.get("report_path") or door.get("selected_report") or "")
-    if not path:
-        return ""
-    name = Path(path).name
-    if isinstance(report.get("signed"), dict):
-        return (
-            f'<p data-selected="report" data-report-state="signed">Signed review report '
-            f"<code>{html.escape(name)}</code>. This file is read-only. "
-            "A new decision needs a new report.</p>"
-        )
-    return (
-        f'<p data-selected="report" data-report-state="draft">Unsigned draft '
-        f"<code>{html.escape(name)}</code>. The review decision can be edited. "
-        "Signing locks this file.</p>"
-    )
 
 
 def _passage_html(passages: list) -> str:
@@ -1852,12 +1739,6 @@ def _discover_home(door: dict) -> str:
     if repo:
         return f"/discover?repo={repo}"
     return "/discover"
-
-
-def _review_report_line(door: dict) -> str:
-    if not str(door.get("repo_id") or "") or not door.get("report_path"):
-        return ""
-    return f"<p>Review report <code>{html.escape(str(door.get('report_path') or ''))}</code></p>"
 
 
 def _claims_href(discovery: dict) -> str:
