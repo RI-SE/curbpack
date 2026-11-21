@@ -316,6 +316,7 @@ def _review_queue(
             claim_count += 1
             deviation_count += len(deviations)
             claim_span = len(deviations)
+            dialog_id = ""
             for index, deviation in enumerate(deviations):
                 cells = []
                 if not requirement_written:
@@ -334,9 +335,11 @@ def _review_queue(
                         f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
                         f"{_file_cell(claim, open_ids, repo, document, discover_href)}</td>"
                     )
-                    cells.append(
-                        f'<td rowspan="{claim_span}">{_checks_cell(claim, dialog_id)}</td>'
-                    )
+                cells.append(
+                    "<td>"
+                    + _deviation_checks(claim, deviation, dialog_id, include_passes=index == 0)
+                    + "</td>"
+                )
                 remedy, verdict, comment, dialog = _deviation_cells(
                     claim, deviation, assessments, editable, index == 0
                 )
@@ -476,25 +479,37 @@ def _claim_edit_href(claim: dict, open_ids: list[str], repo: str, document: str)
     return ""
 
 
-def _checks_cell(claim: dict, dialog_id: str = "") -> str:
+def _deviation_checks(
+    claim: dict, deviation: dict, dialog_id: str, *, include_passes: bool
+) -> str:
+    """One queue row. Passing checks stay with the first deviation of the Claim."""
     pills = []
-    for check in claim.get("checks") or []:
-        if not isinstance(check, dict):
-            continue
-        status = str(check.get("status") or "")
-        name = str(check.get("check") or "")
-        opener = _check_opener(claim, check, dialog_id) if status == "fail" else ""
-        pills.append(
-            f'<span data-check="{html.escape(name)}" data-status="{html.escape(status)}">'
-            f"{_check_pill(check, status, opener)}{_unlinked_args(check)}</span>"
-        )
-    binding = str(claim.get("binding") or "")
-    if binding in {"stale", "missing"}:
-        pills.append(
-            f'<span class="check fail" data-binding="{html.escape(binding)}">'
-            f"Binding {html.escape(binding)}</span>"
-        )
+    if include_passes:
+        for check in claim.get("checks") or []:
+            if isinstance(check, dict) and str(check.get("status") or "") == "pass":
+                pills.append(_check_span(claim, check, dialog_id))
+    if deviation.get("kind") == "check":
+        check = deviation.get("check")
+        if isinstance(check, dict):
+            pills.append(_check_span(claim, check, dialog_id))
+    else:
+        binding = str(claim.get("binding") or "")
+        if binding in {"stale", "missing"}:
+            pills.append(
+                f'<span class="check fail" data-binding="{html.escape(binding)}">'
+                f"Binding {html.escape(binding)}</span>"
+            )
     return " ".join(pills)
+
+
+def _check_span(claim: dict, check: dict, dialog_id: str) -> str:
+    status = str(check.get("status") or "")
+    name = str(check.get("check") or "")
+    opener = _check_opener(claim, check, dialog_id) if status == "fail" else ""
+    return (
+        f'<span data-check="{html.escape(name)}" data-status="{html.escape(status)}">'
+        f"{_check_pill(check, status, opener)}{_unlinked_args(check)}</span>"
+    )
 
 
 def _unlinked_args(check: dict) -> str:
