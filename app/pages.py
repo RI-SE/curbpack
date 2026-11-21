@@ -261,8 +261,10 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
 .review-board table.review-queue p{margin:.15rem 0}
 .review-board select.verdict{font:inherit;max-width:11rem}
-.review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;line-height:1}
-.review-board button.comment-mark.has-comment{background:var(--accent);color:#fff;border-color:var(--accent)}
+.review-board .remedy-icon{display:inline-block;vertical-align:-.2em;margin-right:.3rem;color:var(--muted)}
+.review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;padding:0;color:var(--ink)}
+.review-board button.comment-mark.has-comment{border-color:transparent;background:transparent}
+.review-board button.comment-mark .doc-icon{display:block;margin:auto}
 .review-board dialog.comment-editor{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
 .review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
 .review-board .file-actions{margin-top:.25rem;font-size:.8rem}

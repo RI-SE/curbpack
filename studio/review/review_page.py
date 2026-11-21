@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from app.pages import _flash, _reading, page, repo_config_panel
-from checks.labels import check_caption
+from checks.labels import check_caption, check_short_label
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 from review.present import UNCHANGED
 from studio.compile.impl.report import assessment_identity
@@ -489,7 +489,7 @@ def _checks_cell(claim: dict) -> str:
         name = str(check.get("check") or "")
         pills.append(
             f'<span data-check="{html.escape(name)}" data-status="{html.escape(status)}">'
-            f"{_check_pill(name, status)}{_unlinked_args(check)}</span>"
+            f"{_check_pill(check, status)}{_unlinked_args(check)}</span>"
         )
     binding = str(claim.get("binding") or "")
     if binding in {"stale", "missing"}:
@@ -577,7 +577,8 @@ def _deviation_cells(
         remedy = f'<p data-detail>{html.escape(detail)}</p>' if detail else ""
         if hint:
             remedy += (
-                f'<p data-check-remediation>Check remediation: {html.escape(hint)}</p>'
+                f'<p data-check-remediation>{_remedy_icon("wrench", "Check remediation")} '
+                f"{html.escape(hint)}</p>"
             )
     else:
         identity = {
@@ -590,11 +591,7 @@ def _deviation_cells(
             "requirement_digest": claim.get("requirement_digest"),
             "binding": claim.get("binding"),
         }
-        remedy = (
-            f'<p data-binding="{html.escape(str(claim.get("binding") or ""))}">'
-            f'Requirement binding is {html.escape(str(claim.get("binding") or ""))}. '
-            "The Check status is unchanged.</p>"
-        )
+        remedy = _binding_remedy(str(claim.get("binding") or ""))
     if show_requirement_hint:
         remedy += _requirement_remedy(claim)
     dialog_id = "comment-" + "-".join(
@@ -613,19 +610,76 @@ def _deviation_cells(
     return remedy, verdict, comment, dialog
 
 
+def _binding_remedy(binding: str) -> str:
+    if binding == "stale":
+        text = "The Requirement has changed since this Claim was bound to it."
+    elif binding == "missing":
+        text = "The Requirement this Claim names was not loaded for this run."
+    else:
+        text = ""
+    return (
+        f'<p data-binding="{html.escape(binding)}">{html.escape(text)}</p>'
+    )
+
+
 def _requirement_remedy(claim: dict) -> str:
     hint_from = str(claim.get("requirement_hint_from") or "")
     hint = str(claim.get("requirement_hint") or "")
     if hint_from == "unresolved":
         return (
             '<p data-requirement-remediation data-hint-from="unresolved">'
-            "Requirement remediation for this run is unavailable.</p>"
+            f'{_remedy_icon("info", "Requirement remediation")} Unavailable for this run.</p>'
         )
     if not hint:
         return ""
     return (
         f'<p data-requirement-remediation data-hint-from="{html.escape(hint_from)}">'
-        f"Requirement remediation: {html.escape(hint)}</p>"
+        f'{_remedy_icon("scroll", "Requirement remediation")} {html.escape(hint)}</p>'
+    )
+
+
+def _icon_svg(body: str, *, label: str = "", css: str) -> str:
+    named = (
+        f' role="img" aria-label="{html.escape(label)}" title="{html.escape(label)}"'
+        if label
+        else ' aria-hidden="true"'
+    )
+    return (
+        f'<svg class="{css}" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        f'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+        f"{named}>{body}</svg>"
+    )
+
+
+def _remedy_icon(kind: str, label: str) -> str:
+    bodies = {
+        "wrench": (
+            '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105'
+            "c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3"
+            'l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>'
+        ),
+        "scroll": (
+            '<path d="M15 12h-5"/>'
+            '<path d="M15 8h-5"/>'
+            '<path d="M19 17V5a2 2 0 0 0-2-2H4"/>'
+            '<path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>'
+        ),
+        "info": (
+            '<circle cx="12" cy="12" r="10"/>'
+            '<path d="M12 16v-4"/>'
+            '<path d="M12 8h.01"/>'
+        ),
+    }
+    return _icon_svg(bodies[kind], label=label, css="remedy-icon")
+
+
+def _document_icon() -> str:
+    return _icon_svg(
+        '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>'
+        '<polyline points="14 2 14 8 20 8"/>'
+        '<line x1="16" x2="8" y1="13" y2="13"/>'
+        '<line x1="16" x2="8" y1="17" y2="17"/>',
+        css="doc-icon",
     )
 
 
@@ -668,9 +722,10 @@ def _verdict_controls(
 </select>
 """
     mark = " has-comment" if text.strip() else ""
+    glyph = _document_icon() if text.strip() else ""
     comment = (
         f'<button type="button" class="comment-mark{mark}" data-comment-for="{html.escape(dialog_id)}" '
-        f'aria-label="Comment">✎</button>'
+        f'aria-label="Comment">{glyph}</button>'
     )
     if editable:
         editor = (
@@ -712,22 +767,36 @@ def _reviewed_when(door: dict) -> str:
 
 
 def _comment_script() -> str:
-    return """
+    icon = json.dumps(_document_icon())
+    return f"""
 <script>
-(function() {
-  document.querySelectorAll("[data-comment-for]").forEach(function(button) {
-    button.addEventListener("click", function() {
+(function() {{
+  var doc = {icon};
+  function refresh(button) {{
+    var dialog = document.getElementById(button.getAttribute("data-comment-for"));
+    if (!dialog) return;
+    var field = dialog.querySelector("textarea");
+    if (!field) return;
+    var has = field.value.trim() !== "";
+    button.classList.toggle("has-comment", has);
+    button.innerHTML = has ? doc : "";
+  }}
+  document.querySelectorAll("[data-comment-for]").forEach(function(button) {{
+    button.addEventListener("click", function() {{
       var dialog = document.getElementById(button.getAttribute("data-comment-for"));
       if (dialog && dialog.showModal) dialog.showModal();
-    });
-  });
-  document.querySelectorAll("[data-close-comment]").forEach(function(button) {
-    button.addEventListener("click", function() {
+    }});
+  }});
+  document.querySelectorAll("[data-close-comment]").forEach(function(button) {{
+    button.addEventListener("click", function() {{
       var dialog = button.closest("dialog");
-      if (dialog) dialog.close();
-    });
-  });
-})();
+      if (!dialog) return;
+      var opener = document.querySelector('[data-comment-for="' + dialog.id + '"]');
+      if (opener) refresh(opener);
+      dialog.close();
+    }});
+  }});
+}})();
 </script>
 """
 
@@ -943,7 +1012,7 @@ def _review_claim_checks(
         check_status = str(check.get("status") or "")
         check_name = str(check.get("check") or "")
         check_class = ' class="pill-bad"' if check_status == "fail" else ""
-        pill = _check_pill(check_name, check_status)
+        pill = _check_pill(check, check_status)
         path_cell, path_bits = _review_path_cell(check, open_ids, repo, document)
         path_mark = ' <span class="path-mark">✗</span>' if check_status == "fail" else ""
         path_rows.append(f"<tr><td>{path_cell}{path_mark}</td><td>{pill}</td></tr>")
@@ -1076,12 +1145,12 @@ def _review_path_cell(
     return " ".join(visible), path_bits
 
 
-def _check_pill(name: str, status: str) -> str:
+def _check_pill(check: dict, status: str) -> str:
     kind = status if status in {"pass", "fail", "skipped"} else "fail"
-    caption = check_caption({"check": name})
+    entry = check if isinstance(check, dict) else {"check": str(check or "")}
     return (
-        f'<span class="check {html.escape(kind)}">'
-        f"{html.escape(caption)} · {html.escape(status)}</span>"
+        f'<span class="check {html.escape(kind)}" title="{html.escape(check_caption(entry))}">'
+        f"{html.escape(check_short_label(entry))} · {html.escape(status)}</span>"
     )
 
 
@@ -1224,13 +1293,11 @@ def _deviation_html(claim: dict, assessments: dict, editable: bool) -> str:
     hint = str(claim.get("requirement_hint") or "")
     if hint_from == "unresolved":
         requirement_hint = (
-            '<p data-requirement-remediation data-hint-from="unresolved">'
-            "Requirement remediation for this run is unavailable.</p>"
+            f"{_requirement_remedy({'requirement_hint_from': 'unresolved'})}"
         )
     elif hint:
         requirement_hint = (
-            f'<p data-requirement-remediation data-hint-from="{html.escape(hint_from)}">'
-            f"Requirement remediation: {html.escape(hint)}</p>"
+            f"{_requirement_remedy({'requirement_hint_from': hint_from, 'requirement_hint': hint})}"
         )
     else:
         requirement_hint = ""
@@ -1240,7 +1307,7 @@ def _deviation_html(claim: dict, assessments: dict, editable: bool) -> str:
         detail = str(check.get("detail") or "")
         check_hint = str(check.get("remediation_hint") or "")
         check_hint_html = (
-            f'<p data-check-remediation>Check remediation: {html.escape(check_hint)}</p>'
+            f'<p data-check-remediation>{_remedy_icon("wrench", "Check remediation")} {html.escape(check_hint)}</p>'
             if check_hint
             else ""
         )
@@ -1276,8 +1343,7 @@ def _deviation_html(claim: dict, assessments: dict, editable: bool) -> str:
             "<section class=\"deviation\" "
             f'data-deviation="binding" data-claim="{html.escape(str(claim.get("id") or ""))}" '
             f'data-binding="{html.escape(str(claim.get("binding") or ""))}">'
-            f"<p>Requirement binding is {html.escape(str(claim.get('binding') or ''))}. "
-            "The Check status is unchanged.</p>"
+            f"{_binding_remedy(str(claim.get('binding') or ''))}"
             f"{requirement_hint}"
             f"{_assessment_controls(identity, claim, assessments, editable)}"
             "</section>"

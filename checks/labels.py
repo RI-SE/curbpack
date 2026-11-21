@@ -29,6 +29,26 @@ def check_caption(entry: dict) -> str:
     return CAPTIONS.get(check, check)
 
 
+_SHORT = {
+    "exist": "Exists",
+    "contents": "Contents",
+    "text_forbid": "Forbidden text",
+    "anti_placeholder": "Anti-placeholder",
+    "fresh": "Fresh",
+    "owned": "Owned",
+    "dep_ban": "Banned",
+}
+
+
+def check_short_label(entry: dict) -> str:
+    """Compact label for the same check `check_caption` describes."""
+    caption = check_caption(entry)
+    for key, sentence in CAPTIONS.items():
+        if caption == sentence:
+            return _SHORT[key]
+    return str(entry.get("check") or "") or caption
+
+
 def check_detail(entry: dict) -> dict:
     """Caption plus the arguments a person reads. File names are left out."""
     args = entry.get("args") if isinstance(entry.get("args"), dict) else {}

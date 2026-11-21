@@ -437,9 +437,30 @@ class DeviationAssessmentTest(unittest.TestCase):
             },
         ).decode()
         self.assertIn('data-check-remediation', page)
+        self.assertIn('aria-label="Check remediation"', page)
+        self.assertNotIn("Check remediation:", page)
         self.assertIn("Add docs/a.md.", page)
         self.assertIn('data-hint-from="historical"', page)
+        self.assertIn('aria-label="Requirement remediation"', page)
+        self.assertNotIn("Requirement remediation:", page)
         self.assertIn("Use the requirement version from this run.", page)
+        self.assertIn('class="comment-mark"', page)
+        self.assertNotIn("comment-mark has-comment", page)
+        commented = review_page(
+            {
+                "run_result": run,
+                "claims": [],
+                "assessments": [_assessment(claim, 0, "must_fix", "Add docs/a.md.")],
+            },
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "presentation": presentation,
+            },
+        ).decode()
+        self.assertIn("comment-mark has-comment", commented)
+        self.assertIn('class="doc-icon"', commented)
         self.assertNotIn("Current working-copy guidance.", page)
         self.assertIn(">Accept</option>", page)
         self.assertIn(">Must be fixed</option>", page)

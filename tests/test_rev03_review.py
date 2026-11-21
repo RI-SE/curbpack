@@ -332,6 +332,8 @@ class ReviewGroupingTest(unittest.TestCase):
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-SHARED")
             self.assertIn('data-binding="missing"', group)
+            self.assertIn("The Requirement this Claim names was not loaded for this run.", group)
+            self.assertNotIn("The Check status is unchanged.", group)
             self.assertIn('data-status="pass"', group)
             self.assertIn('class="check pass"', group)
             self.assertNotIn('data-claim-seal', group)
