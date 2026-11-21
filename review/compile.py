@@ -16,6 +16,7 @@ from studio.review.impl import (
     record_assessments,
     record_decision,
     record_review_update,
+    removal_choice,
     save_report_assessments,
     save_report_decision,
     save_report_signature,

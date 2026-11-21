@@ -123,9 +123,35 @@ def review_page(
     if report_value:
         hidden += f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
     signed = signed_report
-    if saved and signed:
+    pending = [str(item) for item in (door.get("retirement_pending") or []) if str(item)]
+    removal = isinstance(report, dict) and report.get("remove_retired_checks") is True
+    retry = bool(removal and signed and pending)
+    sign_warning = ""
+    if retry:
+        sign_warning = (
+            f'<p class="err">These Claims were not updated: {html.escape(", ".join(pending))}. '
+            "Signing again retries those Claims and does not sign the report again.</p>"
+        )
+    elif removal and saved and not signed:
+        sign_warning = "<p>Signing will modify or delete Claim files.</p>"
+    sign_button = "Try retirement again" if retry else "review-sign"
+    sign_form = f"""
+<form method="post" action="/review/sign" data-include-assessments>
+{hidden}
+{sign_warning}
+<label>Signer name</label>
+<input type="text" name="name" placeholder="External Reviewer">
+<button type="submit">{sign_button}</button>
+</form>
+"""
+    if saved and signed and not pending:
         decision_forms = f"""
 <p data-decision>{html.escape(decision)}</p>
+"""
+    elif saved and signed:
+        decision_forms = f"""
+<p data-decision>{html.escape(decision)}</p>
+{sign_form}
 """
     elif saved:
         decision_forms = f"""
@@ -135,12 +161,7 @@ def review_page(
 <textarea name="decision">{html.escape(decision)}</textarea>
 <button type="submit">Save decision</button>
 </form>
-<form method="post" action="/review/sign" data-include-assessments>
-{hidden}
-<label>Signer name</label>
-<input type="text" name="name" placeholder="External Reviewer">
-<button type="submit">review-sign</button>
-</form>
+{sign_form}
 """
     else:
         decision_forms = (
@@ -185,6 +206,7 @@ def review_page(
 {shown}
 {decision_forms}
 {_review_actions(door, report, saved, repo_id)}
+{_retire_dialog()}
 {dialogs}
 </div>
 """
@@ -197,7 +219,7 @@ def _review_queue(
     assessments: dict,
     editable: bool,
 ) -> str:
-    """Attention queue. Passing Claims stay out of the table."""
+    """Review queue. Every recorded Check is a row, including a passing Check."""
     repo = quote(str(door.get("repo_id") or ""), safe="")
     selected_result = quote(str(door.get("selected_result") or ""), safe="")
     selected_report = quote(str(door.get("selected_report") or ""), safe="")
@@ -226,9 +248,7 @@ def _review_queue(
             if not isinstance(claim, dict):
                 continue
             deviations = _claim_deviations(claim)
-            if deviations:
-                queued.append((claim, deviations))
-            else:
+            if not deviations:
                 if _claim_changed(claim):
                     changed += 1
                     for line in claim.get("sentences") or []:
@@ -241,6 +261,8 @@ def _review_queue(
                             remember(
                                 f"Path {entry.get('path')} is missing in the working tree now."
                             )
+            if deviations or _passing_checks(claim):
+                queued.append((claim, deviations))
         if not queued:
             continue
         requirement_span = sum(
@@ -255,8 +277,8 @@ def _review_queue(
             passes = _passing_checks(claim)
             requirement_tip = _requirement_remedy(claim)
             claim_rows: list[tuple[str, object]] = []
-            if passes:
-                claim_rows.append(("passes", passes))
+            for check in passes:
+                claim_rows.append(("pass", check))
             claim_rows.extend(("deviation", deviation) for deviation in deviations)
             if requirement_tip:
                 claim_rows.append(("requirement", requirement_tip))
@@ -279,16 +301,27 @@ def _review_queue(
                         f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
                         f"{_file_cell(claim, open_ids, repo, document)}</td>"
                     )
-                if kind == "passes":
-                    cells.append(
-                        "<td>"
-                        + " ".join(
-                            _check_span(claim, check, dialog_id)
-                            for check in payload
-                            if isinstance(check, dict)
-                        )
-                        + "</td><td></td><td></td><td></td>"
+                if kind == "pass":
+                    check = payload if isinstance(payload, dict) else {}
+                    identity = {
+                        "kind": "check",
+                        "claim_id": claim.get("id"),
+                        "claim_digest": claim.get("digest"),
+                        "index": check.get("index"),
+                    }
+                    comment_id = _comment_id(identity)
+                    verdict, comment, comment_dialog = _verdict_controls(
+                        identity,
+                        claim,
+                        assessments,
+                        editable,
+                        comment_id,
+                        choices=(("", "Passed"), ("retire", "Retire")),
+                        check_label=f"{check_short_label(check)} · check {check.get('index')}",
                     )
+                    dialogs.append(comment_dialog)
+                    cells.append("<td>" + _check_span(claim, check, dialog_id) + "</td>")
+                    cells.extend(("<td></td>", f"<td>{verdict}</td>", f"<td>{comment}</td>"))
                 elif kind == "requirement":
                     cells.append(f"<td></td><td>{payload}</td><td></td><td></td>")
                 else:
@@ -420,9 +453,22 @@ def _passing_checks(claim: dict) -> list[dict]:
 def _claim_row_count(claim: dict, deviations: list[dict]) -> int:
     return (
         len(deviations)
-        + (1 if _passing_checks(claim) else 0)
+        + len(_passing_checks(claim))
         + (1 if _requirement_remedy(claim) else 0)
     )
+
+
+def _comment_id(identity: dict) -> str:
+    dialog_id = "comment-" + "-".join(
+        str(part or "")
+        for part in (
+            identity.get("kind"),
+            identity.get("claim_id"),
+            identity.get("index"),
+            identity.get("binding"),
+        )
+    )
+    return re.sub(r"[^A-Za-z0-9_-]", "-", dialog_id)
 
 
 def _deviation_checks(claim: dict, deviation: dict, dialog_id: str) -> str:
@@ -631,8 +677,11 @@ def _deviation_cells(
         )
     )
     dialog_id = re.sub(r"[^A-Za-z0-9_-]", "-", dialog_id)
+    check_label = ""
+    if deviation["kind"] == "check":
+        check_label = f"{check_short_label(check)} · check {check.get('index')}"
     verdict, comment, dialog = _verdict_controls(
-        identity, claim, assessments, editable, dialog_id
+        identity, claim, assessments, editable, dialog_id, check_label=check_label
     )
     return remedy, verdict, comment, dialog
 
@@ -715,22 +764,38 @@ def _document_icon() -> str:
 
 
 def _verdict_controls(
-    identity: dict, claim: dict, assessments: dict, editable: bool, dialog_id: str
+    identity: dict,
+    claim: dict,
+    assessments: dict,
+    editable: bool,
+    dialog_id: str,
+    *,
+    choices: tuple[tuple[str, str], ...] | None = None,
+    check_label: str = "",
 ) -> tuple[str, str, str]:
     saved = assessments.get(assessment_identity(identity))
     disposition = str(saved.get("disposition") or "") if isinstance(saved, dict) else ""
     text = str(saved.get("text") or "") if isinstance(saved, dict) else ""
     hidden = _assessment_hidden(identity, claim)
-    if not editable:
-        if disposition == "accept":
-            label = "Accept"
-        elif disposition == "must_fix":
-            label = "Must be fixed"
+    if choices is None:
+        if identity.get("kind") == "binding":
+            choices = (("", "Not assessed"), ("accept", "Accept"), ("must_fix", "Must be fixed"))
         else:
-            label = "Not assessed"
+            choices = (
+                ("", "Not assessed"),
+                ("accept", "Accept"),
+                ("must_fix", "Must be fixed"),
+                ("retire", "Retire"),
+            )
+    marker = (
+        f' data-claim-id="{html.escape(str(identity.get("claim_id") or ""))}"'
+        f' data-check-label="{html.escape(check_label)}"'
+    )
+    if not editable:
+        label = dict(choices).get(disposition, "Not assessed")
         carried = hidden + (
-            f'<input type="hidden" name="assess_disposition" form="review-compile" data-assessment-field '
-            f'value="{html.escape(disposition)}">'
+            f'<input type="hidden" name="assess_disposition" form="review-compile" data-assessment-field'
+            f'{marker} value="{html.escape(disposition)}">'
             f'<input type="hidden" name="assess_text" form="review-compile" data-assessment-field '
             f'value="{html.escape(text)}">'
         )
@@ -739,17 +804,15 @@ def _verdict_controls(
             f"{html.escape(label)}</span>"
         )
     else:
-        selected = {
-            "": " selected" if disposition == "" else "",
-            "accept": " selected" if disposition == "accept" else "",
-            "must_fix": " selected" if disposition == "must_fix" else "",
-        }
+        options = "".join(
+            f'<option value="{html.escape(value)}"'
+            f'{" selected" if disposition == value else ""}>{html.escape(caption)}</option>'
+            for value, caption in choices
+        )
         verdict = f"""
 {hidden}
-<select class="verdict" name="assess_disposition" form="review-compile" data-assessment data-assessment-field>
-<option value=""{selected[""]}>Not assessed</option>
-<option value="accept"{selected["accept"]}>Accept</option>
-<option value="must_fix"{selected["must_fix"]}>Must be fixed</option>
+<select class="verdict" name="assess_disposition" form="review-compile" data-assessment data-assessment-field{marker}>
+{options}
 </select>
 """
     mark = " has-comment" if text.strip() else ""
@@ -1581,8 +1644,74 @@ def _unsaved_script() -> str:
       });
     });
   });
+  document.addEventListener("DOMContentLoaded", function() {
+  var compile = document.getElementById("review-compile");
+  var retireDialog = document.getElementById("retire-confirm");
+  if (compile && retireDialog) {
+    compile.addEventListener("submit", function(event) {
+      if (compile.getAttribute("data-retire-confirmed") === "1") return;
+      var byClaim = {};
+      document.querySelectorAll("[name=assess_disposition]").forEach(function(field) {
+        if (field.value !== "retire") return;
+        var claim = field.getAttribute("data-claim-id") || "";
+        var label = field.getAttribute("data-check-label") || "Check";
+        if (!byClaim[claim]) byClaim[claim] = [];
+        byClaim[claim].push(label);
+      });
+      var claims = Object.keys(byClaim);
+      if (!claims.length) return;
+      event.preventDefault();
+      var list = document.getElementById("retire-list");
+      list.replaceChildren();
+      claims.forEach(function(claim) {
+        var title = document.createElement("p");
+        var code = document.createElement("code");
+        code.textContent = claim;
+        title.appendChild(code);
+        var items = document.createElement("ul");
+        byClaim[claim].forEach(function(label) {
+          var line = document.createElement("li");
+          line.textContent = label;
+          items.appendChild(line);
+        });
+        list.appendChild(title);
+        list.appendChild(items);
+      });
+      retireDialog.showModal();
+    });
+    document.getElementById("retire-cancel").addEventListener("click", function() {
+      retireDialog.close();
+    });
+    document.getElementById("retire-continue").addEventListener("click", function() {
+      var choice = document.createElement("input");
+      choice.type = "hidden";
+      choice.name = "remove_retired_checks";
+      choice.value = document.getElementById("retire-remove").checked ? "true" : "false";
+      compile.appendChild(choice);
+      compile.setAttribute("data-retire-confirmed", "1");
+      retireDialog.close();
+      compile.requestSubmit();
+    });
+  }
+  });
 })();
 </script>
+"""
+
+
+def _retire_dialog() -> str:
+    return """
+<dialog id="retire-confirm">
+<p>These Checks will be retired.</p>
+<div id="retire-list"></div>
+<p>Their original results and retirement justifications will remain in the report.</p>
+<p>Claim files will only be changed after the report is signed.</p>
+<label><input id="retire-remove" type="checkbox"> Remove retired Checks from Claims when signing the report.</label>
+<p>
+<button type="button" id="retire-cancel">Cancel</button>
+<button type="button" id="retire-continue">Continue</button>
+</p>
+</dialog>
 """
 
 

@@ -12,6 +12,7 @@ from common.keystore import trust_store
 from common.store import load_claims, load_pack_directory, load_run_result
 from discovery.door import claim_file_relative, repo_claims_dir
 from review.compile import load_report, read_report_signature, same_run, unchecked_requirement_ids
+from studio.review.impl.retire import pending_claim_ids
 from studio.review.impl.saved import _dated_entries
 
 if TYPE_CHECKING:
@@ -78,6 +79,9 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["source_result"] = _matching_run_path(results_folder, report)
         embedded = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
         extra["run_reports"] = _reports_for_run(reports_folder, embedded)
+        extra["retirement_pending"] = pending_claim_ids(
+            report, repo_claims_dir(repo), trust_store(ws.keys)
+        )
         return report, reading, " ".join(errors), True, True, same, _unchecked_for_repo(repo, config, report), extra
     if requested_result.strip():
         status, chosen = _requested_dated(results_folder, requested_result, "run-result")

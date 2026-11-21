@@ -13,6 +13,7 @@ from common.store import load_claims, load_run_result
 from discovery.door import repo_claims_dir
 from review.compile import (
     assessments_from_form,
+    removal_choice,
     save_report_signature,
     save_report_update,
 )
@@ -49,13 +50,15 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     folder = repo_claims_dir(repo)
     claims = load_claims(folder) if folder.is_dir() else []
     _packs, requirements = _report_sources_for_repo(repo, config)
+    assessments = assessments_from_form(form)
     report = compile_report(
         run_result=load_run_result(Path(run_path)),
         requirements=requirements,
         claims=claims,
         trust=trust_store(ws.keys),
         repo=repo,
-        assessments=assessments_from_form(form),
+        assessments=assessments,
+        remove_retired_checks=removal_choice(form, assessments),
     )
     out = _new_review_report_path(reports_dir(repo, config))
     write_report(out, report)
@@ -113,17 +116,34 @@ def _sign_review(ws: Workspace, form: dict) -> str:
         raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
     name = (form.get("name") or [""])[0].strip()
     private, _public = load_or_create_key(ws.keys, name)
-    save_report_signature(
-        Path(report_path),
-        name=name,
-        private_key=private,
-        at=_now(),
-        assessments=assessments_from_form(form),
-    )
+    try:
+        save_report_signature(
+            Path(report_path),
+            name=name,
+            private_key=private,
+            at=_now(),
+            assessments=assessments_from_form(form),
+            claims_dir=repo_claims_dir(repo),
+            trust=trust_store(ws.keys),
+        )
+    except ModelError as exc:
+        if exc.field == "claims":
+            return (
+                f"/review?repo={quote(repo_id, safe='')}&report={quote(report_path, safe='')}"
+                f"&note={quote(str(exc))}"
+            )
+        raise
     return (
         f"/review?repo={quote(repo_id, safe='')}&signed=1"
         f"&report={quote(report_path, safe='')}"
     )
+
+
+def _review_error(error: str, query: dict) -> str:
+    note = (query.get("note") or [""])[0]
+    if not note:
+        return error
+    return f"{error} {note}".strip() if error else note
 
 
 def _review_message(query: dict) -> str:
@@ -164,7 +184,7 @@ def _review_get(ws: Workspace, query: dict) -> bytes:
         report,
         reading,
         message=_review_message(query),
-        error=error,
+        error=_review_error(error, query),
         discovery={
             "repo_id": (query.get("repo") or query.get("repo_id") or [""])[0],
             "source_id": (query.get("source") or query.get("source_id") or [""])[0],

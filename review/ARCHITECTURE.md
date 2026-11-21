@@ -56,7 +56,7 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
 | `run_result` | The result that was reviewed. Compile copies it. Review does not produce another. |
 | `requirements` | `law_text` and the Requirement seal. One object per `requirement_id` on the embedded Claims, in the order those ids first appear. |
 | `claims` | The Claim seal and the args. One object per run-result row, in row order. |
-| `assessments` | Optional. One `accept` or `must_fix` entry per recorded deviation on this run, with the reviewer's text. Absent means Not assessed. Inside the version digest. Not copied to another run. |
+| `assessments` | Optional. `accept` or `must_fix` for a recorded deviation, or `retire` for any Check on this run, with the reviewer's text. A binding cannot be retired. Absent means Not assessed. Inside the version digest. Not copied to another run. |
 | `decision` | The reviewer's words for the whole report. Inside the version digest. |
 | `signed` | `review-sign`. Same shape as every other seal. |
 
@@ -137,7 +137,7 @@ The inputs for `check` and `args` are not on this page. A signed report shows th
 
 This is the required **PoC1-style follow-up**, implemented using the existing Claims Discovery and Claims Editor rather than a new Reconcile/Finder/Relocate subsystem:
 
-1. Render each failed/skipped Claim with its Requirement, original source path, Check IDs, arguments, statuses and failure details. Keep the failed Claim visible. Passing Claims may be collapsed/filtered from the **Review working view** for focus, but remain in the underlying Check result and report. A `fail` is never converted to `pass` merely because the reviewer retained it or opened Discovery.
+1. Render each Claim in the review queue with its Requirement, original source path, Check IDs, arguments, statuses and failure details. A failed or skipped Check keeps Accept and Must be fixed. A passing Check stays in the same table with Passed and Retire. The Check result and the report keep the recorded status. A `fail` is never converted to `pass` merely because the reviewer retained it or opened Discovery.
 2. **Discover again** opens Discovery for that **one Requirement** as a popup. The old Claim and its Checks remain available behind the popup. No copying of Claims into the Discovery core; closing/canceling makes no changes. Show a short instruction to find equivalent evidence and configure suitable Checks.
 3. The **Claims-owned UI presentation hook** (see [`../claims/ARCHITECTURE.md`](../claims/ARCHITECTURE.md)) greys, but never suppresses, candidates already matched to Claims whose configured Checks pass in the relevant run. Unchecked, stale, failed, skipped and ambiguous candidates are not greyed. This is not a green light for legal compliance, and not a new retrieval strategy.
 4. The human inspects candidates, chooses appropriate Checks, and **adds one or more new Claims** via Claims. The failed original is **not** automatically edited or deleted; adding candidates without suitable Checks is not verification.

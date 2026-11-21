@@ -53,7 +53,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             )
             self.assertNotIn("<th>Remedy</th>", page)
             self.assertIn("<th>Verdict</th>", page)
-            self.assertIn("1 claim · 1 deviation", page)
+            self.assertIn("2 claims · 1 deviation", page)
 
             failed_group = _details(page, "REQ-FAIL")
             self.assertIn("broke here", failed_group)
@@ -64,8 +64,11 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertIn("Technical details", page)
             self.assertIn("&quot;paths&quot;", page.split('<section data-secondary>', 1)[1])
 
-            self.assertNotIn('data-requirement="REQ-PASS"', page)
-            self.assertNotIn("passed-note", page.split('<section data-secondary>', 1)[0])
+            passed_group = _details(page, "REQ-PASS")
+            self.assertIn('data-claim="passed-note"', passed_group)
+            self.assertIn(">Passed</option>", passed_group)
+            self.assertIn(">Retire</option>", passed_group)
+            self.assertNotIn(">Must be fixed</option>", passed_group)
 
     def test_check_pills_cover_pass_fail_and_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:

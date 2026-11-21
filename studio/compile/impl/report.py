@@ -17,6 +17,7 @@ REPORT_FIELDS = {
     "claims",
     "appendix",
     "assessments",
+    "remove_retired_checks",
     "decision",
     "signed",
 }
@@ -43,6 +44,7 @@ def compile_report(
     trust: dict[str, bytes] | None = None,
     repo: Path | None = None,
     assessments: list[dict] | None = None,
+    remove_retired_checks: bool | None = None,
 ) -> dict:
     checked = copy.deepcopy(validate_run_result(run_result))
     embedded_claims = [
@@ -56,6 +58,8 @@ def compile_report(
     }
     if assessments:
         report["assessments"] = assessments
+    if remove_retired_checks is not None:
+        report["remove_retired_checks"] = remove_retired_checks
     return validate_report(report)
 
 
@@ -94,6 +98,7 @@ def validate_report(obj: object) -> dict:
         _validate_appendix_item(item, index)
     if "assessments" in obj:
         _validate_assessments(obj["assessments"], run_result)
+    _validate_removal_flag(obj)
     if "decision" in obj and (not isinstance(obj["decision"], str) or not obj["decision"].strip()):
         raise ModelError("review report", "decision", "the reviewer's own words")
     if "signed" in obj:
@@ -337,18 +342,59 @@ def _validate_assessments(assessments: object, run_result: dict) -> None:
                 raise ModelError("review report", f"{where}.{field}", "non-empty string")
         if kind == "check" and not isinstance(item.get("index"), int):
             raise ModelError("review report", f"{where}.index", "the Check index on the run")
-        if item.get("disposition") not in {"accept", "must_fix"}:
-            raise ModelError("review report", f"{where}.disposition", "accept or must_fix")
+        disposition = item.get("disposition")
         identity = assessment_identity(item)
         if identity in seen:
             raise ModelError("review report", where, "one assessment for each recorded deviation")
-        if identity not in known:
-            raise ModelError(
-                "review report",
-                where,
-                "a failed or skipped Check, or a stale or missing binding, on this run",
-            )
+        if kind == "binding":
+            if disposition not in {"accept", "must_fix"}:
+                raise ModelError("review report", f"{where}.disposition", "accept or must_fix")
+            if identity not in known:
+                raise ModelError(
+                    "review report",
+                    where,
+                    "a failed or skipped Check, or a stale or missing binding, on this run",
+                )
+        elif disposition == "retire":
+            if not _check_on_run(run_result, item):
+                raise ModelError("review report", where, "a Check on this run")
+        elif disposition in {"accept", "must_fix"}:
+            if identity not in known:
+                raise ModelError(
+                    "review report",
+                    where,
+                    "a failed or skipped Check, or a stale or missing binding, on this run",
+                )
+        else:
+            raise ModelError("review report", f"{where}.disposition", "accept, must_fix, or retire")
         seen.add(identity)
+
+
+def _check_on_run(run_result: dict, item: dict) -> bool:
+    index = item.get("index")
+    if not isinstance(index, int):
+        return False
+    for row in run_result.get("claims") or []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("id") != item.get("claim_id") or row.get("digest") != item.get("claim_digest"):
+            continue
+        checks = row.get("checks") or []
+        return 0 <= index < len(checks) and isinstance(checks[index], dict)
+    return False
+
+
+def _validate_removal_flag(obj: dict) -> None:
+    has_retire = any(
+        isinstance(item, dict) and item.get("disposition") == "retire"
+        for item in obj.get("assessments") or []
+    )
+    if "remove_retired_checks" in obj and not isinstance(obj.get("remove_retired_checks"), bool):
+        raise ModelError("review report", "remove_retired_checks", "true or false")
+    if has_retire and "remove_retired_checks" not in obj:
+        raise ModelError("review report", "remove_retired_checks", "true or false")
+    if not has_retire and "remove_retired_checks" in obj:
+        raise ModelError("review report", "remove_retired_checks", "absent")
 
 
 def _first_requirement_ids(claims: list[dict]) -> list[str]:

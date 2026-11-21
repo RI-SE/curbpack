@@ -99,7 +99,20 @@ def _summary(content, report):
     run = report['run_result']
     rows = run['claims']
     checks = [item for row in rows for item in row['checks']]
+    retired = _retired_checks(report)
     outcomes = Counter(item['status'] for item in checks)
+    outstanding_fail = 0
+    retired_fail = 0
+    outstanding_skip = 0
+    for row in rows:
+        for item in row['checks']:
+            marked = (row['id'], item.get('index')) in retired
+            if item['status'] == 'fail' and marked:
+                retired_fail += 1
+            elif item['status'] == 'fail':
+                outstanding_fail += 1
+            elif item['status'] == 'skipped' and not marked:
+                outstanding_skip += 1
     content.paragraph('CURBPACK STUDIO  /  REVIEW MATERIAL', 'small')
     content.paragraph('Review report', 'title')
     content.paragraph('Management summary', 'heading')
@@ -109,14 +122,18 @@ def _summary(content, report):
     if not checks:
         content.paragraph('No Checks executed. There is no successful check result to review.', 'claim')
     else:
-        if outcomes['fail']:
+        if outstanding_fail:
             content.paragraph('Checks need follow-up', 'claim')
-            content.paragraph(f"{outcomes['fail']} of {len(checks)} automated checks did not pass. "
+            content.paragraph(f"{outstanding_fail} of {len(checks)} automated checks did not pass. "
                               'Review the evidence and the check configuration before relying on these results.')
-        if outcomes['skipped']:
+        if retired_fail:
+            content.paragraph('Retired checks', 'claim')
+            content.paragraph(f"{retired_fail} failed checks were retired. They are not outstanding corrections. "
+                              'The recorded result remains in this report.')
+        if outstanding_skip:
             content.paragraph('Some checks were not performed', 'claim')
-            content.paragraph(f"{outcomes['skipped']} checks were skipped. Their outcomes remain unknown.")
-        if not outcomes['fail'] and not outcomes['skipped']:
+            content.paragraph(f"{outstanding_skip} checks were skipped. Their outcomes remain unknown.")
+        if not outstanding_fail and not outstanding_skip and not retired_fail:
             content.paragraph('All recorded checks passed', 'claim')
             content.paragraph('Human review of the supporting evidence is still required.')
     content.paragraph(f"This review covers {len(report['requirements'])} source requirements and {len(rows)} recorded statements about the evidence, "
@@ -124,7 +141,10 @@ def _summary(content, report):
     counts = []
     for label, items in (('Evidence assertions', rows), ('Automated checks', checks)):
         total = Counter(item['status'] for item in items)
-        counts.append([label, len(items), total['pass'], total['fail'], total['skipped']])
+        follow_up = total['fail']
+        if label == 'Automated checks':
+            follow_up = outstanding_fail
+        counts.append([label, len(items), total['pass'], follow_up, total['skipped']])
     content.table(['Included', 'Total', 'Passed', 'Needs follow-up', 'Not performed'], counts, [50, 18, 23, 40, 39])
     sources = list(dict.fromkeys(item['source']['instrument'] for item in report['requirements']))
     if sources:
@@ -142,7 +162,7 @@ def _summary(content, report):
     claim_by_id = {claim['id']: claim for claim in report['claims']}
     attention = []
     for row in rows:
-        if not _needs_attention(row):
+        if not _row_needs_attention(row, retired):
             continue
         claim = claim_by_id[row['id']]
         assertion = claim['description']
@@ -181,12 +201,21 @@ def _findings(content, report):
         saved[assessment_identity(item)] = item
     outstanding = []
     accepted = []
+    retired_findings = []
     for deviation in recorded_deviations(report['run_result']):
         assessment = saved.get(assessment_identity(deviation))
         if assessment and assessment.get('disposition') == 'accept':
             accepted.append((deviation, assessment))
+        elif assessment and assessment.get('disposition') == 'retire':
+            retired_findings.append((deviation, assessment))
         else:
             outstanding.append((deviation, assessment))
+    for item in report.get('assessments') or []:
+        if not isinstance(item, dict) or item.get('disposition') != 'retire' or item.get('kind') != 'check':
+            continue
+        if any(assessment_identity(saved_item) == assessment_identity(item) for _deviation, saved_item in retired_findings):
+            continue
+        retired_findings.append((_passing_retirement(report, item), item))
     content.paragraph('Outstanding deviations requiring correction', 'claim')
     if outstanding:
         for number, (deviation, assessment) in enumerate(outstanding, 1):
@@ -201,6 +230,12 @@ def _findings(content, report):
             _deviation_finding(content, report, claims, refs, number, deviation, assessment)
     else:
         content.paragraph('No deviations were accepted.')
+    content.paragraph('Retired checks', 'claim')
+    if retired_findings:
+        for number, (deviation, assessment) in enumerate(retired_findings, 1):
+            _retired_finding(content, report, claims, number, deviation, assessment)
+    else:
+        content.paragraph('No checks were retired.')
     content.paragraph('Passing checks', 'claim')
     passing = []
     for row in report['run_result']['claims']:
@@ -392,8 +427,59 @@ def _deviation_title(deviation, assessment):
     return f'{title}; not assessed'
 
 
-def _needs_attention(row):
-    return row['status'] != 'pass' or row.get('binding') in {'stale', 'missing'}
+def _retired_checks(report):
+    found = set()
+    for item in report.get('assessments') or []:
+        if isinstance(item, dict) and item.get('kind') == 'check' and item.get('disposition') == 'retire':
+            found.add((item.get('claim_id'), item.get('index')))
+    return found
+
+
+def _row_needs_attention(row, retired):
+    if row.get('binding') in {'stale', 'missing'}:
+        return True
+    for item in row.get('checks') or []:
+        if item.get('status') in {'fail', 'skipped'} and (row.get('id'), item.get('index')) not in retired:
+            return True
+    return False
+
+
+def _passing_retirement(report, item):
+    for row in report['run_result']['claims']:
+        if row.get('id') != item.get('claim_id'):
+            continue
+        for check in row.get('checks') or []:
+            if check.get('index') == item.get('index'):
+                return {
+                    'kind': 'check',
+                    'claim_id': item.get('claim_id'),
+                    'status': check.get('status') or 'pass',
+                    'check': check.get('check') or '',
+                    'index': check.get('index'),
+                    'detail': check.get('detail') or '',
+                }
+    return {
+        'kind': 'check',
+        'claim_id': item.get('claim_id'),
+        'status': 'pass',
+        'check': '',
+        'index': item.get('index'),
+        'detail': '',
+    }
+
+
+def _retired_finding(content, report, claims, number, deviation, assessment):
+    claim = claims[deviation['claim_id']]
+    content.paragraph(f'Retired check {number}', 'claim')
+    content.field('Recorded assertion', claim['description'])
+    content.field(
+        'Recorded result',
+        f"{str(deviation.get('status') or 'pass').upper()} · {deviation.get('check') or ''} · check {deviation.get('index')}",
+    )
+    if deviation.get('detail'):
+        content.field('Reason reported by the checker', deviation['detail'])
+    content.field('Retirement justification', assessment['text'])
+    content.paragraph("The recorded result is unchanged. Retirement is the reviewer's decision.")
 
 
 def _binding_label(row):

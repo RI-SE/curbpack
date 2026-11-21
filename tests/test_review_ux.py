@@ -84,9 +84,15 @@ class ReviewStartTest(unittest.TestCase):
             self.assertNotIn("Compile writes a new unsigned report", page)
             self.assertIn("not saved", page)
             self.assertIn('data-selected="run"', page)
-            self.assertIn("No claims need attention", page)
-            queue = page.split('<section data-secondary>', 1)[0]
-            self.assertNotIn("purpose-note", queue)
+            self.assertNotIn("No claims need attention", page)
+            queue = page.split('<table class="review-queue">', 1)[1]
+            self.assertIn('data-claim="purpose-note"', queue)
+            self.assertIn(">Passed</option>", queue)
+            self.assertIn(">Retire</option>", queue)
+            self.assertNotIn(">Must be fixed</option>", queue)
+            self.assertIn('id="retire-confirm"', page)
+            self.assertIn("Remove retired Checks from Claims when signing the report.", page)
+            self.assertIn('id="review-compile"', page)
             self.assertNotIn("Reports for this run", page)
             self.assertNotIn("No report for this run yet.", page)
             self.assertNotIn("<h2>Run results</h2>", page)
