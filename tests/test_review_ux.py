@@ -182,7 +182,7 @@ class ReviewStartTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = _exist_claim("fail-note", "REQ-SHARED", "fail.md")
             write_claim(repo / "kept" / "claims", claim)
-            run = _run_for(claim, status="fail", detail="missing file")
+            run = _run_for(claim, status="fail", detail="fail.md is absent")
             path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             from common.jsonio import write_json
@@ -190,8 +190,12 @@ class ReviewStartTest(unittest.TestCase):
             write_json(path, run)
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
-            self.assertIn('href="/discover?repo=alpha"', page)
-            self.assertIn(">Re-Discover</a>", page)
+            self.assertIn(
+                "Find the file first. Re-discover the Claim if that does not work.",
+                page,
+            )
+            self.assertIn('aria-label="Check remediation"', page)
+            self.assertNotIn(">Re-Discover</a>", page)
             self.assertNotIn(">Re-Discover</button>", page)
             self.assertNotIn('class="review-discover"', page)
 
@@ -200,7 +204,7 @@ class ReviewStartTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = _exist_claim("fail-note", "REQ-SHARED", "fail.md")
             write_claim(repo / "kept" / "claims", claim)
-            run = _run_for(claim, status="fail", detail="missing file")
+            run = _run_for(claim, status="fail", detail="fail.md is absent")
             path = repo / "runs" / "out" / "run-result_20260101T000000Z.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             from common.jsonio import write_json
@@ -212,9 +216,12 @@ class ReviewStartTest(unittest.TestCase):
             )
             with _serve(workspace) as base:
                 page = _get(base + query)
-            self.assertIn(">Re-Discover</button>", page)
-            self.assertIn('class="review-discover"', page)
-            self.assertIn("from=review", page)
+            self.assertIn(
+                "Find the file first. Re-discover the Claim if that does not work.",
+                page,
+            )
+            self.assertNotIn(">Re-Discover</a>", page)
+            self.assertNotIn(">Re-Discover</button>", page)
 
 
 class SignedReportLockTest(unittest.TestCase):

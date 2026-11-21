@@ -15,18 +15,8 @@ CAPTIONS = {
 
 def check_caption(entry: dict) -> str:
     """Human label for one saved check. The `check` field is unchanged."""
-    label = str(entry.get("label") or "")
-    if label in CAPTIONS:
-        return CAPTIONS[label]
-    check = str(entry.get("check") or "")
-    if check == "contents":
-        probes = (entry.get("args") or {}).get("probes") or []
-        kinds = {item.get("kind") for item in probes if isinstance(item, dict)}
-        if kinds == {"pattern"}:
-            return CAPTIONS["text_forbid"]
-        if kinds == {"placeholder"}:
-            return CAPTIONS["anti_placeholder"]
-    return CAPTIONS.get(check, check)
+    variant = check_variant(entry)
+    return CAPTIONS.get(variant, variant)
 
 
 _SHORT = {
@@ -38,6 +28,42 @@ _SHORT = {
     "owned": "Owned",
     "dep_ban": "Banned",
 }
+
+
+_FIND_FILE = "Find the file first. Re-discover the Claim if that does not work."
+
+_REMEDIES = {
+    "text_forbid": "Remove the forbidden text.",
+    "anti_placeholder": "Replace the placeholder text.",
+    "contents": "Change the file so it has the expected content.",
+    "fresh": "Update the file so it is recent enough.",
+    "owned": "Record the file as written by the claimed author.",
+    "dep_ban": "Remove the banned package version.",
+}
+
+
+def check_variant(entry: dict) -> str:
+    """The caption key for one check, including contents probes."""
+    label = str(entry.get("label") or "")
+    if label in CAPTIONS:
+        return label
+    check = str(entry.get("check") or "")
+    if check == "contents":
+        probes = (entry.get("args") or {}).get("probes") or []
+        kinds = {item.get("kind") for item in probes if isinstance(item, dict)}
+        if kinds == {"pattern"}:
+            return "text_forbid"
+        if kinds == {"placeholder"}:
+            return "anti_placeholder"
+    return check if check in CAPTIONS else check
+
+
+def check_remediation(entry: dict, detail: str = "") -> str:
+    """Default tip when a failed check recorded none of its own."""
+    parts = [part.strip() for part in detail.split(";") if part.strip()]
+    if parts and all(part.endswith(" is absent") for part in parts):
+        return _FIND_FILE
+    return _REMEDIES.get(check_variant(entry), "")
 
 
 def check_short_label(entry: dict) -> str:

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
 from common.jsonio import write_json
 from claims.bind import write_claim
+from studio.review.review_page import review_page
 
 from tests.test_rev03_review import (
     _details,
@@ -45,8 +47,8 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertIn("<th>File</th>", page)
             self.assertIn("<th>Checks</th>", page)
             self.assertIn(
-                '<th class="tips" title="Wrench: tip from the Claim. '
-                'Scroll: tip from the Requirement.">Tips</th>',
+                '<th class="tips" title="Wrench: suggestion from the Check. '
+                'Scroll: suggestion from the Requirement.">Remedy suggestions</th>',
                 page,
             )
             self.assertNotIn("<th>Remedy</th>", page)
@@ -174,6 +176,122 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertNotIn('title="too short"', group)
             self.assertNotIn('title="Add a paragraph."', group)
             self.assertNotIn(">File is present ·", group)
+
+    def test_binding_stale_opens_a_sign_dialog_instead_of_rebind(self):
+        claim = {
+            "id": "claim-a",
+            "binding": "stale",
+            "namespace": "house",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [
+                {"index": 0, "check": "exist", "status": "pass", "args": {"path": "a.md"}},
+            ],
+        }
+        page = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+            },
+        ).decode()
+        self.assertNotIn(">Rebind</a>", page)
+        self.assertIn('data-binding-dialog="binding-claim-a"', page)
+        self.assertIn(">Binding stale</button>", page)
+        self.assertIn(
+            "The Requirement has changed since this Claim was bound to it. "
+            "Click the check to rebind this Claim.",
+            page,
+        )
+        self.assertIn("Have you checked the Requirement and confirmed this Claim still applies?", page)
+        self.assertIn(">Sign</button>", page)
+        self.assertIn(">Cancel</button>", page)
+        self.assertIn('action="/claims/claim-a/rebind"', page)
+        self.assertIn('name="return_to" value="/review?repo=alpha', page)
+
+    def test_a_missing_file_is_a_tip_on_exist_and_not_repeated(self):
+        missing = {"path": "SECURITY.md", "state": "missing"}
+        claim = {
+            "id": "claim-a",
+            "status": "fail",
+            "checks": [
+                {
+                    "index": 0,
+                    "check": "exist",
+                    "status": "fail",
+                    "detail": "SECURITY.md is absent",
+                    "args": {"paths": ["SECURITY.md"]},
+                    "paths": [missing],
+                },
+                {
+                    "index": 1,
+                    "check": "contents",
+                    "status": "fail",
+                    "detail": "SECURITY.md is absent",
+                    "args": {
+                        "path": "SECURITY.md",
+                        "probes": [{"kind": "pattern", "pattern": "TODO"}],
+                    },
+                    "paths": [missing],
+                },
+                {
+                    "index": 2,
+                    "check": "contents",
+                    "status": "fail",
+                    "detail": "SECURITY.md matches forbidden pattern 'TODO'",
+                    "args": {
+                        "path": "SECURITY.md",
+                        "probes": [{"kind": "pattern", "pattern": "TODO"}],
+                    },
+                    "paths": [missing],
+                },
+                {
+                    "index": 3,
+                    "check": "contents",
+                    "status": "fail",
+                    "detail": "SECURITY.md contains placeholder text 'TODO'",
+                    "args": {
+                        "path": "SECURITY.md",
+                        "probes": [{"kind": "placeholder"}],
+                    },
+                    "paths": [{"path": "SECURITY.md", "state": "present"}],
+                },
+            ],
+        }
+        page = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+            },
+        ).decode()
+        rows = re.findall(r"<tr>(.*?)</tr>", page, re.S)
+        exist = next(row for row in rows if "Exists · fail" in row)
+        cells = re.findall(r"<td\b.*?</td>", exist, re.S)
+        file_cell = next(cell for cell in cells if "data-claim=" in cell)
+        self.assertIn("(missing)", file_cell)
+        self.assertNotIn("discover-again", page)
+        self.assertNotIn(">Re-Discover</a>", page)
+        self.assertIn(
+            "Find the file first. Re-discover the Claim if that does not work.",
+            cells[3],
+        )
+        self.assertIn('aria-label="Check remediation"', cells[3])
+        self.assertNotIn("is absent", page)
+        forbidden = [row for row in rows if "Forbidden text · fail" in row]
+        self.assertEqual(len(forbidden), 2)
+        absent = next(row for row in forbidden if "matches forbidden pattern" not in row)
+        matched = next(row for row in forbidden if "matches forbidden pattern" in row)
+        self.assertIn("Find the file first.", absent)
+        self.assertIn("Remove the forbidden text.", matched)
+        self.assertNotIn("Find the file first.", matched)
+        placeholder = next(row for row in rows if "Anti-placeholder · fail" in row)
+        self.assertIn("Replace the placeholder text.", placeholder)
+        self.assertIn("contains placeholder text", placeholder)
 
 
 if __name__ == "__main__":

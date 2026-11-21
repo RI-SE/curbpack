@@ -503,6 +503,17 @@ class DeviationAssessmentTest(unittest.TestCase):
             presentation["groups"][0]["claims"][0]["requirement_hint_from"],
             "unresolved",
         )
+        page = review_page(
+            {"run_result": run, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "presentation": presentation,
+            },
+        ).decode()
+        self.assertNotIn("Unavailable for this run.", page)
+        self.assertNotIn('data-hint-from="unresolved"', page)
 
 
 class RerunChecksTest(unittest.TestCase):

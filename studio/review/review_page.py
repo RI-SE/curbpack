@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from app.pages import _flash, _reading, page, repo_config_panel
-from checks.labels import check_caption, check_short_label
+from checks.labels import check_caption, check_remediation, check_short_label
 from studio.claim.researcher import check_editor_dialog, check_form_script, _check_editor_values
 from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 from review.present import UNCHANGED
@@ -119,7 +119,6 @@ def review_page(
             run_facts, run_summary, queue = _review_groups(
                 door["presentation"],
                 door,
-                discover_href,
                 assessments=_assessment_index(report),
                 editable=not signed_report,
             )
@@ -222,7 +221,6 @@ def review_page(
 def _review_groups(
     presentation: dict,
     door: dict,
-    discover_href: str = "",
     *,
     assessments: dict | None = None,
     editable: bool = False,
@@ -249,16 +247,13 @@ def _review_groups(
         "</section>"
         f"{_secondary_details(presentation)}"
     )
-    queue = _review_queue(
-        presentation, door, discover_href, assessments or {}, editable
-    )
+    queue = _review_queue(presentation, door, assessments or {}, editable)
     return header_html, "", queue
 
 
 def _review_queue(
     presentation: dict,
     door: dict,
-    discover_href: str,
     assessments: dict,
     editable: bool,
 ) -> str:
@@ -342,7 +337,7 @@ def _review_queue(
                 if index == 0:
                     cells.append(
                         f'<td rowspan="{claim_span}" data-claim="{html.escape(str(claim.get("id") or ""))}">'
-                        f"{_file_cell(claim, open_ids, repo, document, discover_href)}</td>"
+                        f"{_file_cell(claim, open_ids, repo, document)}</td>"
                     )
                 if kind == "passes":
                     cells.append(
@@ -358,6 +353,15 @@ def _review_queue(
                     cells.append(f"<td></td><td>{payload}</td><td></td><td></td>")
                 else:
                     deviation = payload if isinstance(payload, dict) else {}
+                    if deviation.get("kind") == "binding":
+                        dialogs.append(
+                            _binding_dialog(
+                                claim,
+                                str(door.get("repo_id") or ""),
+                                f"/review?repo={repo}&{document}"
+                                f"&expanded={quote(','.join(open_ids), safe='')}",
+                            )
+                        )
                     cells.append("<td>" + _deviation_checks(claim, deviation, dialog_id) + "</td>")
                     remedy, verdict, comment, dialog = _deviation_cells(
                         claim, deviation, assessments, editable
@@ -386,8 +390,8 @@ def _review_queue(
         table = (
             '<table class="review-queue"><thead><tr>'
             "<th>Requirement</th><th>File</th><th>Checks</th>"
-            '<th class="tips" title="Wrench: tip from the Claim. '
-            'Scroll: tip from the Requirement.">Tips</th>'
+            '<th class="tips" title="Wrench: suggestion from the Check. '
+            'Scroll: suggestion from the Requirement.">Remedy suggestions</th>'
             "<th>Verdict</th><th>Comment</th>"
             "</tr></thead>"
             + "".join(body_rows)
@@ -437,13 +441,10 @@ def _requirement_link(claim: dict, requirement_id: str, repo: str) -> str:
     return f'<a data-leave="1" href="{html.escape(href)}"><code>{label}</code></a>'
 
 
-def _file_cell(
-    claim: dict, open_ids: list[str], repo: str, document: str, discover_href: str
-) -> str:
+def _file_cell(claim: dict, open_ids: list[str], repo: str, document: str) -> str:
     claim_id = str(claim.get("id") or "")
     links = []
     seen = set()
-    edit_href = _claim_edit_href(claim, open_ids, repo, document)
     for check in claim.get("checks") or []:
         if not isinstance(check, dict):
             continue
@@ -464,38 +465,8 @@ def _file_cell(
         extras.append(
             '<span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
         )
-    if str(claim.get("binding") or "") in {"stale", "missing"} and edit_href:
-        extras.append(f'<a data-leave="1" href="{html.escape(edit_href)}">Rebind</a>')
-    status = str(claim.get("status") or "")
-    if status in {"fail", "skipped"} and claim_id:
-        if discover_href:
-            extras.append(
-                f'<a class="discover-again" data-leave="1" href="{html.escape(discover_href)}">Re-Discover</a>'
-            )
-        else:
-            extras.append(
-                f'<button type="button" class="link discover-again" '
-                f'data-dialog="{html.escape(_dialog_id(claim_id))}">Re-Discover</button>'
-            )
     extra = f'<div class="file-actions">{"".join(extras)}</div>' if extras else ""
     return "".join(links) + extra
-
-
-def _claim_edit_href(claim: dict, open_ids: list[str], repo: str, document: str) -> str:
-    claim_id = str(claim.get("id") or "")
-    if not claim_id or not repo:
-        return ""
-    for check in claim.get("checks") or []:
-        if isinstance(check, dict) and str(check.get("edit") or "") == "ok":
-            return_to = (
-                f"/review?repo={repo}&{document}"
-                f"&expanded={quote(','.join(open_ids), safe='')}"
-            )
-            return (
-                f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
-                f"#claim-{quote(claim_id, safe='')}"
-            )
-    return ""
 
 
 def _passing_checks(claim: dict) -> list[dict]:
@@ -524,11 +495,59 @@ def _deviation_checks(claim: dict, deviation: dict, dialog_id: str) -> str:
     else:
         binding = str(claim.get("binding") or "")
         if binding in {"stale", "missing"}:
-            pills.append(
-                f'<span class="check fail" data-binding="{html.escape(binding)}">'
-                f"Binding {html.escape(binding)}</span>"
-            )
+            bind_id = _binding_dialog_id(claim)
+            label = f"Binding {html.escape(binding)}"
+            if bind_id:
+                pills.append(
+                    f'<button type="button" class="check fail" data-binding="{html.escape(binding)}" '
+                    f'data-binding-dialog="{html.escape(bind_id)}">{label}</button>'
+                )
+            else:
+                pills.append(
+                    f'<span class="check fail" data-binding="{html.escape(binding)}">{label}</span>'
+                )
     return " ".join(pills)
+
+
+def _binding_dialog_id(claim: dict) -> str:
+    claim_id = str(claim.get("id") or "")
+    if not claim_id:
+        return ""
+    return "binding-" + re.sub(r"[^A-Za-z0-9_-]", "-", claim_id)
+
+
+def _binding_dialog(claim: dict, repo_id: str, return_to: str) -> str:
+    """Explain a stale or missing binding. Sign confirms the Claim still applies."""
+    dialog_id = _binding_dialog_id(claim)
+    if not dialog_id:
+        return ""
+    binding = str(claim.get("binding") or "")
+    if binding == "missing":
+        text = "<p>The Requirement this Claim names was not loaded for this run.</p>"
+    else:
+        text = (
+            "<p>The Requirement has changed since this Claim was bound to it.</p>"
+            "<p>Have you checked the Requirement and confirmed this Claim still applies?</p>"
+        )
+    claim_id = str(claim.get("id") or "")
+    namespace = str(claim.get("namespace") or "")
+    pack_id = str(claim.get("pack_id") or "")
+    requirement_id = str(claim.get("recorded_requirement_id") or "")
+    if claim_id and repo_id and namespace and pack_id and requirement_id:
+        actions = (
+            f'<form method="post" action="/claims/{html.escape(claim_id)}/rebind">'
+            f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
+            f'<input type="hidden" name="namespace" value="{html.escape(namespace)}">'
+            f'<input type="hidden" name="pack_id" value="{html.escape(pack_id)}">'
+            f'<input type="hidden" name="requirement_id" value="{html.escape(requirement_id)}">'
+            f'<input type="hidden" name="return_to" value="{html.escape(return_to)}">'
+            '<p class="actions"><button type="submit">Sign</button> '
+            '<button type="button" class="secondary" data-close-binding>Cancel</button></p>'
+            "</form>"
+        )
+    else:
+        actions = '<p><button type="button" class="secondary" data-close-binding>Cancel</button></p>'
+    return f'<dialog id="{html.escape(dialog_id)}" class="binding-note">{text}{actions}</dialog>'
 
 
 def _check_span(claim: dict, check: dict, dialog_id: str) -> str:
@@ -602,6 +621,25 @@ def _secondary_details(presentation: dict) -> str:
     return f'<section data-secondary>{body}</section>'
 
 
+def _only_absent(detail: str) -> bool:
+    """True when every clause only says a path is absent."""
+    parts = [part.strip() for part in detail.split(";") if part.strip()]
+    return bool(parts) and all(part.endswith(" is absent") for part in parts)
+
+
+def _default_check_remedy(check: dict, detail: str, hint: str) -> str:
+    """A check-kind tip. A hint recorded on the result is shown instead."""
+    if hint or str(check.get("status") or "") != "fail":
+        return ""
+    text = check_remediation(check, detail)
+    if not text:
+        return ""
+    return (
+        f'<p data-check-remediation>{_remedy_icon("wrench", "Check remediation")} '
+        f"{html.escape(text)}</p>"
+    )
+
+
 def _deviation_cells(
     claim: dict, deviation: dict, assessments: dict, editable: bool
 ) -> tuple[str, str, str, str]:
@@ -615,7 +653,10 @@ def _deviation_cells(
         }
         detail = str(check.get("detail") or "")
         hint = str(check.get("remediation_hint") or "")
-        remedy = f'<p data-detail>{html.escape(detail)}</p>' if detail else ""
+        remedy = ""
+        if detail and not _only_absent(detail):
+            remedy = f'<p data-detail>{html.escape(detail)}</p>'
+        remedy += _default_check_remedy(check, detail, hint)
         if hint:
             remedy += (
                 f'<p data-check-remediation>{_remedy_icon("wrench", "Check remediation")} '
@@ -651,7 +692,10 @@ def _deviation_cells(
 
 def _binding_remedy(binding: str) -> str:
     if binding == "stale":
-        text = "The Requirement has changed since this Claim was bound to it."
+        text = (
+            "The Requirement has changed since this Claim was bound to it. "
+            "Click the check to rebind this Claim."
+        )
     elif binding == "missing":
         text = "The Requirement this Claim names was not loaded for this run."
     else:
@@ -664,12 +708,7 @@ def _binding_remedy(binding: str) -> str:
 def _requirement_remedy(claim: dict) -> str:
     hint_from = str(claim.get("requirement_hint_from") or "")
     hint = str(claim.get("requirement_hint") or "")
-    if hint_from == "unresolved":
-        return (
-            '<p data-requirement-remediation data-hint-from="unresolved">'
-            f'{_remedy_icon("info", "Requirement remediation")} Unavailable for this run.</p>'
-        )
-    if not hint:
+    if not hint or hint_from == "unresolved":
         return ""
     return (
         f'<p data-requirement-remediation data-hint-from="{html.escape(hint_from)}">'
@@ -702,11 +741,6 @@ def _remedy_icon(kind: str, label: str) -> str:
             '<path d="M15 8h-5"/>'
             '<path d="M19 17V5a2 2 0 0 0-2-2H4"/>'
             '<path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>'
-        ),
-        "info": (
-            '<circle cx="12" cy="12" r="10"/>'
-            '<path d="M12 16v-4"/>'
-            '<path d="M12 8h.01"/>'
         ),
     }
     return _icon_svg(bodies[kind], label=label, css="remedy-icon")
@@ -833,6 +867,18 @@ def _comment_script() -> str:
       var opener = document.querySelector('[data-comment-for="' + dialog.id + '"]');
       if (opener) refresh(opener);
       dialog.close();
+    }});
+  }});
+  document.querySelectorAll("[data-binding-dialog]").forEach(function(button) {{
+    button.addEventListener("click", function() {{
+      var dialog = document.getElementById(button.getAttribute("data-binding-dialog"));
+      if (dialog && dialog.showModal) dialog.showModal();
+    }});
+  }});
+  document.querySelectorAll("[data-close-binding]").forEach(function(button) {{
+    button.addEventListener("click", function() {{
+      var dialog = button.closest("dialog");
+      if (dialog) dialog.close();
     }});
   }});
 }})();

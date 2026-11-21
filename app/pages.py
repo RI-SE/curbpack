@@ -267,7 +267,8 @@ dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
 .review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;padding:0;color:var(--ink)}
 .review-board button.comment-mark.has-comment{border-color:transparent;background:transparent}
 .review-board button.comment-mark .doc-icon{display:block;margin:auto}
-.review-board dialog.comment-editor{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.comment-editor,.review-board dialog.binding-note{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.binding-note p{margin:.4rem 0}
 .review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
 .review-board .file-actions{margin-top:.25rem;font-size:.8rem}
 """

@@ -1004,7 +1004,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             self.assertIn("changed.md", json.dumps(current))
 
     def test_rediscover_button_text_and_dialog(self):
-        """REV-03 scenario 32. Without a Discovery job, Re-Discover opens Discover."""
+        """A missing file is check remediation, not a Discover link."""
         with tempfile.TemporaryDirectory() as tmp:
             workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
             _pack(repo, "REQ-SHARED")
@@ -1027,7 +1027,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                                 "check": "exist",
                                 "args": {"paths": ["fail.md"]},
                                 "status": "fail",
-                                "detail": "missing file",
+                                "detail": "fail.md is absent",
                             }
                         ],
                     }
@@ -1039,8 +1039,12 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             run_before = run_path.read_bytes()
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            self.assertIn('href="/discover?repo=alpha"', page)
-            self.assertIn(">Re-Discover</a>", page)
+            self.assertIn(
+                "Find the file first. Re-discover the Claim if that does not work.",
+                page,
+            )
+            self.assertIn('aria-label="Check remediation"', page)
+            self.assertNotIn(">Re-Discover</a>", page)
             self.assertNotIn(">Re-Discover</button>", page)
             self.assertNotIn('class="review-discover"', page)
             self.assertEqual((repo / "kept" / "claims" / "fail-note.json").read_bytes(), claim_before)
@@ -1145,7 +1149,8 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                     + "&timestamp=2026-10-14T080000Z&report="
                     + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
-                self.assertIn(">Re-Discover</button>", review)
+                self.assertIn('class="review-discover"', review)
+                self.assertNotIn(">Re-Discover</button>", review)
                 self.assertIn("return_to=", review.replace("&amp;", "&"))
                 iframe = re.search(r'src="([^"]*return_to[^"]*)"', review)
                 self.assertIsNotNone(iframe)
