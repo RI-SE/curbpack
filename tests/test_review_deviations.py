@@ -450,6 +450,11 @@ class DeviationAssessmentTest(unittest.TestCase):
             )
         self.assertIn('class="comment-mark"', page)
         self.assertNotIn("comment-mark has-comment", page)
+        self.assertIn("data-comment-dialog=", page)
+        self.assertIn(
+            "This verdict needs a comment. Close without one and the previous verdict returns.",
+            page,
+        )
         commented = review_page(
             {
                 "run_result": run,
@@ -472,7 +477,8 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertIn(">Re-run Checks</button>", page)
         self.assertIn(">Create New Report</button>", page)
         self.assertIn(">Back to Claims</a>", page)
-        self.assertIn("Unsaved assessments will be lost.", page)
+        self.assertIn("Save this review before leaving?", page)
+        self.assertNotIn("Unsaved assessments will be lost.", page)
 
     def test_rebind_does_not_move_the_recorded_run_under_the_live_requirement(self):
         old = _requirement()

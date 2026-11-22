@@ -33,10 +33,7 @@ def review_page(
     decision = ""
     signed_report = isinstance(report, dict) and isinstance(report.get("signed"), dict)
     if report is None:
-        if str((door or {}).get("latest_result") or ""):
-            body_report = "<p>Choose a Check run. Nothing is reviewed until you open one.</p>"
-        else:
-            body_report = "<p>No run result for a report.</p>"
+        body_report = _unchosen_run(door or {})
     else:
         decision = report.get("decision") or ""
         result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
@@ -171,6 +168,7 @@ def review_page(
         body_report = "<p>No repository is chosen.</p>"
         decision_forms = ""
     if report is None:
+        decision_forms = ""
         shown = f"<div class=\"card\">{body_report}</div>"
         detail = ""
     else:
@@ -196,10 +194,8 @@ def review_page(
 <div>
 <h1>Review</h1>
 {_review_intro(door, report)}
-{_review_process()}
 </div>
 </div>
-{_review_start(door, report)}
 {_current_run_card(door, report, saved)}
 {_review_empty(door)}
 {_flash(message, error)}
@@ -208,6 +204,7 @@ def review_page(
 {decision_forms}
 {_review_actions(door, report, saved, repo_id)}
 {_retire_dialog()}
+{_resume_dialog(door or {})}
 {dialogs}
 </div>
 """
@@ -812,7 +809,7 @@ def _verdict_controls(
         )
         verdict = f"""
 {hidden}
-<select class="verdict" name="assess_disposition" form="review-compile" data-assessment data-assessment-field{marker}>
+<select class="verdict" name="assess_disposition" form="review-compile" data-assessment data-assessment-field{marker} data-comment-dialog="{html.escape(dialog_id)}">
 {options}
 </select>
 """
@@ -832,6 +829,8 @@ def _verdict_controls(
     dialog = (
         f'<dialog id="{html.escape(dialog_id)}" class="comment-editor">'
         "<p>Comment</p>"
+        "<p data-comment-demand hidden>This verdict needs a comment. "
+        "Close without one and the previous verdict returns.</p>"
         f"{editor}"
         '<p><button type="button" class="secondary" data-close-comment>Close</button></p>'
         "</dialog>"
@@ -876,19 +875,61 @@ def _comment_script() -> str:
     button.classList.toggle("has-comment", has);
     button.innerHTML = has ? doc : "";
   }}
-  document.querySelectorAll("[data-comment-for]").forEach(function(button) {{
+  var needsComment = {{accept: true, must_fix: true, retire: true}};
+  function commentDialog(id) {{
+    return id ? document.getElementById(id) : null;
+  }}
+  function commentText(dialog) {{
+    var field = dialog && dialog.querySelector("textarea");
+    return field ? field.value.trim() : "";
+  }}
+  function showDemand(dialog, on) {{
+    var note = dialog && dialog.querySelector("[data-comment-demand]");
+    if (note) note.hidden = !on;
+  }}
+  function openComment(dialog, demand) {{
+    if (!dialog || !dialog.showModal || dialog.open) return;
+    showDemand(dialog, demand);
+    dialog.showModal();
+    var field = dialog.querySelector("textarea");
+    if (field) field.focus();
+  }}
+  document.querySelectorAll("button[data-comment-for]").forEach(function(button) {{
     button.addEventListener("click", function() {{
-      var dialog = document.getElementById(button.getAttribute("data-comment-for"));
-      if (dialog && dialog.showModal) dialog.showModal();
+      var dialog = commentDialog(button.getAttribute("data-comment-for"));
+      var verdict = document.querySelector('select[data-comment-dialog="' + (dialog ? dialog.id : "") + '"]');
+      var demand = verdict && needsComment[verdict.value] && commentText(dialog) === "";
+      openComment(dialog, demand);
+    }});
+  }});
+  document.querySelectorAll("select[data-comment-dialog]").forEach(function(field) {{
+    field.setAttribute("data-kept", field.value);
+    field.addEventListener("change", function() {{
+      var dialog = commentDialog(field.getAttribute("data-comment-dialog"));
+      if (!needsComment[field.value] || commentText(dialog) !== "") {{
+        field.setAttribute("data-kept", field.value);
+        return;
+      }}
+      openComment(dialog, true);
+    }});
+  }});
+  document.querySelectorAll("dialog.comment-editor").forEach(function(dialog) {{
+    dialog.addEventListener("close", function() {{
+      var field = document.querySelector('select[data-comment-dialog="' + dialog.id + '"]');
+      if (field && needsComment[field.value] && commentText(dialog) === "") {{
+        field.value = field.getAttribute("data-kept") || "";
+      }} else if (field) {{
+        field.setAttribute("data-kept", field.value);
+      }}
+      showDemand(dialog, false);
+      var opener = document.querySelector('button[data-comment-for="' + dialog.id + '"]');
+      if (opener) refresh(opener);
     }});
   }});
   document.querySelectorAll("[data-close-comment]").forEach(function(button) {{
     button.addEventListener("click", function() {{
       var dialog = button.closest("dialog");
-      if (!dialog) return;
-      var opener = document.querySelector('[data-comment-for="' + dialog.id + '"]');
-      if (opener) refresh(opener);
-      dialog.close();
+      if (dialog) dialog.close();
     }});
   }});
   document.querySelectorAll("[data-binding-dialog]").forEach(function(button) {{
@@ -1466,7 +1507,7 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
     )
     return (
         f'<div class="review-actions">{rerun}{_compile_form(door, report, saved, repo_id)}{back}</div>'
-        f"{_unsaved_script()}"
+        f"{_leave_dialog()}{_unsaved_script()}"
     )
 
 
@@ -1629,10 +1670,36 @@ def _unsaved_script() -> str:
   document.querySelectorAll("[data-assessment]").forEach(function(field) {
     field.setAttribute("data-initial", field.value);
   });
-  document.querySelectorAll("[data-leave]").forEach(function(node) {
-    node.addEventListener("click", function(event) {
-      if (dirty() && !window.confirm("Unsaved assessments will be lost.")) event.preventDefault();
-    });
+  var pendingHref = "";
+  var pendingForm = null;
+  var leaving = false;
+  document.addEventListener("click", function(event) {
+    if (!dirty() || leaving) return;
+    var link = event.target.closest("a[href]");
+    if (!link || link.getAttribute("data-resume") === "1") return;
+    var href = link.getAttribute("href") || "";
+    if (!href || href.charAt(0) === "#") return;
+    event.preventDefault();
+    event.stopPropagation();
+    pendingHref = href;
+    pendingForm = null;
+    var dialog = document.getElementById("review-leave");
+    if (dialog && dialog.showModal && !dialog.open) dialog.showModal();
+  }, true);
+  document.addEventListener("submit", function(event) {
+    var form = event.target;
+    if (!form || form.id === "review-compile" || form.hasAttribute("data-include-assessments")) return;
+    if (!dirty() || leaving) return;
+    event.preventDefault();
+    pendingHref = "";
+    pendingForm = form;
+    var dialog = document.getElementById("review-leave");
+    if (dialog && dialog.showModal && !dialog.open) dialog.showModal();
+  }, true);
+  window.addEventListener("beforeunload", function(event) {
+    if (!dirty() || leaving) return;
+    event.preventDefault();
+    event.returnValue = "";
   });
   document.querySelectorAll("form[data-include-assessments]").forEach(function(form) {
     form.addEventListener("submit", function() {
@@ -1650,7 +1717,26 @@ def _unsaved_script() -> str:
   var retireDialog = document.getElementById("retire-confirm");
   if (compile && retireDialog) {
     compile.addEventListener("submit", function(event) {
+      compile.removeAttribute("data-held");
       if (compile.getAttribute("data-retire-confirmed") === "1") return;
+      var needsComment = {accept: true, must_fix: true, retire: true};
+      var missing = null;
+      document.querySelectorAll("select[name=assess_disposition]").forEach(function(field) {
+        if (missing || !needsComment[field.value]) return;
+        var dialog = document.getElementById(field.getAttribute("data-comment-dialog") || "");
+        var text = dialog && dialog.querySelector("textarea");
+        if (dialog && text && text.value.trim() === "") missing = dialog;
+      });
+      if (missing) {
+        event.preventDefault();
+        compile.setAttribute("data-held", "1");
+        var note = missing.querySelector("[data-comment-demand]");
+        if (note) note.hidden = false;
+        if (missing.showModal && !missing.open) missing.showModal();
+        var area = missing.querySelector("textarea");
+        if (area) area.focus();
+        return;
+      }
       var byClaim = {};
       document.querySelectorAll("[name=assess_disposition]").forEach(function(field) {
         if (field.value !== "retire") return;
@@ -1662,6 +1748,7 @@ def _unsaved_script() -> str:
       var claims = Object.keys(byClaim);
       if (!claims.length) return;
       event.preventDefault();
+      compile.setAttribute("data-held", "1");
       var list = document.getElementById("retire-list");
       list.replaceChildren();
       claims.forEach(function(claim) {
@@ -1694,10 +1781,88 @@ def _unsaved_script() -> str:
       compile.requestSubmit();
     });
   }
+  var leaveDialog = document.getElementById("review-leave");
+  if (leaveDialog) {
+    document.getElementById("review-leave-save").addEventListener("click", function() {
+      var next = document.getElementById("review-next");
+      if (next) next.value = pendingHref;
+      leaving = true;
+      if (compile) compile.requestSubmit();
+      if (!compile || compile.getAttribute("data-held") === "1") {
+        leaving = false;
+        if (leaveDialog.open) leaveDialog.close();
+      }
+    });
+    document.getElementById("review-leave-discard").addEventListener("click", function() {
+      leaving = true;
+      leaveDialog.close();
+      if (pendingForm) pendingForm.submit();
+      else if (pendingHref) window.location.href = pendingHref;
+    });
+    document.getElementById("review-leave-cancel").addEventListener("click", function() {
+      pendingHref = "";
+      pendingForm = null;
+      leaveDialog.close();
+    });
+  }
   });
 })();
 </script>
 """
+
+
+def _leave_dialog() -> str:
+    return """
+<dialog id="review-leave" class="review-choice">
+<p>Save this review before leaving?</p>
+<p>The Check result stays unchanged. Save writes an unsigned report.</p>
+<p>
+<button type="button" id="review-leave-save">Save</button>
+<button type="button" id="review-leave-discard">Don't save</button>
+<button type="button" id="review-leave-cancel">Cancel</button>
+</p>
+</dialog>
+"""
+
+
+def _started_review(door: dict) -> dict | None:
+    """The newest report for this run, when that report is still unsigned."""
+    if door.get("review_fresh") or str(door.get("selected_report") or ""):
+        return None
+    if not str(door.get("selected_result") or ""):
+        return None
+    rows = door.get("run_reports") or []
+    if not rows or not isinstance(rows[0], dict) or rows[0].get("signed"):
+        return None
+    if not str(rows[0].get("path") or ""):
+        return None
+    return rows[0]
+
+
+def _resume_dialog(door: dict) -> str:
+    started = _started_review(door)
+    if not started:
+        return ""
+    repo = quote(str(door.get("repo_id") or ""), safe="")
+    result = quote(str(door.get("selected_result") or ""), safe="")
+    report = quote(str(started.get("path") or ""), safe="")
+    continue_href = f"/review?repo={repo}&report={report}"
+    fresh_href = f"/review?repo={repo}&result={result}&fresh=1"
+    cancel_href = f"/review?repo={repo}"
+    return (
+        '<dialog id="resume-review" class="review-choice">'
+        "<p>A review of this Check run is already started.</p>"
+        "<p>The Check result is unchanged. Continue the unsigned report, start over, or go back.</p>"
+        "<p>"
+        f'<a class="btn primary" data-resume="1" href="{html.escape(continue_href)}">Continue</a>'
+        f'<a class="btn" data-resume="1" href="{html.escape(fresh_href)}">Start over</a>'
+        f'<a class="btn" data-resume="1" href="{html.escape(cancel_href)}">Cancel</a>'
+        "</p></dialog>"
+        "<script>document.addEventListener('DOMContentLoaded',function(){"
+        "var dialog=document.getElementById('resume-review');"
+        "if(dialog&&dialog.showModal)dialog.showModal();"
+        "});</script>"
+    )
 
 
 def _retire_dialog() -> str:
@@ -1738,6 +1903,7 @@ def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) ->
 <form id="review-compile" method="post" action="/review/compile">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
 <input type="hidden" name="result" value="{html.escape(result_path)}">
+<input type="hidden" name="next" id="review-next" value="">
 {report_input}
 {note}
 <p class="actions"><button type="submit">Create New Report</button></p>
@@ -1745,43 +1911,27 @@ def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) ->
 """
 
 
-def _review_start(door: dict, report: dict | None) -> str:
-    if report is not None:
-        return ""
-    if str(door.get("selected_result") or "") or str(door.get("selected_report") or ""):
-        return ""
+def _unchosen_run(door: dict) -> str:
     latest = str(door.get("latest_result") or "")
     repo = str(door.get("repo_id") or "")
+    check = '<a href="/check">Check</a>'
     if not latest or not repo:
-        return ""
+        return (
+            "<p>No previous Check result has been chosen. "
+            f"To start a review, go to the {check} tab and select a result to review.</p>"
+        )
     name = Path(latest).name
     href = f"/review?repo={quote(repo, safe='')}&result={quote(latest, safe='')}"
     return (
-        '<div class="card" data-latest-run>'
-        f"<p>Latest Check run <code>{html.escape(name)}</code>. "
-        "Nothing is opened until you choose a Check run.</p>"
-        f'<p><a class="btn primary" href="{html.escape(href)}">Review the latest run</a></p>'
-        "</div>"
+        "<p>No previous Check result has been chosen. "
+        f"To start a review, go to the {check} tab and select a result to review, "
+        f'or <a href="{html.escape(href)}">review the latest Check result '
+        f"<code>{html.escape(name)}</code></a>.</p>"
     )
 
 
 def _review_intro(door: dict, report: dict | None) -> str:
     return ""
-
-
-def _review_process() -> str:
-    return """
-<details class="review-process">
-<summary>Check → Check result → Review → Report → Sign</summary>
-<ol>
-<li>Check runs the configured Checks.</li>
-<li>The Check result records that run.</li>
-<li>Review is where a person reads the result.</li>
-<li>The report stores the decision.</li>
-<li>Sign seals the report.</li>
-</ol>
-</details>
-"""
 
 
 def _run_file_name(door: dict, saved: bool) -> str:

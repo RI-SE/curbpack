@@ -16,8 +16,10 @@ A compiled report is one JSON object. The server writes it at `<product-repo>/do
 | `requirements` | Copies of the Requirements the Claims name, including `references[].law_text` and the Requirement seal. |
 | `claims` | Copies of the Claims that ran, in row order, including `checks[]` and the Claim seal. |
 | `appendix` | Executed Claims that are unsigned or whose signature does not verify, with Claim id and Requirement id. This is not a failed Check. |
+| `assessments` | The reviewer's disposition for a Check or a binding on this run. `accept` and `must_fix` apply to a failed or skipped Check, or a `stale` or `missing` binding. `retire` applies to any Check, including one that passed, and not to a binding. Each entry needs `text`. Absent means Not assessed. An assessment does not change the recorded Check status. |
+| `remove_retired_checks` | Present only when a Check is retired. `true` means review-sign will remove those Checks from the live Claim files. `false` records the decision and leaves the Claim files alone. |
 | `decision` | The reviewer's words. Absent until they are saved. |
-| `signed` | review-sign. Absent until the report is signed. |
+| `signed` | review-sign. Absent until the report is signed. The signature covers the assessments and `remove_retired_checks`. |
 
 Studio does not write a separate findings file, an executive summary, an SBOM, a VEX document, or SARIF from this compile. A dependency question is a `dep_ban` Check when someone configured one. This build does not implement that Check as a pass. The report JSON is the handoff. `tool` and `tool_version` sit on the run result. The exit code is not a JSON field.
 
@@ -49,7 +51,19 @@ Selected Requirements with no row were not checked. If that matters, it belongs 
 
 ## 4. The page does not re-run Check
 
-Compile, save a decision, and sign. **Run checks** on that page is navigation back to the Check page. A replacement Claim is not a pass until that new run has been rendered.
+The order is Check, then the Check result, then Review. **Run checks** on the review page only goes back to the Check page. A replacement Claim is not a pass until that new run has been rendered.
+
+## 5. Retire a Check
+
+A failed or skipped Check can be Not assessed, Accept, Must be fixed, or Retire. A passing Check is Passed or Retire. A binding cannot be retired. Retire needs a comment, as Accept does. The recorded status stays `pass`, `fail`, or `skipped`.
+
+**Create New Report** asks for confirmation when any Check is Retire. It lists those Checks under their Claims. Cancel writes nothing. Continue writes the unsigned report. The checkbox **Remove retired Checks from Claims when signing the report** is stored as `remove_retired_checks`. Leave it unchecked to keep the decision in the report and leave the Claim files unchanged.
+
+Save `decision`, then review-sign. If the checkbox was checked, signing then removes those Checks from the live Claim files. A Claim that still has a Check is signed again by the person who signed the report. A Claim with no Check left is deleted. The Check result copied into the report does not change. Studio does not commit the report or the Claim files.
+
+If removal was chosen and a Claim file no longer matches the Check run, signing refuses and changes nothing. If a later Claim write fails, the report stays signed and the page names the Claims that were not updated. review-sign again finishes only those Claims.
+
+This is not the Retire control in Claims Editor. That control deletes the Claim file immediately, without this comment and without a report.
 
 Signature checks you can do with the file:
 
@@ -59,7 +73,7 @@ Signature checks you can do with the file:
 
 A Git-signed commit of a Claim file can count as that Claim's seal when the product repository is available and the Claim has no `signed` block. The Git author string is not the signer. A reviewer who only has the report file sees the `signed` block that was copied.
 
-## 5. Inspect the evidence
+## 6. Inspect the evidence
 
 For a row that matters, open the path in the product tree at the revision under review and ask:
 
@@ -81,11 +95,11 @@ When `worktree` is `dirty`, the recorded commit is not proof that every checked 
 
 Currency of an assessment is often a different Requirement. Say that in `decision` if you mean it. Do not look for a CRA-compliance checkbox. `validate_report` rejects `compliant` and `meets_cra`.
 
-## 6. What a green result means
+## 7. What a green result means
 
 A green result means the Checks that ran passed for that tree. A person still decides what that means.
 
-If a Claim failed and the evidence moved, use **Discover again** for that Requirement. The failed Claim stays visible. Add a new Claim for the new path. Retire the old Claim after you have confirmed the replacement. Run Checks again. Sign the new Claim in Claims if you approve it. Sign the report separately. Closing the popup changes nothing.
+If a Claim failed and the evidence moved, use **Discover again** for that Requirement. The failed Claim stays visible. Add a new Claim for the new path. Delete the old Claim in Claims Editor after you have confirmed the replacement. Run Checks again. Sign the new Claim in Claims if you approve it. Sign the report separately. Closing the popup changes nothing.
 
 ## Technical reference
 

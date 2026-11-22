@@ -166,7 +166,7 @@ Return to Studio and open **Review**.
 
 Compile the run into review material and inspect how the Requirement, Claim, and Check result are presented together.
 
-The automated result stops at what the Check observed. Review is where a person records what that result means in context.
+The automated result stops at what the Check observed. Review is where a person records what that result means in context. Retiring a Check needs a reason and is stored on the report. The Check is removed from the live Claim only if that report says so, and only when the report is signed.
 
 ## 10. What to try next
 

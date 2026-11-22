@@ -44,12 +44,13 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
   "requirements": [ ],
   "claims": [ ],
   "assessments": [],
+  "remove_retired_checks": false,
   "decision": "the reviewer's own words",
   "signed": { "at": "…", "name": "…", "signature": "…" }
 }
 ```
 
-`decision` is absent until `record_decision`. `signed` is absent until `sign_report`.
+`decision` is absent until `record_decision`. `signed` is absent until `sign_report`. `remove_retired_checks` is absent unless an assessment is `retire`; the example includes it because that assessment is present.
 
 | Field | Why it is here |
 | --- | --- |
@@ -57,6 +58,7 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
 | `requirements` | `law_text` and the Requirement seal. One object per `requirement_id` on the embedded Claims, in the order those ids first appear. |
 | `claims` | The Claim seal and the args. One object per run-result row, in row order. |
 | `assessments` | Optional. `accept` or `must_fix` for a recorded deviation, or `retire` for any Check on this run, with the reviewer's text. A binding cannot be retired. Absent means Not assessed. Inside the version digest. Not copied to another run. |
+| `remove_retired_checks` | Present only when an assessment is `retire`. `true` or `false`. Inside the version digest. `true` is applied to live Claim files after the report signature is written. `false` is the record only. |
 | `decision` | The reviewer's words for the whole report. Inside the version digest. |
 | `signed` | `review-sign`. Same shape as every other seal. |
 
@@ -85,13 +87,13 @@ Compile must not silently embed a Claim different from the one recorded in the r
 
 ### Signature
 
-The five facts are `packs2.md` §2.6 with `what` set to `review report`. The version is `version_digest` of the report. That digest covers `run_result`, the embedded objects, and `decision`. It is not the Requirement digest and not the Claim digest.
+The five facts are `packs2.md` §2.6 with `what` set to `review report`. The version is `version_digest` of the report. That digest covers `run_result`, the embedded objects, `assessments`, `remove_retired_checks`, and `decision`. It is not the Requirement digest and not the Claim digest.
 
 VR-00's shared verifier reads embedded object signatures and eligible trusted signed Git-commit evidence independently, reporting valid, invalid or unsigned and the method/reason. An invalid embedded block is never masked by a valid Git signature. The Git author string is not the signer. When neither exists, the report is unsigned.
 
 The Review backend verifies an embedded Requirement or Claim using the available embedded signature and eligible signed-Git evidence according to VR-00. A standalone report may not provide the repository context required to verify a Git-based seal; explicitly report verification unavailable rather than silently declaring unsigned or valid.
 
-Signing the report does not sign the Requirement, the Claim, or the pack. The organisation chooses who holds the key. The report has no role field.
+Signing the report does not sign the Requirement or the pack. It does not sign a Claim unless `remove_retired_checks` is true. In that case the report is signed first. The same signer then removes the retired Checks from the live Claims, signs a Claim that still has a Check, and deletes a Claim that has none. The embedded Claim and the Check result stay as compiled. A live Claim that does not match the run is a conflict: nothing is signed and no Claim file is changed. A Claim write that fails after the report signature leaves that report signed and names every Claim that was not updated. The same review-sign action retries only those Claims. The organisation chooses who holds the key. The report has no role field.
 
 ### A later run
 
@@ -122,14 +124,14 @@ The page renders the report and posts the decision and the signer name. It does 
 
 | Action | Function | Result on the page |
 | --- | --- | --- |
-| Compile | Call the `studio/compile/` operation explicitly. | A new unsigned report, without a decision. |
+| Compile | Call the `studio/compile/` operation explicitly. | A new unsigned report, without a decision. A Retire confirmation can cancel that write. The removal choice is stored on the report and is not applied yet. |
 | Save decision | Review-owned decision operation and shared persisted report IO. | The decision is saved on an unsigned draft. A signed report is rejected and left unchanged. |
-| review-sign | Review-owned signing operation and shared report IO. | Report signature reading; Requirement and Claim signatures unchanged. A signed report cannot be signed again. |
+| review-sign | Review-owned signing operation and shared report IO. | Signs the report. Requirement signatures stay. Claim files change only when `remove_retired_checks` is true, and only after that signature. A finished signed report is not signed again. An unfinished removal keeps review-sign for the remaining Claims. |
 | Open the Claim | Navigation. | Claims Editor for this Claim; Return preserves the Review context. |
 | Discover again | When the page has a Discovery source and timestamp, the UI opens the existing one-Requirement Discovery as a popup. Otherwise it links to Discover. | The failed Claim and its original Check statuses remain visible. No mutation on open or on following the link. |
 | Run checks | Navigation. | The check page; a new result must be rendered before claiming a replacement passes. |
 
-`ModelError` and `SigningUnavailable` are the red error. A failed sign leaves the file unchanged. Unsaved decision text is the textarea. The file changes only after `write_report` returns.
+`ModelError` and `SigningUnavailable` are the red error. A refusal before the report signature leaves the report and the Claim files unchanged. A Claim write that fails after the signature leaves the signed report in place. Unsaved decision text is the textarea. The report file changes only after `write_report` returns.
 
 The inputs for `check` and `args` are not on this page. A signed report shows the decision as text. Compile writes a new unsigned file and leaves the signed report unchanged.
 
@@ -144,7 +146,7 @@ This is the required **PoC1-style follow-up**, implemented using the existing Cl
 5. The human may **explicitly delete/retire** the replaced old Claim in Claims Editor after confirming replacement. Any not-yet-verified replacement is identified as such. Canceling, an empty search, or an Add failure leaves the old Claim intact. A prior signed report remains evidence of its original run and is never rewritten.
 6. Run Checks again and inspect the new result. Review and sign the new Claim(s) separately in Claims; then Compile/Review can record and sign the **new human decision** for that new run. Neither operation silently copies the old report decision or turns a Check outcome into a claim of conformity.
 
-The visible Check failures and ordinary persisted Claims supply the actionable state. The review report retains the free-text `decision` and may retain `assessments` for the deviations of that run. Those assessments are not a second queue and are not stored in `state.json`. Do not infer human-review currency solely from pass, worktree cleanliness or signatures.
+The visible Check failures and ordinary persisted Claims supply the actionable state. The review report retains the free-text `decision` and may retain `assessments` for the Checks of that run, including a passing Check marked Retire. Those assessments are not a second queue and are not stored in `state.json`. Do not infer human-review currency solely from pass, worktree cleanliness or signatures.
 
 ## PoC1
 
@@ -156,7 +158,7 @@ PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. T
 | Read the passage and the path the check used | Adapt | `law_text` and Claim `args` on the report. PoC1 also showed a claim slug and a locus column. |
 | Record a human conclusion and sign it | Adapt | `decision` and `review-sign`. PoC1's Sign off opens `/remedy` and stores `signed_off` in `state.json`. |
 | Leave a binding as it is | Retain | No action. The Claim file stays. |
-| Look for evidence again after a red check | **Retain and simplify** | Open the existing one-Requirement Discovery in a popup, grey already-checked evidence through a presentation hook, add one or more replacement Claims, explicitly retire the old Claim, rerun Checks, then sign. No new finder. |
+| Look for evidence again after a red check | **Retain and simplify** | Open the existing one-Requirement Discovery in a popup, grey already-checked evidence through a presentation hook, add one or more replacement Claims, delete the old Claim in Claims Editor, rerun Checks, then sign. No new finder. |
 | Change `check` or `args` from the review card | Drop | Claims Editor writes the Claim. This page links there. |
 | Rewrite a path to a `_new` suffix as a re-point | Drop | `rehunt_repoint_path` only renames a demo string. The person edits `args` in the Claims editor. |
 | Persist individual Keep/Re-hunt marks across runs | Recorded on the review report as `assessments` | Accept, Must be fixed, and Not assessed apply to deviations of the selected run. There is no `state.json`, no review queue, and no copy of those assessments onto another run. |

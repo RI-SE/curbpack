@@ -135,11 +135,24 @@ Review opens the latest saved report by default and shows its path. To open a sp
 
 Compile does not run Checks and does not commit. You may commit the report afterwards. That commit is a later revision of the product repository. It is not `run_result.commit`.
 
+When a Check is marked Retire, Create New Report stores that disposition and its comment, and stores whether signing should remove the Check from the live Claim. The Check result itself stays `pass`, `fail`, or `skipped`.
+
 Keep the pack id, version, directory digest, commit, and worktree value with the report if someone has to reproduce the run.
 
 ## 7. Human decision and review-sign
 
-On the review page the reviewer writes `decision` in their own words and then review-sign. The signature covers the report, including that sentence. It is not the Requirement seal and not the Claim seal. Claim sealing is a separate action in Claims, after the person has looked at the evidence and the configured Checks. A passing Check does not sign a Claim.
+On the review page the reviewer writes `decision` in their own words and then review-sign. The signature covers the report, including that sentence, the assessments, and `remove_retired_checks`. It is not the Requirement seal.
+
+When `remove_retired_checks` is false, or absent, review-sign does not change Claim files. When it is true, the same step then removes the retired Checks from the live Claims. A Claim that still has a Check is signed again by the report signer. A Claim with none left is deleted. The Claim copied into the report is left as it was. A passing Check does not by itself sign a Claim.
+
+```text
+Check
+  -> Check result
+  -> Review: Retire, with a comment
+  -> report
+  -> review-sign
+  -> remove the Checks from the Claim files, only if the report said so
+```
 
 The page states that a passing Check does not mean the legal requirement is fulfilled, and that the report has no field for a conclusion that the product meets CRA.
 
@@ -149,7 +162,7 @@ Run Check again on the new tree.
 
 The earlier signed report and the new run result are two snapshots. When both are loaded, Review says whether they are the same run. An older saved report is labeled `This saved report is an older run.` Do not describe it as the current run. **Compile** creates a new dated report and preserves the earlier file. The previous decision is not copied forward.
 
-A failed row can stay on the review page while you open Discovery for that Requirement, add a new Claim, and retire the old Claim yourself.
+A failed row can stay on the review page while you open Discovery for that Requirement, add a new Claim, and delete the old Claim yourself in Claims Editor.
 
 ## 9. Next: run the Check where the repository changes
 

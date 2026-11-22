@@ -62,10 +62,21 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     )
     out = _new_review_report_path(reports_dir(repo, config))
     write_report(out, report)
+    nxt = _safe_review_next((form.get("next") or [""])[0])
+    if nxt:
+        return nxt
     return (
         f"/review?repo={quote(repo_id, safe='')}&compiled=1"
         f"&report={quote(str(out.resolve()), safe='')}"
     )
+
+
+def _safe_review_next(value: str) -> str:
+    """A same-app path. Anything else is ignored so compile cannot redirect elsewhere."""
+    text = str(value or "").strip()
+    if not text.startswith("/") or text.startswith("//") or "\\" in text or "://" in text:
+        return ""
+    return text
 
 
 def _save_review_decision(ws: Workspace, form: dict) -> str:

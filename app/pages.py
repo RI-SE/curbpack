@@ -220,10 +220,6 @@ button.down.selected{background:#b91c1c;border-color:#b91c1c;color:#fff}
 pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;overflow:auto;border-radius:8px;white-space:pre-wrap}
 .review-board .brand{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .review-board h1{font-size:1.75rem;letter-spacing:-.02em}
-.review-board details.review-process{margin:.35rem 0 0;font-size:.92rem}
-.review-board details.review-process > summary{cursor:pointer;color:var(--muted)}
-.review-board details.review-process ol{margin:.4rem 0 0;padding-left:1.2rem}
-.review-board details.review-process li{margin:.15rem 0}
 .review-board h2{font-size:1.15rem;margin:1.4rem 0 .55rem}
 .review-board h3{font-size:1rem;margin:0 0 .4rem;font-family:ui-sans-serif,system-ui,sans-serif}
 .review-board .topline{border-left:4px solid var(--accent);font-size:1.05rem}
@@ -279,7 +275,9 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;padding:0;color:var(--ink)}
 .review-board button.comment-mark.has-comment{border-color:transparent;background:transparent}
 .review-board button.comment-mark .doc-icon{display:block;margin:auto}
-.review-board dialog.comment-editor,.review-board dialog.binding-note{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.comment-editor,.review-board dialog.binding-note,.review-board dialog.review-choice{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.review-choice .btn, .review-board dialog.review-choice button{margin:0 .35rem .35rem 0}
+.review-board dialog.review-choice .btn{margin:0 .35rem .35rem 0}
 .review-board dialog.binding-note p{margin:.4rem 0}
 .review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
 .review-board .file-actions{margin-top:.25rem;font-size:.8rem}

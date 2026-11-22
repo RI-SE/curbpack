@@ -51,7 +51,10 @@ Curbcheck Python API / CLI -> registered Checks -> Run Result
 Studio Compile -> Review report (JSON / PDF)
        |
        v
-Studio Review -> inspect / record decision / sign
+Studio Review -> Retire with a reason / record decision / sign
+       |
+       v
+Claim files change only when that signed report chose removal
 ```
 
 This is a responsibility diagram, not a forced chronological workflow. Not every action is needed for every run. Extraction and Discovery suggestions are not verified compliance evidence. Check results are technical facts; review and organizational release decisions remain distinct. Signing does not imply approval or conformity.
@@ -62,8 +65,8 @@ This is a responsibility diagram, not a forced chronological workflow. Not every
 2. **Identity and provenance:** the revised EP-11 introduces qualified identities, declared `origin`, ownership transfer, and independently declared status. The persistent contract and migrations belong to VL-00/VL-01, not an unrequested EP-02 refactor.
 3. **Signatures:** VR-00 makes embedded and trusted signed-Git evidence consistently reportable; invalid/unsigned is not a release gate. Do not treat one valid mechanism as erasing a known invalid embedded signature.
 4. **Claim binding:** VL-04 adds the exact Requirement identity/digest and separate stale/missing reporting without suppressing Check execution. VL-05 makes exact historical chains inspectable in Review.
-5. **Write ownership:** only explicit editor/ownership/import operations mutate their own files. Compare, Discovery candidate retrieval, Check history inspection and Review do not silently edit them.
-6. **Compile vs Review:** Compile creates and renders reports from recorded results; Review owns decisions/signatures. Neither runs Checks. A new run never deletes an existing saved report.
+5. **Write ownership:** only explicit editor/ownership/import operations mutate their own files. Compare, Discovery candidate retrieval, and Check history inspection do not edit them. Review does not edit a Claim until a signed report has `remove_retired_checks` true, and then only the Checks that report named.
+6. **Compile vs Review:** Compile creates and renders reports from recorded results; Review owns decisions/signatures. Neither runs Checks. A new run never deletes an existing saved report. Signing does not rewrite the Check result stored in the report.
 7. **Compatibility:** EP-02 must preserve existing accepted observable behavior, APIs and CLI workflows or document an explicitly accepted change. Every migration slice has regression tests.
 8. **No implied complexity:** no mandatory Publish lifecycle, separate Studio GUIs, duplicate CLI backends, SQL version store, generic plugin platform, or empty architectural layers.
 

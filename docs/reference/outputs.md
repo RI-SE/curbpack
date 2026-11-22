@@ -203,10 +203,10 @@ The export directory currently has no version segment. The product Pack-tree con
 | --- | --- |
 | `curbcheck` | Prints a text summary. `-j` adds a new dated JSON file under `results_dir`; `-o PATH` writes the same object to that path. Both flags may be used together. |
 | Check page | Writes a new dated run-result JSON under the selected product's `results_dir`. Leaves existing review reports in place. |
-| Compile | Reads the posted run-result path and writes a new dated report under `reports_dir`, including posted `assessments` for that run. Writes nothing when that path is absent. Does not re-run Checks or overwrite a previous dated report. |
+| Compile | Reads the posted run-result path and writes a new dated report under `reports_dir`, including posted `assessments` and, when a Check is retired, `remove_retired_checks`. Writes nothing when that path is absent, or when Retire confirmation is cancelled. Does not re-run Checks, edit Claim files, or overwrite a previous dated report. |
 | Open Review | Lists the dated run results and review reports, and opens only the requested document. Opening the page does not write a report. |
 | Save decision | Updates the selected report's `decision` and removes that report's `signed` block. Embedded Claim and Requirement signatures remain. |
-| review-sign | Requires a saved decision and signs that same report. |
+| review-sign | Requires a saved decision and signs that same report. When `remove_retired_checks` is true, signing then removes the retired Checks from the live Claim files. A Claim with a Check left is signed again. A Claim with none left is deleted. `false` signs the report and does not change Claim files. A Claim that no longer matches the run blocks every write. If a Claim write fails after the report is signed, the report stays signed and a later review-sign finishes only the Claims that were not updated. |
 
 A finished CLI run can write JSON even when Checks failed or were skipped, or no Check ran. A run that stops before saving leaves an existing output file in place. The process exit code is not a JSON field; see [curbcheck — Exit codes](curbcheck-cli.md#exit-codes).
 

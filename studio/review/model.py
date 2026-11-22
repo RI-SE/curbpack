@@ -41,6 +41,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     results_folder = results_dir(repo, config)
     reports_folder = reports_dir(repo, config)
     extra = dict(empty)
+    extra["review_fresh"] = (query.get("fresh") or [""])[0] == "1"
     errors: list[str] = []
     if not results_folder.is_dir():
         errors.append(f"Results directory {config['results_dir']} cannot be used.")

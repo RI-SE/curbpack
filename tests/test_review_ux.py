@@ -58,12 +58,13 @@ class ReviewStartTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
             self.assertIn("<h1>Review</h1>", page)
-            process = page.split('<details class="review-process">', 1)[1].split("</details>", 1)[0]
-            self.assertIn("Check → Check result → Review → Report → Sign", process)
-            self.assertNotIn("Retire", process)
-            self.assertNotIn("<details class=\"review-process\" open>", page)
-            self.assertIn("Review the latest run", page)
-            self.assertIn("Nothing is opened until you choose a Check run.", page)
+            self.assertNotIn('class="review-process"', page)
+            self.assertIn("No previous Check result has been chosen.", page)
+            self.assertIn('go to the <a href="/check">Check</a> tab', page)
+            self.assertIn("review the latest Check result", page)
+            self.assertNotIn("Nothing is opened until you choose a Check run.", page)
+            self.assertNotIn("Review the latest run", page)
+            self.assertNotIn("Save decision and review-sign need a report file.", page)
             self.assertIn(urllib.parse.quote(str(latest.resolve()), safe=""), page)
             self.assertNotIn('action="/review/compile"', page)
             self.assertNotIn("claim-older", page)
@@ -83,9 +84,7 @@ class ReviewStartTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             self.assertIn(path.name, page)
-            process = page.split('<details class="review-process">', 1)[1].split("</details>", 1)[0]
-            self.assertIn("Check → Check result → Review → Report → Sign", process)
-            self.assertNotIn("Retire", process)
+            self.assertNotIn('class="review-process"', page)
             self.assertIn("Execution", page)
             self.assertNotIn("This is the Check result under review.", page)
             self.assertIn(">Create New Report</button>", page)
@@ -97,6 +96,11 @@ class ReviewStartTest(unittest.TestCase):
             self.assertIn('data-claim="purpose-note"', queue)
             self.assertIn(">Passed</option>", queue)
             self.assertIn(">Retire</option>", queue)
+            self.assertIn('data-comment-dialog="comment-check-purpose-note--"', queue)
+            self.assertIn(
+                "This verdict needs a comment. Close without one and the previous verdict returns.",
+                page,
+            )
             self.assertNotIn(">Must be fixed</option>", queue)
             self.assertIn('id="retire-confirm"', page)
             self.assertIn("Remove retired Checks from Claims when signing the report.", page)
@@ -193,6 +197,51 @@ class ReviewStartTest(unittest.TestCase):
         self.assertNotIn("Other run.", page)
         self.assertNotIn("Reports for this run", page)
         self.assertNotIn("<h2>Review reports</h2>", page)
+        self.assertNotIn("A review of this Check run is already started.", page)
+
+    def test_an_unsigned_report_asks_before_the_same_run_opens_again(self):
+        page = review_page(
+            {"run_result": {"claims": []}, "claims": [], "appendix": []},
+            None,
+            saved=False,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/runs/run-result_20260101T000000Z.json",
+                "run_reports": [
+                    {
+                        "name": "review-report_20260102T000000Z.json",
+                        "path": "/tmp/reports/review-report_20260102T000000Z.json",
+                        "decision": "",
+                        "signed": False,
+                        "signer": "",
+                    }
+                ],
+            },
+        ).decode()
+        self.assertIn("A review of this Check run is already started.", page)
+        self.assertIn(">Continue</a>", page)
+        self.assertIn(">Start over</a>", page)
+        self.assertIn(">Cancel</a>", page)
+        self.assertIn("fresh=1", page)
+        self.assertIn("review-report_20260102T000000Z.json", page)
+        fresh = review_page(
+            {"run_result": {"claims": []}, "claims": [], "appendix": []},
+            None,
+            saved=False,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/runs/run-result_20260101T000000Z.json",
+                "review_fresh": True,
+                "run_reports": [
+                    {
+                        "name": "review-report_20260102T000000Z.json",
+                        "path": "/tmp/reports/review-report_20260102T000000Z.json",
+                        "signed": False,
+                    }
+                ],
+            },
+        ).decode()
+        self.assertNotIn("A review of this Check run is already started.", fresh)
 
     def test_rediscover_without_discovery_context_links_to_discover(self):
         with tempfile_workspace() as (workspace, repo):
