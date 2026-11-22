@@ -57,6 +57,11 @@ class ReviewStartTest(unittest.TestCase):
             _write_run(latest, "claim-latest")
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
+            self.assertIn("<h1>Review</h1>", page)
+            process = page.split('<details class="review-process">', 1)[1].split("</details>", 1)[0]
+            self.assertIn("Check → Check result → Review → Report → Sign", process)
+            self.assertNotIn("Retire", process)
+            self.assertNotIn("<details class=\"review-process\" open>", page)
             self.assertIn("Review the latest run", page)
             self.assertIn("Nothing is opened until you choose a Check run.", page)
             self.assertIn(urllib.parse.quote(str(latest.resolve()), safe=""), page)
@@ -78,6 +83,9 @@ class ReviewStartTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             self.assertIn(path.name, page)
+            process = page.split('<details class="review-process">', 1)[1].split("</details>", 1)[0]
+            self.assertIn("Check → Check result → Review → Report → Sign", process)
+            self.assertNotIn("Retire", process)
             self.assertIn("Execution", page)
             self.assertNotIn("This is the Check result under review.", page)
             self.assertIn(">Create New Report</button>", page)

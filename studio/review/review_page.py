@@ -196,6 +196,7 @@ def review_page(
 <div>
 <h1>Review</h1>
 {_review_intro(door, report)}
+{_review_process()}
 </div>
 </div>
 {_review_start(door, report)}
@@ -1766,6 +1767,21 @@ def _review_start(door: dict, report: dict | None) -> str:
 
 def _review_intro(door: dict, report: dict | None) -> str:
     return ""
+
+
+def _review_process() -> str:
+    return """
+<details class="review-process">
+<summary>Check → Check result → Review → Report → Sign</summary>
+<ol>
+<li>Check runs the configured Checks.</li>
+<li>The Check result records that run.</li>
+<li>Review is where a person reads the result.</li>
+<li>The report stores the decision.</li>
+<li>Sign seals the report.</li>
+</ol>
+</details>
+"""
 
 
 def _run_file_name(door: dict, saved: bool) -> str:

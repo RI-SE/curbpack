@@ -220,6 +220,10 @@ button.down.selected{background:#b91c1c;border-color:#b91c1c;color:#fff}
 pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;overflow:auto;border-radius:8px;white-space:pre-wrap}
 .review-board .brand{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .review-board h1{font-size:1.75rem;letter-spacing:-.02em}
+.review-board details.review-process{margin:.35rem 0 0;font-size:.92rem}
+.review-board details.review-process > summary{cursor:pointer;color:var(--muted)}
+.review-board details.review-process ol{margin:.4rem 0 0;padding-left:1.2rem}
+.review-board details.review-process li{margin:.15rem 0}
 .review-board h2{font-size:1.15rem;margin:1.4rem 0 .55rem}
 .review-board h3{font-size:1rem;margin:0 0 .4rem;font-family:ui-sans-serif,system-ui,sans-serif}
 .review-board .topline{border-left:4px solid var(--accent);font-size:1.05rem}
