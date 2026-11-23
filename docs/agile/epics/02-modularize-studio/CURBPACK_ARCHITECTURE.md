@@ -16,7 +16,7 @@ The CLI of any component is **only a thin input/output adapter** calling the sam
 ## Architecture and contract authority
 
 - `docs/reference/packs2.md` is the human/PO-approved normative persistent data contract. Changes to persistent shapes or meaning require an explicit contract decision.
-- `docs/reference/studio-internal.md` defines Studio-internal data structures. `review_decision` is defined there.
+- `docs/reference/studio-internal.md` defines Studio-internal data structures. `review_item` is defined there.
 - `models/pydantic/` implements those contracts for validation and serialization; JSON Schema is **generated from Pydantic**. Neither Python nor generated schema independently changes the norm.
 - `docs/reference/workspace.md` specifies effective workspace/path configuration; it must be updated when VL-00 establishes `namespace_base` and namespace-qualified selection.
 - This target and `docs/arch/ARCHITECTURE.md` own system/component boundaries; each subsystem's `ARCHITECTURE.md` owns its own functional architecture, within these boundaries.

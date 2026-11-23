@@ -13,7 +13,7 @@ The following documents have distinct responsibilities:
 | Document | Authority |
 |---|---|
 | `docs/reference/packs2.md` | Normative persistent data contracts, approved by humans / Product Owner |
-| `docs/reference/studio-internal.md` | Studio-internal data structures. `review_decision` is defined there. Claim, Check, and signature are added to that document in a later step. |
+| `docs/reference/studio-internal.md` | Studio-internal data structures. `review_item` is defined there. Claim, Check, and signature are added to that document in a later step. |
 | `docs/arch/ARCHITECTURE.md` | Approved overall system architecture |
 | Subsystem `ARCHITECTURE.md` files | Subsystem responsibilities and internal boundaries, consistent with the overall architecture |
 | `docs/reference/workspace.md` | Workspace configuration and path contracts |

@@ -7,7 +7,7 @@
 | [Packs v2](packs2.md) | Persistent Pack, Requirement, Claim, signature, and Check shapes. Selection and `search_hints` on `curbpack.json` are §2.3. |
 | [Outputs](outputs.md) | Run-result and review-report JSON structures, field meanings, and interpretation. |
 | [Workspace](workspace.md) | Where product and Studio config live, which keys exist, and the path fields Check and Compile read. |
-| [Studio-internal](studio-internal.md) | Studio-internal data structures. `review_decision` is defined there. |
+| [Studio-internal](studio-internal.md) | Studio-internal data structures. `review_item` is defined there. |
 
 [Configuration](configuration.md) restates that contract.
 

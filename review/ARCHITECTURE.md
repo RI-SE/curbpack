@@ -1,6 +1,6 @@
 # Review — Studio component architecture
 
-**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`. `review_decision` is defined in `docs/reference/studio-internal.md`.
+**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`. `review_item` is defined in `docs/reference/studio-internal.md`.
 
 ## Responsibility and boundaries
 

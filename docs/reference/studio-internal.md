@@ -2,11 +2,11 @@
 
 **Status:** Approved.
 
-This document defines Curbpack Studio's internal data structures. This page defines `review_decision`. Claim, Check, and signature are added to this document in a later step.
+This document defines Curbpack Studio's internal data structures. This page defines `review_item`. Claim, Check, and signature are added to this document in a later step.
 
-## review_decision
+## review_item
 
-`review_decision` is the decision for one Check. `verdict` and `comment` are written once and remain the next time the same deviation is found.
+`review_item` is the decision for one Check. `decision`, `priority`, and `comment` are written once and remain the next time the same deviation is found.
 
 ### Key and provenance
 
@@ -66,7 +66,7 @@ return True
 
 `same_file_metadata` is true when both lists are present and contain the same set of `path`, and each path has the same `size` and the same `mtime`. Order does not matter.
 
-A stored `verdict` and `comment` remain when the predicate is false.
+A stored `decision`, `priority`, `comment`, and `remediation_history` remain when the predicate is false.
 
 ### Object
 
@@ -86,17 +86,28 @@ A missing key is omitted. Unknown keys are invalid.
       { "path": "docs/a.md", "size": 1204, "mtime": "2026-11-22T18:04:11Z" }
     ]
   },
-  "verdict": "must_fix",
+  "decision": "must_fix",
+  "priority": 1,
   "comment": "Add docs/a.md.",
-  "assessed_at": "2026-11-23T05:20:00Z"
+  "assessed_at": "2026-11-23T05:20:00Z",
+  "remediation_history": [
+    {
+      "at": "2026-11-23T08:15:00Z",
+      "comment": "Added security documentation."
+    }
+  ]
 }
 ```
 
-`verdict` is `pass`, `accepted`, `not_assessed`, or `must_fix`.
+`decision` is `pass`, `accepted`, `not_assessed`, or `must_fix`.
 
-- `pass` is the recorded Check outcome. `comment` and `assessed_at` are omitted.
-- `accepted` means the reviewer has accepted the deficiencies the Check found. `comment` is non-empty text and `assessed_at` is UTC `YYYY-MM-DDTHH:MM:SSZ`, the same form as `signed.at`.
-- `not_assessed` is a deviation that has not been judged. `comment` and `assessed_at` are omitted.
-- `must_fix` is the decision that the deficiencies are to be corrected. `comment` and `assessed_at` have the same form as for `accepted`.
+`remediation_history` is the sequence of remediations recorded for this decision, earliest first. Each entry has `at`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `comment`, the non-empty text of what was done. The key is omitted when the sequence is empty.
 
-A provenance key the run does not have is omitted. `verdict` and `comment` are kept.
+`priority` is an integer from 1 to 10. 1 is the most urgent.
+
+- `pass` is the recorded Check outcome. `priority`, `comment`, and `assessed_at` are omitted.
+- `accepted` means the reviewer has accepted the deficiencies the Check found. `priority` is set. `comment` is non-empty text and `assessed_at` is UTC `YYYY-MM-DDTHH:MM:SSZ`, the same form as `signed.at`.
+- `not_assessed` is a deviation that has not been judged. `priority`, `comment`, and `assessed_at` are omitted.
+- `must_fix` is the decision that the deficiencies are to be corrected. `priority`, `comment`, and `assessed_at` have the same form as for `accepted`.
+
+A provenance key the run does not have is omitted. `decision`, `priority`, `comment`, and `remediation_history` are kept.

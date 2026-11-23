@@ -115,7 +115,7 @@ The run result references the Claim digests actually executed. A compiler or rev
 
 ## Review report
 
-Compile copies an existing run result into one JSON object together with the Requirements and Claims needed to review it. It does not execute Checks or change their outcomes. `validate_report` validates the report before it is saved. The per-check decision `review_decision` is defined in [Studio-internal](studio-internal.md).
+Compile copies an existing run result into one JSON object together with the Requirements and Claims needed to review it. It does not execute Checks or change their outcomes. `validate_report` validates the report before it is saved. The per-check decision `review_item` is defined in [Studio-internal](studio-internal.md).
 
 | Field | Meaning |
 | --- | --- |
