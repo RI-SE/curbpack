@@ -36,6 +36,92 @@ _BINDING_ASSESSMENT = {
 }
 
 
+def unmet_compile_conditions(
+    *,
+    run_result: dict,
+    requirements: list[dict],
+    claims: list[dict],
+    repo: Path | None = None,
+) -> list[str]:
+    """Conditions that stop a report, one sentence each. Empty when compile can proceed."""
+    try:
+        checked = validate_run_result(copy.deepcopy(run_result))
+    except ModelError:
+        return ["The selected file must be a Check run result."]
+    claim_gaps = _claim_file_gaps(checked, claims)
+    if claim_gaps:
+        return claim_gaps
+    ordered = _claims_for_rows(checked, claims)
+    return _requirement_version_gaps(ordered, requirements, repo)
+
+
+def _claim_file_gaps(run_result: dict, claims: list[dict]) -> list[str]:
+    """Each Claim file must still be the Claim that this run executed."""
+    by_id: dict[str, dict] = {}
+    for claim in claims:
+        if isinstance(claim, dict) and isinstance(claim.get("id"), str):
+            by_id.setdefault(claim["id"], claim)
+    gaps = []
+    for row in run_result.get("claims") or []:
+        claim_id = row.get("id")
+        label = claim_id if isinstance(claim_id, str) and claim_id else "?"
+        claim = by_id.get(claim_id) if isinstance(claim_id, str) else None
+        if not isinstance(claim, dict):
+            gaps.append(f"Claim {label} must be the Claim file that ran. That file is not loaded.")
+            continue
+        if version_digest(claim) != row.get("digest"):
+            gaps.append(
+                f"Claim {label} must be the Claim that ran. "
+                "The Claim file has changed since this Check run."
+            )
+            continue
+        if not _checks_match(claim, row):
+            gaps.append(f"Claim {label} must have the Checks that ran.")
+    return gaps
+
+
+def _checks_match(claim: dict, row: dict) -> bool:
+    configured = claim.get("checks") or []
+    for item in row.get("checks") or []:
+        index = item.get("index")
+        if not isinstance(index, int) or index < 0 or index >= len(configured):
+            return False
+        configured_item = configured[index]
+        if configured_item.get("check") != item.get("check") or configured_item.get("args") != item.get("args"):
+            return False
+    return True
+
+
+def _requirement_version_gaps(
+    claims: list[dict],
+    requirements: list[dict],
+    repo: Path | None,
+) -> list[str]:
+    """Each recorded Requirement version must be readable. A different current version is not a substitute."""
+    gaps = []
+    for claim in claims:
+        if not isinstance(claim.get("requirement_digest"), str):
+            gaps.append(
+                f"Claim {claim.get('id') or '?'} must record the Requirement version that was checked."
+            )
+    for requirement_id, recorded, claim in _recorded_requirement_versions(claims):
+        match = _supplied_requirement(requirements, requirement_id, recorded)
+        if match is None and repo is not None:
+            match = _recovered_requirement(repo, claim, recorded)
+        if match is None or version_digest(match) != recorded:
+            gaps.append(_missing_version_sentence(requirement_id, recorded))
+    return gaps
+
+
+def _missing_version_sentence(requirement_id: str, recorded: str) -> str:
+    return (
+        f"Requirement {requirement_id} must be the recorded version {recorded}. "
+        "That version was not found. The current Requirement is a different version "
+        "and was not substituted. Recover that version in this repository, or bind "
+        "the Claim to the current Requirement and run Checks again."
+    )
+
+
 def compile_report(
     *,
     run_result: dict,
@@ -46,6 +132,14 @@ def compile_report(
     assessments: list[dict] | None = None,
     remove_retired_checks: bool | None = None,
 ) -> dict:
+    gaps = unmet_compile_conditions(
+        run_result=run_result,
+        requirements=requirements,
+        claims=claims,
+        repo=repo,
+    )
+    if gaps:
+        raise ModelError("review report", "conditions", "\n".join(gaps))
     checked = copy.deepcopy(validate_run_result(run_result))
     embedded_claims = [
         validate_claim(copy.deepcopy(claim)) for claim in _claims_for_rows(checked, claims)
@@ -84,16 +178,32 @@ def validate_report(obj: object) -> dict:
         raise ModelError("review report", "claims", "one Claim per run row, in row order")
     for claim in claims:
         validate_claim(claim)
-    expected_ids = _first_requirement_ids(ordered)
+    expected_versions = [
+        (requirement_id, recorded) for requirement_id, recorded, _claim in _recorded_requirement_versions(ordered)
+    ]
+    actual_versions = [_requirement_version_key(requirement) for requirement in requirements]
     actual_ids = [requirement.get("id") if isinstance(requirement, dict) else None for requirement in requirements]
-    if actual_ids != expected_ids:
+    unique_ids = len(actual_ids) == len(set(actual_ids))
+    if unique_ids:
+        expected_ids = []
+        for claim in ordered:
+            requirement_id = claim.get("requirement_id")
+            if isinstance(requirement_id, str) and requirement_id not in expected_ids:
+                expected_ids.append(requirement_id)
+        if actual_ids != expected_ids:
+            raise ModelError(
+                "review report",
+                "requirements",
+                "the Requirement versions recorded by the Claims, in first-seen order",
+            )
+    elif actual_versions != expected_versions:
         raise ModelError(
             "review report",
             "requirements",
-            "the Requirements named by the Claims, in first-seen order",
+            "the Requirement versions recorded by the Claims, in first-seen order",
         )
     for requirement in requirements:
-        validate_requirement(requirement)
+        validate_requirement(copy.deepcopy(requirement))
     for index, item in enumerate(appendix):
         _validate_appendix_item(item, index)
     if "assessments" in obj:
@@ -182,39 +292,52 @@ def _requirements_for_claims(
     *,
     repo: Path | None = None,
 ) -> list[dict]:
-    """Embed the Requirement version each Claim recorded.
+    """Embed each Requirement version a Claim recorded.
 
+    Two Claims may have recorded different versions of one Requirement id.
     A current Requirement with the same id and a different digest is not a substitute.
     """
     chosen = []
-    for requirement_id in _first_requirement_ids(claims):
-        bound = [claim for claim in claims if claim.get("requirement_id") == requirement_id]
-        digests = []
-        for claim in bound:
-            digest = claim.get("requirement_digest")
-            if isinstance(digest, str) and digest not in digests:
-                digests.append(digest)
-        if len(digests) != 1:
-            raise ModelError(
-                f"requirement {requirement_id}",
-                "requirement_digest",
-                "one recorded Requirement version for this Requirement id",
-            )
-        recorded = digests[0]
+    for requirement_id, recorded, claim in _recorded_requirement_versions(claims):
         match = _supplied_requirement(requirements, requirement_id, recorded)
         if match is None and repo is not None:
-            match = _recovered_requirement(repo, bound[0], recorded)
+            match = _recovered_requirement(repo, claim, recorded)
         if match is None or version_digest(match) != recorded:
             raise ModelError(
                 f"requirement {requirement_id}",
                 "requirement_digest",
-                f"Requirement version {recorded} recorded on the Claim. "
-                "The current Requirement is a different version and was not substituted. "
-                "Recover that version in this repository, or bind the Claim to the current "
-                "Requirement and run Checks again.",
+                _missing_version_sentence(requirement_id, recorded),
             )
-        chosen.append(validate_requirement(copy.deepcopy(match)))
+        embedded = copy.deepcopy(match)
+        validate_requirement(copy.deepcopy(embedded))
+        chosen.append(embedded)
     return chosen
+
+
+def _recorded_requirement_versions(claims: list[dict]) -> list[tuple[str, str, dict]]:
+    """(requirement id, recorded digest, one Claim that recorded it), first seen."""
+    order = []
+    seen: set[tuple[str, str]] = set()
+    for claim in claims:
+        requirement_id = claim.get("requirement_id")
+        recorded = claim.get("requirement_digest")
+        if not isinstance(requirement_id, str) or not isinstance(recorded, str):
+            continue
+        key = (requirement_id, recorded)
+        if key in seen:
+            continue
+        seen.add(key)
+        order.append((requirement_id, recorded, claim))
+    return order
+
+
+def _requirement_version_key(requirement: object) -> tuple[str, str] | None:
+    if not isinstance(requirement, dict) or not isinstance(requirement.get("id"), str):
+        return None
+    try:
+        return (requirement["id"], version_digest(requirement))
+    except (TypeError, ValueError):
+        return None
 
 
 def _supplied_requirement(requirements: list[dict], requirement_id: str, recorded: str) -> dict | None:
@@ -395,15 +518,6 @@ def _validate_removal_flag(obj: dict) -> None:
         raise ModelError("review report", "remove_retired_checks", "true or false")
     if not has_retire and "remove_retired_checks" in obj:
         raise ModelError("review report", "remove_retired_checks", "absent")
-
-
-def _first_requirement_ids(claims: list[dict]) -> list[str]:
-    order = []
-    for claim in claims:
-        requirement_id = claim.get("requirement_id")
-        if isinstance(requirement_id, str) and requirement_id not in order:
-            order.append(requirement_id)
-    return order
 
 
 def _validate_appendix_item(item: object, index: int) -> None:

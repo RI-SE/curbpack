@@ -32,34 +32,38 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     from studio.compile.impl import compile_report, write_report
     from studio.compile.impl.path import _new_review_report_path
 
-    repo_id = _sync_open_repo(ws, form)
-    if not repo_id:
-        raise ModelError("review", "repo", "a chosen repository")
-    repo = _registered_repo_path(ws, repo_id)
-    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    repo_id = ""
     requested = (form.get("result") or [""])[0]
-    if not requested.strip():
-        raise ModelError("review", "report", "a selected run result")
-    status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
-    if status != "ok":
-        raise ModelError(
-            "review",
-            "report",
-            "a run-result file under that repository's results_dir",
+    try:
+        repo_id = _sync_open_repo(ws, form)
+        if not repo_id:
+            raise ModelError("review", "repo", "a chosen repository")
+        repo = _registered_repo_path(ws, repo_id)
+        config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+        if not requested.strip():
+            raise ModelError("review", "report", "a selected run result")
+        status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+        if status != "ok":
+            raise ModelError(
+                "review",
+                "report",
+                "a run-result file under that repository's results_dir",
+            )
+        folder = repo_claims_dir(repo)
+        claims = load_claims(folder) if folder.is_dir() else []
+        _packs, requirements = _report_sources_for_repo(repo, config)
+        assessments = assessments_from_form(form)
+        report = compile_report(
+            run_result=load_run_result(Path(run_path)),
+            requirements=requirements,
+            claims=claims,
+            trust=trust_store(ws.keys),
+            repo=repo,
+            assessments=assessments,
+            remove_retired_checks=removal_choice(form, assessments),
         )
-    folder = repo_claims_dir(repo)
-    claims = load_claims(folder) if folder.is_dir() else []
-    _packs, requirements = _report_sources_for_repo(repo, config)
-    assessments = assessments_from_form(form)
-    report = compile_report(
-        run_result=load_run_result(Path(run_path)),
-        requirements=requirements,
-        claims=claims,
-        trust=trust_store(ws.keys),
-        repo=repo,
-        assessments=assessments,
-        remove_retired_checks=removal_choice(form, assessments),
-    )
+    except ModelError as exc:
+        return _refused_review(repo_id, requested, _compile_refusal(exc))
     out = _new_review_report_path(reports_dir(repo, config))
     write_report(out, report)
     nxt = _safe_review_next((form.get("next") or [""])[0])
@@ -69,6 +73,39 @@ def _compile_review(ws: Workspace, form: dict) -> str:
         f"/review?repo={quote(repo_id, safe='')}&compiled=1"
         f"&report={quote(str(out.resolve()), safe='')}"
     )
+
+
+def _refused_review(repo_id: str, result: str, text: str) -> str:
+    """Stay on the run and name the conditions Create New Report did not meet."""
+    from urllib.parse import quote
+
+    base = "/review?refused=1"
+    if repo_id:
+        base += f"&repo={quote(repo_id, safe='')}"
+    if result.strip():
+        base += f"&result={quote(result, safe='')}"
+    return f"{base}&note={quote(text, safe='')}"
+
+
+def _compile_refusal(exc: ModelError) -> str:
+    if exc.field == "conditions":
+        return exc.expected
+    if exc.object_name == "review" and exc.field == "repo":
+        return "A repository must be chosen."
+    if exc.object_name == "review" and exc.field == "report":
+        if "selected" in exc.expected:
+            return "A Check run result must be selected."
+        return "The selected file must be a run-result in this repository's results directory."
+    if exc.field == "assessments" and "Not assessed" in exc.expected:
+        return "A comment needs Accept, Must be fixed, or Retire. Otherwise leave both empty."
+    if exc.field.endswith(".text"):
+        return "Accept, Must be fixed, and Retire need a comment."
+    if exc.field == "remove_retired_checks":
+        return (
+            "Retire needs the choice of whether signing the report "
+            "removes those Checks from the Claims."
+        )
+    return exc.expected or str(exc)
 
 
 def _safe_review_next(value: str) -> str:
@@ -191,11 +228,18 @@ def _review_get(ws: Workspace, query: dict) -> bytes:
     door.update(extra)
     if extra.get("selected_report"):
         door["report_path"] = extra["selected_report"]
+    refused = (query.get("refused") or [""])[0] == "1"
+    note = (query.get("note") or [""])[0]
+    if refused and note:
+        door["compile_refusal"] = note
+        shown_error = error
+    else:
+        shown_error = _review_error(error, query)
     return review_page(
         report,
         reading,
         message=_review_message(query),
-        error=_review_error(error, query),
+        error=shown_error,
         discovery={
             "repo_id": (query.get("repo") or query.get("repo_id") or [""])[0],
             "source_id": (query.get("source") or query.get("source_id") or [""])[0],

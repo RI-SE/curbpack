@@ -136,7 +136,8 @@ def _historical_requirement(repo: Path, row: dict):
             and version_digest(obj) == row.get("requirement_digest")
         )
 
-    return _historical_object(repo, f"/{requirement_id}.json", _requirement_blob, accept)
+    # The recorded version may live in a file whose name is not the Requirement id.
+    return _historical_object(repo, ".json", _requirement_blob, accept, path_contains="/packs/")
 
 
 def _historical_claim(repo: Path, row: dict):
@@ -150,7 +151,7 @@ def _historical_claim(repo: Path, row: dict):
     return _historical_object(repo, f"/{claim_id}.json", _claim_blob, accept)
 
 
-def _historical_object(repo: Path, suffix: str, parse, accept):
+def _historical_object(repo: Path, suffix: str, parse, accept, path_contains: str | None = None):
     log = _git(repo, "log", "--all", "--pretty=format:%H", "--name-only")
     if log is None:
         return "unavailable"
@@ -164,6 +165,8 @@ def _historical_object(repo: Path, suffix: str, parse, accept):
             commit = text
             continue
         if commit is None or not text.endswith(suffix):
+            continue
+        if path_contains and path_contains not in text:
             continue
         raw = _git(repo, "show", f"{commit}:{text}", decode=False)
         if raw is None:
@@ -179,9 +182,10 @@ def _requirement_blob(raw: bytes):
     if parsed is None:
         return None
     try:
-        return validate_requirement(parsed)
+        validate_requirement(copy.deepcopy(parsed))
     except ModelError:
         return None
+    return parsed
 
 
 def _claim_blob(raw: bytes):

@@ -385,6 +385,61 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertEqual(version_digest(report["requirements"][0]), claim["requirement_digest"])
         self.assertEqual(report["run_result"]["claims"][0]["checks"][0]["status"], "fail")
 
+    def test_compile_embeds_each_recorded_requirement_version(self):
+        historical = _requirement()
+        current = dict(historical)
+        current["remediation_hint"] = "Guidance written after the first Claim was bound."
+        first = _claim(historical)
+        second = build_claim(
+            claim_id="claim-b",
+            requirement=current,
+            source="documents",
+            args={"path": "docs/b.md"},
+            checks=[{"check": "exist", "args": {"paths": ["docs/b.md"]}}],
+            description="Another file is the evidence.",
+        )
+        self.assertNotEqual(first["requirement_digest"], second["requirement_digest"])
+        run = _run(first)
+        other = _run(
+            second,
+            checks=[
+                {
+                    "index": 0,
+                    "check": "exist",
+                    "args": second["checks"][0]["args"],
+                    "status": "fail",
+                    "detail": "docs/b.md is absent",
+                }
+            ],
+        )["claims"][0]
+        run["claims"].append(other)
+        with self.assertRaises(ModelError) as caught:
+            compile_report(run_result=run, requirements=[current], claims=[first, second])
+        self.assertIn(first["requirement_digest"], caught.exception.expected)
+        self.assertIn("was not substituted", caught.exception.expected)
+        report = compile_report(
+            run_result=run,
+            requirements=[current, historical],
+            claims=[first, second],
+        )
+        self.assertEqual([item["id"] for item in report["requirements"]], ["REQ-A", "REQ-A"])
+        self.assertEqual(version_digest(report["requirements"][0]), first["requirement_digest"])
+        self.assertEqual(version_digest(report["requirements"][1]), second["requirement_digest"])
+        self.assertEqual(report["requirements"][0]["remediation_hint"], historical["remediation_hint"])
+        self.assertEqual(report["requirements"][1]["remediation_hint"], current["remediation_hint"])
+        page = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "compile_refusal": caught.exception.expected,
+            },
+        ).decode()
+        self.assertIn("Create New Report did not write a report. These conditions are not met:", page)
+        self.assertIn(first["requirement_digest"], page)
+        self.assertLess(page.index('id="compile-refusal"'), page.index(">Create New Report</button>"))
+
     def test_review_shows_both_hints_and_the_recorded_requirement(self):
         historical = _requirement()
         current = dict(historical)

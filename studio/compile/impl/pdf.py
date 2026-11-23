@@ -136,7 +136,7 @@ def _summary(content, report):
         if not outstanding_fail and not outstanding_skip and not retired_fail:
             content.paragraph('All recorded checks passed', 'claim')
             content.paragraph('Human review of the supporting evidence is still required.')
-    content.paragraph(f"This review covers {len(report['requirements'])} source requirements and {len(rows)} recorded statements about the evidence, "
+    content.paragraph(f"This review covers {len(report['requirements'])} requirement versions and {len(rows)} recorded statements about the evidence, "
                       f"tested by {len(checks)} automated checks. It does not establish that every applicable requirement has been assessed.")
     counts = []
     for label, items in (('Evidence assertions', rows), ('Automated checks', checks)):
@@ -158,7 +158,6 @@ def _summary(content, report):
         content.paragraph('No saved revision was recorded for the checked files.', 'small')
     content.blocks.append(Spacer(1, 3 * mm))
     content.paragraph('What needs attention', 'claim')
-    references = {item['id']: f'B.{n}' for n, item in enumerate(report['requirements'], 1)}
     claim_by_id = {claim['id']: claim for claim in report['claims']}
     attention = []
     for row in rows:
@@ -167,8 +166,9 @@ def _summary(content, report):
         claim = claim_by_id[row['id']]
         assertion = claim['description']
         excerpt = assertion if len(assertion) <= 220 else assertion[:217] + '…'
-        reference = references[claim['requirement_id']]
-        position = [item['id'] for item in report['claims'] if item['requirement_id'] == claim['requirement_id']].index(claim['id']) + 1
+        reference = _ref_for_claim(report, claim)
+        linked = _claims_for_requirement(report, _requirement_for_claim(report, claim) or {})
+        position = [item['id'] for item in linked].index(claim['id']) + 1 if claim['id'] in [item['id'] for item in linked] else 1
         detail = f'Finding {len(attention) + 1} / {reference}, item {position}'
         identity = _binding_identity(row)
         if identity:
@@ -195,7 +195,6 @@ def _findings(content, report):
     content.paragraph('Review findings', 'heading')
     content.paragraph('Use these points to review the material. The recorded assertions and results are not decisions by the PDF exporter.', 'small')
     claims = {claim['id']: claim for claim in report['claims']}
-    refs = {item['id']: f'B.{n}' for n, item in enumerate(report['requirements'], 1)}
     saved = {}
     for item in report.get('assessments') or []:
         saved[assessment_identity(item)] = item
@@ -219,7 +218,7 @@ def _findings(content, report):
     content.paragraph('Outstanding deviations requiring correction', 'claim')
     if outstanding:
         for number, (deviation, assessment) in enumerate(outstanding, 1):
-            _deviation_finding(content, report, claims, refs, number, deviation, assessment)
+            _deviation_finding(content, report, claims, number, deviation, assessment)
     elif report['run_result']['claims']:
         content.paragraph('No outstanding deviations are recorded.')
     else:
@@ -227,7 +226,7 @@ def _findings(content, report):
     content.paragraph('Accepted deviations', 'claim')
     if accepted:
         for number, (deviation, assessment) in enumerate(accepted, 1):
-            _deviation_finding(content, report, claims, refs, number, deviation, assessment)
+            _deviation_finding(content, report, claims, number, deviation, assessment)
     else:
         content.paragraph('No deviations were accepted.')
     content.paragraph('Retired checks', 'claim')
@@ -292,7 +291,6 @@ def _requirements(content, report):
     content.blocks.append(PageBreak())
     content.paragraph('Appendix B — Requirements, evidence and checks', 'heading')
     rows = {row['id']: row for row in report['run_result']['claims']}
-    refs = {item['id']: f'B.{n}' for n, item in enumerate(report['requirements'], 1)}
     reviewed = []
     for claim in report['claims']:
         row = rows[claim['id']]
@@ -302,11 +300,12 @@ def _requirements(content, report):
         label = _binding_label(row)
         if label:
             recorded = f'{recorded}; {label}'
-        reviewed.append([claim['requirement_id'], claim['id'], recorded, refs[claim['requirement_id']]])
+        reviewed.append([claim['requirement_id'], claim['id'], recorded, _ref_for_claim(report, claim)])
     content.paragraph('Reviewed items — recorded outcomes', 'claim')
     content.table(['Requirement', 'Claim', 'Claim / Check outcomes', 'Details'], reviewed, [46, 50, 54, 20])
+    repeated = _repeated_requirement_ids(report)
     for number, requirement in enumerate(report['requirements'], 1):
-        content.heading(f"B.{number}  Requirement {requirement['id']}")
+        content.heading(_requirement_heading(number, requirement, repeated))
         fields = [['Pack', requirement['pack_id']], ['Source', requirement['source']['instrument']]]
         fields += [[key, value] for key, value in requirement['source'].items() if key != 'instrument']
         for key in ('strength', 'responsible', 'applicability', 'exceptions', 'scope', 'origin', 'remediation_hint', 'note'):
@@ -316,7 +315,7 @@ def _requirements(content, report):
         content.table(['Requirement field', 'Recorded value'], fields, [38, 132])
         content.table(['Passage', 'Locator', 'Source passage'],
                       [[ref['nr'], ref['locator'], ref['law_text']] for ref in requirement['references']], [20, 24, 126])
-        claims = [claim for claim in report['claims'] if claim['requirement_id'] == requirement['id']]
+        claims = _claims_for_requirement(report, requirement)
         for item, claim in enumerate(claims, 1):
             row = rows[claim['id']]
             label = _binding_label(row)
@@ -350,7 +349,8 @@ def _review(content, report):
     content.paragraph('Verification not performed by this PDF export. JSON signatures are recorded metadata; '
                       'their presence does not establish validity. Git signature coverage is not inspected.', 'small')
     seals = [('Review report JSON', report)]
-    seals.extend((f"Requirement {item['id']}", item) for item in report['requirements'])
+    repeated = _repeated_requirement_ids(report)
+    seals.extend((_requirement_seal_label(item, repeated), item) for item in report['requirements'])
     seals.extend((f"Claim {item['id']}", item) for item in report['claims'])
     records = []
     for what, obj in seals:
@@ -361,16 +361,13 @@ def _review(content, report):
     content.paragraph('A signature on the JSON report does not sign the PDF bytes. Keep the original JSON report for verification.', 'small')
 
 
-def _deviation_finding(content, report, claims, refs, number, deviation, assessment):
+def _deviation_finding(content, report, claims, number, deviation, assessment):
     claim = claims[deviation['claim_id']]
     row = next(item for item in report['run_result']['claims'] if item['id'] == deviation['claim_id'])
     content.paragraph(f'Finding {number} — {_deviation_title(deviation, assessment)}', 'claim')
     content.field('Recorded assertion', claim['description'])
     _binding_fields(content, row)
-    requirement = next(
-        (item for item in report['requirements'] if item['id'] == claim['requirement_id']),
-        None,
-    )
+    requirement = _requirement_for_claim(report, claim)
     if requirement is not None:
         source = requirement['source']['instrument']
         locators = ', '.join(ref['locator'] for ref in requirement['references'])
@@ -398,7 +395,7 @@ def _deviation_finding(content, report, claims, refs, number, deviation, assessm
         content.field('Reviewer assessment', 'Not assessed')
     content.paragraph('Human review: does the configured check represent the intended requirement? '
                       'Is the evidence sufficient, and does this result call for a change to the evidence or to the check settings?')
-    content.field('Full technical record', f"{refs[claim['requirement_id']]} / {claim['id']}", small=True)
+    content.field('Full technical record', f"{_ref_for_claim(report, claim)} / {claim['id']}", small=True)
 
 
 def _recorded_requirement_hint(requirement, claim):
@@ -480,6 +477,72 @@ def _retired_finding(content, report, claims, number, deviation, assessment):
         content.field('Reason reported by the checker', deviation['detail'])
     content.field('Retirement justification', assessment['text'])
     content.paragraph("The recorded result is unchanged. Retirement is the reviewer's decision.")
+
+
+def _claim_version(claim):
+    return (claim.get('requirement_id'), claim.get('requirement_digest'))
+
+
+def _requirement_version(requirement):
+    return (requirement.get('id'), version_digest(requirement))
+
+
+def _requirement_for_claim(report, claim):
+    recorded = claim.get('requirement_digest')
+    same_id = []
+    for item in report['requirements']:
+        if item.get('id') != claim.get('requirement_id'):
+            continue
+        same_id.append(item)
+        if isinstance(recorded, str) and version_digest(item) == recorded:
+            return item
+    if len(same_id) == 1:
+        return same_id[0]
+    return None
+
+
+def _ref_for_claim(report, claim):
+    requirement = _requirement_for_claim(report, claim)
+    if requirement is None:
+        return ''
+    for number, item in enumerate(report['requirements'], 1):
+        if item is requirement:
+            return f'B.{number}'
+    return ''
+
+
+def _claims_for_requirement(report, requirement):
+    if not requirement:
+        return []
+    exact = [
+        claim for claim in report['claims']
+        if _claim_version(claim) == _requirement_version(requirement)
+    ]
+    if exact or requirement.get('id') in _repeated_requirement_ids(report):
+        return exact
+    return [
+        claim for claim in report['claims']
+        if claim.get('requirement_id') == requirement.get('id')
+    ]
+
+
+def _repeated_requirement_ids(report):
+    counts = Counter(item.get('id') for item in report['requirements'])
+    return {requirement_id for requirement_id, count in counts.items() if count > 1}
+
+
+def _requirement_heading(number, requirement, repeated):
+    title = f"B.{number}  Requirement {requirement['id']}"
+    if requirement.get('id') in repeated:
+        title = f"{title}  version {version_digest(requirement)[:12]}"
+    return title
+
+
+def _requirement_seal_label(requirement, repeated):
+    label = f"Requirement {requirement['id']}"
+    if requirement.get('id') in repeated:
+        label = f"{label} {version_digest(requirement)[:12]}"
+    return label
 
 
 def _binding_label(row):

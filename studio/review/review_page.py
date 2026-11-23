@@ -187,6 +187,8 @@ def review_page(
                 verification=_current_verification(presentation, reading, saved),
             ),
         )
+    actions = _review_actions(door, report, saved, repo_id)
+    refusal = "" if "compile-refusal" in actions else _compile_refusal_html(door)
     body = f"""
 <div class="review-board">
 <div class="brand">curbpack-review</div>
@@ -199,10 +201,11 @@ def review_page(
 {_current_run_card(door, report, saved)}
 {_review_empty(door)}
 {_flash(message, error)}
+{refusal}
 {detail}
 {shown}
 {decision_forms}
-{_review_actions(door, report, saved, repo_id)}
+{actions}
 {_retire_dialog()}
 {_resume_dialog(door or {})}
 {dialogs}
@@ -1010,7 +1013,7 @@ def _review_requirement_card(
     summary = (
         f'<a href="{html.escape(href)}">'
         f'<div class="header" style="margin-bottom:.35rem">'
-        f"<div><h3><code>{html.escape(group_id)}</code></h3></div>"
+        f"<div><h3>{_requirement_heading(group)}</h3></div>"
         f'<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">'
         f"{label_html}{count_pill}"
         f'<span class="pill">{html.escape(result_summary)}</span>'
@@ -1906,9 +1909,24 @@ def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) ->
 <input type="hidden" name="next" id="review-next" value="">
 {report_input}
 {note}
+{_compile_refusal_html(door)}
 <p class="actions"><button type="submit">Create New Report</button></p>
 </form>
 """
+
+
+def _compile_refusal_html(door: dict) -> str:
+    text = str(door.get("compile_refusal") or "").strip()
+    if not text:
+        return ""
+    lines = "".join(
+        f"<p>{html.escape(line)}</p>" for line in text.splitlines() if line.strip()
+    )
+    return (
+        '<div class="err" id="compile-refusal">'
+        "<p>Create New Report did not write a report. These conditions are not met:</p>"
+        f"{lines}</div>"
+    )
 
 
 def _unchosen_run(door: dict) -> str:
@@ -1991,6 +2009,15 @@ def _review_empty(door: dict) -> str:
     if not notice:
         return ""
     return f"<p>{html.escape(notice)}</p>"
+
+
+def _requirement_heading(group: dict) -> str:
+    label = str(group.get("label") or group.get("id") or "")
+    version = str(group.get("version") or "")
+    heading = f"<code>{html.escape(label)}</code>"
+    if version:
+        heading += f' <span class="muted">version {html.escape(version)}</span>'
+    return heading
 
 
 def _passage_html(passages: list) -> str:

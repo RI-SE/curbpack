@@ -198,12 +198,21 @@ def present_compiled_report(
         for claim in (report.get("claims") or [])
         if isinstance(claim, dict) and isinstance(claim.get("id"), str)
     }
-    embedded_requirements = {
-        requirement["id"]: requirement
-        for requirement in (report.get("requirements") or [])
-        if isinstance(requirement, dict) and isinstance(requirement.get("id"), str)
-    }
+    embedded_requirements: dict[tuple[str, str], dict] = {}
+    requirements_by_id: dict[str, dict] = {}
+    version_counts: dict[str, int] = {}
+    for requirement in report.get("requirements") or []:
+        if not isinstance(requirement, dict) or not isinstance(requirement.get("id"), str):
+            continue
+        try:
+            digest = version_digest(requirement)
+        except (TypeError, ValueError):
+            continue
+        embedded_requirements[(requirement["id"], digest)] = requirement
+        requirements_by_id.setdefault(requirement["id"], requirement)
+        version_counts[requirement["id"]] = version_counts.get(requirement["id"], 0) + 1
     grouped: dict[str, list[dict]] = {}
+    group_requirement: dict[str, tuple[str, str]] = {}
     order: list[str] = []
     unresolved: list[dict] = []
     links = list(chain.get("claims") or []) if isinstance(chain, dict) else []
@@ -217,35 +226,48 @@ def present_compiled_report(
         item = _claim_item(
             row, current, claim_readings.get(claim_id), embedded=embedded, repo=repo, chain=link
         )
-        requirement_id_for_hint = str(embedded.get("requirement_id") or "") if isinstance(embedded, dict) else ""
-        fallback = embedded_requirements.get(requirement_id_for_hint)
+        requirement_id = str(embedded.get("requirement_id") or "") if isinstance(embedded, dict) else ""
+        recorded = row.get("requirement_digest")
+        if not isinstance(recorded, str) or not recorded:
+            recorded = embedded.get("requirement_digest") if isinstance(embedded, dict) else ""
+        fallback = embedded_requirements.get((requirement_id, recorded)) if isinstance(recorded, str) else None
+        if fallback is None and version_counts.get(requirement_id) == 1:
+            fallback = requirements_by_id.get(requirement_id)
         _apply_requirement_context(item, row, link, fallback if isinstance(fallback, dict) else None)
         if embedded is None:
             unresolved.append(item)
             continue
-        requirement_id = str(embedded.get("requirement_id") or "")
-        if requirement_id not in embedded_requirements:
+        if requirement_id not in requirements_by_id:
             item["requirement_id"] = requirement_id
             unresolved.append(item)
             continue
-        if requirement_id not in grouped:
-            grouped[requirement_id] = []
-            order.append(requirement_id)
-        grouped[requirement_id].append(item)
+        if version_counts.get(requirement_id, 0) > 1 and isinstance(recorded, str) and recorded:
+            group_key = f"{requirement_id}#{recorded}"
+        else:
+            group_key = requirement_id
+        if group_key not in grouped:
+            grouped[group_key] = []
+            group_requirement[group_key] = (requirement_id, recorded if isinstance(recorded, str) else "")
+            order.append(group_key)
+        grouped[group_key].append(item)
     force_open = seal_forces_open(report_reading)
     groups = []
-    for requirement_id in order:
-        claims = grouped[requirement_id]
-        groups.append(
-            _group(
-                requirement_id,
-                claims,
-                requirement_readings.get(requirement_id),
-                expanded,
-                force_open=force_open,
-                passages=_group_passages(claims, embedded_requirements.get(requirement_id)),
-            )
+    for group_key in order:
+        requirement_id, recorded = group_requirement[group_key]
+        claims = grouped[group_key]
+        requirement = embedded_requirements.get((requirement_id, recorded)) or requirements_by_id.get(requirement_id)
+        group = _group(
+            group_key,
+            claims,
+            requirement_readings.get(requirement_id),
+            expanded,
+            force_open=force_open,
+            passages=_group_passages(claims, requirement),
         )
+        group["label"] = requirement_id
+        if version_counts.get(requirement_id, 0) > 1 and recorded:
+            group["version"] = recorded[:12]
+        groups.append(group)
     if unresolved:
         groups.append(
             _group(UNRESOLVED, unresolved, None, expanded, initially_open=True, force_open=force_open)

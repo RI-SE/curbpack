@@ -210,7 +210,11 @@ class CompilePdfTest(unittest.TestCase):
         second_requirement['id'] = 'REQ-B'
         report['requirements'].append(second_requirement)
         second_claim = copy.deepcopy(report['claims'][0])
-        second_claim.update(id='claim-b', requirement_id='REQ-B')
+        second_claim.update(
+            id='claim-b',
+            requirement_id='REQ-B',
+            requirement_digest=version_digest(second_requirement),
+        )
         second_claim['checks'].append({'check': 'exist', 'args': {'paths': ['second.md']}})
         report['claims'].insert(1, second_claim)
         report['run_result']['claims'].insert(1, {
