@@ -280,6 +280,7 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board dialog.review-choice .btn{margin:0 .35rem .35rem 0}
 .review-board dialog.binding-note p{margin:.4rem 0}
 .review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
+.review-board textarea::placeholder{color:var(--muted)}
 .review-board .file-actions{margin-top:.25rem;font-size:.8rem}
 """
 

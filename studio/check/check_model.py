@@ -233,6 +233,9 @@ def _run_check(ws: Workspace, form: dict) -> str:
         config = validate_curbpack_config(read_json(repo / "curbpack.json"))
         out = new_run_result_path(results_dir(repo, config))
         result, code = run_and_write(repo, None, out)
+        from studio.review.impl.items import record_dirty_files
+
+        record_dirty_files(repo, out, result)
         return_to = (form.get("return_to") or [""])[0].strip()
         if return_to.startswith("/review") and not return_to.startswith("//") and "\\" not in return_to:
             return (

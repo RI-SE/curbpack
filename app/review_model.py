@@ -64,8 +64,34 @@ def _compile_review(ws: Workspace, form: dict) -> str:
         )
     except ModelError as exc:
         return _refused_review(repo_id, requested, _compile_refusal(exc))
+    name = (form.get("name") or [""])[0].strip()
+    decision = (form.get("decision") or [""])[0]
+    if name and not str(decision).strip():
+        return _refused_review(repo_id, requested, "A decision is required before the report is signed.")
     out = _new_review_report_path(reports_dir(repo, config))
     write_report(out, report)
+    if name:
+        from app.server import _now
+
+        try:
+            save_report_update(out, decision=decision, assessments=None)
+            private, _public = load_or_create_key(ws.keys, name)
+            save_report_signature(
+                out,
+                name=name,
+                private_key=private,
+                at=_now(),
+                claims_dir=repo_claims_dir(repo),
+                trust=trust_store(ws.keys),
+                items=_workspace_items(repo, out),
+            )
+        except ModelError as exc:
+            out.unlink(missing_ok=True)
+            return _refused_review(repo_id, requested, _compile_refusal(exc))
+        return (
+            f"/review?repo={quote(repo_id, safe='')}&signed=1"
+            f"&report={quote(str(out.resolve()), safe='')}"
+        )
     nxt = _safe_review_next((form.get("next") or [""])[0])
     if nxt:
         return nxt
@@ -99,7 +125,9 @@ def _compile_refusal(exc: ModelError) -> str:
     if exc.field == "assessments" and "Not assessed" in exc.expected:
         return "A comment needs Accept, Must be fixed, or Retire. Otherwise leave both empty."
     if exc.field.endswith(".text"):
-        return "Accept, Must be fixed, and Retire need a comment."
+        if exc.expected == "a comment":
+            return "Accept on a failing Check needs a comment."
+        return "Retire needs a comment."
     if exc.field == "remove_retired_checks":
         return (
             "Retire needs the choice of whether signing the report "
@@ -134,11 +162,14 @@ def _save_review_decision(ws: Workspace, form: dict) -> str:
     if not report_path:
         raise ModelError("review", "report", "a review-report file under that repository's reports_dir")
     path = Path(report_path)
+    assessments = assessments_from_form(form)
     save_report_update(
         path,
         decision=(form.get("decision") or [""])[0],
-        assessments=assessments_from_form(form),
+        assessments=assessments,
     )
+    if assessments:
+        _sync_item_decisions(repo, path, assessments)
     return (
         f"/review?repo={quote(repo_id, safe='')}&saved=1"
         f"&report={quote(report_path, safe='')}"
@@ -173,6 +204,7 @@ def _sign_review(ws: Workspace, form: dict) -> str:
             assessments=assessments_from_form(form),
             claims_dir=repo_claims_dir(repo),
             trust=trust_store(ws.keys),
+            items=_workspace_items(repo, Path(report_path)),
         )
     except ModelError as exc:
         if exc.field == "claims":
@@ -185,6 +217,159 @@ def _sign_review(ws: Workspace, form: dict) -> str:
         f"/review?repo={quote(repo_id, safe='')}&signed=1"
         f"&report={quote(report_path, safe='')}"
     )
+
+
+def _workspace_items(repo: Path, report_path: Path) -> list[dict] | None:
+    """Items for the Run Result this report reviewed, when that workspace exists."""
+    from common.jsonio import read_json
+    from common.store import load_run_result
+    from common.validate import validate_curbpack_config
+    from curbcheck.api import results_dir
+    from review.compile import load_report, same_run
+    from studio.review.impl.items import load_items, studio_temp_dir, workspace_items_path
+
+    report = load_report(report_path)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    folder = results_dir(repo, config)
+    if not folder.is_dir():
+        return None
+    match = ""
+    for path in sorted(folder.glob("run-result_*.json")):
+        try:
+            loaded = load_run_result(path)
+        except (ModelError, ValueError):
+            continue
+        if same_run(report, loaded):
+            match = path.name
+            break
+    if not match:
+        return None
+    items_path = workspace_items_path(studio_temp_dir(repo), match)
+    if not items_path.is_file():
+        return None
+    return load_items(items_path)
+
+
+def _sync_item_decisions(repo: Path, report_path: Path, assessments: list[dict]) -> None:
+    from common.jsonio import read_json
+    from common.store import load_run_result
+    from common.validate import validate_curbpack_config
+    from curbcheck.api import results_dir
+    from review.compile import load_report, same_run
+    from studio.review.impl.items import (
+        apply_assessment_decisions,
+        load_items,
+        studio_temp_dir,
+        workspace_items_path,
+        write_items,
+    )
+
+    report = load_report(report_path)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    folder = results_dir(repo, config)
+    if not folder.is_dir():
+        return
+    for path in sorted(folder.glob("run-result_*.json")):
+        try:
+            loaded = load_run_result(path)
+        except (ModelError, ValueError):
+            continue
+        if not same_run(report, loaded):
+            continue
+        items_path = workspace_items_path(studio_temp_dir(repo), path.name)
+        if not items_path.is_file():
+            return
+        write_items(items_path, apply_assessment_decisions(load_items(items_path), assessments, loaded))
+        return
+
+
+def _source_items_path(repo: Path, source: str) -> Path:
+    from studio.review.impl.items import studio_temp_dir, workspace_items_path
+
+    return workspace_items_path(studio_temp_dir(repo), Path(source).name)
+
+
+def _remediate(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path, _sync_open_repo
+    from discovery.door import repo_claims_dir
+    from studio.review.impl.items import append_history, load_items, record_retire, retire_live_check, write_items
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    source = (form.get("source") or [""])[0]
+    items_path = _source_items_path(repo, source)
+    items = load_items(items_path)
+    claim_id = (form.get("claim_id") or [""])[0]
+    digest = (form.get("check_digest") or [""])[0]
+    text = (form.get("remediation") or [""])[0]
+    action = (form.get("action") or [""])[0]
+    updated = []
+    found = False
+    for item in items:
+        key = item.get("key") if isinstance(item.get("key"), dict) else {}
+        if key.get("claim_id") == claim_id and key.get("check_digest") == digest:
+            found = True
+            if action == "retire":
+                retire_live_check(repo_claims_dir(repo), claim_id, digest)
+                item = record_retire(item, remediation=text)
+            else:
+                item = append_history(item, remediation=text)
+        updated.append(item)
+    if not found:
+        raise ModelError("review_item", "check_digest", "an item in this workspace")
+    write_items(items_path, updated)
+    mode = "remediation"
+    target = "report" if "review-report_" in Path(source).name else "result"
+    return (
+        f"/review?repo={quote(repo_id, safe='')}&mode={mode}"
+        f"&{target}={quote(source, safe='')}"
+    )
+
+
+def _recheck(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path, _sync_open_repo
+    from discovery.door import repo_claims_dir
+    from studio.review.impl.items import load_items, recheck_item, write_items
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    source = (form.get("source") or [""])[0]
+    items_path = _source_items_path(repo, source)
+    claim_id = (form.get("claim_id") or [""])[0]
+    digest = (form.get("check_digest") or [""])[0]
+    text = (form.get("remediation") or [""])[0] or "Re-check"
+    write_items(
+        items_path,
+        recheck_item(repo, repo_claims_dir(repo), load_items(items_path), claim_id, digest, text),
+    )
+    target = "report" if "review-report_" in Path(source).name else "result"
+    return f"/review?repo={quote(repo_id, safe='')}&mode=remediation&{target}={quote(source, safe='')}"
+
+
+def _create_remedy(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path, _sync_open_repo
+    from studio.review.impl.items import load_items, write_items
+
+    repo_id = _sync_open_repo(ws, form)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    source = (form.get("report") or [""])[0]
+    items_path = _source_items_path(repo, source)
+    if not items_path.is_file():
+        raise ModelError("review_items", "path", "the report workspace")
+    write_items(items_path, load_items(items_path), marker={"remedy": True})
+    return f"/review?repo={quote(repo_id, safe='')}&mode=remediation&report={quote(source, safe='')}"
 
 
 def _review_error(error: str, query: dict) -> str:

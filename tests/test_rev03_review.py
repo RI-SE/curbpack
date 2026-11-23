@@ -274,7 +274,8 @@ class ReviewGroupingTest(unittest.TestCase):
             self.assertIn('data-claim="left-note"', queue)
             self.assertIn('data-claim="right-note"', queue)
             self.assertIn(">Passed</option>", queue)
-            self.assertIn(">Retire</option>", queue)
+            self.assertIn(">Must be fixed</option>", queue)
+            self.assertNotIn(">Retire</option>", queue)
             self.assertIn("<table class=\"review-queue\">", page)
             self.assertEqual(_files(repo), before)
 
@@ -928,7 +929,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             write_json(run_path, run)
             with _serve(workspace) as base:
-                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED", mode="remediation")
                 claims = _get(
                     base
                     + "/claims?repo_id=alpha&return_to="
@@ -960,7 +961,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             changed = _exist_claim("edit-note", "REQ-SHARED", "other.md")
             write_claim(repo / "kept" / "claims", changed)
             with _serve(workspace) as base:
-                unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED", mode="remediation")
             self.assertNotIn(">Edit</a>", unsafe)
             self.assertNotIn(">Update</button>", unsafe)
             self.assertNotIn("data-check-dialog", unsafe)
@@ -1157,11 +1158,11 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                 review = _get(
                     base
                     + "/review?repo=sample-product&source=cra-xml-vii"
-                    + "&timestamp=2026-10-14T080000Z&report="
+                    + "&timestamp=2026-10-14T080000Z&mode=remediation&report="
                     + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
                 self.assertIn('class="review-discover"', review)
-                self.assertNotIn(">Re-Discover</button>", review)
+                self.assertIn(">Re-Discover</button>", review)
                 self.assertIn("return_to=", review.replace("&amp;", "&"))
                 iframe = re.search(r'src="([^"]*return_to[^"]*)"', review)
                 self.assertIsNotNone(iframe)
@@ -1730,10 +1731,12 @@ def _matching_run(repo: Path, claims: list[dict], *, commit: str = "abc123", wor
     return run
 
 
-def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None) -> str:
+def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None, mode: str | None = None) -> str:
     url = base + "/review?repo=" + repo_id + "&result=" + urllib.parse.quote(str(path.resolve()), safe="")
     if expanded is not None:
         url += "&expanded=" + urllib.parse.quote(expanded, safe="")
+    if mode:
+        url += "&mode=" + urllib.parse.quote(mode, safe="")
     return _get(url)
 
 
@@ -1823,7 +1826,16 @@ def _summary(page: str, requirement_id: str) -> str:
 
 
 def _files(root: Path) -> list[str]:
-    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+    """Product files. Review workspaces under .curbpack/tmp are not product files."""
+    found = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith(".curbpack/tmp/"):
+            continue
+        found.append(relative)
+    return sorted(found)
 
 
 def _section(page: str, kind: str) -> str:

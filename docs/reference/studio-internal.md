@@ -6,7 +6,7 @@ This document defines Curbpack Studio's internal data structures. This page defi
 
 ## review_item
 
-`review_item` is the decision for one Check. `decision`, `priority`, and `comment` are written once and remain the next time the same deviation is found.
+`review_item` is the decision for one Check. On the signed items, `decision`, `priority`, and `comment` remain as signed. On the remediation copy, `decision` is the recommendation and may change, and `remediation_history` is appended.
 
 ### Key and provenance
 
@@ -34,39 +34,18 @@ Its `check_digest` is the SHA-256 hex of that canonical JSON. `key` is `claim_id
 - `dirty_git` is `true` when the run's `worktree` is `dirty`, and `false` when it is `clean`.
 - `files` are the relevant files at Check time. Each entry has a path relative to the product repository. `size` is the file size in bytes at that run. `mtime` is the file's modification time at that run, UTC `YYYY-MM-DDTHH:MM:SSZ`.
 
-The Run Result records `commit` and `worktree`. File `size` and `mtime` at Check time are not among the Run Result fields in [Outputs](outputs.md). When `dirty_git` is true and `files` is therefore absent, the decision is not reused.
+The Run Result records `commit` and `worktree`. File `size` and `mtime` are not Run Result fields. When Studio Check writes a Run Result and `worktree` is `dirty`, the same operation writes `paths.temp_dir/run-result_<stamp>.files.json` with each Check's relevant paths, `size`, and `mtime`. Those values are copied to `provenance.files` when the `review_item` is created. A later edit of the worktree does not change that file. `curbcheck` without Studio writes no such file. When `dirty_git` is true and `files` is absent, the stored decision and history remain and a new decision is required.
 
 ### The same deviation
 
-A judgment is reused automatically when `key` matches and the relevant provenance can be verified as unchanged. A value the comparison needs, and which is missing on either side, yields `False`.
+Reusing a decision fills `decision` only. `remediation_history` is shown from the remediation file and does not set `decision`.
 
-`provenance` is compared when `key` matches. `files` are compared when `dirty_git` is `true` on either side.
+A decision is reusable when `key` matches, `requirement_digest` matches, and the underlag below is unchanged. A value the comparison needs, and which is missing on either side, yields false. The stored decision and history remain.
 
-```text
-if previous.key != current.key:
-    return False
-a = previous.provenance
-b = current.provenance
-if a.requirement_digest is missing or b.requirement_digest is missing:
-    return False
-if a.requirement_digest != b.requirement_digest:
-    return False
-if a.git_commit is missing or b.git_commit is missing:
-    return False
-if a.git_commit != b.git_commit:
-    return False
-if a.dirty_git is missing or b.dirty_git is missing:
-    return False
-if a.dirty_git or b.dirty_git:
-    if a.files is missing or b.files is missing:
-        return False
-    return same_file_metadata(a.files, b.files)
-return True
-```
+- Clean to clean compares the Check's relevant file content between the two Git commits. Paths are `provenance.files` when that list exists, otherwise the paths in the Check arguments. A Check with no such paths depends on the commit. The same content reuses the decision. A path added, removed, or changed opens only that item.
+- When either side is `dirty_git`, compare `path`, `size`, and `mtime` with `same_file_metadata`. The worktree is not read again.
 
 `same_file_metadata` is true when both lists are present and contain the same set of `path`, and each path has the same `size` and the same `mtime`. Order does not matter.
-
-A stored `decision`, `priority`, `comment`, and `remediation_history` remain when the predicate is false.
 
 ### Object
 
@@ -92,8 +71,8 @@ A missing key is omitted. Unknown keys are invalid.
   "assessed_at": "2026-11-23T05:20:00Z",
   "remediation_history": [
     {
-      "at": "2026-11-23T08:15:00Z",
-      "comment": "Added security documentation."
+      "date": "2026-11-23T08:15:00Z",
+      "remediation": "Added security documentation."
     }
   ]
 }
@@ -101,13 +80,13 @@ A missing key is omitted. Unknown keys are invalid.
 
 `decision` is `pass`, `accepted`, `not_assessed`, or `must_fix`.
 
-`remediation_history` is the sequence of remediations recorded for this decision, earliest first. Each entry has `at`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `comment`, the non-empty text of what was done. The key is omitted when the sequence is empty.
+`remediation_history` is the sequence of remediations recorded for this item, earliest first. Each entry has `date`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `remediation`, the non-empty text of what was done. A Retire entry also has `action` `retire`. `transition` and `old_check_digest` are optional. A comment is an entry without `action`. The key is omitted when the sequence is empty.
 
 `priority` is an integer from 1 to 10. 1 is the most urgent.
 
 - `pass` is the recorded Check outcome. `priority`, `comment`, and `assessed_at` are omitted.
 - `accepted` means the reviewer has accepted the deficiencies the Check found. `priority` is set. `comment` is non-empty text and `assessed_at` is UTC `YYYY-MM-DDTHH:MM:SSZ`, the same form as `signed.at`.
 - `not_assessed` is a deviation that has not been judged. `priority`, `comment`, and `assessed_at` are omitted.
-- `must_fix` is the decision that the deficiencies are to be corrected. `priority`, `comment`, and `assessed_at` have the same form as for `accepted`.
+- `must_fix` is the decision that the deficiencies are to be corrected. `priority` and `assessed_at` have the same form as for `accepted`. `comment` may be omitted.
 
 A provenance key the run does not have is omitted. `decision`, `priority`, `comment`, and `remediation_history` are kept.

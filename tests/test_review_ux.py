@@ -95,13 +95,13 @@ class ReviewStartTest(unittest.TestCase):
             queue = page.split('<table class="review-queue">', 1)[1]
             self.assertIn('data-claim="purpose-note"', queue)
             self.assertIn(">Passed</option>", queue)
-            self.assertIn(">Retire</option>", queue)
+            self.assertIn(">Must be fixed</option>", queue)
+            self.assertNotIn(">Retire</option>", queue)
             self.assertIn('data-comment-dialog="comment-check-purpose-note--"', queue)
             self.assertIn(
                 "This verdict needs a comment. Close without one and the previous verdict returns.",
                 page,
             )
-            self.assertNotIn(">Must be fixed</option>", queue)
             self.assertIn('id="retire-confirm"', page)
             self.assertIn("Remove retired Checks from Claims when signing the report.", page)
             self.assertIn('id="review-compile"', page)
@@ -207,23 +207,15 @@ class ReviewStartTest(unittest.TestCase):
             door={
                 "repo_id": "alpha",
                 "selected_result": "/tmp/runs/run-result_20260101T000000Z.json",
-                "run_reports": [
-                    {
-                        "name": "review-report_20260102T000000Z.json",
-                        "path": "/tmp/reports/review-report_20260102T000000Z.json",
-                        "decision": "",
-                        "signed": False,
-                        "signer": "",
-                    }
-                ],
+                "existing_review_items": "/tmp/.curbpack/tmp/run-result_20260101T000000Z/review_items.json",
             },
         ).decode()
-        self.assertIn("A review of this Check run is already started.", page)
+        self.assertIn("Continue this review or start over?", page)
+        self.assertIn("resume=1", page)
         self.assertIn(">Continue</a>", page)
         self.assertIn(">Start over</a>", page)
         self.assertIn(">Cancel</a>", page)
         self.assertIn("fresh=1", page)
-        self.assertIn("review-report_20260102T000000Z.json", page)
         fresh = review_page(
             {"run_result": {"claims": []}, "claims": [], "appendix": []},
             None,
@@ -241,7 +233,70 @@ class ReviewStartTest(unittest.TestCase):
                 ],
             },
         ).decode()
-        self.assertNotIn("A review of this Check run is already started.", fresh)
+        self.assertNotIn("Continue this review or start over?", fresh)
+
+    def test_history_is_a_column_only_when_an_item_has_history(self):
+        from studio.review.impl.items import check_digest
+
+        digest = check_digest("exist", {"paths": ["docs/a.md"]})
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/runs/run-result_20260101T000000Z.json",
+            "review_mode": "review",
+            "review_items": [
+                {
+                    "key": {"claim_id": "claim-a", "check_digest": digest},
+                    "decision": "pass",
+                    "remediation_history": [
+                        {
+                            "date": "2026-11-23T08:15:00Z",
+                            "remediation": "Added the missing file.",
+                            "transition": "must_fix -> pass",
+                        }
+                    ],
+                }
+            ],
+        }
+        presentation = {
+            "groups": [
+                {
+                    "id": "REQ-A",
+                    "open": True,
+                    "claims": [
+                        {
+                            "id": "claim-a",
+                            "requirement_id": "REQ-A",
+                            "binding": "match",
+                            "checks": [
+                                {
+                                    "index": 0,
+                                    "check": "exist",
+                                    "args": {"paths": ["docs/a.md"]},
+                                    "status": "pass",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        page = review_page(
+            {"run_result": {"claims": []}, "claims": [], "appendix": []},
+            None,
+            saved=False,
+            door={**door, "presentation": presentation},
+        ).decode()
+        self.assertIn("Remediation history", page)
+        self.assertIn("Added the missing file.", page)
+        self.assertIn("must_fix -&gt; pass", page)
+        self.assertNotIn('data-action="retire"', page)
+        bare = review_page(
+            {"run_result": {"claims": []}, "claims": [], "appendix": []},
+            None,
+            saved=False,
+            door={"repo_id": "alpha", "review_mode": "review", "review_items": [], "presentation": presentation},
+        ).decode()
+        self.assertNotIn("Remediation history", bare)
 
     def test_rediscover_without_discovery_context_links_to_discover(self):
         with tempfile_workspace() as (workspace, repo):
@@ -378,8 +433,9 @@ class SignedReportLockTest(unittest.TestCase):
                 signed_bytes = report_path.read_bytes()
                 self.assertNotIn("Reports for this run", sealed_page)
                 self.assertIn("First reading.", sealed_page)
-                self.assertNotIn('name="decision"', sealed_page)
-                self.assertNotIn(">review-sign</button>", sealed_page)
+                self.assertNotIn(">Save decision</button>", sealed_page)
+                self.assertNotIn('action="/review/sign"', sealed_page)
+                self.assertIn('id="create-report"', sealed_page)
                 self.assertIn(">Create New Report</button>", sealed_page)
                 self.assertIn(
                     f'name="result" value="{run_path.resolve()}"',

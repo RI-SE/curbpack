@@ -108,6 +108,59 @@ class RetireAssessmentTest(unittest.TestCase):
                 remove_retired_checks=True,
             )
         self.assertEqual(caught.exception.field, "assessments[0].disposition")
+        report = compile_report(
+            run_result=run,
+            requirements=[requirement],
+            claims=[claim],
+            assessments=[_assessment(claim, 0, "must_fix", "The check does not cover the requirement.")],
+        )
+        self.assertEqual(report["assessments"][0]["disposition"], "must_fix")
+        self.assertEqual(report["run_result"]["claims"][0]["checks"][0]["status"], "pass")
+
+    def test_signed_items_record_must_fix_on_a_pass_and_a_change_does_not_verify(self):
+        from common.jsonio import write_json
+        from review.compile import read_report_signature
+        from studio.review.impl.items import check_digest, items_from_run, report_items_path
+
+        requirement = _requirement()
+        claim = _claim(requirement)
+        run = _pass_run(claim)
+        report = record_decision(
+            compile_report(run_result=run, requirements=[requirement], claims=[claim]),
+            "The passing check is not enough.",
+        )
+        folder = Path(tempfile.mkdtemp())
+        path = folder / "review-report_20261123T120000Z.json"
+        write_report(path, report)
+        items = items_from_run(run)
+        digest = check_digest("exist", claim["checks"][0]["args"])
+        for item in items:
+            if item["key"]["check_digest"] == digest:
+                item["decision"] = "must_fix"
+                item["comment"] = "The check does not cover the requirement."
+        private, public = generate_keypair()
+        sealed = save_report_signature(
+            path,
+            name="Ada Reviewer",
+            private_key=private,
+            at="2026-11-23T12:00:00Z",
+            items=items,
+        )
+        self.assertEqual(sealed["assessments"][0]["disposition"], "must_fix")
+        self.assertEqual(sealed["assessments"][0]["text"], "The check does not cover the requirement.")
+        self.assertEqual(sealed["run_result"]["claims"][0]["checks"][0]["status"], "pass")
+        self.assertEqual(sealed["items_digest"], version_digest({"items": items}))
+        stored_items = read_json(report_items_path(path))
+        trust = {"Ada Reviewer": public}
+        self.assertTrue(read_signature(stored_items, trust, what="review items")["verifiable"])
+        self.assertTrue(read_report_signature(sealed, trust)["verifiable"])
+        changed = next(item for item in stored_items["items"] if item.get("decision") == "must_fix")
+        changed["decision"] = "pass"
+        write_json(report_items_path(path), stored_items)
+        self.assertFalse(read_signature(read_json(report_items_path(path)), trust, what="review items")["verifiable"])
+        forged = dict(sealed)
+        forged["items_digest"] = "0" * 64
+        self.assertFalse(read_report_signature(forged, trust)["verifiable"])
 
     def test_an_old_report_without_retire_stays_valid(self):
         requirement = _requirement()

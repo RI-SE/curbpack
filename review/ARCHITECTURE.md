@@ -1,6 +1,6 @@
 # Review — Studio component architecture
 
-**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`. `review_item` is defined in `docs/reference/studio-internal.md`.
+**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`. `review_item` is defined in `docs/reference/studio-internal.md`. Review and remediation are two configurations of the same queue. Review edits the decision. Remediation edits the Check, rebind, and Discover, and records Retire as `action` `retire` on `remediation_history`.
 
 ## Responsibility and boundaries
 
@@ -57,7 +57,7 @@ One object. The embedded Requirements and Claims are the Packs v2 objects that w
 | `run_result` | The result that was reviewed. Compile copies it. Review does not produce another. |
 | `requirements` | `law_text` and the Requirement seal. One object per Requirement version recorded on the embedded Claims, in the order those versions first appear. The same `requirement_id` may occur more than once. A Claim links to the object whose digest equals its `requirement_digest`. |
 | `claims` | The Claim seal and the args. One object per run-result row, in row order. |
-| `assessments` | Optional. `accept` or `must_fix` for a recorded deviation, or `retire` for any Check on this run, with the reviewer's text. A binding cannot be retired. Absent means Not assessed. Inside the version digest. Not copied to another run. |
+| `assessments` | Optional. `accept` or `must_fix` for a recorded deviation, or `retire` for any Check on this run. Accept on a failing Check includes the reviewer's text. A binding cannot be retired. Absent means Not assessed. Inside the version digest. Not copied to another run. |
 | `remove_retired_checks` | Present only when an assessment is `retire`. `true` or `false`. Inside the version digest. `true` is applied to live Claim files after the report signature is written. `false` is the record only. |
 | `decision` | The reviewer's words for the whole report. Inside the version digest. |
 | `signed` | `review-sign`. Same shape as every other seal. |

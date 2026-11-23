@@ -141,7 +141,7 @@ Keep the pack id, version, directory digest, commit, and worktree value with the
 
 ## 7. Human decision and review-sign
 
-On the review page the reviewer writes `decision` in their own words and then review-sign. The signature covers the report, including that sentence, the assessments, and `remove_retired_checks`. It is not the Requirement seal.
+On the review page the reviewer writes `decision` in their own words and then review-sign. The signature covers the report, including that sentence, the assessments, `items_digest`, and `remove_retired_checks`. It is not the Requirement seal. The same action signs `review-report_<stamp>.items.json`. `items_digest` is that file's version digest. The signed `review_items.decision` values are what reporting reads.
 
 When `remove_retired_checks` is false, or absent, review-sign does not change Claim files. When it is true, the same step then removes the retired Checks from the live Claims. A Claim that still has a Check is signed again by the report signer. A Claim with none left is deleted. The Claim copied into the report is left as it was. A passing Check does not by itself sign a Claim.
 

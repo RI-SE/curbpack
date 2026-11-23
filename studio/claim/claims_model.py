@@ -249,6 +249,9 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
     claim = read_claim(directory / f"{claim_id}.json")
     updated = rebind_requirement(claim, requirement)
     write_claim(directory, updated)
+    from studio.review.impl.items import record_rebind
+
+    record_rebind(_claims_repo(ws, form), (form.get("return_to") or [""])[0], claim_id)
     return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
 
 

@@ -1,6 +1,6 @@
 """Review assesses each recorded deviation without changing the Check run.
 
-A Claim can carry more than one deviation. Accept and Must be fixed require text.
+A Claim can carry more than one deviation. Accept on a failing Check requires text.
 Not assessed is the absence of an entry. The report stores the assessments beside
 the existing decision, and a signed report stays unchanged.
 """
@@ -202,15 +202,25 @@ class DeviationAssessmentTest(unittest.TestCase):
         requirement = _requirement()
         claim = _claim(requirement)
         run = _run(claim)
-        for disposition in ("accept", "must_fix"):
-            with self.assertRaises(ModelError) as caught:
-                compile_report(
-                    run_result=run,
-                    requirements=[requirement],
-                    claims=[claim],
-                    assessments=[_assessment(claim, 0, disposition, "   ")],
-                )
-            self.assertEqual(caught.exception.field, "assessments[0].text")
+        with self.assertRaises(ModelError) as caught:
+            compile_report(
+                run_result=run,
+                requirements=[requirement],
+                claims=[claim],
+                assessments=[_assessment(claim, 0, "accept", "   ")],
+            )
+        self.assertEqual(caught.exception.field, "assessments[0].text")
+        report = compile_report(
+            run_result=run,
+            requirements=[requirement],
+            claims=[claim],
+            assessments=[
+                _assessment(claim, 0, "must_fix", "   "),
+                _assessment(claim, 1, "accept", ""),
+            ],
+        )
+        self.assertEqual(report["assessments"][0]["text"], "   ")
+        self.assertEqual(report["assessments"][1]["text"], "")
 
     def test_assessments_survive_compile_reload_pdf_and_signing(self):
         requirement = _requirement()
@@ -529,7 +539,9 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertIn(">Accept</option>", page)
         self.assertIn(">Must be fixed</option>", page)
         self.assertIn(">Not assessed</option>", page)
-        self.assertIn(">Re-run Checks</button>", page)
+        self.assertNotIn(">Re-run Checks</button>", page)
+        self.assertIn('id="create-report"', page)
+        self.assertIn("The evidence I reviewed supports these requirements.", page)
         self.assertIn(">Create New Report</button>", page)
         self.assertIn(">Back to Claims</a>", page)
         self.assertIn("Save this review before leaving?", page)

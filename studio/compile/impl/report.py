@@ -19,6 +19,7 @@ REPORT_FIELDS = {
     "assessments",
     "remove_retired_checks",
     "decision",
+    "items_digest",
     "signed",
 }
 _CHECK_ASSESSMENT = {"kind", "claim_id", "claim_digest", "index", "disposition", "text"}
@@ -211,6 +212,10 @@ def validate_report(obj: object) -> dict:
     _validate_removal_flag(obj)
     if "decision" in obj and (not isinstance(obj["decision"], str) or not obj["decision"].strip()):
         raise ModelError("review report", "decision", "the reviewer's own words")
+    if "items_digest" in obj:
+        digest = obj["items_digest"]
+        if not isinstance(digest, str) or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
+            raise ModelError("review report", "items_digest", "the version digest of the signed review items")
     if "signed" in obj:
         _validate_signed(obj["signed"])
         if not isinstance(obj.get("decision"), str) or not obj["decision"].strip():
@@ -459,10 +464,16 @@ def _validate_assessments(assessments: object, run_result: dict) -> None:
         unknown = sorted(set(item) - expected)
         if unknown:
             raise ModelError("review report", f"{where}.{unknown[0]}", "absent")
-        for field in expected - {"index"}:
+        for field in expected - {"index", "text"}:
             value = item.get(field)
             if not isinstance(value, str) or not value.strip():
                 raise ModelError("review report", f"{where}.{field}", "non-empty string")
+        text = item.get("text")
+        if not isinstance(text, str):
+            raise ModelError("review report", f"{where}.text", "string")
+        if _comment_required(item, run_result) and not text.strip():
+            expected_text = "a comment" if item.get("disposition") == "accept" else "non-empty string"
+            raise ModelError("review report", f"{where}.text", expected_text)
         if kind == "check" and not isinstance(item.get("index"), int):
             raise ModelError("review report", f"{where}.index", "the Check index on the run")
         disposition = item.get("disposition")
@@ -481,6 +492,9 @@ def _validate_assessments(assessments: object, run_result: dict) -> None:
         elif disposition == "retire":
             if not _check_on_run(run_result, item):
                 raise ModelError("review report", where, "a Check on this run")
+        elif disposition == "must_fix" and kind == "check":
+            if not _check_on_run(run_result, item):
+                raise ModelError("review report", where, "a Check on this run")
         elif disposition in {"accept", "must_fix"}:
             if identity not in known:
                 raise ModelError(
@@ -491,6 +505,31 @@ def _validate_assessments(assessments: object, run_result: dict) -> None:
         else:
             raise ModelError("review report", f"{where}.disposition", "accept, must_fix, or retire")
         seen.add(identity)
+
+
+def _comment_required(item: dict, run_result: dict) -> bool:
+    """Accept on a failing Check needs text. Retire on an existing report still does."""
+    disposition = item.get("disposition")
+    if disposition == "retire":
+        return True
+    if disposition != "accept" or item.get("kind") != "check":
+        return False
+    return _recorded_status(run_result, item) == "fail"
+
+
+def _recorded_status(run_result: dict, item: dict) -> str:
+    index = item.get("index")
+    if not isinstance(index, int):
+        return ""
+    for row in run_result.get("claims") or []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("id") != item.get("claim_id") or row.get("digest") != item.get("claim_digest"):
+            continue
+        checks = row.get("checks") or []
+        if 0 <= index < len(checks) and isinstance(checks[index], dict):
+            return str(checks[index].get("status") or "")
+    return ""
 
 
 def _check_on_run(run_result: dict, item: dict) -> bool:

@@ -291,7 +291,9 @@ class ReviewPageTest(unittest.TestCase):
         self.assertIn("not saved", preview)
         self.assertIn('data-same-run="yes"', preview)
         self.assertNotIn('name="confirm"', preview)
-        self.assertNotIn('name="decision"', preview)
+        self.assertIn('id="create-report"', preview)
+        self.assertIn('name="decision" form="review-compile"', preview)
+        self.assertNotIn(">Save decision</button>", preview)
         self.assertIn(">Create New Report</button>", preview)
         self.assertNotIn("Compile writes a new unsigned report", preview)
 

@@ -67,6 +67,27 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             errors.append(f"{Path(chosen).name} is not a readable review report.")
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_report"] = chosen
+        extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
+        if extra["review_mode"] == "remediation":
+            from studio.review.impl.items import load_items, studio_temp_dir, workspace_items_path, write_items
+            from common.jsonio import read_json as _read_items_file
+
+            items_path = workspace_items_path(studio_temp_dir(repo), Path(chosen).name)
+            if not items_path.is_file():
+                signed_items = Path(chosen).with_name(Path(chosen).stem + ".items.json")
+                copied = []
+                if signed_items.is_file():
+                    document = _read_items_file(signed_items)
+                    copied = [row for row in (document.get("items") or []) if isinstance(row, dict)]
+                    for row in copied:
+                        row.pop("signed", None)
+                write_items(items_path, copied)
+            extra["review_items"] = load_items(items_path)
+            if (query.get("remedy") or [""])[0] == "1":
+                write_items(items_path, extra["review_items"], marker={"remedy": True})
+                extra["review_items"] = load_items(items_path)
+            document = _read_items_file(items_path) if items_path.is_file() else {}
+            extra["remedy_ready"] = isinstance(document, dict) and document.get("remedy") is True
         try:
             report_rel = str(Path(chosen).resolve().relative_to(repo.resolve()))
         except ValueError:
@@ -95,6 +116,55 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             errors.append(f"{Path(chosen).name} is not a readable run result.")
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_result"] = chosen
+        extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
+        from studio.review.impl.items import (
+            latest_ready_remedy,
+            load_items,
+            open_review_items,
+            retired_absences,
+            reuse_decisions,
+            studio_temp_dir,
+            with_history,
+            workspace_items_path,
+            write_items,
+        )
+        from common.jsonio import read_json as _read_items_file
+
+        temp_dir = studio_temp_dir(repo)
+        items_path = workspace_items_path(temp_dir, Path(chosen).name)
+        choice = ""
+        if (query.get("resume") or [""])[0] == "1":
+            choice = "continue"
+        elif extra["review_fresh"]:
+            choice = "start"
+        _items, items_state = open_review_items(items_path, loaded, choice=choice)
+        if items_state == "ask":
+            extra["existing_review_items"] = str(items_path)
+        source_items: list[dict] = []
+        stored = _read_items_file(items_path) if items_path.is_file() else {}
+        history_from = str(stored.get("history_from") or "") if isinstance(stored, dict) else ""
+        query_remedy = (query.get("remedy") or [""])[0].strip()
+        reuse_flag = (query.get("reuse") or [""])[0].strip()
+        chosen = ""
+        if query_remedy and query_remedy != "1":
+            chosen = Path(query_remedy).stem
+        elif history_from:
+            chosen = history_from
+        elif items_state != "ask":
+            ready = latest_ready_remedy(temp_dir, reports_folder, loaded)
+            if ready:
+                chosen, source_items = ready
+                extra["reuse_offer"] = chosen
+        if chosen and not source_items:
+            source_path = workspace_items_path(temp_dir, chosen)
+            if source_path.is_file():
+                source_items = load_items(source_path)
+        if source_items and not extra.get("reuse_offer"):
+            if reuse_flag == "1":
+                _items = reuse_decisions(repo, loaded, _items, source_items)
+            write_items(items_path, _items, marker={"history_from": chosen})
+        extra["review_items"] = with_history(_items, source_items) if source_items else _items
+        extra["retired_items"] = retired_absences(source_items, loaded) if source_items else []
         extra["run_reports"] = _reports_for_run(reports_folder, loaded)
         report = {"run_result": loaded, "claims": [], "appendix": []}
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)

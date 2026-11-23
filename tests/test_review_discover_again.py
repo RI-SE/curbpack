@@ -104,7 +104,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             try:
                 page = _get(
                     base
-                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z&report="
+                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z&mode=remediation&report="
                     + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
             finally:
@@ -119,9 +119,9 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
         self.assertIn("docs/old.md", before)
         self.assertIn("missing phrase", before)
         self.assertIn('data-check="contents"', before)
-        self.assertNotIn("discover-again", before)
+        self.assertIn(">Re-Discover</button>", before)
         self.assertIn('data-claim="claim-ok"', before)
-        self.assertIn(">Passed</option>", before)
+        self.assertIn(">Passed</span>", before)
         self.assertIn('data-requirement="R1"', dialog)
         self.assertNotIn('data-requirement="R2"', dialog)
         self.assertIn(

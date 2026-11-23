@@ -6,6 +6,7 @@ import copy
 from pathlib import Path
 
 from common.errors import ModelError
+from common.jsonio import write_json
 from common.signing import read_signature, sign_object
 from review.gitseal import git_commit_signature
 from studio.compile.impl import load_report, validate_report, write_report
@@ -51,6 +52,7 @@ def save_report_signature(
     assessments: list[dict] | None = None,
     claims_dir: Path | None = None,
     trust: dict[str, bytes] | None = None,
+    items: list[dict] | None = None,
 ) -> dict:
     if not path.is_file():
         raise ModelError("review report", "path", "a saved report; create a report first")
@@ -66,12 +68,27 @@ def save_report_signature(
     if assessments is not None:
         current = record_assessments(current, assessments)
         validate_report(current)
+    sealed_items = None
+    if items is not None:
+        from studio.review.impl.items import assessments_from_decisions, sign_items_document
+
+        transferred = assessments_from_decisions(items, current.get("run_result") or {})
+        if transferred:
+            current = record_assessments(current, transferred)
+            validate_report(current)
+        sealed_items, digest = sign_items_document(items, name=name, private_key=private_key, at=at)
+        current = copy.deepcopy(current)
+        current["items_digest"] = digest
     if current.get("remove_retired_checks") is True:
         if claims_dir is None:
             raise ModelError("review report", "claims", "the Claims directory")
         refuse_conflicts(current, claims_dir, trust or {})
     sealed = sign_report(current, name=name, private_key=private_key, at=at)
     write_report(path, sealed)
+    if sealed_items is not None:
+        from studio.review.impl.items import report_items_path
+
+        write_json(report_items_path(path), sealed_items)
     if sealed.get("remove_retired_checks") is True:
         apply_pending(sealed, claims_dir, trust or {}, name=name, private_key=private_key, at=at)
     return sealed

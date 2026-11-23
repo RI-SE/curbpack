@@ -135,7 +135,7 @@ The product file may contain only `model.endpoint`, `model.name`, `model.tempera
 
 `bind` is read from the user file at process start. An omitted `--host` or `--port` does not replace it. A flag that is present does, for that process. `--workspace` still selects the Studio workspace. The product file cannot set `bind`.
 
-`paths.temp_dir` and `paths.keys_file` stay in the user file. This change does not give them a reader. Signing keeps the workspace `keys/` directory. `paths.extract_work_dir` is the extract slot, confined to the open repository.
+`paths.temp_dir` and `paths.keys_file` stay in the user file. Review reads `paths.temp_dir`. Each Run Result and each Review Report has a directory there named after the source file's stem, and that directory holds `review_items.json`. A dirty Studio Check also writes `run-result_<stamp>.files.json` directly in `paths.temp_dir`. Signing keeps the workspace `keys/` directory. `paths.extract_work_dir` is the extract slot, confined to the open repository.
 
 Switching repository reads that repository's product file and does not write the user file.
 

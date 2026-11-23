@@ -114,6 +114,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
             raise ModelError("claim", "id", "the Claim to rebind")
         claim = read_claim(context["claims_dir"] / f"{claim_id}.json")
         write_claim(context["claims_dir"], rebind_requirement(claim, requirement))
+        from studio.review.impl.items import record_rebind
+
+        record_rebind(context["repo"], _one(form, "return_to"), claim_id)
         return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/vote":
         save_vote(**common, vote=_one(form, "vote"))
@@ -713,10 +716,12 @@ def _store_check(
         proposed["label"] = label
     checks = [item for item in claim.get("checks") or [] if isinstance(item, dict)]
     raw = _one(form, "edit_index")
+    previous = None
     if raw.isdigit():
         index = int(raw)
         if not 0 <= index < len(checks):
             raise ModelError("claim", "checks", "a check on this claim")
+        previous = checks[index]
         checks[index] = proposed
     elif not any(item.get("check") == check and item.get("args") == args for item in checks):
         checks.append(proposed)
@@ -725,6 +730,18 @@ def _store_check(
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
         raise ModelError("claim", "signed", "confirmation before changing a signed claim")
     write_claim(context["claims_dir"], rebind(claim, checks=checks))
+    if isinstance(previous, dict):
+        from studio.review.impl.items import record_check_change
+
+        record_check_change(
+            context["repo"],
+            _one(form, "return_to"),
+            str(claim.get("id") or ""),
+            str(previous.get("check") or ""),
+            previous.get("args") if isinstance(previous.get("args"), dict) else {},
+            check,
+            args,
+        )
     return True
 
 

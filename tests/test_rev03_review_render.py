@@ -67,8 +67,8 @@ class ReviewRenderStructureTest(unittest.TestCase):
             passed_group = _details(page, "REQ-PASS")
             self.assertIn('data-claim="passed-note"', passed_group)
             self.assertIn(">Passed</option>", passed_group)
-            self.assertIn(">Retire</option>", passed_group)
-            self.assertNotIn(">Must be fixed</option>", passed_group)
+            self.assertIn(">Must be fixed</option>", passed_group)
+            self.assertNotIn(">Retire</option>", passed_group)
 
     def test_check_pills_cover_pass_fail_and_skipped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -217,6 +217,19 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         ).decode()
         self.assertNotIn(">Rebind</a>", page)
+        self.assertNotIn('data-binding-dialog="binding-claim-a"', page)
+        self.assertIn('data-binding="stale"', page)
+        remediated = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "review_mode": "remediation",
+                "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+            },
+        ).decode()
+        page = remediated
         self.assertIn('data-binding-dialog="binding-claim-a"', page)
         self.assertIn('aria-label="Binding stale"', page)
         self.assertIn("Requirement Binding</button>", page)
@@ -224,11 +237,8 @@ class ReviewRenderStructureTest(unittest.TestCase):
         button = page.split('data-binding-dialog="binding-claim-a"', 1)[1].split("</button>", 1)[0]
         self.assertIn('d="M18 6 6 18"', button)
         self.assertNotIn('d="M20 6 9 17l-5-5"', button)
-        self.assertIn(
-            "The Requirement has changed since this Claim was bound to it. "
-            "Click the check to rebind this Claim.",
-            page,
-        )
+        self.assertIn("The Requirement has changed since this Claim was bound to it.", page)
+        self.assertNotIn("Click the check to rebind this Claim.", page)
         self.assertIn("Have you checked the Requirement and confirmed this Claim still applies?", page)
         self.assertIn(">Sign</button>", page)
         self.assertIn(">Cancel</button>", page)
@@ -302,6 +312,18 @@ class ReviewRenderStructureTest(unittest.TestCase):
         self.assertIn("(missing)", file_cell)
         self.assertNotIn("discover-again", page)
         self.assertNotIn(">Re-Discover</a>", page)
+        self.assertNotIn(">Re-Discover</button>", page)
+        remediated = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result_20261120T120000Z.json",
+                "review_mode": "remediation",
+                "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+            },
+        ).decode()
+        self.assertIn(">Re-Discover</button>", remediated)
         self.assertIn(
             "Find the file first. Re-discover the Claim if that does not work.",
             cells[3],

@@ -4,6 +4,8 @@ This guide is for anyone reading a Studio result: QA, security, compliance, buye
 
 The review page compiles the Check run that happened, stores the reviewer's own words, and can sign that report. It does not re-run Check.
 
+A review of a Run Result fills decisions from that run: Passed where the Check passed, otherwise Not assessed. Remediation history is empty. If `review_items` for that run already exists, the page always asks whether to continue or start over. Continue merges the new Checks with the existing items. Start over keeps only the new Checks. A signed report offers Remediate. That opens the same report in remediation, where Check editing, Rebind, and Re-Discover are available, and each of those actions is recorded in the remediation history. Create Remedy Report marks that workspace. Run Check then writes a new Run Result and opens its review. That review shows the Remedy Report history and asks whether to reuse the previous decisions. Reuse fills only the decision. A Check or Claim that is in the Remedy Report and missing from the new run is retired only when the history has `action` `retire`.
+
 Keep a received report unchanged if you need the original handoff. Studio does not commit the report for you. If the team committed `docs/reports/review-report.json`, that commit is their later revision. The run's commit is `run_result.commit`.
 
 ## 1. What is in the report?
@@ -16,7 +18,7 @@ A compiled report is one JSON object. The server writes it at `<product-repo>/do
 | `requirements` | Copies of the Requirements the Claims name, including `references[].law_text` and the Requirement seal. |
 | `claims` | Copies of the Claims that ran, in row order, including `checks[]` and the Claim seal. |
 | `appendix` | Executed Claims that are unsigned or whose signature does not verify, with Claim id and Requirement id. This is not a failed Check. |
-| `assessments` | The reviewer's disposition for a Check or a binding on this run. `accept` and `must_fix` apply to a failed or skipped Check, or a `stale` or `missing` binding. `retire` applies to any Check, including one that passed, and not to a binding. Each entry needs `text`. Absent means Not assessed. An assessment does not change the recorded Check status. |
+| `assessments` | The reviewer's disposition for a Check on this run. `accept` applies to a failed or skipped Check, or a `stale` or `missing` binding. `must_fix` applies to those and also to a Check whose technical status is `pass`. `text` is required when `accept` records a failing Check. Absent means Not assessed. An assessment does not change the recorded Check status. The signed `review_items` decisions are what this reporting uses. |
 | `remove_retired_checks` | Present only when a Check is retired. `true` means review-sign will remove those Checks from the live Claim files. `false` records the decision and leaves the Claim files alone. |
 | `decision` | The reviewer's words. Absent until they are saved. |
 | `signed` | review-sign. Absent until the report is signed. The signature covers the assessments and `remove_retired_checks`. |
@@ -51,13 +53,17 @@ Selected Requirements with no row were not checked. If that matters, it belongs 
 
 ## 4. The page does not re-run Check
 
-The order is Check, then the Check result, then Review. **Run checks** on the review page only goes back to the Check page. A replacement Claim is not a pass until that new run has been rendered.
+The order is Check, then the Check result, then Review. **Re-run Checks** is on Remediation. It goes back to the Check page. A replacement Claim is not a pass until that new run has been rendered.
 
 ## 5. Retire a Check
 
-A failed or skipped Check can be Not assessed, Accept, Must be fixed, or Retire. A passing Check is Passed or Retire. A binding cannot be retired. Retire needs a comment, as Accept does. The recorded status stays `pass`, `fail`, or `skipped`.
+In review, a failed or skipped Check can be Not assessed, Accept, or Must be fixed. A passing Check is Passed or Must be fixed. Accept on a failing Check needs a comment. Must be fixed does not. The recorded status stays as the Check left it. Accept is not available for a passing Check. Retire is not a review verdict.
 
-**Create New Report** asks for confirmation when any Check is Retire. It lists those Checks under their Claims. Cancel writes nothing. Continue writes the unsigned report. The checkbox **Remove retired Checks from Claims when signing the report** is stored as `remove_retired_checks`. Leave it unchecked to keep the decision in the report and leave the Claim files unchanged.
+In remediation, Retire removes that Check from the Claim, or removes the Claim when no Check remains, and writes a history entry with `action` `retire`. A remediation comment is a history entry with `date` and `remediation` and no `action`. The reviewer creates the Remedy Report from that workspace before the next review. A Check or Claim that the Remedy Report contains and the next Run Result does not is retired only when that history entry has `action` `retire`.
+
+A report that already carries `disposition` `retire` still needs a comment. The recorded status stays `pass`, `fail`, or `skipped`. A binding cannot be retired.
+
+**Create New Report** opens a dialog. The dialog asks for the decision and the signer name, then signs the new report. Cancel writes nothing. It still asks for confirmation when any Check is Retire and lists those Checks under their Claims. The checkbox **Remove retired Checks from Claims when signing the report** is stored as `remove_retired_checks`. Leave it unchecked to keep the decision in the report and leave the Claim files unchanged.
 
 Save `decision`, then review-sign. If the checkbox was checked, signing then removes those Checks from the live Claim files. A Claim that still has a Check is signed again by the person who signed the report. A Claim with no Check left is deleted. The Check result copied into the report does not change. Studio does not commit the report or the Claim files.
 
