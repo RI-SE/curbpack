@@ -88,14 +88,22 @@ def _performed_table(editor: dict) -> str:
                 f"/review?repo={quote(repo_id, safe='')}&result={quote(path, safe='')}"
             )
             label = f'<a href="{href}">{label}</a>'
+        review = html.escape(str(run.get("review_label") or "—"))
+        remedy = str(run.get("remedy_label") or "—")
+        href = str(run.get("remedy_href") or "")
+        if href and remedy == "Remediate":
+            remedy_cell = f'<a href="{html.escape(href)}">Remediate</a>'
+        else:
+            remedy_cell = html.escape(remedy)
         body.append(
             "<tr>"
-            f"<td>{label}</td>"
-            f"<td>{html.escape(_outcome(run))}</td>"
+            f"<td>{label}<br>{html.escape(_outcome(run))}</td>"
+            f"<td>{review}</td>"
+            f"<td>{remedy_cell}</td>"
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>When</th><th>Result</th></tr></thead><tbody>"
+        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remedy</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

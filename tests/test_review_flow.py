@@ -73,7 +73,7 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertIn(">Remediate</a>", signed)
                 remediation = _get(base + _href(signed, "Remediate"))
                 self.assertIn('data-action="retire"', remediation)
-                self.assertIn(">Create Remedy Report</button>", remediation)
+                self.assertIn(">Sign Remedy Report</button>", remediation)
                 form = re.search(
                     r'action="/review/remediate"(.*?)</form>',
                     remediation,
@@ -86,7 +86,7 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertIn("Recorded from the remediation page.", saved)
                 remedy = _post(
                     base + "/review/remedy",
-                    {"repo_id": "alpha", "report": report_path},
+                    {"repo_id": "alpha", "report": report_path, "name": "Urban"},
                 )
                 self.assertIn(">Run Check</button>", remedy)
                 nxt = _post_redirect(
@@ -95,15 +95,21 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 )
                 again = _get(base + nxt)
                 self.assertIn("Recorded from the remediation page.", again)
-                self.assertIn("Reuse previous decisions?", again)
-                self.assertIn(">Reuse decisions</a>", again)
+                self.assertIn("Take in the remediation report?", again)
+                self.assertIn(">Take in the report</a>", again)
                 self.assertIn(">Keep the new decisions</a>", again)
                 self.assertNotIn('data-action="retire"', again)
-                reused = _get(base + _href(again, "Reuse decisions"))
+                reused = _get(base + _href(again, "Take in the report"))
                 self.assertIn("Recorded from the remediation page.", reused)
-                self.assertNotIn("Reuse previous decisions?", reused)
+                self.assertNotIn("Take in the remediation report?", reused)
                 kept = _get(base + _href(again, "Keep the new decisions"))
                 self.assertIn("Recorded from the remediation page.", kept)
-                self.assertNotIn("Reuse previous decisions?", kept)
+                self.assertNotIn("Take in the remediation report?", kept)
+                table = _get(base + "/check?repo=alpha")
+                self.assertIn("<th>Check Result</th>", table)
+                self.assertIn("<th>Review</th>", table)
+                self.assertIn("<th>Remedy</th>", table)
+                self.assertIn("All Passed · Signed", table)
+                self.assertIn("1 action · Signed", table)
             stored = read_json(repo / "signed" / "reports" / Path(report_path).name)
             self.assertIn("signed", stored)

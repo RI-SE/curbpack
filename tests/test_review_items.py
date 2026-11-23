@@ -23,13 +23,19 @@ from studio.review.impl.items import (
     items_from_run,
     merge_items,
     open_review_items,
+    project_run,
     record_dirty_files,
     record_retire,
     report_items_path,
+    remedy_report_path,
     retired_absences,
     retarget_check,
     sign_items_document,
+    sign_remedy_document,
     signed_decision,
+    summarize_remedy,
+    summarize_review,
+    take_in_remedy,
     workspace_items_path,
 )
 
@@ -275,6 +281,118 @@ class DecisionAndHistoryTest(unittest.TestCase):
         self.assertTrue(str(report_items_path(Path("review-report_20261123T100000Z.json"))).endswith(
             "review-report_20261123T100000Z.items.json"
         ))
+
+
+class ProjectRunTest(unittest.TestCase):
+    def test_a_full_check_records_must_fix_to_pass_on_the_remediation_copy(self):
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "must_fix"
+        passed = _run("b" * 40, "clean", status="pass")
+        projected = project_run([item], passed, remediation="Checked again.")
+        check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
+        self.assertEqual(check["decision"], "pass")
+        self.assertEqual(check["remediation_history"][-1]["transition"], "must_fix -> pass")
+
+    def test_a_failing_full_check_keeps_must_fix_and_appends_history(self):
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "must_fix"
+        failed = _run("b" * 40, "clean", status="fail")
+        projected = project_run([item], failed, remediation="Still missing.")
+        check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
+        self.assertEqual(check["decision"], "must_fix")
+        self.assertNotIn("transition", check["remediation_history"][-1])
+        self.assertEqual(check["remediation_history"][-1]["remediation"], "Still missing.")
+
+    def test_a_changed_check_is_found_through_old_check_digest(self):
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "must_fix"
+        old = item["key"]["check_digest"]
+        run = _run("b" * 40, "clean", status="pass")
+        run["claims"][0]["checks"][0]["args"] = {"paths": ["docs/b.md"]}
+        projected = project_run([item], run, remediation="The date was wrong.")
+        check = next(row for row in projected if row["key"]["claim_id"] == "claim-a" and row["key"]["check_digest"] != old)
+        self.assertEqual(check["decision"], "pass")
+        self.assertEqual(check["remediation_history"][0]["old_check_digest"], old)
+        self.assertEqual(check["remediation_history"][-1]["transition"], "must_fix -> pass")
+        binding = items_from_run(_run("a" * 40, "clean", status="fail"))[0]
+        both = project_run([binding, item], run, remediation="The date was wrong.")
+        self.assertEqual(both[0]["key"]["check_digest"], binding_digest())
+        self.assertNotIn("remediation_history", both[0])
+
+
+class TakeInRemedyTest(unittest.TestCase):
+    def test_unchanged_underlag_reuses_the_signed_decision(self):
+        tmp, repo = _repo_with_file("same\n")
+        self.addCleanup(tmp.cleanup)
+        commit = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        signed = items_from_run(_run(commit, "clean", status="fail"))[1]
+        signed["decision"] = "accepted"
+        signed["comment"] = "Lisa will finish the document."
+        signed["priority"] = 2
+        signed["assessed_at"] = "2026-11-23T10:00:00Z"
+        remedy = append_history(dict(signed), remediation="Waiting for Lisa.", date="2026-11-23T11:00:00Z")
+        fresh = items_from_run(_run(commit, "clean", status="fail"))
+        taken = take_in_remedy(repo, _run(commit, "clean", status="fail"), fresh, [remedy], [signed])
+        check = next(row for row in taken if row["key"]["check_digest"] == signed["key"]["check_digest"])
+        self.assertEqual(check["decision"], "accepted")
+        self.assertEqual(check["remediation_history"][0]["remediation"], "Waiting for Lisa.")
+
+    def test_changed_underlag_suggests_pass_and_records_the_transition(self):
+        tmp, repo = _repo_with_file("missing\n")
+        self.addCleanup(tmp.cleanup)
+        first = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        signed = items_from_run(_run(first, "clean", status="fail"))[1]
+        signed["decision"] = "accepted"
+        signed["comment"] = "Lisa will finish the document."
+        signed["priority"] = 2
+        signed["assessed_at"] = "2026-11-23T10:00:00Z"
+        remedy = append_history(dict(signed), remediation="Waiting for Lisa.", date="2026-11-23T11:00:00Z")
+        (repo / "docs" / "a.md").write_text("done\n", encoding="utf-8")
+        _git(repo, "add", "docs/a.md")
+        _git(repo, "commit", "-m", "lisa")
+        second = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        later = _run(second, "clean", status="pass")
+        fresh = items_from_run(later)
+        taken = take_in_remedy(repo, later, fresh, [remedy], [signed])
+        check = next(row for row in taken if row["key"]["check_digest"] == signed["key"]["check_digest"])
+        self.assertEqual(check["decision"], "pass")
+        self.assertEqual(check["remediation_history"][-1]["transition"], "accepted -> pass")
+        self.assertEqual(check["remediation_history"][0]["remediation"], "Waiting for Lisa.")
+
+
+class RemedySignatureTest(unittest.TestCase):
+    def test_a_remedy_report_uses_the_same_seal(self):
+        private, public = generate_keypair()
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "must_fix"
+        item = append_history(item, remediation="Documented the gap.", date="2026-11-23T09:00:00Z")
+        sealed = sign_remedy_document([item], name="Urban", private_key=private, at="2026-11-23T12:00:00Z")
+        reading = read_signature(sealed, {"Urban": public}, what="remedy report")
+        self.assertTrue(reading["verifiable"])
+        self.assertEqual(reading["what"], "remedy report")
+        self.assertEqual(reading["who"], "Urban")
+        self.assertEqual(sealed["items"][0]["decision"], "must_fix")
+        self.assertTrue(str(remedy_report_path(Path("review-report_20261123T100000Z.json"))).endswith(
+            "review-report_20261123T100000Z.remedy.json"
+        ))
+        self.assertEqual(summarize_review([item, {**item, "decision": "pass", "key": {"claim_id": "b", "check_digest": "x"}}]), "1 Passed · 1 Must fix · Signed")
+        self.assertEqual(summarize_review([{**item, "decision": "pass"}]), "All Passed · Signed")
+        self.assertEqual(summarize_remedy([item]), "1 action · Signed")
 
 
 class MergeTest(unittest.TestCase):

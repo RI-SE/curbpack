@@ -225,10 +225,10 @@ def load_items(path: Path) -> list[dict]:
 def write_items(path: Path, items: list[dict], *, signed: dict | None = None, marker: dict | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     kept: dict = {}
-    if path.is_file() and marker is None:
+    if path.is_file():
         current = read_json(path)
         if isinstance(current, dict):
-            for key in ("history_from", "remedy"):
+            for key in ("history_from", "remedy", "projected_runs"):
                 if key in current:
                     kept[key] = current[key]
     if marker:
@@ -415,6 +415,171 @@ def apply_recheck(item: dict, status: str, *, remediation: str, date: str | None
     return updated
 
 
+def _checks_in_run(run: dict) -> list[dict]:
+    found = []
+    for claim in run.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+        claim_id = claim.get("id")
+        for check in claim.get("checks") or []:
+            if not isinstance(check, dict):
+                continue
+            args = check.get("args") if isinstance(check.get("args"), dict) else {}
+            name = str(check.get("check") or "")
+            found.append(
+                {
+                    "claim_id": claim_id,
+                    "check": name,
+                    "args": args,
+                    "status": str(check.get("status") or ""),
+                    "digest": check_digest(name, args),
+                }
+            )
+    return found
+
+
+def find_item(item: dict, sources: list[dict]) -> dict | None:
+    """The source for this Check, by its current key or a recorded old_check_digest."""
+    key = item_key(item)
+    for source in sources:
+        if item_key(source) == key:
+            return source
+    claim_id, digest = key
+    for source in sources:
+        if item_key(source)[0] != claim_id:
+            continue
+        for entry in source.get("remediation_history") or []:
+            if isinstance(entry, dict) and entry.get("old_check_digest") == digest:
+                return source
+    return None
+
+
+def project_run(items: list[dict], run: dict, *, remediation: str) -> list[dict]:
+    """Apply one full run to the open remediation copy.
+
+    A pass records the transition and sets the recommendation to pass. A failure
+    appends history and leaves the decision. A changed Check configuration is
+    linked through old_check_digest.
+    """
+    checks = _checks_in_run(run)
+    by_key = {(row["claim_id"], row["digest"]): row for row in checks}
+    known = {item_key(item) for item in items}
+    updated = []
+    for item in items:
+        claim_id, digest = item_key(item)
+        current = item
+        row = by_key.get((claim_id, digest))
+        if row is None and digest != binding_digest():
+            candidates = [
+                check
+                for check in checks
+                if check["claim_id"] == claim_id and (claim_id, check["digest"]) not in known
+            ]
+            if len(candidates) == 1:
+                row = candidates[0]
+                current = retarget_check(current, row["check"], row["args"], remediation=remediation)
+        if row is not None:
+            current = apply_recheck(current, row["status"], remediation=remediation)
+        updated.append(current)
+    present = {item_key(item) for item in updated}
+    for fresh in items_from_run(run):
+        if item_key(fresh) not in present and find_item(fresh, updated) is None:
+            updated.append(fresh)
+            present.add(item_key(fresh))
+    return updated
+
+
+def _history_rows(source: dict | None) -> list[dict]:
+    if not source:
+        return []
+    return [dict(entry) for entry in source.get("remediation_history") or [] if isinstance(entry, dict)]
+
+
+def _signed_for(item: dict, remedy: dict | None, signed_items: list[dict]) -> dict | None:
+    found = find_item(item, signed_items)
+    if found is not None:
+        return found
+    if remedy is None:
+        return None
+    claim_id = item_key(item)[0]
+    olds = {
+        entry.get("old_check_digest")
+        for entry in remedy.get("remediation_history") or []
+        if isinstance(entry, dict) and entry.get("old_check_digest")
+    }
+    for signed in signed_items:
+        if item_key(signed)[0] == claim_id and item_key(signed)[1] in olds:
+            return signed
+    return None
+
+
+def take_in_remedy(
+    repo: Path,
+    run: dict,
+    fresh: list[dict],
+    remedy_items: list[dict],
+    signed_items: list[dict],
+) -> list[dict]:
+    """Bring a Remedy Report into a new Review.
+
+    Unchanged underlag fills the signed decision. Changed underlag keeps the
+    Check's own decision. A pass then records previous -> pass in the history,
+    and that transition does not choose the decision.
+    """
+    taken = []
+    for item in fresh:
+        remedy = find_item(item, remedy_items)
+        signed = _signed_for(item, remedy, signed_items)
+        history = _history_rows(remedy) or _history_rows(signed)
+        updated = dict(item)
+        if history:
+            updated["remediation_history"] = history
+        source = signed or remedy
+        if source and decision_reusable(source, updated, repo=repo, paths=paths_for_item(run, updated)):
+            updated = apply_reused_decision(updated, source)
+        else:
+            previous = str((source or {}).get("decision") or "")
+            if updated.get("decision") == "pass" and previous and previous != "pass":
+                transition = f"{previous} -> pass"
+                if not any(entry.get("transition") == transition for entry in history):
+                    updated = append_history(updated, remediation="Check", transition=transition)
+        taken.append(updated)
+    return taken
+
+
+def sign_remedy_document(items: list[dict], *, name: str, private_key: bytes, at: str) -> dict:
+    """The same seal as a review report. Reading it uses what 'remedy report'."""
+    return sign_object({"items": items, "remedy": True}, name=name, private_key=private_key, at=at)
+
+
+def summarize_review(items: list[dict]) -> str:
+    decisions = [item.get("decision") for item in items if isinstance(item, dict)]
+    if not decisions:
+        return "—"
+    if all(decision == "pass" for decision in decisions):
+        return "All Passed · Signed"
+    parts = []
+    for decision, label in (("pass", "Passed"), ("accepted", "Accepted"), ("must_fix", "Must fix")):
+        count = decisions.count(decision)
+        if count:
+            parts.append(f"{count} {label}")
+    if not parts:
+        return "Signed"
+    return " · ".join(parts) + " · Signed"
+
+
+def summarize_remedy(items: list[dict]) -> str:
+    count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        count += len([entry for entry in item.get("remediation_history") or [] if isinstance(entry, dict)])
+    if count == 0:
+        return "Signed"
+    noun = "action" if count == 1 else "actions"
+    return f"{count} {noun} · Signed"
+
+
 def is_retired(item: dict) -> bool:
     return any(
         isinstance(entry, dict) and entry.get("action") == "retire"
@@ -545,6 +710,10 @@ def with_history(items: list[dict], source_items: list[dict]) -> list[dict]:
     """Attach remediation history for display. The attached history does not set decision."""
     shown = []
     for item in items:
+        own = item.get("remediation_history")
+        if isinstance(own, list) and own:
+            shown.append(item)
+            continue
         history = history_to_show(source_items, item)
         if not history:
             shown.append(item)
@@ -772,6 +941,108 @@ def retire_live_check(claims_dir: Path, claim_id: str, digest: str) -> None:
         retire_claim(claims_dir, claim_id)
         return
     save_claim(claims_dir, rebind(claim, checks=kept))
+
+
+def remedy_report_path(report_path: Path) -> Path:
+    name = report_path.name
+    if name.endswith(".json"):
+        name = name[: -len(".json")] + ".remedy.json"
+    else:
+        name = name + ".remedy.json"
+    return report_path.with_name(name)
+
+
+def remedy_bundle(reports_dir: Path, stem: str) -> tuple[list[dict], list[dict]]:
+    """Remedy items, then the signed review items they started from."""
+    folder = Path(reports_dir)
+    remedy_items: list[dict] = []
+    remedy_path = folder / f"{stem}.remedy.json"
+    if remedy_path.is_file():
+        try:
+            document = read_json(remedy_path)
+        except (OSError, ValueError):
+            document = None
+        if isinstance(document, dict):
+            remedy_items = [row for row in document.get("items") or [] if isinstance(row, dict)]
+    signed_items = list(remedy_items)
+    signed_path = folder / f"{stem}.items.json"
+    if signed_path.is_file():
+        try:
+            signed_document = read_json(signed_path)
+        except (OSError, ValueError):
+            signed_document = None
+        rows = []
+        if isinstance(signed_document, dict):
+            rows = [row for row in signed_document.get("items") or [] if isinstance(row, dict)]
+        if rows:
+            signed_items = rows
+    return remedy_items, signed_items
+
+
+def latest_signed_remedy(reports_dir: Path, run: dict) -> tuple[str, list[dict], list[dict]] | None:
+    """The newest signed Remedy Report whose Review is not this run.
+
+    The remedy items carry the history. The third value is the signed review
+    items when that file exists, otherwise the remedy items.
+    """
+    from review.compile import load_report, same_run
+
+    folder = Path(reports_dir)
+    if not folder.is_dir():
+        return None
+    found: list[tuple[str, list[dict], list[dict]]] = []
+    for path in sorted(folder.glob("review-report_*.remedy.json")):
+        try:
+            document = read_json(path)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(document, dict) or not isinstance(document.get("signed"), dict):
+            continue
+        stem = path.name[: -len(".remedy.json")]
+        report_path = path.with_name(stem + ".json")
+        if report_path.is_file():
+            try:
+                report = load_report(report_path)
+            except (ModelError, ValueError):
+                continue
+            if same_run(report, run):
+                continue
+        remedy_items = [row for row in document.get("items") or [] if isinstance(row, dict)]
+        signed_items = remedy_items
+        signed_path = path.with_name(stem + ".items.json")
+        if signed_path.is_file():
+            try:
+                signed_document = read_json(signed_path)
+            except (OSError, ValueError):
+                signed_document = None
+            rows = []
+            if isinstance(signed_document, dict):
+                rows = [row for row in signed_document.get("items") or [] if isinstance(row, dict)]
+            if rows:
+                signed_items = rows
+        found.append((stem, remedy_items, signed_items))
+    if not found:
+        return None
+    return found[-1]
+
+
+def projected_run_names(repo: Path) -> set[str]:
+    """Run results written while a Remedy was still open. They are not their own rows."""
+    temp = studio_temp_dir(repo)
+    names: set[str] = set()
+    if not temp.is_dir():
+        return names
+    for path in temp.glob("*/review_items.json"):
+        try:
+            document = read_json(path)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(document, dict):
+            continue
+        for name in document.get("projected_runs") or []:
+            if isinstance(name, str) and name:
+                names.add(name)
+    return names
 
 
 def report_items_path(report_path: Path) -> Path:

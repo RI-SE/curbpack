@@ -357,8 +357,10 @@ def _recheck(ws: Workspace, form: dict) -> str:
 def _create_remedy(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
-    from app.server import _registered_repo_path, _sync_open_repo
-    from studio.review.impl.items import load_items, write_items
+    from app.server import _now, _registered_repo_path, _sync_open_repo
+    from common.keystore import load_or_create_key
+    from common.jsonio import write_json
+    from studio.review.impl.items import load_items, remedy_report_path, sign_remedy_document, write_items
 
     repo_id = _sync_open_repo(ws, form)
     if not repo_id:
@@ -368,7 +370,16 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
     items_path = _source_items_path(repo, source)
     if not items_path.is_file():
         raise ModelError("review_items", "path", "the report workspace")
-    write_items(items_path, load_items(items_path), marker={"remedy": True})
+    name = (form.get("name") or [""])[0].strip()
+    if not name:
+        raise ModelError("remedy report", "name", "the signer's name")
+    target = remedy_report_path(Path(source))
+    if target.is_file():
+        raise ModelError("remedy report", "signed", "one signature")
+    private, _public = load_or_create_key(ws.keys, name)
+    sealed = sign_remedy_document(load_items(items_path), name=name, private_key=private, at=_now())
+    write_json(target, sealed)
+    write_items(items_path, sealed["items"], marker={"remedy": True})
     return f"/review?repo={quote(repo_id, safe='')}&mode=remediation&report={quote(source, safe='')}"
 
 

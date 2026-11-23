@@ -503,14 +503,19 @@ def _review_queue(
         )
     retired_list = f'<ul data-retired>{"".join(retired_rows)}</ul>' if retired_rows else ""
     remedy_form = ""
-    if remediation and door.get("selected_report"):
+    if remediation and door.get("selected_report") and not door.get("remedy_signed"):
         remedy_form = (
             '<form method="post" action="/review/remedy">'
             f'<input type="hidden" name="repo_id" value="{html.escape(str(door.get("repo_id") or ""))}">'
             f'<input type="hidden" name="report" value="{html.escape(str(door.get("selected_report") or ""))}">'
-            '<button type="submit">Create Remedy Report</button>'
+            "<label>Signer name</label>"
+            '<input type="text" name="name" placeholder="The person who did the work">'
+            "<button type=\"submit\">Sign Remedy Report</button>"
             "</form>"
         )
+    elif remediation and door.get("remedy_signed"):
+        signer = html.escape(str(door.get("remedy_signer") or ""))
+        remedy_form = f'<p data-remedy-signed>Remedy report · {signer}</p>'
     script = _comment_script()
     if any("check-form" in item for item in dialogs):
         script += "<script>\n" + check_form_script() + "\n</script>"
@@ -1662,12 +1667,21 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
         return ""
     rerun = ""
     if str(door.get("review_mode") or "") == "remediation":
+        if door.get("remedy_signed"):
+            return_to = "/review"
+            label = "Run Check"
+        else:
+            report_query = quote(str(door.get("selected_report") or ""), safe="")
+            result_query = quote(str(door.get("selected_result") or door.get("source_result") or ""), safe="")
+            target = f"report={report_query}" if report_query else f"result={result_query}"
+            return_to = f"/review?repo={quote(repo_id, safe='')}&mode=remediation&{target}"
+            label = "Re-run Checks"
         rerun = f"""
 <form method="post" action="/check">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
 <input type="hidden" name="action" value="check">
-<input type="hidden" name="return_to" value="/review">
-<p class="actions"><button type="submit" data-leave="1">{'Run Check' if door.get('remedy_ready') else 'Re-run Checks'}</button></p>
+<input type="hidden" name="return_to" value="{html.escape(return_to)}">
+<p class="actions"><button type="submit" data-leave="1">{label}</button></p>
 </form>
 """
     back = (
@@ -2059,11 +2073,11 @@ def _reuse_dialog(door: dict) -> str:
     keep_href = f"/review?repo={repo}&result={result}&remedy={remedy}"
     return (
         '<dialog id="reuse-review" class="review-choice">'
-        "<p>Reuse previous decisions?</p>"
-        "<p>Reuse fills the decision where the Check and its underlag are unchanged. "
-        "The remediation history stays visible either way.</p>"
+        "<p>Take in the remediation report?</p>"
+        "<p>The report keeps its review items. Unchanged underlag fills the signed decision. "
+        "The history stays visible either way.</p>"
         "<p>"
-        f'<a class="btn primary" href="{html.escape(reuse_href)}">Reuse decisions</a>'
+        f'<a class="btn primary" href="{html.escape(reuse_href)}">Take in the report</a>'
         f'<a class="btn" href="{html.escape(keep_href)}">Keep the new decisions</a>'
         "</p></dialog>"
         "<script>document.addEventListener('DOMContentLoaded',function(){"

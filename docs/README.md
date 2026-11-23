@@ -211,6 +211,7 @@ Studio installation settings live in `~/.curbpack/curbpack-studio.json`. A produ
 | System boundaries and the cover | [Architecture](arch/ARCHITECTURE.md) |
 | Inherited requirement ids | [System requirements](arch/SYSTEM_REQUIREMENTS.md) |
 | Annex VII point 3, historical narrative and current acceptance | [End-to-end scenario](concepts/end-to-end-scenario.md) |
+| Check, Review, Remediation and a later round | [Från första Check till avslutad granskning](concepts/check-to-closed-review.md) |
 | Stories | [Agile](agile/README.md) |
 | Derived requirements | [Requirements](req/README.md) |
 | Pack Editor behavior still being specified | [Pack Editor requirements](req/pack-editor.md) |

@@ -502,6 +502,30 @@ class SignedReportLockTest(unittest.TestCase):
 
 
 class CheckSummaryTest(unittest.TestCase):
+    def test_a_signed_must_fix_round_links_to_remediate(self):
+        page = check_page(
+            None,
+            None,
+            editor={
+                "repo_id": "alpha",
+                "runs": [
+                    {
+                        "name": "run-result_20260102T153000Z.json",
+                        "path": "/tmp/runs/run.json",
+                        "when": "2026-01-02 15:30 UTC",
+                        "fail": 4,
+                        "pass": 0,
+                        "skipped": 0,
+                        "review_label": "4 Must fix · Signed",
+                        "remedy_label": "Remediate",
+                        "remedy_href": "/review?repo=alpha&mode=remediation",
+                    }
+                ],
+            },
+        ).decode()
+        self.assertIn("4 Must fix · Signed", page)
+        self.assertIn(">Remediate</a>", page)
+        self.assertIn("mode=remediation", page)
     def test_check_page_explains_the_flow_and_lists_performed_checks(self):
         page = check_page(
             None,
@@ -551,6 +575,9 @@ class CheckSummaryTest(unittest.TestCase):
         self.assertNotIn("<th>Path</th>", page)
         self.assertLess(page.index("<h1>Check</h1>"), page.index("Check → Result → Review → Report"))
         self.assertIn("Check writes a Result. Review reads that Result and can write a Report.", page)
+        self.assertIn("<th>Check Result</th>", page)
+        self.assertIn("<th>Review</th>", page)
+        self.assertIn("<th>Remedy</th>", page)
         self.assertLess(page.index("Checks performed"), page.index("2026-01-02 15:30 UTC"))
         self.assertLess(page.index("2026-01-02 15:30 UTC"), page.index("2026-01-01 00:00 UTC"))
         self.assertIn("1 fail", page)

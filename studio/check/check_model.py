@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from curbcheck.api import _pack_version_dir, packs_dir
+from curbcheck.api import _pack_version_dir, packs_dir, reports_dir
 from common.errors import ModelError
 from common.jsonio import read_json
 from common.store import load_run_result
@@ -49,14 +49,18 @@ def _check_editor_model(ws: Workspace, query: dict) -> dict:
     fields = _door_path_fields(ws, repo_id) if repo_id else {}
     packs: list[dict] = []
     selection = ""
+    opened: Path | None = None
+    reports_folder: Path | None = None
     values = {key: "" for key in ("packs_dir", "claims_dir", "results_dir", "reports_dir")}
     if repo_id:
         repo = _registered_repo_path(ws, repo_id)
+        opened = repo
         config_path = repo / "curbpack.json"
         if config_path.is_file():
             from common.validate import validate_curbpack_config
 
             config = validate_curbpack_config(read_json(config_path))
+            reports_folder = reports_dir(repo, config)
             for key in values:
                 values[key] = str(config.get(key) or "")
             packs_root = packs_dir(repo, config)
@@ -99,7 +103,12 @@ def _check_editor_model(ws: Workspace, query: dict) -> dict:
         "results_dir_value": values["results_dir"],
         "reports_dir_value": values["reports_dir"],
         "run_result_path": result_path,
-        "runs": _performed_checks(results_folder),
+        "runs": _annotate_rounds(
+            opened,
+            reports_folder,
+            _performed_checks(results_folder),
+            repo_id,
+        ),
     }
 
 
@@ -134,6 +143,96 @@ def _claims_by_pack(repo: Path) -> dict[str, int]:
         if isinstance(pack_id, str) and pack_id:
             counts[pack_id] = counts.get(pack_id, 0) + 1
     return counts
+
+
+def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[dict], repo_id: str) -> list[dict]:
+    """One row per Check. A run projected into an open Remedy is not a row."""
+    from urllib.parse import quote
+
+    from review.compile import load_report, same_run
+    from studio.review.impl.items import projected_run_names, summarize_remedy, summarize_review
+
+    hidden = projected_run_names(repo) if repo is not None else set()
+    reports = _signed_reports(reports_folder)
+    rows = []
+    for run in runs:
+        if run.get("name") in hidden:
+            continue
+        row = dict(run)
+        row["review_label"] = "—"
+        row["remedy_label"] = "—"
+        row["remedy_href"] = ""
+        loaded = None
+        path_text = str(run.get("path") or "")
+        if path_text:
+            try:
+                loaded = load_run_result(Path(path_text))
+            except (ModelError, OSError, ValueError):
+                loaded = None
+        match = None
+        if loaded is not None:
+            for report in reversed(reports):
+                if same_run(report["report"], loaded):
+                    match = report
+                    break
+        if match is not None:
+            row["review_label"] = summarize_review(match["items"]) if match["items"] else "Signed"
+            if match["remedy_items"] is not None:
+                row["remedy_label"] = summarize_remedy(match["remedy_items"])
+            elif any(item.get("decision") == "must_fix" for item in match["items"]):
+                row["remedy_label"] = "Remediate"
+                row["remedy_href"] = (
+                    f"/review?repo={quote(repo_id, safe='')}"
+                    f"&report={quote(match['path'], safe='')}"
+                    "&mode=remediation"
+                )
+        rows.append(row)
+    return rows
+
+
+def _signed_reports(folder: Path | None) -> list[dict]:
+    from review.compile import load_report
+    from common.jsonio import read_json as _read
+
+    if folder is None or not Path(folder).is_dir():
+        return []
+    found = []
+    for path in sorted(Path(folder).glob("review-report_*.json")):
+        if ".remedy." in path.name or ".items." in path.name or not path.is_file():
+            continue
+        try:
+            report = load_report(path)
+        except (ModelError, OSError, ValueError):
+            continue
+        if not isinstance(report.get("signed"), dict):
+            continue
+        items: list[dict] = []
+        items_path = path.with_name(path.stem + ".items.json")
+        if items_path.is_file():
+            try:
+                document = _read(items_path)
+            except (OSError, ValueError):
+                document = None
+            if isinstance(document, dict):
+                items = [row for row in document.get("items") or [] if isinstance(row, dict)]
+        remedy_items = None
+        remedy_path = path.with_name(path.stem + ".remedy.json")
+        if remedy_path.is_file():
+            try:
+                remedy = _read(remedy_path)
+            except (OSError, ValueError):
+                remedy = None
+            if isinstance(remedy, dict) and isinstance(remedy.get("signed"), dict):
+                remedy_items = [row for row in remedy.get("items") or [] if isinstance(row, dict)]
+        found.append(
+            {
+                "path": str(path.resolve()),
+                "report": report,
+                "items": items,
+                "remedy_items": remedy_items,
+            }
+        )
+    return found
 
 
 def _performed_checks(results_folder: str) -> list[dict]:
@@ -216,6 +315,26 @@ def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None
     return result, process_exit_code(result)
 
 
+def _project_open_remedy(repo: Path, out: Path, result: dict, return_to: str) -> None:
+    """A Check while Remedy is open updates that copy and is not its own row."""
+    from urllib.parse import parse_qs, urlparse
+
+    from studio.review.impl.items import load_items, project_run, studio_temp_dir, workspace_items_path, write_items
+
+    query = parse_qs(urlparse(return_to).query)
+    source = (query.get("report") or query.get("result") or [""])[0]
+    if not source:
+        return
+    path = workspace_items_path(studio_temp_dir(repo), Path(source).name)
+    if not path.is_file():
+        return
+    document = read_json(path)
+    names = [name for name in (document.get("projected_runs") or []) if isinstance(name, str)]
+    if out.name not in names:
+        names.append(out.name)
+    write_items(path, project_run(load_items(path), result, remediation="Check"), marker={"projected_runs": names})
+
+
 def _run_check(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
@@ -237,6 +356,14 @@ def _run_check(ws: Workspace, form: dict) -> str:
 
         record_dirty_files(repo, out, result)
         return_to = (form.get("return_to") or [""])[0].strip()
+        if (
+            return_to.startswith("/review")
+            and not return_to.startswith("//")
+            and "\\" not in return_to
+            and "mode=remediation" in return_to
+        ):
+            _project_open_remedy(repo, out, result, return_to)
+            return return_to
         if return_to.startswith("/review") and not return_to.startswith("//") and "\\" not in return_to:
             return (
                 f"/review?repo={quote(repo_id, safe='')}"

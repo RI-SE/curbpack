@@ -98,6 +98,7 @@ The pilot is a local single-user application on `127.0.0.1:8770`. Discovery and 
 
 * [Packs](packs.md)
 * [Evidence](evidence.md)
+* [Från första Check till avslutad granskning](check-to-closed-review.md) — målbild för Review och Remediation
 * [Packs v2](../reference/packs2.md) — Pack, Requirement, Claim, Check, signing, and run-result fields
 * [Workspace](../reference/workspace.md) — `curbpack.json` keys, created-file values, and on-disk paths
 * [Architecture: data and responsibility](../arch/ARCHITECTURE.md)

@@ -88,6 +88,16 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                 extra["review_items"] = load_items(items_path)
             document = _read_items_file(items_path) if items_path.is_file() else {}
             extra["remedy_ready"] = isinstance(document, dict) and document.get("remedy") is True
+            from studio.review.impl.items import remedy_report_path
+
+            remedy_path = remedy_report_path(Path(chosen))
+            if remedy_path.is_file():
+                remedy_document = _read_items_file(remedy_path)
+                remedy_signed = remedy_document.get("signed") if isinstance(remedy_document, dict) else None
+                if isinstance(remedy_signed, dict):
+                    extra["remedy_signed"] = True
+                    extra["remedy_signer"] = str(remedy_signed.get("name") or "")
+                    extra["remedy_ready"] = True
         try:
             report_rel = str(Path(chosen).resolve().relative_to(repo.resolve()))
         except ValueError:
@@ -119,11 +129,13 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
         from studio.review.impl.items import (
             latest_ready_remedy,
+            latest_signed_remedy,
             load_items,
             open_review_items,
+            remedy_bundle,
             retired_absences,
-            reuse_decisions,
             studio_temp_dir,
+            take_in_remedy,
             with_history,
             workspace_items_path,
             write_items,
@@ -141,6 +153,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         if items_state == "ask":
             extra["existing_review_items"] = str(items_path)
         source_items: list[dict] = []
+        signed_items: list[dict] = []
         stored = _read_items_file(items_path) if items_path.is_file() else {}
         history_from = str(stored.get("history_from") or "") if isinstance(stored, dict) else ""
         query_remedy = (query.get("remedy") or [""])[0].strip()
@@ -151,17 +164,23 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         elif history_from:
             chosen = history_from
         elif items_state != "ask":
-            ready = latest_ready_remedy(temp_dir, reports_folder, loaded)
+            ready = latest_signed_remedy(reports_folder, loaded)
+            if ready is None:
+                legacy = latest_ready_remedy(temp_dir, reports_folder, loaded)
+                ready = (legacy[0], legacy[1], legacy[1]) if legacy else None
             if ready:
-                chosen, source_items = ready
+                chosen, source_items, signed_items = ready
                 extra["reuse_offer"] = chosen
         if chosen and not source_items:
-            source_path = workspace_items_path(temp_dir, chosen)
-            if source_path.is_file():
-                source_items = load_items(source_path)
+            source_items, signed_items = remedy_bundle(reports_folder, chosen)
+            if not source_items:
+                source_path = workspace_items_path(temp_dir, chosen)
+                if source_path.is_file():
+                    source_items = load_items(source_path)
+                    signed_items = source_items
         if source_items and not extra.get("reuse_offer"):
             if reuse_flag == "1":
-                _items = reuse_decisions(repo, loaded, _items, source_items)
+                _items = take_in_remedy(repo, loaded, _items, source_items, signed_items or source_items)
             write_items(items_path, _items, marker={"history_from": chosen})
         extra["review_items"] = with_history(_items, source_items) if source_items else _items
         extra["retired_items"] = retired_absences(source_items, loaded) if source_items else []
