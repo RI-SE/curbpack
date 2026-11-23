@@ -6,7 +6,7 @@
 
 Compile builds an **unsigned review report from recorded Run Results and relevant snapshots** and renders supported outputs such as JSON and PDF. It does **not** execute Checks, decide whether results pass, obtain human review decisions, sign Review reports or mutate prior Run Results.
 
-The target `studio/compile/router.py` owns any Compile REST endpoints. Its thin optional CLI and router call the same headless `studio/compile/impl/` operations. A GUI page is optional and must be thin TypeScript using REST. `studio/app.py` registers routers only. `studio/review/` owns review decisions and signing; `curbcheck/` owns Checks and Run Result creation.
+The target `studio/compile/router.py` owns any Compile REST endpoints. Its thin optional CLI and router call the same headless `studio/compile/impl/` operations. A GUI page is optional and must be thin TypeScript using REST. `studio/app.py` registers routers only. `studio/review/` owns review decisions and signing; `curbcheck/` owns Checks and Run Result creation. `review_decision` is defined in `docs/reference/studio-internal.md`.
 
 ## Operations and preservation
 

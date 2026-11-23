@@ -7,6 +7,7 @@
 Curbpack consists of **two systems**: Curbpack Studio, a modular monolith, and Curbcheck, an independently callable execution system. The full target directory map and ownership rules are in [`../agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md`](../agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md). This document and that detailed target describe **one** architecture; do not maintain competing targets.
 
 - `docs/reference/packs2.md` defines the **human/PO-approved normative persistent data contract**. Nothing here overrides it.
+- `docs/reference/studio-internal.md` defines Studio-internal data structures. `review_decision` is defined there.
 - `models/pydantic/` implements that contract; **generate** JSON Schema from Pydantic. When they disagree, resolve against Packs v2 through an explicit change decision.
 - `docs/reference/workspace.md` defines current configuration/path behavior; new VL-00 namespace fields require an explicit update there.
 - The subsystem `ARCHITECTURE.md` files define functional boundaries within this overall target; obsolete routing, import and Publish claims in those files do not override it.
@@ -80,6 +81,7 @@ The target path and owner for each existing operation must be recorded and check
 
 - [Detailed approved architectural target](../agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md)
 - [Normative Packs v2](../reference/packs2.md)
+- [Studio-internal structures](../reference/studio-internal.md)
 - [Current workspace config contract](../reference/workspace.md)
 - [Agreed decisions](../agile/DECISIONS.md)
 - [EP-02 migration](../agile/epics/02-modularize-studio/EPIC.md)

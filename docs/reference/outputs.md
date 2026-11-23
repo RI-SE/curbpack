@@ -115,12 +115,12 @@ The run result references the Claim digests actually executed. A compiler or rev
 
 ## Review report
 
-Compile copies an existing run result into one JSON object together with the Requirements and Claims needed to review it. It does not execute Checks or change their outcomes. `validate_report` validates the report before it is saved.
+Compile copies an existing run result into one JSON object together with the Requirements and Claims needed to review it. It does not execute Checks or change their outcomes. `validate_report` validates the report before it is saved. The per-check decision `review_decision` is defined in [Studio-internal](studio-internal.md).
 
 | Field | Meaning |
 | --- | --- |
 | `run_result` | The existing [run result](#run-result), copied into the report. |
-| `requirements` | Requirements named by the Claims that ran, in the order their ids first appear. |
+| `requirements` | Requirement versions recorded by the Claims that ran, in the order each version first appears. One Requirement id may appear more than once when Claims recorded different digests. A Claim is tied to the object whose digest is that Claim's `requirement_digest`. |
 | `claims` | The Claims that ran, one per run-result row, in row order. |
 | `appendix` | List of evaluated Claims that are unsigned or whose signature does not verify. Each entry has `id`, `requirement_id`, and `reason`. |
 | `assessments` | Optional list of reviewer assessments on this run. Absent means every deviation is Not assessed. Each entry is one Check, or one `stale` or `missing` binding. A Check entry has `kind` `check`, `claim_id`, `claim_digest`, `index`, `disposition`, and `text`. A binding entry has `kind` `binding`, `claim_id`, `claim_digest`, `namespace`, `pack_id`, `requirement_id`, `requirement_digest`, `binding`, `disposition`, and `text`. `disposition` is `accept`, `must_fix`, or `retire`. `accept` and `must_fix` apply only to a failed or skipped Check, or a `stale` or `missing` binding. `retire` applies to any Check on the run, including `pass`, and not to a binding. `text` is required. An assessment does not change Check status, binding, or the embedded run result. |
@@ -130,7 +130,7 @@ Compile copies an existing run result into one JSON object together with the Req
 
 Unknown report keys are rejected. A report may contain a run with failed or skipped Checks. Producing the report does not turn that run into a pass.
 
-Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. The embedded Requirement is the version whose digest is the Claim's `requirement_digest`. A current Requirement with the same id and a different digest is not substituted. When that version is not in the supplied Requirements, Compile recovers it from local Git history. If it cannot be recovered, Compile fails and names the recorded digest. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
+Compile rejects a missing run result, a missing Claim or Requirement needed for the report, a Claim digest that differs from the result row, or a nested Check that differs from the Claim configuration. Each embedded Requirement is a version whose digest is a Claim's `requirement_digest`. Claims that recorded different versions of one Requirement id each keep their own embedded object. A current Requirement with the same id and a different digest is not substituted for either of them. When a recorded version is not in the supplied Requirements, Compile recovers it from local Git history. If it cannot be recovered, Compile fails and names the recorded digest. It does not rewrite the live Claim or Requirement files. A failed compile leaves existing report files in place.
 
 Assessments submitted with Compile are stored on the new report only. They are not copied onto another run. A report that has no `assessments` field remains valid. An unsigned report can be given a new `assessments` list. A signed report is unchanged.
 

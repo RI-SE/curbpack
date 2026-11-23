@@ -1,6 +1,6 @@
 # Agreed design decisions and open questions
 
-**Updated:** 2026-11-19
+**Updated:** 2026-11-23
 
 This document records decisions that govern ongoing and future Curbpack work. It is not a replacement for normative contracts, architecture specifications, user stories or acceptance tests.
 
@@ -13,6 +13,7 @@ The following documents have distinct responsibilities:
 | Document | Authority |
 |---|---|
 | `docs/reference/packs2.md` | Normative persistent data contracts, approved by humans / Product Owner |
+| `docs/reference/studio-internal.md` | Studio-internal data structures. `review_decision` is defined there. Claim, Check, and signature are added to that document in a later step. |
 | `docs/arch/ARCHITECTURE.md` | Approved overall system architecture |
 | Subsystem `ARCHITECTURE.md` files | Subsystem responsibilities and internal boundaries, consistent with the overall architecture |
 | `docs/reference/workspace.md` | Workspace configuration and path contracts |
