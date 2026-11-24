@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -12,6 +14,37 @@ from common.store import load_run_result
 
 if TYPE_CHECKING:
     from app.server import Workspace
+
+
+def new_check_run_path(folder: Path) -> Path:
+    """A new Check is a directory. The run, its Review, and its Remedy live there."""
+    folder.mkdir(parents=True, exist_ok=True)
+    while True:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        directory = folder / f"run-result_{stamp}"
+        if not directory.exists():
+            directory.mkdir()
+            return directory / "run-result.json"
+        time.sleep(1)
+
+
+def _run_stamp(path: Path) -> str:
+    if path.name == "run-result.json" and path.parent.name.startswith("run-result_"):
+        return path.parent.name
+    return path.name
+
+
+def _run_result_files(folder: Path) -> list[Path]:
+    files = [path for path in folder.glob("run-result_*.json") if path.is_file()]
+    files.extend(path for path in folder.glob("run-result_*/run-result.json") if path.is_file())
+    return sorted(files, key=_run_stamp)
+
+
+def _is_run_result(path: Path) -> bool:
+    return path.is_file() and (
+        (path.name.startswith("run-result_") and path.name.endswith(".json"))
+        or (path.name == "run-result.json" and path.parent.name.startswith("run-result_"))
+    )
 
 
 def _confined_run_result_path(results_folder: str, requested: str) -> str:
@@ -25,10 +58,10 @@ def _confined_run_result_path(results_folder: str, requested: str) -> str:
             path.relative_to(folder)
         except ValueError:
             return ""
-        if path.is_file() and path.name.startswith("run-result_") and path.name.endswith(".json"):
+        if _is_run_result(path):
             return str(path)
         return ""
-    dated = sorted(folder.glob("run-result_*.json"))
+    dated = _run_result_files(folder)
     if dated:
         return str(dated[-1].resolve())
     return ""
@@ -145,94 +178,126 @@ def _claims_by_pack(repo: Path) -> dict[str, int]:
     return counts
 
 
-def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[dict], repo_id: str) -> list[dict]:
-    """One row per Check. A run projected into an open Remedy is not a row."""
+def _quote_link(repo_id: str, **query: str) -> str:
     from urllib.parse import quote
 
-    from review.compile import load_report, same_run
-    from studio.review.impl.items import projected_run_names, summarize_remedy, summarize_review
+    parts = [f"repo={quote(repo_id, safe='')}"]
+    for key, value in query.items():
+        if value:
+            parts.append(f"{key}={quote(value, safe='')}")
+    return "/review?" + "&".join(parts)
 
+
+def _document_is_signed(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        document = read_json(path)
+    except (OSError, ValueError):
+        return False
+    return isinstance(document, dict) and isinstance(document.get("signed"), dict)
+
+
+def _items_document(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        document = read_json(path)
+    except (OSError, ValueError):
+        return {}
+    return document if isinstance(document, dict) else {}
+
+
+def _items_need_remedy(path: Path) -> bool:
+    rows = _items_document(path).get("items")
+    return any(isinstance(row, dict) and row.get("decision") == "must_fix" for row in rows or [])
+
+
+def _remediation_started(path: Path) -> bool:
+    document = _items_document(path)
+    if document.get("remedy") is True:
+        return True
+    rows = document.get("items")
+    return any(
+        isinstance(row, dict) and any(isinstance(entry, dict) for entry in row.get("remediation_history") or [])
+        for row in rows or []
+    )
+
+
+def _newest_signed(directory: Path, *patterns: str) -> Path | None:
+    found: list[Path] = []
+    for pattern in patterns:
+        for path in directory.glob(pattern):
+            if path.name.endswith(".items.json"):
+                continue
+            if _document_is_signed(path):
+                found.append(path)
+    if not found:
+        return None
+    return sorted(found, key=lambda path: path.name)[-1]
+
+
+def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[dict], repo_id: str) -> list[dict]:
+    """One row per Check directory. A Review belongs to that directory, not to identical content."""
+    from studio.review.impl.items import projected_run_names, studio_temp_dir, workspace_items_path
+
+    del reports_folder
     hidden = projected_run_names(repo) if repo is not None else set()
-    reports = _signed_reports(reports_folder)
     rows = []
     for run in runs:
         if run.get("name") in hidden:
             continue
         row = dict(run)
-        row["review_label"] = "—"
-        row["remedy_label"] = "—"
+        path = Path(str(run.get("path") or ""))
+        directory = path.parent if path.name == "run-result.json" else None
+        result_href = _quote_link(repo_id, result=str(path)) if path else ""
+        row["review_href"] = result_href
         row["remedy_href"] = ""
-        loaded = None
-        path_text = str(run.get("path") or "")
-        if path_text:
-            try:
-                loaded = load_run_result(Path(path_text))
-            except (ModelError, OSError, ValueError):
-                loaded = None
-        match = None
-        if loaded is not None:
-            for report in reversed(reports):
-                if same_run(report["report"], loaded):
-                    match = report
-                    break
-        if match is not None:
-            row["review_label"] = summarize_review(match["items"]) if match["items"] else "Signed"
-            if match["remedy_items"] is not None:
-                row["remedy_label"] = summarize_remedy(match["remedy_items"])
-            elif any(item.get("decision") == "must_fix" for item in match["items"]):
+        row["remedy_label"] = "—"
+        if directory is not None and directory.name.startswith("run-result_"):
+            items = directory / "review_items.json"
+            review = _newest_signed(directory, "review-report.json", "review-report_*.json")
+            remedy = _newest_signed(directory, "remedy-report.json", "remedy-report_*.json")
+            locked = review is not None or _document_is_signed(items) or _items_document(items).get("review_locked") is True
+            if locked and review is not None:
+                row["review_label"] = "Signed"
+                row["review_href"] = _quote_link(repo_id, report=str(review.resolve()))
+            elif items.is_file():
+                row["review_label"] = "In progress"
+                row["review_href"] = result_href
+            else:
+                row["review_label"] = "Create"
+            if locked and _remediation_started(items):
+                row["remedy_label"] = "In progress"
+                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
+            elif locked and _items_need_remedy(items):
                 row["remedy_label"] = "Remediate"
-                row["remedy_href"] = (
-                    f"/review?repo={quote(repo_id, safe='')}"
-                    f"&report={quote(match['path'], safe='')}"
-                    "&mode=remediation"
+                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
+            if remedy is not None:
+                row["remedy_report_label"] = "Signed"
+                row["remedy_report_href"] = _quote_link(
+                    repo_id, result=str(path), mode="remediation", snapshot=str(remedy.resolve())
                 )
+        else:
+            items = None
+            if repo is not None and path.name:
+                items = workspace_items_path(studio_temp_dir(repo), path.name)
+            started = items is not None and items.is_file()
+            locked = started and (
+                _document_is_signed(items) or _items_document(items).get("review_locked") is True
+            )
+            if locked:
+                row["review_label"] = "Signed"
+            else:
+                row["review_label"] = "In progress" if started else "Create"
+            if locked and _remediation_started(items):
+                row["remedy_label"] = "In progress"
+                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
+            elif locked and _items_need_remedy(items):
+                row["remedy_label"] = "Remediate"
+                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
         rows.append(row)
     return rows
-
-
-def _signed_reports(folder: Path | None) -> list[dict]:
-    from review.compile import load_report
-    from common.jsonio import read_json as _read
-
-    if folder is None or not Path(folder).is_dir():
-        return []
-    found = []
-    for path in sorted(Path(folder).glob("review-report_*.json")):
-        if ".remedy." in path.name or ".items." in path.name or not path.is_file():
-            continue
-        try:
-            report = load_report(path)
-        except (ModelError, OSError, ValueError):
-            continue
-        if not isinstance(report.get("signed"), dict):
-            continue
-        items: list[dict] = []
-        items_path = path.with_name(path.stem + ".items.json")
-        if items_path.is_file():
-            try:
-                document = _read(items_path)
-            except (OSError, ValueError):
-                document = None
-            if isinstance(document, dict):
-                items = [row for row in document.get("items") or [] if isinstance(row, dict)]
-        remedy_items = None
-        remedy_path = path.with_name(path.stem + ".remedy.json")
-        if remedy_path.is_file():
-            try:
-                remedy = _read(remedy_path)
-            except (OSError, ValueError):
-                remedy = None
-            if isinstance(remedy, dict) and isinstance(remedy.get("signed"), dict):
-                remedy_items = [row for row in remedy.get("items") or [] if isinstance(row, dict)]
-        found.append(
-            {
-                "path": str(path.resolve()),
-                "report": report,
-                "items": items,
-                "remedy_items": remedy_items,
-            }
-        )
-    return found
 
 
 def _performed_checks(results_folder: str) -> list[dict]:
@@ -242,13 +307,11 @@ def _performed_checks(results_folder: str) -> list[dict]:
     if not folder.is_dir():
         return []
     rows = []
-    for path in sorted(folder.glob("run-result_*.json")):
-        if not path.is_file():
-            continue
+    for path in reversed(_run_result_files(folder)):
         row = {
-            "name": path.name,
+            "name": _run_stamp(path),
             "path": str(path.resolve()),
-            "when": _run_when(path.name),
+            "when": _run_when(_run_stamp(path)),
             "fail": 0,
             "pass": 0,
             "skipped": 0,
@@ -261,7 +324,6 @@ def _performed_checks(results_folder: str) -> list[dict]:
         except (ModelError, OSError, ValueError):
             row["unreadable"] = True
         rows.append(row)
-    rows.reverse()
     return rows
 
 
@@ -319,20 +381,25 @@ def _project_open_remedy(repo: Path, out: Path, result: dict, return_to: str) ->
     """A Check while Remedy is open updates that copy and is not its own row."""
     from urllib.parse import parse_qs, urlparse
 
-    from studio.review.impl.items import load_items, project_run, studio_temp_dir, workspace_items_path, write_items
+    from studio.review.impl.items import items_home, load_items, project_run, write_items
 
     query = parse_qs(urlparse(return_to).query)
     source = (query.get("report") or query.get("result") or [""])[0]
     if not source:
         return
-    path = workspace_items_path(studio_temp_dir(repo), Path(source).name)
+    path = items_home(repo, Path(source))
     if not path.is_file():
         return
     document = read_json(path)
     names = [name for name in (document.get("projected_runs") or []) if isinstance(name, str)]
-    if out.name not in names:
-        names.append(out.name)
-    write_items(path, project_run(load_items(path), result, remediation="Check"), marker={"projected_runs": names})
+    stamp = out.parent.name if out.name == "run-result.json" else out.name
+    if stamp not in names:
+        names.append(stamp)
+    write_items(
+        path,
+        project_run(load_items(path), result, remediation="Check", repo=repo, run_name=stamp),
+        marker={"projected_runs": names},
+    )
 
 
 def _run_check(ws: Workspace, form: dict) -> str:
@@ -340,7 +407,7 @@ def _run_check(ws: Workspace, form: dict) -> str:
 
     from app.server import _registered_repo_path
     from common.validate import validate_curbpack_config
-    from curbcheck.api import new_run_result_path, results_dir, run_and_write
+    from curbcheck.api import results_dir, run_and_write
     from discovery.door import set_open_repo
 
     repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
@@ -350,7 +417,7 @@ def _run_check(ws: Workspace, form: dict) -> str:
     if repo_id and action == "check":
         repo = _registered_repo_path(ws, repo_id)
         config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-        out = new_run_result_path(results_dir(repo, config))
+        out = new_check_run_path(results_dir(repo, config))
         result, code = run_and_write(repo, None, out)
         from studio.review.impl.items import record_dirty_files
 

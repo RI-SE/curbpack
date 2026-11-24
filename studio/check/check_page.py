@@ -24,9 +24,7 @@ def check_page(
     )
     body = f"""
 <h1>Check</h1>
-<p>Check writes a Result. Review reads that Result and can write a Report.</p>
-<p>Check → Result → Review → Report</p>
-<p class="muted">A passing Result is not a legal conclusion.</p>
+<p>Check writes a Result. Review saves decisions on that Result until Sign locks them. Remediation starts from that signed review. A Remedy Report records the work and leaves those decisions unchanged.</p>
 {_flash(message, error)}
 {_pack_card(door)}
 <h2>Checks performed</h2>
@@ -88,13 +86,14 @@ def _performed_table(editor: dict) -> str:
                 f"/review?repo={quote(repo_id, safe='')}&result={quote(path, safe='')}"
             )
             label = f'<a href="{href}">{label}</a>'
-        review = html.escape(str(run.get("review_label") or "—"))
-        remedy = str(run.get("remedy_label") or "—")
-        href = str(run.get("remedy_href") or "")
-        if href and remedy == "Remediate":
-            remedy_cell = f'<a href="{html.escape(href)}">Remediate</a>'
-        else:
-            remedy_cell = html.escape(remedy)
+        review = _links(
+            (str(run.get("review_label") or ""), str(run.get("review_href") or "")),
+            (str(run.get("review_report_label") or ""), str(run.get("review_report_href") or "")),
+        )
+        remedy_cell = _links(
+            (str(run.get("remedy_label") or ""), str(run.get("remedy_href") or "")),
+            (str(run.get("remedy_report_label") or ""), str(run.get("remedy_report_href") or "")),
+        )
         body.append(
             "<tr>"
             f"<td>{label}<br>{html.escape(_outcome(run))}</td>"
@@ -103,10 +102,22 @@ def _performed_table(editor: dict) -> str:
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remedy</th></tr></thead><tbody>"
+        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remediation</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
+
+
+def _links(*pairs: tuple[str, str]) -> str:
+    shown = [_linked(label, href) for label, href in pairs if label and label != "—"]
+    return " ".join(shown) if shown else "—"
+
+
+def _linked(label: str, href: str) -> str:
+    text = html.escape(label)
+    if not href or label in {"", "—"}:
+        return text
+    return f'<a href="{html.escape(href)}">{text}</a>'
 
 
 def _outcome(run: dict) -> str:

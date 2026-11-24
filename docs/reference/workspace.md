@@ -93,8 +93,11 @@ With that file:
 | Claim | `<repo>/curbpack/claims/claim-house-security-md.json` |
 | Run result (JSON requested) | `<repo>/.curbpack/run-result_<YYYYMMDDTHHMMSSZ>.json` |
 | Review report | `<repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json` |
+| Studio Check | `<results_dir>/run-result_<YYYYMMDDTHHMMSSZ>/` with `run-result.json`, `review_items.json`, `review-report.json`, and `remedy-report.json` |
 
 `"results_dir": "artifacts/check"` → run under `<repo>/artifacts/check/…`. Same contract.
+
+Studio Check writes one directory per run. That directory is the Check's identity. Its Review and Remedy are the files inside it. A flat `run-result_<stamp>.json` from an earlier Check or from `curbcheck -j` stays where it is. Identical run content does not attach one run's Review to another run.
 
 ---
 

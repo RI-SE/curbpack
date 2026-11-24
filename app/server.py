@@ -224,6 +224,13 @@ def _requested_dated(folder: Path, requested: str, prefix: str) -> tuple[str, st
         return "outside", wanted
     if path.is_file() and path.name.startswith(prefix + "_") and path.name.endswith(".json"):
         return "ok", str(path)
+    if (
+        prefix == "run-result"
+        and path.is_file()
+        and path.name == "run-result.json"
+        and path.parent.name.startswith("run-result_")
+    ):
+        return "ok", str(path)
     return "missing", str(path)
 
 
