@@ -129,13 +129,13 @@ Run it after changes to files the Claims name. A previous pass describes the tre
 
 ## 6. Create review material
 
-On **Review** (`/review`), choose the product under **Repo**. **Compile** uses the latest dated run result in that repository's `results_dir` and the matching Requirement and Claim files. It writes a new `<reports_dir>/review-report_<YYYYMMDDTHHMMSSZ>.json`. With the configuration above, that is `<product-repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json`.
+On **Review** (`/review`), choose the product under **Repo** and open a Check result. **Save** writes the decisions and notes into that Check's `review_items.json` and leaves the review open. **Sign** locks those decisions and writes `review-report_<YYYYMMDDTHHMMSSZ>.json`. Remediation starts from that signed review. An older flat run writes its signed snapshot under `reports_dir`.
 
-Review opens the latest saved report by default and shows its path. To open a specific saved report, use `/review?repo=<repo-id>&report=<URL-encoded-absolute-report-path>`. The file must be a `review-report_*.json` inside that repository's `reports_dir`. The current page has a repository selector but no report picker. If no saved report exists, it previews the latest run; click **Compile** to save it before recording a decision or signing.
+To open a saved report, use `/review?repo=<repo-id>&report=<URL-encoded-absolute-report-path>`. A snapshot inside a Check directory, or a `review-report_*.json` inside `reports_dir`, both open read-only. The current page has a repository selector but no report picker.
 
-Compile does not run Checks and does not commit. You may commit the report afterwards. That commit is a later revision of the product repository. It is not `run_result.commit`.
+Save and Sign do not run Checks and do not commit. You may commit a snapshot afterwards. That commit is a later revision of the product repository. It is not `run_result.commit`.
 
-When a Check is marked Retire, Create New Report stores that disposition and its comment, and stores whether signing should remove the Check from the live Claim. The Check result itself stays `pass`, `fail`, or `skipped`.
+When a Check is marked Retire, Save stores that disposition and its comment on the review work, and stores whether signing a report should remove the Check from the live Claim. The Check result itself stays `pass`, `fail`, or `skipped`.
 
 Keep the pack id, version, directory digest, commit, and worktree value with the report if someone has to reproduce the run.
 
@@ -160,7 +160,7 @@ The page states that a passing Check does not mean the legal requirement is fulf
 
 Run Check again on the new tree.
 
-The earlier signed report and the new run result are two snapshots. When both are loaded, Review says whether they are the same run. An older saved report is labeled `This saved report is an older run.` Do not describe it as the current run. **Compile** creates a new dated report and preserves the earlier file. The previous decision is not copied forward.
+The earlier signed report and the new run result are two snapshots. When both are loaded, Review says whether they are the same run. An older saved report is labeled `This saved report is an older run.` Do not describe it as the current run. **Sign** creates a new dated snapshot and preserves the earlier file. The previous decision is not copied forward.
 
 A failed row can stay on the review page while you open Discovery for that Requirement, add a new Claim, and delete the old Claim yourself in Claims Editor.
 

@@ -107,9 +107,9 @@ class CheckRunTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 ran = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
+                results = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertEqual(len(results), 1)
-                self.assertRegex(results[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
+                self.assertRegex(results[0].parent.name, r"^run-result_\d{8}T\d{6}Z$")
                 self.assertIn(urllib.parse.quote(str(results[0].resolve()), safe=""), ran)
                 self.assertFalse((repo / "runs" / "out" / "run-result.json").exists())
                 first = results[0].read_bytes()
@@ -118,7 +118,7 @@ class CheckRunTest(unittest.TestCase):
                 self.assertNotIn("sneak-claim", json.dumps(result))
                 self.assertNotIn("hidden-pack", ran)
                 ran_again = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
+                results = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertEqual(len(results), 2)
                 self.assertEqual(results[0].read_bytes(), first)
                 self.assertIn(urllib.parse.quote(str(results[1].resolve()), safe=""), ran_again)
@@ -187,31 +187,48 @@ class ReviewCompileTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                runs = sorted((repo / "runs" / "out").glob("run-result_*.json"))
+                runs = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertEqual(len(runs), 1)
+                saved = _post(
+                    base + "/review/compile",
+                    {"repo_id": "widget", "result": str(runs[0].resolve())},
+                )
+                self.assertTrue((runs[0].parent / "review_items.json").is_file())
+                self.assertFalse(any(runs[0].parent.glob("review-report*.json")))
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                self.assertIn(str(runs[0].resolve()), saved)
                 compiled = _post(
                     base + "/review/compile",
-                    {"repo_id": "widget", "result": str(runs[0].resolve())},
+                    {"repo_id": "widget", "result": str(runs[0].resolve()), "name": "Ada Reviewer"},
                 )
-                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
-                self.assertEqual(len(reports), 1)
-                self.assertRegex(reports[0].name, r"^review-report_\d{8}T\d{6}Z\.json$")
-                self.assertIn(str(reports[0].resolve()), compiled)
-                first = reports[0].read_bytes()
-                report = load_report(reports[0])
+                report_path = next(
+                    path
+                    for path in runs[0].parent.glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                )
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                report = load_report(report_path)
                 self.assertEqual(report["run_result"], load_run_result(runs[0]))
                 self.assertEqual([row["id"] for row in report["claims"]], ["claim-readme"])
+                self.assertIn("signed", report)
                 self.assertNotIn("sneak-claim", json.dumps(report))
+                self.assertNotIn("signed", json.loads((runs[0].parent / "review_items.json").read_text()))
                 self.assertFalse((product / "docs" / "reports").exists())
                 self.assertFalse((product / ".curbpack" / "review-report.json").exists())
-                compiled_again = _post(
+                first_bytes = report_path.read_bytes()
+                _post(
                     base + "/review/compile",
-                    {"repo_id": "widget", "result": str(runs[0].resolve())},
+                    {"repo_id": "widget", "result": str(runs[0].resolve()), "name": "Ada Reviewer"},
                 )
-                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
-                self.assertEqual(len(reports), 2)
-                self.assertEqual(reports[0].read_bytes(), first)
-                self.assertIn(str(reports[1].resolve()), compiled_again)
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                self.assertEqual(report_path.read_bytes(), first_bytes)
+                snapshots = [
+                    path
+                    for path in runs[0].parent.glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                ]
+                self.assertEqual(len(snapshots), 1)
+                self.assertNotIn('id="review-save"', compiled)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -244,8 +261,9 @@ class CurbcheckApiTest(unittest.TestCase):
         self.assertIs(api_dir, engine_dir)
         source = inspect.getsource(_run_check)
         api_import = next(line for line in source.splitlines() if "from curbcheck.api import" in line)
-        self.assertIn("new_run_result_path", api_import)
+        self.assertIn("run_and_write", api_import)
         self.assertIn("results_dir", api_import)
+        self.assertIn("new_check_run_path", source)
         self.assertNotIn("checks.run", source)
 
     def test_studio_check_exit_code_uses_the_public_api(self):

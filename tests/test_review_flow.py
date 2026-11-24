@@ -39,7 +39,6 @@ class ReviewRemediationFlowTest(unittest.TestCase):
             )
             write_claim(repo / "kept" / "claims", claim)
             (repo / "docs").mkdir()
-            (repo / "docs" / "a.md").write_text("a\n", encoding="utf-8")
             with _serve(workspace) as base:
                 opened = _post_redirect(
                     base + "/check",
@@ -51,25 +50,27 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertNotIn(">Re-Discover</button>", review)
                 result = re.search(r"result=([^&]+)", opened)
                 self.assertIsNotNone(result)
-                compiled = _post(
-                    base + "/review/compile",
-                    {"repo_id": "alpha", "result": urllib.parse.unquote(result.group(1))},
-                )
-                report = re.search(r'name="report" value="([^"]+)"', compiled)
-                self.assertIsNotNone(report)
-                report_path = report.group(1)
-                _post(
-                    base + "/review",
+                result_path = urllib.parse.unquote(result.group(1))
+                fields = {
+                    name: value
+                    for name, value in re.findall(
+                        r'name="(assess_[^"]+)"[^>]*value="([^"]*)"', review
+                    )
+                }
+                fields.update(
                     {
                         "repo_id": "alpha",
-                        "report": report_path,
+                        "result": result_path,
                         "decision": "I read this run.",
-                    },
+                        "assess_disposition": "must_fix",
+                        "assess_text": "The file is missing.",
+                    }
                 )
-                signed = _post(
-                    base + "/review/sign",
-                    {"repo_id": "alpha", "report": report_path, "name": "Ada Reviewer"},
-                )
+                saved = _post(base + "/review/compile", fields)
+                self.assertNotIn(">Remediate</a>", saved)
+                self.assertFalse((Path(result_path).parent / "review-report.json").is_file())
+                fields["name"] = "Ada Reviewer"
+                signed = _post(base + "/review/compile", fields)
                 self.assertIn(">Remediate</a>", signed)
                 remediation = _get(base + _href(signed, "Remediate"))
                 self.assertIn('data-action="retire"', remediation)
@@ -86,9 +87,9 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertIn("Recorded from the remediation page.", saved)
                 remedy = _post(
                     base + "/review/remedy",
-                    {"repo_id": "alpha", "report": report_path, "name": "Urban"},
+                    {"repo_id": "alpha", "result": result_path, "name": "Urban"},
                 )
-                self.assertIn(">Run Check</button>", remedy)
+                self.assertIn(">Re-run Checks</button>", remedy)
                 nxt = _post_redirect(
                     base + "/check",
                     {"repo_id": "alpha", "action": "check", "return_to": "/review"},
@@ -108,8 +109,10 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 table = _get(base + "/check?repo=alpha")
                 self.assertIn("<th>Check Result</th>", table)
                 self.assertIn("<th>Review</th>", table)
-                self.assertIn("<th>Remedy</th>", table)
-                self.assertIn("All Passed · Signed", table)
-                self.assertIn("1 action · Signed", table)
-            stored = read_json(repo / "signed" / "reports" / Path(report_path).name)
+                self.assertIn("<th>Remediation</th>", table)
+                self.assertIn(">In progress</a>", table)
+                self.assertIn(">Signed</a>", table)
+            stored = read_json(next(Path(result_path).parent.glob("remedy-report_*.json")))
             self.assertIn("signed", stored)
+            work = read_json(Path(result_path).parent / "review_items.json")
+            self.assertNotIn("signed", work)

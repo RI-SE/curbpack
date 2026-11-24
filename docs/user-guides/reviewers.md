@@ -63,11 +63,11 @@ In remediation, Retire removes that Check from the Claim, or removes the Claim w
 
 A report that already carries `disposition` `retire` still needs a comment. The recorded status stays `pass`, `fail`, or `skipped`. A binding cannot be retired.
 
-**Create New Report** opens a dialog. The dialog asks for the decision and the signer name, then signs the new report. Cancel writes nothing. It still asks for confirmation when any Check is Retire and lists those Checks under their Claims. The checkbox **Remove retired Checks from Claims when signing the report** is stored as `remove_retired_checks`. Leave it unchecked to keep the decision in the report and leave the Claim files unchanged.
+**Notes** sit on the page and are saved with **Save**, the same way a comment is. **Save** writes the review and leaves it open, so it can be continued later. **Sign** asks for the signer name, locks those decisions, and is the start of Remediation. A later Save does not reopen a signed review. The Remedy Report records the remediation and does not change the signed decisions. Cancel writes nothing. It still asks for confirmation when any Check is Retire and lists those Checks under their Claims. The checkbox **Remove retired Checks from Claims when signing the report** is stored as `remove_retired_checks`. Leave it unchecked to keep the decision in the report and leave the Claim files unchanged.
 
-Save `decision`, then review-sign. If the checkbox was checked, signing then removes those Checks from the live Claim files. A Claim that still has a Check is signed again by the person who signed the report. A Claim with no Check left is deleted. The Check result copied into the report does not change. Studio does not commit the report or the Claim files.
+If the checkbox was checked, signing then removes those Checks from the live Claim files. A Claim that still has a Check is signed again by the person who signed the report. A Claim with no Check left is deleted. The Check result copied into the report does not change. Studio does not commit the report or the Claim files.
 
-If removal was chosen and a Claim file no longer matches the Check run, signing refuses and changes nothing. If a later Claim write fails, the report stays signed and the page names the Claims that were not updated. review-sign again finishes only those Claims.
+If removal was chosen and a Claim file no longer matches the Check run, signing refuses and changes nothing. If a later Claim write fails, the report stays signed and the page names the Claims that were not updated. **Try retirement again** finishes only those Claims.
 
 This is not the Retire control in Claims Editor. That control deletes the Claim file immediately, without this comment and without a report.
 

@@ -218,7 +218,7 @@ class ReviewDocumentListsTest(unittest.TestCase):
             write_claim(repo / "kept" / "claims", _exist_claim("claim-readme", "CRA-PURPOSE", "README.md"))
             with _serve(workspace) as base:
                 check = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                run = next((repo / "runs" / "out").glob("run-result_*.json"))
+                run = next((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertIn("/review?", check)
                 self.assertIn("repo=widget", check)
                 self.assertIn(urllib.parse.quote(str(run.resolve()), safe=""), check)
@@ -1220,23 +1220,41 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                     base + "/review/compile",
                     {"repo_id": "alpha", "result": str(run_path.resolve())},
                 )
-                first = sorted(reports.glob("review-report_*.json"))
+                self.assertEqual(list(reports.glob("review-report_*.json")), [])
+                self.assertEqual(run_path.read_bytes(), run_before)
+                self.assertIn("Decision saved.", page)
+                _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
+                )
+                first = sorted(
+                    path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+                )
                 self.assertEqual(len(first), 1)
                 first_bytes = first[0].read_bytes()
                 loaded = read_json(first[0])
                 self.assertEqual(loaded["run_result"], read_json(run_path))
                 self.assertNotIn("decision", loaded)
-                self.assertNotIn("signed", loaded)
+                self.assertIn("signed", loaded)
                 self.assertEqual(run_path.read_bytes(), run_before)
                 _post(
                     base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
                 )
-            later = sorted(reports.glob("review-report_*.json"))
-            self.assertEqual(len(later), 2)
+            later = sorted(
+                path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+            )
+            self.assertEqual(len(later), 1)
             self.assertEqual(later[0].read_bytes(), first_bytes)
             self.assertEqual(run_path.read_bytes(), run_before)
-            self.assertIn("Report created.", page)
 
     def test_compile_stops_when_a_claim_is_missing_or_digest_differs(self):
         """REV-03 scenario 34. REV-R10."""
@@ -1295,21 +1313,31 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             write_json(run_path, run)
             with _serve(workspace) as base:
-                _post(
-                    base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
-                )
-                report_path = sorted((repo / "signed" / "reports").glob("review-report_*.json"))[-1]
                 decided = _post(
-                    base + "/review",
+                    base + "/review/compile",
                     {
                         "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
+                        "result": str(run_path.resolve()),
                         "decision": "Please fix the missing file before approval.",
                     },
                 )
+                self.assertEqual(list((repo / "signed" / "reports").glob("review-report_*.json")), [])
                 self.assertIn("Decision saved.", decided)
                 self.assertIn("Please fix the missing file before approval.", decided)
+                sealed_page = _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "decision": "Please fix the missing file before approval.",
+                        "name": "Ada Reviewer",
+                    },
+                )
+                report_path = sorted(
+                    path
+                    for path in (repo / "signed" / "reports").glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                )[-1]
                 stored = read_json(report_path)
                 self.assertEqual(
                     stored["decision"],
@@ -1319,14 +1347,6 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 self.assertEqual(stored["run_result"]["claims"][0]["checks"][0]["status"], "fail")
                 self.assertEqual(stored["run_result"]["claims"][1]["status"], "skipped")
                 self.assertEqual(stored["run_result"]["claims"][1]["checks"][0]["status"], "skipped")
-                sealed_page = _post(
-                    base + "/review/sign",
-                    {
-                        "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
-                        "name": "Ada Reviewer",
-                    },
-                )
             self.assertIn("Report sealed.", sealed_page)
             self.assertNotIn("became pass", sealed_page.lower())
             self.assertNotIn("decision became", sealed_page.lower())

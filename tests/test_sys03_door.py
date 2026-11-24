@@ -683,7 +683,7 @@ class CheckIoTest(unittest.TestCase):
                 self.assertIn("signed/reports", project)
                 check_page = _get(base + "/check")
                 self.assertIn("Checks performed", check_page)
-                self.assertIn("Check → Result → Review → Report", check_page)
+                self.assertIn("Sign locks them", check_page)
                 self.assertIn("CRA baseline", check_page)
                 self.assertIn(">Claims</th>", check_page)
                 self.assertNotIn("Read it", check_page)
@@ -706,16 +706,16 @@ class CheckIoTest(unittest.TestCase):
                 self.assertEqual(read_json(repo / "curbpack.json")["packs"], ["cra-baseline"])
                 self.assertIn("kept/reports", saved_paths)
                 ran = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
+                results = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertEqual(len(results), 1)
-                self.assertRegex(results[0].name, r"^run-result_\d{8}T\d{6}Z\.json$")
+                self.assertRegex(results[0].parent.name, r"^run-result_\d{8}T\d{6}Z$")
                 self.assertIn(urllib.parse.quote(str(results[0].resolve()), safe=""), ran)
                 first = results[0].read_bytes()
                 result = json.loads(first.decode("utf-8"))
                 self.assertEqual([row["id"] for row in result["claims"]], ["claim-readme"])
                 self.assertNotIn("claim-other", json.dumps(result))
                 ran_again = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                results = sorted((repo / "runs" / "out").glob("run-result_*.json"))
+                results = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertEqual(len(results), 2)
                 self.assertEqual(results[0].read_bytes(), first)
                 self.assertIn(urllib.parse.quote(str(results[1].resolve()), safe=""), ran_again)
@@ -758,7 +758,7 @@ class CheckIoTest(unittest.TestCase):
                 included = _post(base + "/check", {"repo_id": "widget", "action": "check"})
                 self.assertIn("Checks performed", included)
                 self.assertNotIn("exclude_requirements", included)
-                newest = sorted((repo / "runs" / "out").glob("run-result_*.json"))[-1]
+                newest = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))[-1]
                 listed = [row["id"] for row in read_json(newest)["claims"]]
                 self.assertEqual(listed, ["claim-readme"])
                 self.assertNotIn("claim-other", listed)
@@ -989,7 +989,7 @@ class ReviewIoTest(unittest.TestCase):
                 self.assertIn('value="signed/reports"', page)
                 self.assertNotIn("sneak-claim", page)
                 _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                run = next((repo / "runs" / "out").glob("run-result_*.json"))
+                run = next((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 previewed = _get(base + "/review?repo=widget")
                 self.assertNotIn("claim-readme", previewed)
                 self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
@@ -1001,14 +1001,17 @@ class ReviewIoTest(unittest.TestCase):
                 self.assertNotIn("sneak-claim", opened)
                 compiled = _post(
                     base + "/review/compile",
-                    {"repo_id": "widget", "result": str(run.resolve())},
+                    {"repo_id": "widget", "result": str(run.resolve()), "name": "Ada Reviewer"},
                 )
-                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
-                self.assertEqual(len(reports), 1)
-                self.assertRegex(reports[0].name, r"^review-report_\d{8}T\d{6}Z\.json$")
-                self.assertIn(str(reports[0].resolve()), compiled)
-                self.assertIn('name="report"', compiled)
-                first = reports[0].read_bytes()
+                report_path = next(
+                    path
+                    for path in run.parent.glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                )
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                self.assertIn(urllib.parse.quote(str(report_path.resolve()), safe=""), compiled)
+                self.assertNotIn('id="review-save"', compiled)
+                first = report_path.read_bytes()
                 report = json.loads(first.decode("utf-8"))
                 self.assertEqual([row["id"] for row in report["claims"]], ["claim-readme"])
                 self.assertNotIn("sneak-claim", json.dumps(report))
@@ -1024,10 +1027,19 @@ class ReviewIoTest(unittest.TestCase):
                     base + "/review/compile",
                     {"repo_id": "widget", "result": str(run.resolve())},
                 )
-                reports = sorted((repo / "signed" / "reports").glob("review-report_*.json"))
-                self.assertEqual(len(reports), 2)
-                self.assertEqual(reports[0].read_bytes(), first)
-                self.assertIn(str(reports[1].resolve()), compiled_again)
+                self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
+                self.assertEqual(report_path.read_bytes(), first)
+                self.assertIn("This review is signed.", compiled_again)
+                self.assertEqual(
+                    len(
+                        [
+                            path
+                            for path in run.parent.glob("review-report_*.json")
+                            if not path.name.endswith(".items.json")
+                        ]
+                    ),
+                    1,
+                )
             finally:
                 httpd.shutdown()
                 httpd.server_close()

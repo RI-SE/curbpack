@@ -87,7 +87,9 @@ class ReviewStartTest(unittest.TestCase):
             self.assertNotIn('class="review-process"', page)
             self.assertIn("Execution", page)
             self.assertNotIn("This is the Check result under review.", page)
-            self.assertIn(">Create New Report</button>", page)
+            self.assertIn('id="review-save"', page)
+            self.assertIn('id="sign-open"', page)
+            self.assertNotIn(">Create New Report</button>", page)
             self.assertNotIn("Compile writes a new unsigned report", page)
             self.assertIn("not saved", page)
             self.assertIn('data-selected="run"', page)
@@ -98,6 +100,9 @@ class ReviewStartTest(unittest.TestCase):
             self.assertIn(">Must be fixed</option>", queue)
             self.assertNotIn(">Retire</option>", queue)
             self.assertIn('data-comment-dialog="comment-check-purpose-note--"', queue)
+            select = queue.split("<select", 1)[1].split("</select>", 1)[0]
+            self.assertNotIn("data-comment-when", select)
+            self.assertEqual(page.count("if (!raw) return false;"), 2)
             self.assertIn(
                 "This verdict needs a comment. Close without one and the previous verdict returns.",
                 page,
@@ -234,6 +239,26 @@ class ReviewStartTest(unittest.TestCase):
             },
         ).decode()
         self.assertNotIn("Continue this review or start over?", fresh)
+        continued = review_page(
+            {"run_result": {"claims": []}, "claims": [], "appendix": []},
+            None,
+            saved=False,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/runs/run-result_20260101T000000Z.json",
+                "review_resumed": True,
+                "reuse_offer": "review-report_20260102T000000Z",
+                "run_reports": [
+                    {
+                        "name": "review-report_20260102T000000Z.json",
+                        "path": "/tmp/reports/review-report_20260102T000000Z.json",
+                        "signed": False,
+                    }
+                ],
+            },
+        ).decode()
+        self.assertNotIn("A review of this Check run is already started.", continued)
+        self.assertNotIn("Take in the remediation report?", continued)
 
     def test_history_is_a_column_only_when_an_item_has_history(self):
         from studio.review.impl.items import check_digest
@@ -409,38 +434,27 @@ class SignedReportLockTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             reports = repo / "signed" / "reports"
             with _serve(workspace) as base:
-                _post(
-                    base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
-                )
-                report_path = next(reports.glob("review-report_*.json"))
-                _post(
-                    base + "/review",
-                    {
-                        "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
-                        "decision": "First reading.",
-                    },
-                )
                 sealed_page = _post(
-                    base + "/review/sign",
+                    base + "/review/compile",
                     {
                         "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
+                        "result": str(run_path.resolve()),
+                        "decision": "First reading.",
                         "name": "Ada Reviewer",
                     },
                 )
-                signed_bytes = report_path.read_bytes()
-                self.assertNotIn("Reports for this run", sealed_page)
-                self.assertIn("First reading.", sealed_page)
-                self.assertNotIn(">Save decision</button>", sealed_page)
-                self.assertNotIn('action="/review/sign"', sealed_page)
-                self.assertIn('id="create-report"', sealed_page)
-                self.assertIn(">Create New Report</button>", sealed_page)
-                self.assertIn(
-                    f'name="result" value="{run_path.resolve()}"',
-                    sealed_page,
+                report_path = next(
+                    path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
                 )
+                snapshot = _get(base + "/review?repo=alpha&report=" + urllib.parse.quote(str(report_path.resolve())))
+                signed_bytes = report_path.read_bytes()
+                self.assertIn("First reading.", sealed_page)
+                self.assertNotIn("Reports for this run", snapshot)
+                self.assertIn("First reading.", snapshot)
+                self.assertNotIn(">Save decision</button>", snapshot)
+                self.assertNotIn('action="/review/sign"', snapshot)
+                self.assertNotIn('id="sign-open"', snapshot)
+                self.assertNotIn('id="review-save"', snapshot)
                 rejected = _post(
                     base + "/review",
                     {
@@ -465,12 +479,20 @@ class SignedReportLockTest(unittest.TestCase):
                     base + "/review/compile",
                     {"repo_id": "alpha", "result": str(run_path.resolve())},
                 )
-            written = sorted(reports.glob("review-report_*.json"))
-            self.assertEqual(len(written), 2)
+                self.assertEqual(report_path.read_bytes(), signed_bytes)
+                _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
+                )
+            written = sorted(
+                path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+            )
+            self.assertEqual(len(written), 1)
             self.assertEqual(written[0].read_bytes(), signed_bytes)
-            fresh = load_report(written[1])
-            self.assertNotIn("decision", fresh)
-            self.assertNotIn("signed", fresh)
             self.assertEqual(read_json(written[0])["decision"], "First reading.")
 
     def test_an_unsigned_draft_still_saves_a_decision(self):
@@ -481,24 +503,43 @@ class SignedReportLockTest(unittest.TestCase):
             _matching_run(repo, [claim])
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             with _serve(workspace) as base:
-                _post(
-                    base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
-                )
-                report_path = next((repo / "signed" / "reports").glob("review-report_*.json"))
                 page = _post(
-                    base + "/review",
+                    base + "/review/compile",
                     {
                         "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
+                        "result": str(run_path.resolve()),
                         "decision": "Still a draft.",
                     },
                 )
+                self.assertEqual(list((repo / "signed" / "reports").glob("review-report_*.json")), [])
+                _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "decision": "Still a draft.",
+                        "name": "Ada Reviewer",
+                    },
+                )
+            self.assertIn("Still a draft.", page)
             self.assertNotIn("Reports for this run", page)
-            self.assertIn('name="decision"', page)
-            self.assertIn(">review-sign</button>", page)
-            self.assertEqual(read_json(report_path)["decision"], "Still a draft.")
-            self.assertNotIn("signed", read_json(report_path))
+            self.assertIn("<label>Notes</label>", page)
+            self.assertIn('name="decision" form="review-compile"', page)
+            self.assertNotIn(">Save decision</button>", page)
+            self.assertIn('id="review-save"', page)
+            self.assertIn(">Save</button>", page)
+            self.assertIn(">Sign</button>", page)
+            self.assertNotIn('action="/review/sign"', page)
+            self.assertNotIn(">Create New Report</button>", page)
+            written = [
+                path
+                for path in (repo / "signed" / "reports").glob("review-report_*.json")
+                if not path.name.endswith(".items.json")
+            ]
+            self.assertEqual(len(written), 1)
+            saved = read_json(written[0])
+            self.assertEqual(saved["decision"], "Still a draft.")
+            self.assertIn("signed", saved)
 
 
 class CheckSummaryTest(unittest.TestCase):
@@ -573,11 +614,16 @@ class CheckSummaryTest(unittest.TestCase):
         self.assertIn('name="action" value="check"', card)
         self.assertNotIn("/tmp/packs/cra-baseline", page)
         self.assertNotIn("<th>Path</th>", page)
-        self.assertLess(page.index("<h1>Check</h1>"), page.index("Check → Result → Review → Report"))
-        self.assertIn("Check writes a Result. Review reads that Result and can write a Report.", page)
+        self.assertLess(page.index("<h1>Check</h1>"), page.index("Sign locks them"))
+        self.assertIn(
+            "Check writes a Result. Review saves decisions on that Result until Sign locks them. "
+            "Remediation starts from that signed review. "
+            "A Remedy Report records the work and leaves those decisions unchanged.",
+            page,
+        )
         self.assertIn("<th>Check Result</th>", page)
         self.assertIn("<th>Review</th>", page)
-        self.assertIn("<th>Remedy</th>", page)
+        self.assertIn("<th>Remediation</th>", page)
         self.assertLess(page.index("Checks performed"), page.index("2026-01-02 15:30 UTC"))
         self.assertLess(page.index("2026-01-02 15:30 UTC"), page.index("2026-01-01 00:00 UTC"))
         self.assertIn("1 fail", page)
@@ -597,7 +643,7 @@ class CheckSummaryTest(unittest.TestCase):
         self.assertNotIn("<h2>Report</h2>", page)
         self.assertNotIn("review-report_", page)
         self.assertIn('name="action" value="check"', page)
-        self.assertIn("not a legal conclusion", page)
+        self.assertNotIn("not a legal conclusion", page)
 
     def test_performed_checks_lists_each_result_newest_first(self):
         older = _run_result("fail", "stale")

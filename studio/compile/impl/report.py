@@ -218,8 +218,6 @@ def validate_report(obj: object) -> dict:
             raise ModelError("review report", "items_digest", "the version digest of the signed review items")
     if "signed" in obj:
         _validate_signed(obj["signed"])
-        if not isinstance(obj.get("decision"), str) or not obj["decision"].strip():
-            raise ModelError("review report", "decision", "words recorded before review-sign")
     return obj
 
 

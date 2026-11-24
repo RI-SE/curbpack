@@ -79,16 +79,18 @@ class UiSmokeTest(unittest.TestCase):
                 check = _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
                 self.assertIn("Checks performed", check)
                 self.assertIn("fail", check)
-                self.assertIn("not a legal conclusion", check)
+                self.assertIn("Sign locks them", check)
+                self.assertNotIn("not a legal conclusion", check)
                 self.assertIn("/review?", check)
-                run = next((root / "product").rglob("run-result_*.json"))
+                run = next((root / "product").glob("**/run-result_*/run-result.json"))
                 review = _get(
                     base
                     + "/review?repo=sample-product&result="
                     + urllib.parse.quote(str(run.resolve()), safe="")
                 )
                 self.assertIn("not saved", review)
-                self.assertIn("Save decision and review-sign need a report file", review)
+                self.assertIn("<label>Notes</label>", review)
+                self.assertNotIn(">Save decision</button>", review)
                 self.assertIn("no field for a conclusion that the product meets CRA", review)
                 self.assertIn("not verification of that commit", review)
                 self.assertIn("claim-risk", review)
@@ -105,22 +107,24 @@ class UiSmokeTest(unittest.TestCase):
                 self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
                 compiled = _post(
                     base + "/review/compile",
-                    {"repo_id": "sample-product", "result": str(run.resolve())},
+                    {
+                        "repo_id": "sample-product",
+                        "result": str(run.resolve()),
+                        "decision": "The stub is not an assessment. I am not saying the product meets CRA.",
+                    },
                 )
-                reports = sorted(reports_dir.glob("review-report_*.json"))
-                self.assertEqual(len(reports), 1)
+                self.assertTrue((run.parent / "review_items.json").is_file())
+                self.assertFalse((run.parent / "review-report.json").exists())
+                self.assertFalse(any(run.parent.glob("review-report_*.json")))
+                self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
                 self.assertNotIn("Save decision and review-sign need a report file", compiled)
                 self.assertNotIn("not saved", compiled)
+                self.assertIn("The stub is not an assessment", compiled)
                 self.assertIn("no field for a conclusion that the product meets CRA", compiled)
                 self.assertIn("not verification of that commit", compiled)
                 self.assertFalse((root / "product" / ".curbpack" / "review-report.json").exists())
                 self.assertFalse((root / "product" / "docs" / "reports" / "review-report.json").exists())
-                saved = _post(
-                    base + "/review",
-                    {"decision": "The stub is not an assessment. I am not saying the product meets CRA."},
-                )
-                self.assertIn("The stub is not an assessment", saved)
-                self.assertIn("unsigned", saved.lower())
+                self.assertNotIn("signed", json.loads((run.parent / "review_items.json").read_text()))
             finally:
                 httpd.shutdown()
                 httpd.server_close()

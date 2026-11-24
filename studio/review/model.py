@@ -19,6 +19,20 @@ if TYPE_CHECKING:
     from app.server import Workspace
 
 
+def _owned_review_report(results_folder: Path, requested: str) -> str:
+    """A Review that lives in its Check directory, not in the reports directory."""
+    path = Path((requested or "").strip()).resolve()
+    try:
+        path.relative_to(Path(results_folder).resolve())
+    except ValueError:
+        return ""
+    if path.is_file() and path.parent.name.startswith("run-result_") and (
+        path.name == "review-report.json" or path.name.startswith("review-report_")
+    ):
+        return str(path)
+    return ""
+
+
 def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     from app.server import _registered_repo_path, _requested_dated, _sync_open_repo
 
@@ -59,6 +73,10 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     if requested_report.strip():
         status, chosen = _requested_dated(reports_folder, requested_report, "review-report")
         if status != "ok":
+            owned = _owned_review_report(results_folder, requested_report)
+            if owned:
+                status, chosen = "ok", owned
+        if status != "ok":
             errors.append(f"{chosen} is not a review report in the Reports directory.")
             return None, None, " ".join(errors), False, False, None, [], extra
         try:
@@ -69,10 +87,10 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["selected_report"] = chosen
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
         if extra["review_mode"] == "remediation":
-            from studio.review.impl.items import load_items, studio_temp_dir, workspace_items_path, write_items
+            from studio.review.impl.items import items_home, load_items, write_items
             from common.jsonio import read_json as _read_items_file
 
-            items_path = workspace_items_path(studio_temp_dir(repo), Path(chosen).name)
+            items_path = items_home(repo, Path(chosen))
             if not items_path.is_file():
                 signed_items = Path(chosen).with_name(Path(chosen).stem + ".items.json")
                 copied = []
@@ -128,6 +146,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["selected_result"] = chosen
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
         from studio.review.impl.items import (
+            carry_history,
             latest_ready_remedy,
             latest_signed_remedy,
             load_items,
@@ -143,13 +162,21 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         from common.jsonio import read_json as _read_items_file
 
         temp_dir = studio_temp_dir(repo)
-        items_path = workspace_items_path(temp_dir, Path(chosen).name)
+        from studio.review.impl.items import check_directory, items_home, run_stem
+
+        run_path = Path(chosen)
+        run_name = run_stem(run_path)
+        items_path = items_home(repo, Path(chosen))
+        resumed = (query.get("resume") or [""])[0] == "1"
+        extra["review_resumed"] = resumed
         choice = ""
-        if (query.get("resume") or [""])[0] == "1":
+        if resumed:
             choice = "continue"
         elif extra["review_fresh"]:
             choice = "start"
-        _items, items_state = open_review_items(items_path, loaded, choice=choice)
+        _items, items_state = open_review_items(
+            items_path, loaded, choice=choice, repo=repo, run_name=run_name
+        )
         if items_state == "ask":
             extra["existing_review_items"] = str(items_path)
         source_items: list[dict] = []
@@ -163,8 +190,13 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             chosen = Path(query_remedy).stem
         elif history_from:
             chosen = history_from
-        elif items_state != "ask":
-            ready = latest_signed_remedy(reports_folder, loaded)
+        elif items_state != "ask" and not extra["review_fresh"] and not resumed and reuse_flag != "1":
+            ready = latest_signed_remedy(
+                reports_folder,
+                loaded,
+                results_dir=results_folder,
+                skip_directory=check_directory(run_path),
+            )
             if ready is None:
                 legacy = latest_ready_remedy(temp_dir, reports_folder, loaded)
                 ready = (legacy[0], legacy[1], legacy[1]) if legacy else None
@@ -172,7 +204,9 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                 chosen, source_items, signed_items = ready
                 extra["reuse_offer"] = chosen
         if chosen and not source_items:
-            source_items, signed_items = remedy_bundle(reports_folder, chosen)
+            source_items, signed_items = remedy_bundle(
+                reports_folder, chosen, results_dir=results_folder
+            )
             if not source_items:
                 source_path = workspace_items_path(temp_dir, chosen)
                 if source_path.is_file():
@@ -181,11 +215,45 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         if source_items and not extra.get("reuse_offer"):
             if reuse_flag == "1":
                 _items = take_in_remedy(repo, loaded, _items, source_items, signed_items or source_items)
+            elif query_remedy:
+                _items = carry_history(_items, source_items)
             write_items(items_path, _items, marker={"history_from": chosen})
         extra["review_items"] = with_history(_items, source_items) if source_items else _items
         extra["retired_items"] = retired_absences(source_items, loaded) if source_items else []
         extra["run_reports"] = _reports_for_run(reports_folder, loaded)
+        stored_now = _read_items_file(items_path) if items_path.is_file() else {}
+        notes = stored_now.get("notes") if isinstance(stored_now, dict) else ""
         report = {"run_result": loaded, "claims": [], "appendix": []}
+        if isinstance(stored_now, dict) and stored_now.get("work_saved") is True:
+            extra["work_saved"] = True
+        if isinstance(stored_now, dict) and (
+            stored_now.get("review_locked") is True or isinstance(stored_now.get("signed"), dict)
+        ):
+            extra["review_locked"] = True
+        try:
+            from studio.review.impl.items import assessments_from_decisions
+
+            saved_assessments = assessments_from_decisions(extra["review_items"], loaded)
+        except ModelError:
+            saved_assessments = []
+        if saved_assessments:
+            report["assessments"] = saved_assessments
+        if isinstance(notes, str) and notes.strip():
+            report["decision"] = notes.strip()
+        snapshot = (query.get("snapshot") or [""])[0].strip()
+        if snapshot and check_directory(run_path) is not None:
+            snap = Path(snapshot).resolve()
+            home = check_directory(run_path)
+            if snap.is_file() and home is not None and snap.parent.resolve() == home.resolve():
+                try:
+                    document = _read_items_file(snap)
+                except (OSError, ValueError):
+                    document = None
+                signed = document.get("signed") if isinstance(document, dict) else None
+                if isinstance(signed, dict):
+                    extra["viewing_snapshot"] = True
+                    extra["remedy_signed"] = True
+                    extra["remedy_signer"] = str(signed.get("name") or "")
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra
@@ -264,7 +332,9 @@ def _review_file_view(repo: Path, requested: str) -> dict | None:
 def _same_as_latest_run(results_folder: Path, report: dict):
     if not results_folder.is_dir():
         return None
-    dated = [path for path in sorted(results_folder.glob("run-result_*.json")) if path.is_file()]
+    from studio.check.check_model import _run_result_files
+
+    dated = _run_result_files(results_folder)
     if not dated:
         return None
     try:

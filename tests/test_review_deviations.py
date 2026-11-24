@@ -446,9 +446,9 @@ class DeviationAssessmentTest(unittest.TestCase):
                 "compile_refusal": caught.exception.expected,
             },
         ).decode()
-        self.assertIn("Create New Report did not write a report. These conditions are not met:", page)
+        self.assertIn("Save did not write a review. These conditions are not met:", page)
         self.assertIn(first["requirement_digest"], page)
-        self.assertLess(page.index('id="compile-refusal"'), page.index(">Create New Report</button>"))
+        self.assertLess(page.index('id="compile-refusal"'), page.index(">Save</button>"))
 
     def test_review_shows_both_hints_and_the_recorded_requirement(self):
         historical = _requirement()
@@ -540,10 +540,12 @@ class DeviationAssessmentTest(unittest.TestCase):
         self.assertIn(">Must be fixed</option>", page)
         self.assertIn(">Not assessed</option>", page)
         self.assertNotIn(">Re-run Checks</button>", page)
-        self.assertIn('id="create-report"', page)
+        self.assertIn('id="sign-dialog"', page)
         self.assertIn("The evidence I reviewed supports these requirements.", page)
-        self.assertIn(">Create New Report</button>", page)
-        self.assertIn(">Back to Claims</a>", page)
+        self.assertIn(">Save</button>", page)
+        self.assertIn(">Sign</button>", page)
+        self.assertIn('data-discard="1" href="/check?repo=alpha">Cancel</a>', page)
+        self.assertNotIn("Back to Claims", page)
         self.assertIn("Save this review before leaving?", page)
         self.assertNotIn("Unsaved assessments will be lost.", page)
 

@@ -224,8 +224,6 @@ def _keep_removal_choice(report: dict) -> None:
 
 def sign_report(report: dict, *, name: str, private_key: bytes, at: str) -> dict:
     _reject_if_signed(report)
-    if not isinstance(report.get("decision"), str) or not report["decision"].strip():
-        raise ModelError("review report", "decision", "words recorded before review-sign")
     if "run_result" not in report:
         raise ModelError("review report", "run_result", "the run result that was reviewed")
     return sign_object(report, name=name, private_key=private_key, at=at)

@@ -117,8 +117,6 @@ class CompileReportTest(unittest.TestCase):
         )
         self.assertNotIn("signed", decided)
         self.assertEqual(decided["requirements"][0]["references"][0]["law_text"], report["requirements"][0]["references"][0]["law_text"])
-        with self.assertRaises(ModelError):
-            sign_report(report, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
         sealed = sign_report(decided, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
         reading = read_report_signature(sealed, {"Ada Reviewer": public})
         requirement_reading = read_signature(sealed["requirements"][0], {"Ada Reviewer": public}, what="requirement")
@@ -195,9 +193,8 @@ class CompileReportTest(unittest.TestCase):
             write_report(path, report)
             before = path.read_bytes()
             with self.assertRaises(ModelError):
-                save_report_signature(path, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+                save_report_signature(path, name="  ", private_key=private, at="2026-10-21T12:00:00Z")
             self.assertEqual(path.read_bytes(), before)
-            save_report_decision(path, "I read this run. I am not saying the product meets CRA.")
             sealed = save_report_signature(
                 path,
                 name="Ada Reviewer",
@@ -291,10 +288,12 @@ class ReviewPageTest(unittest.TestCase):
         self.assertIn("not saved", preview)
         self.assertIn('data-same-run="yes"', preview)
         self.assertNotIn('name="confirm"', preview)
-        self.assertIn('id="create-report"', preview)
+        self.assertIn('id="sign-dialog"', preview)
         self.assertIn('name="decision" form="review-compile"', preview)
         self.assertNotIn(">Save decision</button>", preview)
-        self.assertIn(">Create New Report</button>", preview)
+        self.assertIn(">Save</button>", preview)
+        self.assertIn(">Sign</button>", preview)
+        self.assertNotIn(">Create New Report</button>", preview)
         self.assertNotIn("Compile writes a new unsigned report", preview)
 
 

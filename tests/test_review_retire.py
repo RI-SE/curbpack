@@ -385,7 +385,9 @@ class RetireSignPromptTest(unittest.TestCase):
         }
         unsigned = review_page(report, None, saved=True, door=door).decode()
         self.assertIn("Signing will modify or delete Claim files.", unsigned)
-        self.assertIn(">review-sign</button>", unsigned)
+        self.assertIn('action="/review/sign"', unsigned)
+        self.assertIn(">Save</button>", unsigned)
+        self.assertNotIn(">review-sign</button>", unsigned)
         self.assertNotIn("Try retirement again", unsigned)
         self.assertNotIn("were not updated", unsigned)
         signed = dict(report)

@@ -113,7 +113,7 @@ def review_page(
                 door["presentation"],
                 door,
                 _assessment_index(report),
-                not signed_report,
+                not signed_report and not (door or {}).get("review_locked"),
             )
             queue_html = queue + appendix_html
         else:
@@ -145,7 +145,7 @@ def review_page(
         )
     elif removal and saved and not signed:
         sign_warning = "<p>Signing will modify or delete Claim files.</p>"
-    sign_button = "Try retirement again" if retry else "review-sign"
+    sign_button = "Try retirement again" if retry else "Save"
     sign_form = f"""
 <form method="post" action="/review/sign" data-include-assessments>
 {hidden}
@@ -156,31 +156,15 @@ def review_page(
 </form>
 """
     if saved and signed and not pending:
-        decision_forms = f"""
-<p data-decision>{html.escape(decision)}</p>
-"""
-        if str(door.get("review_mode") or "") != "remediation" and door.get("selected_report"):
-            remediate = (
-                f"/review?repo={quote(repo_id, safe='')}"
-                f"&report={quote(str(door.get('selected_report') or ''), safe='')}"
-                "&mode=remediation"
-            )
-            decision_forms += f'<p><a class="btn" href="{html.escape(remediate)}">Remediate</a></p>'
+        decision_forms = _notes_reading(decision)
     elif saved and signed:
-        decision_forms = f"""
-<p data-decision>{html.escape(decision)}</p>
-{sign_form}
-"""
+        decision_forms = _notes_reading(decision) + sign_form
+    elif door.get("review_locked"):
+        decision_forms = _notes_reading(decision)
+    elif _report_action(door, report, saved):
+        decision_forms = _notes_editor(decision)
     elif saved:
-        decision_forms = f"""
-<form method="post" action="/review" data-include-assessments>
-{hidden}
-<label>Decision</label>
-<textarea name="decision" placeholder="{html.escape(_DECISION_EXAMPLE)}">{html.escape(decision)}</textarea>
-<button type="submit">Save decision</button>
-</form>
-{sign_form}
-"""
+        decision_forms = sign_form
     else:
         decision_forms = (
             '<p class="muted">Save decision and review-sign need a report file.</p>'
@@ -202,7 +186,7 @@ def review_page(
             body=render_technical_details(
                 report,
                 door=door,
-                saved=saved,
+                saved=saved or bool(door.get("work_saved")),
                 same_run_value=same_run_value,
                 unchecked=unchecked,
                 verification=_current_verification(presentation, reading, saved),
@@ -503,11 +487,16 @@ def _review_queue(
         )
     retired_list = f'<ul data-retired>{"".join(retired_rows)}</ul>' if retired_rows else ""
     remedy_form = ""
-    if remediation and door.get("selected_report") and not door.get("remedy_signed"):
+    remedy_source = str(door.get("selected_result") or door.get("source_result") or "")
+    remedy_field = "result"
+    if not remedy_source:
+        remedy_source = str(door.get("selected_report") or "")
+        remedy_field = "report"
+    if remediation and remedy_source and not door.get("remedy_signed"):
         remedy_form = (
             '<form method="post" action="/review/remedy">'
             f'<input type="hidden" name="repo_id" value="{html.escape(str(door.get("repo_id") or ""))}">'
-            f'<input type="hidden" name="report" value="{html.escape(str(door.get("selected_report") or ""))}">'
+            f'<input type="hidden" name="{remedy_field}" value="{html.escape(remedy_source)}">'
             "<label>Signer name</label>"
             '<input type="text" name="name" placeholder="The person who did the work">'
             "<button type=\"submit\">Sign Remedy Report</button>"
@@ -1025,6 +1014,7 @@ def _comment_script() -> str:
   function needsComment(field) {{
     if (!field) return false;
     var raw = field.getAttribute("data-comment-when") || "";
+    if (!raw) return false;
     return raw.split(" ").indexOf(field.value) !== -1;
   }}
   function commentDialog(id) {{
@@ -1684,12 +1674,16 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
 <p class="actions"><button type="submit" data-leave="1">{label}</button></p>
 </form>
 """
-    back = (
-        f'<p><a class="btn" data-leave="1" href="/claims?repo_id={quote(repo_id, safe="")}">'
-        "Back to Claims</a></p>"
+    cancel_href = f"/check?repo={quote(repo_id, safe='')}"
+    form = "" if door.get("viewing_snapshot") or door.get("review_locked") else _compile_form(
+        door, report, saved, repo_id, cancel_href
+    )
+    form += _remediate_link(door, report, repo_id)
+    back = "" if form else (
+        f'<p class="actions"><a class="btn" data-discard="1" href="{html.escape(cancel_href)}">Cancel</a></p>'
     )
     return (
-        f'<div class="review-actions">{rerun}{_compile_form(door, report, saved, repo_id)}{back}</div>'
+        f'<div class="review-actions">{rerun}{form}{back}</div>'
         f"{_leave_dialog()}{_unsaved_script()}"
     )
 
@@ -1857,8 +1851,12 @@ def _unsaved_script() -> str:
   var pendingForm = null;
   var leaving = false;
   document.addEventListener("click", function(event) {
-    if (!dirty() || leaving) return;
     var link = event.target.closest("a[href]");
+    if (link && link.getAttribute("data-discard") === "1") {
+      leaving = true;
+      return;
+    }
+    if (!dirty() || leaving) return;
     if (!link || link.getAttribute("data-resume") === "1") return;
     var href = link.getAttribute("href") || "";
     if (!href || href.charAt(0) === "#") return;
@@ -1904,6 +1902,7 @@ def _unsaved_script() -> str:
       if (compile.getAttribute("data-retire-confirmed") === "1") return;
       function needsComment(field) {
         var raw = field.getAttribute("data-comment-when") || "";
+        if (!raw) return false;
         return raw.split(" ").indexOf(field.value) !== -1;
       }
       var missing = null;
@@ -2001,7 +2000,7 @@ def _leave_dialog() -> str:
     return """
 <dialog id="review-leave" class="review-choice">
 <p>Save this review before leaving?</p>
-<p>The Check result stays unchanged. Save writes an unsigned report.</p>
+<p>The Check result stays unchanged. Save keeps this review so it can be continued.</p>
 <p>
 <button type="button" id="review-leave-save">Save</button>
 <button type="button" id="review-leave-discard">Don't save</button>
@@ -2013,7 +2012,11 @@ def _leave_dialog() -> str:
 
 def _started_review(door: dict) -> dict | None:
     """An existing review_items file, or the newest unsigned report for this run."""
-    if door.get("review_fresh") or str(door.get("selected_report") or ""):
+    if (
+        door.get("review_fresh")
+        or door.get("review_resumed")
+        or str(door.get("selected_report") or "")
+    ):
         return None
     items = str(door.get("existing_review_items") or "")
     if items:
@@ -2064,7 +2067,12 @@ def _resume_dialog(door: dict) -> str:
 
 def _reuse_dialog(door: dict) -> str:
     stem = str(door.get("reuse_offer") or "")
-    if not stem or door.get("existing_review_items"):
+    if (
+        not stem
+        or door.get("existing_review_items")
+        or door.get("review_fresh")
+        or door.get("review_resumed")
+    ):
         return ""
     repo = quote(str(door.get("repo_id") or ""), safe="")
     result = quote(str(door.get("selected_result") or ""), safe="")
@@ -2103,29 +2111,79 @@ def _retire_dialog() -> str:
 """
 
 
-def _report_decision(report: dict | None) -> str:
-    if isinstance(report, dict) and isinstance(report.get("decision"), str):
-        return report["decision"]
-    return ""
+def _notes_editor(decision: str) -> str:
+    """Notes travel with Save, the same way a comment does."""
+    return (
+        "<label>Notes</label>"
+        f'<textarea name="decision" form="review-compile" data-assessment '
+        f'placeholder="{html.escape(_DECISION_EXAMPLE)}">{html.escape(decision)}</textarea>'
+    )
 
 
-def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) -> str:
-    if not repo_id:
+def _notes_reading(decision: str) -> str:
+    if not str(decision).strip():
+        return ""
+    return f"<p>Notes</p><p data-decision>{html.escape(decision)}</p>"
+
+
+def _remediate_link(door: dict, report: dict | None, repo_id: str) -> str:
+    """Remediation starts when Sign has locked the review."""
+    if str(door.get("review_mode") or "") == "remediation" or door.get("viewing_snapshot"):
+        return ""
+    locked = bool(door.get("review_locked")) or (
+        isinstance(report, dict) and isinstance(report.get("signed"), dict)
+    )
+    if not locked:
+        return ""
+    needs = any(
+        isinstance(item, dict) and item.get("decision") == "must_fix"
+        for item in door.get("review_items") or []
+    )
+    if not needs:
+        needs = any(
+            isinstance(item, dict) and item.get("disposition") == "must_fix"
+            for item in (report or {}).get("assessments") or []
+        )
+    if not needs or not repo_id:
+        return ""
+    result = str(door.get("selected_result") or door.get("source_result") or "")
+    if result:
+        href = (
+            f"/review?repo={quote(repo_id, safe='')}"
+            f"&result={quote(result, safe='')}&mode=remediation"
+        )
+    elif door.get("selected_report"):
+        href = (
+            f"/review?repo={quote(repo_id, safe='')}"
+            f"&report={quote(str(door.get('selected_report') or ''), safe='')}&mode=remediation"
+        )
+    else:
+        return ""
+    return f'<p><a class="btn" href="{html.escape(href)}">Remediate</a></p>'
+
+
+def _report_action(door: dict, report: dict | None, saved: bool) -> bool:
+    """The Save dialog is on the page, so signing is not a separate form."""
+    if not str(door.get("repo_id") or "") or report is None:
+        return False
+    result_path = str(door.get("selected_result") or "") or str(door.get("source_result") or "")
+    if saved and isinstance(report.get("signed"), dict):
+        return bool(result_path)
+    return bool(result_path or door.get("selected_report") or not saved)
+
+
+def _compile_form(
+    door: dict, report: dict | None, saved: bool, repo_id: str, cancel_href: str = ""
+) -> str:
+    if not _report_action(door, report, saved):
         return ""
     signed = bool(report) and isinstance(report.get("signed"), dict)
-    result_path = str(door.get("selected_result") or "") or str(door.get("source_result") or "")
-    preview = report is not None and not saved and not str(door.get("selected_report") or "")
-    if not result_path and not preview:
+    if signed:
         return ""
-    note = ""
-    if saved and signed:
-        note = (
-            "<p class=\"muted\">This writes a new report from the same Check run and signs it. "
-            "The signed report stays unchanged.</p>"
-        )
+    result_path = str(door.get("selected_result") or "") or str(door.get("source_result") or "")
     report_input = ""
     report_value = str(door.get("report_path") or "")
-    if report_value and not signed:
+    if report_value:
         report_input = f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
     return f"""
 <form id="review-compile" method="post" action="/review/compile">
@@ -2133,36 +2191,39 @@ def _compile_form(door: dict, report: dict | None, saved: bool, repo_id: str) ->
 <input type="hidden" name="result" value="{html.escape(result_path)}">
 <input type="hidden" name="next" id="review-next" value="">
 {report_input}
-{note}
 {_compile_refusal_html(door)}
-<p class="actions"><button type="button" id="create-report-open">Create New Report</button></p>
+<p class="actions"><button type="button" id="sign-open">Sign</button><button type="submit" id="review-save">Save</button><a class="btn" data-discard="1" href="{html.escape(cancel_href)}">Cancel</a></p>
 </form>
-<dialog id="create-report">
-<p>Signing creates the report. Cancel writes nothing.</p>
-<label>Decision
-<textarea name="decision" form="review-compile" required placeholder="{html.escape(_DECISION_EXAMPLE)}">{html.escape(_report_decision(report))}</textarea>
-</label>
+<dialog id="sign-dialog">
+<p>Sign locks this review. Remediation starts from these decisions.</p>
 <label>Signer name
-<input type="text" name="name" form="review-compile" required placeholder="External Reviewer">
+<input type="text" name="name" form="review-compile" placeholder="External Reviewer">
 </label>
 <p>
-<button type="submit" form="review-compile">review-sign</button>
-<button type="button" id="create-report-cancel" class="secondary">Cancel</button>
+<button type="submit" id="review-sign" form="review-compile">Sign</button>
+<button type="button" id="sign-cancel" class="secondary">Cancel</button>
 </p>
 </dialog>
 <script>
 (function() {{
-  var open = document.getElementById("create-report-open");
-  var dialog = document.getElementById("create-report");
+  var open = document.getElementById("sign-open");
+  var dialog = document.getElementById("sign-dialog");
+  var form = document.getElementById("review-compile");
   if (!open || !dialog || !dialog.showModal) return;
+  var name = document.querySelector('input[name="name"][form="review-compile"]');
   open.addEventListener("click", function() {{
-    var page = document.querySelector("textarea[name=decision]:not([form])");
-    var field = dialog.querySelector("textarea[name=decision]");
-    if (page && field && page.value.trim()) field.value = page.value;
     dialog.showModal();
+    if (name) name.focus();
   }});
-  var cancel = document.getElementById("create-report-cancel");
+  var cancel = document.getElementById("sign-cancel");
   if (cancel) cancel.addEventListener("click", function() {{ dialog.close(); }});
+  if (form) form.addEventListener("submit", function(event) {{
+    if (!event.submitter || event.submitter.id !== "review-sign") return;
+    if (name && name.value.trim()) return;
+    event.preventDefault();
+    if (!dialog.open) dialog.showModal();
+    if (name) name.focus();
+  }});
 }})();
 </script>
 """
@@ -2177,7 +2238,7 @@ def _compile_refusal_html(door: dict) -> str:
     )
     return (
         '<div class="err" id="compile-refusal">'
-        "<p>Create New Report did not write a report. These conditions are not met:</p>"
+        "<p>Save did not write a review. These conditions are not met:</p>"
         f"{lines}</div>"
     )
 
