@@ -260,7 +260,10 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
     write_claim(directory, updated)
     from studio.review.impl.items import record_rebind
 
-    record_rebind(_claims_repo(ws, form), return_to, claim_id, signed=bool(name))
+    matched = updated.get("requirement_digest") == version_digest(requirement)
+    record_rebind(
+        _claims_repo(ws, form), return_to, claim_id, signed=bool(name), matched=matched
+    )
     target = _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
     if name and (target.startswith("/review?") or target == "/review"):
         join = "&" if "?" in target else "?"

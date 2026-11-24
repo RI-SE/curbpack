@@ -221,93 +221,63 @@ def review_page(
     return page(heading, body, banner=panel)
 
 
-def _check_is_accepted(claim: dict, check: dict, assessments: dict, review_items: list[dict]) -> bool:
-    """An accepted failing Check is finished. Remediation does not list it again."""
-    from studio.review.impl.items import check_digest
-
-    identity = {
-        "kind": "check",
-        "claim_id": claim.get("id"),
-        "claim_digest": claim.get("digest"),
-        "index": check.get("index"),
-    }
-    saved = assessments.get(assessment_identity(identity))
-    if isinstance(saved, dict) and saved.get("disposition") == "accept":
-        return True
-    args = check.get("args") if isinstance(check.get("args"), dict) else {}
-    digest = check_digest(str(check.get("check") or ""), args)
+def _matching_item(claim: dict, digest: str, review_items: list[dict]) -> dict | None:
     for item in review_items:
         key = item.get("key") if isinstance(item.get("key"), dict) else {}
-        if (
-            key.get("claim_id") == claim.get("id")
-            and key.get("check_digest") == digest
-            and item.get("decision") == "accepted"
-        ):
-            return True
-    return False
+        if key.get("claim_id") == claim.get("id") and key.get("check_digest") == digest:
+            return item
+    return None
 
 
-def _binding_is_accepted(claim: dict, assessments: dict, review_items: list[dict]) -> bool:
-    from studio.review.impl.items import binding_digest
-
-    identity = {
-        "kind": "binding",
-        "claim_id": claim.get("id"),
-        "claim_digest": claim.get("digest"),
-        "namespace": claim.get("namespace"),
-        "pack_id": claim.get("pack_id"),
-        "requirement_id": claim.get("recorded_requirement_id"),
-        "requirement_digest": claim.get("requirement_digest"),
-        "binding": claim.get("binding"),
-    }
-    saved = assessments.get(assessment_identity(identity))
-    if isinstance(saved, dict) and saved.get("disposition") == "accept":
-        return True
-    digest = binding_digest()
+def _rebind_history(claim: dict, review_items: list[dict]) -> list[dict]:
+    found = []
     for item in review_items:
         key = item.get("key") if isinstance(item.get("key"), dict) else {}
-        if (
-            key.get("claim_id") == claim.get("id")
-            and key.get("check_digest") == digest
-            and item.get("decision") == "accepted"
-        ):
-            return True
-    return False
-
-
-def _binding_was_rebound(claim: dict, review_items: list[dict]) -> bool:
-    """A signed rebind finishes this binding. Remediation does not list it again."""
-    claim_id = claim.get("id")
-    for item in review_items:
-        key = item.get("key") if isinstance(item.get("key"), dict) else {}
-        if key.get("claim_id") != claim_id:
+        if key.get("claim_id") != claim.get("id"):
             continue
         for entry in item.get("remediation_history") or []:
             if isinstance(entry, dict) and entry.get("action") == "rebind":
-                return True
-    return False
+                found.append(entry)
+    return found
 
 
-def _remediation_deviations(
-    claim: dict, deviations: list[dict], assessments: dict, review_items: list[dict]
-) -> list[dict]:
-    """Keep a red Check that is not accepted, and a binding on that same Claim."""
+def _check_rechecked_pass(claim: dict, check: dict, review_items: list[dict]) -> bool:
+    """The latest re-check of this Check passed. Accepting it does not."""
+    from studio.review.impl.items import check_digest
+
+    args = check.get("args") if isinstance(check.get("args"), dict) else {}
+    item = _matching_item(claim, check_digest(str(check.get("check") or ""), args), review_items)
+    return isinstance(item, dict) and item.get("decision") == "pass"
+
+
+def _binding_rechecked_pass(claim: dict, review_items: list[dict]) -> bool:
+    """The binding was checked again after it changed, and that check passed."""
+    from studio.review.impl.items import binding_digest
+
+    item = _matching_item(claim, binding_digest(), review_items)
+    if isinstance(item, dict) and item.get("decision") == "pass":
+        return True
+    return bool(_rebind_history(claim, review_items))
+
+
+def _attention_deviations(claim: dict) -> list[dict]:
+    """Failing Checks and stale or missing bindings. Skipped Checks are not work."""
     kept = []
-    for deviation in deviations:
+    for deviation in _claim_deviations(claim):
         if deviation.get("kind") == "check":
             check = deviation.get("check") if isinstance(deviation.get("check"), dict) else {}
-            if str(check.get("status") or "") != "fail":
-                continue
-            if _check_is_accepted(claim, check, assessments, review_items):
-                continue
-            kept.append(deviation)
-        elif (
-            deviation.get("kind") == "binding"
-            and not _binding_is_accepted(claim, assessments, review_items)
-            and not _binding_was_rebound(claim, review_items)
-        ):
+            if str(check.get("status") or "") == "fail":
+                kept.append(deviation)
+        elif deviation.get("kind") == "binding":
             kept.append(deviation)
     return kept
+
+
+def _deviation_passed(claim: dict, deviation: dict, review_items: list[dict]) -> bool:
+    if deviation.get("kind") == "binding":
+        return _binding_rechecked_pass(claim, review_items)
+    check = deviation.get("check") if isinstance(deviation.get("check"), dict) else {}
+    return _check_rechecked_pass(claim, check, review_items)
 
 
 def _review_queue(
@@ -315,37 +285,67 @@ def _review_queue(
     door: dict,
     assessments: dict,
     editable: bool,
+    *,
+    resolved: bool = False,
 ) -> str:
-    """Review queue. Every recorded Check is a row, including a passing Check."""
+    """One queue. Review shows every Check. Remediation shows the open rows, then the finished ones read-only."""
     remediation = str(door.get("review_mode") or "") == "remediation"
-    remedy_open = remediation and not door.get("remedy_signed")
-    if remediation:
+    remedy_open = remediation and not resolved and not door.get("remedy_signed")
+    if remediation or resolved:
         editable = False
     from studio.review.impl.items import check_digest
 
     review_items = [item for item in (door.get("review_items") or []) if isinstance(item, dict)]
-    show_history = any(item.get("remediation_history") for item in review_items)
-
-    def history_cell(claim: dict, check: dict | None) -> str:
-        if not show_history:
+    def history_line(entry: dict) -> str:
+        text = str(entry.get("remediation") or "").strip()
+        transition = str(entry.get("transition") or "").strip()
+        if text in {"Check", "Re-check"} and not entry.get("action"):
+            text = transition
+        if not text:
             return ""
-        if not isinstance(check, dict):
-            return "<td></td>"
-        args = check.get("args") if isinstance(check.get("args"), dict) else {}
-        digest = check_digest(str(check.get("check") or ""), args)
+        line = f"{entry.get('date') or ''} {text}".strip()
+        if transition and transition not in line:
+            line = f"{line} {transition}".strip()
+        return line
+
+    show_history = any(
+        history_line(entry)
+        for item in review_items
+        for entry in (item.get("remediation_history") or [])
+        if isinstance(entry, dict)
+    )
+
+    def history_lines(claim: dict, digest: str, *, binding: bool = False) -> list[str]:
         lines = []
+        seen: set[str] = set()
         for item in review_items:
             key = item.get("key") if isinstance(item.get("key"), dict) else {}
-            if key.get("claim_id") != claim.get("id") or key.get("check_digest") != digest:
+            if key.get("claim_id") != claim.get("id"):
                 continue
+            same_check = key.get("check_digest") == digest
             for entry in item.get("remediation_history") or []:
                 if not isinstance(entry, dict):
                     continue
-                line = f"{entry.get('date') or ''} {entry.get('remediation') or ''}".strip()
-                if entry.get("transition"):
-                    line = f"{line} {entry.get('transition')}".strip()
-                if line:
+                if not same_check and not (binding and entry.get("action") == "rebind"):
+                    continue
+                line = history_line(entry)
+                if line and line not in seen:
+                    seen.add(line)
                     lines.append(html.escape(line))
+        return lines
+
+    def history_cell(claim: dict, check: dict | None, *, binding: bool = False) -> str:
+        if not show_history:
+            return ""
+        if binding:
+            from studio.review.impl.items import binding_digest
+
+            lines = history_lines(claim, binding_digest(), binding=True)
+        elif isinstance(check, dict):
+            args = check.get("args") if isinstance(check.get("args"), dict) else {}
+            lines = history_lines(claim, check_digest(str(check.get("check") or ""), args))
+        else:
+            lines = []
         return "<td>" + "<br>".join(lines) + "</td>"
 
     def remediation_form(claim: dict, check: dict | None) -> str:
@@ -390,15 +390,28 @@ def _review_queue(
         if not isinstance(group, dict):
             continue
         queued = []
-        for claim in group.get("claims") or []:
-            if not isinstance(claim, dict):
+        requirement_claims = [
+            claim for claim in (group.get("claims") or []) if isinstance(claim, dict)
+        ]
+        if remediation:
+            attention = [
+                (claim, _attention_deviations(claim)) for claim in requirement_claims
+            ]
+            attention = [(claim, rows) for claim, rows in attention if rows]
+            if not attention:
                 continue
+            requirement_green = all(
+                _deviation_passed(claim, deviation, review_items)
+                for claim, rows in attention
+                for deviation in rows
+            )
+            if requirement_green != resolved:
+                continue
+            for claim, deviations in attention:
+                queued.append((claim, deviations))
+        for claim in requirement_claims if not remediation else []:
             deviations = _claim_deviations(claim)
-            if remediation:
-                deviations = _remediation_deviations(claim, deviations, assessments, review_items)
-                if not deviations:
-                    continue
-            elif not deviations:
+            if not deviations:
                 if _claim_changed(claim):
                     changed += 1
                     for line in claim.get("sentences") or []:
@@ -496,7 +509,8 @@ def _review_queue(
                     cells.append(f"<td></td><td>{payload}</td><td></td><td></td>{history_cell(claim, None)}")
                 else:
                     deviation = payload if isinstance(payload, dict) else {}
-                    if remedy_open and deviation.get("kind") == "binding":
+                    passed = remediation and _deviation_passed(claim, deviation, review_items)
+                    if remedy_open and not passed and deviation.get("kind") == "binding":
                         dialogs.append(
                             _binding_dialog(
                                 claim,
@@ -508,7 +522,9 @@ def _review_queue(
                         )
                     cells.append(
                         "<td>"
-                        + _deviation_checks(claim, deviation, dialog_id, allow_edit=remedy_open)
+                        + _deviation_checks(
+                            claim, deviation, dialog_id, allow_edit=remedy_open, done=passed
+                        )
                         + "</td>"
                     )
                     remedy, verdict, comment, dialog = _deviation_cells(
@@ -516,7 +532,8 @@ def _review_queue(
                     )
                     dialogs.append(dialog)
                     deviation_check = deviation.get("check") if isinstance(deviation, dict) else None
-                    if remedy_open and _evidence_missing(deviation_check):
+                    binding_row = deviation.get("kind") == "binding"
+                    if remedy_open and not passed and _evidence_missing(deviation_check):
                         remedy += (
                             '<p><button type="button" class="discover-again" '
                             f'data-dialog="{html.escape(_dialog_id(str(claim.get("id") or "")))}">'
@@ -526,8 +543,12 @@ def _review_queue(
                         (
                             f"<td>{remedy}</td>",
                             f"<td>{verdict}</td>",
-                            f"<td>{comment}{remediation_form(claim, deviation_check if isinstance(deviation_check, dict) else None)}</td>",
-                            history_cell(claim, deviation_check if isinstance(deviation_check, dict) else None),
+                            f"<td>{comment}{'' if passed else remediation_form(claim, deviation_check if isinstance(deviation_check, dict) else None)}</td>",
+                            history_cell(
+                                claim,
+                                deviation_check if isinstance(deviation_check, dict) else None,
+                                binding=binding_row,
+                            ),
                         )
                     )
                 group_rows.append("<tr>" + "".join(cells) + "</tr>")
@@ -583,29 +604,27 @@ def _review_queue(
             + html.escape(reason)
             + "</li>"
         )
+    if resolved:
+        if not body_rows:
+            return ""
+        return (
+            '<section data-resolved="1"><h2>Remediated</h2>'
+            + meta
+            + table
+            + "".join(dialogs)
+            + "</section>"
+        )
+    done = ""
+    if remediation:
+        done = _review_queue(presentation, door, assessments, False, resolved=True)
     retired_list = f'<ul data-retired>{"".join(retired_rows)}</ul>' if retired_rows else ""
     remedy_form = ""
-    remedy_source = str(door.get("selected_result") or door.get("source_result") or "")
-    remedy_field = "result"
-    if not remedy_source:
-        remedy_source = str(door.get("selected_report") or "")
-        remedy_field = "report"
-    if remediation and remedy_source and not door.get("remedy_signed"):
-        remedy_form = (
-            '<form method="post" action="/review/remedy">'
-            f'<input type="hidden" name="repo_id" value="{html.escape(str(door.get("repo_id") or ""))}">'
-            f'<input type="hidden" name="{remedy_field}" value="{html.escape(remedy_source)}">'
-            "<label>Signer name</label>"
-            '<input type="text" name="name" placeholder="The person who did the work">'
-            "<button type=\"submit\">Sign Remediation</button>"
-            "</form>"
-        )
-    elif remediation and door.get("remedy_signed"):
-        remedy_form = ""
+    if remediation and not door.get("remedy_signed"):
+        remedy_form = _remedy_actions(door)
     script = _comment_script()
     if any("check-form" in item for item in dialogs):
         script += "<script>\n" + check_form_script() + "\n</script>"
-    return meta + table + retired_list + remedy_form + changed_note + "".join(dialogs) + script
+    return meta + table + retired_list + remedy_form + changed_note + "".join(dialogs) + done + script
 
 
 def _claim_deviations(claim: dict) -> list[dict]:
@@ -696,27 +715,35 @@ def _comment_id(identity: dict) -> str:
     return re.sub(r"[^A-Za-z0-9_-]", "-", dialog_id)
 
 
-def _deviation_checks(claim: dict, deviation: dict, dialog_id: str, *, allow_edit: bool = False) -> str:
+def _deviation_checks(
+    claim: dict, deviation: dict, dialog_id: str, *, allow_edit: bool = False, done: bool = False
+) -> str:
     """The check or binding pill for one deviation row."""
     pills = []
     if deviation.get("kind") == "check":
         check = deviation.get("check")
         if isinstance(check, dict):
-            pills.append(_check_span(claim, check, dialog_id, allow_edit=allow_edit))
+            shown = check
+            if done and str(check.get("status") or "") == "fail":
+                shown = dict(check)
+                shown["status"] = "pass"
+            pills.append(_check_span(claim, shown, dialog_id, allow_edit=allow_edit))
     else:
         binding = str(claim.get("binding") or "")
         if binding in {"stale", "missing"}:
             bind_id = _binding_dialog_id(claim)
             name = "Requirement Binding" if binding == "stale" else f"Binding {binding}"
-            label = f'{_status_mark("fail", f"Binding {binding}")}{html.escape(name)}'
-            if bind_id and allow_edit:
+            mark = "pass" if done else "fail"
+            label = f'{_status_mark(mark, f"Binding {binding}")}{html.escape(name)}'
+            if bind_id and allow_edit and not done:
                 pills.append(
                     f'<button type="button" class="check fail" data-binding="{html.escape(binding)}" '
                     f'data-binding-dialog="{html.escape(bind_id)}">{label}</button>'
                 )
             else:
+                recorded = "rebound" if done else binding
                 pills.append(
-                    f'<span class="check fail" data-binding="{html.escape(binding)}">{label}</span>'
+                    f'<span class="check {mark}" data-binding="{html.escape(recorded)}">{label}</span>'
                 )
     return " ".join(pills)
 
@@ -1754,30 +1781,26 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
     if not repo_id or report is None:
         return ""
     rerun = ""
-    if str(door.get("review_mode") or "") == "remediation":
-        if door.get("remedy_signed"):
-            return_to = "/review"
-            label = "Run Check"
-        else:
-            report_query = quote(str(door.get("selected_report") or ""), safe="")
-            result_query = quote(str(door.get("selected_result") or door.get("source_result") or ""), safe="")
-            target = f"report={report_query}" if report_query else f"result={result_query}"
-            return_to = f"/review?repo={quote(repo_id, safe='')}&mode=remediation&{target}"
-            label = "Re-run Checks"
+    open_remedy = str(door.get("review_mode") or "") == "remediation" and not door.get("remedy_signed")
+    if str(door.get("review_mode") or "") == "remediation" and door.get("remedy_signed"):
         rerun = f"""
 <form method="post" action="/check">
 <input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
 <input type="hidden" name="action" value="check">
-<input type="hidden" name="return_to" value="{html.escape(return_to)}">
-<p class="actions"><button type="submit" data-leave="1">{label}</button></p>
+<input type="hidden" name="return_to" value="/review">
+<p class="actions"><button type="submit" data-leave="1">Run Check</button></p>
 </form>
 """
     cancel_href = f"/check?repo={quote(repo_id, safe='')}"
-    form = "" if door.get("viewing_snapshot") or door.get("review_locked") else _compile_form(
+    form = "" if (
+        door.get("viewing_snapshot")
+        or door.get("review_locked")
+        or str(door.get("review_mode") or "") == "remediation"
+    ) else _compile_form(
         door, report, saved, repo_id, cancel_href
     )
     form += _remediate_link(door, report, repo_id)
-    back = "" if form else (
+    back = "" if form or open_remedy else (
         f'<p class="actions"><a class="btn" data-discard="1" href="{html.escape(cancel_href)}">Cancel</a></p>'
     )
     return (
@@ -1967,7 +1990,7 @@ def _unsaved_script() -> str:
   }, true);
   document.addEventListener("submit", function(event) {
     var form = event.target;
-    if (!form || form.id === "review-compile" || form.hasAttribute("data-include-assessments") || form.hasAttribute("data-rebind")) return;
+    if (!form || form.id === "review-compile" || form.id === "remedy-sign" || form.id === "remedy-recheck" || form.hasAttribute("data-include-assessments") || form.hasAttribute("data-rebind")) return;
     if (!dirty() || leaving) return;
     event.preventDefault();
     pendingHref = "";
@@ -2269,6 +2292,65 @@ def _report_action(door: dict, report: dict | None, saved: bool) -> bool:
     if saved and isinstance(report.get("signed"), dict):
         return bool(result_path)
     return bool(result_path or door.get("selected_report") or not saved)
+
+
+def _remedy_actions(door: dict) -> str:
+    """Re-check, Save, Cancel, and Sign Off. The signer name stays in the sign dialog."""
+    repo_id = str(door.get("repo_id") or "")
+    source = str(door.get("selected_result") or door.get("source_result") or "")
+    field = "result"
+    if not source:
+        source = str(door.get("selected_report") or "")
+        field = "report"
+    if not repo_id or not source:
+        return ""
+    target = f"{field}={quote(source, safe='')}"
+    return_to = f"/review?repo={quote(repo_id, safe='')}&mode=remediation&{target}"
+    cancel_href = f"/check?repo={quote(repo_id, safe='')}"
+    return f"""
+<form id="remedy-recheck" method="post" action="/check">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<input type="hidden" name="action" value="check">
+<input type="hidden" name="return_to" value="{html.escape(return_to)}">
+</form>
+<form id="remedy-sign" method="post" action="/review/remedy">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<input type="hidden" name="{field}" value="{html.escape(source)}">
+<p class="actions"><button type="submit" form="remedy-recheck">Re-check</button><button type="submit" name="action" value="save" id="review-save">Save</button><a class="btn" data-discard="1" href="{html.escape(cancel_href)}">Cancel</a><button type="button" id="sign-open">Sign Off</button></p>
+</form>
+<dialog id="sign-dialog">
+<p>Sign locks this remediation.</p>
+<label>Signer name
+<input type="text" name="name" form="remedy-sign" placeholder="The person who did the work">
+</label>
+<p>
+<button type="submit" id="review-sign" form="remedy-sign">Sign Off</button>
+<button type="button" id="sign-cancel" class="secondary">Cancel</button>
+</p>
+</dialog>
+<script>
+(function() {{
+  var open = document.getElementById("sign-open");
+  var dialog = document.getElementById("sign-dialog");
+  var form = document.getElementById("remedy-sign");
+  if (!open || !dialog || !dialog.showModal) return;
+  var name = document.querySelector('input[name="name"][form="remedy-sign"]');
+  open.addEventListener("click", function() {{
+    dialog.showModal();
+    if (name) name.focus();
+  }});
+  var cancel = document.getElementById("sign-cancel");
+  if (cancel) cancel.addEventListener("click", function() {{ dialog.close(); }});
+  if (form) form.addEventListener("submit", function(event) {{
+    if (!event.submitter || event.submitter.id !== "review-sign") return;
+    if (name && name.value.trim()) return;
+    event.preventDefault();
+    if (!dialog.open) dialog.showModal();
+    if (name) name.focus();
+  }});
+}})();
+</script>
+"""
 
 
 def _compile_form(

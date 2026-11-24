@@ -326,15 +326,26 @@ class ProjectRunTest(unittest.TestCase):
         self.assertEqual(check["decision"], "pass")
         self.assertEqual(check["remediation_history"][-1]["transition"], "must_fix -> pass")
 
-    def test_a_failing_full_check_keeps_must_fix_and_appends_history(self):
+    def test_a_failing_full_check_keeps_must_fix_and_writes_no_history(self):
         item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
         item["decision"] = "must_fix"
         failed = _run("b" * 40, "clean", status="fail")
-        projected = project_run([item], failed, remediation="Still missing.")
+        projected = project_run([item], failed, remediation="Check")
         check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
         self.assertEqual(check["decision"], "must_fix")
-        self.assertNotIn("transition", check["remediation_history"][-1])
-        self.assertEqual(check["remediation_history"][-1]["remediation"], "Still missing.")
+        self.assertNotIn("remediation_history", check)
+
+    def test_a_background_check_records_the_change_and_not_the_run(self):
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "must_fix"
+        passed = _run("b" * 40, "clean", status="pass")
+        projected = project_run([item], passed, remediation="Check")
+        check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
+        self.assertEqual(check["decision"], "pass")
+        entry = check["remediation_history"][-1]
+        self.assertEqual(entry["transition"], "must_fix -> pass")
+        self.assertEqual(entry["remediation"], "must_fix -> pass")
+        self.assertNotEqual(entry["remediation"], "Check")
 
     def test_a_changed_check_is_found_through_old_check_digest(self):
         item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
@@ -373,8 +384,7 @@ class ProjectRunTest(unittest.TestCase):
         projected = project_run([binding], again, remediation="Still stale.")
         kept = next(row for row in projected if row["key"]["check_digest"] == binding_digest())
         self.assertEqual(kept["decision"], "must_fix")
-        self.assertNotIn("transition", kept["remediation_history"][-1])
-        self.assertEqual(kept["remediation_history"][-1]["remediation"], "Still stale.")
+        self.assertNotIn("remediation_history", kept)
 
 
 class TakeInRemedyTest(unittest.TestCase):

@@ -249,15 +249,51 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         }
         page = review_page(report, None, door=door).decode()
+        self.assertNotIn('<section data-resolved="1">', page)
         self.assertNotIn("claim-green", page)
-        self.assertNotIn("claim-accepted", page)
-        self.assertNotIn(">Accept<", page)
+        self.assertIn('data-claim="claim-accepted"', page)
         self.assertNotIn('class="check pass"', page)
         self.assertNotIn('class="check skipped"', page)
         self.assertIn('data-claim="claim-open"', page)
         self.assertIn('data-claim="claim-stale"', page)
         self.assertIn('data-binding="stale"', page)
         self.assertIn('class="check fail"', page)
+
+    def test_a_recheck_that_passes_is_shown_read_only(self):
+        from studio.review.impl.items import check_digest
+
+        digest = check_digest("contents", {"path": "b.md"})
+        claim = {
+            "id": "claim-fixed",
+            "checks": [
+                {"index": 0, "check": "contents", "status": "fail", "args": {"path": "b.md"}},
+            ],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                {
+                    "key": {"claim_id": "claim-fixed", "check_digest": digest},
+                    "decision": "pass",
+                    "remediation_history": [
+                        {"date": "2026-11-24T00:00:00Z", "remediation": "Re-check", "transition": "must_fix -> pass"}
+                    ],
+                }
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        open_list, resolved = page.split('<section data-resolved="1">', 1)
+        self.assertIn("No claims need attention.", open_list)
+        self.assertNotIn("claim-fixed", open_list)
+        self.assertIn('data-claim="claim-fixed"', resolved)
+        self.assertIn('data-status="pass"', resolved)
+        self.assertIn('class="check pass"', resolved)
+        self.assertNotIn("Re-check", resolved)
+        self.assertIn("must_fix -&gt; pass", resolved)
+        self.assertNotIn(">Re-check</button>", resolved)
 
     def test_a_signed_rebind_leaves_the_remediation_list(self):
         stale = {
@@ -283,8 +319,57 @@ class ReviewRenderStructureTest(unittest.TestCase):
             "presentation": {"groups": [{"id": "REQ-A", "claims": [stale]}]},
         }
         page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
-        self.assertNotIn('data-claim="claim-stale"', page)
-        self.assertIn("No claims need attention.", page)
+        open_list, resolved = page.split('<section data-resolved="1">', 1)
+        self.assertIn("No claims need attention.", open_list)
+        self.assertNotIn('data-claim="claim-stale"', open_list)
+        self.assertIn('data-claim="claim-stale"', resolved)
+        self.assertIn('class="check pass"', resolved)
+        self.assertIn("Rebound the Claim.", resolved)
+        self.assertNotIn('class="check fail"', resolved)
+        self.assertNotIn(">Rebind and Sign</button>", resolved)
+
+    def test_a_requirement_stays_open_until_every_check_is_green(self):
+        from studio.review.impl.items import check_digest
+
+        digest = check_digest("contents", {"path": "b.md"})
+        passed = {
+            "id": "claim-passed",
+            "checks": [
+                {"index": 0, "check": "contents", "status": "fail", "args": {"path": "b.md"}},
+            ],
+        }
+        waiting = {
+            "id": "claim-waiting",
+            "binding": "stale",
+            "namespace": "house",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [{"index": 0, "check": "exist", "status": "pass", "args": {"path": "c.md"}}],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                {
+                    "key": {"claim_id": "claim-passed", "check_digest": digest},
+                    "decision": "pass",
+                    "remediation_history": [
+                        {"date": "2026-11-24T00:00:00Z", "remediation": "Re-check", "transition": "must_fix -> pass"}
+                    ],
+                }
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [passed, waiting]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        self.assertNotIn('<section data-resolved="1">', page)
+        self.assertIn('data-claim="claim-passed"', page)
+        self.assertIn('data-status="pass"', page)
+        self.assertIn("must_fix -&gt; pass", page)
+        self.assertNotIn('formaction="/review/recheck"', page)
+        self.assertIn('data-claim="claim-waiting"', page)
+        self.assertIn('class="check fail"', page)
+        self.assertIn(">Rebind and Sign</button>", page)
 
     def test_binding_stale_opens_a_sign_dialog_instead_of_rebind(self):
         claim = {

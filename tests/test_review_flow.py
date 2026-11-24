@@ -74,7 +74,12 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertIn(">Start</a>", signed)
                 remediation = _get(base + _href(signed, "Start"))
                 self.assertIn('data-action="retire"', remediation)
-                self.assertIn(">Sign Remediation</button>", remediation)
+                self.assertIn(">Re-check</button>", remediation)
+                self.assertIn(">Save</button>", remediation)
+                self.assertIn(">Sign Off</button>", remediation)
+                self.assertIn(">Cancel</a>", remediation)
+                self.assertNotIn(">Sign Remediation</button>", remediation)
+                self.assertNotIn(">Re-run Checks</button>", remediation)
                 form = re.search(
                     r'action="/review/remediate"(.*?)</form>',
                     remediation,
@@ -90,7 +95,7 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                     {"repo_id": "alpha", "result": result_path, "name": "Urban"},
                 )
                 self.assertIn("This signed remediation is read-only.", remedy)
-                self.assertNotIn(">Sign Remediation</button>", remedy)
+                self.assertNotIn(">Sign Off</button>", remedy)
                 nxt = _post_redirect(
                     base + "/check",
                     {"repo_id": "alpha", "action": "check", "return_to": "/review"},

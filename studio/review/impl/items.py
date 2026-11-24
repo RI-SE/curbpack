@@ -450,15 +450,31 @@ def retarget_check(
     return updated
 
 
+_BACKGROUND_RUN = {"Check", "Re-check"}
+
+
+def _noted_change(remediation: str, change: str) -> str:
+    """A background run is not the note. The change is."""
+    note = remediation.strip()
+    if note in _BACKGROUND_RUN:
+        return change
+    return note
+
+
 def apply_recheck(item: dict, status: str, *, remediation: str, date: str | None = None) -> dict:
-    """A passing re-check sets the recommendation to pass. A failure leaves it."""
-    if status != "pass":
-        return append_history(item, remediation=remediation, date=date)
+    """Record a re-check only when it changes the outcome.
+
+    A pass sets the recommendation to pass and the history names that change.
+    A result that leaves the decision is the check running again, not history.
+    """
     previous = str(item.get("decision") or "")
+    if status != "pass" or previous == "pass":
+        return item
+    transition = f"{previous} -> pass" if previous else "pass"
     updated = append_history(
         item,
-        remediation=remediation,
-        transition=f"{previous} -> pass" if previous and previous != "pass" else None,
+        remediation=_noted_change(remediation, transition),
+        transition=transition if previous else None,
         date=date,
     )
     updated["decision"] = "pass"
@@ -541,8 +557,8 @@ def project_run(
 ) -> list[dict]:
     """Apply one full run to the open remediation copy.
 
-    A pass records the transition and sets the recommendation to pass. A failure
-    appends history and leaves the decision. A changed Check configuration is
+    A pass that changes the recommendation records that change and sets it to
+    pass. An unchanged result leaves the item. A changed Check configuration is
     linked through old_check_digest. The binding Check is updated from the
     Claim's binding and is not retargeted onto another Check.
     """
@@ -567,7 +583,12 @@ def project_run(
             ]
             if len(candidates) == 1:
                 row = candidates[0]
-                current = retarget_check(current, row["check"], row["args"], remediation=remediation)
+                current = retarget_check(
+                    current,
+                    row["check"],
+                    row["args"],
+                    remediation=_noted_change(remediation, "Check configuration updated."),
+                )
         if row is not None:
             current = apply_recheck(current, row["status"], remediation=remediation)
         updated.append(current)
@@ -650,7 +671,7 @@ def take_in_remedy(
             if updated.get("decision") == "pass" and previous and previous != "pass":
                 transition = f"{previous} -> pass"
                 if not any(entry.get("transition") == transition for entry in history):
-                    updated = append_history(updated, remediation="Check", transition=transition)
+                    updated = append_history(updated, remediation=transition, transition=transition)
         taken.append(updated)
     return taken
 
@@ -1037,30 +1058,25 @@ def record_check_change(
     write_items(path, updated)
 
 
-def record_rebind(repo: Path, return_to: str, claim_id: str, *, signed: bool = False) -> None:
-    """Rebind records one history entry on this Claim."""
+def record_rebind(
+    repo: Path, return_to: str, claim_id: str, *, signed: bool = False, matched: bool = False
+) -> None:
+    """Rebind checks the binding and records that on the binding item."""
     path = _workspace_from_return(repo, return_to)
     if path is None:
         return
     items = load_items(path)
-    target = None
-    for item in items:
-        if item_key(item) == (claim_id, binding_digest()):
-            target = item_key(item)
-            break
-    if target is None:
-        for item in items:
-            if item_key(item)[0] == claim_id:
-                target = item_key(item)
-                break
-    if target is None:
-        return
+    digest = binding_digest()
+    if not any(item_key(item) == (claim_id, digest) for item in items):
+        items.append(_item(claim_id, digest, "pass" if matched else "not_assessed", {}))
     updated = []
     for item in items:
-        if item_key(item) == target:
+        if item_key(item) == (claim_id, digest):
             item = append_history(
                 item, remediation="Rebound the Claim.", action="rebind" if signed else None
             )
+            if matched:
+                item["decision"] = "pass"
         updated.append(item)
     write_items(path, updated)
 

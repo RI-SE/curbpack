@@ -524,6 +524,13 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
     if not items_path.is_file():
         raise ModelError("review_items", "path", "the saved review")
     _require_open_remediation(items_path)
+    if (form.get("action") or [""])[0] == "save":
+        write_items(items_path, load_items(items_path), marker={"work_saved": True})
+        field = "report" if (form.get("report") or [""])[0] else "result"
+        return (
+            f"/review?repo={quote(repo_id, safe='')}&mode=remediation&saved=1"
+            f"&{field}={quote(source, safe='')}"
+        )
     name = (form.get("name") or [""])[0].strip()
     if not name:
         raise ModelError("remedy report", "name", "the signer's name")
