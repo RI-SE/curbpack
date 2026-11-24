@@ -80,7 +80,9 @@ A missing key is omitted. Unknown keys are invalid.
 
 `decision` is `pass`, `accepted`, `not_assessed`, or `must_fix`.
 
-`remediation_history` is the sequence of remediations recorded for this item, earliest first. Each entry has `date`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `remediation`, the non-empty text of what was done. A Retire entry also has `action` `retire`. `transition` and `old_check_digest` are optional. A comment is an entry without `action`. The key is omitted when the sequence is empty.
+`comment` is the note on this item. It is not a history entry. On the remediation copy it is the current note and may be replaced or cleared.
+
+`remediation_history` is the sequence of actions recorded for this item, earliest first. Each entry has `date`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `remediation`, the non-empty text of what was done. An action has `action` (`retire` or `rebind`) or `transition`. `old_check_digest` is optional. The key is omitted when the sequence is empty.
 
 `priority` is an integer from 1 to 10. 1 is the most urgent.
 

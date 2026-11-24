@@ -421,6 +421,44 @@ def append_history(
     return updated
 
 
+def _plain_comment(entry: dict) -> bool:
+    """A typed note. A re-check, retire, or rebind is a record, not that note."""
+    if entry.get("action") or entry.get("transition"):
+        return False
+    text = str(entry.get("remediation") or "").strip()
+    return bool(text) and text not in {"Check", "Re-check"}
+
+
+def remediation_comment(item: dict) -> str:
+    """The current note. It is the comment, not a history entry."""
+    text = item.get("comment")
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+    found = ""
+    for entry in item.get("remediation_history") or []:
+        if isinstance(entry, dict) and _plain_comment(entry):
+            found = str(entry.get("remediation") or "").strip()
+    return found
+
+
+def set_remediation_comment(item: dict, text: str, *, date: str | None = None) -> dict:
+    """Store the note on `comment`. A note is not a remediation action."""
+    del date
+    history = [row for row in (item.get("remediation_history") or []) if isinstance(row, dict)]
+    kept = [row for row in history if not _plain_comment(row)]
+    updated = dict(item)
+    note = text.strip() if isinstance(text, str) else ""
+    if note:
+        updated["comment"] = note
+    else:
+        updated.pop("comment", None)
+    if kept:
+        updated["remediation_history"] = kept
+    else:
+        updated.pop("remediation_history", None)
+    return updated
+
+
 def record_retire(item: dict, *, remediation: str, date: str | None = None) -> dict:
     """A Retire post names the action. A free-text comment does not."""
     return append_history(item, remediation=remediation, action="retire", date=date)

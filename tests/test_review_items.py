@@ -28,6 +28,8 @@ from studio.review.impl.items import (
     project_run,
     record_dirty_files,
     record_retire,
+    remediation_comment,
+    set_remediation_comment,
     report_items_path,
     remedy_report_path,
     retired_absences,
@@ -261,6 +263,23 @@ class DecisionAndHistoryTest(unittest.TestCase):
         self.assertEqual(retired["remediation_history"][1]["action"], "retire")
         found = retired_absences([retired], empty)
         self.assertEqual(len(found), 1)
+
+    def test_a_comment_replaces_the_previous_note_and_can_be_cleared(self):
+        item = items_from_run(_run("a" * 40, "clean"))[1]
+        noted = set_remediation_comment(item, "snopp", date="2026-11-23T09:00:00Z")
+        self.assertEqual(noted["comment"], "snopp")
+        self.assertNotIn("remediation_history", noted)
+        replaced = set_remediation_comment(noted, "Talk to the owner.", date="2026-11-23T09:10:00Z")
+        self.assertEqual(replaced["comment"], "Talk to the owner.")
+        self.assertNotIn("remediation_history", replaced)
+        parked = append_history(item, remediation="snopp", date="2026-11-23T09:00:00Z")
+        parked = record_retire(parked, remediation="Remove the check.", date="2026-11-23T09:30:00Z")
+        moved = set_remediation_comment(parked, "Talk to the owner.")
+        self.assertEqual(moved["comment"], "Talk to the owner.")
+        self.assertEqual([entry["action"] for entry in moved["remediation_history"]], ["retire"])
+        cleared = set_remediation_comment(moved, "  ")
+        self.assertNotIn("comment", cleared)
+        self.assertEqual(remediation_comment(cleared), "")
 
     def test_recheck_pass_updates_the_recommendation_and_keeps_the_item(self):
         item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
