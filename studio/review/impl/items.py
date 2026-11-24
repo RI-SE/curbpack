@@ -54,6 +54,43 @@ def workspace_items_path(temp_dir: Path, source_name: str) -> Path:
     return workspace_dir(temp_dir, source_name) / "review_items.json"
 
 
+def check_directory(path: Path) -> Path | None:
+    """The Check directory when this file is the run, its Review, its items, or its Remedy."""
+    path = Path(path)
+    if path.name == "run-result.json" and path.parent.name.startswith("run-result_"):
+        return path.parent
+    if path.parent.name.startswith("run-result_") and (
+        path.name in {"review-report.json", "remedy-report.json", "review_items.json"}
+        or _snapshot_name(path.name)
+    ):
+        return path.parent
+    return None
+
+
+def _snapshot_name(name: str) -> bool:
+    """A dated report inside a Check directory. The work file is review_items.json."""
+    return (
+        name.endswith(".json")
+        and not name.endswith(".items.json")
+        and (name.startswith("review-report_") or name.startswith("remedy-report_"))
+    )
+
+
+def items_home(repo: Path, source: Path) -> Path:
+    """Working review items live in the Check directory. Older files still use the temp directory."""
+    directory = check_directory(source)
+    if directory is not None:
+        return directory / "review_items.json"
+    return workspace_items_path(studio_temp_dir(repo), Path(source).name)
+
+
+def run_stem(run_path: Path) -> str:
+    directory = check_directory(run_path)
+    if directory is not None:
+        return directory.name
+    return Path(run_path).name
+
+
 def files_sidecar_path(temp_dir: Path, run_name: str) -> Path:
     stem = Path(run_name).name
     if stem.endswith(".json"):
@@ -113,7 +150,7 @@ def record_dirty_files(repo: Path, run_path: Path, run: dict) -> Path | None:
     """
     if run.get("worktree") != "dirty":
         return None
-    target = files_sidecar_path(studio_temp_dir(repo), run_path.name)
+    target = files_sidecar_path(studio_temp_dir(repo), run_stem(run_path))
     if target.is_file():
         return target
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -228,7 +265,7 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
     if path.is_file():
         current = read_json(path)
         if isinstance(current, dict):
-            for key in ("history_from", "remedy", "projected_runs"):
+            for key in ("history_from", "remedy", "projected_runs", "notes", "work_saved", "review_locked"):
                 if key in current:
                     kept[key] = current[key]
     if marker:
@@ -245,12 +282,17 @@ def open_review_items(
     *,
     files_by_check: dict[tuple, list[dict]] | None = None,
     choice: str = "",
+    repo: Path | None = None,
+    run_name: str = "",
 ) -> tuple[list[dict], str]:
     """Return items and the question state: ready, ask, continued, or restarted.
 
     A missing file is written from the run. An existing file always asks
     continue or start over until the caller passes that choice.
+    A dirty run's sidecar is copied onto provenance.files when the items are created.
     """
+    if files_by_check is None and repo is not None and run_name:
+        files_by_check = load_files_sidecar(studio_temp_dir(repo), run_name)
     new_items = items_from_run(run, files_by_check)
     if not path.is_file():
         write_items(path, new_items)
@@ -454,13 +496,49 @@ def find_item(item: dict, sources: list[dict]) -> dict | None:
     return None
 
 
-def project_run(items: list[dict], run: dict, *, remediation: str) -> list[dict]:
+def _binding_recheck_status(run: dict, claim_id: str) -> str | None:
+    """pass when the Claim's binding is match. fail when it is still stale or missing."""
+    for claim in run.get("claims") or []:
+        if not isinstance(claim, dict) or claim.get("id") != claim_id:
+            continue
+        binding = claim.get("binding")
+        if binding == "match":
+            return "pass"
+        if binding in {"stale", "missing"}:
+            return "fail"
+        return None
+    return None
+
+
+def _recorded_files(
+    files_by_check: dict[tuple, list[dict]] | None,
+    repo: Path | None,
+    run_name: str,
+) -> dict[tuple, list[dict]] | None:
+    if files_by_check is not None:
+        return files_by_check
+    if repo is not None and run_name:
+        return load_files_sidecar(studio_temp_dir(repo), run_name)
+    return None
+
+
+def project_run(
+    items: list[dict],
+    run: dict,
+    *,
+    remediation: str,
+    files_by_check: dict[tuple, list[dict]] | None = None,
+    repo: Path | None = None,
+    run_name: str = "",
+) -> list[dict]:
     """Apply one full run to the open remediation copy.
 
     A pass records the transition and sets the recommendation to pass. A failure
     appends history and leaves the decision. A changed Check configuration is
-    linked through old_check_digest.
+    linked through old_check_digest. The binding Check is updated from the
+    Claim's binding and is not retargeted onto another Check.
     """
+    files = _recorded_files(files_by_check, repo, run_name)
     checks = _checks_in_run(run)
     by_key = {(row["claim_id"], row["digest"]): row for row in checks}
     known = {item_key(item) for item in items}
@@ -469,7 +547,11 @@ def project_run(items: list[dict], run: dict, *, remediation: str) -> list[dict]
         claim_id, digest = item_key(item)
         current = item
         row = by_key.get((claim_id, digest))
-        if row is None and digest != binding_digest():
+        if row is None and digest == binding_digest():
+            status = _binding_recheck_status(run, claim_id)
+            if status is not None and not (status == "pass" and str(current.get("decision") or "") == "pass"):
+                current = apply_recheck(current, status, remediation=remediation)
+        elif row is None:
             candidates = [
                 check
                 for check in checks
@@ -482,7 +564,7 @@ def project_run(items: list[dict], run: dict, *, remediation: str) -> list[dict]
             current = apply_recheck(current, row["status"], remediation=remediation)
         updated.append(current)
     present = {item_key(item) for item in updated}
-    for fresh in items_from_run(run):
+    for fresh in items_from_run(run, files):
         if item_key(fresh) not in present and find_item(fresh, updated) is None:
             updated.append(fresh)
             present.add(item_key(fresh))
@@ -493,6 +575,24 @@ def _history_rows(source: dict | None) -> list[dict]:
     if not source:
         return []
     return [dict(entry) for entry in source.get("remediation_history") or [] if isinstance(entry, dict)]
+
+
+def carry_history(items: list[dict], source_items: list[dict]) -> list[dict]:
+    """Copy remediation history onto items that have none. The history does not set decision."""
+    carried = []
+    for item in items:
+        own = item.get("remediation_history")
+        if isinstance(own, list) and own:
+            carried.append(item)
+            continue
+        history = _history_rows(find_item(item, source_items))
+        if not history:
+            carried.append(item)
+            continue
+        updated = dict(item)
+        updated["remediation_history"] = history
+        carried.append(updated)
+    return carried
 
 
 def _signed_for(item: dict, remedy: dict | None, signed_items: list[dict]) -> dict | None:
@@ -620,6 +720,43 @@ def retired_absences(remedy_items: list[dict], run: dict) -> list[dict]:
     return missing
 
 
+def _binding_assessment(item: dict, run: dict) -> dict | None:
+    """A must_fix or accepted binding becomes a binding assessment. A match has no assessment slot."""
+    claim_id, digest = item_key(item)
+    if digest != binding_digest():
+        return None
+    claim = next(
+        (
+            row
+            for row in run.get("claims") or []
+            if isinstance(row, dict) and row.get("id") == claim_id
+        ),
+        None,
+    )
+    if claim is None or claim.get("binding") not in {"stale", "missing"}:
+        return None
+    text = item.get("comment")
+    text = text.strip() if isinstance(text, str) else ""
+    assessment = {
+        "kind": "binding",
+        "claim_id": claim.get("id"),
+        "claim_digest": claim.get("digest"),
+        "namespace": claim.get("namespace"),
+        "pack_id": claim.get("pack_id"),
+        "requirement_id": claim.get("requirement_id"),
+        "requirement_digest": claim.get("requirement_digest"),
+        "binding": claim.get("binding"),
+        "disposition": "must_fix" if item.get("decision") == "must_fix" else "accept",
+        "text": text,
+    }
+    for field, value in assessment.items():
+        if field == "text":
+            continue
+        if not isinstance(value, str) or not value.strip():
+            return None
+    return assessment
+
+
 def assessments_from_decisions(items: list[dict], run: dict) -> list[dict]:
     """Signed decisions are what the report records. pass and not_assessed add no assessment."""
     index_by_key: dict[tuple, dict] = {}
@@ -640,6 +777,11 @@ def assessments_from_decisions(items: list[dict], run: dict) -> list[dict]:
     for item in items:
         decision = item.get("decision")
         if decision not in {"must_fix", "accepted"}:
+            continue
+        if item_key(item)[1] == binding_digest():
+            assessment = _binding_assessment(item, run)
+            if assessment is not None:
+                assessments.append(assessment)
             continue
         located = index_by_key.get(item_key(item))
         if located is None:
@@ -944,6 +1086,8 @@ def retire_live_check(claims_dir: Path, claim_id: str, digest: str) -> None:
 
 
 def remedy_report_path(report_path: Path) -> Path:
+    if check_directory(report_path) is not None and report_path.name == "review-report.json":
+        return report_path.with_name("remedy-report.json")
     name = report_path.name
     if name.endswith(".json"):
         name = name[: -len(".json")] + ".remedy.json"
@@ -952,11 +1096,77 @@ def remedy_report_path(report_path: Path) -> Path:
     return report_path.with_name(name)
 
 
-def remedy_bundle(reports_dir: Path, stem: str) -> tuple[list[dict], list[dict]]:
+def _newest_signed(directory: Path, *patterns: str) -> Path | None:
+    """The newest signed file in a Check directory. Missing directories yield nothing."""
+    if not directory.is_dir():
+        return None
+    found: list[Path] = []
+    for pattern in patterns:
+        for path in directory.glob(pattern):
+            if not path.is_file():
+                continue
+            try:
+                document = read_json(path)
+            except (OSError, ValueError):
+                continue
+            if not _snapshot_name(path.name) and path.name not in {"review-report.json", "remedy-report.json"}:
+                continue
+            if isinstance(document, dict) and isinstance(document.get("signed"), dict):
+                found.append(path)
+    if not found:
+        return None
+    return sorted(found, key=lambda path: _round_stamp(path.stem))[-1]
+
+
+def _newest_sealed_review(directory: Path) -> tuple[Path, Path] | None:
+    """A signed review snapshot and the sealed items beside it. The work file is not a snapshot."""
+    if not directory.is_dir():
+        return None
+    pairs: list[tuple[Path, Path]] = []
+    legacy = directory / "review-report.json"
+    if legacy.is_file() and (directory / "review_items.json").is_file():
+        pairs.append((legacy, directory / "review_items.json"))
+    for report_path in directory.glob("review-report_*.json"):
+        if not _snapshot_name(report_path.name):
+            continue
+        sealed = report_path.with_name(report_path.stem + ".items.json")
+        if report_path.is_file() and sealed.is_file():
+            pairs.append((report_path, sealed))
+    signed = []
+    for report_path, items_path in pairs:
+        try:
+            report = read_json(report_path)
+            items = read_json(items_path)
+        except (OSError, ValueError):
+            continue
+        if (
+            isinstance(report, dict)
+            and isinstance(report.get("signed"), dict)
+            and isinstance(items, dict)
+            and isinstance(items.get("signed"), dict)
+        ):
+            signed.append((report_path, items_path))
+    if not signed:
+        return None
+    return sorted(signed, key=lambda pair: _round_stamp(pair[0].stem))[-1]
+
+
+def remedy_bundle(
+    reports_dir: Path, stem: str, *, results_dir: Path | None = None
+) -> tuple[list[dict], list[dict]]:
     """Remedy items, then the signed review items they started from."""
     folder = Path(reports_dir)
     remedy_items: list[dict] = []
     remedy_path = folder / f"{stem}.remedy.json"
+    signed_path = folder / f"{stem}.items.json"
+    if results_dir is not None:
+        directory = Path(results_dir) / stem
+        newest = _newest_signed(directory, "remedy-report.json", "remedy-report_*.json")
+        if newest is not None:
+            remedy_path = newest
+            pair = _newest_sealed_review(directory)
+            if pair is not None:
+                signed_path = pair[1]
     if remedy_path.is_file():
         try:
             document = read_json(remedy_path)
@@ -965,31 +1175,53 @@ def remedy_bundle(reports_dir: Path, stem: str) -> tuple[list[dict], list[dict]]
         if isinstance(document, dict):
             remedy_items = [row for row in document.get("items") or [] if isinstance(row, dict)]
     signed_items = list(remedy_items)
-    signed_path = folder / f"{stem}.items.json"
-    if signed_path.is_file():
-        try:
-            signed_document = read_json(signed_path)
-        except (OSError, ValueError):
-            signed_document = None
-        rows = []
-        if isinstance(signed_document, dict):
-            rows = [row for row in signed_document.get("items") or [] if isinstance(row, dict)]
-        if rows:
-            signed_items = rows
+    report_path = signed_path.with_name(
+        "review-report.json" if signed_path.name == "review_items.json" else signed_path.name.replace(".items.json", ".json")
+    )
+    signed_items = _verified_decision_rows(report_path, signed_path, signed_items)
     return remedy_items, signed_items
 
 
-def latest_signed_remedy(reports_dir: Path, run: dict) -> tuple[str, list[dict], list[dict]] | None:
-    """The newest signed Remedy Report whose Review is not this run.
+def latest_signed_remedy(
+    reports_dir: Path,
+    run: dict,
+    *,
+    results_dir: Path | None = None,
+    skip_directory: Path | None = None,
+) -> tuple[str, list[dict], list[dict]] | None:
+    """The newest signed Remedy Report that does not belong to this Check.
 
-    The remedy items carry the history. The third value is the signed review
-    items when that file exists, otherwise the remedy items.
+    The remedy items carry the history. The third value is the newest signed
+    review items from another Check, or this Remedy's own signed items.
+    Identity is the Check directory. A matching result does not hide an earlier Remedy.
     """
-    from review.compile import load_report, same_run
-
     folder = Path(reports_dir)
-    if not folder.is_dir():
+    found: list[tuple[str, list[dict], list[dict]]] = []
+    if folder.is_dir():
+        found.extend(_legacy_remedies(folder, skip_directory))
+    if results_dir is not None and Path(results_dir).is_dir():
+        found.extend(_directory_remedies(Path(results_dir), skip_directory))
+    if not found:
         return None
+    found.sort(key=lambda row: _round_stamp(row[0]))
+    stem, remedy_items, signed_items = found[-1]
+    newer = latest_signed_review_items(
+        folder, run, results_dir=results_dir, skip_directory=skip_directory
+    )
+    if newer:
+        signed_items = newer
+    return stem, remedy_items, signed_items
+
+
+def _round_stamp(stem: str) -> str:
+    return stem.split("_", 1)[1] if "_" in stem else stem
+
+
+def _legacy_remedies(
+    folder: Path, skip_directory: Path | None
+) -> list[tuple[str, list[dict], list[dict]]]:
+    from review.compile import load_report
+
     found: list[tuple[str, list[dict], list[dict]]] = []
     for path in sorted(folder.glob("review-report_*.remedy.json")):
         try:
@@ -1000,30 +1232,157 @@ def latest_signed_remedy(reports_dir: Path, run: dict) -> tuple[str, list[dict],
             continue
         stem = path.name[: -len(".remedy.json")]
         report_path = path.with_name(stem + ".json")
+        if skip_directory is not None and path.parent.resolve() == Path(skip_directory).resolve():
+            continue
         if report_path.is_file():
             try:
-                report = load_report(report_path)
+                load_report(report_path)
             except (ModelError, ValueError):
                 continue
-            if same_run(report, run):
+        remedy_items = [row for row in document.get("items") or [] if isinstance(row, dict)]
+        signed_path = path.with_name(stem + ".items.json")
+        signed_items = _verified_decision_rows(report_path, signed_path, remedy_items)
+        found.append((stem, remedy_items, signed_items))
+    return found
+
+
+def _directory_remedies(
+    results_dir: Path, skip_directory: Path | None
+) -> list[tuple[str, list[dict], list[dict]]]:
+    from review.compile import load_report
+
+    found: list[tuple[str, list[dict], list[dict]]] = []
+    paths = list(results_dir.glob("run-result_*/remedy-report.json"))
+    paths.extend(results_dir.glob("run-result_*/remedy-report_*.json"))
+    for path in sorted(paths):
+        if skip_directory is not None and path.parent.resolve() == Path(skip_directory).resolve():
+            continue
+        try:
+            document = read_json(path)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(document, dict) or not isinstance(document.get("signed"), dict):
+            continue
+        pair = _newest_sealed_review(path.parent)
+        report_path = pair[0] if pair is not None else path.with_name("review-report.json")
+        if report_path.is_file():
+            try:
+                load_report(report_path)
+            except (ModelError, ValueError):
                 continue
         remedy_items = [row for row in document.get("items") or [] if isinstance(row, dict)]
-        signed_items = remedy_items
-        signed_path = path.with_name(stem + ".items.json")
-        if signed_path.is_file():
-            try:
-                signed_document = read_json(signed_path)
-            except (OSError, ValueError):
-                signed_document = None
-            rows = []
-            if isinstance(signed_document, dict):
-                rows = [row for row in signed_document.get("items") or [] if isinstance(row, dict)]
+        items_path = pair[1] if pair is not None else path.with_name("review_items.json")
+        signed_items = _verified_decision_rows(report_path, items_path, remedy_items)
+        found.append((path.parent.name, remedy_items, signed_items))
+    return found
+
+
+def latest_signed_review_items(
+    reports_dir: Path,
+    run: dict,
+    *,
+    results_dir: Path | None = None,
+    skip_directory: Path | None = None,
+) -> list[dict]:
+    """The newest signed review items that do not belong to this Check.
+
+    History stays on the Remedy Report. This list is the decision baseline.
+    A flat report is skipped when its embedded result equals this run, because
+    that file cannot be tied to one Check. A Check directory is skipped only
+    when it is this Check. Items count only when their digest matches the report.
+    """
+    found: list[tuple[str, list[dict]]] = []
+    folder = Path(reports_dir)
+    if folder.is_dir():
+        for path in sorted(folder.glob("review-report_*.items.json")):
+            stem = path.name[: -len(".items.json")]
+            report_path = path.with_name(stem + ".json")
+            rows = _signed_item_rows(report_path, path, run, skip_same_content=True)
             if rows:
-                signed_items = rows
-        found.append((stem, remedy_items, signed_items))
+                found.append((stem, rows))
+    if results_dir is not None and Path(results_dir).is_dir():
+        for directory in sorted(Path(results_dir).glob("run-result_*")):
+            if not directory.is_dir():
+                continue
+            if skip_directory is not None and directory.resolve() == Path(skip_directory).resolve():
+                continue
+            legacy = directory / "review-report.json"
+            rows = _signed_item_rows(
+                legacy,
+                directory / "review_items.json",
+                run,
+                skip_same_content=False,
+            )
+            if rows:
+                found.append((directory.name, rows))
+            for report_path in sorted(directory.glob("review-report_*.json")):
+                if not _snapshot_name(report_path.name):
+                    continue
+                sealed = report_path.with_name(report_path.stem + ".items.json")
+                rows = _signed_item_rows(report_path, sealed, run, skip_same_content=False)
+                if rows:
+                    found.append((report_path.stem, rows))
     if not found:
-        return None
-    return found[-1]
+        return []
+    found.sort(key=lambda row: _round_stamp(row[0]))
+    return found[-1][1]
+
+
+def _signed_item_rows(
+    report_path: Path,
+    items_path: Path,
+    run: dict,
+    *,
+    skip_same_content: bool,
+) -> list[dict]:
+    from review.compile import load_report, same_run
+
+    if not report_path.is_file() or not items_path.is_file():
+        return []
+    try:
+        report = load_report(report_path)
+    except (ModelError, OSError, ValueError):
+        return []
+    if not isinstance(report.get("signed"), dict):
+        return []
+    if skip_same_content and same_run(report, run):
+        return []
+    try:
+        document = read_json(items_path)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(document, dict):
+        return []
+    return _bound_item_rows(report, document)
+
+
+def _bound_item_rows(report: dict, document: dict) -> list[dict]:
+    """The items file counts only when it is signed and still matches items_digest."""
+    if not isinstance(document.get("signed"), dict):
+        return []
+    expected = report.get("items_digest")
+    rows = [row for row in document.get("items") or [] if isinstance(row, dict)]
+    if not rows or not isinstance(expected, str):
+        return []
+    if version_digest({"items": rows}) != expected:
+        return []
+    return rows
+
+
+def _verified_decision_rows(report_path: Path, items_path: Path, fallback: list[dict]) -> list[dict]:
+    """Use the sealed review items when they still match. Otherwise keep the fallback."""
+    from review.compile import load_report
+
+    if not report_path.is_file() or not items_path.is_file():
+        return fallback
+    try:
+        report = load_report(report_path)
+        document = read_json(items_path)
+    except (ModelError, OSError, ValueError):
+        return fallback
+    if not isinstance(report, dict) or not isinstance(document, dict):
+        return fallback
+    return _bound_item_rows(report, document) or fallback
 
 
 def projected_run_names(repo: Path) -> set[str]:
@@ -1046,6 +1405,11 @@ def projected_run_names(repo: Path) -> set[str]:
 
 
 def report_items_path(report_path: Path) -> Path:
+    """Sealed items for a snapshot sit beside that file. The work file stays unsigned."""
+    if report_path.name in {"review-report.json", "remedy-report.json"}:
+        directory = check_directory(report_path)
+        if directory is not None:
+            return directory / "review_items.json"
     name = report_path.name
     if name.endswith(".json"):
         name = name[: -len(".json")] + ".items.json"

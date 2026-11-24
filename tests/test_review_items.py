@@ -17,10 +17,12 @@ from studio.review.impl.items import (
     apply_reused_decision,
     assessments_from_decisions,
     binding_digest,
+    carry_history,
     check_digest,
     decision_reusable,
     history_to_show,
     items_from_run,
+    latest_signed_remedy,
     merge_items,
     open_review_items,
     project_run,
@@ -217,6 +219,37 @@ class DecisionAndHistoryTest(unittest.TestCase):
         accepted["decision"] = "pass"
         self.assertEqual(assessments_from_decisions([accepted], run), [])
 
+    def test_a_stale_binding_decision_becomes_a_binding_assessment(self):
+        from studio.compile.impl.report import _validate_assessments
+
+        run = _run("a" * 40, "clean", status="fail", binding="stale")
+        claim = run["claims"][0]
+        claim["namespace"] = "RISE/house"
+        claim["pack_id"] = "house"
+        claim["requirement_id"] = "REQ-A"
+        item = items_from_run(run)[0]
+        item["decision"] = "must_fix"
+        item["comment"] = "The requirement moved."
+        found = assessments_from_decisions([item], run)
+        self.assertEqual(
+            found,
+            [
+                {
+                    "kind": "binding",
+                    "claim_id": "claim-a",
+                    "claim_digest": "claim-digest",
+                    "namespace": "RISE/house",
+                    "pack_id": "house",
+                    "requirement_id": "REQ-A",
+                    "requirement_digest": "req-digest",
+                    "binding": "stale",
+                    "disposition": "must_fix",
+                    "text": "The requirement moved.",
+                }
+            ],
+        )
+        _validate_assessments(found, run)
+
     def test_a_comment_is_not_retire_and_a_retire_action_is(self):
         run = _run("a" * 40, "clean")
         item = items_from_run(run)[1]
@@ -319,6 +352,30 @@ class ProjectRunTest(unittest.TestCase):
         self.assertEqual(both[0]["key"]["check_digest"], binding_digest())
         self.assertNotIn("remediation_history", both[0])
 
+    def test_a_binding_that_becomes_a_match_records_must_fix_to_pass(self):
+        stale = _run("a" * 40, "clean", status="fail", binding="stale")
+        binding = items_from_run(stale)[0]
+        binding["decision"] = "must_fix"
+        check = items_from_run(stale)[1]
+        check["decision"] = "must_fix"
+        passed = _run("b" * 40, "clean", status="pass", binding="match")
+        projected = project_run([binding, check], passed, remediation="Rebound.")
+        self.assertEqual(projected[0]["key"]["check_digest"], binding_digest())
+        self.assertEqual(projected[0]["decision"], "pass")
+        self.assertEqual(projected[0]["remediation_history"][-1]["transition"], "must_fix -> pass")
+        self.assertEqual(projected[1]["decision"], "pass")
+        self.assertEqual(projected[1]["remediation_history"][-1]["transition"], "must_fix -> pass")
+
+    def test_a_binding_that_stays_stale_keeps_must_fix(self):
+        binding = items_from_run(_run("a" * 40, "clean", status="fail", binding="stale"))[0]
+        binding["decision"] = "must_fix"
+        again = _run("b" * 40, "clean", status="fail", binding="stale")
+        projected = project_run([binding], again, remediation="Still stale.")
+        kept = next(row for row in projected if row["key"]["check_digest"] == binding_digest())
+        self.assertEqual(kept["decision"], "must_fix")
+        self.assertNotIn("transition", kept["remediation_history"][-1])
+        self.assertEqual(kept["remediation_history"][-1]["remediation"], "Still stale.")
+
 
 class TakeInRemedyTest(unittest.TestCase):
     def test_unchanged_underlag_reuses_the_signed_decision(self):
@@ -373,6 +430,211 @@ class TakeInRemedyTest(unittest.TestCase):
         self.assertEqual(check["decision"], "pass")
         self.assertEqual(check["remediation_history"][-1]["transition"], "accepted -> pass")
         self.assertEqual(check["remediation_history"][0]["remediation"], "Waiting for Lisa.")
+
+    def test_keeping_new_decisions_stores_the_history_on_the_items(self):
+        source = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        source["decision"] = "accepted"
+        source = append_history(source, remediation="The document was missing.", date="2026-11-23T09:00:00Z")
+        fresh = items_from_run(_run("b" * 40, "clean"))[1]
+        carried = carry_history([fresh], [source])
+        self.assertEqual(carried[0]["decision"], "pass")
+        self.assertEqual(carried[0]["remediation_history"][0]["remediation"], "The document was missing.")
+
+
+class DirtyProvenanceTest(unittest.TestCase):
+    def test_opening_a_review_copies_the_dirty_sidecar_into_provenance(self):
+        tmp, repo = _repo_with_file("hello\n")
+        self.addCleanup(tmp.cleanup)
+        commit = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        run = _run(commit, "dirty")
+        run_path = repo / "runs" / "run-result_20261123T080000Z.json"
+        record_dirty_files(repo, run_path, run)
+        items, state = open_review_items(
+            repo / "workspace" / "review_items.json",
+            run,
+            repo=repo,
+            run_name=run_path.name,
+        )
+        self.assertEqual(state, "ready")
+        files = items[1]["provenance"]["files"]
+        self.assertEqual(files[0]["path"], "docs/a.md")
+        self.assertEqual(files[0]["size"], (repo / "docs" / "a.md").stat().st_size)
+
+    def test_a_projected_new_check_copies_the_dirty_sidecar(self):
+        tmp, repo = _repo_with_file("hello\n")
+        self.addCleanup(tmp.cleanup)
+        commit = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        run = _run(commit, "dirty")
+        run_path = repo / "runs" / "run-result_20261123T080000Z.json"
+        record_dirty_files(repo, run_path, run)
+        binding = items_from_run(_run(commit, "dirty"))[0]
+        projected = project_run([binding], run, remediation="Check", repo=repo, run_name=run_path.name)
+        check = next(row for row in projected if row["key"]["check_digest"] != binding_digest())
+        self.assertEqual(check["provenance"]["files"][0]["path"], "docs/a.md")
+        self.assertIn("size", check["provenance"]["files"][0])
+
+
+class DecisionBaselineTest(unittest.TestCase):
+    def test_the_newest_signed_review_is_the_decision_baseline(self):
+        from common.jsonio import write_json
+        from common.signing import generate_keypair
+        from review.compile import sign_report, write_report
+        from tests.test_rev03_review import _report
+
+        private, _public = generate_keypair()
+        older = sign_report(
+            _report("claim-old", "First reading."),
+            name="Niklas",
+            private_key=private,
+            at="2026-01-01T00:00:00Z",
+        )
+        item = {
+            "key": {"claim_id": "claim-old", "check_digest": "aa"},
+            "decision": "must_fix",
+            "remediation_history": [
+                {"date": "2026-11-23T09:00:00Z", "remediation": "Filled the gap."}
+            ],
+        }
+        accepted = {**item, "decision": "accepted", "comment": "Prepared.", "remediation_history": []}
+        sealed_items, digest = sign_items_document(
+            [accepted], name="Niklas", private_key=private, at="2026-01-02T00:00:00Z"
+        )
+        newer_body = _report("claim-new", "Lisa is covered.")
+        newer_body["items_digest"] = digest
+        newer = sign_report(
+            newer_body,
+            name="Niklas",
+            private_key=private,
+            at="2026-01-02T00:00:00Z",
+        )
+        current = _report("claim-now", "This run.")
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            write_report(folder / "review-report_20260101T000000Z.json", older)
+            write_report(folder / "review-report_20260102T000000Z.json", newer)
+            write_json(
+                folder / "review-report_20260101T000000Z.remedy.json",
+                {"items": [item], "remedy": True, "signed": {"name": "Urban", "at": "2026-01-01T01:00:00Z", "signature": "seal"}},
+            )
+            write_json(folder / "review-report_20260101T000000Z.items.json", {"items": [item]})
+            write_json(folder / "review-report_20260102T000000Z.items.json", sealed_items)
+            found = latest_signed_remedy(folder, current["run_result"])
+        self.assertIsNotNone(found)
+        stem, remedy_items, signed_items = found
+        self.assertEqual(stem, "review-report_20260101T000000Z")
+        self.assertEqual(remedy_items[0]["remediation_history"][0]["remediation"], "Filled the gap.")
+        self.assertEqual(signed_items[0]["decision"], "accepted")
+
+    def test_edited_items_do_not_become_the_baseline(self):
+        from common.jsonio import write_json
+        from common.signing import generate_keypair
+        from review.compile import sign_report, write_report
+        from tests.test_rev03_review import _report
+
+        private, _public = generate_keypair()
+        item = {
+            "key": {"claim_id": "claim-old", "check_digest": "aa"},
+            "decision": "accepted",
+            "comment": "Prepared.",
+        }
+        sealed_items, digest = sign_items_document(
+            [item], name="Niklas", private_key=private, at="2026-01-02T00:00:00Z"
+        )
+        body = _report("claim-new", "Lisa is covered.")
+        body["items_digest"] = digest
+        signed = sign_report(body, name="Niklas", private_key=private, at="2026-01-02T00:00:00Z")
+        current = _report("claim-now", "This run.")
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            write_report(folder / "review-report_20260102T000000Z.json", signed)
+            sealed_items["items"][0]["decision"] = "pass"
+            write_json(folder / "review-report_20260102T000000Z.items.json", sealed_items)
+            write_json(
+                folder / "review-report_20260102T000000Z.remedy.json",
+                {
+                    "items": [{**item, "decision": "must_fix"}],
+                    "remedy": True,
+                    "signed": {"name": "Urban", "at": "2026-01-02T01:00:00Z", "signature": "seal"},
+                },
+            )
+            found = latest_signed_remedy(folder, current["run_result"])
+        self.assertIsNotNone(found)
+        _stem, _remedy_items, signed_items = found
+        self.assertEqual(signed_items[0]["decision"], "must_fix")
+
+
+class KeepHistoryTest(unittest.TestCase):
+    def test_keep_writes_the_history_into_the_new_review_items(self):
+        import copy
+
+        from app.server import Workspace
+        from common.jsonio import write_json
+        from common.signing import generate_keypair
+        from review.compile import sign_report, write_report
+        from studio.review.impl.items import studio_temp_dir
+        from studio.review.model import _review_view
+        from tests.test_rev03_review import _config, _report, _workspace
+
+        private, _public = generate_keypair()
+        older = sign_report(
+            _report("flow-note", "First reading."),
+            name="Niklas",
+            private_key=private,
+            at="2026-01-01T00:00:00Z",
+        )
+        new_run = copy.deepcopy(older["run_result"])
+        new_run["commit"] = "b" * 40
+        new_run["worktree"] = "clean"
+        fresh = items_from_run(new_run)
+        check = next(item for item in fresh if item["key"]["check_digest"] != binding_digest())
+        remembered = append_history(
+            {**check, "decision": "must_fix"},
+            remediation="The document was missing.",
+            date="2026-11-23T09:00:00Z",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _config(repo)
+            reports = repo / "signed" / "reports"
+            reports.mkdir(parents=True)
+            write_report(reports / "review-report_20260101T000000Z.json", older)
+            write_json(
+                reports / "review-report_20260101T000000Z.remedy.json",
+                {
+                    "items": [remembered],
+                    "remedy": True,
+                    "signed": {"name": "Urban", "at": "2026-01-01T01:00:00Z", "signature": "seal"},
+                },
+            )
+            write_json(reports / "review-report_20260101T000000Z.items.json", {"items": [remembered]})
+            runs = repo / "runs" / "out"
+            runs.mkdir(parents=True)
+            run_path = runs / "run-result_20260102T000000Z.json"
+            write_json(run_path, new_run)
+            _review_view(
+                Workspace(workspace),
+                {
+                    "repo": ["alpha"],
+                    "result": [str(run_path)],
+                    "remedy": ["review-report_20260101T000000Z"],
+                },
+            )
+            stored = read_json(workspace_items_path(studio_temp_dir(repo), run_path.name))
+            kept = next(
+                row for row in stored["items"] if row["key"]["check_digest"] == check["key"]["check_digest"]
+            )
+            self.assertEqual(kept["decision"], "pass")
+            self.assertEqual(kept["remediation_history"][0]["remediation"], "The document was missing.")
 
 
 class RemedySignatureTest(unittest.TestCase):
