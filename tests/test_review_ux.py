@@ -93,8 +93,10 @@ class ReviewStartTest(unittest.TestCase):
             self.assertNotIn("Compile writes a new unsigned report", page)
             self.assertIn("not saved", page)
             self.assertIn('data-selected="run"', page)
-            self.assertNotIn("No claims need attention", page)
-            queue = page.split('<table class="review-queue">', 1)[1]
+            open_list, queue = page.split('<details class="passed-frame"', 1)
+            self.assertIn("<h2>Deviations</h2>", open_list)
+            self.assertIn("No claims need attention", open_list)
+            self.assertNotIn("No claims need attention", queue)
             self.assertIn('data-claim="purpose-note"', queue)
             self.assertIn(">Passed</option>", queue)
             self.assertIn(">Must be fixed</option>", queue)
@@ -448,7 +450,7 @@ class SignedReportLockTest(unittest.TestCase):
                 )
                 snapshot = _get(base + "/review?repo=alpha&report=" + urllib.parse.quote(str(report_path.resolve())))
                 signed_bytes = report_path.read_bytes()
-                self.assertIn("First reading.", sealed_page)
+                self.assertIn("<h1>Check</h1>", sealed_page)
                 self.assertNotIn("Reports for this run", snapshot)
                 self.assertIn("First reading.", snapshot)
                 self.assertNotIn(">Save decision</button>", snapshot)
@@ -512,6 +514,22 @@ class SignedReportLockTest(unittest.TestCase):
                     },
                 )
                 self.assertEqual(list((repo / "signed" / "reports").glob("review-report_*.json")), [])
+                self.assertIn("<h1>Check</h1>", page)
+                opened = _get(
+                    base
+                    + "/review?repo=alpha&resume=1&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                )
+                self.assertIn("Still a draft.", opened)
+                self.assertNotIn("Reports for this run", opened)
+                self.assertIn("<label>Notes</label>", opened)
+                self.assertIn('name="decision" form="review-compile"', opened)
+                self.assertNotIn(">Save decision</button>", opened)
+                self.assertIn('id="review-save"', opened)
+                self.assertIn(">Save</button>", opened)
+                self.assertIn(">Sign</button>", opened)
+                self.assertNotIn('action="/review/sign"', opened)
+                self.assertNotIn(">Create New Report</button>", opened)
                 _post(
                     base + "/review/compile",
                     {
@@ -521,16 +539,6 @@ class SignedReportLockTest(unittest.TestCase):
                         "name": "Ada Reviewer",
                     },
                 )
-            self.assertIn("Still a draft.", page)
-            self.assertNotIn("Reports for this run", page)
-            self.assertIn("<label>Notes</label>", page)
-            self.assertIn('name="decision" form="review-compile"', page)
-            self.assertNotIn(">Save decision</button>", page)
-            self.assertIn('id="review-save"', page)
-            self.assertIn(">Save</button>", page)
-            self.assertIn(">Sign</button>", page)
-            self.assertNotIn('action="/review/sign"', page)
-            self.assertNotIn(">Create New Report</button>", page)
             written = [
                 path
                 for path in (repo / "signed" / "reports").glob("review-report_*.json")

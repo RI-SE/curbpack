@@ -55,6 +55,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     results_folder = results_dir(repo, config)
     reports_folder = reports_dir(repo, config)
     extra = dict(empty)
+    extra["repo_path"] = str(repo.resolve())
     extra["review_fresh"] = (query.get("fresh") or [""])[0] == "1"
     errors: list[str] = []
     if not results_folder.is_dir():
@@ -86,6 +87,8 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             return None, None, " ".join(errors), False, False, None, [], extra
         extra["selected_report"] = chosen
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
+        if isinstance(report.get("signed"), dict) and extra["review_mode"] != "remediation":
+            extra["review_locked"] = True
         if extra["review_mode"] == "remediation":
             from studio.review.impl.items import items_home, load_items, write_items
             from common.jsonio import read_json as _read_items_file

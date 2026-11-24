@@ -196,7 +196,7 @@ class ReviewCompileTest(unittest.TestCase):
                 self.assertTrue((runs[0].parent / "review_items.json").is_file())
                 self.assertFalse(any(runs[0].parent.glob("review-report*.json")))
                 self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
-                self.assertIn(str(runs[0].resolve()), saved)
+                self.assertIn("<h1>Check</h1>", saved)
                 compiled = _post(
                     base + "/review/compile",
                     {"repo_id": "widget", "result": str(runs[0].resolve()), "name": "Ada Reviewer"},

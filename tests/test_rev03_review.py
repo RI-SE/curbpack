@@ -1222,7 +1222,7 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 )
                 self.assertEqual(list(reports.glob("review-report_*.json")), [])
                 self.assertEqual(run_path.read_bytes(), run_before)
-                self.assertIn("Decision saved.", page)
+                self.assertIn("<h1>Check</h1>", page)
                 _post(
                     base + "/review/compile",
                     {
@@ -1322,8 +1322,13 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                     },
                 )
                 self.assertEqual(list((repo / "signed" / "reports").glob("review-report_*.json")), [])
-                self.assertIn("Decision saved.", decided)
-                self.assertIn("Please fix the missing file before approval.", decided)
+                self.assertIn("<h1>Check</h1>", decided)
+                kept = _get(
+                    base
+                    + "/review?repo=alpha&resume=1&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                )
+                self.assertIn("Please fix the missing file before approval.", kept)
                 sealed_page = _post(
                     base + "/review/compile",
                     {
@@ -1347,11 +1352,14 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 self.assertEqual(stored["run_result"]["claims"][0]["checks"][0]["status"], "fail")
                 self.assertEqual(stored["run_result"]["claims"][1]["status"], "skipped")
                 self.assertEqual(stored["run_result"]["claims"][1]["checks"][0]["status"], "skipped")
-            self.assertIn("Report sealed.", sealed_page)
-            self.assertNotIn("became pass", sealed_page.lower())
-            self.assertNotIn("decision became", sealed_page.lower())
-            self.assertIn('data-status="fail"', sealed_page)
-            self.assertIn('data-status="skipped"', sealed_page)
+                opened = _get(
+                    base + "/review?repo=alpha&report=" + urllib.parse.quote(str(report_path.resolve()), safe="")
+                )
+            self.assertIn("<h1>Check</h1>", sealed_page)
+            self.assertNotIn("became pass", opened.lower())
+            self.assertNotIn("decision became", opened.lower())
+            self.assertIn('data-status="fail"', opened)
+            self.assertIn('data-status="skipped"', opened)
             sealed = read_json(report_path)
             reading = read_report_signature(sealed, trust_store(Path(tmp) / "keys"))
             self.assertTrue(reading["verifiable"])

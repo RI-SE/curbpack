@@ -1009,7 +1009,7 @@ class ReviewIoTest(unittest.TestCase):
                     if not path.name.endswith(".items.json")
                 )
                 self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
-                self.assertIn(urllib.parse.quote(str(report_path.resolve()), safe=""), compiled)
+                self.assertIn("<h1>Check</h1>", compiled)
                 self.assertNotIn('id="review-save"', compiled)
                 first = report_path.read_bytes()
                 report = json.loads(first.decode("utf-8"))
@@ -1029,7 +1029,11 @@ class ReviewIoTest(unittest.TestCase):
                 )
                 self.assertFalse(any((repo / "signed" / "reports").glob("review-report_*.json")))
                 self.assertEqual(report_path.read_bytes(), first)
-                self.assertIn("This review is signed.", compiled_again)
+                self.assertIn("The signed decisions are read-only.", compiled_again)
+                self.assertNotIn('id="review-save"', compiled_again)
+                self.assertNotIn('id="sign-open"', compiled_again)
+                self.assertNotIn('id="review-leave-save"', compiled_again)
+                self.assertNotIn("Save did not write a review.", compiled_again)
                 self.assertEqual(
                     len(
                         [

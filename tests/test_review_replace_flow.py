@@ -103,7 +103,7 @@ class ReplaceThenReviewTest(unittest.TestCase):
                         "decision": "I read the replacement run. I am not saying the product meets CRA.",
                     },
                 )
-                self.assertIn("I read the replacement run", sealed)
+                self.assertIn("<h1>Check</h1>", sealed)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
@@ -118,6 +118,7 @@ class ReplaceThenReviewTest(unittest.TestCase):
             self.assertTrue(report_path.is_file())
             self.assertFalse(any(reports_dir(product, config).glob("review-report_*.json")))
             report = read_json(report_path)
+            self.assertIn("I read the replacement run", report["decision"])
             self.assertFalse((product / ".curbpack" / "review-report.json").exists())
             self.assertFalse((product / "docs" / "reports" / "review-report.json").exists())
             reading = read_report_signature(report, trust_store(root / "keys"))

@@ -258,6 +258,11 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board details.requirement > summary{list-style:none;pointer-events:none}
 .review-board details.requirement > summary::-webkit-details-marker{display:none}
 .review-board details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
+.review-board section.deviations-frame{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 .9rem .9rem}
+.review-board section.deviations-frame[data-resolved]{margin-top:1.2rem}
+.review-board section.deviations-frame > h2{font-size:1rem;font-weight:600;margin:0;padding:.75rem 0}
+.review-board details.passed-frame{margin-top:1.2rem;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 .9rem .9rem}
+.review-board details.passed-frame > summary{cursor:pointer;font-weight:600;padding:.75rem 0}
 .review-board details.technical{margin:.35rem 0 0;font-size:.8rem;color:var(--muted)}
 .review-board details.technical > summary{cursor:pointer;list-style:revert;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:.75rem}
 .review-board details.technical code,.review-board details.technical pre{display:block;margin:.35rem 0 0;white-space:pre-wrap;word-break:break-word}
@@ -269,6 +274,8 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board table.review-queue th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:.4rem .45rem;border-bottom:1px solid var(--line)}
 .review-board table.review-queue th.tips{cursor:help}
 .review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
+.review-board td.row-actions form,.review-board td.row-actions p{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;margin:.15rem 0}
+.review-board td.row-actions input[name="remediation"]{width:9rem}
 .review-board table.review-queue p{margin:.15rem 0}
 .review-board select.verdict{font:inherit;max-width:11rem}
 .review-board .remedy-icon{display:inline-block;vertical-align:-.2em;margin-right:.3rem;color:var(--muted)}

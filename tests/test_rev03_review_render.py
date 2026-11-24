@@ -53,7 +53,19 @@ class ReviewRenderStructureTest(unittest.TestCase):
             )
             self.assertNotIn("<th>Remedy</th>", page)
             self.assertIn("<th>Verdict</th>", page)
-            self.assertIn("2 claims · 1 deviation", page)
+            self.assertIn('<details class="passed-frame" data-approved="1">', page)
+            self.assertNotIn('<details class="passed-frame" data-approved="1" open', page)
+            open_list, passed_frame = page.split('<details class="passed-frame"', 1)
+            self.assertIn("<h2>Deviations</h2>", open_list)
+            self.assertLess(
+                open_list.index("<h2>Deviations</h2>"),
+                open_list.index("1 claim · 1 deviation"),
+            )
+            self.assertNotIn("<h2>Deviations</h2>", passed_frame)
+            self.assertIn("1 claim · 1 deviation", open_list)
+            self.assertIn('data-claim="failed-note"', open_list)
+            self.assertNotIn('data-claim="passed-note"', open_list)
+            self.assertIn('data-claim="passed-note"', passed_frame)
 
             failed_group = _details(page, "REQ-FAIL")
             self.assertIn("broke here", failed_group)
@@ -105,9 +117,10 @@ class ReviewRenderStructureTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-MIX")
-            self.assertIn('class="check pass"', group)
             self.assertIn('class="check fail"', group)
             self.assertIn('class="check skipped"', group)
+            self.assertNotIn('class="check pass"', group)
+            self.assertIn('class="check pass"', page.split('data-approved="1"', 1)[1])
             self.assertNotIn("pill-ok", group)
 
     def test_check_pills_use_short_labels_and_caption_tooltips(self):
@@ -152,10 +165,11 @@ class ReviewRenderStructureTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-LABELS")
-            self.assertIn('class="check pass" title="File is present"><svg class="mark"', group)
-            self.assertIn('aria-label="pass"', group)
-            self.assertIn('d="M20 6 9 17l-5-5"', group)
-            self.assertIn("</svg>Exists</span>", group)
+            passed = page.split('data-approved="1"', 1)[1]
+            self.assertIn('class="check pass" title="File is present"><svg class="mark"', passed)
+            self.assertIn('aria-label="pass"', passed)
+            self.assertIn('d="M20 6 9 17l-5-5"', passed)
+            self.assertIn("</svg>Exists</span>", passed)
             self.assertIn(
                 'class="check fail" title="File has the expected content"><svg class="mark"',
                 group,
@@ -172,13 +186,16 @@ class ReviewRenderStructureTest(unittest.TestCase):
                 'class="check skipped" title="File is not a placeholder">Anti-placeholder · skipped<',
                 group,
             )
-            self.assertIn('class="check pass" title="File is recent enough"><svg class="mark"', group)
-            self.assertIn("</svg>Fresh</span>", group)
+            self.assertIn(
+                'class="check pass" title="File is recent enough"><svg class="mark"',
+                passed,
+            )
+            self.assertIn("</svg>Fresh</span>", passed)
             self.assertIn(
                 'class="check pass" title="Written by the claimed author"><svg class="mark"',
-                group,
+                passed,
             )
-            self.assertIn("</svg>Owned</span>", group)
+            self.assertIn("</svg>Owned</span>", passed)
             self.assertIn('class="check fail" title="Banned package version"><svg class="mark"', group)
             self.assertIn("</svg>Banned</span>", group)
             self.assertIn('class="check fail" title="custom_probe"><svg class="mark"', group)
@@ -249,7 +266,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         }
         page = review_page(report, None, door=door).decode()
-        self.assertNotIn('<section data-resolved="1">', page)
+        self.assertNotIn('<section class="deviations-frame" data-resolved="1">', page)
         self.assertNotIn("claim-green", page)
         self.assertIn('data-claim="claim-accepted"', page)
         self.assertNotIn('class="check pass"', page)
@@ -285,7 +302,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
         }
         page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
-        open_list, resolved = page.split('<section data-resolved="1">', 1)
+        open_list, resolved = page.split('<section class="deviations-frame" data-resolved="1">', 1)
         self.assertIn("No claims need attention.", open_list)
         self.assertNotIn("claim-fixed", open_list)
         self.assertIn('data-claim="claim-fixed"', resolved)
@@ -319,7 +336,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             "presentation": {"groups": [{"id": "REQ-A", "claims": [stale]}]},
         }
         page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
-        open_list, resolved = page.split('<section data-resolved="1">', 1)
+        open_list, resolved = page.split('<section class="deviations-frame" data-resolved="1">', 1)
         self.assertIn("No claims need attention.", open_list)
         self.assertNotIn('data-claim="claim-stale"', open_list)
         self.assertIn('data-claim="claim-stale"', resolved)
@@ -362,7 +379,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             "presentation": {"groups": [{"id": "REQ-A", "claims": [passed, waiting]}]},
         }
         page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
-        self.assertNotIn('<section data-resolved="1">', page)
+        self.assertNotIn('<section class="deviations-frame" data-resolved="1">', page)
         self.assertIn('data-claim="claim-passed"', page)
         self.assertIn('data-status="pass"', page)
         self.assertIn("must_fix -&gt; pass", page)
@@ -506,6 +523,13 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         ).decode()
         self.assertIn(">Re-Discover</button>", remediated)
+        self.assertIn('class="discover-again" hidden', remediated)
+        self.assertIn(">Find</button>", remediated)
+        self.assertLess(remediated.index("<th>Actions</th>"), remediated.index("<th>Comment</th>"))
+        self.assertLess(
+            remediated.index("<th>Comment</th>"),
+            remediated.index("<th>Remediation history</th>"),
+        )
         self.assertIn(
             "Find the file first. Re-discover the Claim if that does not work.",
             cells[3],

@@ -72,13 +72,16 @@ def _compile_review(ws: Workspace, form: dict) -> str:
     run = load_run_result(Path(run_path))
     directory = check_directory(Path(run_path))
     if _review_is_locked(repo, Path(run_path)):
-        return _refused_review(repo_id, requested, "This review is signed.")
-    _save_review_work(repo, Path(run_path), run, assessments, decision)
-    if not name:
         return (
-            f"/review?repo={quote(repo_id, safe='')}&saved=1&resume=1"
+            f"/review?repo={quote(repo_id, safe='')}&resume=1"
             f"&result={quote(str(Path(run_path).resolve()), safe='')}"
         )
+    _save_review_work(repo, Path(run_path), run, assessments, decision)
+    if not name:
+        nxt = _safe_review_next((form.get("next") or [""])[0])
+        if nxt:
+            return nxt
+        return f"/check?repo={quote(repo_id, safe='')}"
     out = (
         _new_review_report_path(directory)
         if directory is not None
@@ -119,10 +122,7 @@ def _compile_review(ws: Workspace, form: dict) -> str:
                 out.write_bytes(previous)
             return _refused_review(repo_id, requested, _compile_refusal(exc))
         _lock_review(repo, Path(run_path))
-        return (
-            f"/review?repo={quote(repo_id, safe='')}&signed=1"
-            f"&report={quote(str(out.resolve()), safe='')}"
-        )
+        return f"/check?repo={quote(repo_id, safe='')}"
     nxt = _safe_review_next((form.get("next") or [""])[0])
     if nxt:
         return nxt
@@ -443,7 +443,7 @@ def _remediate(ws: Workspace, form: dict) -> str:
 
     from app.server import _registered_repo_path, _sync_open_repo
     from discovery.door import repo_claims_dir
-    from studio.review.impl.items import append_history, load_items, record_retire, retire_live_check, write_items
+    from studio.review.impl.items import load_items, record_retire, retire_live_check, set_remediation_comment, write_items
 
     repo_id = _sync_open_repo(ws, form)
     if not repo_id:
@@ -465,9 +465,9 @@ def _remediate(ws: Workspace, form: dict) -> str:
             found = True
             if action == "retire":
                 retire_live_check(repo_claims_dir(repo), claim_id, digest)
-                item = record_retire(item, remediation=text)
+                item = record_retire(item, remediation=text.strip() or "Retired.")
             else:
-                item = append_history(item, remediation=text)
+                item = set_remediation_comment(item, text)
         updated.append(item)
     if not found:
         raise ModelError("review_item", "check_digest", "an item in this workspace")
@@ -602,7 +602,9 @@ def _review_get(ws: Workspace, query: dict) -> bytes:
         door["report_path"] = extra["selected_report"]
     refused = (query.get("refused") or [""])[0] == "1"
     note = (query.get("note") or [""])[0]
-    if refused and note:
+    if refused and note == "This review is signed." and door.get("review_locked"):
+        shown_error = error
+    elif refused and note:
         door["compile_refusal"] = note
         shown_error = error
     else:

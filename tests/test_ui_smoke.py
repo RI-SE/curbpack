@@ -117,11 +117,16 @@ class UiSmokeTest(unittest.TestCase):
                 self.assertFalse((run.parent / "review-report.json").exists())
                 self.assertFalse(any(run.parent.glob("review-report_*.json")))
                 self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
-                self.assertNotIn("Save decision and review-sign need a report file", compiled)
-                self.assertNotIn("not saved", compiled)
-                self.assertIn("The stub is not an assessment", compiled)
-                self.assertIn("no field for a conclusion that the product meets CRA", compiled)
-                self.assertIn("not verification of that commit", compiled)
+                self.assertIn("<h1>Check</h1>", compiled)
+                kept = _get(
+                    base
+                    + "/review?repo=sample-product&resume=1&result="
+                    + urllib.parse.quote(str(run.resolve()), safe="")
+                )
+                self.assertNotIn("Save decision and review-sign need a report file", kept)
+                self.assertIn("The stub is not an assessment", kept)
+                self.assertIn("no field for a conclusion that the product meets CRA", kept)
+                self.assertIn("not verification of that commit", kept)
                 self.assertFalse((root / "product" / ".curbpack" / "review-report.json").exists())
                 self.assertFalse((root / "product" / "docs" / "reports" / "review-report.json").exists())
                 self.assertNotIn("signed", json.loads((run.parent / "review_items.json").read_text()))
