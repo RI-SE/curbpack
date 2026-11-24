@@ -194,12 +194,13 @@ def review_page(
         )
     actions = _review_actions(door, report, saved, repo_id)
     refusal = "" if "compile-refusal" in actions else _compile_refusal_html(door)
+    heading = "Remediation" if str(door.get("review_mode") or "") == "remediation" else "Review"
     body = f"""
 <div class="review-board">
 <div class="brand">curbpack-review</div>
 <div class="header">
 <div>
-<h1>Review</h1>
+<h1>{html.escape(heading)}</h1>
 {_review_intro(door, report)}
 </div>
 </div>
@@ -217,7 +218,96 @@ def review_page(
 {dialogs}
 </div>
 """
-    return page("Review", body, banner=panel)
+    return page(heading, body, banner=panel)
+
+
+def _check_is_accepted(claim: dict, check: dict, assessments: dict, review_items: list[dict]) -> bool:
+    """An accepted failing Check is finished. Remediation does not list it again."""
+    from studio.review.impl.items import check_digest
+
+    identity = {
+        "kind": "check",
+        "claim_id": claim.get("id"),
+        "claim_digest": claim.get("digest"),
+        "index": check.get("index"),
+    }
+    saved = assessments.get(assessment_identity(identity))
+    if isinstance(saved, dict) and saved.get("disposition") == "accept":
+        return True
+    args = check.get("args") if isinstance(check.get("args"), dict) else {}
+    digest = check_digest(str(check.get("check") or ""), args)
+    for item in review_items:
+        key = item.get("key") if isinstance(item.get("key"), dict) else {}
+        if (
+            key.get("claim_id") == claim.get("id")
+            and key.get("check_digest") == digest
+            and item.get("decision") == "accepted"
+        ):
+            return True
+    return False
+
+
+def _binding_is_accepted(claim: dict, assessments: dict, review_items: list[dict]) -> bool:
+    from studio.review.impl.items import binding_digest
+
+    identity = {
+        "kind": "binding",
+        "claim_id": claim.get("id"),
+        "claim_digest": claim.get("digest"),
+        "namespace": claim.get("namespace"),
+        "pack_id": claim.get("pack_id"),
+        "requirement_id": claim.get("recorded_requirement_id"),
+        "requirement_digest": claim.get("requirement_digest"),
+        "binding": claim.get("binding"),
+    }
+    saved = assessments.get(assessment_identity(identity))
+    if isinstance(saved, dict) and saved.get("disposition") == "accept":
+        return True
+    digest = binding_digest()
+    for item in review_items:
+        key = item.get("key") if isinstance(item.get("key"), dict) else {}
+        if (
+            key.get("claim_id") == claim.get("id")
+            and key.get("check_digest") == digest
+            and item.get("decision") == "accepted"
+        ):
+            return True
+    return False
+
+
+def _binding_was_rebound(claim: dict, review_items: list[dict]) -> bool:
+    """A signed rebind finishes this binding. Remediation does not list it again."""
+    claim_id = claim.get("id")
+    for item in review_items:
+        key = item.get("key") if isinstance(item.get("key"), dict) else {}
+        if key.get("claim_id") != claim_id:
+            continue
+        for entry in item.get("remediation_history") or []:
+            if isinstance(entry, dict) and entry.get("action") == "rebind":
+                return True
+    return False
+
+
+def _remediation_deviations(
+    claim: dict, deviations: list[dict], assessments: dict, review_items: list[dict]
+) -> list[dict]:
+    """Keep a red Check that is not accepted, and a binding on that same Claim."""
+    kept = []
+    for deviation in deviations:
+        if deviation.get("kind") == "check":
+            check = deviation.get("check") if isinstance(deviation.get("check"), dict) else {}
+            if str(check.get("status") or "") != "fail":
+                continue
+            if _check_is_accepted(claim, check, assessments, review_items):
+                continue
+            kept.append(deviation)
+        elif (
+            deviation.get("kind") == "binding"
+            and not _binding_is_accepted(claim, assessments, review_items)
+            and not _binding_was_rebound(claim, review_items)
+        ):
+            kept.append(deviation)
+    return kept
 
 
 def _review_queue(
@@ -228,6 +318,7 @@ def _review_queue(
 ) -> str:
     """Review queue. Every recorded Check is a row, including a passing Check."""
     remediation = str(door.get("review_mode") or "") == "remediation"
+    remedy_open = remediation and not door.get("remedy_signed")
     if remediation:
         editable = False
     from studio.review.impl.items import check_digest
@@ -258,7 +349,7 @@ def _review_queue(
         return "<td>" + "<br>".join(lines) + "</td>"
 
     def remediation_form(claim: dict, check: dict | None) -> str:
-        if not remediation or not isinstance(check, dict):
+        if not remedy_open or not isinstance(check, dict):
             return ""
         args = check.get("args") if isinstance(check.get("args"), dict) else {}
         digest = check_digest(str(check.get("check") or ""), args)
@@ -303,7 +394,11 @@ def _review_queue(
             if not isinstance(claim, dict):
                 continue
             deviations = _claim_deviations(claim)
-            if not deviations:
+            if remediation:
+                deviations = _remediation_deviations(claim, deviations, assessments, review_items)
+                if not deviations:
+                    continue
+            elif not deviations:
                 if _claim_changed(claim):
                     changed += 1
                     for line in claim.get("sentences") or []:
@@ -316,12 +411,15 @@ def _review_queue(
                             remember(
                                 f"Path {entry.get('path')} is missing in the working tree now."
                             )
-            if deviations or _passing_checks(claim):
+            if deviations or (not remediation and _passing_checks(claim)):
                 queued.append((claim, deviations))
         if not queued:
             continue
         requirement_span = sum(
-            _claim_row_count(claim, deviations) for claim, deviations in queued
+            len(deviations)
+            + (0 if remediation else len(_passing_checks(claim)))
+            + (1 if _requirement_remedy(claim) else 0)
+            for claim, deviations in queued
         )
         requirement_written = False
         requirement_id = str(group.get("id") or "")
@@ -329,7 +427,7 @@ def _review_queue(
         for claim, deviations in queued:
             claim_count += 1
             deviation_count += len(deviations)
-            passes = _passing_checks(claim)
+            passes = [] if remediation else _passing_checks(claim)
             requirement_tip = _requirement_remedy(claim)
             claim_rows: list[tuple[str, object]] = []
             for check in passes:
@@ -338,7 +436,7 @@ def _review_queue(
             if requirement_tip:
                 claim_rows.append(("requirement", requirement_tip))
             claim_span = len(claim_rows)
-            if remediation:
+            if remedy_open:
                 dialog_id, update_dialog = _failed_check_dialog(
                     claim,
                     repo,
@@ -384,7 +482,7 @@ def _review_queue(
                     )
                     dialogs.append(comment_dialog)
                     cells.append(
-                        "<td>" + _check_span(claim, check, dialog_id, allow_edit=remediation) + "</td>"
+                        "<td>" + _check_span(claim, check, dialog_id, allow_edit=remedy_open) + "</td>"
                     )
                     cells.extend(
                         (
@@ -398,7 +496,7 @@ def _review_queue(
                     cells.append(f"<td></td><td>{payload}</td><td></td><td></td>{history_cell(claim, None)}")
                 else:
                     deviation = payload if isinstance(payload, dict) else {}
-                    if remediation and deviation.get("kind") == "binding":
+                    if remedy_open and deviation.get("kind") == "binding":
                         dialogs.append(
                             _binding_dialog(
                                 claim,
@@ -410,7 +508,7 @@ def _review_queue(
                         )
                     cells.append(
                         "<td>"
-                        + _deviation_checks(claim, deviation, dialog_id, allow_edit=remediation)
+                        + _deviation_checks(claim, deviation, dialog_id, allow_edit=remedy_open)
                         + "</td>"
                     )
                     remedy, verdict, comment, dialog = _deviation_cells(
@@ -418,7 +516,7 @@ def _review_queue(
                     )
                     dialogs.append(dialog)
                     deviation_check = deviation.get("check") if isinstance(deviation, dict) else None
-                    if remediation and _evidence_missing(deviation_check):
+                    if remedy_open and _evidence_missing(deviation_check):
                         remedy += (
                             '<p><button type="button" class="discover-again" '
                             f'data-dialog="{html.escape(_dialog_id(str(claim.get("id") or "")))}">'
@@ -499,12 +597,11 @@ def _review_queue(
             f'<input type="hidden" name="{remedy_field}" value="{html.escape(remedy_source)}">'
             "<label>Signer name</label>"
             '<input type="text" name="name" placeholder="The person who did the work">'
-            "<button type=\"submit\">Sign Remedy Report</button>"
+            "<button type=\"submit\">Sign Remediation</button>"
             "</form>"
         )
     elif remediation and door.get("remedy_signed"):
-        signer = html.escape(str(door.get("remedy_signer") or ""))
-        remedy_form = f'<p data-remedy-signed>Remedy report · {signer}</p>'
+        remedy_form = ""
     script = _comment_script()
     if any("check-form" in item for item in dialogs):
         script += "<script>\n" + check_form_script() + "\n</script>"
@@ -650,13 +747,14 @@ def _binding_dialog(claim: dict, repo_id: str, return_to: str) -> str:
     requirement_id = str(claim.get("recorded_requirement_id") or "")
     if claim_id and repo_id and namespace and pack_id and requirement_id:
         actions = (
-            f'<form method="post" action="/claims/{html.escape(claim_id)}/rebind">'
+            f'<form method="post" action="/claims/{html.escape(claim_id)}/rebind" data-rebind="1">'
             f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
             f'<input type="hidden" name="namespace" value="{html.escape(namespace)}">'
             f'<input type="hidden" name="pack_id" value="{html.escape(pack_id)}">'
             f'<input type="hidden" name="requirement_id" value="{html.escape(requirement_id)}">'
             f'<input type="hidden" name="return_to" value="{html.escape(return_to)}">'
-            '<p class="actions"><button type="submit">Sign</button> '
+            '<label>Signer name <input type="text" name="name" required></label>'
+            '<p class="actions"><button type="submit">Rebind and Sign</button> '
             '<button type="button" class="secondary" data-close-binding>Cancel</button></p>'
             "</form>"
         )
@@ -1869,7 +1967,7 @@ def _unsaved_script() -> str:
   }, true);
   document.addEventListener("submit", function(event) {
     var form = event.target;
-    if (!form || form.id === "review-compile" || form.hasAttribute("data-include-assessments")) return;
+    if (!form || form.id === "review-compile" || form.hasAttribute("data-include-assessments") || form.hasAttribute("data-rebind")) return;
     if (!dirty() || leaving) return;
     event.preventDefault();
     pendingHref = "";
@@ -2133,33 +2231,34 @@ def _remediate_link(door: dict, report: dict | None, repo_id: str) -> str:
     locked = bool(door.get("review_locked")) or (
         isinstance(report, dict) and isinstance(report.get("signed"), dict)
     )
-    if not locked:
-        return ""
-    needs = any(
-        isinstance(item, dict) and item.get("decision") == "must_fix"
-        for item in door.get("review_items") or []
-    )
-    if not needs:
-        needs = any(
-            isinstance(item, dict) and item.get("disposition") == "must_fix"
-            for item in (report or {}).get("assessments") or []
-        )
-    if not needs or not repo_id:
+    if not locked or not repo_id:
         return ""
     result = str(door.get("selected_result") or door.get("source_result") or "")
+    if door.get("remedy_signed") or door.get("remedy_locked"):
+        label = "View report"
+        extra = "&view=report"
+    elif door.get("remedy_ready") or any(
+        isinstance(item, dict) and item.get("remediation_history")
+        for item in door.get("review_items") or []
+    ):
+        label = "Continue"
+        extra = ""
+    else:
+        label = "Start"
+        extra = ""
     if result:
         href = (
             f"/review?repo={quote(repo_id, safe='')}"
-            f"&result={quote(result, safe='')}&mode=remediation"
+            f"&result={quote(result, safe='')}&mode=remediation{extra}"
         )
     elif door.get("selected_report"):
         href = (
             f"/review?repo={quote(repo_id, safe='')}"
-            f"&report={quote(str(door.get('selected_report') or ''), safe='')}&mode=remediation"
+            f"&report={quote(str(door.get('selected_report') or ''), safe='')}&mode=remediation{extra}"
         )
     else:
         return ""
-    return f'<p><a class="btn" href="{html.escape(href)}">Remediate</a></p>'
+    return f'<p><a class="btn" href="{html.escape(href)}">{label}</a></p>'
 
 
 def _report_action(door: dict, report: dict | None, saved: bool) -> bool:
@@ -2263,6 +2362,17 @@ def _unchosen_run(door: dict) -> str:
 
 
 def _review_intro(door: dict, report: dict | None) -> str:
+    del report
+    if str(door.get("review_mode") or "") == "remediation" and door.get("remedy_signed"):
+        return (
+            '<p data-report-placeholder>Remediation report is not generated yet. '
+            "This signed remediation is read-only.</p>"
+        )
+    if door.get("review_locked") and str(door.get("review_mode") or "") != "remediation":
+        return (
+            '<p data-report-placeholder>Review report is not generated yet. '
+            "The signed decisions are read-only.</p>"
+        )
     return ""
 
 

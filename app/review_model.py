@@ -426,6 +426,18 @@ def _source_items_path(repo: Path, source: str) -> Path:
     return items_home(repo, Path(source))
 
 
+def _require_open_remediation(items_path: Path) -> None:
+    from common.jsonio import read_json
+
+    document = read_json(items_path) if items_path.is_file() else {}
+    if not isinstance(document, dict):
+        document = {}
+    if document.get("remedy_locked") is True:
+        raise ModelError("remediation", "signed", "This remediation is signed.")
+    if document.get("review_locked") is not True and not isinstance(document.get("signed"), dict):
+        raise ModelError("remediation", "review", "Remediation starts from a signed review.")
+
+
 def _remediate(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
@@ -439,6 +451,7 @@ def _remediate(ws: Workspace, form: dict) -> str:
     repo = _registered_repo_path(ws, repo_id)
     source = (form.get("source") or [""])[0]
     items_path = _source_items_path(repo, source)
+    _require_open_remediation(items_path)
     items = load_items(items_path)
     claim_id = (form.get("claim_id") or [""])[0]
     digest = (form.get("check_digest") or [""])[0]
@@ -481,6 +494,7 @@ def _recheck(ws: Workspace, form: dict) -> str:
     repo = _registered_repo_path(ws, repo_id)
     source = (form.get("source") or [""])[0]
     items_path = _source_items_path(repo, source)
+    _require_open_remediation(items_path)
     claim_id = (form.get("claim_id") or [""])[0]
     digest = (form.get("check_digest") or [""])[0]
     text = (form.get("remediation") or [""])[0] or "Re-check"
@@ -509,6 +523,7 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
     items_path = _source_items_path(repo, source)
     if not items_path.is_file():
         raise ModelError("review_items", "path", "the saved review")
+    _require_open_remediation(items_path)
     name = (form.get("name") or [""])[0].strip()
     if not name:
         raise ModelError("remedy report", "name", "the signer's name")
@@ -525,6 +540,7 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
     private, _public = load_or_create_key(ws.keys, name)
     sealed = sign_remedy_document(load_items(items_path), name=name, private_key=private, at=_now())
     write_json(target, sealed)
+    write_items(items_path, load_items(items_path), marker={"remedy": True, "remedy_locked": True})
     if directory is not None:
         result = directory / "run-result.json"
         return (
@@ -546,6 +562,8 @@ def _review_message(query: dict) -> str:
         return "Report created."
     if (query.get("saved") or [""])[0]:
         return "Decision saved."
+    if (query.get("rebound") or [""])[0]:
+        return "Claim rebound and signed."
     if (query.get("signed") or [""])[0]:
         return "Report sealed."
     if (query.get("claim_changed") or [""])[0]:

@@ -45,15 +45,14 @@ class CheckDirectoryTest(unittest.TestCase):
         flat = by_when["2026-11-22 10:18:00 UTC"]
         self.assertEqual(newest["review_label"], "Create")
         self.assertIn("result=", newest["review_href"])
-        self.assertNotIn("report=", newest["review_href"])
+        self.assertNotIn("view=", newest["review_href"])
         self.assertEqual(newest["remedy_label"], "—")
-        self.assertEqual(signed["review_label"], "Signed")
-        self.assertIn("report=", signed["review_href"])
+        self.assertEqual(signed["review_label"], "View")
+        self.assertIn("view=review", signed["review_href"])
         self.assertNotIn("mode=remediation", signed["review_href"])
-        self.assertEqual(signed["remedy_label"], "—")
-        self.assertEqual(signed["remedy_report_label"], "Signed")
-        self.assertIn("mode=remediation", signed["remedy_report_href"])
-        self.assertIn("snapshot=", signed["remedy_report_href"])
+        self.assertEqual(signed["remedy_label"], "View report")
+        self.assertIn("view=report", signed["remedy_href"])
+        self.assertNotIn("remedy_report_label", signed)
         self.assertEqual(flat["review_label"], "Create")
         self.assertNotIn(str(first), flat["review_href"])
 
@@ -65,9 +64,10 @@ class CheckDirectoryTest(unittest.TestCase):
             write_json(run / "run-result.json", _body())
             write_json(run / "review_items.json", {"items": []})
             rows = _annotate_rounds(None, None, _performed_checks(str(folder)), "alpha")
-        self.assertEqual(rows[0]["review_label"], "In progress")
+        self.assertEqual(rows[0]["review_label"], "Continue")
         self.assertIn("result=", rows[0]["review_href"])
-        self.assertNotIn("review_report_label", rows[0])
+        self.assertIn("resume=1", rows[0]["review_href"])
+        self.assertNotIn("view=", rows[0]["review_href"])
         self.assertEqual(rows[0]["remedy_label"], "—")
 
     def test_saved_work_and_a_signed_report_stay_separate(self):
@@ -90,15 +90,44 @@ class CheckDirectoryTest(unittest.TestCase):
             )
             rows = _annotate_rounds(None, None, _performed_checks(str(folder)), "alpha")
         row = rows[0]
-        self.assertEqual(row["review_label"], "Signed")
-        self.assertIn("report=", row["review_href"])
+        self.assertEqual(row["review_label"], "View")
+        self.assertIn("view=review", row["review_href"])
         self.assertNotIn("mode=remediation", row["review_href"])
-        self.assertIn("review-report_20261124T080000Z.json", row["review_href"])
-        self.assertEqual(row["remedy_label"], "In progress")
+        self.assertEqual(row["remedy_label"], "View report")
         self.assertIn("mode=remediation", row["remedy_href"])
-        self.assertNotIn("snapshot=", row["remedy_href"])
-        self.assertEqual(row["remedy_report_label"], "Signed")
-        self.assertIn("snapshot=", row["remedy_report_href"])
+        self.assertIn("view=report", row["remedy_href"])
+
+    def test_signed_review_moves_from_start_to_continue_to_view_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            run = folder / "run-result_20261123T142000Z"
+            run.mkdir()
+            write_json(run / "run-result.json", _body())
+            write_json(run / "review_items.json", {"items": [], "review_locked": True})
+            started = _annotate_rounds(None, None, _performed_checks(str(folder)), "alpha")
+            write_json(
+                run / "review_items.json",
+                {"items": [{"remediation_history": [{"remediation": "Filled"}]}], "review_locked": True, "remedy": True},
+            )
+            continued = _annotate_rounds(None, None, _performed_checks(str(folder)), "alpha")
+            write_json(
+                run / "review_items.json",
+                {
+                    "items": [{"remediation_history": [{"remediation": "Filled"}]}],
+                    "review_locked": True,
+                    "remedy": True,
+                    "remedy_locked": True,
+                },
+            )
+            signed = _annotate_rounds(None, None, _performed_checks(str(folder)), "alpha")
+        self.assertEqual(started[0]["review_label"], "View")
+        self.assertEqual(started[0]["remedy_label"], "Start")
+        self.assertIn("mode=remediation", started[0]["remedy_href"])
+        self.assertNotIn("view=report", started[0]["remedy_href"])
+        self.assertEqual(continued[0]["review_label"], "View")
+        self.assertEqual(continued[0]["remedy_label"], "Continue")
+        self.assertEqual(signed[0]["remedy_label"], "View report")
+        self.assertIn("view=report", signed[0]["remedy_href"])
 
     def test_a_new_studio_check_is_a_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -129,12 +158,9 @@ class CheckDirectoryTest(unittest.TestCase):
                     {
                         "when": "2026-11-24 07:23 UTC",
                         "path": "/tmp/runs/run-result_20261124T072314Z/run-result.json",
-                        "review_label": "In progress",
+                        "review_label": "Continue",
                         "review_href": "/review?repo=alpha&result=owned",
-                        "review_report_label": "Signed",
-                        "review_report_href": "/review?repo=alpha&report=owned",
-                        "remedy_label": "Remediate",
-                        "remedy_href": "/review?repo=alpha&result=owned&mode=remediation",
+                        "remedy_label": "—",
                         "fail": 4,
                         "pass": 0,
                         "skipped": 0,
@@ -142,9 +168,7 @@ class CheckDirectoryTest(unittest.TestCase):
                 ],
             },
         ).decode()
-        self.assertIn("<th>Remediation</th>", page)
+        self.assertIn("<th>Remedy</th>", page)
         self.assertIn('href="/review?repo=alpha&amp;result=new">Create</a>', page)
-        self.assertIn('href="/review?repo=alpha&amp;result=owned">In progress</a>', page)
-        self.assertIn('href="/review?repo=alpha&amp;report=owned">Signed</a>', page)
-        self.assertIn('href="/review?repo=alpha&amp;result=owned&amp;mode=remediation">Remediate</a>', page)
-        self.assertNotIn("mode=remediation", page.split(">Signed</a>")[0].split("href=")[-1])
+        self.assertIn('href="/review?repo=alpha&amp;result=owned">Continue</a>', page)
+        self.assertNotIn(">Remediate</a>", page)

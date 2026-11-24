@@ -208,11 +208,6 @@ def _items_document(path: Path) -> dict:
     return document if isinstance(document, dict) else {}
 
 
-def _items_need_remedy(path: Path) -> bool:
-    rows = _items_document(path).get("items")
-    return any(isinstance(row, dict) and row.get("decision") == "must_fix" for row in rows or [])
-
-
 def _remediation_started(path: Path) -> bool:
     document = _items_document(path)
     if document.get("remedy") is True:
@@ -237,6 +232,37 @@ def _newest_signed(directory: Path, *patterns: str) -> Path | None:
     return sorted(found, key=lambda path: path.name)[-1]
 
 
+def _round_state(repo_id: str, path: Path, items: Path | None, *, locked: bool, remedy_signed: bool) -> dict:
+    """Create, Continue, and View for the review. Start, Continue, and View report for the remedy."""
+    result = str(path)
+    review_href = _quote_link(repo_id, result=result)
+    if not locked:
+        if items is not None and items.is_file():
+            return {
+                "review_label": "Continue",
+                "review_href": _quote_link(repo_id, result=result, resume="1"),
+                "remedy_label": "—",
+                "remedy_href": "",
+            }
+        return {"review_label": "Create", "review_href": review_href, "remedy_label": "—", "remedy_href": ""}
+    review_href = _quote_link(repo_id, result=result, view="review")
+    if remedy_signed:
+        remedy_label = "View report"
+        remedy_href = _quote_link(repo_id, result=result, mode="remediation", view="report")
+    elif items is not None and _remediation_started(items):
+        remedy_label = "Continue"
+        remedy_href = _quote_link(repo_id, result=result, mode="remediation")
+    else:
+        remedy_label = "Start"
+        remedy_href = _quote_link(repo_id, result=result, mode="remediation")
+    return {
+        "review_label": "View",
+        "review_href": review_href,
+        "remedy_label": remedy_label,
+        "remedy_href": remedy_href,
+    }
+
+
 def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[dict], repo_id: str) -> list[dict]:
     """One row per Check directory. A Review belongs to that directory, not to identical content."""
     from studio.review.impl.items import projected_run_names, studio_temp_dir, workspace_items_path
@@ -250,52 +276,25 @@ def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[
         row = dict(run)
         path = Path(str(run.get("path") or ""))
         directory = path.parent if path.name == "run-result.json" else None
-        result_href = _quote_link(repo_id, result=str(path)) if path else ""
-        row["review_href"] = result_href
-        row["remedy_href"] = ""
-        row["remedy_label"] = "—"
         if directory is not None and directory.name.startswith("run-result_"):
             items = directory / "review_items.json"
-            review = _newest_signed(directory, "review-report.json", "review-report_*.json")
-            remedy = _newest_signed(directory, "remedy-report.json", "remedy-report_*.json")
-            locked = review is not None or _document_is_signed(items) or _items_document(items).get("review_locked") is True
-            if locked and review is not None:
-                row["review_label"] = "Signed"
-                row["review_href"] = _quote_link(repo_id, report=str(review.resolve()))
-            elif items.is_file():
-                row["review_label"] = "In progress"
-                row["review_href"] = result_href
-            else:
-                row["review_label"] = "Create"
-            if locked and _remediation_started(items):
-                row["remedy_label"] = "In progress"
-                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
-            elif locked and _items_need_remedy(items):
-                row["remedy_label"] = "Remediate"
-                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
-            if remedy is not None:
-                row["remedy_report_label"] = "Signed"
-                row["remedy_report_href"] = _quote_link(
-                    repo_id, result=str(path), mode="remediation", snapshot=str(remedy.resolve())
-                )
-        else:
-            items = None
-            if repo is not None and path.name:
-                items = workspace_items_path(studio_temp_dir(repo), path.name)
-            started = items is not None and items.is_file()
-            locked = started and (
-                _document_is_signed(items) or _items_document(items).get("review_locked") is True
+            document = _items_document(items)
+            locked = (
+                _newest_signed(directory, "review-report.json", "review-report_*.json") is not None
+                or _document_is_signed(items)
+                or document.get("review_locked") is True
             )
-            if locked:
-                row["review_label"] = "Signed"
-            else:
-                row["review_label"] = "In progress" if started else "Create"
-            if locked and _remediation_started(items):
-                row["remedy_label"] = "In progress"
-                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
-            elif locked and _items_need_remedy(items):
-                row["remedy_label"] = "Remediate"
-                row["remedy_href"] = _quote_link(repo_id, result=str(path), mode="remediation")
+            remedy_signed = (
+                _newest_signed(directory, "remedy-report.json", "remedy-report_*.json") is not None
+                or document.get("remedy_locked") is True
+            )
+        else:
+            items = workspace_items_path(studio_temp_dir(repo), path.name) if repo is not None and path.name else None
+            document = _items_document(items) if items is not None else {}
+            locked = _document_is_signed(items) if items is not None else False
+            locked = locked or document.get("review_locked") is True
+            remedy_signed = document.get("remedy_locked") is True
+        row.update(_round_state(repo_id, path, items, locked=locked, remedy_signed=remedy_signed))
         rows.append(row)
     return rows
 

@@ -248,11 +248,24 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
     directory = _claims_directory(ws, form)
     claim = read_claim(directory / f"{claim_id}.json")
     updated = rebind_requirement(claim, requirement)
+    return_to = (form.get("return_to") or [""])[0]
+    name = (form.get("name") or [""])[0].strip()
+    if "mode=remediation" in return_to and not name:
+        raise ModelError("claim", "name", "the signer name")
+    if name:
+        from app.server import _now
+
+        private, _public = load_or_create_key(ws.keys, name)
+        updated = sign_claim(updated, name=name, private_key=private, at=_now())
     write_claim(directory, updated)
     from studio.review.impl.items import record_rebind
 
-    record_rebind(_claims_repo(ws, form), (form.get("return_to") or [""])[0], claim_id)
-    return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+    record_rebind(_claims_repo(ws, form), return_to, claim_id, signed=bool(name))
+    target = _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+    if name and (target.startswith("/review?") or target == "/review"):
+        join = "&" if "?" in target else "?"
+        return f"{target}{join}rebound=1"
+    return target
 
 
 def _update_claim(ws: Workspace, claim_id: str, form: dict) -> str:

@@ -170,14 +170,21 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         resumed = (query.get("resume") or [""])[0] == "1"
         extra["review_resumed"] = resumed
         choice = ""
-        if resumed:
+        pre = _read_items_file(items_path) if items_path.is_file() else {}
+        pre_locked = isinstance(pre, dict) and (
+            pre.get("review_locked") is True or isinstance(pre.get("signed"), dict)
+        )
+        if pre_locked:
+            choice = "continue"
+            extra["review_fresh"] = False
+        elif resumed:
             choice = "continue"
         elif extra["review_fresh"]:
             choice = "start"
         _items, items_state = open_review_items(
             items_path, loaded, choice=choice, repo=repo, run_name=run_name
         )
-        if items_state == "ask":
+        if items_state == "ask" and not pre_locked:
             extra["existing_review_items"] = str(items_path)
         source_items: list[dict] = []
         signed_items: list[dict] = []
@@ -230,6 +237,24 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             stored_now.get("review_locked") is True or isinstance(stored_now.get("signed"), dict)
         ):
             extra["review_locked"] = True
+        remedy_locked = isinstance(stored_now, dict) and stored_now.get("remedy_locked") is True
+        home = check_directory(run_path)
+        if not remedy_locked and home is not None:
+            from studio.review.impl.items import _newest_signed
+
+            remedy_locked = _newest_signed(home, "remedy-report.json", "remedy-report_*.json") is not None
+        view = (query.get("view") or [""])[0]
+        if (
+            extra.get("review_locked")
+            and extra["review_mode"] == "remediation"
+            and not remedy_locked
+            and view != "report"
+        ):
+            write_items(items_path, load_items(items_path), marker={"remedy": True})
+            extra["remedy_ready"] = True
+        if remedy_locked:
+            extra["remedy_locked"] = True
+            extra["remedy_signed"] = True
         try:
             from studio.review.impl.items import assessments_from_decisions
 

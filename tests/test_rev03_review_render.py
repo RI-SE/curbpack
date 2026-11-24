@@ -196,6 +196,96 @@ class ReviewRenderStructureTest(unittest.TestCase):
             self.assertNotIn('title="Add a paragraph."', group)
             self.assertNotIn(">File is present ·", group)
 
+    def test_remediation_lists_only_unaccepted_red_checks(self):
+        green = {
+            "id": "claim-green",
+            "checks": [{"index": 0, "check": "exist", "status": "pass", "args": {"path": "ok.md"}}],
+        }
+        accepted = {
+            "id": "claim-accepted",
+            "digest": "digest-accepted",
+            "checks": [
+                {"index": 0, "check": "exist", "status": "pass", "args": {"path": "a.md"}},
+                {"index": 1, "check": "contents", "status": "fail", "args": {"path": "a.md"}},
+            ],
+        }
+        stale = {
+            "id": "claim-stale",
+            "binding": "stale",
+            "namespace": "house",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [{"index": 0, "check": "exist", "status": "pass", "args": {"path": "c.md"}}],
+        }
+        open_fail = {
+            "id": "claim-open",
+            "digest": "digest-open",
+            "checks": [
+                {"index": 0, "check": "exist", "status": "pass", "args": {"path": "b.md"}},
+                {"index": 1, "check": "contents", "status": "fail", "args": {"path": "b.md"}},
+                {"index": 2, "check": "fresh", "status": "skipped", "args": {}},
+            ],
+        }
+        report = {
+            "run_result": {"claims": []},
+            "claims": [],
+            "assessments": [
+                {
+                    "kind": "check",
+                    "claim_id": "claim-accepted",
+                    "claim_digest": "digest-accepted",
+                    "index": 1,
+                    "disposition": "accept",
+                    "text": "Known gap.",
+                }
+            ],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "presentation": {
+                "groups": [{"id": "REQ-A", "claims": [green, accepted, stale, open_fail]}]
+            },
+        }
+        page = review_page(report, None, door=door).decode()
+        self.assertNotIn("claim-green", page)
+        self.assertNotIn("claim-accepted", page)
+        self.assertNotIn(">Accept<", page)
+        self.assertNotIn('class="check pass"', page)
+        self.assertNotIn('class="check skipped"', page)
+        self.assertIn('data-claim="claim-open"', page)
+        self.assertIn('data-claim="claim-stale"', page)
+        self.assertIn('data-binding="stale"', page)
+        self.assertIn('class="check fail"', page)
+
+    def test_a_signed_rebind_leaves_the_remediation_list(self):
+        stale = {
+            "id": "claim-stale",
+            "binding": "stale",
+            "namespace": "house",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [{"index": 0, "check": "exist", "status": "pass", "args": {"path": "c.md"}}],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                {
+                    "key": {"claim_id": "claim-stale", "check_digest": "binding"},
+                    "remediation_history": [
+                        {"date": "2026-11-24T00:00:00Z", "remediation": "Rebound the Claim.", "action": "rebind"}
+                    ],
+                }
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [stale]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        self.assertNotIn('data-claim="claim-stale"', page)
+        self.assertIn("No claims need attention.", page)
+
     def test_binding_stale_opens_a_sign_dialog_instead_of_rebind(self):
         claim = {
             "id": "claim-a",
@@ -205,6 +295,7 @@ class ReviewRenderStructureTest(unittest.TestCase):
             "recorded_requirement_id": "REQ-A",
             "checks": [
                 {"index": 0, "check": "exist", "status": "pass", "args": {"path": "a.md"}},
+                {"index": 1, "check": "contents", "status": "fail", "args": {"path": "a.md"}},
             ],
         }
         page = review_page(
@@ -230,6 +321,10 @@ class ReviewRenderStructureTest(unittest.TestCase):
             },
         ).decode()
         page = remediated
+        self.assertIn("<h1>Remediation</h1>", page)
+        self.assertIn("<title>Remediation</title>", page)
+        self.assertNotIn("<h1>Review</h1>", page)
+        self.assertNotIn('class="check pass"', page)
         self.assertIn('data-binding-dialog="binding-claim-a"', page)
         self.assertIn('aria-label="Binding stale"', page)
         self.assertIn("Requirement Binding</button>", page)
@@ -240,7 +335,9 @@ class ReviewRenderStructureTest(unittest.TestCase):
         self.assertIn("The Requirement has changed since this Claim was bound to it.", page)
         self.assertNotIn("Click the check to rebind this Claim.", page)
         self.assertIn("Have you checked the Requirement and confirmed this Claim still applies?", page)
-        self.assertIn(">Sign</button>", page)
+        self.assertIn(">Rebind and Sign</button>", page)
+        self.assertIn('name="name"', page)
+        self.assertIn('data-rebind="1"', page)
         self.assertIn(">Cancel</button>", page)
         self.assertIn('action="/claims/claim-a/rebind"', page)
         self.assertIn('name="return_to" value="/review?repo=alpha', page)

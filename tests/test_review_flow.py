@@ -67,14 +67,14 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                     }
                 )
                 saved = _post(base + "/review/compile", fields)
-                self.assertNotIn(">Remediate</a>", saved)
+                self.assertNotIn(">Start</a>", saved)
                 self.assertFalse((Path(result_path).parent / "review-report.json").is_file())
                 fields["name"] = "Ada Reviewer"
                 signed = _post(base + "/review/compile", fields)
-                self.assertIn(">Remediate</a>", signed)
-                remediation = _get(base + _href(signed, "Remediate"))
+                self.assertIn(">Start</a>", signed)
+                remediation = _get(base + _href(signed, "Start"))
                 self.assertIn('data-action="retire"', remediation)
-                self.assertIn(">Sign Remedy Report</button>", remediation)
+                self.assertIn(">Sign Remediation</button>", remediation)
                 form = re.search(
                     r'action="/review/remediate"(.*?)</form>',
                     remediation,
@@ -89,7 +89,8 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                     base + "/review/remedy",
                     {"repo_id": "alpha", "result": result_path, "name": "Urban"},
                 )
-                self.assertIn(">Re-run Checks</button>", remedy)
+                self.assertIn("This signed remediation is read-only.", remedy)
+                self.assertNotIn(">Sign Remediation</button>", remedy)
                 nxt = _post_redirect(
                     base + "/check",
                     {"repo_id": "alpha", "action": "check", "return_to": "/review"},
@@ -109,9 +110,9 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 table = _get(base + "/check?repo=alpha")
                 self.assertIn("<th>Check Result</th>", table)
                 self.assertIn("<th>Review</th>", table)
-                self.assertIn("<th>Remediation</th>", table)
-                self.assertIn(">In progress</a>", table)
-                self.assertIn(">Signed</a>", table)
+                self.assertIn("<th>Remedy</th>", table)
+                self.assertIn(">View</a>", table)
+                self.assertIn(">View report</a>", table)
             stored = read_json(next(Path(result_path).parent.glob("remedy-report_*.json")))
             self.assertIn("signed", stored)
             work = read_json(Path(result_path).parent / "review_items.json")

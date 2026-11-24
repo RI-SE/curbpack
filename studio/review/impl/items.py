@@ -265,7 +265,15 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
     if path.is_file():
         current = read_json(path)
         if isinstance(current, dict):
-            for key in ("history_from", "remedy", "projected_runs", "notes", "work_saved", "review_locked"):
+            for key in (
+                "history_from",
+                "remedy",
+                "projected_runs",
+                "notes",
+                "work_saved",
+                "review_locked",
+                "remedy_locked",
+            ):
                 if key in current:
                     kept[key] = current[key]
     if marker:
@@ -1029,7 +1037,7 @@ def record_check_change(
     write_items(path, updated)
 
 
-def record_rebind(repo: Path, return_to: str, claim_id: str) -> None:
+def record_rebind(repo: Path, return_to: str, claim_id: str, *, signed: bool = False) -> None:
     """Rebind records one history entry on this Claim."""
     path = _workspace_from_return(repo, return_to)
     if path is None:
@@ -1050,7 +1058,9 @@ def record_rebind(repo: Path, return_to: str, claim_id: str) -> None:
     updated = []
     for item in items:
         if item_key(item) == target:
-            item = append_history(item, remediation="Rebound the Claim.")
+            item = append_history(
+                item, remediation="Rebound the Claim.", action="rebind" if signed else None
+            )
         updated.append(item)
     write_items(path, updated)
 

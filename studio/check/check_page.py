@@ -24,7 +24,7 @@ def check_page(
     )
     body = f"""
 <h1>Check</h1>
-<p>Check writes a Result. Review saves decisions on that Result until Sign locks them. Remediation starts from that signed review. A Remedy Report records the work and leaves those decisions unchanged.</p>
+<p>Check writes a Result. Review saves decisions on that Result until Sign locks them. A signed review opens read-only. Remediation starts from that signed review, and Sign locks that work too. Reports are not generated yet.</p>
 {_flash(message, error)}
 {_pack_card(door)}
 <h2>Checks performed</h2>
@@ -102,7 +102,7 @@ def _performed_table(editor: dict) -> str:
             "</tr>"
         )
     return (
-        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remediation</th></tr></thead><tbody>"
+        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remedy</th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )

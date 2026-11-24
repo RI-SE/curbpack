@@ -617,13 +617,13 @@ class CheckSummaryTest(unittest.TestCase):
         self.assertLess(page.index("<h1>Check</h1>"), page.index("Sign locks them"))
         self.assertIn(
             "Check writes a Result. Review saves decisions on that Result until Sign locks them. "
-            "Remediation starts from that signed review. "
-            "A Remedy Report records the work and leaves those decisions unchanged.",
+            "A signed review opens read-only. Remediation starts from that signed review, "
+            "and Sign locks that work too. Reports are not generated yet.",
             page,
         )
         self.assertIn("<th>Check Result</th>", page)
         self.assertIn("<th>Review</th>", page)
-        self.assertIn("<th>Remediation</th>", page)
+        self.assertIn("<th>Remedy</th>", page)
         self.assertLess(page.index("Checks performed"), page.index("2026-01-02 15:30 UTC"))
         self.assertLess(page.index("2026-01-02 15:30 UTC"), page.index("2026-01-01 00:00 UTC"))
         self.assertIn("1 fail", page)
