@@ -295,6 +295,8 @@ def _binding_rechecked_pass(claim: dict, review_items: list[dict]) -> bool:
     from studio.review.impl.items import binding_digest
 
     item = _matching_item(claim, binding_digest(), review_items)
+    if isinstance(item, dict) and item.get("decision") == "must_fix":
+        return False
     if isinstance(item, dict) and item.get("decision") == "pass":
         return True
     return bool(_rebind_history(claim, review_items))
@@ -561,7 +563,12 @@ def _review_queue(
             claim_count += 1
             deviation_count += 0 if approved else len(deviations)
             passes = _passing_checks(claim) if approved else []
-            requirement_tip = "" if approved and deviations else _requirement_remedy(claim)
+            claim_closed = remediation and bool(deviations) and all(
+                _deviation_retired(claim, deviation, review_items)
+                or _deviation_passed(claim, deviation, review_items)
+                for deviation in deviations
+            )
+            requirement_tip = "" if (approved and deviations) or claim_closed else _requirement_remedy(claim)
             claim_rows: list[tuple[str, object]] = []
             for check in passes:
                 claim_rows.append(("pass", check))
@@ -736,15 +743,12 @@ def _review_queue(
     def _plural(count: int, word: str) -> str:
         return f"{count} {word}" + ("" if count == 1 else "s")
 
-    count = (
-        f"{_plural(claim_count, 'claim')} · {_plural(deviation_count, 'deviation')}"
-        if claim_count
-        else "No claims need attention"
-    )
-    meta = f'<p class="review-meta">{html.escape(when + " · " if when else "")}{html.escape(count)}</p>'
     if not body_rows:
+        meta = ""
         table = "<p>No claims need attention.</p>"
     else:
+        count = f"{_plural(claim_count, 'claim')} · {_plural(deviation_count, 'deviation')}"
+        meta = f'<p class="review-meta">{html.escape(when + " · " if when else "")}{html.escape(count)}</p>'
         table = (
             '<table class="review-queue"><thead><tr>'
             "<th>Requirement</th><th>File</th><th>Checks</th>"
@@ -826,7 +830,40 @@ def _review_queue(
         + table
         + "</section>"
     )
-    return open_list + retired_list + remedy_form + changed_note + "".join(dialogs) + done + passed + script
+    return (
+        _round_notes(door)
+        + open_list
+        + retired_list
+        + remedy_form
+        + changed_note
+        + "".join(dialogs)
+        + done
+        + passed
+        + script
+    )
+
+
+def _round_notes(door: dict) -> str:
+    """Notes for this remediation round. They sit above the queues and travel with Sign Off."""
+    if str(door.get("review_mode") or "") != "remediation":
+        return ""
+    text = str(door.get("remedy_notes") or "")
+    if door.get("remedy_signed"):
+        if not text.strip():
+            return ""
+        return (
+            '<section class="round-notes"><h2>Notes</h2>'
+            f"<p data-remedy-notes>{html.escape(text)}</p></section>"
+        )
+    placeholder = (
+        "What this round did not cover. For example: other Checks still fail and are outside "
+        "this round, so a full Check is recommended."
+    )
+    return (
+        '<section class="round-notes"><h2>Notes</h2>'
+        f'<textarea name="notes" form="remedy-sign" placeholder="{html.escape(placeholder)}">'
+        f"{html.escape(text)}</textarea></section>"
+    )
 
 
 def _claim_deviations(claim: dict) -> list[dict]:
@@ -1903,15 +1940,8 @@ def _file_preview(root: Path, relative: str) -> str:
 
 
 def _find_dialog(dialog_id: str, filename: str, choices: list[tuple[str, str]], hidden: str) -> str:
-    """Radios for every same-named file. OK writes that path into the Claim."""
+    """Radios for every same-named file. Opening the dialog searches again."""
     name = html.escape(Path(filename).name or filename)
-    if not choices:
-        return (
-            f'<dialog id="{html.escape(dialog_id)}" class="binding-note" data-find>'
-            f"<p>Files named <code>{name}</code></p>"
-            f"<p>No file named <code>{name}</code> is in this project.</p>"
-            '<p><button type="button" class="secondary" data-find-cancel>Cancel</button></p></dialog>'
-        )
     radios = []
     previews = []
     for index, (path, text) in enumerate(choices):
@@ -1931,16 +1961,20 @@ def _find_dialog(dialog_id: str, filename: str, choices: list[tuple[str, str]], 
             '<p><button type="button" class="secondary" data-find-preview-close>Close</button></p>'
             "</dialog>"
         )
+    listed = "".join(radios) or f"<p>No file named <code>{name}</code> is in this project.</p>"
+    submit_hidden = "" if choices else " hidden"
     return (
-        f'<dialog id="{html.escape(dialog_id)}" class="binding-note" data-find>'
+        f'<dialog id="{html.escape(dialog_id)}" class="binding-note" data-find '
+        f'data-find-name="{name}">'
         f'<form method="post" action="/review/find">{hidden}'
         f"<p>Files named <code>{name}</code></p>"
-        f"{''.join(radios)}"
+        f'<div data-find-choices>{listed}</div>'
+        f'<div data-find-submit{submit_hidden}>'
         '<p class="muted">OK writes this path into the Claim, signs it, and runs the check again.</p>'
         "<label>Signer name <input type=\"text\" name=\"name\" required></label>"
         '<p><button type="submit">OK</button> '
         '<button type="button" class="secondary" data-find-cancel>Cancel</button></p>'
-        f"</form></dialog>{''.join(previews)}"
+        f"</div></form></dialog>{''.join(previews)}"
     )
 
 
@@ -1999,10 +2033,66 @@ document.querySelectorAll("[data-remedy-comment-cancel]").forEach(function(butto
 def _find_script() -> str:
     return """
 <script>
+function findEscape(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+function paintFind(dialog, paths) {
+  var box = dialog.querySelector("[data-find-choices]");
+  var submit = dialog.querySelector("[data-find-submit]");
+  if (!box) return;
+  document.querySelectorAll('dialog[data-find-preview][id^="' + dialog.id + '-preview-"]').forEach(function(node) {
+    node.remove();
+  });
+  if (!paths.length) {
+    box.innerHTML = "<p>No file named <code>" + findEscape(dialog.getAttribute("data-find-name") || "") + "</code> is in this project.</p>";
+    if (submit) submit.hidden = true;
+    return;
+  }
+  var radios = "";
+  paths.forEach(function(row, index) {
+    var previewId = dialog.id + "-preview-" + index;
+    radios += '<label class="find-choice"><input type="radio" name="path" value="'
+      + findEscape(row.path) + '" required data-find-preview="' + findEscape(previewId) + '"><code>'
+      + findEscape(row.path) + "</code></label>";
+    var preview = document.createElement("dialog");
+    preview.id = previewId;
+    preview.className = "binding-note";
+    preview.setAttribute("data-find-preview", "");
+    preview.innerHTML = "<p><code>" + findEscape(row.path) + "</code></p>"
+      + '<p class="muted">This is the file in the working tree now.</p><pre>'
+      + findEscape(row.text || "") + "</pre>"
+      + '<p><button type="button" class="secondary" data-find-preview-close>Close</button></p>';
+    preview.querySelector("[data-find-preview-close]").addEventListener("click", function() {
+      preview.close();
+    });
+    dialog.parentNode.insertBefore(preview, dialog.nextSibling);
+  });
+  box.innerHTML = radios;
+  if (submit) submit.hidden = false;
+  box.querySelectorAll("input[data-find-preview]").forEach(function(input) {
+    input.addEventListener("click", function() {
+      var preview = document.getElementById(input.getAttribute("data-find-preview"));
+      if (preview && preview.showModal) preview.showModal();
+    });
+  });
+}
 document.querySelectorAll("[data-find-open]").forEach(function(button) {
   button.addEventListener("click", function() {
     var dialog = document.getElementById(button.getAttribute("data-find-open"));
-    if (dialog && dialog.showModal) dialog.showModal();
+    if (!dialog || !dialog.showModal) return;
+    dialog.showModal();
+    var repoInput = dialog.querySelector('input[name="repo_id"]');
+    var repo = repoInput ? repoInput.value : "";
+    var name = dialog.getAttribute("data-find-name") || "";
+    var url = "/review/find-files?repo_id=" + encodeURIComponent(repo) + "&name=" + encodeURIComponent(name);
+    fetch(url).then(function(response) { return response.json(); }).then(function(data) {
+      paintFind(dialog, (data && data.paths) || []);
+    });
   });
 });
 document.querySelectorAll("[data-find] input[data-find-preview]").forEach(function(input) {
@@ -2194,6 +2284,7 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
         return ""
     rerun = ""
     open_remedy = str(door.get("review_mode") or "") == "remediation" and not door.get("remedy_signed")
+    revoke = ""
     if str(door.get("review_mode") or "") == "remediation" and door.get("remedy_signed"):
         rerun = f"""
 <form method="post" action="/check">
@@ -2203,6 +2294,7 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
 <p class="actions"><button type="submit" data-leave="1">Run Check</button></p>
 </form>
 """
+        revoke = _revoke_sign(door)
     cancel_href = f"/check?repo={quote(repo_id, safe='')}"
     read_only = str(door.get("review_mode") or "") != "remediation" and (
         door.get("viewing_snapshot")
@@ -2219,7 +2311,7 @@ def _review_actions(door: dict, report: dict | None, saved: bool, repo_id: str) 
         f'<p class="actions"><a class="btn" data-discard="1" href="{html.escape(cancel_href)}">Cancel</a></p>'
     )
     leave = "" if read_only else f"{_leave_dialog()}{_unsaved_script()}"
-    return f'<div class="review-actions">{rerun}{form}{back}</div>{leave}'
+    return f'<div class="review-actions">{rerun}{revoke}{form}{back}</div>{leave}'
 
 
 def _assessment_index(report: dict | None) -> dict:
@@ -2729,6 +2821,57 @@ def _remedy_actions(door: dict) -> str:
 """
 
 
+def _revoke_sign(door: dict) -> str:
+    """Ask for a name, then open the round. The sealed file is left in place."""
+    repo_id = str(door.get("repo_id") or "")
+    source = str(door.get("selected_result") or door.get("source_result") or "")
+    field = "result"
+    if not source:
+        source = str(door.get("selected_report") or "")
+        field = "report"
+    if not repo_id or not source:
+        return ""
+    return f"""
+<form id="remedy-revoke" method="post" action="/review/remedy">
+<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
+<input type="hidden" name="{field}" value="{html.escape(source)}">
+<p class="actions"><button type="button" id="revoke-open" class="secondary">Revoke signature</button></p>
+</form>
+<dialog id="revoke-dialog">
+<p>Revoke opens this remediation. The signed file stays.</p>
+<label>Name
+<input type="text" name="name" form="remedy-revoke" placeholder="The person revoking the signature">
+</label>
+<p>
+<button type="submit" id="review-revoke" name="action" value="revoke" form="remedy-revoke">Revoke</button>
+<button type="button" id="revoke-cancel" class="secondary">Cancel</button>
+</p>
+</dialog>
+<script>
+(function() {{
+  var open = document.getElementById("revoke-open");
+  var dialog = document.getElementById("revoke-dialog");
+  var form = document.getElementById("remedy-revoke");
+  if (!open || !dialog || !dialog.showModal) return;
+  var name = document.querySelector('input[name="name"][form="remedy-revoke"]');
+  open.addEventListener("click", function() {{
+    dialog.showModal();
+    if (name) name.focus();
+  }});
+  var cancel = document.getElementById("revoke-cancel");
+  if (cancel) cancel.addEventListener("click", function() {{ dialog.close(); }});
+  if (form) form.addEventListener("submit", function(event) {{
+    if (!event.submitter || event.submitter.id !== "review-revoke") return;
+    if (name && name.value.trim()) return;
+    event.preventDefault();
+    if (!dialog.open) dialog.showModal();
+    if (name) name.focus();
+  }});
+}})();
+</script>
+"""
+
+
 def _compile_form(
     door: dict, report: dict | None, saved: bool, repo_id: str, cancel_href: str = ""
 ) -> str:
@@ -2925,11 +3068,50 @@ def _outside_account(events: list) -> str:
     )
 
 
+def _signed_off_line(door: dict) -> str:
+    who = str(door.get("remedy_signer") or "").strip()
+    when = str(door.get("remedy_signed_at") or "").strip()
+    if who and when:
+        return f"Signed off by {who} at {when}."
+    if who:
+        return f"Signed off by {who}."
+    return "Signed off."
+
+
+def _remedy_pdf_link(door: dict, *, revoked: bool = False) -> str:
+    name = str(door.get("remedy_revocation_md" if revoked else "remedy_md") or "")
+    repo = str(door.get("repo_id") or "")
+    source = str(door.get("selected_result") or door.get("source_result") or "")
+    if not name or not repo or not source:
+        return ""
+    href = (
+        f"/review/remedy-report?repo={quote(repo, safe='')}"
+        f"&result={quote(source, safe='')}"
+    )
+    if revoked:
+        href += f"&file={quote(name, safe='')}"
+    label = "Previous remediation report" if revoked else "Remediation report"
+    return f'<p><a href="{html.escape(href)}">{label}</a></p>'
+
+
 def _review_intro(door: dict, report: dict | None) -> str:
     if str(door.get("review_mode") or "") == "remediation" and door.get("remedy_signed"):
         return (
-            '<p data-report-placeholder>Remediation report is not generated yet. '
+            f'<p data-remedy-signed>{html.escape(_signed_off_line(door))} '
             "This signed remediation is read-only.</p>"
+            f"{_remedy_pdf_link(door)}"
+        )
+    revocation = door.get("remedy_revocation") if isinstance(door.get("remedy_revocation"), dict) else None
+    if str(door.get("review_mode") or "") == "remediation" and revocation:
+        report_name = str(revocation.get("report") or "the previous signature")
+        who = str(revocation.get("name") or "").strip()
+        when = str(revocation.get("at") or "").strip()
+        by = f" by {who}" if who else ""
+        at = f" at {when}" if when else ""
+        return (
+            f'<p data-remedy-revoked>The signature on {html.escape(report_name)} '
+            f"was revoked{html.escape(by)}{html.escape(at)}. The signed file is unchanged.</p>"
+            f"{_remedy_pdf_link(door, revoked=True)}"
         )
     if door.get("review_locked") and str(door.get("review_mode") or "") != "remediation":
         if isinstance(report, dict) and isinstance(report.get("signed"), dict):

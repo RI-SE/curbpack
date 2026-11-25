@@ -96,7 +96,7 @@ from requirements.workspace import (
 from review.compile import (
     durable_report_path,
 )
-from studio.check.check_model import _check_editor_model, _check_report, _run_check
+from studio.check.check_model import _check_editor_model, _check_report, _remove_check, _run_check
 from studio.check.check_page import check_page
 from studio.claim.claims_model import (
     _claims_model,
@@ -283,6 +283,14 @@ def make_handler(ws: Workspace):
             self.end_headers()
             self.wfile.write(body)
 
+        def _send_pdf(self, body: bytes, filename: str) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/pdf")
+            self.send_header("Content-Disposition", f'inline; filename="{filename}"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def _send_download(self, body: bytes, filename: str) -> None:
             self.send_response(200)
             self.send_header("Content-Type", "application/zip")
@@ -372,6 +380,20 @@ def make_handler(ws: Workspace):
                     return
                 if parsed.path == "/discover/browse":
                     self._send_browse(query)
+                    return
+                if parsed.path == "/review/remedy-report":
+                    from app.review_model import remedy_report_response
+
+                    kind, body, filename = remedy_report_response(ws, query)
+                    if kind == "pdf":
+                        self._send_pdf(body, filename)
+                    else:
+                        self._send(200, body)
+                    return
+                if parsed.path == "/review/find-files":
+                    from app.review_model import find_files_now
+
+                    self._send_json(find_files_now(ws, query))
                     return
                 if _requires_open_project(parsed.path) and not open_repo_id(ws.root):
                     self._redirect("/project")
@@ -595,6 +617,7 @@ def make_handler(ws: Workspace):
                     result,
                     exit_code,
                     message=_check_message(query),
+                    error=_check_error(query),
                     editor=editor,
                 )
             if path == "/review":
@@ -741,6 +764,9 @@ def make_handler(ws: Workspace):
                 return
             if path == "/scaffold":
                 self._redirect(_write_scaffold(ws, form))
+                return
+            if path == "/check/remove":
+                self._redirect(_remove_check(ws, form))
                 return
             if path == "/check":
                 self._redirect(_run_check(ws, form))
@@ -1382,8 +1408,18 @@ def _shown_pack_dir(ws: Workspace, pack_id: str, fallback: Path | None) -> str:
 
 
 def _check_message(query: dict) -> str:
+    if (query.get("signed") or [""])[0]:
+        return "Remediation signed off."
+    if (query.get("removed") or [""])[0]:
+        return "Check result removed."
     if (query.get("saved") or [""])[0]:
         return "Saved curbpack.json in the repo."
+    return ""
+
+
+def _check_error(query: dict) -> str:
+    if (query.get("remove") or [""])[0] == "no":
+        return "That check result was not removed."
     return ""
 
 

@@ -3,7 +3,24 @@
 from __future__ import annotations
 
 import html
+import re
 from urllib.parse import quote
+
+_REPORT = (
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>'
+    '<path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/>'
+    "</svg>"
+)
+
+_TRASH = (
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>'
+    '<path d="M10 11v6"/><path d="M14 11v6"/>'
+    "</svg>"
+)
 
 from app.pages import _flash, page, repo_config_panel
 
@@ -77,7 +94,8 @@ def _performed_table(editor: dict) -> str:
     if not runs:
         return "<p>No checks performed yet.</p>"
     body = []
-    for run in runs:
+    dialogs = []
+    for index, run in enumerate(runs):
         when = str(run.get("when") or run.get("name") or "")
         path = str(run.get("path") or "")
         label = html.escape(when)
@@ -94,18 +112,79 @@ def _performed_table(editor: dict) -> str:
             (str(run.get("remedy_label") or ""), str(run.get("remedy_href") or "")),
             (str(run.get("remedy_report_label") or ""), str(run.get("remedy_report_href") or "")),
         )
+        counts = run.get("remedy_counts")
+        if isinstance(counts, dict):
+            remedy_cell = f"{remedy_cell}<br>{html.escape(_outcome(counts))}"
+        files = [str(name) for name in (run.get("files") or []) if str(name)]
+        remove = ""
+        dialog_id = "remove-check-" + re.sub(r"[^A-Za-z0-9_-]", "-", str(index))
+        if repo_id and path and files:
+            remove = (
+                f'<button type="button" class="trash" data-remove-open="{html.escape(dialog_id)}" '
+                'aria-label="Remove this check result">'
+                f"{_TRASH}</button>"
+            )
+            dialogs.append(_remove_dialog(dialog_id, repo_id, path, files))
+        pdf_href = str(run.get("remedy_pdf_href") or "")
+        report = ""
+        if pdf_href:
+            report = (
+                f'<a class="report-file" href="{html.escape(pdf_href)}" '
+                f'aria-label="Remediation report">{_REPORT}</a>'
+            )
         body.append(
             "<tr>"
+            f'<td class="remove">{remove}</td>'
             f"<td>{label}<br>{html.escape(_outcome(run))}</td>"
             f"<td>{review}</td>"
             f"<td>{remedy_cell}</td>"
+            f'<td class="report">{report}</td>'
             "</tr>"
         )
+    script = _remove_script() if dialogs else ""
     return (
-        "<table><thead><tr><th>Check Result</th><th>Review</th><th>Remedy</th></tr></thead><tbody>"
+        "<table><thead><tr><th class=\"remove\"></th><th>Check Result</th>"
+        "<th>Review</th><th>Remedy</th><th class=\"report\"></th></tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
+        + "".join(dialogs)
+        + script
     )
+
+
+def _remove_dialog(dialog_id: str, repo_id: str, path: str, files: list[str]) -> str:
+    items = "".join(f"<li><code>{html.escape(name)}</code></li>" for name in files)
+    return (
+        f'<dialog id="{html.escape(dialog_id)}" class="remove-check">'
+        '<div class="head"><h2>Remove this check result?</h2></div>'
+        '<div class="body"><p>These files will be removed.</p>'
+        f"<ul>{items}</ul>"
+        '<form method="post" action="/check/remove">'
+        f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
+        f'<input type="hidden" name="result" value="{html.escape(path)}">'
+        '<p class="actions"><button type="submit" class="remove-ok">OK</button>'
+        '<button type="button" class="secondary" data-close>Cancel</button></p>'
+        "</form></div></dialog>"
+    )
+
+
+def _remove_script() -> str:
+    return """
+<script>
+document.querySelectorAll("[data-remove-open]").forEach(function(button) {
+  button.addEventListener("click", function() {
+    var dialog = document.getElementById(button.getAttribute("data-remove-open"));
+    if (dialog && dialog.showModal) dialog.showModal();
+  });
+});
+document.querySelectorAll("dialog.remove-check [data-close]").forEach(function(button) {
+  button.addEventListener("click", function() {
+    var dialog = button.closest("dialog");
+    if (dialog) dialog.close();
+  });
+});
+</script>
+"""
 
 
 def _links(*pairs: tuple[str, str]) -> str:

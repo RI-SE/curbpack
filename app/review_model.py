@@ -428,11 +428,12 @@ def _source_items_path(repo: Path, source: str) -> Path:
 
 def _require_open_remediation(items_path: Path) -> None:
     from common.jsonio import read_json
+    from studio.review.impl.items import remediation_is_sealed
 
     document = read_json(items_path) if items_path.is_file() else {}
     if not isinstance(document, dict):
         document = {}
-    if document.get("remedy_locked") is True:
+    if remediation_is_sealed(items_path):
         raise ModelError("remediation", "signed", "This remediation is signed.")
     if document.get("review_locked") is not True and not isinstance(document.get("signed"), dict):
         raise ModelError("remediation", "review", "Remediation starts from a signed review.")
@@ -593,6 +594,26 @@ def _claim_check(claim: dict, items: list[dict], claim_id: str, digest: str) -> 
     return None
 
 
+def find_files_now(ws: Workspace, query: dict) -> dict:
+    """Same-named files in the working tree at the moment Find opens."""
+    from app.server import _registered_repo_path, _sync_open_repo
+    from studio.find_file import find_same_name
+    from studio.review.review_page import _file_preview
+
+    repo_id = _sync_open_repo(ws, query)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    name = (query.get("name") or [""])[0]
+    return {
+        "name": Path(name).name,
+        "paths": [
+            {"path": path, "text": _file_preview(repo, path)}
+            for path in find_same_name(repo, name)
+        ],
+    }
+
+
 def _adopt_found_file(ws: Workspace, form: dict) -> str:
     """Write the chosen path into the Claim, sign it, and re-check the Checks that named the old path."""
     from urllib.parse import quote
@@ -694,6 +715,158 @@ def _adopt_found_file(ws: Workspace, form: dict) -> str:
     )
 
 
+def _remedy_notes(form: dict, document: dict) -> str:
+    if "notes" in form:
+        return (form.get("notes") or [""])[0].strip()
+    stored = document.get("remedy_notes")
+    return stored.strip() if isinstance(stored, str) else ""
+
+
+def _remedy_save_marker(form: dict) -> dict:
+    marker: dict = {"work_saved": True}
+    if "notes" in form:
+        marker["remedy_notes"] = (form.get("notes") or [""])[0].strip() or None
+    return marker
+
+
+def remedy_report_response(ws: Workspace, query: dict) -> tuple[str, bytes, str]:
+    """The Markdown report, or its PDF when format=pdf. Both stay inside the Check directory."""
+    from urllib.parse import quote
+
+    from app.pages import page
+    from app.server import _registered_repo_path, _requested_dated, _sync_open_repo
+    from common.validate import validate_curbpack_config
+    from studio.review.impl.items import check_directory
+    from studio.review.impl.remedy_markdown import remedy_markdown_html
+    from studio.review.impl.remedy_report import published_remedy_file
+
+    repo_id = _sync_open_repo(ws, query)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    requested = (query.get("result") or [""])[0]
+    status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+    if status != "ok":
+        raise ModelError("remedy report", "path", "a check in this repository")
+    directory = check_directory(Path(run_path))
+    if directory is None:
+        raise ModelError("remedy report", "path", "a check directory")
+    items_path = directory / "review_items.json"
+    document = read_json(items_path) if items_path.is_file() else {}
+    asked = (query.get("file") or [""])[0]
+    kind = (query.get("format") or [""])[0]
+    if kind == "pdf":
+        pdf = published_remedy_file(directory, document, _sibling_name(asked, ".pdf"), ".pdf")
+        if pdf is None:
+            raise ModelError("remedy report", "pdf", "a remediation report for this check")
+        return "pdf", pdf.read_bytes(), pdf.name
+    markdown = published_remedy_file(directory, document, _sibling_name(asked, ".md"), ".md")
+    if markdown is None:
+        raise ModelError("remedy report", "markdown", "a remediation report for this check")
+    pdf_query = f"&format=pdf"
+    if asked:
+        pdf_query += f"&file={quote(Path(asked).with_suffix('.pdf').name, safe='')}"
+    href = (
+        f"/review/remedy-report?repo={quote(repo_id, safe='')}"
+        f"&result={quote(requested, safe='')}{pdf_query}"
+    )
+    body = (
+        f'<p><a href="{html_escape(href)}">PDF</a></p>'
+        + remedy_markdown_html(markdown.read_text(encoding="utf-8"))
+    )
+    return "html", page("Remediation report", body, [("", "Remediation report")]), ""
+
+
+def _sibling_name(requested: str, suffix: str) -> str:
+    if not requested:
+        return ""
+    return Path(requested).with_suffix(suffix).name if requested.endswith((".md", ".pdf", ".json")) else requested
+
+
+def html_escape(value: str) -> str:
+    import html
+
+    return html.escape(value, quote=True)
+
+
+def _remedy_reference(directory: Path | None, source: str) -> dict:
+    """The Check directory and the signed Review this remediation closes."""
+    from studio.review.impl.items import _newest_signed
+
+    from common.jsonio import read_json
+
+    run = directory.name if directory is not None else Path(source).name
+    review = ""
+    reviewer = ""
+    reviewed_at = ""
+    if directory is not None:
+        newest = _newest_signed(directory, "review-report.json", "review-report_*.json")
+        if newest is not None:
+            review = newest.name
+            try:
+                report = read_json(newest)
+            except (OSError, ValueError):
+                report = None
+            signed = report.get("signed") if isinstance(report, dict) else None
+            if isinstance(signed, dict):
+                reviewer = str(signed.get("name") or "").strip()
+                reviewed_at = str(signed.get("at") or "").strip()
+    reference = {"run": run, "review": review}
+    if reviewer:
+        reference["reviewer"] = reviewer
+    if reviewed_at:
+        reference["reviewed_at"] = reviewed_at
+    return reference
+
+
+def _remedy_source_run(directory: Path | None) -> dict | None:
+    if directory is None:
+        return None
+    path = directory / "run-result.json"
+    if not path.is_file():
+        return None
+    loaded = read_json(path)
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _revoke_remedy(repo_id: str, source: str, items_path: Path, form: dict) -> str:
+    """Open the round again. The sealed file stays where it was written."""
+    from urllib.parse import quote
+
+    from app.server import _now
+    from common.jsonio import read_json
+    from studio.review.impl.items import (
+        active_remedy_report,
+        check_directory,
+        load_items,
+        remediation_is_sealed,
+        write_items,
+    )
+
+    name = (form.get("name") or [""])[0].strip()
+    if not name:
+        raise ModelError("remediation", "name", "the name of the person revoking the signature")
+    if not remediation_is_sealed(items_path):
+        raise ModelError("remediation", "signed", "This remediation is not signed.")
+    document = read_json(items_path)
+    if not isinstance(document, dict):
+        document = {}
+    active = active_remedy_report(check_directory(items_path), document)
+    rows = [row for row in (document.get("remedy_revoked") or []) if isinstance(row, dict)]
+    rows.append({"report": active.name if active is not None else "", "name": name, "at": _now()})
+    write_items(
+        items_path,
+        load_items(items_path),
+        marker={"remedy_locked": None, "remedy_revoked": rows},
+    )
+    field = "report" if (form.get("report") or [""])[0] else "result"
+    return (
+        f"/review?repo={quote(repo_id, safe='')}&mode=remediation&revoked=1"
+        f"&{field}={quote(source, safe='')}"
+    )
+
+
 def _create_remedy(ws: Workspace, form: dict) -> str:
     from urllib.parse import quote
 
@@ -710,9 +883,12 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
     items_path = _source_items_path(repo, source)
     if not items_path.is_file():
         raise ModelError("review_items", "path", "the saved review")
+    action = (form.get("action") or [""])[0]
+    if action == "revoke":
+        return _revoke_remedy(repo_id, source, items_path, form)
     _require_open_remediation(items_path)
-    if (form.get("action") or [""])[0] == "save":
-        write_items(items_path, load_items(items_path), marker={"work_saved": True})
+    if action == "save":
+        write_items(items_path, load_items(items_path), marker=_remedy_save_marker(form))
         field = "report" if (form.get("report") or [""])[0] else "result"
         return (
             f"/review?repo={quote(repo_id, safe='')}&mode=remediation&saved=1"
@@ -733,24 +909,34 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
             raise ModelError("remedy report", "signed", "one signature")
     private, _public = load_or_create_key(ws.keys, name)
     document = read_json(items_path)
-    recorded = document.get("outside") if isinstance(document, dict) else None
+    if not isinstance(document, dict):
+        document = {}
+    recorded = document.get("outside")
     outside = recorded if isinstance(recorded, list) and recorded else None
+    notes = _remedy_notes(form, document)
+    full_checks = [item for item in (document.get("projected_runs") or []) if isinstance(item, str) and item]
+    reference = _remedy_reference(directory, source)
+    run = _remedy_source_run(directory)
+    write_items(
+        items_path,
+        load_items(items_path),
+        marker={"remedy": True, "remedy_locked": True, "remedy_notes": notes or None},
+    )
     sealed = sign_remedy_document(
         load_items(items_path),
         name=name,
         private_key=private,
         at=_now(),
         outside=outside,
+        notes=notes,
+        reference=reference,
+        full_checks=full_checks,
     )
     write_json(target, sealed)
-    write_items(items_path, load_items(items_path), marker={"remedy": True, "remedy_locked": True})
-    if directory is not None:
-        result = directory / "run-result.json"
-        return (
-            f"/review?repo={quote(repo_id, safe='')}&mode=remediation&signed=1"
-            f"&result={quote(str(result.resolve()), safe='')}"
-        )
-    return f"/review?repo={quote(repo_id, safe='')}&mode=remediation&report={quote(source, safe='')}"
+    from studio.review.impl.remedy_report import publish_remedy_reading
+
+    publish_remedy_reading(sealed, run, target)
+    return f"/check?repo={quote(repo_id, safe='')}&signed=1"
 
 
 def _review_error(error: str, query: dict) -> str:
@@ -767,6 +953,10 @@ def _review_message(query: dict) -> str:
         return "Decision saved."
     if (query.get("rebound") or [""])[0]:
         return "Claim rebound and signed."
+    if (query.get("revoked") or [""])[0]:
+        return "Signature revoked. The signed file is unchanged."
+    if (query.get("signed") or [""])[0] and (query.get("mode") or [""])[0] == "remediation":
+        return "Remediation signed off."
     if (query.get("signed") or [""])[0]:
         return "Report sealed."
     if (query.get("claim_changed") or [""])[0]:

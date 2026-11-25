@@ -257,18 +257,37 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
 
         private, _public = load_or_create_key(ws.keys, name)
         updated = sign_claim(updated, name=name, private_key=private, at=_now())
-    write_claim(directory, updated)
-    from studio.review.impl.items import record_rebind
+    repo = _claims_repo(ws, form)
+    from urllib.parse import parse_qs, urlparse
 
+    from studio.review.impl.items import items_home, record_rebind, remember_studio_edit
+
+    source = ""
+    if "mode=remediation" in return_to:
+        query = parse_qs(urlparse(return_to).query)
+        source = (query.get("report") or query.get("result") or [""])[0]
+    items_path = items_home(repo, Path(source)) if source else None
+    if items_path is not None and items_path.is_file():
+        remember_studio_edit(
+            items_path,
+            claim,
+            claim_file_relative(repo, directory, claim_id),
+            {"claim_id": claim_id, "check": "binding"},
+        )
+    write_claim(directory, updated)
     matched = updated.get("requirement_digest") == version_digest(requirement)
     record_rebind(
-        _claims_repo(ws, form),
+        repo,
         return_to,
         claim_id,
         signed=bool(name),
         matched=matched,
         name=name,
     )
+    if source:
+        from studio.check.check_model import regress_remediation
+
+        regress_remediation(repo, source)
     target = _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
     if name and (target.startswith("/review?") or target == "/review"):
         join = "&" if "?" in target else "?"

@@ -309,14 +309,44 @@ class ReviewRenderStructureTest(unittest.TestCase):
         }
         page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
         open_list, resolved = page.split('<section class="deviations-frame" data-resolved="1">', 1)
-        self.assertIn("No claims need attention.", open_list)
+        self.assertEqual(open_list.count("No claims need attention"), 1)
         self.assertNotIn("claim-fixed", open_list)
+        self.assertLess(open_list.index('class="round-notes"'), open_list.index('data-deviations="1"'))
+        self.assertIn('name="notes" form="remedy-sign"', open_list)
         self.assertIn('data-claim="claim-fixed"', resolved)
         self.assertIn('data-status="pass"', resolved)
         self.assertIn('class="check pass"', resolved)
         self.assertNotIn("Re-check", resolved)
         self.assertIn("must_fix -&gt; pass", resolved)
         self.assertNotIn(">Re-check</button>", resolved)
+        signed_door = dict(door)
+        signed_door["remedy_signed"] = True
+        signed_door["remedy_signer"] = "Ada"
+        signed_door["remedy_signed_at"] = "2026-11-25T11:00:00Z"
+        signed_door["remedy_notes"] = "Y and P still fail outside this round."
+        signed_door["remedy_md"] = "remedy-report_20261125T110000Z.md"
+        signed = review_page({"run_result": {"claims": []}, "claims": []}, None, door=signed_door).decode()
+        self.assertLess(signed.index('class="round-notes"'), signed.index('data-deviations="1"'))
+        self.assertIn("Y and P still fail outside this round.", signed)
+        self.assertNotIn('name="notes"', signed)
+        self.assertIn("Signed off by Ada at 2026-11-25T11:00:00Z.", signed)
+        self.assertIn("This signed remediation is read-only.", signed)
+        self.assertIn("Revoke signature", signed)
+        self.assertNotIn("Sign Off", signed)
+        self.assertIn("Remediation report", signed)
+        self.assertNotIn("Remediation report (PDF)", signed)
+        self.assertIn("/review/remedy-report?", signed)
+        revoked_door = dict(door)
+        revoked_door["remedy_revocation"] = {
+            "report": "remedy-report_20261125T110500Z.json",
+            "name": "Ada",
+            "at": "2026-11-25T12:00:00Z",
+        }
+        reopened = review_page({"run_result": {"claims": []}, "claims": []}, None, door=revoked_door).decode()
+        self.assertIn("data-remedy-revoked", reopened)
+        self.assertIn("remedy-report_20261125T110500Z.json", reopened)
+        self.assertIn("Sign Off", reopened)
+        self.assertNotIn("Revoke signature", reopened)
 
     def test_a_retired_check_is_struck_and_leaves_the_queue(self):
         from app.pages import CSS
@@ -445,6 +475,120 @@ class ReviewRenderStructureTest(unittest.TestCase):
         self.assertIn("Rebound the Claim.", resolved)
         self.assertNotIn('class="check fail"', resolved)
         self.assertNotIn(">Rebind and Sign</button>", resolved)
+
+    def test_a_failed_recheck_keeps_a_rebound_claim_open(self):
+        from studio.review.impl.items import binding_digest
+
+        stale = {
+            "id": "claim-stale",
+            "binding": "stale",
+            "namespace": "house",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [{"index": 0, "check": "exist", "status": "pass", "args": {"path": "c.md"}}],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                {
+                    "key": {"claim_id": "claim-stale", "check_digest": binding_digest()},
+                    "decision": "must_fix",
+                    "remediation_history": [
+                        {"date": "2026-11-24T00:00:00Z", "remediation": "Rebound the Claim.", "action": "rebind"},
+                        {"date": "2026-11-24T00:00:01Z", "remediation": "Check", "transition": "pass -> fail"},
+                    ],
+                }
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [stale]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        self.assertIn('data-claim="claim-stale"', page)
+        self.assertNotIn('data-resolved="1"', page)
+        self.assertIn('class="check fail"', page)
+
+    def test_a_green_claim_hides_the_requirement_remedy(self):
+        from studio.review.impl.items import check_digest
+
+        digest = check_digest("contents", {"path": "b.md"})
+        hint = "Replace TODO / lorem ipsum / [insert ...] with real contact and process details."
+        green = {
+            "id": "claim-green",
+            "requirement_hint": hint,
+            "requirement_hint_from": "current",
+            "checks": [
+                {"index": 0, "check": "contents", "status": "fail", "args": {"path": "b.md"}},
+            ],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                {"key": {"claim_id": "claim-green", "check_digest": digest}, "decision": "pass"},
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [green]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        _open_list, resolved = page.split('<section class="deviations-frame" data-resolved="1">', 1)
+        self.assertNotIn("data-requirement-remediation", resolved)
+        self.assertNotIn("lorem ipsum", resolved)
+        still_open = dict(door)
+        still_open["review_items"] = []
+        open_page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=still_open).decode()
+        self.assertIn("data-requirement-remediation", open_page)
+        self.assertIn("lorem ipsum", open_page)
+
+    def test_a_changed_claim_shows_its_current_file(self):
+        from studio.review.impl.present import present_raw_run
+
+        run = {
+            "tool": "curbcheck",
+            "tool_version": "0",
+            "packs": [],
+            "claims": [
+                {
+                    "id": "claim-a",
+                    "digest": "old",
+                    "status": "fail",
+                    "requirement_id": "REQ-A",
+                    "checks": [
+                        {
+                            "index": 0,
+                            "check": "contents",
+                            "status": "fail",
+                            "args": {"paths": ["SECURITY.md", ".well-known/security.txt"]},
+                        }
+                    ],
+                }
+            ],
+        }
+        current = {
+            "id": "claim-a",
+            "requirement_id": "REQ-A",
+            "checks": [
+                {
+                    "check": "contents",
+                    "args": {"paths": ["docs/SECURITY.md", ".well-known/security.txt"]},
+                }
+            ],
+        }
+        shown = present_raw_run(
+            run_result=run,
+            claims_by_id={"claim-a": current},
+            requirements_by_id={"REQ-A": {"id": "REQ-A"}},
+            claim_readings={},
+            requirement_readings={},
+            expanded=None,
+        )
+        check = shown["groups"][0]["claims"][0]["checks"][0]
+        self.assertEqual(
+            [row["path"] for row in check["paths"]],
+            ["docs/SECURITY.md", ".well-known/security.txt"],
+        )
+        self.assertEqual(check["args"]["paths"][0], "SECURITY.md")
+        self.assertEqual(check["edit"], "unsafe")
 
     def test_a_requirement_stays_open_until_every_check_is_green(self):
         from studio.review.impl.items import check_digest

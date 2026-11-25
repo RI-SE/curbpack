@@ -97,8 +97,13 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                     base + "/review/remedy",
                     {"repo_id": "alpha", "result": result_path, "name": "Urban"},
                 )
-                self.assertIn("This signed remediation is read-only.", remedy)
-                self.assertNotIn(">Sign Off</button>", remedy)
+                self.assertIn("<h1>Check</h1>", remedy)
+                self.assertIn("Remediation signed off.", remedy)
+                completed = re.search(r'<a href="([^"]*mode=remediation[^"]*)">Completed</a>', remedy)
+                self.assertIsNotNone(completed)
+                locked = _get(base + completed.group(1).replace("&amp;", "&"))
+                self.assertIn("This signed remediation is read-only.", locked)
+                self.assertNotIn(">Sign Off</button>", locked)
                 nxt = _post_redirect(
                     base + "/check",
                     {"repo_id": "alpha", "action": "check", "return_to": "/review"},
@@ -120,7 +125,9 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 self.assertIn("<th>Review</th>", table)
                 self.assertIn("<th>Remedy</th>", table)
                 self.assertIn(">View</a>", table)
-                self.assertIn(">View report</a>", table)
+                self.assertIn(">Completed</a>", table)
+                self.assertIn('aria-label="Remediation report"', table)
+                self.assertIn("/review/remedy-report?", table)
             stored = read_json(next(Path(result_path).parent.glob("remedy-report_*.json")))
             self.assertIn("signed", stored)
             work = read_json(Path(result_path).parent / "review_items.json")

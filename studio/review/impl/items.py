@@ -284,9 +284,11 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
                 "remedy",
                 "projected_runs",
                 "notes",
+                "remedy_notes",
                 "work_saved",
                 "review_locked",
                 "remedy_locked",
+                "remedy_revoked",
                 "outside",
                 "pending_outside",
                 "studio_snapshot",
@@ -961,15 +963,37 @@ def sign_remedy_document(
     private_key: bytes,
     at: str,
     outside: list | None = None,
+    notes: str | None = None,
+    reference: dict | None = None,
+    full_checks: list | None = None,
 ) -> dict:
     """The same seal as a review report. Reading it uses what 'remedy report'.
 
     outside is the acknowledged regressions. It is part of the signed remedy,
-    not of the locked review.
+    not of the locked review. notes are the round's own words, also inside the seal.
+    reference names the Check and the signed Review. full_checks names the full
+    runs recorded for this round. An empty list means no full Check was run.
     """
     document: dict = {"items": items, "remedy": True}
     if outside:
         document["outside"] = outside
+    text = notes.strip() if isinstance(notes, str) else ""
+    if text:
+        document["notes"] = text
+    if isinstance(reference, dict):
+        stored = {
+            "run": str(reference.get("run") or ""),
+            "review": str(reference.get("review") or ""),
+        }
+        reviewer = str(reference.get("reviewer") or "").strip()
+        reviewed_at = str(reference.get("reviewed_at") or "").strip()
+        if reviewer:
+            stored["reviewer"] = reviewer
+        if reviewed_at:
+            stored["reviewed_at"] = reviewed_at
+        document["reference"] = stored
+    if full_checks is not None:
+        document["full_checks"] = [name for name in full_checks if isinstance(name, str) and name]
     return sign_object(document, name=name, private_key=private_key, at=at)
 
 
@@ -1334,7 +1358,7 @@ def _workspace_from_return(repo: Path, return_to: str) -> Path | None:
     source = (query.get("report") or query.get("result") or [""])[0]
     if not source:
         return None
-    path = workspace_items_path(studio_temp_dir(repo), Path(source).name)
+    path = items_home(repo, Path(source))
     if not path.is_file():
         return None
     return path
@@ -1444,6 +1468,45 @@ def remedy_report_path(report_path: Path) -> Path:
     else:
         name = name + ".remedy.json"
     return report_path.with_name(name)
+
+
+def revoked_remedy_names(document: object) -> set[str]:
+    """Filenames of remedy seals that no longer lock the round."""
+    if not isinstance(document, dict):
+        return set()
+    names: set[str] = set()
+    for row in document.get("remedy_revoked") or []:
+        if isinstance(row, dict) and isinstance(row.get("report"), str) and row["report"]:
+            names.add(row["report"])
+    return names
+
+
+def active_remedy_report(directory: Path | None, document: object) -> Path | None:
+    """The newest remedy seal, unless that seal has been revoked."""
+    if directory is None:
+        return None
+    newest = _newest_signed(Path(directory), "remedy-report.json", "remedy-report_*.json")
+    if newest is None or newest.name in revoked_remedy_names(document):
+        return None
+    return newest
+
+
+def remediation_is_sealed(items_path: Path) -> bool:
+    """A round is sealed by its newest unrevoked remedy file, or by the lock when no file exists."""
+    document: dict = {}
+    if items_path.is_file():
+        try:
+            loaded = read_json(items_path)
+        except (OSError, ValueError):
+            loaded = {}
+        if isinstance(loaded, dict):
+            document = loaded
+    directory = check_directory(items_path)
+    if directory is not None:
+        newest = _newest_signed(directory, "remedy-report.json", "remedy-report_*.json")
+        if newest is not None:
+            return newest.name not in revoked_remedy_names(document)
+    return document.get("remedy_locked") is True
 
 
 def _newest_signed(directory: Path, *patterns: str) -> Path | None:

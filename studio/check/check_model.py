@@ -178,6 +178,56 @@ def _claims_by_pack(repo: Path) -> dict[str, int]:
     return counts
 
 
+def _remedy_pdf_href(repo_id: str, path: Path, directory: Path | None, document: object) -> str:
+    """The Markdown report beside the active seal. An open round has no report link."""
+    from urllib.parse import quote
+
+    from studio.review.impl.remedy_report import published_remedy_file
+
+    if not repo_id or directory is None or published_remedy_file(directory, document) is None:
+        return ""
+    return (
+        f"/review/remedy-report?repo={quote(repo_id, safe='')}"
+        f"&result={quote(str(path), safe='')}"
+    )
+
+
+def _remedy_full_check_counts(repo: Path | None, directory: Path | None, document: object) -> dict | None:
+    """Pass, fail, skipped, and stale from the full Check recorded on the signed remediation."""
+    from studio.review.impl.items import active_remedy_report
+
+    names: list[str] = []
+    active = active_remedy_report(directory, document) if directory is not None else None
+    if active is not None and active.is_file():
+        try:
+            sealed = read_json(active)
+        except (OSError, ValueError):
+            sealed = None
+        if isinstance(sealed, dict):
+            names = [item for item in (sealed.get("full_checks") or []) if isinstance(item, str) and item]
+    if not names and isinstance(document, dict):
+        names = [item for item in (document.get("projected_runs") or []) if isinstance(item, str) and item]
+    if repo is None or not names:
+        return None
+    stamp = names[-1]
+    folder = remediation_results_dir(repo)
+    path = folder / stamp / "run-result.json"
+    if not path.is_file():
+        flat = folder / stamp
+        path = flat if flat.is_file() else None
+    if path is None:
+        return None
+    try:
+        loaded = read_json(path)
+    except (OSError, ValueError):
+        return None
+    if isinstance(loaded, dict) and isinstance(loaded.get("run_result"), dict):
+        loaded = loaded["run_result"]
+    if not isinstance(loaded, dict):
+        return None
+    return _outcome_counts(loaded)
+
+
 def _quote_link(repo_id: str, **query: str) -> str:
     from urllib.parse import quote
 
@@ -233,7 +283,7 @@ def _newest_signed(directory: Path, *patterns: str) -> Path | None:
 
 
 def _round_state(repo_id: str, path: Path, items: Path | None, *, locked: bool, remedy_signed: bool) -> dict:
-    """Create, Continue, and View for the review. Start, Continue, and View report for the remedy."""
+    """Create, Continue, and View for the review. Start, Continue, and Completed for the remedy."""
     result = str(path)
     review_href = _quote_link(repo_id, result=result)
     if not locked:
@@ -247,7 +297,7 @@ def _round_state(repo_id: str, path: Path, items: Path | None, *, locked: bool, 
         return {"review_label": "Create", "review_href": review_href, "remedy_label": "—", "remedy_href": ""}
     review_href = _quote_link(repo_id, result=result, view="review")
     if remedy_signed:
-        remedy_label = "View report"
+        remedy_label = "Completed"
         remedy_href = _quote_link(repo_id, result=result, mode="remediation", view="report")
     elif items is not None and _remediation_started(items):
         remedy_label = "Continue"
@@ -263,9 +313,102 @@ def _round_state(repo_id: str, path: Path, items: Path | None, *, locked: bool, 
     }
 
 
+def check_result_removal(results_folder: str, requested: str) -> list[Path]:
+    """Files that belong to one Checks performed row, and nothing outside that row."""
+    confined = _confined_run_result_path(results_folder, requested)
+    if not confined:
+        return []
+    path = Path(confined)
+    folder = Path(results_folder).resolve()
+    if path.name == "run-result.json" and path.parent.name.startswith("run-result_"):
+        directory = path.parent
+        if directory.is_symlink() or directory.parent.resolve() != folder:
+            return []
+        return _contained_files(directory, folder)
+    if path.is_symlink() or path.parent.resolve() != folder:
+        return []
+    return [path]
+
+
+def remove_check_result(results_folder: str, requested: str) -> list[str]:
+    """Delete one check result. Returns the paths that were removed, relative to the results folder."""
+    folder = Path(results_folder).resolve()
+    files = check_result_removal(str(folder), requested)
+    if not files:
+        return []
+    labels = [_relative_result_path(folder, path) for path in files]
+    directories = {
+        path.parent
+        for path in files
+        if path.name == "run-result.json" and path.parent.name.startswith("run-result_")
+    }
+    for path in files:
+        if path.is_symlink() or path.is_file():
+            path.unlink()
+    for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+        _remove_emptied(directory, folder)
+    return labels
+
+
+def _contained_files(directory: Path, root: Path) -> list[Path]:
+    """Files inside directory. A symlink is the link itself, never the target."""
+    found: list[Path] = []
+    root = root.resolve()
+    try:
+        directory.resolve().relative_to(root)
+    except ValueError:
+        return found
+    for child in sorted(directory.iterdir(), key=lambda item: item.name):
+        if child.is_symlink():
+            found.append(child)
+            continue
+        if child.is_file():
+            try:
+                child.resolve().relative_to(root)
+            except ValueError:
+                continue
+            found.append(child)
+        elif child.is_dir():
+            found.extend(_contained_files(child, root))
+    return found
+
+
+def _remove_emptied(directory: Path, stop: Path) -> None:
+    if directory.is_symlink() or not directory.is_dir():
+        return
+    if directory.resolve() == stop.resolve():
+        return
+    for child in list(directory.iterdir()):
+        if child.is_dir() and not child.is_symlink():
+            _remove_emptied(child, stop)
+    try:
+        directory.rmdir()
+    except OSError:
+        return
+
+
+def _relative_result_path(folder: Path, path: Path) -> str:
+    try:
+        return path.relative_to(folder).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _removal_labels(path: Path) -> list[str]:
+    if not path.name:
+        return []
+    home = path.parent.parent if path.name == "run-result.json" else path.parent
+    return [_relative_result_path(home, item) for item in check_result_removal(str(home), str(path))]
+
+
 def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[dict], repo_id: str) -> list[dict]:
     """One row per Check directory. A Review belongs to that directory, not to identical content."""
-    from studio.review.impl.items import projected_run_names, studio_temp_dir, workspace_items_path
+    from studio.review.impl.items import (
+        projected_run_names,
+        remediation_is_sealed,
+        studio_temp_dir,
+        workspace_items_path,
+    )
 
     del reports_folder
     hidden = projected_run_names(repo) if repo is not None else set()
@@ -284,10 +427,7 @@ def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[
                 or _document_is_signed(items)
                 or document.get("review_locked") is True
             )
-            remedy_signed = (
-                _newest_signed(directory, "remedy-report.json", "remedy-report_*.json") is not None
-                or document.get("remedy_locked") is True
-            )
+            remedy_signed = remediation_is_sealed(items)
         else:
             items = workspace_items_path(studio_temp_dir(repo), path.name) if repo is not None and path.name else None
             document = _items_document(items) if items is not None else {}
@@ -295,6 +435,13 @@ def _annotate_rounds(repo: Path | None, reports_folder: Path | None, runs: list[
             locked = locked or document.get("review_locked") is True
             remedy_signed = document.get("remedy_locked") is True
         row.update(_round_state(repo_id, path, items, locked=locked, remedy_signed=remedy_signed))
+        working = document if directory is not None else {}
+        row["remedy_pdf_href"] = _remedy_pdf_href(repo_id, path, directory, working)
+        if remedy_signed:
+            counts = _remedy_full_check_counts(repo, directory, working)
+            if counts:
+                row["remedy_counts"] = counts
+        row["files"] = _removal_labels(path)
         rows.append(row)
     return rows
 
@@ -383,13 +530,18 @@ def _load_compared_run(path: Path) -> dict:
     return load_run_result(path)
 
 
+def remediation_results_dir(repo: Path) -> Path:
+    """Re-checks made while a Remedy is open. They are not Checks performed."""
+    from studio.review.impl.items import studio_temp_dir
+
+    return studio_temp_dir(repo) / "remediation-runs"
+
+
 def _execute_check(repo: Path) -> tuple[dict, Path]:
-    from common.validate import validate_curbpack_config
-    from curbcheck.api import results_dir, run_and_write
+    from curbcheck.api import run_and_write
     from studio.review.impl.items import record_dirty_files
 
-    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-    out = new_check_run_path(results_dir(repo, config))
+    out = new_check_run_path(remediation_results_dir(repo))
     result, _code = run_and_write(repo, None, out)
     record_dirty_files(repo, out, result)
     return result, out
@@ -449,12 +601,19 @@ def _run_check(ws: Workspace, form: dict) -> str:
     if repo_id and action == "check":
         repo = _registered_repo_path(ws, repo_id)
         config = validate_curbpack_config(read_json(repo / "curbpack.json"))
-        out = new_check_run_path(results_dir(repo, config))
+        return_to = (form.get("return_to") or [""])[0].strip()
+        remediation = (
+            return_to.startswith("/review")
+            and not return_to.startswith("//")
+            and "\\" not in return_to
+            and "mode=remediation" in return_to
+        )
+        folder = remediation_results_dir(repo) if remediation else results_dir(repo, config)
+        out = new_check_run_path(folder)
         result, code = run_and_write(repo, None, out)
         from studio.review.impl.items import record_dirty_files
 
         record_dirty_files(repo, out, result)
-        return_to = (form.get("return_to") or [""])[0].strip()
         if (
             return_to.startswith("/review")
             and not return_to.startswith("//")
@@ -473,3 +632,24 @@ def _run_check(ws: Workspace, form: dict) -> str:
             f"&result={quote(str(out.resolve()), safe='')}"
         )
     return f"/check?repo={quote(repo_id, safe='')}" if repo_id else "/check"
+
+
+def _remove_check(ws: Workspace, form: dict) -> str:
+    from urllib.parse import quote
+
+    from app.server import _registered_repo_path
+    from common.validate import validate_curbpack_config
+    from curbcheck.api import results_dir
+    from discovery.door import set_open_repo
+
+    repo_id = (form.get("repo_id") or form.get("repo") or [""])[0].strip()
+    if repo_id:
+        set_open_repo(ws.root, repo_id)
+    if not repo_id:
+        return "/check"
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    requested = (form.get("result") or [""])[0]
+    if remove_check_result(str(results_dir(repo, config)), requested):
+        return f"/check?repo={quote(repo_id, safe='')}&removed=1"
+    return f"/check?repo={quote(repo_id, safe='')}&remove=no"

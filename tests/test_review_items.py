@@ -33,6 +33,7 @@ from studio.review.impl.items import (
     project_run,
     record_dirty_files,
     remember_studio_edit,
+    record_rebind,
     rollback_pending,
     settle_regression,
     turned_green,
@@ -710,6 +711,68 @@ class RemedySignatureTest(unittest.TestCase):
         self.assertEqual(summarize_review([item, {**item, "decision": "pass", "key": {"claim_id": "b", "check_digest": "x"}}]), "1 Passed · 1 Must fix · Signed")
         self.assertEqual(summarize_review([{**item, "decision": "pass"}]), "All Passed · Signed")
         self.assertEqual(summarize_remedy([item]), "1 action · Signed")
+        noted = sign_remedy_document(
+            [item],
+            name="Urban",
+            private_key=private,
+            at="2026-11-23T12:00:00Z",
+            notes="Y and P still fail outside this round. A full Check is recommended.",
+        )
+        self.assertEqual(
+            noted["notes"],
+            "Y and P still fail outside this round. A full Check is recommended.",
+        )
+        self.assertTrue(read_signature(noted, {"Urban": public}, what="remedy report")["verifiable"])
+        self.assertNotIn("notes", sealed)
+
+    def test_a_later_save_keeps_the_round_notes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "review_items.json"
+            write_items(path, [], marker={"notes": "Review decision.", "remedy_notes": "Run a full Check."})
+            write_items(path, [], marker={"work_saved": True})
+            stored = read_json(path)
+        self.assertEqual(stored["notes"], "Review decision.")
+        self.assertEqual(stored["remedy_notes"], "Run a full Check.")
+
+    def test_the_newest_seal_locks_the_round_until_that_file_is_revoked(self):
+        from app.review_model import _require_open_remediation, _revoke_remedy
+        from common.jsonio import write_json
+        from studio.review.impl.items import active_remedy_report, remediation_is_sealed
+
+        private, public = generate_keypair()
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "run-result_20261125T110000Z"
+            folder.mkdir()
+            items = folder / "review_items.json"
+            write_items(items, [], marker={"review_locked": True, "remedy": True, "remedy_locked": True})
+            first = sign_remedy_document([], name="Ada", private_key=private, at="2026-11-25T11:00:00Z")
+            second = sign_remedy_document([], name="Ada", private_key=private, at="2026-11-25T11:05:00Z")
+            write_json(folder / "remedy-report_20261125T110000Z.json", first)
+            write_json(folder / "remedy-report_20261125T110500Z.json", second)
+            self.assertTrue(remediation_is_sealed(items))
+            self.assertEqual(
+                active_remedy_report(folder, read_json(items)).name,
+                "remedy-report_20261125T110500Z.json",
+            )
+            with self.assertRaises(ModelError):
+                _require_open_remediation(items)
+            _revoke_remedy(
+                "alpha",
+                str(folder / "run-result.json"),
+                items,
+                {"name": ["Ada"], "result": [str(folder / "run-result.json")]},
+            )
+            stored = read_json(items)
+            self.assertEqual(stored["remedy_revoked"][0]["report"], "remedy-report_20261125T110500Z.json")
+            self.assertEqual(stored["remedy_revoked"][0]["name"], "Ada")
+            self.assertNotIn("remedy_locked", stored)
+            self.assertFalse(remediation_is_sealed(items))
+            self.assertIsNone(active_remedy_report(folder, stored))
+            self.assertTrue((folder / "remedy-report_20261125T110500Z.json").is_file())
+            self.assertTrue(read_signature(second, {"Ada": public}, what="remedy report")["verifiable"])
+            _require_open_remediation(items)
+            write_items(items, [], marker={"work_saved": True})
+            self.assertEqual(read_json(items)["remedy_revoked"][0]["name"], "Ada")
 
     def test_an_acknowledged_outside_check_is_inside_the_signed_remedy(self):
         private, public = generate_keypair()
@@ -995,3 +1058,27 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(both[1]["decision"], "pass")
         self.assertEqual(both[0]["key"]["check_digest"], exist)
         self.assertEqual(both[1]["key"]["check_digest"], contents)
+
+    def test_rebind_history_is_written_next_to_the_run(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name) / "repo"
+        run = repo / "runs" / "run-result_20261125T100000Z"
+        run.mkdir(parents=True)
+        source = run / "run-result.json"
+        source.write_text("{}", encoding="utf-8")
+        items_path = run / "review_items.json"
+        write_items(items_path, [], marker={"review_locked": True})
+        record_rebind(
+            repo,
+            f"/review?repo=alpha&mode=remediation&result={source}",
+            "claim-a",
+            signed=True,
+            matched=True,
+            name="Ada",
+        )
+        stored = load_items(items_path)
+        self.assertEqual(stored[0]["key"]["check_digest"], binding_digest())
+        self.assertEqual(stored[0]["decision"], "pass")
+        self.assertEqual(stored[0]["remediation_history"][0]["action"], "rebind")
+        self.assertEqual(stored[0]["remediation_history"][0]["name"], "Ada")

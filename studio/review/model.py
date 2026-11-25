@@ -243,12 +243,11 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             stored_now.get("review_locked") is True or isinstance(stored_now.get("signed"), dict)
         ):
             extra["review_locked"] = True
-        remedy_locked = isinstance(stored_now, dict) and stored_now.get("remedy_locked") is True
-        home = check_directory(run_path)
-        if not remedy_locked and home is not None:
-            from studio.review.impl.items import _newest_signed
+        from studio.review.impl.items import active_remedy_report, remediation_is_sealed
 
-            remedy_locked = _newest_signed(home, "remedy-report.json", "remedy-report_*.json") is not None
+        home = check_directory(run_path)
+        remedy_locked = remediation_is_sealed(items_path) if items_path.is_file() else False
+        active_remedy = active_remedy_report(home, stored_now)
         view = (query.get("view") or [""])[0]
         if (
             extra.get("review_locked")
@@ -262,14 +261,29 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         if remedy_locked:
             extra["remedy_locked"] = True
             extra["remedy_signed"] = True
-            if home is not None:
-                from studio.review.impl.items import _newest_signed
-
-                sealed_path = _newest_signed(home, "remedy-report.json", "remedy-report_*.json")
-                if sealed_path is not None and sealed_path.is_file():
-                    sealed = _read_items_file(sealed_path)
-                    if isinstance(sealed, dict) and isinstance(sealed.get("outside"), list):
-                        extra["outside"] = sealed["outside"]
+            if active_remedy is not None and active_remedy.is_file():
+                sealed = _read_items_file(active_remedy)
+                signed = sealed.get("signed") if isinstance(sealed, dict) else None
+                if isinstance(signed, dict):
+                    extra["remedy_signer"] = str(signed.get("name") or "")
+                    extra["remedy_signed_at"] = str(signed.get("at") or "")
+                    extra["remedy_report"] = active_remedy.name
+                if isinstance(sealed, dict) and isinstance(sealed.get("outside"), list):
+                    extra["outside"] = sealed["outside"]
+                if isinstance(sealed, dict) and isinstance(sealed.get("notes"), str):
+                    extra["remedy_notes"] = sealed["notes"]
+                markdown = active_remedy.with_suffix(".md")
+                if markdown.is_file():
+                    extra["remedy_md"] = markdown.name
+        elif isinstance(stored_now, dict):
+            revoked_rows = [row for row in (stored_now.get("remedy_revoked") or []) if isinstance(row, dict)]
+            if revoked_rows:
+                extra["remedy_revocation"] = revoked_rows[-1]
+                report_name = str(revoked_rows[-1].get("report") or "")
+                if home is not None and report_name.endswith(".json"):
+                    markdown = home / f"{Path(report_name).stem}.md"
+                    if markdown.is_file() and markdown.parent.resolve() == home.resolve():
+                        extra["remedy_revocation_md"] = markdown.name
         try:
             from studio.review.impl.items import assessments_from_decisions
 
@@ -280,6 +294,10 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             report["assessments"] = saved_assessments
         if isinstance(notes, str) and notes.strip():
             report["decision"] = notes.strip()
+        if not extra.get("remedy_signed"):
+            remedy_notes = stored_now.get("remedy_notes") if isinstance(stored_now, dict) else ""
+            if isinstance(remedy_notes, str):
+                extra["remedy_notes"] = remedy_notes
         snapshot = (query.get("snapshot") or [""])[0].strip()
         if snapshot and check_directory(run_path) is not None:
             snap = Path(snapshot).resolve()
@@ -296,6 +314,9 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                     extra["remedy_signer"] = str(signed.get("name") or "")
                     if isinstance(document.get("outside"), list):
                         extra["outside"] = document["outside"]
+                    extra["remedy_notes"] = (
+                        document.get("notes") if isinstance(document.get("notes"), str) else ""
+                    )
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra

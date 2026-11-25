@@ -12,7 +12,7 @@ from common.store import load_claim
 from common.validate import validate_requirement
 from studio.review.impl.items import check_digest, load_items, write_items
 from studio.review.review_page import _find_dialog, review_page
-from tests.test_rev03_review import _pack, _post, _post_redirect, _requirement, _serve, _workspace
+from tests.test_rev03_review import _get, _pack, _post, _post_redirect, _requirement, _serve, _workspace
 
 
 def _claim(path: str) -> dict:
@@ -47,12 +47,13 @@ class FindDialogTest(unittest.TestCase):
         self.assertIn("# Security", dialog)
         self.assertIn('name="name"', dialog)
         self.assertIn(">OK</button>", dialog)
+        self.assertIn('data-find-name="SECURITY.md"', dialog)
         self.assertNotIn("does not change the Claim", dialog)
 
         empty = _find_dialog("find-2", "SECURITY.md", [], "")
         self.assertIn("No file named <code>SECURITY.md</code>", empty)
-        self.assertNotIn('action="/review/find"', empty)
-        self.assertNotIn(">OK</button>", empty)
+        self.assertIn('action="/review/find"', empty)
+        self.assertIn("data-find-submit hidden", empty)
 
     def test_a_passed_retarget_moves_the_requirement_and_shows_both_paths(self):
         old = check_digest("exist", {"paths": ["SECURITY.md"]})
@@ -145,6 +146,20 @@ class FindDialogTest(unittest.TestCase):
         _open, resolved = page.split('data-resolved="1"', 1)
         self.assertIn('data-status="pass"', resolved)
         self.assertNotIn("Find the file first", resolved)
+
+
+class FindFilesNowTest(unittest.TestCase):
+    def test_opening_find_reads_a_file_created_after_the_page(self):
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            with _serve(workspace) as base:
+                (repo / "SECURITY.md").write_text("now\n", encoding="utf-8")
+                body = _get(base + "/review/find-files?repo_id=alpha&name=SECURITY.md")
+            payload = json.loads(body)
+            self.assertEqual([row["path"] for row in payload["paths"]], ["SECURITY.md"])
+            self.assertEqual(payload["paths"][0]["text"], "now\n")
 
 
 class FindAdoptTest(unittest.TestCase):

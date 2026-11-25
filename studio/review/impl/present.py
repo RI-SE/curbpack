@@ -336,12 +336,21 @@ def _claim_item(
             continue
         args = check.get("args") if isinstance(check.get("args"), dict) else {}
         name = str(check.get("check") or "")
-        adapted = path_adapter(name, args)
+        index = check.get("index")
+        shown = args
+        if (
+            isinstance(index, int)
+            and 0 <= index < len(current_checks)
+            and isinstance(current_checks[index], dict)
+            and str(current_checks[index].get("check") or "") == name
+            and isinstance(current_checks[index].get("args"), dict)
+        ):
+            shown = current_checks[index]["args"]
+        adapted = path_adapter(name, shown)
         paths = []
         for relative in adapted.get("paths") or []:
             state = path_state(repo, relative) if repo is not None else "missing"
             paths.append({"path": relative, "state": state})
-        index = check.get("index")
         edit = "none"
         if current is not None:
             if not digest_matches:

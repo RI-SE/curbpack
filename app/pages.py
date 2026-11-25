@@ -147,6 +147,15 @@ dialog.config-all .config-panel{border:0;padding:0;margin:0}
 .check-run > table{width:auto;flex:1 1 auto;margin:0}
 .check-run > form{margin:0;flex:0 0 auto;display:flex;align-items:flex-end}
 .check-run .actions{margin:0}
+th.remove,td.remove,th.report,td.report{width:2.4rem;text-align:center;vertical-align:middle}
+a.report-file{color:var(--ink);display:inline-flex;line-height:0}
+button.trash{background:var(--bad);color:#fff;border:1px solid var(--bad);padding:.28rem .34rem;line-height:0}
+button.trash:hover{background:#991b1b}
+dialog.remove-check ul{margin:.4rem 0 1rem;padding-left:1.2rem}
+dialog.remove-check code{overflow-wrap:anywhere}
+dialog.remove-check p.actions button{min-width:6.5rem;padding:.45rem .9rem;font-size:1rem;line-height:1.2;border-radius:6px;border:1px solid transparent}
+dialog.remove-check p.actions button.remove-ok{background:var(--bad);border-color:var(--bad);color:#fff}
+dialog.remove-check p.actions button.remove-ok:hover{background:#991b1b}
 .discover-wrap th.num.wrap{white-space:normal;line-height:1.2;max-width:6.5rem}
 body:has(.req-desk) main{max-width:min(1400px,100%)}
 .req-head{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:center;justify-content:space-between;margin:0 0 .35rem}
@@ -259,6 +268,9 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board details.requirement > summary{list-style:none;pointer-events:none}
 .review-board details.requirement > summary::-webkit-details-marker{display:none}
 .review-board details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
+.review-board section.round-notes{margin:0 0 1.2rem}
+.review-board section.round-notes > h2{font-size:1rem;font-weight:600;margin:0 0 .4rem}
+.review-board section.round-notes p{white-space:pre-wrap;margin:.2rem 0 0}
 .review-board section.deviations-frame{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 .9rem .9rem}
 .review-board section.deviations-frame[data-resolved]{margin-top:1.2rem}
 .review-board section.deviations-frame > h2{font-size:1rem;font-weight:600;margin:0;padding:.75rem 0}
