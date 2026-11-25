@@ -376,29 +376,62 @@ def _check_report(ws: Workspace, query: dict, editor: dict) -> tuple[dict | None
     return result, process_exit_code(result)
 
 
+def _load_compared_run(path: Path) -> dict:
+    document = read_json(path)
+    if isinstance(document, dict) and isinstance(document.get("run_result"), dict):
+        return document["run_result"]
+    return load_run_result(path)
+
+
+def _execute_check(repo: Path) -> tuple[dict, Path]:
+    from common.validate import validate_curbpack_config
+    from curbcheck.api import results_dir, run_and_write
+    from studio.review.impl.items import record_dirty_files
+
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    out = new_check_run_path(results_dir(repo, config))
+    result, _code = run_and_write(repo, None, out)
+    record_dirty_files(repo, out, result)
+    return result, out
+
+
+def regress_remediation(repo: Path, source: str, *, result: dict | None = None, out: Path | None = None) -> str:
+    """Run every Check, then project the original deviations or store an outside warning."""
+    from studio.review.impl.items import items_home, settle_regression
+
+    if not source:
+        return "skipped"
+    path = items_home(repo, Path(source))
+    if not path.is_file():
+        return "skipped"
+    if result is None or out is None:
+        result, out = _execute_check(repo)
+    stamp = out.parent.name if out.name == "run-result.json" else out.name
+    document = read_json(path)
+    names = [name for name in (document.get("projected_runs") or []) if isinstance(name, str)]
+    if stamp not in names:
+        names.append(stamp)
+    from studio.review.impl.items import write_items, load_items
+
+    write_items(path, load_items(path), marker={"projected_runs": names})
+    return settle_regression(
+        path,
+        _load_compared_run(Path(source)),
+        result,
+        run_name=stamp,
+        run_path=str(out.resolve()),
+    )
+
+
 def _project_open_remedy(repo: Path, out: Path, result: dict, return_to: str) -> None:
     """A Check while Remedy is open updates that copy and is not its own row."""
     from urllib.parse import parse_qs, urlparse
-
-    from studio.review.impl.items import items_home, load_items, project_run, write_items
 
     query = parse_qs(urlparse(return_to).query)
     source = (query.get("report") or query.get("result") or [""])[0]
     if not source:
         return
-    path = items_home(repo, Path(source))
-    if not path.is_file():
-        return
-    document = read_json(path)
-    names = [name for name in (document.get("projected_runs") or []) if isinstance(name, str)]
-    stamp = out.parent.name if out.name == "run-result.json" else out.name
-    if stamp not in names:
-        names.append(stamp)
-    write_items(
-        path,
-        project_run(load_items(path), result, remediation="Check", repo=repo, run_name=stamp),
-        marker={"projected_runs": names},
-    )
+    regress_remediation(repo, source, result=result, out=out)
 
 
 def _run_check(ws: Workspace, form: dict) -> str:

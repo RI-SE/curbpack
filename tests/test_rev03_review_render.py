@@ -52,7 +52,8 @@ class ReviewRenderStructureTest(unittest.TestCase):
                 page,
             )
             self.assertNotIn("<th>Remedy</th>", page)
-            self.assertIn("<th>Verdict</th>", page)
+            self.assertIn("<th>Decisions</th>", page)
+            self.assertNotIn("<th>Verdict</th>", page)
             self.assertIn('<details class="passed-frame" data-approved="1">', page)
             self.assertNotIn('<details class="passed-frame" data-approved="1" open', page)
             open_list, passed_frame = page.split('<details class="passed-frame"', 1)
@@ -78,6 +79,11 @@ class ReviewRenderStructureTest(unittest.TestCase):
 
             passed_group = _details(page, "REQ-PASS")
             self.assertIn('data-claim="passed-note"', passed_group)
+            self.assertIn(
+                '<option value="must_fix" selected>Must be fixed</option>',
+                failed_group,
+            )
+            self.assertIn('<option value="" selected>Passed</option>', passed_group)
             self.assertIn(">Passed</option>", passed_group)
             self.assertIn(">Must be fixed</option>", passed_group)
             self.assertNotIn(">Retire</option>", passed_group)
@@ -311,6 +317,101 @@ class ReviewRenderStructureTest(unittest.TestCase):
         self.assertNotIn("Re-check", resolved)
         self.assertIn("must_fix -&gt; pass", resolved)
         self.assertNotIn(">Re-check</button>", resolved)
+
+    def test_a_retired_check_is_struck_and_leaves_the_queue(self):
+        from app.pages import CSS
+        from studio.review.impl.items import check_digest, record_retire
+
+        digest = check_digest("text_forbid", {"path": "SECURITY.md", "text": "secret"})
+        claim = {
+            "id": "claim-retired",
+            "checks": [
+                {
+                    "index": 0,
+                    "check": "text_forbid",
+                    "status": "fail",
+                    "args": {"path": "SECURITY.md", "text": "secret"},
+                }
+            ],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                record_retire(
+                    {"key": {"claim_id": "claim-retired", "check_digest": digest}, "decision": "must_fix"},
+                    remediation="Retired.",
+                )
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        open_list, resolved = page.split('<section class="deviations-frame" data-resolved="1">', 1)
+        self.assertIn("No claims need attention.", open_list)
+        self.assertNotIn("claim-retired", open_list)
+        row = next(part for part in re.findall(r"<tr>(.*?)</tr>", resolved, re.S) if "claim-retired" in part)
+        self.assertIn('class="check retired"', row)
+        self.assertIn("<s>Forbidden text</s>", row)
+        self.assertIn(">Retired</span>", row)
+        self.assertIn("Retired.", row)
+        self.assertNotIn("must_fix -&gt; pass", row)
+        self.assertNotIn('data-action="retire"', row)
+        self.assertNotIn(">Re-check</button>", row)
+        self.assertNotIn("Remove the forbidden text.", row)
+        self.assertIn("text-decoration:line-through", CSS)
+        self.assertIn(".check.retired", CSS)
+
+    def test_a_retired_check_stays_yellow_beside_an_open_failure(self):
+        from studio.review.impl.items import check_digest, record_retire
+
+        retired_digest = check_digest("text_forbid", {"path": "SECURITY.md", "text": "secret"})
+        claim = {
+            "id": "claim-mixed",
+            "checks": [
+                {
+                    "index": 0,
+                    "check": "text_forbid",
+                    "status": "fail",
+                    "args": {"path": "SECURITY.md", "text": "secret"},
+                },
+                {
+                    "index": 1,
+                    "check": "exist",
+                    "status": "fail",
+                    "args": {"paths": ["SECURITY.md"]},
+                    "detail": "SECURITY.md is absent",
+                },
+            ],
+        }
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "review_items": [
+                record_retire(
+                    {
+                        "key": {"claim_id": "claim-mixed", "check_digest": retired_digest},
+                        "decision": "must_fix",
+                    },
+                    remediation="Retired.",
+                )
+            ],
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [claim]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        self.assertIn('data-claim="claim-mixed"', page)
+        self.assertNotIn('data-resolved="1"', page)
+        rows = re.findall(r"<tr>(.*?)</tr>", page, re.S)
+        retired = next(row for row in rows if 'data-status="retired"' in row)
+        failing = next(row for row in rows if 'data-status="fail"' in row and 'data-check="exist"' in row)
+        self.assertIn('class="check retired"', retired)
+        self.assertIn("<s>Forbidden text</s>", retired)
+        self.assertNotIn('data-action=', retired)
+        self.assertNotIn("Remove the forbidden text.", retired)
+        self.assertIn('class="check fail"', failing)
+        self.assertIn('class="actions-menu"', failing)
+        self.assertIn(">Re-check</button>", failing)
 
     def test_a_signed_rebind_leaves_the_remediation_list(self):
         stale = {
@@ -546,6 +647,181 @@ class ReviewRenderStructureTest(unittest.TestCase):
         placeholder = next(row for row in rows if "Anti-placeholder</" in row)
         self.assertIn("Replace the placeholder text.", placeholder)
         self.assertIn("contains placeholder text", placeholder)
+
+    def test_an_open_remediation_check_uses_an_actions_menu(self):
+        from studio.review.impl.items import check_digest
+
+        missing = {
+            "index": 0,
+            "check": "exist",
+            "status": "fail",
+            "edit": "ok",
+            "detail": "docs/a.md is absent",
+            "args": {"path": "docs/a.md"},
+            "paths": [{"path": "docs/a.md", "state": "missing"}],
+        }
+        present = {
+            "index": 1,
+            "check": "contents",
+            "status": "fail",
+            "edit": "none",
+            "detail": "placeholder text",
+            "args": {"path": "SECURITY.md"},
+            "paths": [{"path": "SECURITY.md", "state": "present"}],
+        }
+        claim = {
+            "id": "claim-open",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [missing, present],
+        }
+        binding = {"id": "claim-stale", "binding": "stale", "checks": []}
+        door = {
+            "repo_id": "alpha",
+            "selected_result": "/tmp/run-result.json",
+            "review_mode": "remediation",
+            "presentation": {"groups": [{"id": "REQ-A", "claims": [claim, binding]}]},
+        }
+        page = review_page({"run_result": {"claims": []}, "claims": []}, None, door=door).decode()
+        rows = re.findall(r"<tr>(.*?)</tr>", page, re.S)
+        exist = next(row for row in rows if 'data-check="exist"' in row)
+        contents = next(row for row in rows if 'data-check="contents"' in row)
+        bound = next(row for row in rows if 'data-binding="stale"' in row)
+
+        self.assertIn('class="actions-menu"', exist)
+        self.assertIn('class="actions-label">Actions</span>', exist)
+        self.assertIn('class="actions-panel"', exist)
+        labels = ["Find", "Edit check", "Add comment", "Re-check", "Retire"]
+        places = [exist.index(f">{label}</button>") for label in labels]
+        self.assertEqual(places, sorted(places))
+        self.assertIn('data-find-open="find-claim-open-0"', exist)
+        self.assertIn("No file named <code>a.md</code>", page)
+        self.assertNotIn("does not change the Claim", page)
+        self.assertNotIn("data-find-result=", page)
+        self.assertIn('data-check-dialog="check-update-claim-open"', exist)
+        self.assertIn('data-remedy-comment-open="remedy-comment-claim-open-0"', exist)
+        self.assertIn('id="recheck-claim-open-0"', exist)
+        self.assertIn('action="/review/recheck"', exist)
+        self.assertIn('form="recheck-claim-open-0"', exist)
+        self.assertIn('id="retire-claim-open-0"', exist)
+        self.assertIn('action="/review/remediate"', exist)
+        self.assertIn('name="action" value="retire"', exist)
+        self.assertIn('form="retire-claim-open-0"', exist)
+        self.assertIn('data-action="retire"', exist)
+        panel = re.search(r'<div class="actions-panel".*?</div>', exist, re.S)
+        self.assertIsNotNone(panel)
+        self.assertIn(">Find</button>", panel.group(0))
+        self.assertNotIn('<dialog id="remedy-comment-claim-open-0"', panel.group(0))
+        self.assertNotIn('action="/review/recheck"', panel.group(0))
+        self.assertNotIn('action="/review/remediate"', panel.group(0))
+        self.assertIn('<dialog id="remedy-comment-claim-open-0"', exist)
+
+        self.assertIn('class="actions-menu"', contents)
+        self.assertNotIn("data-find-open", contents)
+        self.assertNotIn("Edit check", contents)
+        self.assertIn(">Add comment</button>", contents)
+        self.assertIn(">Re-check</button>", contents)
+        self.assertIn('data-action="retire"', contents)
+        self.assertNotIn("actions-menu", bound)
+
+        digest = check_digest("exist", {"path": "docs/a.md"})
+        mixed = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                **door,
+                "review_items": [
+                    {
+                        "key": {"claim_id": "claim-open", "check_digest": digest},
+                        "decision": "pass",
+                    }
+                ],
+            },
+        ).decode()
+        mixed_rows = re.findall(r"<tr>(.*?)</tr>", mixed, re.S)
+        passed_exist = next(row for row in mixed_rows if 'data-check="exist"' in row)
+        still_open = next(row for row in mixed_rows if 'data-check="contents"' in row)
+        self.assertNotIn("actions-menu", passed_exist)
+        self.assertIn('class="actions-menu"', still_open)
+        finished = {
+            "id": "claim-fixed",
+            "pack_id": "house-policy",
+            "recorded_requirement_id": "REQ-A",
+            "checks": [missing],
+        }
+        resolved_page = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run-result.json",
+                "review_mode": "remediation",
+                "review_items": [
+                    {
+                        "key": {"claim_id": "claim-fixed", "check_digest": digest},
+                        "decision": "pass",
+                    }
+                ],
+                "presentation": {"groups": [{"id": "REQ-A", "claims": [finished]}]},
+            },
+        ).decode()
+        open_list, resolved = resolved_page.split(
+            '<section class="deviations-frame" data-resolved="1">', 1
+        )
+        self.assertIn("No claims need attention.", open_list)
+        self.assertNotIn("actions-menu", resolved)
+        self.assertNotIn(">Re-check</button>", resolved)
+
+        review = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={**door, "review_mode": ""},
+        ).decode()
+        self.assertNotIn('class="actions-menu"', review)
+        signed = review_page(
+            {"run_result": {"claims": []}, "claims": []},
+            None,
+            door={**door, "remedy_signed": True},
+        ).decode()
+        self.assertNotIn('class="actions-menu"', signed)
+        accepted = review_page(
+            {
+                "run_result": {"claims": []},
+                "claims": [],
+                "assessments": [
+                    {
+                        "kind": "check",
+                        "claim_id": "claim-open",
+                        "claim_digest": "digest-1",
+                        "index": 1,
+                        "disposition": "accept",
+                        "text": "Kept.",
+                    }
+                ],
+            },
+            None,
+            door={
+                **door,
+                "review_mode": "",
+                "presentation": {
+                    "groups": [
+                        {
+                            "id": "REQ-A",
+                            "claims": [{**claim, "digest": "digest-1"}],
+                        }
+                    ]
+                },
+            },
+        ).decode()
+        contents = next(
+            row
+            for row in re.findall(r"<tr>(.*?)</tr>", accepted, re.S)
+            if 'data-check="contents"' in row
+        )
+        self.assertIn('<option value="accept" selected>Accept</option>', contents)
+        self.assertNotIn('<option value="must_fix" selected>', contents)
+        self.assertIn("<th>Decisions</th>", page)
+        self.assertIn('data-disposition="must_fix">Must be fixed</span>', page)
 
 
 if __name__ == "__main__":

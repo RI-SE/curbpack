@@ -232,13 +232,27 @@ def item_key(item: dict) -> tuple:
     return (key.get("claim_id"), key.get("check_digest"))
 
 
+def _replaced_digests(items: list[dict]) -> set[tuple]:
+    """Check keys a later configuration already replaced."""
+    replaced = set()
+    for item in items:
+        claim_id = item_key(item)[0]
+        for entry in item.get("remediation_history") or []:
+            if isinstance(entry, dict) and entry.get("old_check_digest"):
+                replaced.add((claim_id, entry["old_check_digest"]))
+    return replaced
+
+
 def merge_items(existing: list[dict], new_items: list[dict]) -> list[dict]:
     """Keep the existing item when the key matches. Add a Check that exists only on the run."""
     kept = {item_key(item): item for item in existing}
+    replaced = _replaced_digests(existing)
     merged: list[dict] = []
     seen: set[tuple] = set()
     for item in new_items:
         key = item_key(item)
+        if key in replaced and key not in kept:
+            continue
         merged.append(kept[key] if key in kept else item)
         seen.add(key)
     for item in existing:
@@ -273,11 +287,18 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
                 "work_saved",
                 "review_locked",
                 "remedy_locked",
+                "outside",
+                "pending_outside",
+                "studio_snapshot",
             ):
                 if key in current:
                     kept[key] = current[key]
     if marker:
-        kept.update(marker)
+        for key, value in marker.items():
+            if value is None:
+                kept.pop(key, None)
+            else:
+                kept[key] = value
     document: dict = {"items": items, **kept}
     if signed is not None:
         document["signed"] = signed
@@ -400,8 +421,10 @@ def append_history(
     action: str | None = None,
     transition: str | None = None,
     old_check_digest: str | None = None,
+    name: str | None = None,
     date: str | None = None,
 ) -> dict:
+    """Append one history row. `name` is the person who signed that change, when there is one."""
     if not isinstance(remediation, str) or not remediation.strip():
         raise ModelError("review_item", "remediation", "non-empty text")
     entry: dict = {
@@ -414,6 +437,9 @@ def append_history(
         entry["transition"] = transition
     if old_check_digest:
         entry["old_check_digest"] = old_check_digest
+    signer = name.strip() if isinstance(name, str) else ""
+    if signer:
+        entry["name"] = signer
     updated = dict(item)
     history = [row for row in (item.get("remediation_history") or []) if isinstance(row, dict)]
     history.append(entry)
@@ -459,9 +485,9 @@ def set_remediation_comment(item: dict, text: str, *, date: str | None = None) -
     return updated
 
 
-def record_retire(item: dict, *, remediation: str, date: str | None = None) -> dict:
+def record_retire(item: dict, *, remediation: str, name: str | None = None, date: str | None = None) -> dict:
     """A Retire post names the action. A free-text comment does not."""
-    return append_history(item, remediation=remediation, action="retire", date=date)
+    return append_history(item, remediation=remediation, action="retire", name=name, date=date)
 
 
 def retarget_check(
@@ -471,6 +497,8 @@ def retarget_check(
     *,
     remediation: str,
     transition: str | None = None,
+    action: str | None = None,
+    name: str | None = None,
     date: str | None = None,
 ) -> dict:
     """Keep the item. Store the old digest and point the key at the new configuration."""
@@ -479,7 +507,9 @@ def retarget_check(
         item,
         remediation=remediation,
         transition=transition,
+        action=action,
         old_check_digest=old,
+        name=name,
         date=date,
     )
     key = dict(updated.get("key") or {})
@@ -499,24 +529,41 @@ def _noted_change(remediation: str, change: str) -> str:
     return note
 
 
-def apply_recheck(item: dict, status: str, *, remediation: str, date: str | None = None) -> dict:
+def apply_recheck(item: dict, status: str, *, remediation: str, name: str | None = None, date: str | None = None) -> dict:
     """Record a re-check only when it changes the outcome.
 
     A pass sets the recommendation to pass and the history names that change.
     A result that leaves the decision is the check running again, not history.
+    A retired Check keeps its decision.
     """
-    previous = str(item.get("decision") or "")
-    if status != "pass" or previous == "pass":
+    if is_retired(item):
         return item
-    transition = f"{previous} -> pass" if previous else "pass"
-    updated = append_history(
-        item,
-        remediation=_noted_change(remediation, transition),
-        transition=transition if previous else None,
-        date=date,
-    )
-    updated["decision"] = "pass"
-    return updated
+    previous = str(item.get("decision") or "")
+    if status == "pass":
+        if previous == "pass":
+            return item
+        transition = f"{previous} -> pass" if previous else "pass"
+        updated = append_history(
+            item,
+            remediation=_noted_change(remediation, transition),
+            transition=transition if previous else None,
+            name=name,
+            date=date,
+        )
+        updated["decision"] = "pass"
+        return updated
+    if status == "fail" and previous == "pass":
+        transition = "pass -> fail"
+        updated = append_history(
+            item,
+            remediation=_noted_change(remediation, transition),
+            transition=transition,
+            name=name,
+            date=date,
+        )
+        updated["decision"] = "must_fix"
+        return updated
+    return item
 
 
 def _checks_in_run(run: dict) -> list[dict]:
@@ -584,6 +631,63 @@ def _recorded_files(
     return None
 
 
+def failing_checks(run: dict) -> list[dict]:
+    """The failing Checks in one run. Identity is the claim and the check digest."""
+    found = []
+    for row in _checks_in_run(run):
+        if row["status"] != "fail":
+            continue
+        found.append(
+            {"claim_id": row["claim_id"], "check": row["check"], "digest": row["digest"]}
+        )
+    return found
+
+
+def canonical_digest(claim_id: str, digest: str, items: list[dict]) -> str:
+    """The original digest of a Check. A retarget counts as the Check it replaced."""
+    for item in items:
+        if item_key(item) != (claim_id, digest):
+            continue
+        for entry in item.get("remediation_history") or []:
+            if isinstance(entry, dict) and entry.get("old_check_digest"):
+                return str(entry["old_check_digest"])
+    return digest
+
+
+def outside(found: list[dict], reference: list[dict], items: list[dict] | None = None) -> list[dict]:
+    """Failing Checks in found whose identity is not a failing Check in reference.
+
+    The comparison is the set of identities, not the number of failures.
+    """
+    owned = {(row.get("claim_id"), row.get("digest")) for row in reference}
+    kept = items or []
+    extra = []
+    for row in found:
+        claim_id = row.get("claim_id")
+        digest = str(row.get("digest") or "")
+        canonical = canonical_digest(str(claim_id), digest, kept)
+        if (claim_id, canonical) in owned or (claim_id, digest) in owned:
+            continue
+        extra.append(row)
+    return extra
+
+
+def affected(remediated: list[dict], found: list[dict]) -> list[dict]:
+    """Remediated rows whose Check fails again in found."""
+    failing = {(row.get("claim_id"), row.get("digest")) for row in found}
+    return [item for item in remediated if item_key(item) in failing]
+
+
+def turned_green(deviations: list[dict], run: dict) -> list[dict]:
+    """Deviation rows whose Check passes in this run."""
+    passing = {
+        (row["claim_id"], row["digest"])
+        for row in _checks_in_run(run)
+        if row["status"] == "pass"
+    }
+    return [item for item in deviations if item_key(item) in passing]
+
+
 def project_run(
     items: list[dict],
     run: dict,
@@ -592,6 +696,7 @@ def project_run(
     files_by_check: dict[tuple, list[dict]] | None = None,
     repo: Path | None = None,
     run_name: str = "",
+    source: dict | None = None,
 ) -> list[dict]:
     """Apply one full run to the open remediation copy.
 
@@ -599,14 +704,28 @@ def project_run(
     pass. An unchanged result leaves the item. A changed Check configuration is
     linked through old_check_digest. The binding Check is updated from the
     Claim's binding and is not retargeted onto another Check.
+
+    When source is the original report, a Check that did not fail there is left
+    unchanged and is not added.
     """
     files = _recorded_files(files_by_check, repo, run_name)
     checks = _checks_in_run(run)
     by_key = {(row["claim_id"], row["digest"]): row for row in checks}
     known = {item_key(item) for item in items}
+    owned = None
+    if source is not None:
+        owned = {(row["claim_id"], row["digest"]) for row in failing_checks(source)}
     updated = []
     for item in items:
         claim_id, digest = item_key(item)
+        if owned is not None and digest != binding_digest():
+            canonical = canonical_digest(claim_id, str(digest or ""), items)
+            if (claim_id, digest) not in owned and (claim_id, canonical) not in owned:
+                updated.append(item)
+                continue
+        if is_retired(item):
+            updated.append(item)
+            continue
         current = item
         row = by_key.get((claim_id, digest))
         if row is None and digest == binding_digest():
@@ -630,12 +749,133 @@ def project_run(
         if row is not None:
             current = apply_recheck(current, row["status"], remediation=remediation)
         updated.append(current)
+    if source is not None:
+        return updated
     present = {item_key(item) for item in updated}
     for fresh in items_from_run(run, files):
         if item_key(fresh) not in present and find_item(fresh, updated) is None:
             updated.append(fresh)
             present.add(item_key(fresh))
     return updated
+
+
+def _outside_event(pending: dict, choice: str) -> dict:
+    event = {
+        "run": str(pending.get("run") or ""),
+        "checks": [row for row in pending.get("checks") or [] if isinstance(row, dict)],
+        "choice": choice,
+    }
+    studio = pending.get("studio")
+    if isinstance(studio, dict) and (studio.get("claim_id") or studio.get("check")):
+        event["studio"] = {"claim_id": studio.get("claim_id"), "check": studio.get("check")}
+    return event
+
+
+def remember_studio_edit(items_path: Path, claim: dict, claim_file: str, action: dict) -> None:
+    """Keep the claim and the rows from before the latest Studio change."""
+    import copy
+
+    items = load_items(items_path)
+    write_items(
+        items_path,
+        items,
+        marker={
+            "studio_snapshot": {
+                "claim_file": claim_file,
+                "claim": copy.deepcopy(claim),
+                "items": copy.deepcopy(items),
+                "action": {
+                    "claim_id": action.get("claim_id"),
+                    "check": action.get("check"),
+                },
+            }
+        },
+    )
+
+
+def settle_regression(
+    items_path: Path,
+    source_run: dict,
+    new_run: dict,
+    *,
+    run_name: str,
+    run_path: str,
+) -> str:
+    """Project a full run, or stop when it fails a Check the original report passed.
+
+    Returns "outside" or "applied". An outside result leaves the queue unchanged.
+    """
+    document = read_json(items_path) if items_path.is_file() else {}
+    if not isinstance(document, dict):
+        document = {}
+    items = load_items(items_path)
+    extra = outside(failing_checks(new_run), failing_checks(source_run), items)
+    if extra:
+        snapshot = document.get("studio_snapshot")
+        studio = snapshot.get("action") if isinstance(snapshot, dict) else None
+        write_items(
+            items_path,
+            items,
+            marker={
+                "pending_outside": {
+                    "run": run_name,
+                    "run_path": run_path,
+                    "checks": extra,
+                    "studio": studio,
+                }
+            },
+        )
+        return "outside"
+    projected = project_run(items, new_run, remediation="Check", source=source_run)
+    write_items(
+        items_path,
+        projected,
+        marker={"pending_outside": None, "studio_snapshot": None},
+    )
+    return "applied"
+
+
+def accept_pending(items_path: Path, source_run: dict, new_run: dict) -> None:
+    """Record the outside Checks and update only the original deviations."""
+    document = read_json(items_path)
+    pending = document.get("pending_outside") if isinstance(document, dict) else None
+    if not isinstance(pending, dict) or not pending.get("checks"):
+        raise ModelError("remediation", "outside", "a warning to acknowledge")
+    events = [row for row in (document.get("outside") or []) if isinstance(row, dict)]
+    events.append(_outside_event(pending, "ok"))
+    projected = project_run(load_items(items_path), new_run, remediation="Check", source=source_run)
+    write_items(
+        items_path,
+        projected,
+        marker={"outside": events, "pending_outside": None, "studio_snapshot": None},
+    )
+
+
+def rollback_pending(items_path: Path, repo: Path) -> None:
+    """Restore the latest Studio change. Files edited outside Studio stay as they are."""
+    document = read_json(items_path)
+    if not isinstance(document, dict):
+        document = {}
+    snapshot = document.get("studio_snapshot")
+    if not isinstance(snapshot, dict) or not isinstance(snapshot.get("claim"), dict):
+        raise ModelError("remediation", "rollback", "a Studio change to restore")
+    relative = Path(str(snapshot.get("claim_file") or ""))
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ModelError("remediation", "rollback", "a claim inside this repository")
+    target = (repo / relative).resolve()
+    if repo.resolve() not in target.parents:
+        raise ModelError("remediation", "rollback", "a claim inside this repository")
+    write_json(target, snapshot["claim"])
+    pending = document.get("pending_outside") if isinstance(document.get("pending_outside"), dict) else {}
+    events = [row for row in (document.get("outside") or []) if isinstance(row, dict)]
+    if pending.get("checks"):
+        events.append(_outside_event(pending, "rolled_back"))
+    restored = [row for row in (snapshot.get("items") or []) if isinstance(row, dict)]
+    write_items(
+        items_path,
+        restored,
+        marker={"outside": events, "pending_outside": None, "studio_snapshot": None},
+    )
 
 
 def _history_rows(source: dict | None) -> list[dict]:
@@ -714,9 +954,23 @@ def take_in_remedy(
     return taken
 
 
-def sign_remedy_document(items: list[dict], *, name: str, private_key: bytes, at: str) -> dict:
-    """The same seal as a review report. Reading it uses what 'remedy report'."""
-    return sign_object({"items": items, "remedy": True}, name=name, private_key=private_key, at=at)
+def sign_remedy_document(
+    items: list[dict],
+    *,
+    name: str,
+    private_key: bytes,
+    at: str,
+    outside: list | None = None,
+) -> dict:
+    """The same seal as a review report. Reading it uses what 'remedy report'.
+
+    outside is the acknowledged regressions. It is part of the signed remedy,
+    not of the locked review.
+    """
+    document: dict = {"items": items, "remedy": True}
+    if outside:
+        document["outside"] = outside
+    return sign_object(document, name=name, private_key=private_key, at=at)
 
 
 def summarize_review(items: list[dict]) -> str:
@@ -752,6 +1006,17 @@ def is_retired(item: dict) -> bool:
         isinstance(entry, dict) and entry.get("action") == "retire"
         for entry in item.get("remediation_history") or []
     )
+
+
+def mark_retired(items: list[dict], claim_id: str, digest: str, note: str, *, claim_gone: bool) -> list[dict]:
+    """Retire one Check. Retire every row of the Claim when the Claim itself is gone."""
+    updated = []
+    for item in items:
+        key_claim, key_digest = item_key(item)
+        if key_claim == claim_id and (claim_gone or key_digest == digest) and not is_retired(item):
+            item = record_retire(item, remediation=note)
+        updated.append(item)
+    return updated
 
 
 def retired_absences(remedy_items: list[dict], run: dict) -> list[dict]:
@@ -1000,7 +1265,16 @@ def status_for_item(claim_result: dict, item: dict) -> str | None:
     return None
 
 
-def recheck_item(repo: Path, claims_dir: Path, items: list[dict], claim_id: str, digest: str, text: str) -> list[dict]:
+def recheck_item(
+    repo: Path,
+    claims_dir: Path,
+    items: list[dict],
+    claim_id: str,
+    digest: str,
+    text: str,
+    *,
+    name: str | None = None,
+) -> list[dict]:
     """Run the Claim and merge that Check's status onto the same item."""
     from checks.run import run_claim
     from common.store import load_claim
@@ -1015,7 +1289,7 @@ def recheck_item(repo: Path, claims_dir: Path, items: list[dict], claim_id: str,
             found = True
             status = status_for_item(result, item)
             if status is not None:
-                item = apply_recheck(item, status, remediation=text)
+                item = apply_recheck(item, status, remediation=text, name=name)
         updated.append(item)
     if not found:
         raise ModelError("review_item", "check_digest", "an item in this workspace")
@@ -1074,6 +1348,8 @@ def record_check_change(
     old_args: dict,
     new_check: str,
     new_args: dict,
+    *,
+    name: str | None = None,
 ) -> None:
     """A changed Check configuration keeps the item and records old_check_digest."""
     path = _workspace_from_return(repo, return_to)
@@ -1091,13 +1367,20 @@ def record_check_change(
                 new_check,
                 new_args if isinstance(new_args, dict) else {},
                 remediation="Check configuration updated.",
+                name=name,
             )
         updated.append(item)
     write_items(path, updated)
 
 
 def record_rebind(
-    repo: Path, return_to: str, claim_id: str, *, signed: bool = False, matched: bool = False
+    repo: Path,
+    return_to: str,
+    claim_id: str,
+    *,
+    signed: bool = False,
+    matched: bool = False,
+    name: str | None = None,
 ) -> None:
     """Rebind checks the binding and records that on the binding item."""
     path = _workspace_from_return(repo, return_to)
@@ -1111,7 +1394,10 @@ def record_rebind(
     for item in items:
         if item_key(item) == (claim_id, digest):
             item = append_history(
-                item, remediation="Rebound the Claim.", action="rebind" if signed else None
+                item,
+                remediation="Rebound the Claim.",
+                action="rebind" if signed else None,
+                name=name if signed else None,
             )
             if matched:
                 item["decision"] = "pass"

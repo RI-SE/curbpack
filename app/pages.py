@@ -245,6 +245,7 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board .check.pass{background:#dcfce7;color:#166534;border-color:#86efac}
 .review-board .check.fail{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .review-board .check.skipped{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.review-board .check.retired{background:#fef3c7;color:#92400e;border-color:#fcd34d;text-decoration:line-through}
 .review-board table.path-checks{width:100%;border-collapse:collapse;font-size:.92rem}
 .review-board table.path-checks th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
 .review-board table.path-checks th,.review-board table.path-checks td{text-align:left;padding:.55rem .4rem;border-bottom:1px solid var(--line);vertical-align:top}
@@ -275,6 +276,19 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board table.review-queue th.tips{cursor:help}
 .review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
 .review-board td.row-actions form,.review-board td.row-actions p{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;margin:.15rem 0}
+.review-board td.row-actions form.row-action-form{display:none}
+.review-board button.actions-menu{display:inline-flex;align-items:center;gap:.35rem;border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}
+.review-board button.actions-menu .actions-label{text-decoration:underline;text-underline-offset:3px}
+.review-board .menu-icon{display:block;flex:none}
+.review-board .actions-panel{margin:0;padding:.3rem 0;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.12);min-width:12rem}
+.review-board .actions-panel button{display:flex;align-items:center;gap:.55rem;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:.45rem .8rem;cursor:pointer}
+.review-board .actions-panel button:hover,.review-board .actions-panel button:focus-visible{background:#f4f5f7}
+.review-board dialog[data-find] label.find-choice{display:flex;gap:.55rem;align-items:flex-start;font-weight:400;margin:.35rem 0;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+.review-board dialog[data-find] label.find-choice:hover,.review-board dialog[data-find] label.find-choice:focus-within{border-color:var(--accent);background:#f0fdfa}
+.review-board dialog[data-find] label.find-choice:has(input:checked){border-color:var(--accent);background:#ecfdf5}
+.review-board dialog[data-find] label.find-choice code{color:var(--accent);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.review-board dialog[data-find-preview]{max-width:40rem}
+.review-board dialog[data-find-preview] pre{max-height:18rem;overflow:auto;white-space:pre-wrap}
 .review-board td.row-actions input[name="remediation"]{width:9rem}
 .review-board table.review-queue p{margin:.15rem 0}
 .review-board select.verdict{font:inherit;max-width:11rem}

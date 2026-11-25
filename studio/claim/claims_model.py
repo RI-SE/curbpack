@@ -262,7 +262,12 @@ def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
 
     matched = updated.get("requirement_digest") == version_digest(requirement)
     record_rebind(
-        _claims_repo(ws, form), return_to, claim_id, signed=bool(name), matched=matched
+        _claims_repo(ws, form),
+        return_to,
+        claim_id,
+        signed=bool(name),
+        matched=matched,
+        name=name,
     )
     target = _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
     if name and (target.startswith("/review?") or target == "/review"):

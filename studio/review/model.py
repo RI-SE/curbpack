@@ -109,6 +109,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                 extra["review_items"] = load_items(items_path)
             document = _read_items_file(items_path) if items_path.is_file() else {}
             extra["remedy_ready"] = isinstance(document, dict) and document.get("remedy") is True
+            _attach_outside(extra, document)
             from studio.review.impl.items import remedy_report_path
 
             remedy_path = remedy_report_path(Path(chosen))
@@ -119,6 +120,8 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                     extra["remedy_signed"] = True
                     extra["remedy_signer"] = str(remedy_signed.get("name") or "")
                     extra["remedy_ready"] = True
+                    if isinstance(remedy_document.get("outside"), list):
+                        extra["outside"] = remedy_document["outside"]
         try:
             report_rel = str(Path(chosen).resolve().relative_to(repo.resolve()))
         except ValueError:
@@ -255,9 +258,18 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         ):
             write_items(items_path, load_items(items_path), marker={"remedy": True})
             extra["remedy_ready"] = True
+        _attach_outside(extra, stored_now)
         if remedy_locked:
             extra["remedy_locked"] = True
             extra["remedy_signed"] = True
+            if home is not None:
+                from studio.review.impl.items import _newest_signed
+
+                sealed_path = _newest_signed(home, "remedy-report.json", "remedy-report_*.json")
+                if sealed_path is not None and sealed_path.is_file():
+                    sealed = _read_items_file(sealed_path)
+                    if isinstance(sealed, dict) and isinstance(sealed.get("outside"), list):
+                        extra["outside"] = sealed["outside"]
         try:
             from studio.review.impl.items import assessments_from_decisions
 
@@ -282,10 +294,24 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                     extra["viewing_snapshot"] = True
                     extra["remedy_signed"] = True
                     extra["remedy_signer"] = str(signed.get("name") or "")
+                    if isinstance(document.get("outside"), list):
+                        extra["outside"] = document["outside"]
         extra["presentation"] = _raw_presentation(ws, repo, config, loaded, query)
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra
     return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _attach_outside(extra: dict, document: object) -> None:
+    if not isinstance(document, dict):
+        return
+    pending = document.get("pending_outside")
+    if isinstance(pending, dict) and pending.get("checks"):
+        extra["pending_outside"] = pending
+        extra["outside_can_rollback"] = isinstance(document.get("studio_snapshot"), dict)
+    recorded = document.get("outside")
+    if isinstance(recorded, list) and recorded:
+        extra["outside"] = recorded
 
 
 def _reports_for_run(folder: Path, run_result: dict) -> list[dict]:

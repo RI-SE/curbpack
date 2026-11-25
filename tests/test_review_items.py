@@ -22,11 +22,23 @@ from studio.review.impl.items import (
     decision_reusable,
     history_to_show,
     items_from_run,
+    load_items,
     latest_signed_remedy,
     merge_items,
     open_review_items,
+    accept_pending,
+    affected,
+    failing_checks,
+    outside,
     project_run,
     record_dirty_files,
+    remember_studio_edit,
+    rollback_pending,
+    settle_regression,
+    turned_green,
+    write_items,
+    is_retired,
+    mark_retired,
     record_retire,
     remediation_comment,
     set_remediation_comment,
@@ -259,8 +271,12 @@ class DecisionAndHistoryTest(unittest.TestCase):
         self.assertNotIn("action", noted["remediation_history"][0])
         empty = {"claims": []}
         self.assertEqual(retired_absences([noted], empty), [])
-        retired = record_retire(noted, remediation="Remove the check.", date="2026-11-23T09:30:00Z")
+        retired = record_retire(noted, remediation="Remove the check.", name="Ada", date="2026-11-23T09:30:00Z")
         self.assertEqual(retired["remediation_history"][1]["action"], "retire")
+        self.assertEqual(retired["remediation_history"][1]["name"], "Ada")
+        self.assertNotIn("name", noted["remediation_history"][0])
+        blank = append_history(item, remediation="Talk to the owner.", name="  ", date="2026-11-23T09:05:00Z")
+        self.assertNotIn("name", blank["remediation_history"][0])
         found = retired_absences([retired], empty)
         self.assertEqual(len(found), 1)
 
@@ -344,6 +360,15 @@ class ProjectRunTest(unittest.TestCase):
         check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
         self.assertEqual(check["decision"], "pass")
         self.assertEqual(check["remediation_history"][-1]["transition"], "must_fix -> pass")
+
+    def test_a_later_failure_clears_a_pass(self):
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        item["decision"] = "pass"
+        failed = _run("b" * 40, "clean", status="fail")
+        projected = project_run([item], failed, remediation="Check")
+        check = next(row for row in projected if row["key"]["check_digest"] == item["key"]["check_digest"])
+        self.assertEqual(check["decision"], "must_fix")
+        self.assertEqual(check["remediation_history"][-1]["transition"], "pass -> fail")
 
     def test_a_failing_full_check_keeps_must_fix_and_writes_no_history(self):
         item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
@@ -673,6 +698,7 @@ class RemedySignatureTest(unittest.TestCase):
         item["decision"] = "must_fix"
         item = append_history(item, remediation="Documented the gap.", date="2026-11-23T09:00:00Z")
         sealed = sign_remedy_document([item], name="Urban", private_key=private, at="2026-11-23T12:00:00Z")
+        self.assertNotIn("outside", sealed)
         reading = read_signature(sealed, {"Urban": public}, what="remedy report")
         self.assertTrue(reading["verifiable"])
         self.assertEqual(reading["what"], "remedy report")
@@ -684,6 +710,30 @@ class RemedySignatureTest(unittest.TestCase):
         self.assertEqual(summarize_review([item, {**item, "decision": "pass", "key": {"claim_id": "b", "check_digest": "x"}}]), "1 Passed · 1 Must fix · Signed")
         self.assertEqual(summarize_review([{**item, "decision": "pass"}]), "All Passed · Signed")
         self.assertEqual(summarize_remedy([item]), "1 action · Signed")
+
+    def test_an_acknowledged_outside_check_is_inside_the_signed_remedy(self):
+        private, public = generate_keypair()
+        item = items_from_run(_run("a" * 40, "clean", status="fail"))[1]
+        event = {
+            "run": "run-result_20261125T070000Z",
+            "checks": [{"claim_id": "claim-a", "check": "contents", "digest": "abc"}],
+            "choice": "ok",
+            "studio": {"claim_id": "claim-a", "check": "exist"},
+        }
+        sealed = sign_remedy_document(
+            [item],
+            name="Urban",
+            private_key=private,
+            at="2026-11-23T12:00:00Z",
+            outside=[event],
+        )
+        reading = read_signature(sealed, {"Urban": public}, what="remedy report")
+        self.assertTrue(reading["verifiable"])
+        self.assertEqual(sealed["outside"][0]["choice"], "ok")
+        self.assertEqual(sealed["outside"][0]["checks"][0]["check"], "contents")
+        review_items = sign_items_document([item], name="Urban", private_key=private, at="2026-11-23T12:00:00Z")
+        self.assertEqual(review_items[1], version_digest({"items": [item]}))
+        self.assertNotIn("outside", review_items[0])
 
 
 class MergeTest(unittest.TestCase):
@@ -699,3 +749,249 @@ class MergeTest(unittest.TestCase):
         by_digest = {item["key"]["check_digest"]: item for item in merged}
         self.assertEqual(by_digest[existing[1]["key"]["check_digest"]]["decision"], "must_fix")
         self.assertIn(check_digest("exist", {"paths": ["docs/b.md"]}), by_digest)
+
+    def test_merge_does_not_restore_a_check_a_retarget_replaced(self):
+        run = _run("a" * 40, "clean", status="fail")
+        old = items_from_run(run)[1]
+        moved = retarget_check(
+            old,
+            "exist",
+            {"paths": ["docs/b.md"]},
+            remediation="SECURITY.md -> docs/SECURITY.md",
+            action="retarget",
+            date="2026-11-23T09:30:00Z",
+        )
+        merged = merge_items([moved], items_from_run(run))
+        digests = [item["key"]["check_digest"] for item in merged]
+        self.assertIn(moved["key"]["check_digest"], digests)
+        self.assertNotIn(old["key"]["check_digest"], digests)
+
+
+class RegressionTest(unittest.TestCase):
+    def _pair(self, exist_status: str, contents_status: str) -> dict:
+        return {
+            "claims": [
+                {
+                    "id": "claim-a",
+                    "checks": [
+                        {
+                            "index": 0,
+                            "check": "exist",
+                            "args": {"paths": ["docs/a.md"]},
+                            "status": exist_status,
+                        },
+                        {
+                            "index": 1,
+                            "check": "contents",
+                            "args": {"path": "docs/b.md"},
+                            "status": contents_status,
+                        },
+                    ],
+                }
+            ]
+        }
+
+    def _items(self) -> tuple[list[dict], str, str]:
+        exist = check_digest("exist", {"paths": ["docs/a.md"]})
+        contents = check_digest("contents", {"path": "docs/b.md"})
+        return [
+            {"key": {"claim_id": "claim-a", "check_digest": exist}, "decision": "must_fix"},
+            {"key": {"claim_id": "claim-a", "check_digest": contents}, "decision": "pass"},
+        ], exist, contents
+
+    def test_the_same_failures_are_inside_and_a_different_pair_is_outside(self):
+        items, _exist, _contents = self._items()
+        source = self._pair("fail", "fail")
+        self.assertEqual(outside(failing_checks(source), failing_checks(source), items), [])
+        swapped = self._pair("fail", "pass")
+        swapped["claims"][0]["checks"].append(
+            {"index": 2, "check": "exist", "args": {"paths": ["docs/c.md"]}, "status": "fail"}
+        )
+        extra = outside(failing_checks(swapped), failing_checks(source), items)
+        self.assertEqual(
+            [row["digest"] for row in extra],
+            [check_digest("exist", {"paths": ["docs/c.md"]})],
+        )
+
+    def test_a_previous_pass_that_fails_is_outside_and_a_fail_that_passes_is_green(self):
+        items, exist, contents = self._items()
+        source = self._pair("fail", "pass")
+        new = self._pair("pass", "fail")
+        extra = outside(failing_checks(new), failing_checks(source), items)
+        self.assertEqual([row["digest"] for row in extra], [contents])
+        self.assertEqual(turned_green([items[0]], new)[0]["key"]["check_digest"], exist)
+        self.assertEqual(
+            affected([items[1]], failing_checks(self._pair("fail", "fail")))[0]["key"]["check_digest"],
+            contents,
+        )
+
+    def test_a_retargeted_check_remains_the_original_deviation(self):
+        source = self._pair("fail", "pass")
+        old = check_digest("exist", {"paths": ["docs/a.md"]})
+        moved = retarget_check(
+            {"key": {"claim_id": "claim-a", "check_digest": old}, "decision": "must_fix"},
+            "exist",
+            {"paths": ["docs/b.md"]},
+            remediation="docs/a.md -> docs/b.md",
+            action="retarget",
+        )
+        new = self._pair("fail", "pass")
+        new["claims"][0]["checks"][0]["args"] = {"paths": ["docs/b.md"]}
+        self.assertEqual(outside(failing_checks(new), failing_checks(source), [moved]), [])
+
+    def test_a_remediated_check_that_fails_again_comes_back(self):
+        items, exist, _contents = self._items()
+        items[0]["decision"] = "pass"
+        source = self._pair("fail", "pass")
+        again = self._pair("fail", "pass")
+        projected = project_run(items, again, remediation="Check", source=source)
+        check = next(item for item in projected if item["key"]["check_digest"] == exist)
+        self.assertEqual(check["decision"], "must_fix")
+        self.assertEqual(check["remediation_history"][-1]["transition"], "pass -> fail")
+
+    def test_ok_updates_the_original_deviation_and_leaves_the_new_failure_out(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "review_items.json"
+        items, exist, contents = self._items()
+        write_items(path, items, marker={"review_locked": True})
+        source = self._pair("fail", "pass")
+        new = self._pair("pass", "fail")
+        self.assertEqual(
+            settle_regression(path, source, new, run_name="run-result_1", run_path=str(path)),
+            "outside",
+        )
+        self.assertEqual([item["decision"] for item in load_items(path)], ["must_fix", "pass"])
+        accept_pending(path, source, new)
+        updated = {item["key"]["check_digest"]: item for item in load_items(path)}
+        self.assertEqual(updated[exist]["decision"], "pass")
+        self.assertEqual(updated[exist]["remediation_history"][-1]["transition"], "must_fix -> pass")
+        self.assertEqual(updated[contents]["decision"], "pass")
+        document = read_json(path)
+        self.assertEqual(document["outside"][0]["choice"], "ok")
+        self.assertEqual(document["outside"][0]["checks"][0]["digest"], contents)
+
+    def test_rollback_restores_the_claim_and_records_the_event(self):
+        from common.jsonio import write_json
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        repo = Path(tmp.name) / "repo"
+        (repo / "claims").mkdir(parents=True)
+        claim_path = repo / "claims" / "claim-a.json"
+        original = {"id": "claim-a", "args": {"path": "docs/a.md"}}
+        write_json(claim_path, original)
+        items, _exist, _contents = self._items()
+        items_path = repo / "review_items.json"
+        write_items(items_path, items, marker={"review_locked": True})
+        remember_studio_edit(
+            items_path,
+            original,
+            "claims/claim-a.json",
+            {"claim_id": "claim-a", "check": "exist"},
+        )
+        write_json(claim_path, {"id": "claim-a", "args": {"path": "docs/c.md"}})
+        source = self._pair("fail", "pass")
+        new = self._pair("pass", "fail")
+        self.assertEqual(
+            settle_regression(items_path, source, new, run_name="run-result_1", run_path=str(items_path)),
+            "outside",
+        )
+        rollback_pending(items_path, repo)
+        self.assertEqual(read_json(claim_path)["args"]["path"], "docs/a.md")
+        self.assertEqual(load_items(items_path)[0]["decision"], "must_fix")
+        self.assertEqual(read_json(items_path)["outside"][0]["choice"], "rolled_back")
+        self.assertFalse((repo / "docs" / "c.md").exists())
+
+    def test_the_warning_names_the_changed_check_and_the_check_that_failed(self):
+        from studio.review.review_page import _outside_panel
+
+        warning = _outside_panel(
+            {
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run.json",
+                "outside_can_rollback": True,
+                "pending_outside": {
+                    "checks": [{"claim_id": "claim-b", "check": "contents", "digest": "x"}],
+                    "studio": {"claim_id": "claim-a", "check": "exist"},
+                },
+            }
+        )
+        self.assertIn("claim-b", warning)
+        self.assertIn("contents", warning)
+        self.assertIn("claim-a", warning)
+        self.assertIn("exist", warning)
+        self.assertIn("Rollback restores only that Studio change", warning)
+        self.assertIn('value="rollback"', warning)
+        no_studio = _outside_panel(
+            {
+                "repo_id": "alpha",
+                "selected_result": "/tmp/run.json",
+                "pending_outside": {"checks": [{"claim_id": "claim-b", "check": "contents"}]},
+            }
+        )
+        self.assertIn("no Studio change to restore", no_studio)
+        self.assertNotIn('value="rollback"', no_studio)
+        account = _outside_panel(
+            {
+                "outside": [
+                    {
+                        "run": "run-result_1",
+                        "choice": "ok",
+                        "checks": [{"claim_id": "claim-b", "check": "contents"}],
+                        "studio": {"claim_id": "claim-a", "check": "exist"},
+                    }
+                ]
+            }
+        )
+        self.assertIn("data-outside-account", account)
+        self.assertIn("Acknowledged", account)
+
+    def test_a_retired_check_is_not_retargeted_or_passed(self):
+        exist = check_digest("exist", {"paths": ["docs/a.md"]})
+        item = record_retire(
+            {"key": {"claim_id": "claim-a", "check_digest": exist}, "decision": "must_fix"},
+            remediation="Retired.",
+        )
+        source = self._pair("fail", "pass")
+        new = {
+            "claims": [
+                {
+                    "id": "claim-a",
+                    "checks": [
+                        {
+                            "index": 0,
+                            "check": "contents",
+                            "args": {"path": "docs/b.md"},
+                            "status": "fail",
+                        }
+                    ],
+                }
+            ]
+        }
+        projected = project_run([item], new, remediation="Check", source=source)
+        self.assertEqual(len(projected), 1)
+        self.assertEqual(projected[0]["key"]["check_digest"], exist)
+        self.assertEqual(projected[0]["decision"], "must_fix")
+        self.assertTrue(is_retired(projected[0]))
+        self.assertEqual(
+            [entry.get("action") for entry in projected[0]["remediation_history"]],
+            ["retire"],
+        )
+        again = apply_recheck(projected[0], "pass", remediation="Check")
+        self.assertEqual(again["decision"], "must_fix")
+        self.assertEqual(again["remediation_history"], projected[0]["remediation_history"])
+
+    def test_retiring_the_claim_retires_every_row_and_one_check_does_not(self):
+        items, exist, contents = self._items()
+        one = mark_retired(items, "claim-a", exist, "Retired.", claim_gone=False)
+        self.assertTrue(is_retired(one[0]))
+        self.assertFalse(is_retired(one[1]))
+        self.assertEqual(one[0]["decision"], "must_fix")
+        self.assertEqual(one[1]["decision"], "pass")
+        both = mark_retired(items, "claim-a", exist, "Retired.", claim_gone=True)
+        self.assertTrue(all(is_retired(item) for item in both))
+        self.assertEqual(both[0]["decision"], "must_fix")
+        self.assertEqual(both[1]["decision"], "pass")
+        self.assertEqual(both[0]["key"]["check_digest"], exist)
+        self.assertEqual(both[1]["key"]["check_digest"], contents)

@@ -20,6 +20,8 @@ from app.home_model import _select_pack
 from app.prepare_post import _prepare_workspace
 from app.publication_model import _publication_model, _publish_selected, _seal_selected
 from app.review_model import (
+    _ack_outside,
+    _adopt_found_file,
     _compile_review,
     _create_remedy,
     _recheck,
@@ -757,6 +759,12 @@ def make_handler(ws: Workspace):
                 return
             if path == "/review/recheck":
                 self._redirect(_recheck(ws, form))
+                return
+            if path == "/review/outside":
+                self._redirect(_ack_outside(ws, form))
+                return
+            if path == "/review/find":
+                self._redirect(_adopt_found_file(ws, form))
                 return
             if path == "/review/remedy":
                 self._redirect(_create_remedy(ws, form))

@@ -729,6 +729,18 @@ def _store_check(
         return False
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
         raise ModelError("claim", "signed", "confirmation before changing a signed claim")
+    return_to = _one(form, "return_to")
+    from studio.review.impl.items import _workspace_from_return, remember_studio_edit
+
+    workspace = _workspace_from_return(context["repo"], return_to)
+    if workspace is not None:
+        claim_file = context["claims_dir"] / f"{claim.get('id')}.json"
+        remember_studio_edit(
+            workspace,
+            claim,
+            str(claim_file.resolve().relative_to(Path(context["repo"]).resolve())),
+            {"claim_id": str(claim.get("id") or ""), "check": check},
+        )
     write_claim(context["claims_dir"], rebind(claim, checks=checks))
     if isinstance(previous, dict):
         from studio.review.impl.items import record_check_change
@@ -741,7 +753,17 @@ def _store_check(
             previous.get("args") if isinstance(previous.get("args"), dict) else {},
             check,
             args,
+            name=_one(form, "name"),
         )
+    if workspace is not None:
+        from urllib.parse import parse_qs, urlparse
+
+        from studio.check.check_model import regress_remediation
+
+        query = parse_qs(urlparse(return_to).query)
+        source = (query.get("report") or query.get("result") or [""])[0]
+        if source:
+            regress_remediation(context["repo"], source)
     return True
 
 

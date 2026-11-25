@@ -207,6 +207,7 @@ def review_page(
 {_current_run_card(door, report, saved)}
 {_review_empty(door)}
 {_flash(message, error)}
+{_outside_panel(door or {})}
 {refusal}
 {detail}
 {shown}
@@ -221,12 +222,38 @@ def review_page(
     return page(heading, body, banner=panel)
 
 
+def _item_keeps_digest(item: dict, digest: str) -> bool:
+    """True for the current key, or a Check whose path change recorded this digest."""
+    key = item.get("key") if isinstance(item.get("key"), dict) else {}
+    if key.get("check_digest") == digest:
+        return True
+    for entry in item.get("remediation_history") or []:
+        if isinstance(entry, dict) and entry.get("old_check_digest") == digest:
+            return True
+    return False
+
+
+def _moved_from(item: dict, digest: str) -> bool:
+    """True when this item replaced a Check that used to have this digest."""
+    for entry in item.get("remediation_history") or []:
+        if isinstance(entry, dict) and entry.get("old_check_digest") == digest:
+            return True
+    return False
+
+
 def _matching_item(claim: dict, digest: str, review_items: list[dict]) -> dict | None:
+    """The live item for this run Check. A retarget wins over a copy of the old key."""
+    direct = None
+    moved = None
     for item in review_items:
         key = item.get("key") if isinstance(item.get("key"), dict) else {}
-        if key.get("claim_id") == claim.get("id") and key.get("check_digest") == digest:
-            return item
-    return None
+        if key.get("claim_id") != claim.get("id"):
+            continue
+        if key.get("check_digest") == digest and direct is None:
+            direct = item
+        elif moved is None and _moved_from(item, digest):
+            moved = item
+    return moved or direct
 
 
 def _rebind_history(claim: dict, review_items: list[dict]) -> list[dict]:
@@ -239,6 +266,19 @@ def _rebind_history(claim: dict, review_items: list[dict]) -> list[dict]:
             if isinstance(entry, dict) and entry.get("action") == "rebind":
                 found.append(entry)
     return found
+
+
+def _deviation_retired(claim: dict, deviation: dict, review_items: list[dict]) -> bool:
+    """The remediation retired this Check. The original report still records its result."""
+    from studio.review.impl.items import binding_digest, check_digest, is_retired
+
+    if deviation.get("kind") == "binding":
+        item = _matching_item(claim, binding_digest(), review_items)
+    else:
+        check = deviation.get("check") if isinstance(deviation.get("check"), dict) else {}
+        args = check.get("args") if isinstance(check.get("args"), dict) else {}
+        item = _matching_item(claim, check_digest(str(check.get("check") or ""), args), review_items)
+    return isinstance(item, dict) and is_retired(item)
 
 
 def _check_rechecked_pass(claim: dict, check: dict, review_items: list[dict]) -> bool:
@@ -309,7 +349,8 @@ def _review_queue(
             text = transition
         if not text:
             return ""
-        line = f"{entry.get('date') or ''} {text}".strip()
+        who = str(entry.get("name") or "").strip()
+        line = " ".join(part for part in (str(entry.get("date") or "").strip(), who, text) if part)
         if transition and transition not in line:
             line = f"{line} {transition}".strip()
         return line
@@ -328,7 +369,7 @@ def _review_queue(
             key = item.get("key") if isinstance(item.get("key"), dict) else {}
             if key.get("claim_id") != claim.get("id"):
                 continue
-            same_check = key.get("check_digest") == digest
+            same_check = _item_keeps_digest(item, digest)
             for entry in item.get("remediation_history") or []:
                 if not isinstance(entry, dict):
                     continue
@@ -365,25 +406,53 @@ def _review_queue(
             return ""
         return remediation_comment(item)
 
-    def remediation_form(claim: dict, check: dict | None) -> tuple[str, str]:
+    def remediation_menu(claim: dict, check: dict | None, editor_id: str, find_id: str) -> str:
+        """One Actions menu for a check row. Dialogs and forms stay outside the panel."""
         if not remedy_open or not isinstance(check, dict):
-            return "", ""
+            return ""
         args = check.get("args") if isinstance(check.get("args"), dict) else {}
         digest = check_digest(str(check.get("check") or ""), args)
         source = str(door.get("selected_report") or door.get("selected_result") or "")
-        dialog_id = "remedy-comment-" + re.sub(
+        slug = re.sub(
             r"[^A-Za-z0-9_-]",
             "-",
             f"{claim.get('id') or ''}-{check.get('index')}",
         )
+        comment_id = "remedy-comment-" + slug
+        recheck_id = "recheck-" + slug
+        retire_id = "retire-" + slug
+        menu_id = "actions-" + slug
         hidden = (
             f'<input type="hidden" name="repo_id" value="{html.escape(str(door.get("repo_id") or ""))}">'
             f'<input type="hidden" name="source" value="{html.escape(source)}">'
             f'<input type="hidden" name="claim_id" value="{html.escape(str(claim.get("id") or ""))}">'
             f'<input type="hidden" name="check_digest" value="{html.escape(digest)}">'
         )
+        items = []
+        if find_id:
+            items.append(
+                f'<button type="button" data-find-open="{html.escape(find_id)}">'
+                f"{_menu_icon('search')}Find</button>"
+            )
+        opener = _check_opener(claim, check, editor_id)
+        if opener:
+            items.append(
+                f'<button type="button" {opener}>{_menu_icon("pencil")}Edit check</button>'
+            )
+        items.append(
+            f'<button type="button" data-remedy-comment-open="{html.escape(comment_id)}">'
+            f"{_menu_icon('message')}Add comment</button>"
+        )
+        items.append(
+            f'<button type="submit" form="{html.escape(recheck_id)}">'
+            f"{_menu_icon('refresh')}Re-check</button>"
+        )
+        items.append(
+            f'<button type="submit" form="{html.escape(retire_id)}" data-action="retire">'
+            f"{_menu_icon('archive')}Retire</button>"
+        )
         dialog = (
-            f'<dialog id="{html.escape(dialog_id)}" class="comment-editor">'
+            f'<dialog id="{html.escape(comment_id)}" class="comment-editor">'
             f'<form method="post" action="/review/remediate" data-remedy-comment>{hidden}'
             "<p>Comment</p>"
             f'<textarea name="remediation">{html.escape(current_note(claim, check))}</textarea>'
@@ -391,16 +460,16 @@ def _review_queue(
             '<button type="button" class="secondary" data-remedy-comment-cancel>Cancel</button></p>'
             "</form></dialog>"
         )
-        buttons = (
-            f'<p><button type="button" data-remedy-comment-open="{html.escape(dialog_id)}">Add comment</button></p>'
-            f"{dialog}"
-            f'<form method="post" action="/review/recheck">{hidden}'
-            "<p><button type=\"submit\">Re-check</button></p></form>"
-            f'<form method="post" action="/review/remediate">{hidden}'
-            '<input type="hidden" name="action" value="retire">'
-            '<p><button type="submit" data-action="retire">Retire</button></p></form>'
+        return (
+            dialog
+            + f'<form id="{html.escape(recheck_id)}" class="row-action-form" method="post" action="/review/recheck">{hidden}</form>'
+            + f'<form id="{html.escape(retire_id)}" class="row-action-form" method="post" action="/review/remediate">{hidden}'
+            + '<input type="hidden" name="action" value="retire"></form>'
+            + f'<button type="button" class="actions-menu" popovertarget="{html.escape(menu_id)}">'
+            + f'{_menu_icon("wrench")}<span class="actions-label">Actions</span>{_menu_icon("caret")}'
+            + "</button>"
+            + f'<div class="actions-panel" id="{html.escape(menu_id)}" popover="auto">{"".join(items)}</div>'
         )
-        return buttons, ""
     repo = quote(str(door.get("repo_id") or ""), safe="")
     selected_result = quote(str(door.get("selected_result") or ""), safe="")
     selected_report = quote(str(door.get("selected_report") or ""), safe="")
@@ -449,7 +518,8 @@ def _review_queue(
             if not attention:
                 continue
             requirement_green = all(
-                _deviation_passed(claim, deviation, review_items)
+                _deviation_retired(claim, deviation, review_items)
+                or _deviation_passed(claim, deviation, review_items)
                 for claim, rows in attention
                 for deviation in rows
             )
@@ -564,7 +634,9 @@ def _review_queue(
                     )
                 else:
                     deviation = payload if isinstance(payload, dict) else {}
-                    passed = remediation and _deviation_passed(claim, deviation, review_items)
+                    retired = remediation and _deviation_retired(claim, deviation, review_items)
+                    passed = remediation and not retired and _deviation_passed(claim, deviation, review_items)
+                    closed = retired or passed
                     if remedy_open and not passed and deviation.get("kind") == "binding":
                         dialogs.append(
                             _binding_dialog(
@@ -578,20 +650,34 @@ def _review_queue(
                     cells.append(
                         "<td>"
                         + _deviation_checks(
-                            claim, deviation, dialog_id, allow_edit=remedy_open, done=passed
+                            claim,
+                            deviation,
+                            dialog_id,
+                            allow_edit=remedy_open and not retired,
+                            done=passed,
+                            retired=retired,
                         )
                         + "</td>"
                     )
                     remedy, verdict, comment, dialog = _deviation_cells(
-                        claim, deviation, assessments, editable
+                        claim,
+                        deviation,
+                        assessments,
+                        editable,
+                        recommend=not closed,
+                        choices=(("", "Passed"), ("must_fix", "Must be fixed")) if passed else None,
+                        caption="Retired" if retired else "",
                     )
+                    if closed:
+                        remedy = ""
                     dialogs.append(dialog)
                     deviation_check = deviation.get("check") if isinstance(deviation, dict) else None
                     binding_row = deviation.get("kind") == "binding"
                     actions = ""
                     if remediation:
                         pieces = []
-                        if remedy_open and not passed and _evidence_missing(deviation_check):
+                        find_id = ""
+                        if remedy_open and not closed and _evidence_missing(deviation_check):
                             pieces.append(
                                 '<p hidden><button type="button" class="discover-again" hidden '
                                 f'data-dialog="{html.escape(_dialog_id(str(claim.get("id") or "")))}">'
@@ -603,17 +689,28 @@ def _review_queue(
                                 "-",
                                 f"{claim.get('id') or ''}-{deviation_check.get('index') if isinstance(deviation_check, dict) else ''}",
                             )
-                            pieces.append(
-                                f'<p><button type="button" data-find-open="{html.escape(find_id)}">Find</button></p>'
-                                f'<p data-find-result="{html.escape(find_id)}"></p>'
+                            find_args = (
+                                deviation_check.get("args")
+                                if isinstance(deviation_check, dict) and isinstance(deviation_check.get("args"), dict)
+                                else {}
                             )
-                            dialogs.append(_find_dialog(find_id, filename, same_name_paths(filename)))
-                        if not passed and isinstance(deviation_check, dict):
-                            buttons, comment_dialog = remediation_form(claim, deviation_check)
-                            if buttons:
-                                pieces.append(buttons)
-                            if comment_dialog:
-                                dialogs.append(comment_dialog)
+                            find_source = str(door.get("selected_report") or door.get("selected_result") or "")
+                            find_hidden = (
+                                f'<input type="hidden" name="repo_id" value="{html.escape(str(door.get("repo_id") or ""))}">'
+                                f'<input type="hidden" name="source" value="{html.escape(find_source)}">'
+                                f'<input type="hidden" name="claim_id" value="{html.escape(str(claim.get("id") or ""))}">'
+                                f'<input type="hidden" name="check_digest" value="{html.escape(check_digest(str(deviation_check.get("check") or "") if isinstance(deviation_check, dict) else "", find_args))}">'
+                            )
+                            root = Path(str(door.get("repo_path") or "")) if door.get("repo_path") else None
+                            choices = [
+                                (path, _file_preview(root, path) if root is not None else "")
+                                for path in same_name_paths(filename)
+                            ]
+                            dialogs.append(_find_dialog(find_id, filename, choices, find_hidden))
+                        if not closed and isinstance(deviation_check, dict):
+                            menu = remediation_menu(claim, deviation_check, dialog_id, find_id)
+                            if menu:
+                                pieces.append(menu)
                         actions = f'<td class="row-actions">{"".join(pieces)}</td>'
                     note = current_note(claim, deviation_check) if remediation and isinstance(deviation_check, dict) else ""
                     cells.extend(
@@ -653,7 +750,7 @@ def _review_queue(
             "<th>Requirement</th><th>File</th><th>Checks</th>"
             '<th class="tips" title="Wrench: suggestion from the Check. '
             'Scroll: suggestion from the Requirement.">Remedy suggestions</th>'
-            "<th>Verdict</th>"
+            "<th>Decisions</th>"
             + ("<th>Actions</th>" if remediation else "")
             + "<th>Comment</th>"
             + ("<th>Remediation history</th>" if show_history else "")
@@ -721,6 +818,8 @@ def _review_queue(
         script += _find_script()
     if "data-remedy-comment" in table:
         script += _remedy_comment_script()
+    if "actions-menu" in table:
+        script += _actions_menu_script()
     open_list = (
         '<section class="deviations-frame" data-deviations="1"><h2>Deviations</h2>'
         + meta
@@ -819,7 +918,13 @@ def _comment_id(identity: dict) -> str:
 
 
 def _deviation_checks(
-    claim: dict, deviation: dict, dialog_id: str, *, allow_edit: bool = False, done: bool = False
+    claim: dict,
+    deviation: dict,
+    dialog_id: str,
+    *,
+    allow_edit: bool = False,
+    done: bool = False,
+    retired: bool = False,
 ) -> str:
     """The check or binding pill for one deviation row."""
     pills = []
@@ -827,16 +932,19 @@ def _deviation_checks(
         check = deviation.get("check")
         if isinstance(check, dict):
             shown = check
-            if done and str(check.get("status") or "") == "fail":
+            if retired:
+                shown = dict(check)
+                shown["status"] = "retired"
+            elif done and str(check.get("status") or "") == "fail":
                 shown = dict(check)
                 shown["status"] = "pass"
-            pills.append(_check_span(claim, shown, dialog_id, allow_edit=allow_edit))
+            pills.append(_check_span(claim, shown, dialog_id, allow_edit=allow_edit and not retired))
     else:
         binding = str(claim.get("binding") or "")
         if binding in {"stale", "missing"}:
             bind_id = _binding_dialog_id(claim)
             name = "Requirement Binding" if binding == "stale" else f"Binding {binding}"
-            mark = "pass" if done else "fail"
+            mark = "retired" if retired else "pass" if done else "fail"
             label = f'{_status_mark(mark, f"Binding {binding}")}{html.escape(name)}'
             if bind_id and allow_edit and not done:
                 pills.append(
@@ -990,7 +1098,14 @@ def _default_check_remedy(check: dict, detail: str, hint: str) -> str:
 
 
 def _deviation_cells(
-    claim: dict, deviation: dict, assessments: dict, editable: bool
+    claim: dict,
+    deviation: dict,
+    assessments: dict,
+    editable: bool,
+    *,
+    recommend: bool = False,
+    choices: tuple[tuple[str, str], ...] | None = None,
+    caption: str = "",
 ) -> tuple[str, str, str, str]:
     if deviation["kind"] == "check":
         check = deviation["check"]
@@ -1047,6 +1162,9 @@ def _deviation_cells(
         dialog_id,
         check_label=check_label,
         comment_when=comment_when,
+        recommend=recommend,
+        choices=choices,
+        caption=caption,
     )
     return remedy, verdict, comment, dialog
 
@@ -1098,6 +1216,34 @@ def _status_mark(status: str, label: str = "") -> str:
     return _icon_svg(body, label=label or status, css="mark", size=14)
 
 
+def _menu_icon(kind: str) -> str:
+    bodies = {
+        "wrench": (
+            '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105'
+            "c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3"
+            'l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>'
+        ),
+        "caret": '<path d="m6 9 6 6 6-6"/>',
+        "search": '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+        "pencil": '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+        "message": (
+            '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+        ),
+        "refresh": (
+            '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>'
+            '<path d="M3 3v5h5"/>'
+            '<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>'
+            '<path d="M16 16h5v5"/>'
+        ),
+        "archive": (
+            '<rect width="20" height="5" x="2" y="3" rx="1"/>'
+            '<path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>'
+            '<path d="M10 12h4"/>'
+        ),
+    }
+    return _icon_svg(bodies[kind], css="menu-icon")
+
+
 def _remedy_icon(kind: str, label: str) -> str:
     bodies = {
         "wrench": (
@@ -1144,9 +1290,16 @@ def _verdict_controls(
     choices: tuple[tuple[str, str], ...] | None = None,
     check_label: str = "",
     comment_when: tuple[str, ...] = (),
+    recommend: bool = False,
+    caption: str = "",
 ) -> tuple[str, str, str]:
     saved = assessments.get(assessment_identity(identity))
-    disposition = str(saved.get("disposition") or "") if isinstance(saved, dict) else ""
+    if isinstance(saved, dict):
+        disposition = str(saved.get("disposition") or "")
+    elif recommend:
+        disposition = "must_fix"
+    else:
+        disposition = ""
     text = str(saved.get("text") or "") if isinstance(saved, dict) else ""
     hidden = _assessment_hidden(identity, claim)
     if choices is None:
@@ -1163,7 +1316,7 @@ def _verdict_controls(
         f' data-check-label="{html.escape(check_label)}"'
     )
     if not editable:
-        label = dict(choices).get(disposition, "Not assessed")
+        label = caption or dict(choices).get(disposition, "Not assessed")
         carried = hidden + (
             f'<input type="hidden" name="assess_disposition" form="review-compile" data-assessment-field'
             f'{marker} value="{html.escape(disposition)}">'
@@ -1680,11 +1833,14 @@ def _review_path_cell(
 
 
 def _check_pill(check: dict, status: str, opener: str = "") -> str:
-    kind = status if status in {"pass", "fail", "skipped"} else "fail"
+    kind = status if status in {"pass", "fail", "skipped", "retired"} else "fail"
     entry = check if isinstance(check, dict) else {"check": str(check or "")}
     name = html.escape(check_short_label(entry))
     mark = _status_mark(status)
-    label = f"{mark}{name}" if mark else f"{name} · {html.escape(status)}"
+    if status == "retired":
+        label = f"<s>{name}</s>"
+    else:
+        label = f"{mark}{name}" if mark else f"{name} · {html.escape(status)}"
     title = html.escape(check_caption(entry))
     if opener:
         return (
@@ -1727,29 +1883,92 @@ def _check_file(check: dict) -> str:
     return ""
 
 
-def _find_dialog(dialog_id: str, filename: str, paths: list[str]) -> str:
-    """The dialog returns a path or nothing. It does not change the Claim."""
+def _file_preview(root: Path, relative: str) -> str:
+    """Working-tree text for a repo-relative path. Empty when the path is not a file here."""
+    if Path(relative).is_absolute() or ".." in Path(relative).parts:
+        return ""
+    try:
+        path = (root / relative).resolve()
+        path.relative_to(root.resolve())
+    except ValueError:
+        return ""
+    if not path.is_file():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return path.read_bytes().decode("utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _find_dialog(dialog_id: str, filename: str, choices: list[tuple[str, str]], hidden: str) -> str:
+    """Radios for every same-named file. OK writes that path into the Claim."""
     name = html.escape(Path(filename).name or filename)
-    if paths:
-        choices = "".join(
-            "<li><button type=\"button\" data-find-choice=\""
-            + html.escape(path)
-            + "\">"
-            + html.escape(path)
-            + "</button></li>"
-            for path in paths
+    if not choices:
+        return (
+            f'<dialog id="{html.escape(dialog_id)}" class="binding-note" data-find>'
+            f"<p>Files named <code>{name}</code></p>"
+            f"<p>No file named <code>{name}</code> is in this project.</p>"
+            '<p><button type="button" class="secondary" data-find-cancel>Cancel</button></p></dialog>'
         )
-        body = (
-            f"<ul>{choices}</ul>"
-            '<p class="muted">Choosing a file returns that path. It does not change the Claim.</p>'
+    radios = []
+    previews = []
+    for index, (path, text) in enumerate(choices):
+        preview_id = f"{dialog_id}-preview-{index}"
+        radios.append(
+            "<label class=\"find-choice\">"
+            f'<input type="radio" name="path" value="{html.escape(path)}" required '
+            f'data-find-preview="{html.escape(preview_id)}">'
+            f"<code>{html.escape(path)}</code>"
+            "</label>"
         )
-    else:
-        body = f"<p>No file named <code>{name}</code> is in this project.</p>"
+        previews.append(
+            f'<dialog id="{html.escape(preview_id)}" class="binding-note" data-find-preview>'
+            f"<p><code>{html.escape(path)}</code></p>"
+            '<p class="muted">This is the file in the working tree now.</p>'
+            f"<pre>{html.escape(text)}</pre>"
+            '<p><button type="button" class="secondary" data-find-preview-close>Close</button></p>'
+            "</dialog>"
+        )
     return (
         f'<dialog id="{html.escape(dialog_id)}" class="binding-note" data-find>'
-        f"<p>Files named <code>{name}</code></p>{body}"
-        '<p><button type="button" data-find-cancel>Cancel</button></p></dialog>'
+        f'<form method="post" action="/review/find">{hidden}'
+        f"<p>Files named <code>{name}</code></p>"
+        f"{''.join(radios)}"
+        '<p class="muted">OK writes this path into the Claim, signs it, and runs the check again.</p>'
+        "<label>Signer name <input type=\"text\" name=\"name\" required></label>"
+        '<p><button type="submit">OK</button> '
+        '<button type="button" class="secondary" data-find-cancel>Cancel</button></p>'
+        f"</form></dialog>{''.join(previews)}"
     )
+
+
+def _actions_menu_script() -> str:
+    """Place the menu under its trigger, and close it when a row is chosen."""
+    return """
+<script>
+document.querySelectorAll("button.actions-menu").forEach(function(button) {
+  var panel = document.getElementById(button.getAttribute("popovertarget"));
+  if (!panel) return;
+  panel.addEventListener("toggle", function(event) {
+    if (event.newState !== "open") return;
+    var box = button.getBoundingClientRect();
+    var left = Math.max(8, box.left);
+    panel.style.margin = "0";
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+    panel.style.left = left + "px";
+    panel.style.top = (box.bottom + 4) + "px";
+  });
+  panel.querySelectorAll("button").forEach(function(item) {
+    item.addEventListener("click", function() {
+      if (panel.hidePopover) panel.hidePopover();
+    });
+  });
+});
+</script>
+"""
 
 
 def _remedy_comment_script() -> str:
@@ -1786,22 +2005,22 @@ document.querySelectorAll("[data-find-open]").forEach(function(button) {
     if (dialog && dialog.showModal) dialog.showModal();
   });
 });
-document.querySelectorAll("[data-find-choice]").forEach(function(button) {
+document.querySelectorAll("[data-find] input[data-find-preview]").forEach(function(input) {
+  input.addEventListener("click", function() {
+    var preview = document.getElementById(input.getAttribute("data-find-preview"));
+    if (preview && preview.showModal) preview.showModal();
+  });
+});
+document.querySelectorAll("[data-find-preview-close]").forEach(function(button) {
   button.addEventListener("click", function() {
     var dialog = button.closest("dialog");
-    if (!dialog) return;
-    var slot = document.querySelector('[data-find-result="' + dialog.id + '"]');
-    if (slot) slot.textContent = button.getAttribute("data-find-choice") || "";
-    dialog.close();
+    if (dialog) dialog.close();
   });
 });
 document.querySelectorAll("[data-find-cancel]").forEach(function(button) {
   button.addEventListener("click", function() {
     var dialog = button.closest("dialog");
-    if (!dialog) return;
-    var slot = document.querySelector('[data-find-result="' + dialog.id + '"]');
-    if (slot) slot.textContent = "";
-    dialog.close();
+    if (dialog) dialog.close();
   });
 });
 </script>
@@ -2597,6 +2816,112 @@ def _unchosen_run(door: dict) -> str:
         f"To start a review, go to the {check} tab and select a result to review, "
         f'or <a href="{html.escape(href)}">review the latest Check result '
         f"<code>{html.escape(name)}</code></a>.</p>"
+    )
+
+
+def _outside_panel(door: dict) -> str:
+    """The warning for a new failure, and the acknowledged events the remedy will sign."""
+    parts = []
+    pending = door.get("pending_outside")
+    if isinstance(pending, dict) and pending.get("checks"):
+        parts.append(_outside_warning(door, pending))
+    events = door.get("outside")
+    if isinstance(events, list) and events:
+        parts.append(_outside_account(events))
+    return "".join(parts)
+
+
+def _outside_warning(door: dict, pending: dict) -> str:
+    rows = []
+    for check in pending.get("checks") or []:
+        if not isinstance(check, dict):
+            continue
+        rows.append(
+            "<li><code>"
+            + html.escape(str(check.get("claim_id") or ""))
+            + "</code> "
+            + html.escape(str(check.get("check") or ""))
+            + "</li>"
+        )
+    studio = pending.get("studio") if isinstance(pending.get("studio"), dict) else None
+    if studio and (studio.get("claim_id") or studio.get("check")):
+        changed = (
+            "<p>The last Studio change was <code>"
+            + html.escape(str(studio.get("claim_id") or ""))
+            + "</code> / "
+            + html.escape(str(studio.get("check") or ""))
+            + ". It may be a different check from the one that failed.</p>"
+            + "<p>Rollback restores only that Studio change. "
+            + "A file removed or edited outside Studio is left as it is.</p>"
+        )
+    else:
+        changed = "<p>There is no Studio change to restore.</p>"
+    repo = html.escape(str(door.get("repo_id") or ""))
+    source = html.escape(str(door.get("selected_result") or door.get("selected_report") or ""))
+    hidden = (
+        f'<input type="hidden" name="repo_id" value="{repo}">'
+        f'<input type="hidden" name="source" value="{source}">'
+    )
+    rollback = ""
+    if door.get("outside_can_rollback"):
+        rollback = (
+            '<form method="post" action="/review/outside">'
+            + hidden
+            + '<input type="hidden" name="action" value="rollback">'
+            + '<button type="submit">Rollback</button></form>'
+        )
+    return (
+        '<section data-outside><h2>Checks outside the original report</h2>'
+        + "<ul>"
+        + "".join(rows)
+        + "</ul>"
+        + changed
+        + '<form method="post" action="/review/outside">'
+        + hidden
+        + '<input type="hidden" name="action" value="ok">'
+        + "<button type=\"submit\">OK</button></form>"
+        + rollback
+        + "</section>"
+    )
+
+
+def _outside_account(events: list) -> str:
+    rows = []
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        choice = "Rolled back" if event.get("choice") == "rolled_back" else "Acknowledged"
+        checks = []
+        for check in event.get("checks") or []:
+            if isinstance(check, dict):
+                checks.append(
+                    html.escape(str(check.get("claim_id") or ""))
+                    + " "
+                    + html.escape(str(check.get("check") or ""))
+                )
+        studio = event.get("studio") if isinstance(event.get("studio"), dict) else None
+        changed = ""
+        if studio and (studio.get("claim_id") or studio.get("check")):
+            changed = (
+                " after a change to "
+                + html.escape(str(studio.get("claim_id") or ""))
+                + " / "
+                + html.escape(str(studio.get("check") or ""))
+            )
+        rows.append(
+            "<li>"
+            + html.escape(choice)
+            + " "
+            + html.escape(str(event.get("run") or ""))
+            + ": "
+            + ", ".join(checks)
+            + changed
+            + "</li>"
+        )
+    return (
+        '<section data-outside-account><h2>Outside the original report</h2><ul>'
+        + "".join(rows)
+        + "</ul></section>"
     )
 
 
