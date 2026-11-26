@@ -21,6 +21,7 @@ REPORT_FIELDS = {
     "decision",
     "items_digest",
     "signed",
+    "format_version",
 }
 _CHECK_ASSESSMENT = {"kind", "claim_id", "claim_digest", "index", "disposition", "text"}
 _BINDING_ASSESSMENT = {
@@ -164,6 +165,10 @@ def validate_report(obj: object) -> dict:
     unknown = sorted(set(obj) - REPORT_FIELDS)
     if unknown:
         raise ModelError("review report", unknown[0], f"one of {sorted(REPORT_FIELDS)}")
+    if "format_version" in obj:
+        value = obj["format_version"]
+        if type(value) is not int or value != 1:
+            raise ModelError("review report", "format_version", "1, or absent")
     run_result = validate_run_result(obj.get("run_result"))
     requirements = obj.get("requirements")
     claims = obj.get("claims")

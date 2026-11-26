@@ -79,7 +79,7 @@ def signed_block(digest: str, *, name: str, private_key: bytes, at: str) -> dict
 
 
 def sign_object(obj: dict, *, name: str, private_key: bytes, at: str) -> dict:
-    """Seal a requirement, claim, or review report. The digest is the object without `signed`."""
+    """Seal a requirement, claim, or review report. The digest drops `signed` and `format_version`."""
     out = copy.deepcopy(obj)
     out.pop("signed", None)
     out["signed"] = signed_block(version_digest(out), name=name, private_key=private_key, at=at)

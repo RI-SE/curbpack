@@ -96,7 +96,7 @@ A provenance key the run does not have is omitted. `decision`, `priority`, `comm
 
 ## review_items.json
 
-The working file is `review_items.json` in the Studio Check directory. It is one object. `items` is the list of `review_item`. Save writes the decisions into `items` and the reviewer's words for the whole review into `notes`. It does not write a report and does not change a signature.
+The working file is `review_items.json` in the Studio Check directory. It is one object. `items` is the list of `review_item`. Save writes the decisions into `items` and the reviewer's words for the whole review into `notes`. It does not write a report and does not change a signature. `format_version` is an optional integer contract version on this object. Absent means version 0 and is accepted. The only present value accepted is `1`. The version digest removes it together with `signed`. The sealed copy `review-report_<stamp>.items.json` is the same object.
 
 Sign sets `review_locked` to `true` and leaves the working decisions in place. The sealed copy is a separate file, `review-report_<stamp>.items.json`, defined in [Outputs](outputs.md). Reading that seal uses `what` `review items`. Remediation edits the working file. On that copy `decision` is the recommendation and does not replace the sealed decision.
 

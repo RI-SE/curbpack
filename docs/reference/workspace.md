@@ -49,6 +49,7 @@ Accepted keys are only those in §2.2.
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
 | `namespace_base` | yes | `"RISE"` | Publisher base namespace. A new Pack namespace is this value, a slash, and the Pack `name`. |
+| `format_version` | no | omitted | Integer contract version of this file. Absent means version 0 and is accepted. The only present value accepted is `1`. It is not a pack release version. |
 
 **Dialog → file:** packs and requirements as checkboxes. Ticked packs → `packs`. Unticked requirements → `exclude_requirements`.
 

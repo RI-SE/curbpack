@@ -25,6 +25,7 @@ REQUIREMENT_FIELDS = {
     "signed",
     "namespace",
     "status",
+    "format_version",
 }
 
 # Old PoC fields and fields packs2.md explicitly removed.
@@ -54,6 +55,7 @@ PACK_FIELDS = {
     "source",
     "origin",
     "signed",
+    "format_version",
 }
 
 CLAIM_FIELDS = {
@@ -68,6 +70,7 @@ CLAIM_FIELDS = {
     "severity",
     "checks",
     "signed",
+    "format_version",
 }
 
 FORBIDDEN_CLAIM_FIELDS = {"remediation", "expected", "settlement", "law_text", "search"}
@@ -120,6 +123,14 @@ def _reject_unknown(obj: dict, object_name: str, allowed: set[str]) -> None:
     unknown = sorted(set(obj) - allowed)
     if unknown:
         _expect(object_name, unknown[0], f"one of {sorted(allowed)}")
+
+
+def _validate_format_version(obj: dict, object_name: str) -> None:
+    if "format_version" not in obj:
+        return
+    value = obj["format_version"]
+    if type(value) is not int or value != 1:
+        _expect(object_name, "format_version", "1, or absent")
 
 
 def _validate_signed_block(obj: dict, object_name: str, *, required: bool) -> None:
@@ -224,6 +235,7 @@ def validate_requirement(obj: object, *, published: bool = False) -> dict:
     if forbidden:
         _expect(name, forbidden[0], "absent on a requirement")
     _reject_unknown(requirement, name, REQUIREMENT_FIELDS)
+    _validate_format_version(requirement, name)
     _nonempty_str(requirement, name, "id", required=True)
     _nonempty_str(requirement, name, "pack_id", required=True)
     _nonempty_str(requirement, name, "namespace", required=True)
@@ -253,6 +265,7 @@ def validate_pack(obj: object, *, sealed: bool = False) -> dict:
     pack = _require_dict(obj, "pack")
     name = f"pack {pack.get('id', '?')}"
     _reject_unknown(pack, name, PACK_FIELDS)
+    _validate_format_version(pack, name)
     _nonempty_str(pack, name, "id", required=True)
     _nonempty_str(pack, name, "version", required=True)
     _nonempty_str(pack, name, "namespace", required=True)
@@ -327,6 +340,7 @@ def validate_claim(obj: object) -> dict:
     if forbidden:
         _expect(name, forbidden[0], "absent on a claim")
     _reject_unknown(claim, name, CLAIM_FIELDS)
+    _validate_format_version(claim, name)
     _nonempty_str(claim, name, "id", required=True)
     _nonempty_str(claim, name, "requirement_id", required=True)
     for field in ("namespace", "pack_id", "requirement_digest"):
@@ -365,12 +379,14 @@ CURBPACK_CONFIG_FIELDS = {
     "results_dir",
     "reports_dir",
     "namespace_base",
+    "format_version",
 }
 
 
 def validate_curbpack_config(obj: object) -> dict:
     config = _require_dict(obj, "curbpack.json")
     _reject_unknown(config, "curbpack.json", CURBPACK_CONFIG_FIELDS)
+    _validate_format_version(config, "curbpack.json")
     _string_list(config.get("packs"), "curbpack.json", "packs", allow_empty=True)
     if "exclude_requirements" in config and "requirements" in config:
         _expect("curbpack.json", "requirements", "absent when exclude_requirements is set")
@@ -420,7 +436,12 @@ def _validate_search_hints(hints: object) -> None:
 
 def validate_run_result(obj: object) -> dict:
     result = _require_dict(obj, "run result")
-    _reject_unknown(result, "run result", {"commit", "worktree", "packs", "tool", "tool_version", "claims"})
+    _reject_unknown(
+        result,
+        "run result",
+        {"commit", "worktree", "packs", "tool", "tool_version", "claims", "format_version"},
+    )
+    _validate_format_version(result, "run result")
     has_commit = "commit" in result
     has_worktree = "worktree" in result
     if has_commit != has_worktree:

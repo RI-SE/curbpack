@@ -44,6 +44,17 @@ class ObjectSignatureTest(unittest.TestCase):
         self.assertIn("not available", result["reason"])
         self.assertIn("does not fetch", result["reason"])
 
+    def test_version_digest_ignores_format_version(self):
+        private, public = generate_keypair()
+        requirement = {"id": "REQ-1", "pack_id": "pack", "note": "keep"}
+        digest = version_digest(requirement)
+        block = signed_block(digest, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
+        changed = {**requirement, "format_version": 1}
+        self.assertEqual(version_digest(changed), digest)
+        result = verify_object(version_digest(changed), block, {"Ada": public})
+        self.assertEqual(result["status"], "valid")
+        self.assertEqual(result["version"], digest)
+
     def test_dotfile_changes_the_pack_version(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
