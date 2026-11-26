@@ -184,7 +184,7 @@ Reuse PoC1 LLM scoring (`poc/components/cra_evidence_hunt/hunt.py` score prompt 
 
 Assessment must not be required for binding. A human may bind from retrieval-only candidates.
 
-The researcher Discover job runs assessment after retrieval, bounded by `assess_limit` (default 5, allowed range 0–20) per Requirement per run. Candidates beyond the cap stay in the returned list with assessment fields omitted and are labeled not assessed. A failed or skipped call does not remove the candidate. A finished assessment with score 0 or rank None is omitted from that list and kept on the job so a later run does not score it again. Binding from a retrieval-only candidate remains valid. The score control explains that method: one model call, temperature 0, the requirement text and the first 12,000 characters, with current product material and risk assessment weighed above roadmap text and a bare mention of security. The number is not a check result.
+The researcher Discover job runs assessment after retrieval, bounded by `assess_limit` (default 20, allowed range 0–20) per Requirement per run. Candidates beyond the cap stay in the returned list with assessment fields omitted and are labeled not assessed. A failed or skipped call does not remove the candidate. A finished assessment with score 0 or rank None is omitted from that list and kept on the job so a later run does not score it again. Binding from a retrieval-only candidate remains valid. The score control explains that method: one model call, temperature 0, the requirement text and the first 12,000 characters, with current product material and risk assessment weighed above roadmap text and a bare mention of security. The number is not a check result.
 
 ### 6.4 Orchestration
 

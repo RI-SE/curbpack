@@ -6,6 +6,7 @@ import html
 from urllib.parse import quote
 
 from app.pages import progress_dialog
+from discovery.assess import DEFAULT_ASSESS_LIMIT
 from discovery.search import glob_hit, highlight_verified, verify_excerpt
 
 SCORE_HELP = (
@@ -75,7 +76,7 @@ def dialog_html(model: dict) -> str:
 {bound_fields}
 {repo_field}
 <label>Assess up to
-<input type="number" name="assess_limit" value="{html.escape(str(model.get('try_assess_limit') or 5))}"
+<input type="number" name="assess_limit" value="{html.escape(str(model.get('try_assess_limit') if model.get('try_assess_limit') is not None else DEFAULT_ASSESS_LIMIT))}"
  min="0" max="20"></label>
 <p><button type="submit"{go_disabled}>GO</button></p>
 </form>

@@ -1450,12 +1450,13 @@ if (fields) {
     sign_ui = "" if signed else _sign_dialog(requirement, model)
     status = _seal_status_badge(model.get("reading"))
     from studio.claim.try_discovery import dialog_html
+    from discovery.assess import DEFAULT_ASSESS_LIMIT
 
     try_model = {
         "requirement_id": requirement.get("id"),
         "repos": model.get("repos") or [],
         "try_repo_id": model.get("try_repo_id") or "",
-        "try_assess_limit": model.get("try_assess_limit") or 5,
+        "try_assess_limit": model.get("try_assess_limit") if model.get("try_assess_limit") is not None else DEFAULT_ASSESS_LIMIT,
         "try_candidates": model.get("try_candidates") or [],
         "discovery_hints": requirement.get("discovery_hints") or {},
         "try_open": bool(model.get("try_open")),

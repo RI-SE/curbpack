@@ -7,6 +7,7 @@ import json
 from urllib.parse import quote
 
 from app.pages import page, progress_dialog, repo_config_panel
+from discovery.assess import DEFAULT_ASSESS_LIMIT
 
 
 def discover_page(model: dict) -> bytes:
@@ -86,7 +87,7 @@ def _pack_row(repo_id: str, pack: dict) -> str:
         f'<td class="num">{_count_link("claims-link", href, claims, "Claims on those requirements")}</td>'
         f'<td class="num">{_count_link("unclaimed-link", gap_href, unclaimed, "Requirements with no claim")}</td>'
         "<td>"
-        f'<input type="number" name="assess_limit" form="{form_id}" value="5" min="0" max="20" '
+        f'<input type="number" name="assess_limit" form="{form_id}" value="{DEFAULT_ASSESS_LIMIT}" min="0" max="20" '
         'aria-label="Limit">'
         "</td>"
         '<td class="actions">'

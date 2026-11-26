@@ -13,6 +13,7 @@ from claims.bind import read_claims
 from common.errors import ModelError
 from common.jsonio import read_json
 from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements, set_open_repo
+from discovery.assess import DEFAULT_ASSESS_LIMIT
 from discovery.jobs import CURBPACK_COPY
 from discovery.jobs import read_job as read_discover_job
 from discovery.jobs import reviewable_targets
@@ -164,7 +165,7 @@ def _start_pack_discover(ws: Workspace, repo_id: str, pack_id: str, form: dict) 
     if pack_id not in config["packs"]:
         raise ModelError("discover", "pack_id", f"a pack named in curbpack.json, not {pack_id}")
     requirements = repo_pack_requirements(repo, pack_id)
-    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    raw_limit = (form.get("assess_limit") or [str(DEFAULT_ASSESS_LIMIT)])[0].strip() or str(DEFAULT_ASSESS_LIMIT)
     if not raw_limit.isdigit():
         raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
     name = pack_display_name(repo, pack_id)
@@ -222,7 +223,7 @@ def _start_discover(ws: Workspace, form: dict) -> str:
     config = validate_curbpack_config(read_json(repo / "curbpack.json"))
     hunt = {"search_hints": config.get("search_hints") or {}}
     title = f"Discover — {row.get('name') or repo_id} / {source.get('name') or source_id} {source.get('section_id') or ''}"
-    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    raw_limit = (form.get("assess_limit") or [str(DEFAULT_ASSESS_LIMIT)])[0].strip() or str(DEFAULT_ASSESS_LIMIT)
     if not raw_limit.isdigit():
         raise ModelError("discover", "assess_limit", "an integer from 0 to 20")
     job_id = f"discover-{secrets.token_hex(4)}"

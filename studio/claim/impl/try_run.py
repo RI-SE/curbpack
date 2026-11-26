@@ -12,7 +12,7 @@ from pathlib import Path
 
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
-from discovery.assess import assess_candidates, shows_support
+from discovery.assess import DEFAULT_ASSESS_LIMIT, assess_candidates, shows_support
 from discovery.search import discover_candidates, read_source_text
 
 _LOCK = threading.Lock()
@@ -39,7 +39,7 @@ def start_try_job(
     repo_id: str,
     requirement: dict,
     hunt: dict,
-    assess_limit: int = 5,
+    assess_limit: int = DEFAULT_ASSESS_LIMIT,
     pack_id: str = "",
     editor_query: str = "",
     complete=None,

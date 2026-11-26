@@ -108,6 +108,7 @@ class TryDiscoveryUiTest(unittest.TestCase):
                 self.assertNotIn("save-before-test", editor)
                 self.assertIn("try-discovery-dialog", editor)
                 self.assertIn("GO", editor)
+                self.assertIn('name="assess_limit" value="20"', editor)
                 self.assertIn("Sample", editor)
                 self.assertIn('id="try-add-repo-open"', editor)
                 self.assertIn(">Add repo</button>", editor)

@@ -14,7 +14,7 @@ from requirements.extract.call import _default_complete, _parse_json_object
 MAX_CHARS = 12000
 DEFAULT_MODEL = "qwen3-coder:30b"
 DEFAULT_ENDPOINT = "http://127.0.0.1:11434"
-DEFAULT_ASSESS_LIMIT = 5
+DEFAULT_ASSESS_LIMIT = 20
 RANKS = {"High", "Medium", "Low", "None"}
 
 SCORE_PROMPT = """You score whether a repository file is evidence for a regulatory documentation requirement.

@@ -123,6 +123,7 @@ class DiscoverLayoutTest(unittest.TestCase):
                     discover.index(">Limit</th>"),
                 )
                 self.assertLess(discover.index(">Limit</th>"), discover.index(">Actions</th>"))
+                self.assertIn('name="assess_limit" form="discover-cra-xml-baseline" value="20"', discover)
                 self.assertNotIn("Working copy", discover)
                 self.assertNotIn("2026-10-13T143000Z", discover)
                 self.assertNotIn("Published · 0.1.0", discover)

@@ -19,6 +19,7 @@ from common.keystore import load_or_create_key, trust_store
 from common.signing import read_signature
 from discovery.door import repo_pack_requirements
 from discovery.repos import find_repo, load_repos, resolve_repo_path
+from discovery.assess import DEFAULT_ASSESS_LIMIT
 from discovery.try_run import load_try_result, read_try_job, start_try_job
 from requirements.editing import (
     apply_edits,
@@ -68,7 +69,7 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
         "try_open": try_open or bool(try_document and not try_job),
         "try_ran": bool(try_document),
         "try_candidates": list((try_document or {}).get("candidates") or []),
-        "try_assess_limit": 5,
+        "try_assess_limit": DEFAULT_ASSESS_LIMIT,
         "try_error": (query.get("try_error") or [""])[0],
         "try_job": try_job,
         "workspace_root": str(ws.root.resolve()),
@@ -354,7 +355,7 @@ def _run_try_discovery(ws: Workspace, requirement_id: str, form: dict) -> str:
     row = find_repo(data, repo_id)
     if row is None:
         raise ModelError("try discovery", "repo_id", f"a registered repository, not {repo_id}")
-    raw_limit = (form.get("assess_limit") or ["5"])[0].strip() or "5"
+    raw_limit = (form.get("assess_limit") or [str(DEFAULT_ASSESS_LIMIT)])[0].strip() or str(DEFAULT_ASSESS_LIMIT)
     if not raw_limit.isdigit():
         raise ModelError("try discovery", "assess_limit", "an integer from 0 to 20")
     assess_limit = int(raw_limit)
