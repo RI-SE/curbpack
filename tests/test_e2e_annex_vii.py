@@ -235,7 +235,12 @@ class AnnexViiScenarioTest(unittest.TestCase):
                 requirements=[load_requirement(version_dir / "CRA-ANNEX-VII-RISK.json", published=True)],
                 claims=[load_claim(repo / "curbpack" / "claims" / "claim-risk.json")],
             )
-            self.assertEqual(report["run_result"], green)
+            self.assertEqual(green["format_version"], 1)
+            self.assertNotIn("format_version", report["run_result"])
+            self.assertEqual(
+                report["run_result"],
+                {key: value for key, value in green.items() if key != "format_version"},
+            )
             self.assertNotIn("signed", report)
             self.assertNotIn("compliant", report)
             self.assertNotIn("git_note", report)

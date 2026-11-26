@@ -6,6 +6,8 @@ requires a publisher release: `signed` present, `origin` absent.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from common.errors import ModelError
 
 REQUIREMENT_FIELDS = {
@@ -125,7 +127,7 @@ def _reject_unknown(obj: dict, object_name: str, allowed: set[str]) -> None:
         _expect(object_name, unknown[0], f"one of {sorted(allowed)}")
 
 
-def _validate_format_version(obj: dict, object_name: str) -> None:
+def validate_format_version(obj: dict, object_name: str) -> None:
     if "format_version" not in obj:
         return
     value = obj["format_version"]
@@ -235,7 +237,7 @@ def validate_requirement(obj: object, *, published: bool = False) -> dict:
     if forbidden:
         _expect(name, forbidden[0], "absent on a requirement")
     _reject_unknown(requirement, name, REQUIREMENT_FIELDS)
-    _validate_format_version(requirement, name)
+    validate_format_version(requirement, name)
     _nonempty_str(requirement, name, "id", required=True)
     _nonempty_str(requirement, name, "pack_id", required=True)
     _nonempty_str(requirement, name, "namespace", required=True)
@@ -265,7 +267,7 @@ def validate_pack(obj: object, *, sealed: bool = False) -> dict:
     pack = _require_dict(obj, "pack")
     name = f"pack {pack.get('id', '?')}"
     _reject_unknown(pack, name, PACK_FIELDS)
-    _validate_format_version(pack, name)
+    validate_format_version(pack, name)
     _nonempty_str(pack, name, "id", required=True)
     _nonempty_str(pack, name, "version", required=True)
     _nonempty_str(pack, name, "namespace", required=True)
@@ -340,7 +342,7 @@ def validate_claim(obj: object) -> dict:
     if forbidden:
         _expect(name, forbidden[0], "absent on a claim")
     _reject_unknown(claim, name, CLAIM_FIELDS)
-    _validate_format_version(claim, name)
+    validate_format_version(claim, name)
     _nonempty_str(claim, name, "id", required=True)
     _nonempty_str(claim, name, "requirement_id", required=True)
     for field in ("namespace", "pack_id", "requirement_digest"):
@@ -383,10 +385,32 @@ CURBPACK_CONFIG_FIELDS = {
 }
 
 
+def read_curbpack(path: Path) -> tuple[dict, int, int]:
+    from common.jsonio import read_json
+    from common.store import read_format_document
+
+    checked = validate_curbpack_config(read_json(path))
+    return read_format_document(checked, "curbpack.json")
+
+
+def load_curbpack(path: Path) -> dict:
+    document, _read_version, _current_version = read_curbpack(path)
+    return document
+
+
+def save_curbpack(path: Path, document: dict) -> Path:
+    from common.jsonio import write_json
+    from common.store import stamp_saved_document
+
+    checked = validate_curbpack_config(document)
+    write_json(path, stamp_saved_document(checked))
+    return path
+
+
 def validate_curbpack_config(obj: object) -> dict:
     config = _require_dict(obj, "curbpack.json")
     _reject_unknown(config, "curbpack.json", CURBPACK_CONFIG_FIELDS)
-    _validate_format_version(config, "curbpack.json")
+    validate_format_version(config, "curbpack.json")
     _string_list(config.get("packs"), "curbpack.json", "packs", allow_empty=True)
     if "exclude_requirements" in config and "requirements" in config:
         _expect("curbpack.json", "requirements", "absent when exclude_requirements is set")
@@ -441,7 +465,7 @@ def validate_run_result(obj: object) -> dict:
         "run result",
         {"commit", "worktree", "packs", "tool", "tool_version", "claims", "format_version"},
     )
-    _validate_format_version(result, "run result")
+    validate_format_version(result, "run result")
     has_commit = "commit" in result
     has_worktree = "worktree" in result
     if has_commit != has_worktree:

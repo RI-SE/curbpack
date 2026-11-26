@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 
-from common.canonical import version_digest
+from common.canonical import version_digest, without_format_version
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from common.validate import validate_claim, validate_requirement, validate_run_result
@@ -142,13 +142,17 @@ def compile_report(
     )
     if gaps:
         raise ModelError("review report", "conditions", "\n".join(gaps))
-    checked = copy.deepcopy(validate_run_result(run_result))
+    checked = without_format_version(copy.deepcopy(validate_run_result(run_result)))
     embedded_claims = [
-        validate_claim(copy.deepcopy(claim)) for claim in _claims_for_rows(checked, claims)
+        without_format_version(validate_claim(copy.deepcopy(claim)))
+        for claim in _claims_for_rows(checked, claims)
     ]
     report = {
         "run_result": checked,
-        "requirements": _requirements_for_claims(embedded_claims, requirements, repo=repo),
+        "requirements": [
+            without_format_version(requirement)
+            for requirement in _requirements_for_claims(embedded_claims, requirements, repo=repo)
+        ],
         "claims": embedded_claims,
         "appendix": signature_appendix(checked, embedded_claims, trust or {}, repo=repo),
     }
@@ -165,10 +169,9 @@ def validate_report(obj: object) -> dict:
     unknown = sorted(set(obj) - REPORT_FIELDS)
     if unknown:
         raise ModelError("review report", unknown[0], f"one of {sorted(REPORT_FIELDS)}")
-    if "format_version" in obj:
-        value = obj["format_version"]
-        if type(value) is not int or value != 1:
-            raise ModelError("review report", "format_version", "1, or absent")
+    from common.validate import validate_format_version
+
+    validate_format_version(obj, "review report")
     run_result = validate_run_result(obj.get("run_result"))
     requirements = obj.get("requirements")
     claims = obj.get("claims")
@@ -227,11 +230,21 @@ def validate_report(obj: object) -> dict:
 
 
 def write_report(path: Path, report: dict) -> None:
-    write_json(path, validate_report(report))
+    from common.store import stamp_saved_document
+
+    write_json(path, stamp_saved_document(validate_report(report)))
+
+
+def read_review_report(path: Path) -> tuple[dict, int, int]:
+    from common.store import read_format_document
+
+    checked = validate_report(read_json(path))
+    return read_format_document(checked, "review report")
 
 
 def load_report(path: Path) -> dict:
-    return validate_report(read_json(path))
+    document, _read_version, _current_version = read_review_report(path)
+    return document
 
 
 def replace_saved_report(path: Path, report: dict, *, confirm: bool) -> None:

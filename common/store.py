@@ -9,10 +9,37 @@ from common.jsonio import read_json, write_json
 from common.validate import (
     upgrade_stored_claim,
     validate_claim,
+    validate_format_version,
     validate_pack,
     validate_requirement,
     validate_run_result,
 )
+
+CURRENT_FORMAT_VERSION = 1
+
+
+def upgrade_format_0_to_1(document: dict) -> dict:
+    """The only production step. It sets format_version to 1 and changes nothing else."""
+    upgraded = dict(document)
+    upgraded["format_version"] = CURRENT_FORMAT_VERSION
+    return upgraded
+
+
+def stamp_saved_document(document: dict) -> dict:
+    """Put format_version 1 on the validated document that save writes."""
+    document["format_version"] = CURRENT_FORMAT_VERSION
+    return document
+
+
+def read_format_document(document: dict, object_name: str) -> tuple[dict, int, int]:
+    """Return the current document, the version that was stored, and current_version.
+
+    A missing format_version is version 0. This does not write.
+    """
+    validate_format_version(document, object_name)
+    if "format_version" not in document:
+        return upgrade_format_0_to_1(document), 0, CURRENT_FORMAT_VERSION
+    return dict(document), document["format_version"], CURRENT_FORMAT_VERSION
 
 
 def _safe_id(value: str, object_name: str) -> str:
@@ -25,39 +52,60 @@ def _safe_id(value: str, object_name: str) -> str:
 def save_requirement(directory: Path, requirement: dict, *, published: bool = False) -> Path:
     checked = validate_requirement(requirement, published=published)
     path = directory / f"{_safe_id(checked['id'], 'requirement')}.json"
-    write_json(path, checked)
+    write_json(path, stamp_saved_document(checked))
     return path
 
 
+def read_requirement(path: Path, *, published: bool = False) -> tuple[dict, int, int]:
+    checked = validate_requirement(read_json(path), published=published)
+    return read_format_document(checked, f"requirement {checked.get('id', '?')}")
+
+
 def load_requirement(path: Path, *, published: bool = False) -> dict:
-    return validate_requirement(read_json(path), published=published)
+    document, _read_version, _current_version = read_requirement(path, published=published)
+    return document
 
 
 def save_pack(directory: Path, pack: dict, *, sealed: bool = False) -> Path:
     checked = validate_pack(pack, sealed=sealed)
     path = directory / "pack.json"
-    write_json(path, checked)
+    write_json(path, stamp_saved_document(checked))
     return path
 
 
+def read_pack(path: Path, *, sealed: bool = False) -> tuple[dict, int, int]:
+    checked = validate_pack(read_json(path), sealed=sealed)
+    return read_format_document(checked, f"pack {checked.get('id', '?')}")
+
+
 def load_pack(path: Path, *, sealed: bool = False) -> dict:
-    return validate_pack(read_json(path), sealed=sealed)
+    document, _read_version, _current_version = read_pack(path, sealed=sealed)
+    return document
 
 
 def save_claim(directory: Path, claim: dict) -> Path:
     checked = validate_claim(claim)
     path = directory / f"{_safe_id(checked['id'], 'claim')}.json"
-    write_json(path, checked)
+    write_json(path, stamp_saved_document(checked))
     return path
 
 
-def load_claim(path: Path) -> dict:
+def read_claim(path: Path) -> tuple[dict, int, int]:
     raw = read_json(path)
+    name = f"claim {raw.get('id', '?')}" if isinstance(raw, dict) else "claim"
+    if isinstance(raw, dict):
+        validate_format_version(raw, name)
     upgraded = upgrade_stored_claim(raw)
-    if upgraded is not None:
-        write_json(path, upgraded)
-        return upgraded
-    return validate_claim(raw)
+    document = upgraded if upgraded is not None else validate_claim(raw)
+    if isinstance(raw, dict) and "format_version" in raw and "format_version" not in document:
+        document = dict(document)
+        document["format_version"] = raw["format_version"]
+    return read_format_document(document, name)
+
+
+def load_claim(path: Path) -> dict:
+    document, _read_version, _current_version = read_claim(path)
+    return document
 
 
 def load_claims(directory: Path) -> list[dict]:
@@ -71,12 +119,18 @@ def load_claims(directory: Path) -> list[dict]:
 
 def save_run_result(path: Path, result: dict) -> Path:
     checked = validate_run_result(result)
-    write_json(path, checked)
+    write_json(path, stamp_saved_document(checked))
     return path
 
 
+def read_run_result(path: Path) -> tuple[dict, int, int]:
+    checked = validate_run_result(read_json(path))
+    return read_format_document(checked, "run result")
+
+
 def load_run_result(path: Path) -> dict:
-    return validate_run_result(read_json(path))
+    document, _read_version, _current_version = read_run_result(path)
+    return document
 
 
 def load_pack_directory(root: Path) -> tuple[dict, list[dict]]:
