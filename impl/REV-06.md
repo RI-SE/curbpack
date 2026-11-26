@@ -3,7 +3,7 @@
 ## Summary
 
 - **Story:** `docs/agile/epics/01-pack-editor/stories/REV-06-item-provenance-and-reuse.md`
-- **Goal:** One `review_item` per Check, with provenance from the run, reused only when the underlag is unchanged.
+- **Goal:** One `review_item` per Check, with provenance from the run, reused only when the checked material is unchanged.
 - **Scope / exclusions:** The behavior already in `studio/review/impl/items.py`. No new field and no new test.
 - **Baseline:** The suite below was already green on 2026-11-26.
 

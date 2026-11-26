@@ -23,7 +23,7 @@ The page leads with **Deviations**. A passing Check is folded under **Passed**. 
 
 For a deviation the decision is **Not assessed**, **Accept**, or **Must be fixed**. A passing Check is **Passed** or **Must be fixed**. Accept is not offered for a passing Check. The Check result stays `pass`, `fail`, or `skipped`. Retire is not a review decision.
 
-**Notes** are the reviewer's words for the whole review. **Save** writes the decisions and the notes into that Check's `review_items.json` and returns to Check. The review stays open, so the row says **Continue**. **Sign** asks for the signer name, locks the decisions, writes the signed review report beside that Check, and returns to Check. The row then says **View**. A later Save does not reopen a signed review.
+**Notes** are the reviewer's words for the whole review. **Save** writes the decisions and the notes into that Check's `review_items.json` and returns to Check. The review stays open, so the row says **Continue**. **Sign** asks for the signer name, locks the decisions, writes the signed review report beside that Check, and returns to Check. The row then says **View**. A later Save does not reopen a signed review. A signed review offers **Generate PDF**, which writes the review PDF beside that report. Opening it again is **Review report PDF**. The signature stays on the JSON.
 
 If `review_items` for that run already exist, the page asks whether to continue or start over. Continue merges the new Checks with the existing items. Start over keeps only the new Checks.
 
@@ -59,7 +59,7 @@ The history column lists what was done: a re-check that changed the outcome, a r
 
 A completed remediation can be opened read-only. **Run Check** there starts the next Check. **Revoke signature** asks for a name, opens the remediation again, and leaves the signed file in place.
 
-The next Check can offer **Take in the remediation report**. The report keeps its review items. Where the underlag is unchanged, the signed decision is filled in, including a prepared **Accept**. Where the underlag changed, that decision is not reused. The history stays visible either way. **Keep the new decisions** leaves the decisions that the new run filled in. A Check that the remediation report contains and the new run does not is retired only when the history has `action` `retire`.
+The next Check asks to reuse unresolved review item decisions, history, and comments from the latest remediation report only when no review of this Check has been saved yet, and that remediation still has a decision that is **Accept** or **Must fix**. A pass does not raise the question. A saved review of this Check asks to continue that review instead. The dialog can open the latest remediation report. **Reuse Review item Decisions** fills the signed assessment, its comment, and the history where the checked material is unchanged. **Start Fresh from check result** leaves the decisions that the new run filled in and does not bring the remediation history, comments, or retired checks. A Check that the remediation report contains and the new run does not is listed as retired only when that report is reused and the history has `action` `retire`.
 
 ## 3. What a green result means
 

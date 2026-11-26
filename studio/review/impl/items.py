@@ -317,6 +317,7 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
         if isinstance(current, dict):
             for key in (
                 "history_from",
+                "started_fresh",
                 "remedy",
                 "projected_runs",
                 "notes",
@@ -342,7 +343,13 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
     document: dict = {"items": items, **kept}
     if signed is not None:
         document["signed"] = signed
-    document["format_version"] = CURRENT_FORMAT_VERSION
+    keep_older_format = (
+        isinstance(current, dict) and "format_version" not in current
+        if path.is_file()
+        else False
+    )
+    if not keep_older_format:
+        document["format_version"] = CURRENT_FORMAT_VERSION
     write_json(path, document)
 
 
@@ -961,6 +968,14 @@ def _signed_for(item: dict, remedy: dict | None, signed_items: list[dict]) -> di
     return None
 
 
+def has_unresolved_decision(items: list[dict]) -> bool:
+    """True when the last remediation still has an accepted or must-fix decision.
+
+    A pass is resolved. The next review asks to reuse decisions only when one remains.
+    """
+    return any(isinstance(item, dict) and item.get("decision") in {"accepted", "must_fix"} for item in items)
+
+
 def take_in_remedy(
     repo: Path,
     run: dict,
@@ -970,8 +985,8 @@ def take_in_remedy(
 ) -> list[dict]:
     """Bring a Remedy Report into a new Review.
 
-    Unchanged underlag fills the signed decision. Changed underlag keeps the
-    Check's own decision. A pass then records previous -> pass in the history,
+    Unchanged checked material fills the signed decision. Changed checked
+    material keeps the Check's own decision. A pass then records previous -> pass in the history,
     and that transition does not choose the decision.
     """
     taken = []

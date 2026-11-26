@@ -3,7 +3,7 @@
 ## Summary
 
 - **Story:** `docs/agile/epics/01-pack-editor/stories/REV-10-the-next-review.md`
-- **Goal:** The next Check is a new review. Unchanged underlag reuses the signed decision. A missing Check is retired only with `action` `retire`.
+- **Goal:** The next Check is a new review. Unchanged checked material reuses the signed decision. A missing Check is retired only with `action` `retire`.
 - **Scope / exclusions:** The take-in already in `studio/review/impl/items.py`. Sign on the new review stays REV-08.
 - **Baseline:** The suite below was already green on 2026-11-26.
 
@@ -27,7 +27,7 @@
 | Requirement ID | Story | Test / observed evidence | Status |
 | --- | --- | --- | --- |
 | REV-R01 | NEXT-01 | `CheckDirectoryTest.test_a_remediation_run_is_not_listed_as_performed`, `test_a_new_studio_check_is_a_directory` | VERIFIED |
-| REV-R02 | NEXT-02 | `TakeInRemedyTest.test_unchanged_underlag_reuses_the_signed_decision`, `test_changed_underlag_suggests_pass_and_records_the_transition`, `test_keeping_new_decisions_stores_the_history_on_the_items`, `KeepHistoryTest.test_keep_writes_the_history_into_the_new_review_items` | VERIFIED |
+| REV-R02 | NEXT-02 | `TakeInRemedyTest.test_unchanged_checked_material_reuses_the_signed_decision`, `test_changed_checked_material_suggests_pass_and_records_the_transition`, `KeepHistoryTest.test_start_fresh_does_not_store_the_remediation_history` | VERIFIED |
 | REV-R03 | NEXT-03 | `DecisionAndHistoryTest.test_a_comment_is_not_retire_and_a_retire_action_is` | VERIFIED |
 
 ## Tasks
@@ -54,4 +54,4 @@ The split plan's next review is the take-in the page already offers. A comment d
 
 ## Work log
 
-- **2026-11-26 / Task 1:** Unchanged underlag reuses the signed decision. Changed underlag does not. A comment is not a retire, and `action` `retire` is. 76 tests, OK. No product code changed.
+- **2026-11-26 / Task 1:** Unchanged checked material reuses the signed decision. Changed checked material does not. A comment is not a retire, and `action` `retire` is. 76 tests, OK. No product code changed.

@@ -385,6 +385,12 @@ def make_handler(ws: Workspace):
                 if parsed.path == "/discover/browse":
                     self._send_browse(query)
                     return
+                if parsed.path == "/review/report-pdf":
+                    from app.review_model import review_report_pdf
+
+                    _kind, body, filename = review_report_pdf(ws, query)
+                    self._send_pdf(body, filename)
+                    return
                 if parsed.path == "/review/remedy-report":
                     from app.review_model import remedy_report_response
 
@@ -631,6 +637,11 @@ def make_handler(ws: Workspace):
             return pages.page("Not found", "<p>Unknown page.</p>")
 
         def _post(self, path: str, form: dict) -> None:
+            if path == "/format-upgrade":
+                from studio.format_prompt import apply_format_upgrade
+
+                self._redirect(apply_format_upgrade(ws, form))
+                return
             if path == "/project":
                 self._redirect(project_selector.handle_project_post(ws.root, form))
                 return
@@ -774,6 +785,12 @@ def make_handler(ws: Workspace):
                 return
             if path == "/check":
                 self._redirect(_run_check(ws, form))
+                return
+            if path == "/review/report-pdf":
+                from app.review_model import review_report_pdf
+
+                _kind, body, filename = review_report_pdf(ws, form)
+                self._send_pdf(body, filename)
                 return
             if path == "/review/compile":
                 self._redirect(_compile_review(ws, form))

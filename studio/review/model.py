@@ -33,6 +33,17 @@ def _owned_review_report(results_folder: Path, requested: str) -> str:
     return ""
 
 
+def _review_was_started(document: object) -> bool:
+    """A review the user saved or sealed. Opening the page does not start one."""
+    if not isinstance(document, dict):
+        return False
+    return (
+        document.get("work_saved") is True
+        or document.get("review_locked") is True
+        or isinstance(document.get("signed"), dict)
+    )
+
+
 def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
     from app.server import _registered_repo_path, _requested_dated, _sync_open_repo
 
@@ -89,6 +100,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
         if isinstance(report.get("signed"), dict) and extra["review_mode"] != "remediation":
             extra["review_locked"] = True
+            _attach_signed_review(extra, Path(chosen))
         if extra["review_mode"] == "remediation":
             from studio.review.impl.items import items_home, load_items, write_items
             from common.jsonio import read_json as _read_items_file
@@ -153,6 +165,7 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["review_mode"] = "remediation" if (query.get("mode") or [""])[0] == "remediation" else "review"
         from studio.review.impl.items import (
             carry_history,
+            has_unresolved_decision,
             latest_ready_remedy,
             latest_signed_remedy,
             load_items,
@@ -190,7 +203,20 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         _items, items_state = open_review_items(
             items_path, loaded, choice=choice, repo=repo, run_name=run_name
         )
-        if items_state == "ask" and not pre_locked:
+        from urllib.parse import quote
+
+        from studio.format_prompt import compatibility_form
+
+        extra["format_prompt"] = compatibility_form(
+            items_path,
+            "review_items",
+            next_path=(
+                f"/review?repo={quote(repo_id)}&result={quote(str(run_path.resolve()))}"
+            ),
+            fields={"repo": repo_id, "result": str(run_path.resolve())},
+            label="review_items.json",
+        )
+        if items_state == "ask" and not pre_locked and _review_was_started(pre):
             extra["existing_review_items"] = str(items_path)
         source_items: list[dict] = []
         signed_items: list[dict] = []
@@ -203,7 +229,14 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
             chosen = Path(query_remedy).stem
         elif history_from:
             chosen = history_from
-        elif items_state != "ask" and not extra["review_fresh"] and not resumed and reuse_flag != "1":
+        elif (
+            not extra.get("existing_review_items")
+            and not pre_locked
+            and items_state != "continued"
+            and not extra["review_fresh"]
+            and not resumed
+            and reuse_flag != "1"
+        ):
             ready = latest_signed_remedy(
                 reports_folder,
                 loaded,
@@ -215,7 +248,24 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                 ready = (legacy[0], legacy[1], legacy[1]) if legacy else None
             if ready:
                 chosen, source_items, signed_items = ready
-                extra["reuse_offer"] = chosen
+                if has_unresolved_decision(source_items):
+                    extra["reuse_offer"] = chosen
+                offer_run = Path(results_folder) / chosen / "run-result.json"
+                if offer_run.is_file():
+                    from studio.review.impl.remedy_report import published_remedy_file
+
+                    offer_items = offer_run.parent / "review_items.json"
+                    try:
+                        offer_document = read_json(offer_items) if offer_items.is_file() else {}
+                    except (OSError, ValueError):
+                        offer_document = {}
+                    published = published_remedy_file(offer_run.parent, offer_document)
+                    if published and extra.get("reuse_offer"):
+                        from studio.review.impl.remedy_markdown import remedy_markdown_html
+
+                        extra["reuse_offer_html"] = remedy_markdown_html(
+                            published.read_text(encoding="utf-8")
+                        )
         if chosen and not source_items:
             source_items, signed_items = remedy_bundle(
                 reports_folder, chosen, results_dir=results_folder
@@ -226,13 +276,28 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
                     source_items = load_items(source_path)
                     signed_items = source_items
         if source_items and not extra.get("reuse_offer"):
+            fresh_start = reuse_flag == "0" or (
+                isinstance(stored, dict) and stored.get("started_fresh") is True
+            )
             if reuse_flag == "1":
                 _items = take_in_remedy(repo, loaded, _items, source_items, signed_items or source_items)
-            elif query_remedy:
+            elif query_remedy and not fresh_start:
                 _items = carry_history(_items, source_items)
-            write_items(items_path, _items, marker={"history_from": chosen})
-        extra["review_items"] = with_history(_items, source_items) if source_items else _items
-        extra["retired_items"] = retired_absences(source_items, loaded) if source_items else []
+            marker = {"history_from": chosen}
+            if fresh_start:
+                marker["started_fresh"] = True
+            if reuse_flag == "0":
+                for item in _items:
+                    item.pop("remediation_history", None)
+            write_items(items_path, _items, marker=marker)
+        else:
+            fresh_start = isinstance(stored, dict) and stored.get("started_fresh") is True
+        extra["review_items"] = (
+            _items if fresh_start or not source_items else with_history(_items, source_items)
+        )
+        extra["retired_items"] = (
+            [] if fresh_start or not source_items else retired_absences(source_items, loaded)
+        )
         extra["run_reports"] = _reports_for_run(reports_folder, loaded)
         stored_now = _read_items_file(items_path) if items_path.is_file() else {}
         notes = stored_now.get("notes") if isinstance(stored_now, dict) else ""
@@ -246,6 +311,8 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         from studio.review.impl.items import active_remedy_report, remediation_is_sealed
 
         home = check_directory(run_path)
+        if extra.get("review_locked") and extra["review_mode"] != "remediation":
+            _attach_signed_review(extra, run_path)
         remedy_locked = remediation_is_sealed(items_path) if items_path.is_file() else False
         active_remedy = active_remedy_report(home, stored_now)
         view = (query.get("view") or [""])[0]
@@ -321,6 +388,23 @@ def _review_view(ws: Workspace, query: dict | None = None) -> tuple:
         extra["file_view"] = _review_file_view(repo, (query.get("file") or [""])[0])
         return report, None, " ".join(errors), False, False, None, [], extra
     return None, None, " ".join(errors), False, False, None, [], extra
+
+
+def _attach_signed_review(extra: dict, source: Path | None) -> None:
+    """The newest signed review report for this Check, when the page is showing that Check."""
+    from studio.check.check_model import _newest_signed
+    from studio.review.impl.items import check_directory
+
+    if source is None:
+        return
+    directory = check_directory(source)
+    if directory is None:
+        return
+    report_path = _newest_signed(directory, "review-report.json", "review-report_*.json")
+    if report_path is None:
+        return
+    extra["signed_review_report"] = report_path.name
+    extra["signed_review_pdf"] = report_path.with_suffix(".pdf").is_file()
 
 
 def _attach_outside(extra: dict, document: object) -> None:

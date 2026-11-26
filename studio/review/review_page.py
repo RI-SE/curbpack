@@ -196,6 +196,7 @@ def review_page(
     refusal = "" if "compile-refusal" in actions else _compile_refusal_html(door)
     heading = "Remediation" if str(door.get("review_mode") or "") == "remediation" else "Review"
     body = f"""
+{door.get("format_prompt") or ""}
 <div class="review-board">
 <div class="brand">curbpack-review</div>
 <div class="header">
@@ -2675,6 +2676,18 @@ def _resume_dialog(door: dict) -> str:
         message = "A review of this Check run is already started."
         detail = "The Check result is unchanged. Continue the unsigned report, start over, or go back."
     cancel_href = f"/review?repo={repo}"
+    later = str(door.get("format_later") or "")
+    if later:
+        later_q = "&format_later=" + quote(later, safe="")
+        continue_href += later_q
+        fresh_href += later_q
+        cancel_href += later_q
+    script = (
+        "<script>document.addEventListener('DOMContentLoaded',function(){"
+        "var dialog=document.getElementById('resume-review');"
+        "if(dialog&&dialog.showModal)dialog.showModal();"
+        "});</script>"
+    )
     return (
         '<dialog id="resume-review" class="review-choice">'
         f"<p>{html.escape(message)}</p>"
@@ -2684,10 +2697,7 @@ def _resume_dialog(door: dict) -> str:
         f'<a class="btn" data-resume="1" href="{html.escape(fresh_href)}">Start over</a>'
         f'<a class="btn" data-resume="1" href="{html.escape(cancel_href)}">Cancel</a>'
         "</p></dialog>"
-        "<script>document.addEventListener('DOMContentLoaded',function(){"
-        "var dialog=document.getElementById('resume-review');"
-        "if(dialog&&dialog.showModal)dialog.showModal();"
-        "});</script>"
+        + script
     )
 
 
@@ -2704,19 +2714,39 @@ def _reuse_dialog(door: dict) -> str:
     result = quote(str(door.get("selected_result") or ""), safe="")
     remedy = quote(stem, safe="")
     reuse_href = f"/review?repo={repo}&result={result}&remedy={remedy}&reuse=1"
-    keep_href = f"/review?repo={repo}&result={result}&remedy={remedy}"
+    keep_href = f"/review?repo={repo}&result={result}&remedy={remedy}&reuse=0"
+    reading = str(door.get("reuse_offer_html") or "")
+    preview = ""
+    report = ""
+    if reading:
+        preview = (
+            '<button type="button" class="btn" id="reuse-preview-open">'
+            "Preview Latest Remediation Report</button>"
+        )
+        report = (
+            '<dialog id="reuse-report" class="review-choice">'
+            '<p><button type="button" class="btn" id="reuse-preview-close">Close</button></p>'
+            f"{reading}"
+            "</dialog>"
+        )
     return (
         '<dialog id="reuse-review" class="review-choice">'
-        "<p>Take in the remediation report?</p>"
-        "<p>The report keeps its review items. Unchanged underlag fills the signed decision. "
-        "The history stays visible either way.</p>"
+        "<p>Reuse unresolved review item decisions, history, and comments from the latest remediation report?</p>"
+        "<p>You can read the details in the latest remediation report.</p>"
         "<p>"
-        f'<a class="btn primary" href="{html.escape(reuse_href)}">Take in the report</a>'
-        f'<a class="btn" href="{html.escape(keep_href)}">Keep the new decisions</a>'
+        f"{preview}"
+        f'<a class="btn primary" href="{html.escape(reuse_href)}">Reuse Review item Decisions</a>'
+        f'<a class="btn" href="{html.escape(keep_href)}">Start Fresh from check result</a>'
         "</p></dialog>"
+        f"{report}"
         "<script>document.addEventListener('DOMContentLoaded',function(){"
         "var dialog=document.getElementById('reuse-review');"
         "if(dialog&&dialog.showModal&&!document.getElementById('resume-review'))dialog.showModal();"
+        "var preview=document.getElementById('reuse-report');"
+        "var open=document.getElementById('reuse-preview-open');"
+        "if(open&&preview&&preview.showModal)open.addEventListener('click',function(){preview.showModal();});"
+        "var close=document.getElementById('reuse-preview-close');"
+        "if(close&&preview)close.addEventListener('click',function(){preview.close();});"
         "});</script>"
     )
 
@@ -3114,13 +3144,40 @@ def _review_intro(door: dict, report: dict | None) -> str:
             f"{_remedy_pdf_link(door, revoked=True)}"
         )
     if door.get("review_locked") and str(door.get("review_mode") or "") != "remediation":
-        if isinstance(report, dict) and isinstance(report.get("signed"), dict):
-            return '<p data-report-placeholder>The signed decisions are read-only.</p>'
+        signed = isinstance(report, dict) and isinstance(report.get("signed"), dict)
+        if signed or door.get("signed_review_report"):
+            return (
+                '<p data-report-placeholder>The signed decisions are read-only.</p>'
+                + _review_pdf_control(door)
+            )
         return (
             '<p data-report-placeholder>Review report is not generated yet. '
             "The signed decisions are read-only.</p>"
         )
     return ""
+
+
+def _review_pdf_control(door: dict) -> str:
+    """Generate the review PDF beside the signed report, then open that file."""
+    if not door.get("signed_review_report"):
+        return ""
+    repo = str(door.get("repo_id") or "")
+    source = str(door.get("selected_result") or door.get("source_result") or "")
+    if not repo or not source:
+        return ""
+    href = (
+        f"/review/report-pdf?repo={quote(repo, safe='')}"
+        f"&result={quote(source, safe='')}"
+    )
+    if door.get("signed_review_pdf"):
+        return f'<p><a class="btn" href="{html.escape(href)}">Review report PDF</a></p>'
+    return (
+        '<form method="post" action="/review/report-pdf">'
+        f'<input type="hidden" name="repo_id" value="{html.escape(repo)}">'
+        f'<input type="hidden" name="result" value="{html.escape(source)}">'
+        '<p><button type="submit" class="btn">Generate PDF</button></p>'
+        "</form>"
+    )
 
 
 def _run_file_name(door: dict, saved: bool) -> str:

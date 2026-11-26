@@ -432,8 +432,18 @@ class ProjectRunTest(unittest.TestCase):
         self.assertNotIn("remediation_history", kept)
 
 
+class UnresolvedDecisionTest(unittest.TestCase):
+    def test_accepted_or_must_fix_is_unresolved_and_pass_is_not(self):
+        from studio.review.impl.items import has_unresolved_decision
+
+        self.assertTrue(has_unresolved_decision([{"decision": "pass"}, {"decision": "must_fix"}]))
+        self.assertTrue(has_unresolved_decision([{"decision": "accepted"}]))
+        self.assertFalse(has_unresolved_decision([{"decision": "pass"}, {"decision": "not_assessed"}]))
+        self.assertFalse(has_unresolved_decision([]))
+
+
 class TakeInRemedyTest(unittest.TestCase):
-    def test_unchanged_underlag_reuses_the_signed_decision(self):
+    def test_unchanged_checked_material_reuses_the_signed_decision(self):
         tmp, repo = _repo_with_file("same\n")
         self.addCleanup(tmp.cleanup)
         commit = subprocess.run(
@@ -452,9 +462,10 @@ class TakeInRemedyTest(unittest.TestCase):
         taken = take_in_remedy(repo, _run(commit, "clean", status="fail"), fresh, [remedy], [signed])
         check = next(row for row in taken if row["key"]["check_digest"] == signed["key"]["check_digest"])
         self.assertEqual(check["decision"], "accepted")
+        self.assertEqual(check["comment"], "Lisa will finish the document.")
         self.assertEqual(check["remediation_history"][0]["remediation"], "Waiting for Lisa.")
 
-    def test_changed_underlag_suggests_pass_and_records_the_transition(self):
+    def test_changed_checked_material_suggests_pass_and_records_the_transition(self):
         tmp, repo = _repo_with_file("missing\n")
         self.addCleanup(tmp.cleanup)
         first = subprocess.run(
@@ -629,7 +640,7 @@ class DecisionBaselineTest(unittest.TestCase):
 
 
 class KeepHistoryTest(unittest.TestCase):
-    def test_keep_writes_the_history_into_the_new_review_items(self):
+    def test_start_fresh_does_not_store_the_remediation_history(self):
         import copy
 
         from app.server import Workspace
@@ -666,7 +677,16 @@ class KeepHistoryTest(unittest.TestCase):
             write_json(
                 reports / "review-report_20260101T000000Z.remedy.json",
                 {
-                    "items": [remembered],
+                    "items": [
+                        remembered,
+                        record_retire(
+                            {
+                                "key": {"claim_id": "gone-claim", "check_digest": "abc"},
+                                "decision": "must_fix",
+                            },
+                            remediation="Retired.",
+                        ),
+                    ],
                     "remedy": True,
                     "signed": {"name": "Urban", "at": "2026-01-01T01:00:00Z", "signature": "seal"},
                 },
@@ -676,20 +696,34 @@ class KeepHistoryTest(unittest.TestCase):
             runs.mkdir(parents=True)
             run_path = runs / "run-result_20260102T000000Z.json"
             write_json(run_path, new_run)
-            _review_view(
+            started = _review_view(
                 Workspace(workspace),
                 {
                     "repo": ["alpha"],
                     "result": [str(run_path)],
                     "remedy": ["review-report_20260101T000000Z"],
+                    "reuse": ["0"],
                 },
             )
+            self.assertEqual(started[7]["retired_items"], [])
             stored = read_json(workspace_items_path(studio_temp_dir(repo), run_path.name))
             kept = next(
                 row for row in stored["items"] if row["key"]["check_digest"] == check["key"]["check_digest"]
             )
             self.assertEqual(kept["decision"], "pass")
-            self.assertEqual(kept["remediation_history"][0]["remediation"], "The document was missing.")
+            self.assertNotIn("remediation_history", kept)
+            self.assertTrue(stored.get("started_fresh"))
+            again = _review_view(
+                Workspace(workspace),
+                {"repo": ["alpha"], "result": [str(run_path)]},
+            )
+            shown = next(
+                row
+                for row in again[7]["review_items"]
+                if row["key"]["check_digest"] == check["key"]["check_digest"]
+            )
+            self.assertNotIn("remediation_history", shown)
+            self.assertEqual(again[7]["retired_items"], [])
 
 
 class RemedySignatureTest(unittest.TestCase):
