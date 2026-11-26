@@ -27,6 +27,7 @@ One JSON object describing the repository state checked, the loaded Packs, and t
 | `tool` | `curbcheck`. |
 | `tool_version` | Checker build string. The observed example below uses `0.0.1a`. |
 | `claims` | Array of evaluated Claim rows. May be empty; an empty result is not successful verification. |
+| `format_version` | Optional integer contract version. Absent means version 0 and is accepted. The only present value accepted is `1`. Outside the version digest. |
 
 ### Pack entries
 
@@ -43,7 +44,7 @@ A loaded Pack may have no Claim rows. Selection of a Pack does not create Claims
 | Field | Meaning |
 | --- | --- |
 | `id` | Claim id. |
-| `digest` | Claim digest: version digest of the whole Claim with its entire `signed` block removed, using Packs v2 §2.6. |
+| `digest` | Claim digest: version digest of the whole Claim with its entire `signed` block and `format_version` removed, using Packs v2 §2.6. |
 | `namespace` | Requirement namespace recorded on the Claim. Present on a new result. |
 | `pack_id` | Pack id recorded on the Claim. Present on a new result. |
 | `requirement_id` | Requirement id recorded on the Claim. Present on a new result. |
@@ -126,8 +127,9 @@ Compile copies an existing run result into one JSON object together with the Req
 | `assessments` | Optional list of reviewer assessments on this run. Absent means no `accepted` or `must_fix` decision was copied. Each entry is one Check, or one `stale` or `missing` binding. A Check entry has `kind` `check`, `claim_id`, `claim_digest`, `index`, `disposition`, and `text`. A binding entry has `kind` `binding`, `claim_id`, `claim_digest`, `namespace`, `pack_id`, `requirement_id`, `requirement_digest`, `binding`, `disposition`, and `text`. On the page, `disposition` is `accept` or `must_fix`. `accept` applies only to a failed or skipped Check, or a `stale` or `missing` binding. `must_fix` applies to those and also to a Check whose technical status is `pass`. `text` is required for `accept` on a failing Check. Other assessments may leave `text` empty. `pass` and `not_assessed` add no assessment. An assessment does not change Check status, binding, or the embedded run result. `validate_report` still accepts an older Check entry whose `disposition` is `retire`, including a passing Check, and not a binding. That entry requires `text`. The Review page does not post it. Remediation Retire is `action` `retire` on `review_item`, not this field. |
 | `remove_retired_checks` | Present only when an assessment has `disposition` `retire`. `true` or `false`. Absent on every other report. `true` means review-sign, after the report signature is written, removes those Checks from the live Claim files. A Claim with any Check left is signed again. A Claim with none left is deleted. `false` records the older choice and does not change Claim files. The Review page does not set this field. A report that already has it `true` still applies it at review-sign. The signature covers this field when it is present. |
 | `decision` | The reviewer's words for the whole review. Absent until Sign writes the report. On the page these words are the Notes. Save stores them on `review_items.json` and does not write this field. |
-| `items_digest` | Version digest of the sealed items object `{ "items": [ ... ] }` with `signed` removed. Sign writes that object as `review-report_<stamp>.items.json` beside the report. Present when Sign seals the items. The report signature covers this field. The signed items' `decision` values are what reporting reads. The working file `review_items.json` is not this object. |
-| `signed` | Report signature, absent until signed. Same `at`, `name`, and `signature` shape as Packs v2 §2.6. The version digest is the report with `signed` removed, so `assessments`, `items_digest`, `decision`, and `remove_retired_checks` are covered when they are present. Reading uses `what` `review report`. |
+| `items_digest` | Version digest of the sealed items object `{ "items": [ ... ] }` with `signed` and `format_version` removed. Sign writes that object as `review-report_<stamp>.items.json` beside the report. Present when Sign seals the items. The report signature covers this field. The signed items' `decision` values are what reporting reads. The working file `review_items.json` is not this object. |
+| `signed` | Report signature, absent until signed. Same `at`, `name`, and `signature` shape as Packs v2 §2.6. The version digest is the report with `signed` and `format_version` removed, so `assessments`, `items_digest`, `decision`, and `remove_retired_checks` are covered when they are present. Reading uses `what` `review report`. |
+| `format_version` | Optional integer contract version. Absent means version 0 and is accepted. The only present value accepted is `1`. Removed with `signed` before the version digest, so it does not change that digest. |
 
 Unknown report keys are rejected. A report may contain a run with failed or skipped Checks. Producing the report does not turn that run into a pass.
 
@@ -143,7 +145,7 @@ The Compile function was checked against `run-result_20261029T135239Z.json` and 
 
 ## Remedy report
 
-Sign Off writes `remedy-report_<YYYYMMDDTHHMMSSZ>.json` in the Studio Check directory. It does not change the signed review report or the sealed review items. Reading the seal uses `what` `remedy report`. The version digest is the object with `signed` removed, the same rule as Packs v2 §2.6.
+Sign Off writes `remedy-report_<YYYYMMDDTHHMMSSZ>.json` in the Studio Check directory. It does not change the signed review report or the sealed review items. Reading the seal uses `what` `remedy report`. The version digest is the object with `signed` and `format_version` removed, the same rule as Packs v2 §2.6.
 
 | Field | Meaning |
 | --- | --- |
@@ -154,6 +156,7 @@ Sign Off writes `remedy-report_<YYYYMMDDTHHMMSSZ>.json` in the Studio Check dire
 | `reference` | The Check and the signed review this work closes. `run` is the Check directory name. `review` is the signed review report's file name, or empty when that directory has none. `reviewer` and `reviewed_at` are copied from that report's `signed` block when it has one, and omitted otherwise. |
 | `full_checks` | Names of the full Check runs recorded for this round. An empty list means none was recorded. |
 | `signed` | Same `at`, `name`, and `signature` shape as Packs v2 §2.6. |
+| `format_version` | Optional integer contract version. Absent means version 0 and is accepted. The only present value accepted is `1`. Removed with `signed` before the version digest. |
 
 The page also writes `remedy-report_<stamp>.md` and `remedy-report_<stamp>.pdf` beside that JSON. The signature does not cover those bytes. Publish refuses a Markdown or PDF name that already exists.
 
