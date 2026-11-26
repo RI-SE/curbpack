@@ -93,7 +93,7 @@ With that file:
 | Claim | `<repo>/curbpack/claims/claim-house-security-md.json` |
 | Run result (JSON requested) | `<repo>/.curbpack/run-result_<YYYYMMDDTHHMMSSZ>.json` |
 | Review report | `<repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json` |
-| Studio Check | `<results_dir>/run-result_<YYYYMMDDTHHMMSSZ>/` with `run-result.json`, `review_items.json`, `review-report.json`, and `remedy-report.json` |
+| Studio Check | `<results_dir>/run-result_<YYYYMMDDTHHMMSSZ>/` with `run-result.json`, `review_items.json`, `review-report_<YYYYMMDDTHHMMSSZ>.json`, and `remedy-report_<YYYYMMDDTHHMMSSZ>.json` |
 
 `"results_dir": "artifacts/check"` → run under `<repo>/artifacts/check/…`. Same contract.
 
@@ -138,7 +138,7 @@ The product file may contain only `model.endpoint`, `model.name`, `model.tempera
 
 `bind` is read from the user file at process start. An omitted `--host` or `--port` does not replace it. A flag that is present does, for that process. `--workspace` still selects the Studio workspace. The product file cannot set `bind`.
 
-`paths.temp_dir` and `paths.keys_file` stay in the user file. Review reads `paths.temp_dir`. Each Run Result and each Review Report has a directory there named after the source file's stem, and that directory holds `review_items.json`. A dirty Studio Check also writes `run-result_<stamp>.files.json` directly in `paths.temp_dir`. Signing keeps the workspace `keys/` directory. `paths.extract_work_dir` is the extract slot, confined to the open repository.
+`paths.temp_dir` and `paths.keys_file` stay in the user file. A Studio Check keeps `review_items.json` in its own directory under `results_dir`. An older flat run still keeps `review_items.json` in `paths.temp_dir`, in a directory named after the source file's stem. A dirty Studio Check also writes `run-result_<stamp>.files.json` directly in `paths.temp_dir`. Re-checks made while a remediation is open are written under `paths.temp_dir/remediation-runs/` and are not rows on Check. Signing keeps the workspace `keys/` directory. `paths.extract_work_dir` is the extract slot, confined to the open repository.
 
 Switching repository reads that repository's product file and does not write the user file.
 

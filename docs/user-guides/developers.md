@@ -88,11 +88,11 @@ The first line counts evaluated Claims and gives the process exit code. Each Cla
 
 Exit 0 requires at least one executed Check and every included Claim and Check to pass. Failure, skip, or no executed Checks gives exit 1. Claims with no Checks are not evaluated. Claims outside the selected Requirements are filtered out. Selecting a Pack alone does not create Claims or verify its Requirements. See [curbcheck](../reference/curbcheck-cli.md) for the full output and exit-code reference.
 
-For human review, open **Review** (`/review`) in Studio and choose the same repository. The report brings together the Check results, Claim evidence arguments, and signature information. See section 6 for compiling and opening saved reports.
+For human review, open **Check** and use the row in **Checks performed**. **Create** or **Continue** opens the review of that run. See section 6.
 
 ## 4. Investigate and fix a finding
 
-Read the failed Check's detail and its configured arguments. In Studio, Review provides the Claim context; **Open the Claim** opens the Claims editor. Nothing writes a proposed file from a failure.
+Read the failed Check's detail and its configured arguments. The review queue shows the Requirement, the file, and the Check. Nothing writes a proposed file from a failure. Changing the Check, or the path it names, is a remediation action after the review is signed. See section 6.
 
 - Discovery lists candidate paths for a Requirement. A candidate is not a Claim. Useful and Poor marks stay in workspace feedback.
 - The Requirement's `remediation_hint` and `law_text` are text you read. They are not applied as a patch.
@@ -127,42 +127,46 @@ After the Pack is selected and the Claims exist, the command you repeat is the C
 
 Run it after changes to files the Claims name. A previous pass describes the tree that was checked. Claim edits and a new Check do not require a new Extract.
 
-## 6. Create review material
+## 6. Review and remediation
 
-On **Review** (`/review`), choose the product under **Repo** and open a Check result. **Save** writes the decisions and notes into that Check's `review_items.json` and leaves the review open. **Sign** locks those decisions and writes `review-report_<YYYYMMDDTHHMMSSZ>.json`. Remediation starts from that signed review. An older flat run writes its signed snapshot under `reports_dir`.
+Work from **Check**. Each run is one directory under `results_dir`, named `run-result_<YYYYMMDDTHHMMSSZ>/`, with `run-result.json` inside it. The table row is that directory. An older flat `run-result_<stamp>.json` stays where it was written.
 
-To open a saved report, use `/review?repo=<repo-id>&report=<URL-encoded-absolute-report-path>`. A snapshot inside a Check directory, or a `review-report_*.json` inside `reports_dir`, both open read-only. The current page has a repository selector but no report picker.
+**Save** on Review writes the decisions and the notes into that directory's `review_items.json` and returns to Check. The review is still open. **Sign** asks for a name, locks those decisions, writes and signs `review-report_<YYYYMMDDTHHMMSSZ>.json` in the same directory, and returns to Check. The signed review opens read-only. Save and Sign do not run Checks and do not commit.
 
-Save and Sign do not run Checks and do not commit. You may commit a snapshot afterwards. That commit is a later revision of the product repository. It is not `run_result.commit`.
+The decisions on a signed review stay as signed. Remediation is a separate copy of the work: **Start** after a signed review, then **Continue** until **Sign Off**. On that copy the decision is a recommendation. A comment is the current note on the Check. History records a re-check that changed the outcome, a retire, or a rebind.
 
-When a Check is marked Retire, Save stores that disposition and its comment on the review work, and stores whether signing a report should remove the Check from the live Claim. The Check result itself stays `pass`, `fail`, or `skipped`.
+**Retire** in remediation removes that Check from the live Claim immediately, or removes the Claim when no Check remains, and appends `action` `retire`. It does not turn the Check result into `pass`. **Find** writes a chosen same-named path into the Claim and signs that Claim. **Re-check**, whether from the row or from the bottom of the page, runs every Check and projects the original deviations. A new failure outside those deviations is recorded on the remediation when you choose **OK**. It is not added to the queue. **Rollback** restores only the latest Studio change of the Claim.
 
-Keep the pack id, version, directory digest, commit, and worktree value with the report if someone has to reproduce the run.
-
-## 7. Human decision and review-sign
-
-On the review page the reviewer writes `decision` in their own words and then review-sign. The signature covers the report, including that sentence, the assessments, `items_digest`, and `remove_retired_checks`. It is not the Requirement seal. The same action signs `review-report_<stamp>.items.json`. `items_digest` is that file's version digest. The signed `review_items.decision` values are what reporting reads.
-
-When `remove_retired_checks` is false, or absent, review-sign does not change Claim files. When it is true, the same step then removes the retired Checks from the live Claims. A Claim that still has a Check is signed again by the report signer. A Claim with none left is deleted. The Claim copied into the report is left as it was. A passing Check does not by itself sign a Claim.
+**Sign Off** seals `remedy-report_<YYYYMMDDTHHMMSSZ>.json` in the Check directory, publishes the readable report, and returns to Check. The seal is a remedy report. It does not replace the signed review and it does not set a new review decision. **Revoke signature** opens the remediation again and leaves the sealed file in place.
 
 ```text
 Check
-  -> Check result
-  -> Review: Retire, with a comment
-  -> report
-  -> review-sign
-  -> remove the Checks from the Claim files, only if the report said so
+  -> review_items.json
+  -> Sign locks the review and writes the review report
+  -> Remediation: comment, Find, Edit check, Re-check, Retire
+  -> Sign Off writes the remedy report
+  -> the next Check can take that report in
 ```
 
-The page states that a passing Check does not mean the legal requirement is fulfilled, and that the report has no field for a conclusion that the product meets CRA.
+A Check started from an open remediation is stored apart from **Checks performed** and does not become its own row. The next full Check from the Check page is a new row. That review can take in the latest signed remediation: unchanged underlag fills the signed decision, and the history is shown either way. Taking it in does not set `decision` from the history.
+
+`review_item` is defined in [Studio-internal](../reference/studio-internal.md). Paths are in [Workspace](../reference/workspace.md). The page walkthrough is [Reviewing](reviewers.md).
+
+Technical details still state that a passing Check does not mean the legal requirement is fulfilled, and that the report has no field for a conclusion that the product meets CRA.
+
+## 7. What the signature covers
+
+Review-sign seals the review report. It is not the Requirement seal and it is not the Claim seal. The signed `review_items` decisions are what a later review can reuse. Remediation does not edit that sealed decision.
+
+Sign Off seals the remedy document: the items, the history, the round notes, and any acknowledged Check that fell outside the original deviations. Reading that seal uses `what` `remedy report`.
+
+A passing Check does not by itself sign a Claim. Find and a rebound Claim are signed by the person named on that action.
 
 ## 8. Re-check after later changes
 
-Run Check again on the new tree.
+Run Check again on the new tree. That is a new row.
 
-The earlier signed report and the new run result are two snapshots. When both are loaded, Review says whether they are the same run. An older saved report is labeled `This saved report is an older run.` Do not describe it as the current run. **Sign** creates a new dated snapshot and preserves the earlier file. The previous decision is not copied forward.
-
-A failed row can stay on the review page while you open Discovery for that Requirement, add a new Claim, and delete the old Claim yourself in Claims Editor.
+The earlier signed review and the new run are two snapshots. Technical details say `same run: yes` or `same run: no. This saved report is an older run.` Do not describe the older report as the current run. The previous signed file stays. A decision is filled in again only when the new review takes in a remediation report and the underlag is unchanged.
 
 ## 9. Next: run the Check where the repository changes
 

@@ -1,10 +1,12 @@
 # Review — Studio component architecture
 
-**Status:** Target functional contract, updated 2026-11-06 for EP-02, VR-00 and revised EP-11. The existing implementation and previous legacy PoC2 assertions below are migration/test evidence, not overriding architecture. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts and current `docs/reference/workspace.md`. `review_item` is defined in `docs/reference/studio-internal.md`. Review and remediation are two configurations of the same queue. Review edits the decision. Remediation edits the Check, rebind, and Discover, and records Retire as `action` `retire` on `remediation_history`.
+**Status:** Target functional contract, with the page flow aligned to Studio on 2026-11-25. Persisted contracts are governed by `docs/reference/packs2.md`, output contracts, `docs/reference/workspace.md`, and `docs/reference/studio-internal.md`. The user steps are [Reviewing](../docs/user-guides/reviewers.md). Legacy PoC2 notes below are migration evidence.
+
+Review and remediation are two configurations of the same queue. Review edits the decision, then Sign locks it and returns to Check. Remediation starts from that locked review. It edits the Check, rebinds, finds a replacement path, runs every Check, and Retire removes the Check from the live Claim immediately, recording `action` `retire`. A comment is the current note on the item, not a history entry. Sign Off seals a remedy report and does not change the locked decisions. A new failure outside the original deviations is acknowledged on the remedy and is not added to the queue.
 
 ## Responsibility and boundaries
 
-`studio/review/` owns human inspection of existing Run Results and compiled reports, review decisions, verification readings, Review report signatures, and read-only historical traceability (VL-05). It **does not** execute Checks, create Run Results, assemble reports, render PDFs, edit Claims, or change Requirements.
+`studio/review/` owns human inspection of existing Run Results and compiled reports, review decisions, verification readings, Review report signatures, the remediation queue, and read-only historical traceability (VL-05). Check execution and Run Result creation stay with Check. Report assembly and PDF rendering stay with Compile. Remediation calls those operations, and Retire writes the live Claim through the Claim writers. Review does not change a Requirement.
 
 | Component | Responsibility |
 |---|---|
@@ -93,13 +95,13 @@ VR-00's shared verifier reads embedded object signatures and eligible trusted si
 
 The Review backend verifies an embedded Requirement or Claim using the available embedded signature and eligible signed-Git evidence according to VR-00. A standalone report may not provide the repository context required to verify a Git-based seal; explicitly report verification unavailable rather than silently declaring unsigned or valid.
 
-Signing the report does not sign the Requirement or the pack. It does not sign a Claim unless `remove_retired_checks` is true. In that case the report is signed first. The same signer then removes the retired Checks from the live Claims, signs a Claim that still has a Check, and deletes a Claim that has none. The embedded Claim and the Check result stay as compiled. A live Claim that does not match the run is a conflict: nothing is signed and no Claim file is changed. A Claim write that fails after the report signature leaves that report signed and names every Claim that was not updated. The same review-sign action retries only those Claims. The organisation chooses who holds the key. The report has no role field.
+Signing the report does not sign the Requirement or the pack. The page does not retire a Check from Review. Remediation Retire removes the Check from the live Claim when the action is taken, or removes the Claim when no Check remains, and records `action` `retire`. A compiled report that already carries `remove_retired_checks` true still applies that older flag at review-sign: the report is signed first, a Claim that still has a Check is signed again by the report signer, and a Claim with none left is deleted. The embedded Claim and the Check result stay as compiled. A live Claim that does not match the run is a conflict: nothing is signed and no Claim file is changed. A Claim write that fails after the report signature leaves that report signed and names every Claim that was not updated. The same review-sign action retries only those Claims. The organisation chooses who holds the key. The report has no role field.
 
 ### A later run
 
 `same_run(report, run_result)` is true when the report's `run_result` and the loaded run result compare equal. The cover and the review page both use it. Nothing stores the flag.
 
-A check run **must not write or delete** the saved report. After a different result is written, Review must distinguish the earlier signed report from the new run; `same_run` is a relationship between snapshots, not a review-currency or compliance verdict. **Compile** can replace the single durable file with a new unsigned report and no `decision` only after explicit confirmation. Preserving prior bytes requires the configured retention behavior or committed Git history; do not infer that an uncommitted overwritten file can be recovered. Compiling the same run also requires confirmation; prior decisions are not copied forward.
+A check run **must not write or delete** the saved report. After a different result is written, Review must distinguish the earlier signed report from the new run; `same_run` is a relationship between snapshots, not a review-currency or compliance verdict. Sign writes a new dated review report in the Check directory and leaves the earlier file in place. The next review can take in a signed remediation report: unchanged underlag fills the signed decision, and the history is shown either way. Taking it in does not copy a decision whose underlag changed.
 
 Opening Review without a report does not write anything. A preview may be requested from the Compile backend; explicit Compile creates the unsigned report. **Save decision** and **review-sign** operate on a selected saved report.
 
@@ -182,10 +184,12 @@ PoC1 review is `poc/components/review/ui.py` on port 8767, fed by `scan.json`. T
 
 `compile_report` copies `packs`, sets `git_note` from `worktree`, sets `limits` to the two standing sentences, checks an embedded Claim's digest and nested Checks against its row, and writes `appendix` for unsigned or unverifiable executed Claims. `current_report` in `poc2/app/server.py` loads the Packs named by the product `curbpack.json` when those directories exist. `read_report_signature` does not take a repo. Check leaves the report file in place. The review page shows the failed Claim, its Checks, and a Discovery popup for that Requirement. It still writes `.curbpack/review-report.json`. It does not show `same_run`, and it does not ask before a new decision replaces the saved report.
 
-## Historical gaps (verify against current code before scheduling)
+## Historical gaps
 
-- **Implemented in the current UI, still short of this contract:** the one-Requirement Discovery popup, the Check-result grey-out on that presentation, and Add → explicit Retire → Check → Claim sign → report sign. The page still has no separate Compile action. Saving a decision writes the preview. `same_run` is not shown, and replacing a saved report does not ask for confirmation.
-- **Durable path not yet written:** the server still uses `.curbpack/review-report.json`. The approved file is `docs/reports/review-report.json` in the product repository. Check must keep whichever file is the saved report. Git history of the durable file, after the user commits it, is the retention. legacy PoC2 does not commit and does not store another copy.
-- **Intentionally deferred:** durable per-item Keep/Re-hunt marks and automatic review-currency inference. Do not mark those features implemented or invent persistence solely for them.
+These three bullets describe the PoC2 server. They are not the current page. A Studio Check is a directory under `results_dir`, and its review report and remedy report are files in that directory. See [Workspace](../docs/reference/workspace.md) and [Reviewing](../docs/user-guides/reviewers.md).
+
+- PoC2 showed one-Requirement Discovery, greyed passing candidates, and retired a Claim from the editor before a separate report sign. Saving a decision wrote the preview. `same_run` was not shown.
+- PoC2 wrote `.curbpack/review-report.json`. The product path discussed then was `docs/reports/review-report.json`.
+- Durable per-item Keep/Re-hunt marks and automatic review-currency inference were deferred. Do not invent persistence for them. Reuse of a signed decision is the remediation take-in described above, not a Keep mark.
 
 The reviewer's authority is the organisation's choice of key. The report does not record it.

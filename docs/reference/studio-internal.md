@@ -72,7 +72,8 @@ A missing key is omitted. Unknown keys are invalid.
   "remediation_history": [
     {
       "date": "2026-11-23T08:15:00Z",
-      "remediation": "Added security documentation."
+      "remediation": "must_fix -> pass",
+      "transition": "must_fix -> pass"
     }
   ]
 }

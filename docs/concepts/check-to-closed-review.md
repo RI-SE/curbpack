@@ -1,63 +1,47 @@
 # Use case: Från första Check till avslutad granskning
 
-**Status:** Målbild för Check, Review och Remediation. Texten beskriver det avsedda förloppet. Den beskriver inte vad Studio gör i dag, och den är inte ett normativt kontrakt. `docs/reference/studio-internal.md` styr `review_item`.
+**Status:** Så här gör Studio. `docs/reference/studio-internal.md` styr `review_item`. Sidans steg står i [Reviewing](../user-guides/reviewers.md).
 
 ### Dag 1 – Olle checkar in
 
 Olle har gjort ändringar i produkten och checkar in koden.
 
-En fullständig **Check** körs och identifierar ett antal problem. Niklas öppnar resultatet i **Review**, granskar underlaget och beslutar att fyra Checks är `must_fix`.
+En fullständig **Check** körs och blir en rad under **Checks performed**. Niklas öppnar den. Sidan leder med avvikelserna. Han sätter fyra Checks till `must_fix`.
 
-Niklas signerar Review Report. Därmed finns fyra dokumenterade avvikelser som måste hanteras.
+**Sign** låser de besluten, skriver review-rapporten i Checkens katalog och går tillbaka till Check. Raden säger **View**. Granskningen är skrivskyddad. Remediation har inte börjat förrän någon väljer **Start**.
 
 ### Dag 2 – Urban arbetar med Remediation
 
-Urban öppnar **Remediation** från den signerade rapporten.
+Urban väljer **Start** på den signerade raden.
 
-1. **Finding #1:** En Claim är bunden till fel Requirement. Urban gör Rebind och kör Re-check. Resultatet blir PASS.
-2. **Finding #2:** Samma åtgärd visar sig även ha löst nästa problem. Vid Re-check blir även denna PASS, utan ytterligare ändring.
-3. **Finding #3:** En Check har felaktigt datum i sin konfiguration. Urban rättar datumet och kör Re-check. PASS.
-4. **Finding #4:** Ett obligatoriskt dokument saknas. Urban kan inte färdigställa det och skriver i Remediation: *"Dokumentet kräver Lisas medverkan. Lisa är tillbaka nästa månad."*
+1. **Finding #1:** En Claim är bunden till fel Requirement. Urban gör Rebind och kör Re-check. Den raden blir grön och flyttas till **Remediated**. Det signerade `must_fix` står kvar.
+2. **Finding #2:** Samma åtgärd har löst nästa problem. Re-check gör även den grön, utan ytterligare ändring.
+3. **Finding #3:** En Check har felaktigt datum. Urban rättar datumet och kör Re-check. Raden blir grön.
+4. **Finding #4:** Ett obligatoriskt dokument saknas. Urban kan inte färdigställa det. **Add comment** sätter anteckningen på Checken: *"Dokumentet kräver Lisas medverkan. Lisa är tillbaka nästa månad."* Anteckningen är `comment`. Den är inte en historikpost.
 
-`remediation_history` visar vad Urban har gjort, vilka Checks som ändrat resultat och varför den sista punkten är olöst.
+Historiken visar åtgärderna: rebind, och en re-check som ändrade utfallet. En Check som redan var grön och som fallerar i en hel körning visas som **Checks outside the original report**. Den läggs inte i kön. **OK** sparar händelsen på remedieringen. **Rollback** lägger bara tillbaka senaste ändringen som Studio själv gjorde.
 
 ### Dag 3 – Remedy Report och en ny Check
 
-Urban signerar en **Remedy Report** med samma sigill som en Review Report. Han skriver under att arbetet är gjort så bra det gick, och tar ansvar för den redogörelsen. Rapporten berättar vad han gjort: tre Re-checkar blev PASS, och den fjärde är olöst med kommentaren om Lisa. Den har kvar sina `review_items`. Det är inte ett granskningsbeslut.
+Urban väljer **Sign Off**. Sigillet är en remedy report: namn, tid och signatur över arbetet, historiken, rundans anteckningar och en kvitterad avvikelse utanför den ursprungliga kön. Det är inte ett granskningsbeslut, och det ändrar inte Niklas signerade beslut. Studio skriver en läsbar rapport och går tillbaka till Check. Remedy-kolumnen säger **Completed**.
 
-Niklas kan signera den Review han redan har och skicka den vidare. Om han är smart läser han Remedy Report och begär en ny Check.
+Niklas läser rapporten. Vill han gå vidare kör han en ny Check. Den är en ny rad.
 
-Den nya körningen erbjuder två saker: återuppta en påbörjad Review, eller ta in synpunkterna från senaste Remedy Report.
+Den nya granskningen kan fråga om den ska ta in remedieringsrapporten.
 
-- De tre rättade punkterna har ändrat underlag. Deras `must_fix` återanvänds inte. Checken visar PASS, och Niklas godkänner dem.
-- Den fjärde har samma underlag. Niklas läser kommentaren och beslutar att acceptera avvikelsen tills Lisa kan färdigställa dokumentet.
+- De tre rättade punkterna har ändrat underlag. Deras `must_fix` återanvänds inte. Checken visar pass, och Niklas godkänner dem.
+- Den fjärde har samma underlag. Niklas läser kommentaren och sätter **Accept**.
 
-Niklas signerar Review Report.
+Finns redan en påbörjad granskning av just den körningen frågar sidan först om den ska fortsätta eller börja om.
 
-**Resultat:**
-
-- 3 Passed
-- 1 Accepted
-- 0 Must fix
-
-Granskningen är avslutad, men rapporten visar tydligt att ett problem accepterades utan att vara tekniskt åtgärdat.
+Niklas signerar. Resultatet är 3 Passed, 1 Accepted, 0 Must fix. Ett problem är accepterat utan att vara tekniskt åtgärdat.
 
 ### Senare Checkar – beslutet ligger kvar
 
-Efter signeringen körs många nya Checkar. För den accepterade avvikelsen är beslutet redan förberett: kommentaren säger varför, och underlaget är oförändrat tills Lisa färdigställer dokumentet. Samma sak gäller de tre Passed, så länge deras krav och underlag står stilla.
+Nästa Check kan åter ta in den senaste signerade remedieringen. Oförändrat underlag fyller det signerade beslutet, även det förberedda `accepted`. Historiken visas oavsett valet. **Keep the new decisions** lämnar de beslut den nya körningen fyllde i.
 
-En ny Review erbjuder **Reuse decisions** från den senaste signerade rapporten. Niklas väljer återanvändning. De fyra besluten fylls i igen. Den accepterade punkten behöver inte granskas om.
+När Lisa färdigställer dokumentet och Olle checkar in ändringen ger den fjärde Checken pass. Underlaget är nytt, så det tidigare `accepted` återanvänds inte. De tre andra kan fortfarande återanvändas om deras underlag står stilla.
 
-När Lisa färdigställer dokumentet och Olle checkar in ändringen ger den fjärde Checken PASS. Underlaget är nytt, så det tidigare `accepted` återanvänds inte. Checken föreslår `pass`. De tre andra kan fortfarande återanvändas.
+Niklas granskar den fjärde punkten och godkänner. En ny review-rapport signeras.
 
-Niklas granskar den fjärde punkten, konstaterar att dokumentet finns och godkänner.
-
-En ny Review Report signeras.
-
-**Resultat:**
-
-- 4 Passed
-- 0 Accepted
-- 0 Must fix
-
-Historiken visar fortfarande att dokumentet först saknades, att avvikelsen accepterades tills Lisa kunde färdigställa det, och att det senare blev `pass`.
+Historiken visar fortfarande att dokumentet först saknades, att avvikelsen accepterades, och att den senare blev pass.

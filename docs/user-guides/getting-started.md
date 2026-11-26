@@ -162,11 +162,11 @@ known product state
 
 ## 9. Review the run
 
-Return to Studio and open **Review**.
+Return to Studio and open **Check**. The run is a row under **Checks performed**. Open it.
 
-Compile the run into review material and inspect how the Requirement, Claim, and Check result are presented together.
+The page leads with the deviations. A person records what the result means: Not assessed, Accept, or Must be fixed. **Sign** locks those decisions. The Check result itself stays what the tool recorded.
 
-The automated result stops at what the Check observed. Review is where a person records what that result means in context. Retiring a Check needs a reason and is stored on the report. The Check is removed from the live Claim only if that report says so, and only when the report is signed.
+Remediation starts from that signed review. That is where a Check is edited, re-checked, or retired. Retire removes the Check from the Claim then, and records why. The walkthrough is [Reviewing](reviewers.md).
 
 ## 10. What to try next
 
