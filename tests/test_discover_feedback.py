@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from checks.schema import validate_check_args
 from common.errors import ModelError
 from common.jsonio import read_json
 from discovery.feedback import add_finding, feedback_path, load_feedback, save_check, save_vote
-from discovery.jobs import start_discover_job
+from discovery.jobs import read_job, start_discover_job
 
 
 class FeedbackTest(unittest.TestCase):
@@ -108,11 +109,11 @@ class FeedbackTest(unittest.TestCase):
                 timestamp="2026-10-14T080000Z",
                 assess_limit=0,
             )
-            from discovery.jobs import read_job
-
-            for _ in range(50):
-                if read_job(root / "jobs", "discover-keep").get("status") != "running":
-                    break
+            deadline = time.monotonic() + 5
+            while read_job(root / "jobs", "discover-keep").get("status") == "running":
+                if time.monotonic() >= deadline:
+                    self.fail("discover-keep did not finish")
+                time.sleep(0.05)
             self.assertEqual(path.read_bytes(), before)
 
     def test_added_finding_needs_a_file_and_a_rationale(self):
