@@ -6,6 +6,7 @@ import io
 import os
 import secrets
 import shutil
+import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,7 @@ def export_pack_zip(directory: Path, trust: dict) -> tuple[bytes, list[dict]]:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for path in files:
-            archive.writestr(path.relative_to(directory).as_posix(), path.read_bytes())
+            archive.writestr(_zip_member(path, directory), path.read_bytes())
     return buffer.getvalue(), rows
 
 
@@ -94,6 +95,17 @@ def import_posted_zip(root: Path, keys: Path, payload: bytes) -> str:
         + "&destination="
         + quote(previous, safe="")
     )
+
+
+def _zip_member(path: Path, directory: Path) -> zipfile.ZipInfo:
+    """Record the file's own time. A later export of the same bytes stays the same archive."""
+    stamp = time.localtime(path.stat().st_mtime)[:6]
+    if stamp[0] < 1980:
+        stamp = (1980, 1, 1, 0, 0, 0)
+    info = zipfile.ZipInfo(path.relative_to(directory).as_posix(), stamp)
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o600 << 16
+    return info
 
 
 def _regular_files(directory: Path) -> list[Path]:

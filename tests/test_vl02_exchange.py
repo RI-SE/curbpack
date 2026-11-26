@@ -54,6 +54,16 @@ def _members(payload: bytes) -> dict[str, bytes]:
 
 
 class ExportZipTest(unittest.TestCase):
+    def test_a_later_export_of_the_same_files_is_the_same_zip(self):
+        import zipfile as zipfile_module
+        from unittest.mock import patch
+
+        first, _rows = export_pack_zip(self.directory, {"Ada": self.public})
+        real = zipfile_module.time.time
+        with patch.object(zipfile_module.time, "time", lambda: real() + 5):
+            second, _rows = export_pack_zip(self.directory, {"Ada": self.public})
+        self.assertEqual(second, first)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
