@@ -33,5 +33,5 @@ Draft stories are not permission to implement.
 
 - Implementing an adapter for NIST or any other new document.
 - A plugin registry, a UI for writing adapters, or a change to extraction behavior.
-- The EP-01 pilot journeys, Publish, or DOC-04's model consolidation.
+- The EP-01 pilot journeys, legacy Publish, or DOC-04's Pydantic/generated-schema alignment.
 - Treating `docs/ssdf/` as the adapter guide.

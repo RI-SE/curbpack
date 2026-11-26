@@ -28,7 +28,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             ws = Workspace(root)
             old = build_claim(
                 claim_id="claim-old",
-                requirement_id="R1",
+                requirement=_requirement("R1"),
                 source="documents",
                 args={"path": "docs/old.md"},
                 checks=[
@@ -44,7 +44,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             )
             ok = build_claim(
                 claim_id="claim-ok",
-                requirement_id="R1",
+                requirement=_requirement("R1"),
                 source="documents",
                 args={"path": "docs/ok.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/ok.md"]}}],
@@ -104,7 +104,7 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
             try:
                 page = _get(
                     base
-                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z&report="
+                    + "/review?repo=sample-product&source=cra-xml-vii&timestamp=2026-10-21T120000Z&mode=remediation&report="
                     + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
             finally:
@@ -112,15 +112,16 @@ class ReviewDiscoverAgainTest(unittest.TestCase):
                 httpd.server_close()
             self.assertEqual(report_path.read_bytes(), before_bytes)
 
-        before, _sep, rest = page.partition("<dialog ")
+        before, _sep, rest = page.partition('<dialog id="review-discover-')
         dialog, _end, after = rest.partition("</dialog>")
         self.assertIn('data-claim="claim-old"', before)
         self.assertIn('data-requirement="R1"', before)
         self.assertIn("docs/old.md", before)
         self.assertIn("missing phrase", before)
         self.assertIn('data-check="contents"', before)
-        self.assertIn("Re-Discover", before)
-        self.assertIn('data-claim="claim-ok"', before)
+        self.assertIn(">Re-Discover</button>", before)
+        self.assertNotIn('data-claim="claim-ok"', page)
+        self.assertNotIn(">Passed</span>", before)
         self.assertIn('data-requirement="R1"', dialog)
         self.assertNotIn('data-requirement="R2"', dialog)
         self.assertIn(
@@ -138,6 +139,7 @@ def _requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "house",
+        "namespace": "RISE/house",
         "source": {
             "framework": "test",
             "instrument": "fixture",

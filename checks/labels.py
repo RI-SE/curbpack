@@ -15,15 +15,100 @@ CAPTIONS = {
 
 def check_caption(entry: dict) -> str:
     """Human label for one saved check. The `check` field is unchanged."""
+    variant = check_variant(entry)
+    return CAPTIONS.get(variant, variant)
+
+
+_SHORT = {
+    "exist": "Exists",
+    "contents": "Contents",
+    "text_forbid": "Forbidden text",
+    "anti_placeholder": "Anti-placeholder",
+    "fresh": "Fresh",
+    "owned": "Owned",
+    "dep_ban": "Banned",
+}
+
+
+_FIND_FILE = "Find the file first. Re-discover the Claim if that does not work."
+
+_REMEDIES = {
+    "text_forbid": "Remove the forbidden text.",
+    "anti_placeholder": "Replace the placeholder text.",
+    "contents": "Change the file so it has the expected content.",
+    "fresh": "Update the file so it is recent enough.",
+    "owned": "Record the file as written by the claimed author.",
+    "dep_ban": "Remove the banned package version.",
+}
+
+
+def check_variant(entry: dict) -> str:
+    """The caption key for one check, including contents probes."""
     label = str(entry.get("label") or "")
     if label in CAPTIONS:
-        return CAPTIONS[label]
+        return label
     check = str(entry.get("check") or "")
     if check == "contents":
         probes = (entry.get("args") or {}).get("probes") or []
         kinds = {item.get("kind") for item in probes if isinstance(item, dict)}
         if kinds == {"pattern"}:
-            return CAPTIONS["text_forbid"]
+            return "text_forbid"
         if kinds == {"placeholder"}:
-            return CAPTIONS["anti_placeholder"]
-    return CAPTIONS.get(check, check)
+            return "anti_placeholder"
+    return check if check in CAPTIONS else check
+
+
+def check_remediation(entry: dict, detail: str = "") -> str:
+    """Default tip when a failed check recorded none of its own."""
+    parts = [part.strip() for part in detail.split(";") if part.strip()]
+    if parts and all(part.endswith(" is absent") for part in parts):
+        return _FIND_FILE
+    return _REMEDIES.get(check_variant(entry), "")
+
+
+def check_short_label(entry: dict) -> str:
+    """Compact label for the same check `check_caption` describes."""
+    caption = check_caption(entry)
+    for key, sentence in CAPTIONS.items():
+        if caption == sentence:
+            return _SHORT[key]
+    return str(entry.get("check") or "") or caption
+
+
+def check_detail(entry: dict) -> dict:
+    """Caption plus the arguments a person reads. File names are left out."""
+    args = entry.get("args") if isinstance(entry.get("args"), dict) else {}
+    fields: list[dict] = []
+    for probe in args.get("probes") or []:
+        if not isinstance(probe, dict):
+            continue
+        kind = probe.get("kind")
+        if kind == "size" and probe.get("bytes") is not None:
+            fields.append({"label": "Min bytes", "value": str(probe["bytes"])})
+        elif kind == "words" and probe.get("n") is not None:
+            fields.append({"label": "Min words", "value": str(probe["n"])})
+        elif kind == "headers":
+            headers = [str(item) for item in probe.get("headers") or [] if str(item).strip()]
+            if headers:
+                fields.append({"label": "Require headers", "value": ", ".join(headers)})
+        elif kind == "pattern":
+            fields.append({"label": "Pattern", "value": str(probe.get("pattern") or "")})
+        elif kind == "token":
+            fields.append({"label": "Bind repo token", "value": "yes"})
+    for key, label in (
+        ("package", "Package"),
+        ("banned_versions", "Banned versions"),
+        ("max_age_days", "Max age days"),
+        ("since_ref", "Since ref"),
+        ("email", "Require git author email"),
+        ("name", "Require git author name"),
+    ):
+        value = args.get(key)
+        if value is None or value == "" or value == []:
+            continue
+        if isinstance(value, list):
+            value = ", ".join(str(item) for item in value)
+        fields.append({"label": label, "value": str(value)})
+    if args.get("bind_repo_token") is True:
+        fields.append({"label": "Bind repo token", "value": "yes"})
+    return {"caption": check_caption(entry), "fields": fields}

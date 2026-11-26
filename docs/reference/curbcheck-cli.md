@@ -64,9 +64,9 @@ There is no global `--as-of`, `--heal`, or `--diff`. `git_fresh` carries its own
 
 ## What the run reads
 
-`curbpack.json` sits at the repository root. The runner validates the required workspace.md §2.2 fields (`packs`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `unsigned_requirements`) plus optional `requirements` or `exclude_requirements`. The single key `curbpack` is rejected. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope, unless `--packs` / `--requirements` overlay that selection for this run without writing the file. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
+`curbpack.json` sits at the repository root. The runner validates the required workspace.md §2.2 fields (`packs`, `search_hints`, `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`, `namespace_base`) plus optional `requirements` or `exclude_requirements`. The single key `curbpack` is rejected. It uses `packs` together with either `requirements` or `exclude_requirements` to decide which Requirements are in scope, unless `--packs` / `--requirements` overlay that selection for this run without writing the file. A valid `search_hints` block stays in the file; the run does not walk its globs or discovery sources. The key `hunt` is rejected, and no result is written.
 
-`packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way. `unsigned_requirements` is required; its enforcement is a later epic.
+`packs` is a list of pack ids. Use either `requirements` (only these ids) or `exclude_requirements` (every Requirement in the selected packs, minus these ids). A file that sets both stops before a result is written. An id in `requirements` that is not in the loaded packs stops the same way.
 
 ```json
 {
@@ -76,7 +76,7 @@ There is no global `--as-of`, `--heal`, or `--diff`. `git_fresh` carries its own
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
   "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "namespace_base": "RISE"
 }
 ```
 
@@ -84,20 +84,29 @@ For each selected pack id, the runner loads `<packs_dir>/<id>/<pack-version>/pac
 
 Claims are the `*.json` files directly inside `claims_dir`, in filename order. Files in subdirectories are not loaded. Each file is one Claim, in the shape in Packs v2 §2.4. A Claim whose `checks` array is empty is omitted: it is a saved proposal, and it adds no row. A Claim whose `requirement_id` is outside the selection is omitted; selected Claims still run. A Requirement that has no executed Claim adds no row either. The runner does not invent one.
 
-The runner does not read `discovery_hints`, `note`, `remediation_hint`, or the Claim `description` to decide pass or fail. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
+The runner does not read `discovery_hints`, `note`, the Requirement's `remediation_hint`, or the Claim `description` to decide pass or fail. A Check tool may return its own optional `remediation_hint` on a failure. The runner copies that string onto the Check result and does not use it to choose status, binding, or whether the Check runs. A missing or invalid Claim signature is not turned into a failed Check. Signing and the review report are later steps.
 
 ## What the run prints
 
-Stdout is always the text summary, including when no JSON file is written. Claim status is padded to seven characters. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one. A `wrote {path}` line is printed only for each JSON file this run actually wrote.
+Stdout is always the text summary, including when no JSON file is written. Claim status is padded to seven characters. A row that carries `binding` prints that word on the same line. `stale` then prints the recorded Requirement digest and the digest of the Requirement this run loaded. `missing` prints the unresolved namespace, pack id, and requirement id. The process exit code stays the Check result. Each configured Check follows, indented, with its zero-based index. A `detail` is appended after an em dash when that Check has one. A `wrote {path}` line is printed only for each JSON file this run actually wrote.
 
-A passing Claim with `-o /path/to/run.json`:
+A passing Claim whose Requirement matches, with `-o /path/to/run.json`:
 
 ```text
 wrote /path/to/run.json
 claims 1 exit 0
-pass    HOUSE-SECURITY-MD
+pass    HOUSE-SECURITY-MD binding match
   pass    [0] exist
   pass    [1] contents
+```
+
+A passing Check whose Requirement digest has changed:
+
+```text
+claims 1 exit 0
+pass    HOUSE-SECURITY-MD binding stale
+  requirement <recorded digest> actual <loaded digest>
+  pass    [0] exist
 ```
 
 A Claim whose file exists and whose content probes do not:
@@ -105,7 +114,7 @@ A Claim whose file exists and whose content probes do not:
 ```text
 wrote /path/to/run.json
 claims 1 exit 1
-fail    HOUSE-SECURITY-MD
+fail    HOUSE-SECURITY-MD binding match
   pass    [0] exist
   fail    [1] contents — SECURITY.md is 17 bytes, not >= 80; SECURITY.md has 3 words, not >= 20
 ```

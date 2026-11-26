@@ -1,6 +1,9 @@
 {
   "id": "FIX-FRESH-REVIEW",
   "requirement_id": "FIX-FRESH-REVIEW",
+  "namespace": "RISE/Fresh and owned check fixture (test only)",
+  "pack_id": "fresh-owned-test",
+  "requirement_digest": "c908cee0cb2924d0af6530df6f53cd22d4b39b0ba12f9eeb337c725e879ae7d3",
   "source": "documents",
   "args": {
     "path": "docs/review-log.md"

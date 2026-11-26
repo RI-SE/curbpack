@@ -91,7 +91,7 @@ class CoverageHookTest(unittest.TestCase):
 def _claim(claim_id: str, path: str, checks: list[dict]) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id="REQ-A",
+        requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=checks,
@@ -101,6 +101,17 @@ def _claim(claim_id: str, path: str, checks: list[dict]) -> dict:
 
 def _packs() -> list[dict]:
     return [{"id": "house", "version": "0.1.0", "digest": "abc"}]
+
+
+class CoverageBackendTest(unittest.TestCase):
+    def test_coverage_mark_lives_in_the_claim_backend(self):
+        import inspect
+
+        from claims.ui.coverage import load_run as kept
+        from studio.claim.impl.coverage import load_run as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/claim/impl/coverage.py", inspect.getsourcefile(backend).replace("\\", "/"))
 
 
 if __name__ == "__main__":

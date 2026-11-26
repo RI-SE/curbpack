@@ -21,7 +21,7 @@ REQ = {'id':'REQ-A', 'pack_id':'house',
 PACKS = [{'id':'house','version':'0.1.0','digest':'abc'}]
 
 def claim(cid, path):
-    return build_claim(claim_id=cid, requirement_id='REQ-A', source='documents', args={'path':path},
+    return build_claim(claim_id=cid, requirement={"id": 'REQ-A', "namespace": "RISE/Example", "pack_id": "example"}, source='documents', args={'path':path},
         checks=[{'check':'exist','args':{'paths':[path]}}],
         description='Evidence is present at the identified path.')
 

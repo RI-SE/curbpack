@@ -172,22 +172,30 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 home = _get(base + "/")
-                self.assertIn(">Home</a>", home)
-                self.assertIn("Change Project", home)
-                self.assertIn("author packs from law text", home)
+                self.assertLess(
+                    home.index('href="/home">Start</a>'),
+                    home.index('href="/project">Change-Project</a>'),
+                )
+                self.assertIn('href="/discover">Discovery &amp; Claims</a>', home)
+                self.assertIn('href="/check">Verification-Workflow</a>', home)
+                self.assertNotIn('>Home</a>', home)
+                self.assertNotIn('>Discover</a>', home)
+                self.assertIn("Change-Project", home)
+                self.assertIn("Registered projects", home)
+                self.assertIn("Choose the product repository", home)
                 self.assertNotIn(">PoC2</a>", home)
                 self.assertNotIn("Active Pack", home)
                 self.assertNotIn("/select-pack", home)
                 self.assertIn('href="/requirements"', home)
                 self.assertIn('href="/discover"', home)
                 self.assertIn('href="/check"', home)
-                self.assertIn('href="/review"', home)
+                self.assertNotIn('href="/review"', home)
                 self.assertNotIn("Developer", home)
                 self.assertNotIn('href="/claims"', home)
                 self.assertNotIn('href="/scaffold"', home)
                 self.assertNotIn("No review report.", home)
                 self.assertNotIn("signature verifies", home)
-                self.assertLess(home.index("Pack Editor"), home.index('href="/discover"'))
+                self.assertLess(home.index("Pack-Editor"), home.index('href="/discover"'))
 
                 _post(base + "/select-pack", {"kind": "working", "pack_id": "cra-baseline", "ref": "2026-10-13T090000Z"})
 
@@ -200,7 +208,7 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 self.assertIn("># Claims</th>", discover)
                 self.assertNotIn(">Copy</th>", discover)
                 self.assertNotIn("Add repo", discover)
-                self.assertIn("Change Project", discover)
+                self.assertIn("Change-Project", discover)
                 self.assertNotIn("CRA Annex VII", discover)
                 self.assertNotIn("matched_by", discover)
                 self.assertNotIn("docs/risk-assessment.md", discover)
@@ -232,7 +240,7 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
                 home = _get(base + "/")
                 self.assertIn("Curbpack Studio", home)
                 self.assertIn("Registered projects", home)
-                self.assertIn("Change Project", home)
+                self.assertIn("Change-Project", home)
                 self.assertIn('href="/project"', home)
                 self.assertNotIn("Developer", home)
                 self.assertNotIn("No review report.", home)

@@ -1,0 +1,340 @@
+"""Claims editor view-model. The URL stays on the old server."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from claims.bind import (
+    build_claim,
+    exist_args_for_path,
+    law_passages,
+    read_claim,
+    read_claim_seal,
+    rebind_from_fields,
+    rebind_requirement,
+    require_requirement_id,
+    retire_claim,
+    sign_claim,
+    write_claim,
+)
+from common.canonical import version_digest
+from common.errors import ModelError
+from common.keystore import load_or_create_key, trust_store
+from discovery.door import claim_file_relative, repo_claims_dir
+
+if TYPE_CHECKING:
+    from app.server import Workspace
+
+
+def _claims_model(ws: Workspace, query: dict) -> dict:
+    from app.server import _claims_lookup, _claims_repo, _door_chrome, _query_value
+
+    door = _door_chrome(ws, query)
+    lookup = _claims_lookup(ws, query)
+    known_ids = list(lookup)
+    trust = trust_store(ws.keys)
+    repo = _claims_repo(ws, query)
+    rows = []
+    from common.store import load_claims
+
+    config_path = repo / "curbpack.json"
+    claims_dir = repo_claims_dir(repo) if config_path.is_file() else None
+    claims = load_claims(claims_dir) if claims_dir is not None and claims_dir.is_dir() else []
+    from claims.ui.coverage import load_run, retire_warning
+
+    run_result = load_run(repo)
+    if claims_dir is not None:
+        for claim in claims:
+            requirement_id = str(claim.get("requirement_id") or "")
+            requirement = lookup.get(requirement_id)
+            relative = claim_file_relative(repo, claims_dir, claim["id"])
+            rows.append(
+                {
+                    "claim": claim,
+                    "passages": law_passages(requirement) if requirement else [],
+                    "reading": read_claim_seal(
+                        claim,
+                        trust,
+                        repo=repo if claims_dir.is_dir() else None,
+                        relative=relative,
+                    ),
+                    "retire_warning": retire_warning(claim, claims, run_result),
+                }
+            )
+    proposed_namespace = _query_value(query, "namespace")
+    proposed_pack_id = _query_value(query, "pack_id")
+    proposed = _proposed_requirement(
+        ws,
+        repo,
+        proposed_namespace,
+        proposed_pack_id,
+        _query_value(query, "requirement_id"),
+        _query_value(query, "timestamp"),
+    )
+    prefill_requirement_id = (query.get("requirement_id") or [""])[0].strip()
+    prefill_path = (query.get("path") or [""])[0].strip()
+    prefill_passages: list[str] = []
+    proposing = bool(proposed_namespace and proposed_pack_id and prefill_requirement_id)
+    if prefill_requirement_id and not proposing:
+        # Validate query context when Discovery (or the user) named a Requirement.
+        # Unknown ids must not fall back to a demo Requirement.
+        if prefill_requirement_id not in lookup:
+            raise ModelError(
+                "claim",
+                "requirement_id",
+                f"an id in the selected Pack, not {prefill_requirement_id}",
+            )
+        prefill_passages = law_passages(lookup[prefill_requirement_id])
+        if prefill_path:
+            exist_args_for_path(prefill_path)
+    rebind_requirements = _working_copy_choices(
+        ws.root,
+        proposed_pack_id,
+        _query_value(query, "timestamp"),
+    )
+    prefill_source = ""
+    if prefill_requirement_id and prefill_requirement_id in lookup:
+        hints = lookup[prefill_requirement_id].get("discovery_hints") or {}
+        sources = hints.get("sources") if isinstance(hints, dict) else None
+        ids = [
+            item.get("source")
+            for item in sources or []
+            if isinstance(item, dict) and isinstance(item.get("source"), str)
+        ]
+        if len(ids) == 1:
+            prefill_source = ids[0]
+    return {
+        "claims": rows,
+        "requirement_ids": known_ids,
+        "rebind_requirements": rebind_requirements,
+        "proposed_requirement": proposed,
+        "prefill_requirement_id": prefill_requirement_id,
+        "prefill_path": prefill_path,
+        "prefill_source": prefill_source,
+        "prefill_passages": prefill_passages,
+        "repos": door.get("repos") or [],
+        "repo_id": str(door.get("repo_id") or ""),
+        "curbpack_file": door.get("curbpack_file") or "",
+        "directory": door.get("directory") or "",
+        "claims_dir": door.get("claims_dir") or "",
+        "results_dir": door.get("results_dir") or "",
+        "reports_dir": door.get("reports_dir") or "",
+        "packs_dir_value": door.get("packs_dir_value") or "",
+        "claims_dir_value": door.get("claims_dir_value") or "",
+        "results_dir_value": door.get("results_dir_value") or "",
+        "reports_dir_value": door.get("reports_dir_value") or "",
+        "source_id": _query_value(query, "source_id"),
+        "timestamp": _query_value(query, "timestamp"),
+        "return_to": _query_value(query, "return_to"),
+    }
+
+
+def _working_copy_choices(workspace: Path, pack_id: str, timestamp: str) -> list[dict]:
+    """Requirements in the working copy named by the Review link. Empty for a repository pack."""
+    from discovery.jobs import CURBPACK_COPY
+    from requirements.workspace import load_working_copy, select_working_copy
+
+    if not pack_id or not timestamp or timestamp == CURBPACK_COPY:
+        return []
+    try:
+        directory = select_working_copy(workspace, pack_id, timestamp)
+        _pack, requirements = load_working_copy(directory)
+    except (ModelError, OSError, ValueError):
+        return []
+    choices = []
+    for item in requirements:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        choices.append(
+            {
+                "namespace": str(item.get("namespace") or ""),
+                "pack_id": str(item.get("pack_id") or pack_id),
+                "id": str(item.get("id")),
+            }
+        )
+    return choices
+
+
+def _proposed_requirement(
+    ws: Workspace,
+    repo: Path,
+    namespace: str,
+    pack_id: str,
+    requirement_id: str,
+    timestamp: str,
+) -> dict | None:
+    from claims.impact import requirement_for_binding
+
+    if not namespace or not pack_id or not requirement_id:
+        return None
+    requirement = requirement_for_binding(
+        repo,
+        namespace,
+        pack_id,
+        requirement_id,
+        workspace=ws.root,
+        timestamp=timestamp,
+    )
+    if requirement is None:
+        return None
+    return {
+        "namespace": requirement.get("namespace"),
+        "pack_id": requirement.get("pack_id"),
+        "id": requirement.get("id"),
+        "digest": version_digest(requirement),
+    }
+
+
+def _create_claim(ws: Workspace, form: dict) -> str:
+    from app.server import _claims_directory, _claims_lookup, _claims_redirect
+
+    known = _claims_lookup(ws, form)
+    requirement_id = require_requirement_id(
+        (form.get("requirement_id") or [""])[0],
+        list(known),
+    )
+    args = json.loads((form.get("args") or ["{}"])[0])
+    checks = json.loads((form.get("checks") or ["[]"])[0])
+    if not isinstance(args, dict):
+        raise ModelError("claim", "args", "JSON object")
+    if not isinstance(checks, list):
+        raise ModelError("claim", "checks", "JSON list")
+    claim = build_claim(
+        claim_id=(form.get("id") or [""])[0].strip(),
+        requirement=known[requirement_id],
+        source=(form.get("source") or [""])[0].strip(),
+        args=args,
+        checks=checks,
+        description=(form.get("description") or [""])[0].strip(),
+        severity=(form.get("severity") or [""])[0].strip() or None,
+    )
+    claims_dir = _claims_directory(ws, form)
+    destination = claims_dir / f"{claim['id']}.json"
+    if destination.is_file():
+        raise ModelError("claim", "id", "a new id; an existing Claim is edited explicitly")
+    write_claim(claims_dir, claim)
+    return _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+
+
+def _rebind_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_lookup, _claims_redirect, _claims_repo
+    from claims.impact import requirement_for_binding
+
+    namespace = (form.get("namespace") or [""])[0].strip()
+    pack_id = (form.get("pack_id") or [""])[0].strip()
+    requirement_id = (form.get("requirement_id") or [""])[0].strip()
+    timestamp = (form.get("timestamp") or [""])[0].strip()
+    if namespace and pack_id:
+        requirement = requirement_for_binding(
+            _claims_repo(ws, form),
+            namespace,
+            pack_id,
+            requirement_id,
+            workspace=ws.root,
+            timestamp=timestamp,
+        )
+        if requirement is None:
+            raise ModelError(
+                "claim",
+                "requirement_id",
+                "the Requirement named by namespace, pack id, and requirement id",
+            )
+    else:
+        known = _claims_lookup(ws, form)
+        requirement_id = require_requirement_id(requirement_id, list(known))
+        requirement = known[requirement_id]
+    directory = _claims_directory(ws, form)
+    claim = read_claim(directory / f"{claim_id}.json")
+    updated = rebind_requirement(claim, requirement)
+    return_to = (form.get("return_to") or [""])[0]
+    name = (form.get("name") or [""])[0].strip()
+    if "mode=remediation" in return_to and not name:
+        raise ModelError("claim", "name", "the signer name")
+    if name:
+        from app.server import _now
+
+        private, _public = load_or_create_key(ws.keys, name)
+        updated = sign_claim(updated, name=name, private_key=private, at=_now())
+    repo = _claims_repo(ws, form)
+    from urllib.parse import parse_qs, urlparse
+
+    from studio.review.impl.items import items_home, record_rebind, remember_studio_edit
+
+    source = ""
+    if "mode=remediation" in return_to:
+        query = parse_qs(urlparse(return_to).query)
+        source = (query.get("report") or query.get("result") or [""])[0]
+    items_path = items_home(repo, Path(source)) if source else None
+    if items_path is not None and items_path.is_file():
+        remember_studio_edit(
+            items_path,
+            claim,
+            claim_file_relative(repo, directory, claim_id),
+            {"claim_id": claim_id, "check": "binding"},
+        )
+    write_claim(directory, updated)
+    matched = updated.get("requirement_digest") == version_digest(requirement)
+    record_rebind(
+        repo,
+        return_to,
+        claim_id,
+        signed=bool(name),
+        matched=matched,
+        name=name,
+    )
+    if source:
+        from studio.check.check_model import regress_remediation
+
+        regress_remediation(repo, source)
+    target = _claims_redirect(form, f"saved=1&requirement_id={requirement_id}")
+    if name and (target.startswith("/review?") or target == "/review"):
+        join = "&" if "?" in target else "?"
+        return f"{target}{join}rebound=1"
+    return target
+
+
+def _update_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect
+
+    claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
+    had_signed = isinstance(claim.get("signed"), dict)
+    before = version_digest(claim)
+    updated = rebind_from_fields(
+        claim,
+        source=(form.get("source") or [""])[0],
+        args_json=(form.get("args") or ["{}"])[0],
+        checks_json=(form.get("checks") or ["[]"])[0],
+        severity=(form.get("severity") or [""])[0],
+        description=(form.get("description") or [""])[0],
+    )
+    write_claim(_claims_directory(ws, form), updated)
+    flag = "cleared=1" if had_signed and "signed" not in updated else "saved=1"
+    return _claims_redirect(
+        form,
+        f"{flag}&requirement_id={updated.get('requirement_id', '')}",
+        claim_changed=before != version_digest(updated),
+    )
+
+
+def _sign_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect, _now
+
+    claim = read_claim(_claims_directory(ws, form) / f"{claim_id}.json")
+    name = (form.get("name") or [""])[0].strip()
+    private, _public = load_or_create_key(ws.keys, name)
+    sealed = sign_claim(claim, name=name, private_key=private, at=_now())
+    write_claim(_claims_directory(ws, form), sealed)
+    return _claims_redirect(
+        form,
+        f"signed=1&requirement_id={claim.get('requirement_id', '')}",
+        claim_changed=False,
+    )
+
+
+def _retire_claim(ws: Workspace, claim_id: str, form: dict) -> str:
+    from app.server import _claims_directory, _claims_redirect
+
+    retire_claim(_claims_directory(ws, form), claim_id)
+    return _claims_redirect(form, "retired=1", claim_changed=False)

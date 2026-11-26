@@ -35,7 +35,7 @@ class CreateConfiguredClaimsTest(unittest.TestCase):
             claims = repo / "claims"
             outcomes = create_configured_claims(
                 claims,
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 known_ids=["REQ-A", "REQ-B"],
                 source="documents",
                 args={"path": "docs/a.md"},
@@ -54,7 +54,7 @@ class CreateConfiguredClaimsTest(unittest.TestCase):
             before = (claims / f"{claim_id}.json").read_bytes()
             again = create_configured_claims(
                 claims,
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 known_ids=["REQ-A"],
                 source="documents",
                 args={"path": "docs/a.md"},
@@ -77,7 +77,7 @@ class CreateConfiguredClaimsTest(unittest.TestCase):
             existing = sign_claim(
                 build_claim(
                     claim_id=claim_id,
-                    requirement_id="REQ-A",
+                    requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                     source="documents",
                     args={"path": "docs/other.md"},
                     checks=[{"check": "exist", "args": {"paths": ["docs/other.md"]}}],
@@ -91,7 +91,7 @@ class CreateConfiguredClaimsTest(unittest.TestCase):
             before = (claims / f"{claim_id}.json").read_bytes()
             outcomes = create_configured_claims(
                 claims,
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 known_ids=["REQ-A"],
                 source="documents",
                 args={"path": "docs/a.md"},
@@ -110,7 +110,7 @@ class CreateConfiguredClaimsTest(unittest.TestCase):
             claims = Path(tmp)
             outcomes = create_configured_claims(
                 claims,
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 known_ids=["REQ-A"],
                 source="documents",
                 args={"path": "docs/a.md"},

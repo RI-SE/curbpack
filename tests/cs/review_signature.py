@@ -20,17 +20,17 @@ def specimen(private: bytes) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
         (repo / 'evidence.md').write_text('Evidence\n', encoding='utf-8')
-        claim = build_claim(
-            claim_id='C-1', requirement_id='REQ-1', source='documents',
-            args={'path':'evidence.md'},
-            checks=[{'check':'exist', 'args':{'paths':['evidence.md']}}],
-            description='This document is the checked evidence.')
         requirement = {
-            'id':'REQ-1', 'pack_id':'house',
+            'id':'REQ-1', 'namespace': 'RISE/house', 'pack_id':'house',
             'source':{'framework':'test','instrument':'test','identifier':'FIX-1',
                       'language':'en','url':'https://example.test'},
             'references':[{'nr':1,'locator':'1','law_text':'The documentation exists.'}],
         }
+        claim = build_claim(
+            claim_id='C-1', requirement=requirement, source='documents',
+            args={'path':'evidence.md'},
+            checks=[{'check':'exist', 'args':{'paths':['evidence.md']}}],
+            description='This document is the checked evidence.')
         run = build_run_result(repo, [claim], [{'id':'house','version':'0.1.0','digest':'abc'}])
         report = compile_report(run_result=run, requirements=[requirement], claims=[claim])
         report = record_decision(report, 'Evidence reviewed, not a compliance conclusion.')

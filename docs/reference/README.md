@@ -1,12 +1,13 @@
 # Reference
 
-[Packs v2](packs2.md), [Outputs](outputs.md), and [Workspace](workspace.md) define the contracts.
+[Packs v2](packs2.md), [Outputs](outputs.md), [Workspace](workspace.md), and [Studio-internal](studio-internal.md) define the contracts.
 
 | Page | Owns |
 | --- | --- |
 | [Packs v2](packs2.md) | Persistent Pack, Requirement, Claim, signature, and Check shapes. Selection and `search_hints` on `curbpack.json` are §2.3. |
 | [Outputs](outputs.md) | Run-result and review-report JSON structures, field meanings, and interpretation. |
 | [Workspace](workspace.md) | Where product and Studio config live, which keys exist, and the path fields Check and Compile read. |
+| [Studio-internal](studio-internal.md) | Studio-internal data structures. `review_item` is defined there. |
 
 [Configuration](configuration.md) restates that contract.
 

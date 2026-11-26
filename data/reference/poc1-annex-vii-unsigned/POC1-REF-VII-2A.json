@@ -40,5 +40,7 @@
     "instrument": "CRA",
     "language": "en",
     "url": "https://publications.europa.eu/resource/celex/32024R2847"
-  }
+  },
+  "namespace": "RISE/PoC1 Annex VII reference",
+  "status": "draft"
 }

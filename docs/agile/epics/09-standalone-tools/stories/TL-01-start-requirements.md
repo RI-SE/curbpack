@@ -1,14 +1,18 @@
-# TL-01 — Start Requirements alone
+# TL-01 — Use Pack and Requirements operations from CLI
 
-**Status:** Draft. Not authorization to implement.
-**Epic:** [EP-09 Start each Packs v2 tool on its own](../EPIC.md)
+**Status:** Draft; after relevant EP-02 Pack migration.
+**Epic:** [EP-09](../EPIC.md)
 
-**As a legal expert**, I want to start Requirements by itself, so that I can extract, import, review, edit, and seal Requirements without opening Claims, Check, or the pilot.
+**As a Pack maintainer**, I want a headless CLI for supported Pack/Requirements operations, so that I can use them in scripts without running Studio's GUI.
 
-**Accept when:**
+## Acceptance — Given / When / Then
 
-- One command starts Requirements and shows its catalog, extract, edit, and sign pages.
-- The same operations run from that command without a browser.
-- The process does not import `pilot_app`, claims, checks, compile, review, or scaffold.
-- It reads and writes Packs v2 Requirements and `pack.json` through `common/`. A Requirement file the expert does not edit keeps its bytes, including `signed`.
-- Discover, Check, Compile, and Review are not pages of this process. Extract stays inside it.
+**Given** a Pack operation is implemented in `studio/pack/impl/` **when** called from its CLI **then** the CLI invokes that same backend operation as the Pack REST router; no second extractor, editor, signer or exporter is created.
+
+**Given** valid and invalid inputs **when** the CLI runs **then** results, validation failures, and file side effects match the backend contract, with usable messages and exit codes.
+
+**Given** a headless installation **when** the CLI starts **then** it does not import Studio UI pages or depend on a running FastAPI server.
+
+**Given** an operation planned for VL-01–VL-03 but not yet implemented **when** this story is accepted **then** no placeholder implementation is added for that future feature.
+
+Preserve established CLI compatibility; decide any new entry-point spelling against the actual migrated packaging. Studio retains its single integrated GUI.

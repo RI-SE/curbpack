@@ -60,7 +60,7 @@ Start Studio:
 curbpack-studio
 ```
 
-Open the local URL it prints, usually `http://127.0.0.1:8770`. Studio keeps its workspace in `~/curbpack-studio/workspace`. Use `--port` if 8770 is taken, or `--workspace` to choose another directory. In the browser, confirm **Pack Editor**, **Discovery & Claims**, **Check**, and **Review** open. Continue with [Getting started](getting-started.md).
+Open the local URL it prints, usually `http://127.0.0.1:8770`. Studio keeps its workspace in `~/curbpack-studio/workspace`. Use `--port` if 8770 is taken, or `--workspace` to choose another directory. In the browser, the menu begins with **Start**, then **Change-Project**, **Pack-Editor**, **Discovery & Claims**, and **Verification-Workflow**. Open Start and confirm the workflow diagram and the three links under it. Continue with [Getting started](getting-started.md).
 
 The checker runs independently:
 

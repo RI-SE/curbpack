@@ -28,7 +28,7 @@ def _requirement():
 def _exist(path: str):
     return build_claim(
         claim_id="claim-risk-exist",
-        requirement_id="CRA-ANNEX-VII-RISK",
+        requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],
@@ -40,7 +40,7 @@ def _exist(path: str):
 def _contents(path: str, headers=None):
     return build_claim(
         claim_id="claim-risk-contents",
-        requirement_id="CRA-ANNEX-VII-RISK",
+        requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
         source="documents",
         args={"path": path},
         checks=[
@@ -204,7 +204,7 @@ class CheckBehaviorTest(unittest.TestCase):
                         "claims_dir": "curbpack/claims",
                         "results_dir": ".curbpack",
                         "reports_dir": "curbpack/reports",
-                        "unsigned_requirements": "reject",
+                        "namespace_base": "RISE",
                     }
                 )
                 + "\n",
@@ -216,7 +216,7 @@ class CheckBehaviorTest(unittest.TestCase):
             path = "docs/annex-vii/risk_assessment.md"
             combined = build_claim(
                 claim_id="claim-risk",
-                requirement_id="CRA-ANNEX-VII-RISK",
+                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": path},
                 checks=[

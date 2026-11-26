@@ -10,18 +10,18 @@ Start Curbpack Studio and choose the repository where you want to create and mai
 
 This may be a shared repository containing Packs used by several products, or a product repository that maintains its own Packs.
 
-Open **Pack Editor** from the Studio cover page.
+Open **Pack Editor** from **Start**, or **Pack-Editor** in the menu.
 
 ## 2. Create a Pack
 
 Create a Pack from source material such as legislation, a standard, or a company policy.
 
-Choose **Add document**.
+Choose **Add Pack Source**.
 
 Enter the information requested by Studio, including:
 
-- a name for the source;
-- its official name;
+- a Pack name, after the namespace prefix from `curbpack.json`;
+- its official document name;
 - the source URL;
 - the adapter used to read it.
 

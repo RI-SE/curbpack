@@ -93,4 +93,10 @@ def load_pack_directory(root: Path) -> tuple[dict, list[dict]]:
                 "pack_id",
                 f"{pack['id']!r}",
             )
+        if requirement.get("namespace") != pack.get("namespace"):
+            raise ModelError(
+                f"requirement {requirement['id']}",
+                "namespace",
+                f"{pack.get('namespace')!r}",
+            )
     return pack, requirements

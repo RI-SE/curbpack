@@ -3,17 +3,17 @@
 | Guide | What it shows |
 | --- | --- |
 | [Install](install.md) | Start Curbpack Studio from the downloaded program. |
-| [Getting started](getting-started.md) | The cover: Pack Editor, Discovery & Claims, Check, and Review. |
+| [Getting started](getting-started.md) | The reference product from Start: Pack Editor, Discovery & Claims, and Verification Workflow through a signed review and Sign Off. |
 | [Developer guide](developers.md) | A product repository: select a Pack, bind Claims, run Check, compile, sign. |
 | [CI/CD](ci-cd.md) | The same Check in a pipeline. Studio's own GitHub workflows are a separate pipeline. |
-| [Reviewers](reviewers.md) | The report at `docs/reports/review-report.json`, and how to read a row. |
+| [Reviewers](reviewers.md) | Check, the signed review, and remediation through Sign Off. |
 | [Troubleshooting](troubleshooting.md) | Startup, Git, packaging, and a green run that watched the wrong file. |
 | [Pack authors](pack-developers.md) | A Pack, its Requirements, and the Claims that monitor them. |
 
 ## Typical workflow
 
 1. **Start Studio.** [Install](install.md).
-2. **Try the reference product.** Set up the walkthrough Pack and Claims, remove one evidence file, run Check, restore it. [Getting started](getting-started.md).
+2. **Try the reference product.** Delete `SECURITY.md`, run Check, sign the review, restore the file during remediation, re-check, and sign the remediation report. [Getting started](getting-started.md).
 3. **Select a Pack for your repository.** Write `curbpack.json`. Author Requirements in Pack Editor. [Developer guide](developers.md).
 4. **Discover and bind.** Candidates are not Claims. A person saves the Claim and its `checks[]`.
 5. **Run curbcheck.** The browser button or the `curbcheck` command.

@@ -7,7 +7,7 @@ from pathlib import Path
 from common.errors import ModelError
 from common.keystore import trust_store
 from common.signing import read_signature
-from checks.run import process_exit_code
+from curbcheck.api import process_exit_code
 from common.store import load_claims, load_requirement, load_run_result
 from requirements.editing import read_pack_seal
 from review.compile import durable_report_path, load_report, read_report_signature, same_run

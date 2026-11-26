@@ -23,6 +23,8 @@ REQUIREMENT_FIELDS = {
     "discovery_hints",
     "origin",
     "signed",
+    "namespace",
+    "status",
 }
 
 # Old PoC fields and fields packs2.md explicitly removed.
@@ -45,16 +47,21 @@ PACK_FIELDS = {
     "id",
     "name",
     "version",
-    "assurance_class",
+    "namespace",
+    "status",
     "description",
     "jurisdiction",
     "source",
+    "origin",
     "signed",
 }
 
 CLAIM_FIELDS = {
     "id",
     "requirement_id",
+    "namespace",
+    "pack_id",
+    "requirement_digest",
     "source",
     "args",
     "description",
@@ -70,6 +77,23 @@ SOURCE_REQUIRED = ("framework", "instrument", "identifier", "language", "url")
 
 STRENGTHS = {"MUST", "SHOULD", "MAY"}
 SEVERITIES = {"high", "medium", "critical"}
+STATUSES = {"draft", "reviewed"}
+
+
+def pack_namespace(namespace_base: str, name: str) -> str:
+    return f"{namespace_base}/{name}"
+
+
+def pack_identity(pack: dict) -> tuple[str, str]:
+    return (str(pack.get("namespace") or ""), str(pack.get("id") or ""))
+
+
+def requirement_identity(requirement: dict) -> tuple[str, str, str]:
+    return (
+        str(requirement.get("namespace") or ""),
+        str(requirement.get("pack_id") or ""),
+        str(requirement.get("id") or ""),
+    )
 
 
 def _expect(object_name: str, field: str, expected: str) -> None:
@@ -173,12 +197,24 @@ def _validate_references(refs: object, object_name: str) -> None:
         _expect(object_name, "references[].nr", "1, 2, 3, … in array order")
 
 
+def _apply_status(obj: dict, object_name: str) -> None:
+    if "status" not in obj:
+        obj["status"] = "draft"
+        return
+    if obj["status"] not in STATUSES:
+        _expect(object_name, "status", "draft or reviewed")
+
+
 def _validate_origin(origin: object, object_name: str) -> None:
     if not isinstance(origin, dict):
         _expect(object_name, "origin", "object")
-    _reject_unknown(origin, f"{object_name}.origin", {"pack", "version"})
+    _reject_unknown(origin, f"{object_name}.origin", {"namespace", "pack", "version", "requirement"})
+    if "namespace" in origin:
+        _nonempty_str(origin, f"{object_name}.origin", "namespace", required=True)
     _nonempty_str(origin, f"{object_name}.origin", "pack", required=True)
     _nonempty_str(origin, f"{object_name}.origin", "version", required=True)
+    if "requirement" in origin:
+        _nonempty_str(origin, f"{object_name}.origin", "requirement", required=True)
 
 
 def validate_requirement(obj: object, *, published: bool = False) -> dict:
@@ -190,6 +226,8 @@ def validate_requirement(obj: object, *, published: bool = False) -> dict:
     _reject_unknown(requirement, name, REQUIREMENT_FIELDS)
     _nonempty_str(requirement, name, "id", required=True)
     _nonempty_str(requirement, name, "pack_id", required=True)
+    _nonempty_str(requirement, name, "namespace", required=True)
+    _apply_status(requirement, name)
     if "source" not in requirement:
         _expect(name, "source", "legal instrument")
     _validate_source(requirement["source"], name, require_edition=published)
@@ -217,9 +255,13 @@ def validate_pack(obj: object, *, sealed: bool = False) -> dict:
     _reject_unknown(pack, name, PACK_FIELDS)
     _nonempty_str(pack, name, "id", required=True)
     _nonempty_str(pack, name, "version", required=True)
-    for field in ("name", "assurance_class", "description", "jurisdiction"):
+    _nonempty_str(pack, name, "namespace", required=True)
+    _apply_status(pack, name)
+    for field in ("name", "description", "jurisdiction"):
         if field in pack:
             _nonempty_str(pack, name, field, required=True)
+    if "origin" in pack:
+        _validate_origin(pack["origin"], name)
     if "source" in pack:
         source = pack["source"]
         if not isinstance(source, dict):
@@ -271,6 +313,10 @@ def upgrade_stored_claim(document: object) -> dict | None:
     }
     if isinstance(document.get("severity"), str) and document["severity"]:
         upgraded["severity"] = document["severity"]
+    for field in ("namespace", "pack_id", "requirement_digest"):
+        value = document.get(field)
+        if isinstance(value, str) and value.strip():
+            upgraded[field] = value
     return validate_claim(upgraded)
 
 
@@ -283,6 +329,8 @@ def validate_claim(obj: object) -> dict:
     _reject_unknown(claim, name, CLAIM_FIELDS)
     _nonempty_str(claim, name, "id", required=True)
     _nonempty_str(claim, name, "requirement_id", required=True)
+    for field in ("namespace", "pack_id", "requirement_digest"):
+        _nonempty_str(claim, name, field, required=True)
     _nonempty_str(claim, name, "source", required=True)
     _nonempty_str(claim, name, "description", required=True)
     if not isinstance(claim.get("args"), dict):
@@ -316,10 +364,8 @@ CURBPACK_CONFIG_FIELDS = {
     "claims_dir",
     "results_dir",
     "reports_dir",
-    "unsigned_requirements",
+    "namespace_base",
 }
-
-UNSIGNED_REQUIREMENTS_VALUES = {"report", "reject", "signed_commit"}
 
 
 def validate_curbpack_config(obj: object) -> dict:
@@ -337,8 +383,7 @@ def validate_curbpack_config(obj: object) -> dict:
     _validate_search_hints(config["search_hints"])
     for field in ("packs_dir", "claims_dir", "results_dir", "reports_dir"):
         _relative_dir(config.get(field), field)
-    if config.get("unsigned_requirements") not in UNSIGNED_REQUIREMENTS_VALUES:
-        _expect("curbpack.json", "unsigned_requirements", '"report", "reject" or "signed_commit"')
+    _nonempty_str(config, "curbpack.json", "namespace_base", required=True)
     return config
 
 
@@ -407,12 +452,34 @@ def _validate_run_row(row: object, index: int) -> None:
     where = f"run result.claims[{index}]"
     if not isinstance(row, dict):
         _expect("run result", f"claims[{index}]", "object")
-    _reject_unknown(row, where, {"id", "digest", "status", "checks"})
+    binding_fields = {
+        "namespace",
+        "pack_id",
+        "requirement_id",
+        "requirement_digest",
+        "binding",
+        "actual_digest",
+    }
+    _reject_unknown(row, where, {"id", "digest", "status", "checks"} | binding_fields)
     for field in ("id", "digest", "status"):
         _nonempty_str(row, where, field, required=True)
     status = row.get("status")
     if status not in ("pass", "fail", "skipped"):
         _expect("run result", f"claims[{index}].status", "pass, fail, or skipped")
+    recorded = set(row) & binding_fields
+    if recorded:
+        required = {"namespace", "pack_id", "requirement_id", "requirement_digest", "binding"}
+        if not required <= recorded:
+            _expect("run result", f"claims[{index}].binding", "the Requirement identity, digest, and binding")
+        for field in ("namespace", "pack_id", "requirement_id", "requirement_digest"):
+            _nonempty_str(row, where, field, required=True)
+        if row.get("binding") not in ("match", "stale", "missing"):
+            _expect("run result", f"claims[{index}].binding", "match, stale, or missing")
+        if row.get("binding") == "missing":
+            if "actual_digest" in row:
+                _expect("run result", f"claims[{index}].actual_digest", "absent when binding is missing")
+        else:
+            _nonempty_str(row, where, "actual_digest", required=True)
     checks = row.get("checks")
     if not isinstance(checks, list) or not checks:
         _expect("run result", f"claims[{index}].checks", "one result per configured check")
@@ -424,7 +491,7 @@ def _validate_check_result(item: object, claim_index: int, check_index: int) -> 
     where = f"run result.claims[{claim_index}].checks[{check_index}]"
     if not isinstance(item, dict):
         _expect("run result", f"claims[{claim_index}].checks[{check_index}]", "object")
-    _reject_unknown(item, where, {"index", "check", "args", "status", "detail"})
+    _reject_unknown(item, where, {"index", "check", "args", "status", "detail", "remediation_hint"})
     if item.get("index") != check_index:
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].index", str(check_index))
     _nonempty_str(item, where, "check", required=True)
@@ -437,3 +504,11 @@ def _validate_check_result(item: object, claim_index: int, check_index: int) -> 
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].detail", "absent when status is pass")
     if status in ("fail", "skipped") and (not isinstance(item.get("detail"), str) or not item["detail"].strip()):
         _expect("run result", f"claims[{claim_index}].checks[{check_index}].detail", "non-empty string")
+    if status != "fail" and "remediation_hint" in item:
+        _expect(
+            "run result",
+            f"claims[{claim_index}].checks[{check_index}].remediation_hint",
+            "absent unless status is fail",
+        )
+    if "remediation_hint" in item:
+        _nonempty_str(item, where, "remediation_hint", required=True)

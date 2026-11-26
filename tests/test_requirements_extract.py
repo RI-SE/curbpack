@@ -180,6 +180,22 @@ class ExtractSectionTest(unittest.TestCase):
         )
         self.assertEqual(_file_bytes(first["copy"]), before)
 
+    def test_saved_requirements_copy_the_pack_namespace(self):
+        pack = draft_pack()
+        pack["namespace"] = "ACME/CRA baseline"
+        result = extract_section(
+            Path(self.tmp.name),
+            ADAPTERS / "cra",
+            self.cra,
+            "VII",
+            _sample_proposals(),
+            pack,
+            at="2026-10-13T100000Z",
+        )
+        loaded, requirements = load_working_copy(result["copy"])
+        self.assertEqual(loaded["namespace"], "ACME/CRA baseline")
+        self.assertTrue(all(item["namespace"] == "ACME/CRA baseline" for item in requirements))
+
 
 class WorkingCopySelectionTest(unittest.TestCase):
     def setUp(self):
@@ -211,3 +227,17 @@ class WorkingCopySelectionTest(unittest.TestCase):
         self.assertEqual(self.selected_copy(root, "cra-baseline"), second)
         second.rename(second.parent / "gone")
         self.assertIsNone(self.selected_copy(root, "cra-baseline"))
+
+
+class ExtractBackendTest(unittest.TestCase):
+    def test_extract_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.extract.adapter import load_adapter as kept
+        from studio.pack.impl.extract.adapter import load_adapter as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/extract/adapter.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )

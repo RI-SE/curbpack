@@ -11,7 +11,7 @@ from claims.bind import build_claim
 from common.canonical import version_digest
 from common.errors import ModelError
 from common.signing import generate_keypair, read_signature
-from app.pages import review_page
+from studio.review.review_page import review_page
 from review.compile import (
     compile_report,
     durable_report_path,
@@ -117,8 +117,6 @@ class CompileReportTest(unittest.TestCase):
         )
         self.assertNotIn("signed", decided)
         self.assertEqual(decided["requirements"][0]["references"][0]["law_text"], report["requirements"][0]["references"][0]["law_text"])
-        with self.assertRaises(ModelError):
-            sign_report(report, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
         sealed = sign_report(decided, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
         reading = read_report_signature(sealed, {"Ada Reviewer": public})
         requirement_reading = read_signature(sealed["requirements"][0], {"Ada Reviewer": public}, what="requirement")
@@ -195,9 +193,8 @@ class CompileReportTest(unittest.TestCase):
             write_report(path, report)
             before = path.read_bytes()
             with self.assertRaises(ModelError):
-                save_report_signature(path, name="Ada Reviewer", private_key=private, at="2026-10-21T12:00:00Z")
+                save_report_signature(path, name="  ", private_key=private, at="2026-10-21T12:00:00Z")
             self.assertEqual(path.read_bytes(), before)
-            save_report_decision(path, "I read this run. I am not saying the product meets CRA.")
             sealed = save_report_signature(
                 path,
                 name="Ada Reviewer",
@@ -291,14 +288,19 @@ class ReviewPageTest(unittest.TestCase):
         self.assertIn("not saved", preview)
         self.assertIn('data-same-run="yes"', preview)
         self.assertNotIn('name="confirm"', preview)
-        self.assertNotIn('name="decision"', preview)
-        self.assertIn(">Compile</button>", preview)
+        self.assertIn('id="sign-dialog"', preview)
+        self.assertIn('name="decision" form="review-compile"', preview)
+        self.assertNotIn(">Save decision</button>", preview)
+        self.assertIn(">Save</button>", preview)
+        self.assertIn(">Sign</button>", preview)
+        self.assertNotIn(">Create New Report</button>", preview)
+        self.assertNotIn("Compile writes a new unsigned report", preview)
 
 
 def _claim(claim_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id="REQ-A",
+        requirement=_requirement("REQ-A"),
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],
@@ -310,6 +312,7 @@ def _requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "house",
+        "namespace": "RISE/house",
         "source": {
             "framework": "test",
             "instrument": "fixture",
@@ -349,6 +352,209 @@ def _run(claim: dict, *, worktree: str | None = None, digest_suffix: str | None 
         run["commit"] = "a" * 40
         run["worktree"] = worktree
     return run
+
+
+class CompileImplTest(unittest.TestCase):
+    def test_review_compile_calls_the_compile_backend(self):
+        import inspect
+
+        from app.review_model import _compile_review
+        from review.compile import compile_report as engine_compile
+        from review.compile import write_report as engine_write
+        from studio.compile.impl import compile_report as backend_compile
+        from studio.compile.impl import write_report as backend_write
+
+        self.assertIs(backend_compile, engine_compile)
+        self.assertIs(backend_write, engine_write)
+        from review.compile import load_report as kept_load
+        from review.compile import replace_saved_report as kept_replace
+        from studio.compile.impl import load_report as backend_load
+        from studio.compile.impl import replace_saved_report as backend_replace
+
+        self.assertIs(backend_load, kept_load)
+        self.assertIs(backend_replace, kept_replace)
+        for function in (backend_compile, backend_write, backend_load, backend_replace):
+            self.assertIn("studio/compile/impl/", inspect.getsourcefile(function).replace("\\", "/"))
+        source = inspect.getsource(_compile_review)
+        self.assertIn("from studio.compile.impl import compile_report, write_report", source)
+        self.assertNotIn("review.compile", source)
+        kept = inspect.getsource(__import__("review.compile", fromlist=["record_decision"]))
+        self.assertNotIn("def compile_report", kept)
+        self.assertNotIn("def write_report", kept)
+        self.assertNotIn("def validate_report", kept)
+        self.assertNotIn("def load_report", kept)
+        self.assertNotIn("def replace_saved_report", kept)
+        self.assertNotIn("def record_decision", kept)
+        self.assertNotIn("def sign_report", kept)
+
+    def test_review_decision_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.compile import read_report_signature as kept_read
+        from review.compile import record_decision as kept_decision
+        from review.compile import save_report_decision as kept_save_decision
+        from review.compile import save_report_signature as kept_save_signature
+        from review.compile import sign_report as kept_sign
+        from studio.review.impl import read_report_signature as backend_read
+        from studio.review.impl import record_decision as backend_decision
+        from studio.review.impl import save_report_decision as backend_save_decision
+        from studio.review.impl import save_report_signature as backend_save_signature
+        from studio.review.impl import sign_report as backend_sign
+
+        pairs = (
+            (backend_decision, kept_decision),
+            (backend_sign, kept_sign),
+            (backend_save_decision, kept_save_decision),
+            (backend_save_signature, kept_save_signature),
+            (backend_read, kept_read),
+        )
+        for backend, kept in pairs:
+            self.assertIs(backend, kept)
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
+
+    def test_durable_report_path_lives_in_review(self):
+        import inspect
+
+        from review.compile import durable_report_path as kept_path
+        from studio.review.impl.path import durable_report_path as review_path
+
+        self.assertIs(review_path, kept_path)
+        self.assertIn(
+            "studio/review/impl/path.py",
+            inspect.getsourcefile(review_path).replace("\\", "/"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(
+                review_path(Path(tmp)),
+                Path(tmp) / "docs" / "reports" / "review-report.json",
+            )
+
+    def test_compiled_report_path_lives_in_compile(self):
+        import inspect
+
+        from app.review_model import _compile_review
+        from studio.compile.impl.path import _new_review_report_path
+
+        self.assertIn(
+            "studio/compile/impl/path.py",
+            inspect.getsourcefile(_new_review_report_path).replace("\\", "/"),
+        )
+        source = inspect.getsource(_compile_review)
+        self.assertIn("from studio.compile.impl.path import _new_review_report_path", source)
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "reports"
+            path = _new_review_report_path(folder)
+            self.assertEqual(path.parent, folder)
+            self.assertRegex(path.name, r"^review-report_\d{8}T\d{6}Z\.json$")
+            self.assertTrue(folder.is_dir())
+            self.assertFalse(path.exists())
+
+
+class ReviewPresentTest(unittest.TestCase):
+    def test_saved_report_selection_lives_in_review(self):
+        import inspect
+
+        from app.review_model import _confined_review_report_path
+        from studio.review.model import _dated_entries as used_entries
+        from studio.review.model import _review_view
+        from studio.review.impl.saved import _confined_review_report_path as review_confine
+        from studio.review.impl.saved import _dated_entries as review_entries
+
+        self.assertIs(review_entries, used_entries)
+        self.assertIs(review_confine, _confined_review_report_path)
+        for function in (review_entries, review_confine):
+            self.assertIn(
+                "studio/review/impl/saved.py",
+                inspect.getsourcefile(function).replace("\\", "/"),
+            )
+        self.assertIn("_dated_entries", inspect.getsource(_review_view))
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            older = folder / "review-report_20260101T000000Z.json"
+            newer = folder / "review-report_20260101T000001Z.json"
+            other = folder / "run-result_20260101T000000Z.json"
+            older.write_text("{}\n", encoding="utf-8")
+            newer.write_text("{}\n", encoding="utf-8")
+            other.write_text("{}\n", encoding="utf-8")
+            listed = review_entries(folder, "review-report")
+            self.assertEqual([row["name"] for row in listed], [older.name, newer.name])
+            self.assertEqual(review_confine(str(folder), str(older)), str(older.resolve()))
+            self.assertEqual(review_confine(str(folder), str(folder.parent / newer.name)), str(newer.resolve()))
+            self.assertEqual(review_confine("", str(newer)), "")
+
+    def test_review_page_model_lives_in_review(self):
+        import inspect
+
+        from app.review_model import _review_get
+        from app.review_model import _review_view as kept_view
+        from studio.review.model import _review_file_view
+        from studio.review.model import _review_view as review_view
+
+        self.assertIs(review_view, kept_view)
+        self.assertIn("studio/review/model.py", inspect.getsourcefile(review_view).replace("\\", "/"))
+        self.assertIn("_review_view", inspect.getsource(_review_get))
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "note.txt").write_text("hello\n", encoding="utf-8")
+            self.assertIsNone(_review_file_view(repo, "  "))
+            self.assertEqual(_review_file_view(repo, "/etc/passwd")["state"], "invalid")
+            self.assertEqual(_review_file_view(repo, "missing.txt")["state"], "missing")
+            self.assertEqual(_review_file_view(repo, "note.txt")["text"], "hello\n")
+
+    def test_review_read_model_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.present import PREVIOUS_UNKNOWN as kept_unknown
+        from review.present import present_compiled_report as kept_compiled
+        from review.present import present_raw_run as kept_raw
+        from review.present import seal_label as kept_label
+        from studio.review.impl.present import PREVIOUS_UNKNOWN as backend_unknown
+        from studio.review.impl.present import present_compiled_report as backend_compiled
+        from studio.review.impl.present import present_raw_run as backend_raw
+        from studio.review.impl.present import seal_label as backend_label
+
+        self.assertIs(backend_unknown, kept_unknown)
+        pairs = (
+            (backend_label, kept_label),
+            (backend_raw, kept_raw),
+            (backend_compiled, kept_compiled),
+        )
+        for backend, kept in pairs:
+            self.assertIs(backend, kept)
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(backend).replace("\\", "/"))
+
+    def test_report_inspection_lives_in_the_review_backend(self):
+        import inspect
+
+        from review.compile import same_run as kept_same
+        from review.compile import unchecked_requirement_ids as kept_unchecked
+        from studio.review.impl.present import same_run as backend_same
+        from studio.review.impl.present import unchecked_requirement_ids as backend_unchecked
+
+        self.assertIs(backend_same, kept_same)
+        self.assertIs(backend_unchecked, kept_unchecked)
+        for function in (backend_same, backend_unchecked):
+            self.assertIn("studio/review/impl/", inspect.getsourcefile(function).replace("\\", "/"))
+
+    def test_shared_sentences_live_outside_the_report(self):
+        import inspect
+
+        from review.compile import NO_CRA_FIELD as kept_field
+        from review.compile import NOT_A_LEGAL_CONCLUSION as kept_conclusion
+        from review.compile import worktree_sentence as kept_sentence
+        from studio.common.presentation import NO_CRA_FIELD as shared_field
+        from studio.common.presentation import NOT_A_LEGAL_CONCLUSION as shared_conclusion
+        from studio.common.presentation import worktree_sentence as shared_sentence
+
+        self.assertIs(shared_conclusion, kept_conclusion)
+        self.assertIs(shared_field, kept_field)
+        self.assertIs(shared_sentence, kept_sentence)
+        self.assertIn(
+            "studio/common/presentation.py",
+            inspect.getsourcefile(shared_sentence).replace("\\", "/"),
+        )
+        self.assertEqual(shared_sentence({"worktree": "clean"}), "The worktree was clean.")
+        self.assertIn("not verification of that commit", shared_sentence({"worktree": "dirty"}))
 
 
 if __name__ == "__main__":

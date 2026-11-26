@@ -4,17 +4,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from claims.bind import create_configured_claims, read_claim, read_claims, rebind, suggest_claim_id, write_claim
+from claims.bind import (
+    create_configured_claims,
+    read_claim,
+    read_claims,
+    rebind,
+    rebind_requirement,
+    suggest_claim_id,
+    write_claim,
+)
+from studio.claim.impl.bind import source_overlap
 from claims.ui.coverage import covered_paths, load_run
-from claims.ui import researcher
 from common.errors import CheckError, ModelError
 from discovery.feedback import add_finding, dismiss_why, load_feedback, save_check, save_vote
 from discovery.jobs import CURBPACK_COPY, latest_job
 from discovery.present import overview_rows, signing_label
 from discovery.door import pack_display_name, repo_claims_dir, repo_pack_requirements
+from discovery.studio import researcher_mode
 from discovery.repos import find_repo, load_repos, resolve_repo_path
 from discovery.search import read_source_text
-from requirements.workspace import resolve_copy_ref
+from requirements.workspace import load_working_copy, resolve_copy_ref, select_working_copy
+from studio.claim import researcher
 
 
 def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict) -> bytes | None:
@@ -37,7 +47,7 @@ def handle_get(root: Path, path: str, query: dict, *, sources: list, trust: dict
                 if isinstance(claim, dict)
             }
             rows = [row for row in rows if row.get("id") not in claimed]
-        model = {**_ids(context), "rows": rows, "gap": gap}
+        model = {**_ids(context), "rows": rows, "gap": gap, "researcher_mode": researcher_mode(context["repo"])}
         return_to = _safe_review_return(_one(query, "return_to"))
         if return_to:
             model["return_to"] = return_to
@@ -81,6 +91,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         "/discover/feedback/add",
         "/discover/feedback/motivation",
         "/discover/claims/create",
+        "/discover/claims/rebind",
     }:
         return None
     context = _context(root, form, sources)
@@ -97,6 +108,16 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         path=file_path,
         known_ids=known,
     )
+    if path == "/discover/claims/rebind":
+        claim_id = _one(form, "claim_id").strip()
+        if not claim_id:
+            raise ModelError("claim", "id", "the Claim to rebind")
+        claim = read_claim(context["claims_dir"] / f"{claim_id}.json")
+        write_claim(context["claims_dir"], rebind_requirement(claim, requirement))
+        from studio.review.impl.items import record_rebind
+
+        record_rebind(context["repo"], _one(form, "return_to"), claim_id)
+        return _back(context, requirement_id, return_to=_one(form, "return_to"))
     if path == "/discover/feedback/vote":
         save_vote(**common, vote=_one(form, "vote"))
         return _back(context, requirement_id, return_to=_one(form, "return_to"))
@@ -104,10 +125,30 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         wrote_claim = False
         try:
             check, args, label = _check_from_form(file_path, form)
-            # Explicit Check edit updates the existing Claim. A plain save still
-            # goes through feedback + suggest_claim_id so a differently named
-            # Claim for the same path can be created (SYS-03 Discover).
-            if _one(form, "edit_index").isdigit() and _claim_for_path(
+            if _one(form, "overlap_confirm") != "1":
+                rows = source_overlap(
+                    _claim_being_saved(context, requirement_id, file_path, form, check, args),
+                    context["claims"],
+                )
+                if rows:
+                    model = _with_signing(context, requirement, form, trust)
+                    return_to = _safe_review_return(_one(form, "return_to"))
+                    if return_to:
+                        model["return_to"] = return_to
+                    model["overlap"] = {
+                        "rows": rows,
+                        "fields": _posted_fields(form),
+                        "cancel_href": _back(context, requirement_id, return_to=_one(form, "return_to")),
+                    }
+                    return researcher.requirement_page(model)
+            # A row that already is a Claim names that Claim. The same file can
+            # belong to another Claim, so the path alone is not the identity.
+            claim_id = _one(form, "claim_id").strip()
+            if claim_id:
+                wrote_claim = _update_named_claim(
+                    context, claim_id, requirement_id, form, check, args, label
+                )
+            elif _one(form, "edit_index").isdigit() and _claim_for_path(
                 context["claims"], requirement_id, file_path
             ) is not None:
                 wrote_claim = _update_claim_check(
@@ -177,7 +218,7 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
         return researcher.requirement_page(model)
     outcomes = create_configured_claims(
         context["claims_dir"],
-        requirement_id=requirement_id,
+        requirement=requirement,
         known_ids=known,
         source=source,
         args={"path": file_path},
@@ -203,6 +244,9 @@ def handle_post(root: Path, path: str, form: dict, *, sources: list, trust: dict
 def _context(root: Path, bag: dict, sources: list) -> dict:
     repo_id = _one(bag, "repo") or _one(bag, "repo_id")
     pack_id = _one(bag, "pack") or _one(bag, "pack_id")
+    timestamp = _one(bag, "timestamp")
+    if pack_id and timestamp and timestamp != CURBPACK_COPY:
+        return _working_copy_context(root, repo_id, pack_id, timestamp)
     if pack_id:
         return _pack_context(root, repo_id, pack_id)
     source_id = _one(bag, "source") or _one(bag, "source_id")
@@ -234,6 +278,38 @@ def _context(root: Path, bag: dict, sources: list) -> dict:
         "claims_dir": folder,
         "requirements": requirements,
         "workspace": root,
+        "job": job,
+        "feedback": feedback,
+        "claims": claims,
+    }
+
+
+def _working_copy_context(root: Path, repo_id: str, pack_id: str, timestamp: str) -> dict:
+    """Requirements from the working copy Compare or Take Ownership just saved."""
+    row = find_repo(load_repos(root), repo_id)
+    if row is None:
+        raise ModelError("discover", "repo_id", f"a registered repository, not {repo_id}")
+    repo = resolve_repo_path(root, str(row.get("path") or ""))
+    directory = select_working_copy(root, pack_id, timestamp)
+    _pack, requirements = load_working_copy(directory)
+    folder = repo_claims_dir(repo)
+    claims = read_claims(folder) if folder.is_dir() else []
+    job = latest_job(root / "jobs", repo_id=repo_id, source_id=pack_id, timestamp=timestamp)
+    feedback = load_feedback(root, repo_id, pack_id, timestamp)
+    return {
+        "repo_id": repo_id,
+        "repo_name": str(row.get("name") or repo_id),
+        "source_id": pack_id,
+        "pack_id": pack_id,
+        "section_name": pack_id,
+        "section_id": "",
+        "timestamp": timestamp,
+        "repo": repo,
+        "workspace": root,
+        "claims_dir": folder,
+        "requirements": [
+            item for item in requirements if isinstance(item, dict) and isinstance(item.get("id"), str)
+        ],
         "job": job,
         "feedback": feedback,
         "claims": claims,
@@ -326,6 +402,7 @@ def _requirement_model(context: dict, requirement: dict, bag: dict) -> dict:
         "notice": _one(bag, "notice"),
         "open_checks": _one(bag, "open_checks"),
         "repo_files": _repo_files(context["repo"]),
+        "researcher_mode": researcher_mode(context["repo"]),
     }
 
 
@@ -365,11 +442,15 @@ def _split(path: str) -> tuple[str, str]:
 def _back(context: dict, requirement_id: str, **extra: str) -> str:
     from urllib.parse import quote
 
-    repo = quote(context["repo_id"])
     pack_id = str(context.get("pack_id") or "")
     if pack_id:
-        query = f"repo={repo}&pack={quote(pack_id)}"
+        query = researcher._pack_query(
+            context["repo_id"],
+            pack_id,
+            str(context.get("timestamp") or ""),
+        )
     else:
+        repo = quote(context["repo_id"])
         query = (
             f"repo={repo}&source={quote(context['source_id'])}"
             f"&timestamp={quote(context['timestamp'])}"
@@ -538,6 +619,74 @@ def _choose_motivation(
     return True
 
 
+def _claim_being_saved(
+    context: dict,
+    requirement_id: str,
+    file_path: str,
+    form: dict,
+    check: str,
+    args: dict,
+) -> dict:
+    """The Claim this save would write, including the check, before it is stored."""
+    existing = None
+    claim_id = _one(form, "claim_id").strip()
+    if claim_id:
+        file = context["claims_dir"] / f"{claim_id}.json"
+        if file.is_file():
+            loaded = read_claim(file)
+            if loaded.get("requirement_id") == requirement_id and str(loaded.get("id") or "") == claim_id:
+                existing = loaded
+    if existing is None and _one(form, "edit_index").isdigit():
+        existing = _claim_for_path(context["claims"], requirement_id, file_path)
+    checks = [item for item in (existing or {}).get("checks") or [] if isinstance(item, dict)]
+    proposed = {"check": check, "args": args}
+    raw = _one(form, "edit_index")
+    if raw.isdigit() and 0 <= int(raw) < len(checks):
+        checks = [*checks]
+        checks[int(raw)] = proposed
+    else:
+        checks = [*checks, proposed]
+    stored = (existing or {}).get("args")
+    if not isinstance(stored, dict):
+        stored = {"path": file_path}
+    return {
+        "id": str((existing or {}).get("id") or ""),
+        "requirement_id": requirement_id,
+        "args": stored,
+        "checks": checks,
+    }
+
+
+def _posted_fields(form: dict) -> list[dict]:
+    fields = []
+    for key, value in form.items():
+        if key == "overlap_confirm":
+            continue
+        text = value[0] if isinstance(value, list) else value
+        fields.append({"name": str(key), "value": "" if text is None else str(text)})
+    return fields
+
+
+def _update_named_claim(
+    context: dict,
+    claim_id: str,
+    requirement_id: str,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
+    """Append or replace one check on the Claim the row named."""
+    folder = context["claims_dir"]
+    file = folder / f"{claim_id}.json"
+    if not file.is_file():
+        raise ModelError("claim", "id", "a saved claim")
+    claim = read_claim(file)
+    if claim.get("requirement_id") != requirement_id or str(claim.get("id") or "") != claim_id:
+        raise ModelError("claim", "id", "a claim for this requirement")
+    return _store_check(context, claim, form, check, args, label)
+
+
 def _update_claim_check(
     context: dict,
     requirement_id: str,
@@ -551,15 +700,28 @@ def _update_claim_check(
     claim = _claim_for_path(context["claims"], requirement_id, file_path)
     if claim is None:
         return False
+    return _store_check(context, claim, form, check, args, label)
+
+
+def _store_check(
+    context: dict,
+    claim: dict,
+    form: dict,
+    check: str,
+    args: dict,
+    label: str,
+) -> bool:
     proposed = {"check": check, "args": args}
     if label:
         proposed["label"] = label
     checks = [item for item in claim.get("checks") or [] if isinstance(item, dict)]
     raw = _one(form, "edit_index")
+    previous = None
     if raw.isdigit():
         index = int(raw)
         if not 0 <= index < len(checks):
             raise ModelError("claim", "checks", "a check on this claim")
+        previous = checks[index]
         checks[index] = proposed
     elif not any(item.get("check") == check and item.get("args") == args for item in checks):
         checks.append(proposed)
@@ -567,7 +729,41 @@ def _update_claim_check(
         return False
     if isinstance(claim.get("signed"), dict) and _one(form, "unsign") != "1":
         raise ModelError("claim", "signed", "confirmation before changing a signed claim")
+    return_to = _one(form, "return_to")
+    from studio.review.impl.items import _workspace_from_return, remember_studio_edit
+
+    workspace = _workspace_from_return(context["repo"], return_to)
+    if workspace is not None:
+        claim_file = context["claims_dir"] / f"{claim.get('id')}.json"
+        remember_studio_edit(
+            workspace,
+            claim,
+            str(claim_file.resolve().relative_to(Path(context["repo"]).resolve())),
+            {"claim_id": str(claim.get("id") or ""), "check": check},
+        )
     write_claim(context["claims_dir"], rebind(claim, checks=checks))
+    if isinstance(previous, dict):
+        from studio.review.impl.items import record_check_change
+
+        record_check_change(
+            context["repo"],
+            _one(form, "return_to"),
+            str(claim.get("id") or ""),
+            str(previous.get("check") or ""),
+            previous.get("args") if isinstance(previous.get("args"), dict) else {},
+            check,
+            args,
+            name=_one(form, "name"),
+        )
+    if workspace is not None:
+        from urllib.parse import parse_qs, urlparse
+
+        from studio.check.check_model import regress_remediation
+
+        query = parse_qs(urlparse(return_to).query)
+        source = (query.get("report") or query.get("result") or [""])[0]
+        if source:
+            regress_remediation(context["repo"], source)
     return True
 
 
@@ -629,7 +825,7 @@ def _sync_claim(context: dict, requirement: dict, file_path: str, feedback: dict
         return True
     create_configured_claims(
         directory,
-        requirement_id=requirement_id,
+        requirement=requirement,
         known_ids=known,
         source=source,
         args={"path": file_path},

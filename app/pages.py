@@ -1,14 +1,9 @@
-"""HTML for the demo. Renders values it is given and does not decide them."""
+"""Shared HTML chrome. Renders values it is given and does not decide them."""
 
 from __future__ import annotations
 
 import html
 import json
-import re
-from urllib.parse import quote
-
-from checks.labels import check_caption
-from review.compile import NO_CRA_FIELD, NOT_A_LEGAL_CONCLUSION, worktree_sentence
 
 CSS = """
 :root{--bg:#eef2f7;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#0f766e;--ok:#15803d;--bad:#b91c1c}
@@ -28,10 +23,16 @@ a{color:var(--accent)}
 .topbar .crumbs a{margin:0}
 .topbar .crumbs .here{color:var(--ink)}
 .repo-current{font-size:.92rem;margin-right:.5rem}
-.repo-current strong{font-weight:600}
+button.link{background:none;border:0;border-radius:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:.12em}
+button.link:hover{color:#115e59}
 form.inline{display:inline}
 button.secondary{background:#fff;color:var(--ink);border:1px solid #cbd5e1}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+figure.workflow{margin:.75rem 0 0}
+figure.workflow img{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+.start-steps dt{margin:.9rem 0 .15rem}
+.start-steps dt:first-child{margin-top:0}
+.start-steps dd{margin:0;color:var(--muted)}
 .muted{color:var(--muted)}
 .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:.6rem .75rem;border-radius:8px}
 .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:.6rem .75rem;border-radius:8px}
@@ -48,7 +49,10 @@ label{display:block;font-size:.78rem;color:var(--muted);margin:.6rem 0 .2rem}
 .ro-field strong,.ro-field a{display:block;margin-top:.15rem;font-size:1rem;font-weight:700;color:var(--ink)}
 .ro-field a{font-weight:400;color:var(--accent);word-break:break-all}
 .identity-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
-.req-identity .identity-bar .field-grid{flex:1;margin:0 0 .75rem;grid-template-columns:repeat(3,max-content);justify-content:start}
+.req-identity .req-kind{margin:0;font-size:1rem}
+.req-identity .req-id{margin:.15rem 0 0}
+.req-identity .identity-bar{margin-bottom:.75rem}
+.req-identity .identity-bar .field-grid{flex:1;margin:0;grid-template-columns:repeat(3,max-content);justify-content:start}
 a.details{display:inline-block;background:#fff;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:.45rem .75rem;text-decoration:none;white-space:nowrap}
 a.details:hover{background:#ecfdf5}
 .req-identity .ref-law{margin:0 0 .75rem}
@@ -65,6 +69,14 @@ a.details:hover{background:#ecfdf5}
 .ref-law-head{margin:0 0 .25rem;font-size:.78rem}
 .ref-law{margin:0;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:.85rem;line-height:1.4;color:var(--ink);background:transparent;border:0;padding:0}
 input[type=text],textarea{width:100%;font:inherit;padding:.4rem .5rem;border:1px solid #cbd5e1;border-radius:6px}
+.name-with-namespace{display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+.name-with-namespace .namespace-prefix{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.name-with-namespace input[type=text]{width:auto;flex:1;min-width:0}
+.url-with-open{display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+.url-with-open input[type=text]{width:auto;flex:1;min-width:0}
+.url-with-open button{white-space:nowrap}
+input.conflict{border-color:var(--bad);background:#fef2f2}
+p.name-conflict{color:var(--bad);font-size:.85rem;margin:.35rem 0 0}
 input::placeholder,textarea::placeholder{color:#94a3b8;opacity:1}
 textarea{min-height:6rem;font-family:ui-monospace,Menlo,monospace;font-size:.85rem}
 button{font:inherit;background:#0f766e;color:#fff;border:0;border-radius:6px;padding:.45rem .75rem;cursor:pointer}
@@ -80,6 +92,9 @@ button.sign-ok:disabled,button.sign-bad:disabled{opacity:1;cursor:default}
 button.secondary{background:#fff;color:var(--accent);border:1px solid var(--accent)}
 button.secondary:hover{background:#ecfdf5}
 .actions{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.source-actions{margin:0 0 .75rem}
+form.import-zip{margin:0}
+form.import-zip input[type=file]{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .actions form{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
 .editor-actions{margin-top:.85rem;align-items:center}
 .editor-actions dialog{position:fixed}
@@ -92,6 +107,16 @@ details.requirement > summary{list-style:none;pointer-events:none}
 details.requirement > summary::-webkit-details-marker{display:none}
 details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
 dialog{border:1px solid var(--line);border-radius:12px;padding:0;max-width:36rem;width:calc(100% - 2rem)}
+dialog.overlap{max-width:min(52rem,calc(100% - 2rem))}
+dialog.overlap[open]{position:fixed;top:8vh;left:50%;transform:translateX(-50%);z-index:20;max-height:80vh;overflow:auto}
+dialog.overlap table{width:100%;border-collapse:collapse}
+dialog.overlap th,dialog.overlap td{text-align:left;vertical-align:top;padding:.4rem .55rem;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+dialog.overlap th{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#57534e}
+dialog.overlap button.overlap-detail{background:none;border:0;padding:0;color:#0f766e;font:inherit;text-decoration:underline;cursor:pointer}
+dialog.check-detail{white-space:normal}
+dialog.check-detail dl{margin:0}
+dialog.check-detail dt{font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#57534e}
+dialog.check-detail dd{margin:0 0 .7rem;overflow-wrap:anywhere}
 dialog.try-discovery{max-width:min(56rem,calc(100% - 2rem))}
 dialog.try-discovery .body{max-height:70vh;overflow:auto}
 dialog.review-discover{max-width:min(72rem,calc(100% - 2rem));width:calc(100% - 2rem)}
@@ -113,21 +138,35 @@ a.edit-review[hidden]{display:none}
 .repo-row .repo-picker label{display:flex;align-items:center;gap:.5rem;margin:0}
 .repo-row .actions{margin:0}
 .config-panel{background:transparent;border:1px solid #cbd5e1;border-radius:10px;padding:.85rem 1rem;margin:.25rem 0 .75rem}
-.config-panel .repo-row{margin-bottom:.35rem}
+.config-panel .repo-row{margin:0}
 .config-panel label{margin:.45rem 0 0}
 .config-panel input[readonly]{background:#fff;color:var(--ink);cursor:text}
+dialog.config-all{max-width:40rem;width:calc(100% - 2rem)}
+dialog.config-all .config-panel{border:0;padding:0;margin:0}
 .discover-wrap .repo-picker{margin:0 0 .75rem}
 .discover-wrap table{width:100%}
 .discover-wrap .path-cell{max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .discover-wrap select.copy-select{max-width:16rem}
 .discover-wrap th.num,.discover-wrap td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.check-run{display:flex;align-items:stretch;gap:1.25rem}
+.check-run > table{width:auto;flex:1 1 auto;margin:0}
+.check-run > form{margin:0;flex:0 0 auto;display:flex;align-items:flex-end}
+.check-run .actions{margin:0}
+th.remove,td.remove,th.report,td.report{width:2.4rem;text-align:center;vertical-align:middle}
+a.report-file{color:var(--ink);display:inline-flex;line-height:0}
+button.trash{background:var(--bad);color:#fff;border:1px solid var(--bad);padding:.28rem .34rem;line-height:0}
+button.trash:hover{background:#991b1b}
+dialog.remove-check ul{margin:.4rem 0 1rem;padding-left:1.2rem}
+dialog.remove-check code{overflow-wrap:anywhere}
+dialog.remove-check p.actions button{min-width:6.5rem;padding:.45rem .9rem;font-size:1rem;line-height:1.2;border-radius:6px;border:1px solid transparent}
+dialog.remove-check p.actions button.remove-ok{background:var(--bad);border-color:var(--bad);color:#fff}
+dialog.remove-check p.actions button.remove-ok:hover{background:#991b1b}
 .discover-wrap th.num.wrap{white-space:normal;line-height:1.2;max-width:6.5rem}
 body:has(.req-desk) main{max-width:min(1400px,100%)}
 .req-head{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:center;justify-content:space-between;margin:0 0 .35rem}
 .req-head h1{margin:0;flex:1;min-width:12rem}
 .req-head #seal-status{flex-shrink:0}
 .req-head #seal-status button{cursor:default}
-.req-badges{display:flex;align-items:center;gap:.6rem}
 .seal{display:inline-block;font-weight:600;border-radius:6px;padding:.35rem .75rem}
 .seal-ok{background:#15803d;color:#fff}
 .seal-open{background:#fff;color:#44403c;border:1px solid #d6d3d1}
@@ -159,6 +198,11 @@ body:has(.req-desk) main{max-width:min(1400px,100%)}
 label.show-suggestions{display:flex;align-items:center;gap:.4rem;margin:.75rem 0 .35rem;font-size:.92rem}
 .hits-table tr.suggestion-row,.hits-table .suggestion{display:none}
 .hits-table.show-suggestions tr.suggestion-row{display:table-row}
+.hits-table.show-suggestions tr.detail-row[hidden]{display:none}
+.hits-table tr.hit-row.suggestion-row{background:#fffbeb}
+.hits-table tr.hit-row.suggestion-row:hover,
+.hits-table tr.hit-row.suggestion-row.open{background:#fef9c3}
+.hits-table tr.detail-row.suggestion-row td{background:#fffbeb}
 .hits-table.show-suggestions .suggestion{display:block}
 .hits-table.show-suggestions .motivation-current.has-suggestion{display:none}
 form.motivation-pick{margin:0}
@@ -193,15 +237,29 @@ pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;
 .review-board h2{font-size:1.15rem;margin:1.4rem 0 .55rem}
 .review-board h3{font-size:1rem;margin:0 0 .4rem;font-family:ui-sans-serif,system-ui,sans-serif}
 .review-board .topline{border-left:4px solid var(--accent);font-size:1.05rem}
+.review-board [data-selected="run"] h2{margin:.85rem 0 .35rem;font-size:1.05rem}
+.review-board [data-selected="run"] .topline{border-left:0;padding:0;font-size:1rem}
+.review-board [data-selected="run"] button.link code{font-size:1rem}
+dialog.run-detail{max-width:min(52rem,calc(100% - 2rem))}
+dialog.run-detail h3{font-size:1rem;margin:1rem 0 .35rem}
+dialog.run-detail h4{font-size:.85rem;margin:.7rem 0 .2rem}
+dialog.run-detail dl{display:grid;grid-template-columns:minmax(8rem,12rem) 1fr;gap:.15rem .75rem;margin:.25rem 0 .5rem}
+dialog.run-detail dt{color:var(--muted);margin:0}
+dialog.run-detail dd{margin:0;overflow-wrap:anywhere}
+dialog.run-detail details{margin:.35rem 0}
+dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem}
 .review-board .header{display:flex;flex-wrap:wrap;gap:.75rem 1.25rem;align-items:baseline;justify-content:space-between;margin-bottom:1.1rem}
 .review-board .pill{display:inline-block;font-size:.75rem;padding:.15rem .45rem;border-radius:999px;background:var(--line);color:var(--ink);border:0;margin:0}
 .review-board .pill-bad{background:#fee2e2;color:#991b1b}
 .review-board .note{font-size:.88rem;color:var(--muted);margin:.35rem 0 .55rem}
 .review-board .seal-facts{display:block;font-size:.72rem;color:var(--muted);margin-top:.35rem;line-height:1.3;max-height:2.7em;overflow:hidden}
-.review-board .check{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board .check{display:inline-flex;align-items:center;gap:.25rem;font-family:ui-monospace,Menlo,monospace;font-size:.75rem;padding:.12rem .4rem;border-radius:4px;margin:.1rem .2rem .1rem 0;border:1px solid transparent}
+.review-board .check .mark{display:block;flex:none}
+.review-board button.check{cursor:pointer;line-height:1.2}
 .review-board .check.pass{background:#dcfce7;color:#166534;border-color:#86efac}
 .review-board .check.fail{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .review-board .check.skipped{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.review-board .check.retired{background:#fef3c7;color:#92400e;border-color:#fcd34d;text-decoration:line-through}
 .review-board table.path-checks{width:100%;border-collapse:collapse;font-size:.92rem}
 .review-board table.path-checks th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
 .review-board table.path-checks th,.review-board table.path-checks td{text-align:left;padding:.55rem .4rem;border-bottom:1px solid var(--line);vertical-align:top}
@@ -215,16 +273,63 @@ pre.excerpt{background:#fafaf9;border:1px solid var(--line);padding:.85rem 1rem;
 .review-board details.requirement > summary{list-style:none;pointer-events:none}
 .review-board details.requirement > summary::-webkit-details-marker{display:none}
 .review-board details.requirement > summary > a{display:block;pointer-events:auto;color:inherit;text-decoration:none}
+.review-board section.round-notes{margin:0 0 1.2rem}
+.review-board section.round-notes > h2{font-size:1rem;font-weight:600;margin:0 0 .4rem}
+.review-board section.round-notes p{white-space:pre-wrap;margin:.2rem 0 0}
+.review-board section.deviations-frame{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 .9rem .9rem}
+.review-board section.deviations-frame[data-resolved]{margin-top:1.2rem}
+.review-board section.deviations-frame > h2{font-size:1rem;font-weight:600;margin:0;padding:.75rem 0}
+.review-board details.passed-frame{margin-top:1.2rem;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 .9rem .9rem}
+.review-board details.passed-frame > summary{cursor:pointer;font-weight:600;padding:.75rem 0}
 .review-board details.technical{margin:.35rem 0 0;font-size:.8rem;color:var(--muted)}
 .review-board details.technical > summary{cursor:pointer;list-style:revert;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:.75rem}
 .review-board details.technical code,.review-board details.technical pre{display:block;margin:.35rem 0 0;white-space:pre-wrap;word-break:break-word}
 .review-board ul.review-check-list{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .review-board .path-mark{color:#b91c1c;font-weight:700}
 .review-board .claim-technical{margin-top:.5rem}
+.review-board .review-meta{color:var(--muted);margin:.15rem 0 .9rem}
+.review-board table.review-queue{width:100%;border-collapse:collapse;background:var(--card);font-size:.92rem}
+.review-board table.review-queue th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:.4rem .45rem;border-bottom:1px solid var(--line)}
+.review-board table.review-queue th.tips{cursor:help}
+.review-board table.review-queue td{padding:.5rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
+.review-board td.row-actions form,.review-board td.row-actions p{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;margin:.15rem 0}
+.review-board td.row-actions form.row-action-form{display:none}
+.review-board button.actions-menu{display:inline-flex;align-items:center;gap:.35rem;border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}
+.review-board button.actions-menu .actions-label{text-decoration:underline;text-underline-offset:3px}
+.review-board .menu-icon{display:block;flex:none}
+.review-board .actions-panel{margin:0;padding:.3rem 0;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.12);min-width:12rem}
+.review-board .actions-panel button{display:flex;align-items:center;gap:.55rem;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:.45rem .8rem;cursor:pointer}
+.review-board .actions-panel button:hover,.review-board .actions-panel button:focus-visible{background:#f4f5f7}
+.review-board dialog[data-find] label.find-choice{display:flex;gap:.55rem;align-items:flex-start;font-weight:400;margin:.35rem 0;padding:.5rem .65rem;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+.review-board dialog[data-find] label.find-choice:hover,.review-board dialog[data-find] label.find-choice:focus-within{border-color:var(--accent);background:#f0fdfa}
+.review-board dialog[data-find] label.find-choice:has(input:checked){border-color:var(--accent);background:#ecfdf5}
+.review-board dialog[data-find] label.find-choice code{color:var(--accent);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.review-board dialog[data-find-preview]{max-width:40rem}
+.review-board dialog[data-find-preview] pre{max-height:18rem;overflow:auto;white-space:pre-wrap}
+.review-board td.row-actions input[name="remediation"]{width:9rem}
+.review-board table.review-queue p{margin:.15rem 0}
+.review-board select.verdict{font:inherit;max-width:11rem}
+.review-board .remedy-icon{display:inline-block;vertical-align:-.2em;margin-right:.3rem;color:var(--muted)}
+.review-board button.comment-mark{width:1.8rem;height:1.8rem;border:1px solid var(--line);border-radius:4px;background:#fff;cursor:pointer;padding:0;color:var(--ink)}
+.review-board button.comment-mark.has-comment{border-color:transparent;background:transparent}
+.review-board button.comment-mark .doc-icon{display:block;margin:auto}
+.review-board dialog.comment-editor,.review-board dialog.binding-note,.review-board dialog.review-choice{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog.review-choice .btn, .review-board dialog.review-choice button{margin:0 .35rem .35rem 0}
+.review-board dialog.review-choice .btn{margin:0 .35rem .35rem 0}
+.review-board dialog.binding-note p{margin:.4rem 0}
+.review-board dialog.comment-editor textarea{min-height:6rem;width:100%}
+.review-board textarea::placeholder{color:var(--muted)}
+.review-board .file-actions{margin-top:.25rem;font-size:.8rem}
 """
 
 
-def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> bytes:
+def page(
+    title: str,
+    body: str,
+    crumbs: list[tuple[str, str]] | None = None,
+    *,
+    banner: str = "",
+) -> bytes:
     crumb_html = ""
     if crumbs:
         parts = []
@@ -243,8 +348,11 @@ def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> 
 <span><span class="name-curbpack">Curbpack</span> <span class="name-studio">Studio</span></span>
 </a>
 <nav>
-<a href="/project">Change Project</a>
-<a href="/">Home</a>
+<a href="/home">Start</a>
+<a href="/project">Change-Project</a>
+<a href="/requirements">Pack-Editor</a>
+<a href="/discover">Discovery &amp; Claims</a>
+<a href="/check">Verification-Workflow</a>
 {crumb_html}
 </nav>
 </header>
@@ -256,6 +364,7 @@ def page(title: str, body: str, crumbs: list[tuple[str, str]] | None = None) -> 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 <style>{CSS}</style></head><body><main>
 {topbar}
+{banner}
 {body}
 </main></body></html>"""
     return doc.encode("utf-8")
@@ -359,277 +468,6 @@ def _reading(reading: dict | None) -> str:
     return text
 
 
-def cover(_model: dict, message: str = "", error: str = "") -> bytes:
-    body = f"""
-<h1>Curbpack Studio</h1>
-<p class="muted">Curbpack Studio turns law text into checkable requirements, grouped in packs.
-The pilot workflow: author packs from law text → create claims in your product →
-check regularly → review the result and fix what failed.</p>
-{_flash(message, error)}
-<div class="card">
-<p><a href="/requirements">Pack Editor</a></p>
-<p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
-<p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
-<p><a href="/review">Review — compile and sign review</a></p>
-</div>
-"""
-    return page("Curbpack Studio", body)
-
-
-def _lines(values) -> str:
-    if not values:
-        return ""
-    return "\n".join(str(item) for item in values)
-
-
-def requirement_page(requirement: dict, reading: dict, message: str = "", error: str = "") -> bytes:
-    source = requirement.get("source") or {}
-    hints = requirement.get("discovery_hints") or {}
-    law = ""
-    locator = ""
-    if requirement.get("references"):
-        law = requirement["references"][0].get("law_text") or ""
-        locator = requirement["references"][0].get("locator") or ""
-    sources = "\n".join(item.get("source", "") for item in (hints.get("sources") or []) if isinstance(item, dict))
-    body = f"""
-<h1>{html.escape(requirement.get('id', 'Requirement'))}</h1>
-{_flash(message, error)}
-{_reading(reading)}
-<div class="card">
-<p>Locator <code>{html.escape(locator)}</code></p>
-<pre>{html.escape(law)}</pre>
-</div>
-<form method="post" action="/requirement">
-<label>Edition</label>
-<input type="text" name="edition" value="{html.escape(source.get('edition', ''))}">
-<label>Remediation hint</label>
-<textarea name="remediation_hint">{html.escape(requirement.get('remediation_hint', ''))}</textarea>
-<label>Note</label>
-<textarea name="note">{html.escape(requirement.get('note', ''))}</textarea>
-<label>Concepts</label>
-<textarea name="concepts">{html.escape(_lines(hints.get('concepts')))}</textarea>
-<label>Path hints</label>
-<textarea name="path_hints">{html.escape(_lines(hints.get('path_hints')))}</textarea>
-<label>Source ids (one per line, no args)</label>
-<textarea name="sources">{html.escape(sources)}</textarea>
-<label>Expected evidence</label>
-<textarea name="expected_evidence">{html.escape(_lines(hints.get('expected_evidence')))}</textarea>
-<button type="submit">Save draft</button>
-</form>
-<form method="post" action="/publish">
-<label>Signer name</label>
-<input type="text" name="name" placeholder="Ada Jurist">
-<button type="submit">Publish and sign</button>
-</form>
-<form method="post" action="/seal-pack">
-<label>Pack sealer name</label>
-<input type="text" name="name" placeholder="Ada Jurist">
-<button type="submit">Seal pack directory</button>
-</form>
-<p class="muted">Saving a change drops any previous signature. Publishing refuses a local working copy that already has origin.</p>
-"""
-    return page(requirement.get("id", "Requirement"), body)
-
-
-def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
-    """Claims editor. Domain logic stays in claims.bind / server helpers."""
-    blocks = []
-    for item in model.get("claims") or []:
-        claim = item.get("claim") or {}
-        claim_id = str(claim.get("id") or "")
-        requirement_id = str(claim.get("requirement_id") or "")
-        args = json.dumps(claim.get("args") or {}, indent=2, ensure_ascii=False)
-        checks = json.dumps(claim.get("checks") or [], indent=2, ensure_ascii=False)
-        reading = item.get("reading") or {}
-        seal_html = _claim_seal_html(reading)
-        law_html = _passages_html(item.get("passages") or [])
-        signed = isinstance(claim.get("signed"), dict)
-        save_note = (
-            '<p class="err">This Claim is sealed. Saving a changed payload clears the seal. '
-            "It is then an unsigned draft until signed again.</p>"
-            if signed
-            else '<p class="muted">Unsigned draft. Selecting a Discovery path or saving does not approve evidence.</p>'
-        )
-        hidden = _claim_context(model)
-        warning = str(item.get("retire_warning") or "")
-        warning_html = f'<p class="err">{html.escape(warning)}</p>' if warning else ""
-        confirm = "Retire this Claim? The file is removed."
-        if warning:
-            confirm = f"{warning} {confirm}"
-        sign_form = ""
-        if not signed:
-            sign_form = f"""
-<form method="post" action="/claims/{html.escape(claim_id)}/sign">
-{hidden}
-<label>Signer name</label>
-<input type="text" name="name" placeholder="Ada Jurist" required>
-<button type="submit">Sign claim</button>
-</form>
-"""
-        blocks.append(
-            f"""<div class="card" id="claim-{html.escape(claim_id)}">
-{seal_html}
-<p><code>{html.escape(claim_id)}</code> → <code>{html.escape(requirement_id)}</code></p>
-{law_html}
-{save_note}
-<form method="post" action="/claims/{html.escape(claim_id)}">
-{hidden}
-<input type="hidden" name="requirement_id" value="{html.escape(requirement_id)}">
-<label>Source</label>
-<input type="text" name="source" value="{html.escape(claim.get('source', ''))}" required>
-<label>Severity</label>
-<input type="text" name="severity" value="{html.escape(claim.get('severity', ''))}">
-<label>Description</label>
-<input type="text" name="description" value="{html.escape(claim.get('description', ''))}" required>
-<label>Source args JSON</label>
-<textarea name="args">{html.escape(args)}</textarea>
-<label>Checks JSON</label>
-<textarea name="checks">{html.escape(checks)}</textarea>
-<button type="submit">Save claim</button>
-</form>
-{sign_form}
-{warning_html}
-<form method="post" action="/claims/{html.escape(claim_id)}/retire"
- onsubmit="return confirm({html.escape(json.dumps(confirm))});">
-{hidden}
-<button type="submit">Retire</button>
-</form>
-</div>"""
-        )
-    empty = (
-        '<p class="muted">No Claims yet. Create them from '
-        '<a href="/discover">Discovery &amp; Claims</a> '
-        "(add a check on a finding).</p>"
-        if not blocks
-        else ""
-    )
-    panel = repo_config_panel(
-        model,
-        action="/claims",
-        show=("config", "packs", "claims"),
-    )
-    body = f"""
-<h1>Claim editor</h1>
-<p class="muted">Edit, sign, or retire Claims already in the product repo.
-New Claims come from <a href="/discover">Discovery &amp; Claims</a>.
-Editing a sealed Claim clears its seal.</p>
-{panel}
-{_flash(message, error)}
-{''.join(blocks) or empty}
-"""
-    return page("Claim editor", body)
-
-
-def _claim_context(model: dict) -> str:
-    fields = []
-    for key in ("repo_id", "source_id", "timestamp", "return_to"):
-        value = str(model.get(key) or "")
-        if value:
-            fields.append(f'<input type="hidden" name="{key}" value="{html.escape(value)}">')
-    return "".join(fields)
-
-
-def _claim_seal_html(reading: dict) -> str:
-    if reading.get("verifiable"):
-        return (
-            f'<p><strong>Signed · verifiable</strong> · who {html.escape(str(reading.get("who") or "—"))}'
-            f' · when {html.escape(str(reading.get("when") or "—"))}</p>'
-        )
-    if isinstance(reading.get("who"), str) and reading.get("who"):
-        reason = html.escape(str(reading.get("reason") or "signature does not verify"))
-        return (
-            f'<p class="err"><strong>Signed · not verifiable</strong> · who '
-            f'{html.escape(str(reading.get("who")))} · {reason}</p>'
-        )
-    reason = html.escape(str(reading.get("reason") or "unsigned draft"))
-    return f'<p class="muted"><strong>Unsigned draft</strong> · {reason}</p>'
-
-
-def _passages_html(passages: list) -> str:
-    if not passages:
-        return '<p class="muted">No law_text available for this Requirement in the selected Pack.</p>'
-    blocks = []
-    for text in passages:
-        blocks.append(f"<pre>{html.escape(str(text))}</pre>")
-    return "<p>Requirement text</p>" + "".join(blocks)
-
-
-def scaffold_page(message: str = "", error: str = "") -> bytes:
-    body = f"""
-<h1>Scaffold</h1>
-<p class="muted">Writes a short stub and refuses to overwrite an existing file. The stub is not approved evidence.</p>
-{_flash(message, error)}
-<form method="post" action="/scaffold">
-<label>Path</label>
-<input type="text" name="path" value="docs/annex-vii/risk_assessment.md">
-<button type="submit">Write stub</button>
-</form>
-"""
-    return page("Scaffold", body)
-
-
-def check_page(
-    result: dict | None,
-    exit_code: int | None,
-    message: str = "",
-    error: str = "",
-    editor: dict | None = None,
-) -> bytes:
-    if result is None:
-        shown = "<p>No run yet.</p>"
-    else:
-        git = ""
-        if result.get("worktree") == "dirty":
-            git = "<p class=\"err\">The worktree was dirty. This result is not verification of that commit's exact content.</p>"
-        elif result.get("commit"):
-            git = f"<p class=\"muted\">commit <code>{html.escape(result['commit'])}</code> · worktree {html.escape(result['worktree'])}</p>"
-        rows = []
-        for row in result.get("claims") or []:
-            nested = row.get("checks") or []
-            if not nested:
-                rows.append(
-                    "<tr>"
-                    f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
-                    f"<td></td><td></td>"
-                    f"<td>{html.escape(row.get('status', ''))}</td><td></td>"
-                    "</tr>"
-                )
-            for item in nested:
-                rows.append(
-                    "<tr>"
-                    f"<td><code>{html.escape(row.get('id', ''))}</code></td>"
-                    f"<td>{item.get('index', '')}</td>"
-                    f"<td>{html.escape(check_caption(item))}</td>"
-                    f"<td>{html.escape(item.get('status', ''))}</td>"
-                    f"<td>{html.escape(item.get('detail') or '')}</td>"
-                    "</tr>"
-                )
-        table = "<p>No claim rows. This is not a successful verification.</p>" if not rows else (
-            "<table><tr><th>Claim</th><th>Index</th><th>Check</th><th>Status</th><th>Detail</th></tr>"
-            + "".join(rows)
-            + "</table>"
-        )
-        shown = git + f"<p>exit {exit_code}</p>" + table
-    door = editor or {}
-    panel = repo_config_panel(
-        door,
-        action="/check",
-        show=("config", "packs", "claims", "results", "reports"),
-    )
-    body = f"""
-<h1>Check</h1>
-<p class="muted">Check reads this repository's <code>curbpack.json</code>.
-The file is not signed. A green check row is not a legal conclusion.
-Edit paths on <a href="/project">Project</a>.</p>
-{panel}
-{_flash(message, error)}
-{_curbpack_editor(door)}
-<h2>Report</h2>
-<div class="card">{shown}</div>
-"""
-    return page("Check", body)
-
-
 _PATH_FIELDS = (
     ("config", "Current Configuration", "curbpack_file"),
     ("packs", "Packs directory", "packs_dir_value"),
@@ -639,960 +477,86 @@ _PATH_FIELDS = (
 )
 
 
-def repo_config_panel(model: dict, *, action: str = "", show: tuple[str, ...] = (), beside: str = "") -> str:
-    """Readonly curbpack path banner for the fields named in show.
+def repo_config_panel(
+    model: dict,
+    *,
+    action: str = "",
+    show: tuple[str, ...] = (),
+    beside: str = "",
+    title: str = "Current Project",
+    blanks: bool = False,
+) -> str:
+    """Project name under the top bar. The name opens the path fields.
 
-    show is a subset of config, packs, claims, results, reports.
-    action is unused (kept for call-site compatibility); change project via topbar.
+    show and blanks stay for call-site compatibility. The compact panel does not
+    list path fields. A selected project name opens every field in the dialog.
+    With no project, NONE links to Change Project. action is unused.
     """
-    del action
-    wanted = set(show)
+    del action, show, blanks
+    current = _current_project_label(model, title=title)
+    dialog = _config_all_dialog(model) if model.get("repo_id") else ""
+    return (
+        '<section class="config-panel">'
+        f'<div class="repo-row">{current}{beside}</div>'
+        "</section>"
+        f"{dialog}"
+    )
+
+
+def _path_inputs(model: dict, wanted: set[str], *, blanks: bool) -> list[str]:
     fields = []
     for key, label, source in _PATH_FIELDS:
         if key not in wanted:
             continue
         value = str(model.get(source) or "")
-        if not value:
+        if not value and not blanks:
             continue
         fields.append(
             f"<label>{html.escape(label)} "
             f'<input type="text" readonly value="{html.escape(value)}"></label>'
         )
-    current = _current_project_label(model)
+    return fields
+
+
+def _config_all_dialog(model: dict) -> str:
+    """Full path panel. The project name (id config-all-open) opens it."""
+    fields = _path_inputs(
+        model,
+        {key for key, _label, _source in _PATH_FIELDS},
+        blanks=True,
+    )
     return (
-        '<section class="config-panel">'
-        f'<div class="repo-row">{current}{beside}</div>'
-        f'{"".join(fields)}'
-        "</section>"
+        '<dialog id="config-all" class="config-all">'
+        '<div class="head"><h2>Current Project</h2>'
+        '<button type="button" id="config-all-close">Close</button></div>'
+        f'<div class="body"><div class="config-panel">{"".join(fields)}</div></div>'
+        "</dialog>"
+        "<script>"
+        '(function(){var open=document.getElementById("config-all-open");'
+        'var dialog=document.getElementById("config-all");'
+        'if(!open||!dialog)return;'
+        'open.addEventListener("click",function(){dialog.showModal();});'
+        'document.getElementById("config-all-close").addEventListener("click",function(){dialog.close();});'
+        "})();"
+        "</script>"
     )
 
 
-def _current_project_label(model: dict) -> str:
+def _current_project_label(model: dict, title: str = "Project") -> str:
     repo_id = str(model.get("repo_id") or "")
     name = repo_id
     for repo in model.get("repos") or []:
         if isinstance(repo, dict) and str(repo.get("id") or "") == repo_id:
             name = str(repo.get("name") or repo_id)
             break
-    if not repo_id:
-        return '<span class="repo-current muted">No project selected.</span>'
-    # Change lives on Project / top bar, not in this panel.
-    return f'<span class="repo-current">Project <strong>{html.escape(name)}</strong></span>'
-
-
-def _curbpack_editor(editor: dict) -> str:
-    repo_id = str(editor.get("repo_id") or "")
+    label = html.escape(title)
     if not repo_id:
         return (
-            '<div class="card discover-wrap">'
-            '<p class="muted">Select a project to run Check.</p></div>'
-        )
-    rows = []
-    for pack in editor.get("packs") or []:
-        if not isinstance(pack, dict):
-            continue
-        pack_id = str(pack.get("id") or "")
-        state = "present" if pack.get("present") else "missing"
-        rows.append(
-            "<tr>"
-            f"<td><code>{html.escape(pack_id)}</code></td>"
-            f"<td>{html.escape(state)}</td>"
-            f"<td><code>{html.escape(str(pack.get('pack_dir') or ''))}</code></td>"
-            "</tr>"
-        )
-    if not rows:
-        rows.append('<tr><td colspan="3" class="muted">No packs named in curbpack.json.</td></tr>')
-    selection = str(editor.get("selection") or "")
-    selection_html = (
-        f"<p>Selection <code>{html.escape(selection)}</code></p>" if selection else ""
-    )
-    result_path = str(editor.get("run_result_path") or "")
-    result_html = ""
-    if result_path:
-        result_html = f"<p>Run result <code>{html.escape(result_path)}</code></p>"
-        if repo_id:
-            href = f"/review?repo={quote(repo_id, safe='')}&result={quote(result_path, safe='')}"
-            result_html += f'<p><a href="{html.escape(href)}">Review this run</a></p>'
-    return f"""
-<div class="card discover-wrap">
-{selection_html}
-{result_html}
-<table><thead><tr><th>Pack</th><th>Status</th><th>Path</th></tr></thead><tbody>
-{"".join(rows)}
-</tbody></table>
-<form method="post" action="/check">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<p class="actions">
-<button type="submit" name="action" value="check">Check</button>
-</p>
-</form>
-</div>
-"""
-
-
-def review_page(
-    report: dict | None,
-    reading: dict | None,
-    message: str = "",
-    error: str = "",
-    discovery: dict | None = None,
-    *,
-    saved: bool = False,
-    report_exists: bool = False,
-    same_run_value: bool | None = None,
-    unchecked: list[str] | None = None,
-    door: dict | None = None,
-) -> bytes:
-    dialogs = ""
-    decision = ""
-    if report is None:
-        body_report = "<p>No run result to compile.</p>"
-    else:
-        decision = report.get("decision") or ""
-        result = report.get("run_result") if isinstance(report.get("run_result"), dict) else {}
-        note = worktree_sentence(result)
-        limits = "".join(
-            f"<li>{html.escape(item)}</li>" for item in (NOT_A_LEGAL_CONCLUSION, NO_CRA_FIELD)
-        )
-        if same_run_value is True:
-            same_html = '<p data-same-run="yes">same run: yes</p>'
-        elif same_run_value is False:
-            same_html = '<p data-same-run="no">same run: no. This saved report is an older run.</p>'
-        else:
-            same_html = ""
-        unchecked_html = ""
-        if unchecked:
-            codes = ", ".join(f"<code>{html.escape(item)}</code>" for item in unchecked)
-            unchecked_html = f"<p>These selected Requirements were not checked: {codes}</p>"
-        claims_by_id = {
-            claim["id"]: claim
-            for claim in (report.get("claims") or [])
-            if isinstance(claim, dict) and isinstance(claim.get("id"), str)
-        }
-        claims_href = _claims_href(discovery or {})
-        rows = []
-        dialog_parts = []
-        review_return = _review_return_url(door or {})
-        for row in result.get("claims") or []:
-            if not isinstance(row, dict):
-                continue
-            claim = claims_by_id.get(row.get("id")) or {}
-            rows.append(_review_claim_row(row, claim, claims_href))
-            dialog = _review_discover_dialog(row, claim, discovery or {}, return_to=review_return)
-            if dialog:
-                dialog_parts.append(dialog)
-        if door and isinstance(door.get("presentation"), dict) and not dialog_parts:
-            for group in door["presentation"].get("groups") or []:
-                if not isinstance(group, dict):
-                    continue
-                group_id = str(group.get("id") or "")
-                for item in group.get("claims") or []:
-                    if not isinstance(item, dict):
-                        continue
-                    requirement_id = str(item.get("requirement_id") or "")
-                    if group_id and group_id != "Unresolved Claims":
-                        requirement_id = group_id
-                    dialog = _review_discover_dialog(
-                        {"id": item.get("id"), "status": item.get("status")},
-                        {"requirement_id": requirement_id},
-                        discovery or {},
-                        return_to=review_return,
-                    )
-                    if dialog:
-                        dialog_parts.append(dialog)
-        appendix = []
-        for item in report.get("appendix") or []:
-            appendix.append(
-                f"<li><code>{html.escape(item.get('id', ''))}</code> "
-                f"requirement <code>{html.escape(item.get('requirement_id', ''))}</code> "
-                f"{html.escape(item.get('reason', ''))}</li>"
-            )
-        if not saved:
-            appendix_html = ""
-        elif appendix:
-            appendix_html = "<h2>Signature appendix</h2><ul>" + "".join(appendix) + "</ul>"
-        else:
-            appendix_html = (
-                "<h2>Signature appendix</h2>"
-                '<p class="muted">No unsigned or unverifiable Claims in this run.</p>'
-            )
-        dialogs = "".join(dialog_parts) + _review_discover_script(bool(dialog_parts))
-        reading_html = _reading(reading) if saved else "<p>not saved</p>"
-        if door and door.get("presentation"):
-            listed = _review_groups(door["presentation"], door) + appendix_html
-        else:
-            listed = f"<h2>Check results</h2><ul>{''.join(rows)}</ul>{appendix_html}<pre>{html.escape(json.dumps(result, indent=2, ensure_ascii=False))}</pre>"
-        file_dialog = _review_file_dialog(door or {})
-        body_report = f"""
-{reading_html}
-{same_html}
-<p>{html.escape(note)}</p>
-<ul>{limits}</ul>
-{unchecked_html}
-{file_dialog}
-{listed}
-"""
-    door = door or {}
-    panel = repo_config_panel(
-        door,
-        action="/review",
-        show=("config", "packs", "claims", "results", "reports"),
-    )
-    repo_id = str(door.get("repo_id") or "")
-    report_value = str((door or {}).get("report_path") or "")
-    hidden = ""
-    if repo_id:
-        hidden += f'<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">'
-    if report_value:
-        hidden += f'<input type="hidden" name="report" value="{html.escape(report_value)}">'
-    if saved:
-        decision_forms = f"""
-<form method="post" action="/review">
-{hidden}
-<label>Decision</label>
-<textarea name="decision">{html.escape(decision)}</textarea>
-<button type="submit">Save decision</button>
-</form>
-<form method="post" action="/review/sign">
-{hidden}
-<label>Signer name</label>
-<input type="text" name="name" placeholder="External Reviewer">
-<button type="submit">review-sign</button>
-</form>
-"""
-    else:
-        decision_forms = (
-            '<p class="muted">Compile writes the report. Save decision and review-sign need that file.</p>'
-        )
-    compile_form = ""
-    if repo_id:
-        selected_result = str(door.get("selected_result") or "")
-        result_input = ""
-        if selected_result:
-            result_input = (
-                f'<input type="hidden" name="result" value="{html.escape(selected_result)}">'
-            )
-        compile_form = f"""
-<form method="post" action="/review/compile">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-{result_input}
-<p class="actions"><button type="submit">Compile</button></p>
-</form>
-"""
-    if not repo_id and report is None:
-        body_report = "<p>No repository is chosen.</p>"
-        decision_forms = ""
-        compile_form = ""
-    chrome = _review_report_line(door)
-    body = f"""
-<div class="review-board">
-<div class="brand">curbpack-review</div>
-<div class="header">
-<div>
-<h1>Review</h1>
-<p class="muted">The decision is the reviewer's words. There is no field for meeting CRA.</p>
-</div>
-</div>
-{panel}
-{chrome}
-{_review_lists(door)}
-{_flash(message, error)}
-<div class="card">{body_report}</div>
-{compile_form}
-<p><a href="/check">Run checks</a></p>
-{decision_forms}
-{dialogs}
-</div>
-"""
-    return page("Review", body)
-
-
-def _review_groups(presentation: dict, door: dict) -> str:
-    header = presentation.get("header") if isinstance(presentation.get("header"), dict) else {}
-    packs = " ".join(
-        f"{html.escape(str(pack.get('id') or ''))} {html.escape(str(pack.get('version') or ''))}"
-        for pack in header.get("packs") or []
-        if isinstance(pack, dict)
-    )
-    report_label = str(presentation.get("report_seal_label") or "")
-    report_label_html = (
-        f'<p data-report-seal="{html.escape(report_label)}">{html.escape(report_label)}</p>'
-        if report_label
-        else ""
-    )
-    header_html = (
-        '<section class="card" data-run-header>'
-        f"<p>{html.escape(str(header.get('tool') or ''))} {html.escape(str(header.get('tool_version') or ''))}</p>"
-        f"<p>commit {html.escape(str(header.get('commit') or ''))}</p>"
-        f"<p>worktree {html.escape(str(header.get('worktree') or ''))}</p>"
-        f"<p>{packs}</p>"
-        f"{report_label_html}"
-        "</section>"
-    )
-    groups = [group for group in presentation.get("groups") or [] if isinstance(group, dict)]
-    open_ids = [str(group.get("id") or "") for group in groups if group.get("open")]
-    open_count = len(open_ids)
-    total = len(groups)
-    fail_open = sum(1 for group in groups if group.get("open") and "fail" in str(group.get("result_summary") or ""))
-    topline = (
-        f'<div class="card topline">'
-        f"<p style=\"margin:0\">{open_count} of {total} requirements need attention. "
-        f"{'Failed Checks remain visible for review. ' if fail_open else ''}"
-        f"Passed Requirements stay collapsed. "
-        f"Expand a row to inspect paths and Checks, then Edit or Re-Discover as needed.</p>"
-        f'<p class="muted" style="margin:.65rem 0 0">'
-        f"{open_count} open · {total - open_count} collapsed · "
-        f"Compile writes the review report; decision and seal stay separate.</p>"
-        f"</div>"
-    )
-    repo = quote(str(door.get("repo_id") or ""), safe="")
-    selected_result = quote(str(door.get("selected_result") or ""), safe="")
-    selected_report = quote(str(door.get("selected_report") or ""), safe="")
-    document = (
-        f"report={selected_report}" if selected_report else f"result={selected_result}"
-    )
-    attention_parts = []
-    collapsed_parts = []
-    for group in groups:
-        block = _review_requirement_card(group, open_ids, repo, document)
-        if group.get("open"):
-            attention_parts.append(block)
-        else:
-            collapsed_parts.append(block)
-    attention = ""
-    if attention_parts:
-        attention = "<h2>Requirements needing attention</h2>" + "".join(attention_parts)
-    collapsed = ""
-    if collapsed_parts:
-        collapsed = "<h2>Passed / unchanged</h2>" + "".join(collapsed_parts)
-    return header_html + topline + attention + collapsed
-
-
-def _review_requirement_card(
-    group: dict,
-    open_ids: list[str],
-    repo: str,
-    document: str,
-) -> str:
-    group_id = str(group.get("id") or "")
-    if group.get("open"):
-        nxt = [item for item in open_ids if item != group_id]
-    else:
-        nxt = sorted(set(open_ids) | {group_id})
-    href = f"/review?repo={repo}&{document}&expanded={quote(','.join(nxt), safe='')}"
-    open_attr = " open" if group.get("open") else ""
-    label = str(group.get("seal_label") or "")
-    label_html = ""
-    if label:
-        bad = ' style="background:#fee2e2;color:#991b1b"' if label == "Invalid seal" else ""
-        label_html = (
-            f'<span class="pill" data-seal-label="{html.escape(label)}"{bad}>'
-            f"{html.escape(label)}</span>"
-        )
-    seal = _seal_line(group.get("seal")) if isinstance(group.get("seal"), dict) else ""
-    counts = _review_check_counts(group)
-    skipped_bit = f" · {counts['skipped']} skipped" if counts["skipped"] else ""
-    count_pill = (
-        f'<span class="pill">{counts["fail"]} fail · {counts["pass"]} pass'
-        f"{skipped_bit}</span>"
-    )
-    result_summary = str(group.get("result_summary") or "")
-    claim_header = []
-    claims_html = []
-    for claim in group.get("claims") or []:
-        if not isinstance(claim, dict):
-            continue
-        claim_id = str(claim.get("id") or "")
-        status = str(claim.get("status") or "")
-        klass = ' class="pill-bad"' if status == "fail" else ""
-        claim_label = str(claim.get("seal_label") or "")
-        claim_label_html = (
-            f' <span class="pill" data-claim-seal="{html.escape(claim_label)}">'
-            f"{html.escape(claim_label)}</span>"
-            if claim_label
-            else ""
-        )
-        claim_facts = _seal_line(claim.get("seal")) if isinstance(claim.get("seal"), dict) else ""
-        claim_header.append(
-            f' claim {html.escape(claim_id)}{claim_label_html}{claim_facts}'
-        )
-        claims_html.append(
-            _review_claim_card(claim, open_ids, repo, document)
-        )
-    note = _review_attention_note(group)
-    note_html = f'<p class="note">{html.escape(note)}</p>' if note else ""
-    summary = (
-        f'<a href="{html.escape(href)}">'
-        f'<div class="header" style="margin-bottom:.35rem">'
-        f"<div><h3><code>{html.escape(group_id)}</code></h3></div>"
-        f'<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">'
-        f"{label_html}{count_pill}"
-        f'<span class="pill">{html.escape(result_summary)}</span>'
-        f"</div></div>"
-        f'<span class="seal-facts">{seal}{"".join(claim_header)}</span>'
-        f"</a>"
-    )
-    return (
-        f'<details class="requirement card" data-requirement="{html.escape(group_id)}"{open_attr}>'
-        f"<summary>{summary}</summary>"
-        f"{note_html}{''.join(claims_html)}</details>"
-    )
-
-
-def _review_claim_card(claim: dict, open_ids: list[str], repo: str, document: str) -> str:
-    claim_id = str(claim.get("id") or "")
-    status = str(claim.get("status") or "")
-    klass = ' class="pill-bad"' if status == "fail" else ""
-    requirement_id = str(claim.get("requirement_id") or "")
-    requirement_html = (
-        f'<p class="muted">Unresolved requirement <code>{html.escape(requirement_id)}</code></p>'
-        if requirement_id
-        else ""
-    )
-    attention_sentences = [
-        str(line)
-        for line in claim.get("sentences") or []
-        if str(line) and str(line) != "The Claim is unchanged since the Check run."
-    ]
-    sentences = "".join(f'<p class="note">{html.escape(line)}</p>' for line in attention_sentences)
-    unchanged = "The Claim is unchanged since the Check run." in [
-        str(line) for line in claim.get("sentences") or []
-    ]
-    # Keep the unchanged sentence in the DOM for scenario tests, but do not lead with it
-    # when the Claim already has a fail/skipped result or another attention note.
-    if unchanged and status not in {"fail", "skipped"} and not attention_sentences:
-        unchanged_html = "<p>The Claim is unchanged since the Check run.</p>"
-    elif unchanged:
-        unchanged_html = '<p class="muted" hidden>The Claim is unchanged since the Check run.</p>'
-    else:
-        unchanged_html = ""
-    path_rows, check_items, actions, tech_parts = _review_claim_checks(
-        claim, open_ids, repo, document
-    )
-    table = (
-        '<table class="path-checks"><thead><tr><th>Path</th><th>Checks</th></tr></thead>'
-        f"<tbody>{''.join(path_rows)}</tbody></table>"
-        if path_rows
-        else ""
-    )
-    tech_block = ""
-    if tech_parts:
-        tech_block = (
-            '<details class="technical"><summary>Technical details</summary>'
-            + "".join(tech_parts)
-            + "</details>"
+            f'<span class="repo-current">{label} '
+            f'<a href="/project">NONE</a></span>'
         )
     return (
-        f'<div class="card claim-card" data-claim="{html.escape(claim_id)}">'
-        f'<div class="header" style="margin-bottom:.35rem">'
-        f"<div><h3>Claim <code>{html.escape(claim_id)}</code></h3></div>"
-        f'<div><span data-status="{html.escape(status)}"{klass}>{html.escape(status)}</span></div>'
-        f"</div>"
-        f"{requirement_html}{sentences}{unchanged_html}"
-        f"{table}"
-        f"{tech_block}"
-        f'<ul class="review-check-list" aria-hidden="true">{"".join(check_items)}</ul>'
-        f'<div class="actions">{"".join(actions)}</div>'
-        f"</div>"
+        f'<span class="repo-current">{label} '
+        f'<button type="button" class="link" id="config-all-open">{html.escape(name)}</button>'
+        "</span>"
     )
-
-
-def _review_claim_checks(
-    claim: dict, open_ids: list[str], repo: str, document: str
-) -> tuple[list[str], list[str], list[str], list[str]]:
-    path_rows: list[str] = []
-    check_items: list[str] = []
-    actions: list[str] = []
-    tech_parts: list[str] = []
-    claim_id = str(claim.get("id") or "")
-    status = str(claim.get("status") or "")
-    action_edit_added = False
-    for check in claim.get("checks") or []:
-        if not isinstance(check, dict):
-            continue
-        detail = str(check.get("detail") or "")
-        args = check.get("args") if isinstance(check.get("args"), dict) else {}
-        check_status = str(check.get("status") or "")
-        check_name = str(check.get("check") or "")
-        check_class = ' class="pill-bad"' if check_status == "fail" else ""
-        pill = _check_pill(check_name, check_status)
-        path_cell, path_bits = _review_path_cell(check, open_ids, repo, document)
-        path_mark = ' <span class="path-mark">✗</span>' if check_status == "fail" else ""
-        path_rows.append(f"<tr><td>{path_cell}{path_mark}</td><td>{pill}</td></tr>")
-        edit = str(check.get("edit") or "none")
-        edit_html = ""
-        if edit == "ok":
-            return_to = (
-                f"/review?repo={repo}&{document}"
-                f"&expanded={quote(','.join(open_ids), safe='')}"
-            )
-            edit_href = (
-                f"/claims?repo_id={repo}&return_to={quote(return_to, safe='')}"
-                f"#claim-{quote(claim_id, safe='')}"
-            )
-            edit_html = (
-                f'<a class="edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
-                f'href="{html.escape(edit_href)}">Edit</a>'
-            )
-            if not action_edit_added:
-                actions.append(
-                    f'<a class="btn primary edit-review" data-edit-check="{html.escape(str(check.get("index")))}" '
-                    f'href="{html.escape(edit_href)}">Edit <code>{html.escape(claim_id)}</code></a>'
-                )
-                action_edit_added = True
-        elif edit == "unsafe":
-            edit_html = (
-                '<span data-edit-unsafe="1">The current Check cannot be matched safely.</span>'
-            )
-            actions.append(edit_html)
-        tech_inner = (
-            f"<p>{html.escape(str(check.get('index')))}: {html.escape(check_name)} "
-            f"{html.escape(check_status)}"
-            f"{(' — ' + html.escape(detail)) if detail else ''}</p>"
-            f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code>"
-        )
-        tech_parts.append(tech_inner)
-        # Contract list keeps args/paths for scenario tests; not shown in the primary card.
-        check_items.append(
-            "<li "
-            f'data-check="{html.escape(check_name)}" '
-            f'data-status="{html.escape(check_status)}"{check_class}>'
-            f"{pill}"
-            f"{(' ' + ' '.join(path_bits)) if path_bits else ''}"
-            f"{(' ' + edit_html) if edit_html else ''}"
-            f'<details class="technical"><summary>Technical details</summary>{tech_inner}</details>'
-            f"</li>"
-        )
-    if status in {"fail", "skipped"} and claim_id:
-        actions.append(
-            f'<button type="button" class="btn discover-again" '
-            f'data-dialog="{html.escape(_dialog_id(claim_id))}">'
-            f"Re-Discover</button>"
-        )
-    return path_rows, check_items, actions, tech_parts
-
-
-def _review_path_cell(
-    check: dict, open_ids: list[str], repo: str, document: str
-) -> tuple[str, list[str]]:
-    path_bits: list[str] = []
-    visible: list[str] = []
-    for entry in check.get("paths") or []:
-        if not isinstance(entry, dict):
-            continue
-        rel = str(entry.get("path") or "")
-        state = str(entry.get("state") or "")
-        if state == "present":
-            file_href = (
-                f"/review?repo={repo}&{document}"
-                f"&expanded={quote(','.join(open_ids), safe='')}"
-                f"&file={quote(rel, safe='')}"
-            )
-            link = (
-                f'<a class="file-link" data-path="{html.escape(rel)}" data-path-state="present" '
-                f'href="{html.escape(file_href)}"><code>{html.escape(rel)}</code></a>'
-            )
-            path_bits.append(
-                f'<a data-path="{html.escape(rel)}" data-path-state="present" '
-                f'href="{html.escape(file_href)}">{html.escape(rel)}</a>'
-            )
-            visible.append(link)
-        else:
-            text = (
-                f'<span data-path="{html.escape(rel)}" '
-                f'data-path-state="{html.escape(state)}">'
-                f"<code>{html.escape(rel)}</code> ({html.escape(state)})</span>"
-            )
-            path_bits.append(
-                f'<span data-path="{html.escape(rel)}" '
-                f'data-path-state="{html.escape(state)}">{html.escape(rel)} ({html.escape(state)})</span>'
-            )
-            visible.append(text)
-    dep = check.get("dep_ban") if isinstance(check.get("dep_ban"), dict) else None
-    if dep is not None:
-        banned = ", ".join(html.escape(str(item)) for item in (dep.get("banned_versions") or []))
-        package = html.escape(str(dep.get("package") or ""))
-        dep_html = (
-            f'<span data-dep-ban="{package}">package {package} banned_versions {banned}</span>'
-        )
-        path_bits.append(dep_html)
-        visible.append(dep_html)
-    if not visible:
-        # Unknown checks: show a neutral placeholder; args stay in Technical details / li.
-        visible.append('<span class="muted">—</span>')
-    return " ".join(visible), path_bits
-
-
-def _check_pill(name: str, status: str) -> str:
-    kind = status if status in {"pass", "fail", "skipped"} else "fail"
-    return (
-        f'<span class="check {html.escape(kind)}">'
-        f"{html.escape(name)} · {html.escape(status)}</span>"
-    )
-
-
-def _review_check_counts(group: dict) -> dict[str, int]:
-    counts = {"pass": 0, "fail": 0, "skipped": 0}
-    for claim in group.get("claims") or []:
-        if not isinstance(claim, dict):
-            continue
-        for check in claim.get("checks") or []:
-            if not isinstance(check, dict):
-                continue
-            status = str(check.get("status") or "")
-            if status in counts:
-                counts[status] += 1
-    return counts
-
-
-def _review_attention_note(group: dict) -> str:
-    notes: list[str] = []
-    if str(group.get("seal_label") or "") == "Invalid seal":
-        notes.append("Invalid seal on this Requirement.")
-    for claim in group.get("claims") or []:
-        if not isinstance(claim, dict):
-            continue
-        for line in claim.get("sentences") or []:
-            text = str(line)
-            if text and text != "The Claim is unchanged since the Check run.":
-                notes.append(text)
-        if str(claim.get("seal_label") or "") == "Invalid seal":
-            notes.append(f"Invalid seal on claim {claim.get('id')}.")
-        for check in claim.get("checks") or []:
-            if not isinstance(check, dict):
-                continue
-            detail = str(check.get("detail") or "")
-            status = str(check.get("status") or "")
-            if status == "fail":
-                notes.append(detail or f"Check {check.get('check')} failed.")
-            elif status == "skipped":
-                notes.append(detail or f"Check {check.get('check')} was skipped.")
-            for path in check.get("paths") or []:
-                if isinstance(path, dict) and path.get("state") == "missing":
-                    notes.append(
-                        f"Path {path.get('path')} is missing; restore it or re-point the Check."
-                    )
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for note in notes:
-        if note in seen:
-            continue
-        seen.add(note)
-        ordered.append(note)
-    return " ".join(ordered[:3])
-
-
-def _seal_line(reading: dict) -> str:
-    who = reading.get("who") or "—"
-    when = reading.get("when") or "—"
-    verified = "yes" if reading.get("verifiable") else "no"
-    reason = str(reading.get("reason") or "")
-    reason_html = f" {html.escape(reason)}" if reason else ""
-    return (
-        f" {html.escape(str(reading.get('what') or ''))}"
-        f" who {html.escape(str(who))}"
-        f" when {html.escape(str(when))}"
-        f" verifiable {verified}"
-        f" version {html.escape(str(reading.get('version') or ''))}"
-        f"{reason_html}"
-    )
-
-
-def _review_file_dialog(door: dict) -> str:
-    view = door.get("file_view")
-    if not isinstance(view, dict):
-        return ""
-    rel = str(view.get("path") or "")
-    state = str(view.get("state") or "")
-    repo = quote(str(door.get("repo_id") or ""), safe="")
-    selected_result = quote(str(door.get("selected_result") or ""), safe="")
-    selected_report = quote(str(door.get("selected_report") or ""), safe="")
-    document = f"report={selected_report}" if selected_report else f"result={selected_result}"
-    groups = door.get("presentation", {}).get("groups") if isinstance(door.get("presentation"), dict) else []
-    open_ids = [
-        str(group.get("id") or "")
-        for group in (groups or [])
-        if isinstance(group, dict) and group.get("open")
-    ]
-    close_href = (
-        f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
-    )
-    if state != "present":
-        return (
-            f'<div class="card" data-file-dialog="{html.escape(rel)}" '
-            f'data-file-state="{html.escape(state)}">'
-            f"<p>Path {html.escape(rel)} is {html.escape(state)}.</p>"
-            f'<p><a href="{html.escape(close_href)}">Close file</a></p></div>'
-        )
-    return (
-        f'<div class="card" data-file-dialog="{html.escape(rel)}" data-file-state="present">'
-        f"<p>{html.escape(rel)}</p>"
-        f"<pre>{html.escape(str(view.get('text') or ''))}</pre>"
-        f'<p><a href="{html.escape(close_href)}">Close file</a></p></div>'
-    )
-
-
-def _review_lists(door: dict) -> str:
-    if not str(door.get("repo_id") or ""):
-        return ""
-    repo = quote(str(door.get("repo_id") or ""), safe="")
-
-    def rows(entries: list, kind: str, label: str, key: str) -> str:
-        parts = []
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            href = f"/review?repo={repo}&{key}={quote(str(entry.get('path') or ''), safe='')}"
-            parts.append(
-                f'<li data-kind="{kind}"><a href="{html.escape(href)}">'
-                f"{html.escape(label)} {html.escape(str(entry.get('name') or ''))}</a></li>"
-            )
-        return "".join(parts)
-
-    notice = str(door.get("results_notice") or "")
-    notice_html = f"<p>{html.escape(notice)}</p>" if notice else ""
-    return (
-        "<h2>Run results</h2>"
-        f'<ul data-list="run-results">{rows(door.get("run_results") or [], "run-result", "Run result", "result")}</ul>'
-        f"{notice_html}"
-        "<h2>Review reports</h2>"
-        f'<ul data-list="review-reports">{rows(door.get("review_reports") or [], "review-report", "Review report", "report")}</ul>'
-    )
-
-
-def _review_report_line(door: dict) -> str:
-    if not str(door.get("repo_id") or "") or not door.get("report_path"):
-        return ""
-    return f"<p>Review report <code>{html.escape(str(door.get('report_path') or ''))}</code></p>"
-
-
-def _review_path_chrome(door: dict) -> str:
-    if not str(door.get("repo_id") or ""):
-        return ""
-    parts = []
-    if door.get("curbpack_file"):
-        parts.append(f"<p>curbpack.json <code>{html.escape(str(door.get('curbpack_file') or ''))}</code></p>")
-    if door.get("directory"):
-        parts.append(
-            f'<p class="muted">Packs directory <code>{html.escape(str(door.get("directory") or ""))}</code>.</p>'
-        )
-    if door.get("claims_dir"):
-        parts.append(
-            f'<p class="muted">Claims directory <code>{html.escape(str(door.get("claims_dir") or ""))}</code>.</p>'
-        )
-    if door.get("results_dir"):
-        parts.append(
-            f'<p class="muted">Results directory <code>{html.escape(str(door.get("results_dir") or ""))}</code>.</p>'
-        )
-    if door.get("reports_dir"):
-        parts.append(
-            f'<p class="muted">Reports directory <code>{html.escape(str(door.get("reports_dir") or ""))}</code>.</p>'
-        )
-    if door.get("report_path"):
-        parts.append(f"<p>Review report <code>{html.escape(str(door.get('report_path') or ''))}</code></p>")
-    return "".join(parts)
-
-
-def studio_page(model: dict, message: str = "") -> bytes:
-    door = model.get("door") or {}
-    repo_id = str(door.get("repo_id") or "")
-    current = _current_project_label(door)
-    chrome = _review_path_chrome(door)
-    if not repo_id:
-        body = f"""
-<h1>Studio config</h1>
-{current}
-<p>No repository is chosen.</p>
-"""
-        return page("Studio config", body)
-    values = model.get("values") or {}
-    present = bool(model.get("present"))
-    offer = (
-        "<p>No curbpack-studio.json. Save writes one with the fields below.</p>"
-        if not present
-        else f"<p>curbpack-studio.json <code>{html.escape(str(model.get('path') or ''))}</code></p>"
-    )
-    paths = ""
-    if present:
-        paths = (
-            f'<p class="muted">temp_dir <code>{html.escape(str(values.get("path_temp_dir") or ""))}</code></p>'
-            f'<p class="muted">extract_work_dir <code>{html.escape(str(values.get("path_extract_work_dir") or ""))}</code></p>'
-            f'<p class="muted">keys_file <code>{html.escape(str(values.get("path_keys_file") or "null"))}</code></p>'
-        )
-    body = f"""
-<h1>Studio config</h1>
-<p class="muted">Operator settings for this product repository. Absent file keeps today's bind/model/temp wiring.</p>
-{current}
-{chrome}
-{offer}
-{paths}
-{_flash(message, "")}
-<form method="post" action="/studio">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<input type="hidden" name="action" value="save">
-<label>bind.host <input type="text" name="bind_host" value="{html.escape(str(values.get("bind_host") or ""))}" required autocomplete="off"></label>
-<label>bind.port <input type="text" name="bind_port" value="{html.escape(str(values.get("bind_port") or ""))}" required autocomplete="off"></label>
-<label>model.endpoint <input type="text" name="model_endpoint" value="{html.escape(str(values.get("model_endpoint") or ""))}" required autocomplete="off"></label>
-<label>model.api_key <input type="text" name="model_api_key" value="{html.escape(str(values.get("model_api_key") or ""))}" required autocomplete="off"></label>
-<label>model.name <input type="text" name="model_name" value="{html.escape(str(values.get("model_name") or ""))}" required autocomplete="off"></label>
-<label>model.temperature <input type="text" name="model_temperature" value="{html.escape(str(values.get("model_temperature") or ""))}" required autocomplete="off"></label>
-<label>prompts.interpret <input type="text" name="prompt_interpret" value="{html.escape(str(values.get("prompt_interpret") or ""))}" autocomplete="off"></label>
-<label>prompts.discovery_hints <input type="text" name="prompt_discovery_hints" value="{html.escape(str(values.get("prompt_discovery_hints") or ""))}" autocomplete="off"></label>
-<label>paths.temp_dir <input type="text" name="path_temp_dir" value="{html.escape(str(values.get("path_temp_dir") or ""))}" required autocomplete="off"></label>
-<label>paths.extract_work_dir <input type="text" name="path_extract_work_dir" value="{html.escape(str(values.get("path_extract_work_dir") or ""))}" required autocomplete="off"></label>
-<label>paths.keys_file <input type="text" name="path_keys_file" value="{html.escape(str(values.get("path_keys_file") or ""))}" autocomplete="off"></label>
-<p class="actions">
-<button type="submit" form="studio-cancel" class="secondary">Cancel</button>
-<button type="submit">Save</button>
-</p>
-</form>
-<form method="post" action="/studio" id="studio-cancel">
-<input type="hidden" name="repo_id" value="{html.escape(repo_id)}">
-<input type="hidden" name="action" value="cancel">
-</form>
-"""
-    return page("Studio config", body)
-
-
-def _claims_href(discovery: dict) -> str:
-    parts = []
-    for key in ("repo_id", "source_id", "timestamp"):
-        value = str(discovery.get(key) or "")
-        if value:
-            parts.append(f"{key}={quote(value)}")
-    if not parts:
-        return "/claims"
-    return "/claims?" + "&".join(parts)
-
-
-def _review_claim_row(row: dict, claim: dict, claims_href: str) -> str:
-    claim_id = str(row.get("id") or "")
-    status = str(row.get("status") or "")
-    checks = _review_checks(row)
-    if status not in {"fail", "skipped"} or not claim:
-        return (
-            f'<li data-claim="{html.escape(claim_id)}" data-status="{html.escape(status)}">'
-            f"<code>{html.escape(claim_id)}</code> {html.escape(status)} "
-            f"<ul>{checks}</ul>"
-            f'<p><a href="{html.escape(claims_href)}">Open the Claim</a></p></li>'
-        )
-    requirement_id = str(claim.get("requirement_id") or "")
-    args = claim.get("args") if isinstance(claim.get("args"), dict) else {}
-    source_path = str(args.get("path") or "")
-    button = ""
-    if requirement_id:
-        button = (
-            f'<button type="button" class="discover-again" data-dialog="{html.escape(_dialog_id(claim_id))}">'
-            "Re-Discover</button>"
-        )
-    return (
-        f'<li class="review-failed" data-claim="{html.escape(claim_id)}" '
-        f'data-status="{html.escape(status)}" data-requirement="{html.escape(requirement_id)}">'
-        f"<code>{html.escape(claim_id)}</code> {html.escape(status)}"
-        f"<p>Requirement <code>{html.escape(requirement_id)}</code></p>"
-        f"<p>Source path <code>{html.escape(source_path)}</code></p>"
-        f"<p class=\"muted\">Source args <code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></p>"
-        f"<ul>{checks}</ul>"
-        f"{button}"
-        f'<p><a href="{html.escape(claims_href)}">Open the Claim</a></p></li>'
-    )
-
-
-def _review_checks(row: dict) -> str:
-    parts = []
-    for item in row.get("checks") or []:
-        if not isinstance(item, dict):
-            continue
-        detail = str(item.get("detail") or "")
-        detail_html = f" — {html.escape(detail)}" if detail else ""
-        args = item.get("args") if isinstance(item.get("args"), dict) else {}
-        parts.append(
-            "<li "
-            f'data-check="{html.escape(str(item.get("check") or ""))}" '
-            f'data-status="{html.escape(str(item.get("status") or ""))}">'
-            f"{html.escape(str(item.get('index')))}: {html.escape(check_caption(item))} "
-            f"{html.escape(str(item.get('status') or ''))}{detail_html} "
-            f"<code>{html.escape(json.dumps(args, ensure_ascii=False))}</code></li>"
-        )
-    return "".join(parts)
-
-
-def _review_discover_dialog(row: dict, claim: dict, discovery: dict, *, return_to: str = "") -> str:
-    if str(row.get("status") or "") not in {"fail", "skipped"}:
-        return ""
-    requirement_id = str(claim.get("requirement_id") or "")
-    if not requirement_id:
-        return ""
-    claim_id = str(row.get("id") or "")
-    repo_id = str(discovery.get("repo_id") or "")
-    source_id = str(discovery.get("source_id") or "")
-    timestamp = str(discovery.get("timestamp") or "")
-    if repo_id and source_id and timestamp:
-        src = (
-            f"/discover/claims/{quote(requirement_id)}"
-            f"?repo={quote(repo_id)}&source={quote(source_id)}&timestamp={quote(timestamp)}&from=review"
-        )
-        if return_to:
-            src += f"&return_to={quote(return_to, safe='')}"
-        frame = (
-            f'<iframe title="Discovery for {html.escape(requirement_id)}" src="{html.escape(src)}"></iframe>'
-        )
-    else:
-        frame = (
-            "<p class=\"muted\">Choose the repository, source, and working copy on Discover "
-            "before this popup can open that Requirement.</p>"
-        )
-    return f"""
-<dialog id="{html.escape(_dialog_id(claim_id))}" class="review-discover" data-requirement="{html.escape(requirement_id)}">
-  <div class="head">
-    <h2>Re-Discover — <code>{html.escape(requirement_id)}</code></h2>
-    <button type="button" class="secondary" data-close>Close</button>
-  </div>
-  <div class="body">
-    <p>Find equivalent evidence for this Requirement and configure suitable Checks. Closing this leaves the failed Claim and its Checks unchanged.</p>
-    {frame}
-  </div>
-</dialog>
-"""
-
-
-def _review_discover_script(enabled: bool) -> str:
-    if not enabled:
-        return ""
-    return """
-<script>
-document.querySelectorAll("button.discover-again").forEach((button) => {
-  button.addEventListener("click", () => {
-    const dialog = document.getElementById(button.dataset.dialog);
-    if (dialog && dialog.showModal) dialog.showModal();
-  });
-});
-document.querySelectorAll("dialog.review-discover [data-close]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const dialog = button.closest("dialog");
-    if (dialog) dialog.close();
-  });
-});
-</script>
-"""
-
-
-def _review_return_url(door: dict) -> str:
-    repo = quote(str(door.get("repo_id") or ""), safe="")
-    selected_result = quote(str(door.get("selected_result") or ""), safe="")
-    selected_report = quote(str(door.get("selected_report") or ""), safe="")
-    if not repo or (not selected_result and not selected_report):
-        return ""
-    document = f"report={selected_report}" if selected_report else f"result={selected_result}"
-    groups = door.get("presentation", {}).get("groups") if isinstance(door.get("presentation"), dict) else []
-    open_ids = [
-        str(group.get("id") or "")
-        for group in (groups or [])
-        if isinstance(group, dict) and group.get("open")
-    ]
-    return f"/review?repo={repo}&{document}&expanded={quote(','.join(open_ids), safe='')}"
-
-
-def _dialog_id(claim_id: str) -> str:
-    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", claim_id).strip("-") or "claim"
-    return f"review-discover-{slug}"

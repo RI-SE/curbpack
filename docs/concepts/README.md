@@ -13,13 +13,15 @@ Claims in the product repository
       +
 the product working tree
       ↓
-Run curbcheck
+Check writes one result: pass / fail / skipped
       ↓
-one run result: pass / fail / skipped
+Review records a decision per deviation
       ↓
-compiled review report
+Sign locks that review
       ↓
-human decision and review-sign
+Remediation, then Sign Off
+      ↓
+the next Check can take the remediation report in
 ```
 
 The selected Requirements say **what the provision requires**, including `discovery_hints`.
@@ -30,9 +32,9 @@ A Claim says **which evidence a person associates with one Requirement**, and `c
 
 The run result records **what those questions observed**.
 
-Review records **what a person decided** about that run. Compile does not run Checks. Signing the report does not sign the Requirement or the Claim.
+Review records **what a person decided** about that run. Sign locks those decisions. Remediation is the later work on the same Check, and Sign Off seals that account without changing the signed decisions. Neither seal signs the Requirement or the Claim.
 
-The activities can be repeated independently. A product change is a new Check run. A new sealed Requirement can be followed by a new Discovery. Neither of those restarts Extract. The cover links each area and does not order them.
+The activities can be repeated independently. A product change is a new Check run. A new sealed Requirement can be followed by a new Discovery. Neither of those restarts Extract. **Start** shows the workflow and links Pack Editor, Discovery & Claims, and Verification Workflow. Opening one does not require the others.
 
 ## Main concepts
 
@@ -88,7 +90,7 @@ Material created by Extract or Discovery does not become evidence of human work 
 
 A run result belongs to the Pack ids, each Pack's `version`, the pack-directory digest, the Claim digests, the Check arguments, and the Git `commit` and `worktree` when Git has a HEAD.
 
-The same inputs should produce the same observation. A dirty worktree can still pass. The Check page then states that the result is not verification of that commit's content. A later run writes a new run-result file and does not rewrite an earlier review report. A later compile writes a new `review-report_<UTC>.json` and leaves the earlier report in place. When both a saved report and a run result are loaded, the review page says `same run: yes` or `same run: no. This saved report is an older run.`
+The same inputs should produce the same observation. A dirty worktree can still pass. Technical details on the review state that the result is not verification of that commit's content. A later Check writes a new run directory and does not rewrite an earlier review. Sign writes `review-report_<UTC>.json` in that Check's directory and leaves any earlier report in place. When a saved report and a run are both open, Technical details say `same run: yes` or `same run: no. This saved report is an older run.`
 
 ### Evaluation stays local
 
@@ -98,6 +100,7 @@ The pilot is a local single-user application on `127.0.0.1:8770`. Discovery and 
 
 * [Packs](packs.md)
 * [Evidence](evidence.md)
+* [Från första Check till avslutad granskning](check-to-closed-review.md) — Review och Remediation som Studio gör dem
 * [Packs v2](../reference/packs2.md) — Pack, Requirement, Claim, Check, signing, and run-result fields
 * [Workspace](../reference/workspace.md) — `curbpack.json` keys, created-file values, and on-disk paths
 * [Architecture: data and responsibility](../arch/ARCHITECTURE.md)

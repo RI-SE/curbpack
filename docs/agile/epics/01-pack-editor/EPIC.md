@@ -37,6 +37,13 @@ Preserve existing functioning user flows. Document and verify what the imported 
 | CHK-08 | Studio Check and Review call the post–CHK-07 curbcheck API (after CHK-07) |
 | REV-01 | Compile a report from a specific Check run |
 | REV-02 | Review and sign a report without confusing different runs |
+| [REV-04](stories/REV-04-compile-pdf.md) | Readable monochrome review PDF. DONE. |
+| [REV-05](stories/REV-05-management-review-pdf.md) | Management summary with technical appendices. DONE. |
+| [REV-06](stories/REV-06-item-provenance-and-reuse.md) | One review item per Check, with provenance and reuse. DONE. |
+| [REV-07](stories/REV-07-one-workspace-per-check.md) | One `review_items.json` per Check, continue or start over. DONE. |
+| [REV-08](stories/REV-08-sign-the-review-items.md) | Sign the review and the items. DONE. |
+| [REV-09](stories/REV-09-remediation.md) | Remediation through Sign Off. DONE. |
+| [REV-10](stories/REV-10-the-next-review.md) | The next review takes in the remedy. DONE. |
 | DOC-04 | One authoritative Packs v2 model and matching JSON Schemas |
 | SYS-01 | Complete and verify the full pilot workflow |
 | SYS-02 | Keep every pipeline case in the one functional suite. Not a release blocker. |
@@ -57,6 +64,6 @@ Story details: [`stories/`](stories/). PE-11 is Export. SYS-03 is the door those
 
 ## Specification status
 
-Pack Editor has draft derived requirements in [`docs/req/pack-editor.md`](../../../req/pack-editor.md). CHK-06 has approved rows CHK-R14–CHK-R17 in [`docs/req/checks.md`](../../../req/checks.md). The other CHK, REV and SYS stories **do not yet have formal derived requirements or approved acceptance tests**. Their next step is to compare these stories with the fresh pilot, identify real gaps and specify/test only those gaps before implementing changes.
+Pack Editor has draft derived requirements in [`docs/req/pack-editor.md`](../../../req/pack-editor.md). CHK-06 has approved rows CHK-R14–CHK-R17 in [`docs/req/checks.md`](../../../req/checks.md). REV-04 through REV-10 define acceptance in the story and are closed against the behavior already in the code. They do not add derived requirements in `docs/req/`. REV-01, REV-02, and REV-03, and the other CHK and SYS stories, do not yet have that closure. `tests/Review_ACCEPTANCE_SCENARIOS.md` uses the headings REV-06 through REV-10 for an older Discover flow. Those headings are not these stories.
 
 Open product decisions and provenance rules: [`docs/agile/DECISIONS.md`](../../DECISIONS.md). Packs v2 in the Curbpack repository remains the authoritative persisted data contract. [DOC-04](stories/DOC-04-single-persistent-model.md) proposes one Studio model contract for that data. It is draft and is not authorization to implement.

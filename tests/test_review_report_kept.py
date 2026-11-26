@@ -90,11 +90,13 @@ class CompileReplacesOnlyAfterConfirmationTest(unittest.TestCase):
                         "result": str(
                             (results_dir(ws.repo, config) / "run-result_20261021T120000Z.json").resolve()
                         ),
+                        "decision": "I read the first run. I am not saying the product meets CRA.",
+                        "name": "Ada Reviewer",
                     },
                 )
-                _post(base + "/review", {"decision": "I read the first run. I am not saying the product meets CRA."})
-                _post(base + "/review/sign", {"name": "Ada Reviewer"})
-                first = sorted(reports.glob("review-report_*.json"))[0]
+                first = sorted(
+                    path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+                )[0]
                 signed = first.read_bytes()
                 (ws.repo / "docs" / "notes.md").write_text("uncommitted\n", encoding="utf-8")
                 _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
@@ -106,20 +108,21 @@ class CompileReplacesOnlyAfterConfirmationTest(unittest.TestCase):
                 self.assertIn("older run", review)
                 self.assertIn("I read the first run", review)
                 self.assertIn("verifiable yes", review.lower())
-                later_run = sorted(results_dir(ws.repo, config).glob("run-result_*.json"))[-1]
+                later_run = next(results_dir(ws.repo, config).glob("run-result_*/run-result.json"))
                 replaced = _post(
                     base + "/review/compile",
                     {"repo_id": "sample-product", "result": str(later_run.resolve())},
                 )
-                later = sorted(reports.glob("review-report_*.json"))
-                self.assertEqual(len(later), 2)
-                self.assertEqual(later[0].read_bytes(), signed)
+                later = sorted(
+                    path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+                )
+                self.assertEqual(later, [first])
+                self.assertEqual(first.read_bytes(), signed)
+                self.assertFalse((later_run.parent / "review-report.json").exists())
+                self.assertFalse(any(later_run.parent.glob("review-report_*.json")))
+                self.assertTrue((later_run.parent / "review_items.json").is_file())
                 self.assertNotIn("I read the first run", replaced)
-                self.assertIn('data-same-run="yes"', replaced)
-                self.assertIn("unsigned", replaced.lower())
-                loaded = read_json(later[-1])
-                self.assertNotIn("decision", loaded)
-                self.assertNotIn("signed", loaded)
+                self.assertNotIn("signed", read_json(later_run.parent / "review_items.json"))
                 self.assertEqual(_git(ws.repo, "rev-parse", "HEAD"), head)
             finally:
                 httpd.shutdown()

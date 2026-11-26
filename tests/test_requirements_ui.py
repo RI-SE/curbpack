@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
 import tempfile
@@ -46,7 +47,12 @@ def _proposals() -> list[dict]:
 
 
 def _xml_pack() -> dict:
-    return {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"}
+    return {
+        "id": "cra-xml-baseline",
+        "name": "CRA XML",
+        "version": "0.1.0",
+        "namespace": "RISE/CRA XML",
+    }
 
 
 class RequirementsUiTest(unittest.TestCase):
@@ -98,6 +104,7 @@ class RequirementsUiTest(unittest.TestCase):
                     "id": "house-policy",
                     "name": "House Policy",
                     "version": draft_pack()["version"],
+                    "namespace": "RISE/House Policy",
                     "source": {
                         "instrument": "Content of the technical documentation",
                         "url": "https://publications.europa.eu/resource/celex/32024R2847",
@@ -114,9 +121,21 @@ class RequirementsUiTest(unittest.TestCase):
                 catalog = _get(base + "/requirements")
                 self.assertIn("Pack Sources", catalog)
                 self.assertIn("id=\"add-open\"", catalog)
+                self.assertIn("<h2>Add Pack Source</h2>", catalog)
+                self.assertNotIn("Edit on the pack row can change the adapter later.", catalog)
+                self.assertIn('id="add-namespace">RISE/</span>', catalog)
+                self.assertIn("Official Document Name", catalog)
+                self.assertNotIn(">Document name<", catalog)
+                self.assertIn('id="add-url-open"', catalog)
+                self.assertIn('id="edit-url-open"', catalog)
+                self.assertIn('id="edit-namespace">RISE/</span>', catalog)
+                self.assertIn('"namespace": "RISE/House Policy"', catalog)
+                self.assertIn("<th>Pack Name</th>", catalog)
+                self.assertNotIn("<th>Document name</th>", catalog)
+                self.assertNotIn("<th>Namespace</th>", catalog)
                 self.assertIn("Official name", catalog)
                 self.assertIn("Content of the technical documentation", catalog)
-                self.assertIn("House Policy", catalog)
+                self.assertIn("<code>RISE/House Policy</code>", catalog)
                 sections = _get(base + "/requirements?document=cra-annex-vii")
                 self.assertIn("Pack Editor", sections)
                 self.assertIn("2026-10-13T090000Z", sections)
@@ -258,7 +277,7 @@ class RequirementsUiTest(unittest.TestCase):
                     _post(base + "/requirements/publish", {"version": "0.1.0"})
                 self.assertEqual(_bytes(created["copy"]), copy_after_publish)
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _fake_model_complete,
                 ):
                     page = _post(
@@ -300,7 +319,7 @@ class RequirementsUiTest(unittest.TestCase):
                 self.assertEqual(stages, {"interpret", "discovery_hints"})
                 release_before = _bytes(release)
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _failing_complete,
                 ):
                     failed_page = _post(
@@ -424,6 +443,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "fresh-nis",
                     "name": "Fresh NIS",
                     "version": "0.1.0",
+                    "namespace": "RISE/Fresh NIS",
                     "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
                 },
             )
@@ -433,12 +453,15 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "kept-nis",
                     "name": "Kept NIS",
                     "version": "0.1.0",
+                    "namespace": "RISE/Kept NIS",
                     "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
                 },
             )
             requirement = {
                 "id": "NIS-ART1",
                 "pack_id": "kept-nis",
+                "namespace": "RISE/Kept NIS",
+                "status": "draft",
                 "source": {
                     "framework": "EU",
                     "instrument": "NIS2",
@@ -457,6 +480,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "house-policy",
                     "name": "House Policy Example",
                     "version": "0.1.0",
+                    "namespace": "RISE/House Policy Example",
                 },
             )
             write_json(
@@ -464,6 +488,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                 {
                     "id": "HOUSE-SECURITY-MD",
                     "pack_id": "house-policy",
+                    "namespace": "RISE/House Policy Example",
                     "source": {
                         "framework": "internal",
                         "instrument": "House Policy Example",
@@ -494,7 +519,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     base + "/requirements?document=fresh-nis&repo=fixture-product"
                 )
                 self.assertIn('id="add-open"', fresh_page)
-                self.assertIn("No sections yet. Click Add.", fresh_page)
+                self.assertIn("No sections yet. Click Add Section.", fresh_page)
                 self.assertNotIn(">Extract</button>", fresh_page)
                 added = _post(
                     base + "/requirements/catalog",
@@ -522,7 +547,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                 )
                 self.assertIn("<code>manual</code>", house_page)
                 self.assertIn("Security docs", house_page)
-                self.assertNotIn("No sections yet. Click Add.", house_page)
+                self.assertNotIn("No sections yet. Click Add Section.", house_page)
                 self.assertNotIn("HOUSE-SECURITY-MD", house_page)
                 self.assertIn('disabled>Extract</button>', house_page)
                 self.assertIn('name="section" value="Security docs"', house_page)
@@ -550,6 +575,80 @@ class RepoPackSectionsTest(unittest.TestCase):
                 httpd.shutdown()
                 httpd.server_close()
 
+    def test_copy_section_keeps_only_the_named_article(self):
+        """A section query lists that article and leaves the other article out."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "product"
+            version = draft_pack()["version"]
+            kept = repo / "curbpack" / "packs" / "kept-nis" / version
+            kept.mkdir(parents=True)
+            write_json(
+                repo / "curbpack.json",
+                created_curbpack(packs=["kept-nis"]),
+            )
+            write_json(
+                kept / "pack.json",
+                {
+                    "id": "kept-nis",
+                    "name": "Kept NIS",
+                    "version": "0.1.0",
+                    "namespace": "RISE/Kept NIS",
+                    "source": {"framework": "EU", "instrument": "NIS2", "url": _NIS_URL},
+                },
+            )
+            for article, text in (
+                ("Art.1", "This Directive lays down measures."),
+                ("Art.2", "This Directive applies to public and private entities."),
+            ):
+                requirement_id = "NIS-" + article.replace(".", "").upper()
+                write_json(
+                    kept / f"{requirement_id}.json",
+                    {
+                        "id": requirement_id,
+                        "pack_id": "kept-nis",
+                        "namespace": "RISE/Kept NIS",
+                        "source": {
+                            "framework": "EU",
+                            "instrument": "NIS2",
+                            "identifier": "CELEX:32022L2555",
+                            "language": "en",
+                            "url": _NIS_URL,
+                        },
+                        "references": [{"nr": 1, "locator": article, "law_text": text}],
+                    },
+                )
+            save_repos(
+                root,
+                add_repo(root, load_repos(root), name="Fixture product", path=str(repo)),
+            )
+            set_open_repo(root, "fixture-product")
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                both = _get(base + "/requirements/copy?repo=fixture-product&pack=kept-nis")
+                self.assertIn("NIS-ART1", both)
+                self.assertIn("NIS-ART2", both)
+                article_one = _get(
+                    base + "/requirements/copy?repo=fixture-product&pack=kept-nis&section=Art.1"
+                )
+                self.assertIn("NIS-ART1", article_one)
+                self.assertNotIn("NIS-ART2", article_one)
+                self.assertIn(
+                    'href="/requirements/requirement/NIS-ART1?repo=fixture-product&amp;pack=kept-nis&amp;section=Art.1"',
+                    article_one,
+                )
+                article_two = _get(
+                    base + "/requirements/copy?repo=fixture-product&pack=kept-nis&section=Art.2"
+                )
+                self.assertIn("NIS-ART2", article_two)
+                self.assertNotIn("NIS-ART1", article_two)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
     def test_pack_row_shows_url_or_manual_content_and_edit_saves_pack_info(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -567,7 +666,7 @@ class RepoPackSectionsTest(unittest.TestCase):
             )
             write_json(
                 house / "pack.json",
-                {"id": "house-policy", "name": "House Policy Example", "version": "0.1.0"},
+                {"id": "house-policy", "name": "House Policy Example", "version": "0.1.0", "namespace": "RISE/House Policy Example"},
             )
             write_json(
                 cra / "pack.json",
@@ -575,6 +674,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "cra-baseline",
                     "name": "CRA Annex VII",
                     "version": "0.1.0",
+                    "namespace": "RISE/CRA Annex VII",
                     "source": {"framework": "EU", "instrument": "CRA", "url": cra_url},
                 },
             )
@@ -593,14 +693,18 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertIn('readonly', page)
                 self.assertNotIn("Edit configuration", page)
                 self.assertNotIn(">Change</a>", page)
-                self.assertIn("Current Configuration", page)
-                self.assertNotIn("Current Pack Dir", page)
-                self.assertNotIn("Claims directory", page)
+                self.assertIn('id="config-all-open"', page)
+                self.assertNotIn("Show Configuration", page)
+                compact, _, dialog = page.partition('<dialog id="config-all"')
+                self.assertNotIn("Current Configuration", compact)
+                self.assertNotIn("Claims directory", compact)
+                self.assertIn("Current Configuration", dialog)
+                self.assertIn("Claims directory", dialog)
                 self.assertNotIn("Baselines", page)
                 self.assertIn("Manual Content", page)
                 self.assertIn(cra_url, page)
-                self.assertIn(">Edit</button>", page)
-                self.assertIn(">Sections</button>", page)
+                self.assertIn(">Edit Pack Source</button>", page)
+                self.assertIn(">Edit Sections</button>", page)
                 self.assertIn('id="edit-pack-confirm"', page)
                 self.assertIn("Update the pack info?", page)
                 updated = _post(
@@ -641,6 +745,7 @@ class RepoPackSectionsTest(unittest.TestCase):
                     "id": "cra",
                     "name": "CRA",
                     "version": version,
+                    "namespace": "RISE/CRA",
                     "source": {"instrument": "CRA", "url": xml_url},
                 },
             )
@@ -652,7 +757,7 @@ class RepoPackSectionsTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 with patch(
-                    "requirements.extract.produce._default_complete",
+                    "studio.pack.impl.extract.produce._default_complete",
                     _fake_model_complete,
                 ):
                     page = _post(
@@ -668,36 +773,55 @@ class RepoPackSectionsTest(unittest.TestCase):
                 self.assertEqual(job["status"], "done", job)
                 self.assertEqual(job.get("dest_pack"), "cra")
                 self.assertEqual(job.get("dest_repo"), "fixture-product")
-                self.assertTrue(job.get("copy_timestamp"))
+                self.assertTrue(job.get("section_extract"))
+                self.assertEqual(job.get("section_id"), "VII")
+                self.assertTrue(job.get("extracted_at"))
+                self.assertFalse(job.get("copy_timestamp"))
+                self.assertFalse((root / "selection.json").is_file())
+                slot = repo / ".curbpack" / "extract" / "cra" / "VII"
+                self.assertTrue((slot / "pack.json").is_file())
+                self.assertEqual(
+                    (slot / "extracted-at.txt").read_text(encoding="utf-8").strip(),
+                    job["extracted_at"],
+                )
                 self.assertEqual([path.name for path in pack.glob("*.json")], ["pack.json"])
-                review = _get(
-                    base
-                    + "/requirements/extract/review?proposal="
-                    + urllib.parse.quote(job["copy_timestamp"])
-                    + "&pack=cra&repo=fixture-product"
+                listing = _get(
+                    base + "/requirements/copy?pack=cra&repo=fixture-product&section=VII"
                 )
-                self.assertIn("Only in this extraction", review)
-                adds = re.findall(r'name="add" value="([^"]*)"', review)
-                pairs = re.findall(r'name="pair" value="([^"]*)"', review)
-                self.assertTrue(adds)
-                accepted = _post_form(
-                    base + "/requirements/extract/review",
-                    {
-                        "proposal": job["copy_timestamp"],
-                        "destination": "cra",
-                        "pack": "cra",
-                        "repo": "fixture-product",
-                        "pair": pairs,
-                        "add": adds,
-                    },
-                    doseq=True,
-                )
+                self.assertIn("<th>Changes</th>", listing)
+                self.assertIn(">New</a>", listing)
+                self.assertIn("Drop Extracted Data", listing)
+                hrefs = re.findall(r'href="(/requirements/compare/form\?[^"]+)"', listing)
+                self.assertTrue(hrefs)
+                accepted = ""
+                for href in hrefs:
+                    query = urllib.parse.parse_qs(urllib.parse.urlparse(html.unescape(href)).query)
+                    self.assertEqual(query["section"][0], "VII")
+                    self.assertNotIn("proposal", query)
+                    accepted = _post_form(
+                        base + "/requirements/compare/form/apply",
+                        {
+                            "requirement": query["requirement"][0],
+                            "pack": query["pack"][0],
+                            "repo": query["repo"][0],
+                            "section": query["section"][0],
+                            "choice": '{"requirement": "new"}',
+                        },
+                        doseq=False,
+                    )
                 written = [path for path in pack.glob("*.json") if path.name != "pack.json"]
                 self.assertTrue(written)
                 saved = json.loads(written[0].read_text(encoding="utf-8"))
                 self.assertEqual(saved["pack_id"], "cra")
-                self.assertIn('action="/requirements/copy"', accepted)
-                self.assertNotIn("disabled>Edit</button>", accepted)
+                self.assertIn(">Sign</button>", accepted)
+                self.assertFalse((root / "selection.json").is_file())
+                dropped = _post(
+                    base + "/requirements/extract/drop",
+                    {"repo": "fixture-product", "pack": "cra", "section": "VII"},
+                )
+                self.assertFalse(slot.exists())
+                self.assertNotIn("Drop Extracted Data", dropped)
+                self.assertTrue(written[0].is_file())
             finally:
                 httpd.shutdown()
                 httpd.server_close()

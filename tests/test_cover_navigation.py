@@ -16,7 +16,7 @@ from common.store import save_pack
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
-from requirements.ui.pages import job_fragment
+from studio.pack.pages import job_fragment
 from requirements.workspace import create_extraction_copy, mark_selected
 
 
@@ -31,7 +31,7 @@ class CoverNavigationTest(unittest.TestCase):
             try:
                 project = _get(base + "/")
                 self.assertIn("Curbpack Studio", project)
-                self.assertIn("Change Project", project)
+                self.assertIn("Change-Project", project)
                 self.assertIn("Registered projects", project)
                 self.assertIn('href="/project"', project)
                 self.assertNotIn("Developer", project)
@@ -89,6 +89,7 @@ class CoverNavigationTest(unittest.TestCase):
                     "id": "house",
                     "name": "House Rules",
                     "version": draft_pack()["version"],
+                    "namespace": "RISE/House Rules",
                     "source": {"instrument": "House", "url": "https://example.test/house"},
                 },
             )
@@ -100,13 +101,25 @@ class CoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
-                self.assertIn("Pack Editor", cover)
-                self.assertIn('href="/requirements">Pack Editor</a>', cover)
-                for href in ("/discover", "/check", "/review"):
+                self.assertLess(
+                    cover.index('href="/home">Start</a>'),
+                    cover.index('href="/project">Change-Project</a>'),
+                )
+                self.assertIn("Pack-Editor", cover)
+                self.assertIn('href="/requirements">Pack-Editor</a>', cover)
+                self.assertIn('href="/discover">Discovery &amp; Claims</a>', cover)
+                self.assertIn('href="/check">Verification-Workflow</a>', cover)
+                self.assertNotIn(">Discover</a>", cover)
+                self.assertNotIn(">Home</a>", cover)
+                for href in ("/discover", "/check"):
                     self.assertIn(f'href="{href}"', cover)
+                self.assertNotIn('href="/review"', cover)
                 listed = _get(base + "/requirements")
                 self.assertIn("<h1>Pack Sources</h1>", listed)
-                self.assertIn("House Rules", listed)
+                self.assertIn("<th>Pack Name</th>", listed)
+                self.assertNotIn("<th>Document name</th>", listed)
+                self.assertNotIn("<th>Namespace</th>", listed)
+                self.assertIn("<code>RISE/House Rules</code>", listed)
                 self.assertEqual(catalog_path.read_bytes(), before)
                 self.assertFalse((root / "selection.json").exists())
                 self.assertEqual(
@@ -130,7 +143,12 @@ class CoverNavigationTest(unittest.TestCase):
             copy = create_extraction_copy(
                 root,
                 "cra-xml-baseline",
-                {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"},
+                {
+                    "id": "cra-xml-baseline",
+                    "name": "CRA XML",
+                    "version": "0.1.0",
+                    "namespace": "RISE/cra-xml extract",
+                },
                 at="2026-10-27T065647Z",
             )
             mark_selected(root, "cra-xml-baseline", copy.name)

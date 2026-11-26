@@ -1,5 +1,4 @@
 {
-  "assurance_class": "structural_draft",
   "description": "Agent-produced unsigned reference for Directive (EU) 2022/2555 Article 21 only. Not legally certified and not independently human-reviewed. Not a published Pack and not an extraction-agent result. Requirement ids are reference labels, not a product naming convention.",
   "id": "nis2-article-21-agent-reference",
   "jurisdiction": "EU",
@@ -9,5 +8,7 @@
     "instrument": "NIS2",
     "url": "https://publications.europa.eu/resource/celex/32022L2555"
   },
-  "version": "0.0.0-reference"
+  "version": "0.0.0-reference",
+  "namespace": "RISE/NIS2 Article 21 agent reference",
+  "status": "draft"
 }

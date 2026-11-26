@@ -38,7 +38,7 @@ class ReplaceThenReviewTest(unittest.TestCase):
             claims_dir = product / "curbpack" / "claims"
             old = build_claim(
                 claim_id="claim-old",
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/risk-a.md"},
                 checks=[
@@ -92,28 +92,33 @@ class ReplaceThenReviewTest(unittest.TestCase):
                     results_dir(
                         product,
                         validate_curbpack_config(read_json(product / "curbpack.json")),
-                    ).glob("run-result_*.json")
+                    ).glob("run-result_*/run-result.json")
                 )
-                _post(
+                sealed = _post(
                     base + "/review/compile",
-                    {"repo_id": "sample-product", "result": str(run.resolve())},
+                    {
+                        "repo_id": "sample-product",
+                        "result": str(run.resolve()),
+                        "name": "Ada Reviewer",
+                        "decision": "I read the replacement run. I am not saying the product meets CRA.",
+                    },
                 )
-                decided = _post(
-                    base + "/review",
-                    {"decision": "I read the replacement run. I am not saying the product meets CRA."},
-                )
-                self.assertIn("I read the replacement run", decided)
-                sealed = _post(base + "/review/sign", {"name": "Ada Reviewer"})
-                self.assertIn("verifiable yes", sealed.lower())
+                self.assertIn("<h1>Check</h1>", sealed)
             finally:
                 httpd.shutdown()
                 httpd.server_close()
             claim = read_claim(replacement)
             self.assertEqual(claim["signed"]["name"], "Ada Reviewer")
             config = validate_curbpack_config(read_json(product / "curbpack.json"))
-            reports = sorted(reports_dir(product, config).glob("review-report_*.json"))
-            self.assertEqual(len(reports), 1)
-            report = read_json(reports[0])
+            report_path = next(
+                path
+                for path in run.parent.glob("review-report_*.json")
+                if not path.name.endswith(".items.json")
+            )
+            self.assertTrue(report_path.is_file())
+            self.assertFalse(any(reports_dir(product, config).glob("review-report_*.json")))
+            report = read_json(report_path)
+            self.assertIn("I read the replacement run", report["decision"])
             self.assertFalse((product / ".curbpack" / "review-report.json").exists())
             self.assertFalse((product / "docs" / "reports" / "review-report.json").exists())
             reading = read_report_signature(report, trust_store(root / "keys"))

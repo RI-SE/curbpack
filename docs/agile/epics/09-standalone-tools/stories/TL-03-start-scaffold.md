@@ -1,14 +1,16 @@
-# TL-03 — Start curbpack-scaffold alone
+# TL-03 — Headless scaffold operation, if retained
 
-**Status:** Draft. Not authorization to implement.
-**Epic:** [EP-09 Start each Packs v2 tool on its own](../EPIC.md)
+**Status:** Draft; optional after EP-02 establishes ownership.
+**Epic:** [EP-09](../EPIC.md)
 
-**As a developer**, I want to start curbpack-scaffold by itself, so that I can write a stub for a missing path without opening the pilot.
+**As a developer**, I want to invoke the existing scaffold/stub operation from a command, so that creating a missing product file does not require the Studio GUI.
 
-**Accept when:**
+## Acceptance — Given / When / Then
 
-- One command starts the stub UI.
-- It writes a new file at a relative path in the product repository and refuses to overwrite a file that already exists.
-- The process does not import `pilot_app` or another tool.
-- The written file is product content. It is not a Claim, a Requirement, or a run result.
-- The tool does not propose a remediation from a check result. That role stays the deferred note in `docs/arch/ARCHITECTURE.md`.
+**Given** a safe repo-relative target path **when** the CLI invokes the existing scaffold backend **then** it creates the requested stub with the same behavior as the existing operation.
+
+**Given** an existing file or a path outside the product root **when** invoked **then** the backend rejects the operation without overwriting or escaping the repository.
+
+**Given** a headless environment **when** the CLI starts **then** it requires neither a separate GUI server nor an independent scaffold system.
+
+Before implementation, verify whether scaffold remains a supported Studio operation and identify its actual EP-02 owner; do not invent a new Studio subsystem or new remediation policy solely for this draft story.

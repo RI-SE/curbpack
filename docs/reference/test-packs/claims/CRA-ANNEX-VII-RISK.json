@@ -1,6 +1,9 @@
 {
   "id": "CRA-ANNEX-VII-RISK",
   "requirement_id": "CRA-ANNEX-VII-RISK",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "pack_id": "cra-baseline",
+  "requirement_digest": "5057ec061b81c4c23d23763f39e2183235ba132b716e889837edfd2124c6f282",
   "source": "documents",
   "args": {
     "path": "docs/annex-vii/risk_assessment.md"

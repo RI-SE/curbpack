@@ -15,5 +15,7 @@
       "locator": "Security docs",
       "law_text": "security.txt present for coordinated disclosure."
     }
-  ]
+  ],
+  "namespace": "RISE/House Policy Example",
+  "status": "draft"
 }

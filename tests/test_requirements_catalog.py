@@ -104,7 +104,7 @@ class RequirementsCatalogTest(unittest.TestCase):
                 before = _get(base + "/requirements")
                 self.assertIn("Pack Sources", before)
                 self.assertIn('id="add-open"', before)
-                self.assertIn("Official name", before)
+                self.assertIn("Official Document Name", before)
                 self.assertNotIn("Section<select", before)
                 data = urllib.parse.urlencode(
                     {
@@ -121,7 +121,10 @@ class RequirementsCatalogTest(unittest.TestCase):
                 with urllib.request.urlopen(request) as response:
                     page = response.read().decode("utf-8")
                 self.assertIn("Pack added", page)
-                self.assertIn("CRA Annex V", page)
+                self.assertIn("<th>Pack Name</th>", page)
+                self.assertNotIn("<th>Document name</th>", page)
+                self.assertNotIn("<th>Namespace</th>", page)
+                self.assertIn("<code>RISE/CRA Annex V</code>", page)
                 self.assertIn("EU declaration of conformity", page)
                 self.assertIn('data-document="cra-annex-v"', page)
                 pack_file = (
@@ -163,6 +166,20 @@ class RequirementsCatalogTest(unittest.TestCase):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+
+    def test_catalog_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.catalog import load_catalog as kept
+        from studio.pack.impl.catalog import load_catalog as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/catalog.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(backend(Path(tmp)), {"documents": [], "sources": []})
 
 
 def _get(url: str) -> str:

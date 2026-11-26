@@ -1,6 +1,9 @@
 {
   "id": "CRA-ANNEX-VII-SUPPORT",
   "requirement_id": "CRA-ANNEX-VII-SUPPORT",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "pack_id": "cra-baseline",
+  "requirement_digest": "adc62bf77ea648209109dab1d7145c7904803bae91491c24c696e3c71aed9983",
   "source": "documents",
   "args": {
     "path": "docs/annex-vii/support_period.md"

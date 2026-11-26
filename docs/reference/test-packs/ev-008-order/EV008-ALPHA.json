@@ -15,5 +15,7 @@
       "locator": "EV008-ALPHA",
       "law_text": "docs/ev008-alpha.md present."
     }
-  ]
+  ],
+  "namespace": "RISE/EV-008 order independence (test only)",
+  "status": "draft"
 }

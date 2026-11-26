@@ -803,7 +803,8 @@ def main() -> None:
             "id": PACK_ID,
             "name": "NIS2 Article 21 agent reference",
             "version": "0.0.0-reference",
-            "assurance_class": "structural_draft",
+            "namespace": "RISE/NIS2 Article 21 agent reference",
+            "status": "draft",
             "description": (
                 "Agent-produced unsigned reference for Directive (EU) 2022/2555 Article 21 only. "
                 "Not legally certified and not independently human-reviewed. Not a published Pack "

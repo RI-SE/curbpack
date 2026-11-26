@@ -2,14 +2,15 @@
 
 [Workspace](workspace.md) decides where product and Studio config live, which keys exist, and the on-disk paths. [Packs v2](packs2.md) §2.3 decides how `curbpack.json` selects packs and requirements, and how `search_hints` merges. This page repeats that contract. It does not add a key or a path.
 
-Two files sit at the product repository root.
+`curbpack.json` sits at the product repository root. Studio settings are the user file `~/.curbpack/curbpack-studio.json` and the product file `<product-repo>/curbpack-studio.json`. A project key that is present replaces the user value for that field only.
 
 | File | Read by | Job |
 |------|---------|-----|
 | `curbpack.json` | `curbcheck`, Studio Check / Compile / Discover | Pack selection, requirement exclude/include, `search_hints`, directory paths for packs / claims / results / reports |
-| `curbpack-studio.json` | Studio | Bind address, model endpoint/name, `$ENV` secrets, prompt paths, temp/extract/keys |
+| `~/.curbpack/curbpack-studio.json` | Studio | Installation values: bind, model, prompts, paths |
+| `<product-repo>/curbpack-studio.json` | Studio | Allowed project overrides only |
 
-`.env` (gitignored) supplies values for `$NAME` placeholders in `curbpack-studio.json` at load time. An unknown `$NAME` is an error.
+`model.api_key` is empty or a `$NAME` placeholder. The value is read from `~/.curbpack/.env`. A missing name yields an empty key. A literal key is rejected and not written. The key is sent only when the effective `model.endpoint` comes from the user file.
 
 `curbpack.json` is not JSON-sealed. It is covered by git (optionally signed commits). Studio import verifies the pack/requirement seal before writing into `packs_dir`. `.curbpack.json` is not `curbpack.json`.
 
@@ -33,7 +34,7 @@ Selection mode is exactly one of: `exclude_requirements`, or `requirements`, or 
 | `claims_dir` | yes | `"curbpack/claims"` | Claim `*.json` directly in this directory: `<claims_dir>/<claim-id>.json`. |
 | `results_dir` | yes | `".curbpack"` | Directory for run-result JSON when JSON output is requested. |
 | `reports_dir` | yes | `"curbpack/reports"` | Directory for review-report JSON from Compile / Review. |
-| `unsigned_requirements` | yes | `"report"` | Accepted values and intended behaviour: [Workspace](workspace.md) §2.4. |
+| `namespace_base` | yes | `"RISE"` | Publisher base namespace. A new Pack namespace is this value, a slash, and the Pack `name`. |
 
 `packs` lists pack ids. It does not list versions. The version in use is `version` on the local `pack.json` for that id. Keeping that file is what makes the choice reproducible. A newer publication is visible when its `pack.json` has reached `packs_dir`. Nothing fetches one.
 
@@ -76,7 +77,7 @@ Search merge: the repository `search_hints`, then that requirement's `discovery_
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
   "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "namespace_base": "RISE"
 }
 ```
 
@@ -102,7 +103,7 @@ Explicit include, hand/CLI only. A real file still carries every required key:
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
   "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "namespace_base": "RISE"
 }
 ```
 
@@ -118,10 +119,6 @@ With the created file:
 | Review report | `<repo>/curbpack/reports/review-report_<YYYYMMDDTHHMMSSZ>.json` |
 
 `"results_dir": "artifacts/check"` writes the run under `<repo>/artifacts/check/…`. Same contract.
-
-### `unsigned_requirements` (later epic)
-
-Accepted values, the created-file value, and the intended behaviour are [Workspace](workspace.md) §2.4.
 
 ### What the run reads
 
@@ -139,7 +136,11 @@ Claims are `<claims_dir>/<claim-id>.json`. Run-result and review-report paths ar
 
 ## `curbpack-studio.json`
 
-While this file is absent, Studio keeps today's wiring (`127.0.0.1:8770`, Ollama `http://127.0.0.1:11434`, model `qwen3-coder:30b`, adapter prompts, workspace keys). When the file is present, Studio loads it after `$ENV` substitution from `.env`. CLI `--host`, `--port`, and `--workspace` override for that process.
+The user file holds the blocks below. While it is absent, Studio uses these created-file values (`127.0.0.1:8770`, Ollama `http://127.0.0.1:11434`, model `qwen3-coder:30b`, adapter prompts, workspace keys).
+
+The product file may contain only `model.endpoint`, `model.name`, `model.temperature`, `prompts.interpret`, `prompts.discovery_hints`, `paths.extract_work_dir`, and `researcher_mode`. Any other field is an error that names every such field and says it belongs in the user file.
+
+`bind` comes from the user file unless `--host` or `--port` is present for that process. An omitted flag does not replace the user file. The product file cannot set `bind`. `paths.temp_dir` and `paths.keys_file` have no reader in this change. Signing keeps the workspace `keys/` directory.
 
 Studio may offer to create the file. The created values match today's:
 
@@ -151,7 +152,7 @@ Studio may offer to create the file. The created values match today's:
   },
   "model": {
     "endpoint": "http://127.0.0.1:11434",
-    "api_key": "$CURBPACK_MODEL_API_KEY",
+    "api_key": "",
     "name": "qwen3-coder:30b",
     "temperature": 0.2
   },
@@ -163,7 +164,8 @@ Studio may offer to create the file. The created values match today's:
     "temp_dir": ".curbpack/tmp",
     "extract_work_dir": ".curbpack/extract",
     "keys_file": null
-  }
+  },
+  "researcher_mode": false
 }
 ```
 
@@ -171,13 +173,14 @@ Studio may offer to create the file. The created values match today's:
 |---------------|---------|
 | `bind` | UI listen address. |
 | `model.endpoint` | Model HTTP base URL. |
-| `model.api_key` | `$NAME` from `.env`. |
+| `model.api_key` | Empty, or `$NAME` from `~/.curbpack/.env`. Sent only with the user file's endpoint. |
 | `model.name` | Model id sent to the endpoint. |
 | `model.temperature` | Extract temperature. |
 | `prompts.*` | Repo-relative path, or `null` for the installation's adapter prompt files. Key present either way. |
 | `paths.temp_dir` | Scratch under the product repo. |
 | `paths.extract_work_dir` | Extract work trees. |
 | `paths.keys_file` | Signing keys JSON, or `null` for the pilot workspace `keys/keys.json`. |
+| `researcher_mode` | Optional boolean. `true` hides the Review column on a requirement and the Useful and Poor columns on the Claims list. Omitted or `false` keeps those columns. |
 
 ```env
 CURBPACK_MODEL_API_KEY=
@@ -188,10 +191,12 @@ Packs, claims, the run result, and the review report are the path fields in `cur
 ## Layout
 
 ```text
+~/.curbpack/
+  curbpack-studio.json
+  .env
 <product-repo>/
   curbpack.json
   curbpack-studio.json
-  .env
   curbpack/
     packs/<pack-id>/<pack-version>/pack.json
     claims/<claim-id>.json

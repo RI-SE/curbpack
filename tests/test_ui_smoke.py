@@ -27,14 +27,21 @@ class UiSmokeTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
-                self.assertIn("Pack Editor", cover)
+                self.assertLess(
+                    cover.index('href="/home">Start</a>'),
+                    cover.index('href="/project">Change-Project</a>'),
+                )
+                self.assertIn("Pack-Editor", cover)
+                self.assertIn('href="/discover">Discovery &amp; Claims</a>', cover)
+                self.assertIn('href="/check">Verification-Workflow</a>', cover)
+                self.assertNotIn(">Discover</a>", cover)
                 self.assertNotIn("No review report.", cover)
-                self.assertIn("Discover", cover)
                 self.assertNotIn("Developer", cover)
                 self.assertNotIn('href="/claims"', cover)
                 self.assertNotIn('href="/scaffold"', cover)
                 # Sample Prepare lives under packs/; it is not the active pilot Pack.
-                self.assertIn("author packs from law text", cover)
+                self.assertIn("Registered projects", cover)
+                self.assertIn("Choose the product repository", cover)
                 self.assertNotIn("CRA-ANNEX-VII-RISK", cover)
                 requirement = _get(base + "/requirement")
                 self.assertIn("cybersecurity risks", requirement)
@@ -76,17 +83,20 @@ class UiSmokeTest(unittest.TestCase):
                     },
                 )
                 check = _post(base + "/check", {"repo_id": "sample-product", "action": "check"})
-                self.assertIn("claim-risk", check)
+                self.assertIn("Checks performed", check)
                 self.assertIn("fail", check)
-                self.assertIn("not a legal conclusion", check)
-                run = next((root / "product").rglob("run-result_*.json"))
+                self.assertIn("Sign locks them", check)
+                self.assertNotIn("not a legal conclusion", check)
+                self.assertIn("/review?", check)
+                run = next((root / "product").glob("**/run-result_*/run-result.json"))
                 review = _get(
                     base
                     + "/review?repo=sample-product&result="
                     + urllib.parse.quote(str(run.resolve()), safe="")
                 )
                 self.assertIn("not saved", review)
-                self.assertIn("Compile writes the report", review)
+                self.assertIn("<label>Notes</label>", review)
+                self.assertNotIn(">Save decision</button>", review)
                 self.assertIn("no field for a conclusion that the product meets CRA", review)
                 self.assertIn("not verification of that commit", review)
                 self.assertIn("claim-risk", review)
@@ -103,22 +113,46 @@ class UiSmokeTest(unittest.TestCase):
                 self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
                 compiled = _post(
                     base + "/review/compile",
-                    {"repo_id": "sample-product", "result": str(run.resolve())},
+                    {
+                        "repo_id": "sample-product",
+                        "result": str(run.resolve()),
+                        "decision": "The stub is not an assessment. I am not saying the product meets CRA.",
+                    },
                 )
-                reports = sorted(reports_dir.glob("review-report_*.json"))
-                self.assertEqual(len(reports), 1)
-                self.assertNotIn("Compile writes the report", compiled)
-                self.assertNotIn("not saved", compiled)
-                self.assertIn("no field for a conclusion that the product meets CRA", compiled)
-                self.assertIn("not verification of that commit", compiled)
+                self.assertTrue((run.parent / "review_items.json").is_file())
+                self.assertFalse((run.parent / "review-report.json").exists())
+                self.assertFalse(any(run.parent.glob("review-report_*.json")))
+                self.assertFalse(reports_dir.exists() and any(reports_dir.glob("review-report_*.json")))
+                self.assertIn("<h1>Check</h1>", compiled)
+                kept = _get(
+                    base
+                    + "/review?repo=sample-product&resume=1&result="
+                    + urllib.parse.quote(str(run.resolve()), safe="")
+                )
+                self.assertNotIn("Save decision and review-sign need a report file", kept)
+                self.assertIn("The stub is not an assessment", kept)
+                self.assertIn("no field for a conclusion that the product meets CRA", kept)
+                self.assertIn("not verification of that commit", kept)
                 self.assertFalse((root / "product" / ".curbpack" / "review-report.json").exists())
                 self.assertFalse((root / "product" / "docs" / "reports" / "review-report.json").exists())
-                saved = _post(
-                    base + "/review",
-                    {"decision": "The stub is not an assessment. I am not saying the product meets CRA."},
-                )
-                self.assertIn("The stub is not an assessment", saved)
-                self.assertIn("unsigned", saved.lower())
+                self.assertNotIn("signed", json.loads((run.parent / "review_items.json").read_text()))
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_open_project_scaffold_page_shows_the_stub_form(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            prepare_demo(root)
+            httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/scaffold")
+                self.assertIn("<h1>Scaffold</h1>", page)
+                self.assertIn('action="/scaffold"', page)
+                self.assertIn("The stub is not approved evidence.", page)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

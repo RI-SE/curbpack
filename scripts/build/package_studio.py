@@ -11,7 +11,8 @@ from package_common import ROOT, host_filename, host_label, package_binary, pyin
 
 DIST = ROOT / "dist" / "studio"
 DATAS =( 
-    ("app/icons/curbpack-icon.svg","app/icons/"),  
+    ("app/icons/curbpack-icon.svg","app/icons/"),
+    ("app/icons/workflow.jpg","app/icons/"),  
     ("requirements/extract/adapters", "requirements/extract/adapters"),
     ("requirements/extract/data", "requirements/extract/data"),
     ("requirements/extract/guidance", "requirements/extract/guidance"),

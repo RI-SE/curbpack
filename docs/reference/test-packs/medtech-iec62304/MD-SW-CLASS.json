@@ -15,5 +15,7 @@
       "locator": "4.3",
       "law_text": "IEC 62304 software safety classification rationale missing."
     }
-  ]
+  ],
+  "namespace": "RISE/MedTech IEC 62304 draft overlay (informational)",
+  "status": "draft"
 }

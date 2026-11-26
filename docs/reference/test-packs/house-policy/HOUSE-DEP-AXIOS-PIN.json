@@ -15,5 +15,7 @@
       "locator": "Dependencies",
       "law_text": "No banned axios versions in dependencies or devDependencies."
     }
-  ]
+  ],
+  "status": "draft",
+  "namespace": "RISE/House Policy Example"
 }

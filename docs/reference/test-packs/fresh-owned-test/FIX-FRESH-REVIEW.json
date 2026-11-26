@@ -15,5 +15,7 @@
       "locator": "FIX-FRESH-REVIEW",
       "law_text": "Review log commit is within freshness window."
     }
-  ]
+  ],
+  "namespace": "RISE/Fresh and owned check fixture (test only)",
+  "status": "draft"
 }

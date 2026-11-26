@@ -48,15 +48,15 @@ Each executable case starts the same way: from the Curbpack root, `source tmp/ve
 ### SETUP
 
 - Repository state: R1 via `SUT=curbpack ./setup.sh R1 --commit` under `external_test/curbpack`.
-- Claims: the seven carried claim files from that fixture.
-- Packs: fixture packs copied into `$REFERENCE_PRODUCT_ROOT/curbpack/packs/<id>/<version>/`.
+- Claims: every claim file in the pin's `claims_dir`.
+- Packs: the pack directories named by the pin's `curbpack.json`.
 
 ### TEST STEPS
 
 
 | Step | Action | Expected result |
 | ---- | ------ | --------------- |
-| 1    | `curbcheck --repo "$REFERENCE_PRODUCT_ROOT" -o "$REFERENCE_PRODUCT_ROOT/run-result.json"` (after writing a complete §2.2 `curbpack.json`, copying fixture packs into `curbpack/packs/<id>/<version>/`, and copying the seven claims into `curbpack/claims`) | Stdout includes `claims 7 exit 0`. Every claim status in `run-result.json` is `pass`. |
+| 1    | `curbcheck --repo "$REFERENCE_PRODUCT_ROOT" -o "$REFERENCE_PRODUCT_ROOT/run-result.json"` on the pin's own `curbpack.json` | Stdout includes `claims 13 exit 0`. Every claim status in `run-result.json` is `pass`. |
 | 2    | Process exit code | `0`. |
 
 When `tmp/suit-runner/EV-001.carried` exists (after `make test-curbcheck` carried run), this row is not re-executed.

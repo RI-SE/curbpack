@@ -76,7 +76,7 @@ This story writes the guide and corrects the sentences that still describe adapt
 - A NIST, or any other new, adapter.
 - Changing `load_adapter`, the extract stages, or the Pack Editor.
 - A plugin framework or an adapter-editing screen.
-- DOC-04, and any move of `docs/reference/packs2.md`.
+- DOC-04 and changes to the normative `docs/reference/packs2.md` (which is **not** to be moved).
 
 ### Stop if
 

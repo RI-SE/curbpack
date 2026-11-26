@@ -31,7 +31,7 @@ That prints `Verification run configuration: OK`, deletes the clone, and clones 
 
 ## Run the carried checks
 
-After the source above, the mechanical steps are in [procedures/README.md](procedures/README.md). In short: apply R1 with the Studio fixture `setup.sh`, write `curbpack.json` without a `curbpack` key, copy the seven claim files from the fixture's `claims/` into `$REFERENCE_PRODUCT_ROOT/curbpack/claims/`, and run:
+After the source above, the mechanical steps are in [procedures/README.md](procedures/README.md). In short: apply R1 with the Studio fixture `setup.sh`, leave the clone's `curbpack.json` as the pin committed it, and run:
 
 ```sh
 curbcheck \
@@ -39,9 +39,9 @@ curbcheck \
   -o "$REFERENCE_PRODUCT_ROOT/run-result.json"
 ```
 
-`curbpack.json` uses created-file `packs_dir` `curbpack/packs` and `claims_dir` `curbpack/claims`. The fixture packs are copied into that versioned tree. `-o` writes the run-result JSON. Do not pass `--packs` as a directory.
+`curbpack.json` is the file in the pinned product. Pack and claim directories are its `packs_dir` and `claims_dir`. `-o` writes the run-result JSON. Do not pass `--packs` as a directory.
 
-Exit 0 for that slice requires stdout `claims 7 exit 0` and no claim status `fail`. Manual rows are in [tests/check/manual.md](../../tests/check/manual.md). They are not a pass.
+Exit 0 for that slice requires stdout `claims 13 exit 0` and no claim status `fail`. Manual rows are in [tests/check/manual.md](../../tests/check/manual.md). They are not a pass.
 
 `make test-curbcheck` runs that same sequence for CI after it starts the verification run. A person testing by the book starts with `make start-verification-run` and `source tmp/verification-run.sh` first.
 

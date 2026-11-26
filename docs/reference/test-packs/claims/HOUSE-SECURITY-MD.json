@@ -1,6 +1,9 @@
 {
   "id": "HOUSE-SECURITY-MD",
   "requirement_id": "HOUSE-SECURITY-MD",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "f7e03eb876b5251db1b1458180fa7525e8dda063db2fb702298d96e5aa9054ca",
   "source": "documents",
   "args": {
     "path": "SECURITY.md"

@@ -1,6 +1,9 @@
 {
   "id": "CRA-ANNEX-VII-MANUAL",
   "requirement_id": "CRA-ANNEX-VII-MANUAL",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "pack_id": "cra-baseline",
+  "requirement_digest": "f0afaa9cb97b6bfa1babc2dcb336cfa12a5b8f5213f36b051a6614a51d937ace",
   "source": "documents",
   "args": {
     "path": "docs/annex-vii/user_manual_security.md"

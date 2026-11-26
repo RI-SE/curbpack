@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import base64
 import copy
+from pathlib import Path
 from typing import Optional
 
-from common.canonical import version_digest
+from common.canonical import pack_directory_digest, version_digest
 from common.errors import ModelError, SigningUnavailable
 
 try:
@@ -141,3 +142,64 @@ def _decode_signature(value: object) -> Optional[bytes]:
         return base64.b64decode(value, validate=True)
     except Exception:
         return None
+
+
+def complete_pack_digest(root: Path) -> str:
+    """Directory digest of every file, including dotfiles.
+
+    This is the same digest ``seal_pack_directory`` and ``read_pack_seal`` use.
+    """
+    return pack_directory_digest(root)
+
+
+def verify_object(digest: str, signed: object, trust: dict[str, bytes]) -> dict:
+    """Object-signature result. Git is not consulted."""
+    reading = read_digest(digest, signed, trust, what="object")
+    if not isinstance(signed, dict):
+        return {
+            "status": "unsigned",
+            "method": "none",
+            "signer": None,
+            "version": digest,
+            "reason": reading.get("reason"),
+        }
+    if reading.get("verifiable"):
+        return {
+            "status": "valid",
+            "method": "object",
+            "signer": reading.get("who"),
+            "version": digest,
+            "reason": None,
+        }
+    return {
+        "status": "invalid",
+        "method": "object",
+        "signer": reading.get("who"),
+        "version": digest,
+        "reason": reading.get("reason"),
+    }
+
+
+def verify_signature(
+    digest: str,
+    signed: object,
+    trust: dict[str, bytes],
+    *,
+    repo: Path | None = None,
+    paths: list[str] | None = None,
+    tree_prefix: str | None = None,
+) -> dict:
+    """Object signature first. Git is used only when no ``signed`` block is present."""
+    if isinstance(signed, dict):
+        return verify_object(digest, signed, trust)
+    if repo is None:
+        return {
+            "status": "unsigned",
+            "method": "none",
+            "signer": None,
+            "version": None,
+            "reason": "No signed block and no signed Git commit. The object is unsigned.",
+        }
+    from review.gitseal import git_content_result
+
+    return git_content_result(repo, list(paths or []), tree_prefix=tree_prefix)

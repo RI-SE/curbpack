@@ -58,7 +58,12 @@ class RequirementEditorErrorRedirectTest(unittest.TestCase):
                 adapter,
                 "VII",
                 proposals,
-                {"id": "cra-xml-baseline", "name": "CRA XML", "version": "0.1.0"},
+                {
+                    "id": "cra-xml-baseline",
+                    "name": "CRA XML",
+                    "version": "0.1.0",
+                    "namespace": "RISE/cra-xml extract",
+                },
                 at="2026-10-13T090000Z",
             )
             mark_source_adapter(root, "cra-xml")

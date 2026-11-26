@@ -325,13 +325,13 @@ class CompareTransferTest(unittest.TestCase):
 
 class ExtractReviewPageTest(unittest.TestCase):
     def test_page_leaves_unchecked_fields_and_updates_the_chosen_one(self):
+        import json
         import threading
         import urllib.parse
         import urllib.request
         from http.server import ThreadingHTTPServer
 
         from app.server import Workspace, make_handler
-        from requirements.compare import extraction_review
         from requirements.workspace import mark_selected, read_selection
 
         tmp = tempfile.TemporaryDirectory()
@@ -343,7 +343,15 @@ class ExtractReviewPageTest(unittest.TestCase):
         save_requirement(working, apply_edits(base, {"note": "already edited", "remediation_hint": "keep this"}))
         save_requirement(proposal, apply_edits(base, {"note": "from extraction", "remediation_hint": "from extraction"}))
         mark_selected(root, "cra-baseline", working.name)
-        review = extraction_review(working, proposal)
+        from common.jsonio import write_json
+        from discovery.door import created_curbpack, set_open_repo
+        from discovery.repos import add_repo, load_repos, save_repos
+
+        repo = root / "product"
+        repo.mkdir()
+        write_json(repo / "curbpack.json", created_curbpack(namespace_base="RISE", packs=["cra-baseline"]))
+        save_repos(root, add_repo(root, load_repos(root), name="Product", path=str(repo)))
+        set_open_repo(root, "product")
         httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Workspace(root)))
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
@@ -352,35 +360,59 @@ class ExtractReviewPageTest(unittest.TestCase):
         page = urllib.request.urlopen(
             base_url
             + "/requirements/extract/review?proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
+        )
+        self.assertIn("/requirements/copy?", page.geturl())
+        body = page.read().decode("utf-8")
+        self.assertIn("<th>Changes</th>", body)
+        self.assertIn(">Updates</a>", body)
+        self.assertNotIn("/vendor/jsondiffpatch.js", body)
+        self.assertNotIn("Use the new definition", body)
+        form_page = urllib.request.urlopen(
+            base_url
+            + "/requirements/compare/form?requirement=CRA-ANNEX-VII-RISK"
+            + "&proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
         ).read().decode("utf-8")
-        self.assertIn("Use the new definition", page)
-        self.assertNotIn("Update Note", page)
-        self.assertNotIn("what to look for", page)
-        self.assertIn("Red", page)
-        self.assertIn("that value only", page)
-        self.assertIn("diff-pick", page)
-        self.assertIn("already edited", page)
-        self.assertIn("from extraction", page)
-        self.assertIn("/vendor/jsondiffpatch.js", page)
-        self.assertNotIn("<p>Your copy</p>", page)
-        vendor = urllib.request.urlopen(base_url + "/vendor/jsondiffpatch.js")
-        self.assertEqual(vendor.status, 200)
-        self.assertIn(b"jsondiffpatch", vendor.read(400))
-        self.assertNotIn('type="checkbox" name="field" value="CRA-ANNEX-VII-RISK|note" checked', page)
-        item = review["updates"][0]
-        form = urllib.parse.urlencode(
+        self.assertIn('data-cancel="/requirements/copy?proposal=', form_page)
+        self.assertIn("destination=2026-10-13T090000Z", form_page)
+        self.assertNotIn(">Cancel</a>", form_page)
+        self.assertIn("/requirements/compare/form.js", form_page)
+        payload = json.loads(
+            urllib.request.urlopen(
+                base_url
+                + "/requirements/compare/form.json?requirement=CRA-ANNEX-VII-RISK"
+                + "&proposal=2026-10-13T143000Z&destination=2026-10-13T090000Z"
+            ).read()
+        )
+        self.assertEqual(payload["current"]["note"], "already edited")
+        self.assertEqual(payload["proposed"]["note"], "from extraction")
+        posted = urllib.parse.urlencode(
             {
+                "requirement": "CRA-ANNEX-VII-RISK",
                 "proposal": "2026-10-13T143000Z",
                 "destination": "2026-10-13T090000Z",
-                "pair": f"CRA-ANNEX-VII-RISK|{item['source_digest']}|{item['destination_digest']}",
-                "field": "CRA-ANNEX-VII-RISK|note",
+                "choice": '{"note": "new", "remediation_hint": "old"}',
             }
         ).encode("utf-8")
         brought = urllib.request.urlopen(
-            urllib.request.Request(base_url + "/requirements/extract/review", data=form, method="POST")
+            urllib.request.Request(
+                base_url + "/requirements/compare/form/apply",
+                data=posted,
+                method="POST",
+            )
         ).read().decode("utf-8")
-        self.assertIn("Updated the fields you chose", brought)
+        self.assertIn(">Sign</button>", brought)
         saved = load_requirement(working / "CRA-ANNEX-VII-RISK.json")
         self.assertEqual(saved["note"], "from extraction")
         self.assertEqual(saved["remediation_hint"], "keep this")
         self.assertEqual(read_selection(root)["timestamp"], working.name)
+
+
+class CompareBackendTest(unittest.TestCase):
+    def test_compare_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.compare import compare_copies as kept
+        from studio.pack.impl.compare import compare_copies as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/pack/impl/compare.py", inspect.getsourcefile(backend).replace("\\", "/"))

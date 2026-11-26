@@ -119,7 +119,15 @@ class EditAndPersistTest(unittest.TestCase):
         self.assertNotIn("origin", published)
 
         copy = working_copy(published, draft_pack())
-        self.assertEqual(copy["origin"], {"pack": "cra-baseline", "version": "0.1.0"})
+        self.assertEqual(
+            copy["origin"],
+            {
+                "namespace": "RISE/CRA baseline",
+                "pack": "cra-baseline",
+                "version": "0.1.0",
+                "requirement": "CRA-ANNEX-VII-RISK",
+            },
+        )
         self.assertNotIn("signed", copy)
         unsigned = read_signature(copy, trust, what="requirement")
         self.assertFalse(unsigned["verifiable"])
@@ -190,6 +198,20 @@ class EditAndPersistTest(unittest.TestCase):
             path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
             broken = read_pack_seal(root, trust)
             self.assertFalse(broken["verifiable"])
+
+
+class EditingBackendTest(unittest.TestCase):
+    def test_editing_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.editing import EDITABLE as kept_fields
+        from requirements.editing import apply_edits as kept
+        from studio.pack.impl.editing import EDITABLE as backend_fields
+        from studio.pack.impl.editing import apply_edits as backend
+
+        self.assertIs(backend, kept)
+        self.assertIs(backend_fields, kept_fields)
+        self.assertIn("studio/pack/impl/editing.py", inspect.getsourcefile(backend).replace("\\", "/"))
 
 
 def _with_edition(requirement: dict) -> dict:

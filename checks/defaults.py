@@ -26,7 +26,7 @@ def created_curbpack(**overrides) -> dict:
         "claims_dir": "curbpack/claims",
         "results_dir": ".curbpack",
         "reports_dir": "curbpack/reports",
-        "unsigned_requirements": "reject",
+        "namespace_base": "RISE",
     }
     document.update(overrides)
     return validate_curbpack_config(document)

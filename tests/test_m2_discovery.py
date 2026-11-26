@@ -113,5 +113,16 @@ class ReadSourceTextTest(unittest.TestCase):
         self.assertNotIn("<mark>", html_text)
 
 
+class DiscoveryBackendTest(unittest.TestCase):
+    def test_discovery_search_lives_in_the_claim_backend(self):
+        import inspect
+
+        from discovery.search import discover_candidates as kept
+        from studio.claim.impl.search import discover_candidates as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/claim/impl/search.py", inspect.getsourcefile(backend).replace("\\", "/"))
+
+
 if __name__ == "__main__":
     unittest.main()

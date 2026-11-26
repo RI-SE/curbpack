@@ -50,4 +50,4 @@ Draft stories are not permission to implement. Further stories (a production ima
 - **EP-01** finishes the functional pilot. This epic does not gate it.
 - **EP-02** modularizes the process. A container is not that split.
 - **EP-03** records security evidence. It does not build this image. SEC-04 and SEC-05 stay there.
-- **EP-09** makes each tool startable on its own. This epic containers the Studio tree that exists today.
+- **EP-09** adds thin headless CLI interfaces to backend operations after EP-02; it does not create independent GUI systems. This epic containers the supported Studio/Curbcheck programs, not a hypothetical split into separate GUI servers.

@@ -170,7 +170,7 @@ def _fill_curbcheck_repo(repo: Path) -> Path:
             repo / "curbpack" / "claims",
             build_claim(
                 claim_id=claim_id,
-                requirement_id="CRA-ANNEX-VII-RISK",
+                requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/a.md"},
                 checks=checks,

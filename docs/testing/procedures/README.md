@@ -8,7 +8,7 @@ curbcheck \
   -o <prepared-repo>/run-result.json
 ```
 
-`curbpack.json` must include the workspace.md §2.2 path fields. Copy the selected fixture packs into `<prepared-repo>/curbpack/packs/<id>/<version>/` and leave `packs_dir` at the created-file value `curbpack/packs`. `-o` writes the run-result JSON. `--packs` is not a directory. The runner does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
+`curbpack.json` is the file committed in the pinned product. It includes the workspace.md §2.2 path fields. `-o` writes the run-result JSON. `--packs` is not a directory. The runner does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`.
 
 ## Prepare a verification run
 
@@ -34,23 +34,11 @@ On the clone, after the source:
    SUT=curbpack ./setup.sh R1 --commit
    ```
 
-2. Write `$REFERENCE_PRODUCT_ROOT/curbpack.json`:
+2. Leave `$REFERENCE_PRODUCT_ROOT/curbpack.json` as the pin committed it. Packs and claims stay at that file's `packs_dir` and `claims_dir`.
 
-   A complete workspace.md §2.2 file with created-file path fields and packs `cra-baseline`, `house-policy`, `medtech-iec62304`. Copy those packs from the clone fixture into `curbpack/packs/<id>/<version>/`.
+3. From the Studio root, run the argv in the section above with `--repo` pointing at the clone.
 
-3. Copy only these files from `external_test/curbpack/claims/` into `$REFERENCE_PRODUCT_ROOT/curbpack/claims/`:
-
-   - `CRA-ANNEX-VII-MANUAL.json`
-   - `CRA-ANNEX-VII-RISK.json`
-   - `CRA-ANNEX-VII-SUPPORT.json`
-   - `CRA-ART14-PATH.json`
-   - `HOUSE-ANTI-PLACEHOLDER.json`
-   - `HOUSE-SECURITY-MD.json`
-   - `HOUSE-SECURITY-TXT.json`
-
-4. From the Studio root, run the argv in the section above with `--repo` pointing at the clone.
-
-Stdout `claims 7 exit 0` and no claim status `fail` is the pass. Manual rows are printed by `make test-curbcheck` and are not part of the count. The seven expected statuses are in [cases.md](cases.md).
+Stdout `claims 13 exit 0` and no claim status `fail` is the pass. Manual rows are printed by `make test-curbcheck` and are not part of the count. The carried statuses are in [cases.md](cases.md).
 
 ## Repository states
 

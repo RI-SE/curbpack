@@ -1,6 +1,9 @@
 {
   "id": "EV008-BOTH-PATHS",
   "requirement_id": "EV008-ALPHA",
+  "namespace": "RISE/EV-008 order independence (test only)",
+  "pack_id": "ev-008-order",
+  "requirement_digest": "daca29e9d2223a2919d263119542fd4cc831fcc46079fb022abdfd54933b772b",
   "source": "documents",
   "args": {
     "paths": [

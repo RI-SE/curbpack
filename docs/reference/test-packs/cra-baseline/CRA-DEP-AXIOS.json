@@ -15,5 +15,7 @@
       "locator": "CRA-DEP-AXIOS",
       "law_text": "Dependency tree free of listed unmitigated axios pins."
     }
-  ]
+  ],
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft"
 }

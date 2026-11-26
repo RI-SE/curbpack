@@ -1,42 +1,194 @@
 # Agreed design decisions and open questions
 
-This short record preserves conclusions from the Pack Editor discussion. It is **not** a substitute for user stories, formal requirements, the existing pilot, or authoritative Packs v2 contracts. Do not implement the open ideas merely because they appear here.
+**Updated:** 2026-11-23
 
-## Agreed for the pilot and next iteration
+This document records decisions that govern ongoing and future Curbpack work. It is not a replacement for normative contracts, architecture specifications, user stories or acceptance tests.
 
-- The app start page shows the existing tools. Pack Editor is one of them; no redesign of the launcher is requested.
-- Pack Editor has **two levels**. First: one row per editable Pack, with Pack name, the regulatory document and its chosen adapter, plus **Sections** and **Export Pack**. Second: **Sections** opens that Pack's existing list of sources. The selected document and adapter are displayed in the heading instead of repeated on each row; the source rows retain **Extract** and **Edit**. **Add Source** belongs on this second level. Human review 2026-10-28 by danielfl: the pack-row action is **Sections**. The pilot pack-level file action is **Export Pack** ([PE-11](epics/01-pack-editor/stories/PE-11-publish-pack.md)), not Publish.
-- This is **one extra navigation level**, not a replacement for the existing source editor, extraction workflow, requirement editor, comparison UI or signing process. Do not create a separate Pack Publisher subsystem to achieve it. **Export Pack** is a Pack-level action, not an individual source-row action. Publisher Publish is not the pilot.
-- A source records the appropriate section/range and URL used to reach the original legal text. Do not silently conflate a *source row*, the *sections that an adapter can enumerate*, and the *Requirement references* stored in Packs v2. The exact source/section selection semantics must be checked against the fresh pilot before changing them.
-- An adapter is the document-specific extraction logic/configuration: for example a short program or configuration that identifies document structure and supplies regulatory sections/text to the extractor. Its implementation format is **not** a new Packs v2 field or a decision to require YAML.
-- **Extract** continues to use the selected source, its document/adapter configuration and the existing extraction UI; the current view of supported/remaining sections, run progress and diagnostics must not be lost without a conscious decision.
-- Re-running Extract may reflect revised legal text, a different prompt/model or an improved adapter. The new output is a **proposal**. Compare old and new and let the user explicitly apply or discard supported changes. No silent replacement or deletion; preserve unrelated Requirement fields and source references.
-- All Requirements remain traceable to the original regulatory document, edition and exact supporting passages/locations, including multiple legal references when required. Editing, re-extraction and new Pack versions must not erase this provenance. Modified signed payloads need new signatures. Published versions remain immutable.
-- Packs v2 is the authoritative persisted Pack/Requirement contract. Pack membership uses `requirement.pack_id`; legal provenance uses `source` and `references[]`. `origin` is reserved for descent from a published Pack, not extraction provenance. Adapter/model/prompt/run diagnostics belong outside normative Requirement fields. Confirm precise semantics against `docs/reference/packs2.md` before coding.
-- Pilot-first: import implementation and tests **only from a fresh PoC2 ZIP**, establish its actual test baseline, finish the pilot and avoid premature refactoring. The starter includes no PoC2 code, keys or generated workspace.
-- **One repository is the pilot door.** Decided 2026-10-28 by danielfl. Required for the pilot. Behavioural story: [SYS-03](epics/01-pack-editor/stories/SYS-03-one-repo-door.md). **Config and path contract (authoritative as of 2026-10-29):** [docs/reference/workspace.md](../reference/workspace.md). That file supersedes the earlier single `curbpack` directory key and the hard-coded path tables in older reference docs for product/Studio config. `curbpack.json` holds `packs`, selection lists, `search_hints`, and the directory fields `packs_dir`, `claims_dir`, `results_dir`, `reports_dir`. Pack on disk: `<packs_dir>/<pack-id>/<pack-version>/pack.json`. `curbpack-studio.json` holds Studio bind/model/prompts/temp (opt-in; absent file keeps today's pilot wiring). SYS-03 and `plan/SYS-03.md` must be brought in line with `workspace.md` before further door implementation. `packs2.md` and related path docs still need a pass for the version directory and the withdrawn `curbpack` key. `registered_sources.json` is not the door.
-- The license is Apache-2.0, as `LICENSE`. A later change of license is a separate ownership decision.
+Completed stories remain historical records. Later decisions take precedence for subsequent work without retroactively changing those stories. See [decision addendum](DECISIONS_ADDENDUM_2026-11-19.md) for agreed examples and boundaries.
 
-## Explicitly open — do not decide automatically
+## 1. Authority and documentation
 
-- How the editable workspace maps to **Git repository, working tree and branch**. The existing per-source **Working copy** column may not be the right concept. Git is considered the intended working environment, but the workflow/UI is not agreed.
-- **Multi-version Pack workflow** (side-by-side releases, has-update marks, pack-exchange zip, Claim impact after taking in a new release, optional SQLite index) lives in draft epic [EP-11](epics/11-pack-version-lifecycle/EPIC.md). It is not EP-01 pilot scope.
-- **Pilot simplification (agreed for EP-01 focus):** the operator may work against the **latest / single active** working copy or selected Pack release only. Immutable `published/<id>/<version>/` trees may already exist on disk; the pilot does not have to offer editing multiple versions at once. Full multi-version grip is EP-11.
-- The exact meaning of a source row versus adapter-enumerated section choices; retain the working pilot behavior until agreed otherwise.
-- Whether to extract multiple sections per operation; a single section at a time suffices as the initial behavior.
-- How the user explicitly confirms the treatment of a Requirement that disappears on re-extraction. Its disappearance must be visible and cannot silently delete approved work.
-- Whether Pack publication includes all eligible reviewed Requirements or a deliberate selected subset.
-- Public repository visibility and authorization to publish code remain separate ownership decisions. The license is not one of them.
+The following documents have distinct responsibilities:
 
-## Ideas for later epics, not Pack Editor requirements
+| Document | Authority |
+|---|---|
+| `docs/reference/packs2.md` | Normative persistent data contracts, approved by humans / Product Owner |
+| `docs/reference/studio-internal.md` | Studio-internal data structures. `review_item` is defined there. Claim, Check, and signature are added to that document in a later step. |
+| `docs/arch/ARCHITECTURE.md` | Approved overall system architecture |
+| Subsystem `ARCHITECTURE.md` files | Subsystem responsibilities and internal boundaries, consistent with the overall architecture |
+| `docs/reference/workspace.md` | Workspace configuration and path contracts |
+| `docs/agile/` | Planned changes, dependencies and acceptance criteria |
+| `docs/req/` and `docs/test/` | Derived requirements and verification |
 
-- **General pack/directory compare** (promote today’s directory-diff UI into a standalone pack-compare tool). Park under [EP-09 Standalone tools](epics/09-standalone-tools/EPIC.md); if the compare is specifically multi-version Pack lifecycle, [EP-11](epics/11-pack-version-lifecycle/EPIC.md). Not SYS-03 / EP-01 pilot scope. Noted 2026-10-29 walkthrough.
-- **Studio config.** Hidden from the cover on 2026-10-29. The page stays at `GET`/`POST /studio` (`studio_page` in `app/pages.py`, routing in `app/server.py`). It edits `curbpack-studio.json` and does not use the shared repo panel, which reads product `curbpack.json` path fields. Not pilot chrome.
-- **Compare, Consolidate, and Publish on the Requirements list.** Hidden from that list on 2026-10-29. The links were the muted paragraph under the requirement table in `requirements/ui/pages.py` `copy_page`. The pages and routes stay: `compare_page` (`GET /requirements/compare`, `POST /requirements/compare/apply`), `consolidate_page` (`GET /requirements/consolidate`, `POST /requirements/consolidate/apply`), `publication_page` (`GET`/`POST /requirements/publish`). Routing is `app/server.py`. Publisher Publish is not the pilot; the pack-level file action remains Export Pack ([PE-11](epics/01-pack-editor/stories/PE-11-publish-pack.md)).
-- **Git baselines on Pack Sources.** The Pack Sources page hid the “Baselines (Git — UI later)” panel on 2026-10-29. A later UI can show that a baseline is a Git commit of the installation workspace, separate from Export. Export copies the selected working copy to a directory the user chooses. Example commands, not a portable layout: `git status`, `git add <pack-id>/<timestamp>`, `git commit -m "Baseline: <pack-id> at <timestamp>"`, `git log --oneline -- <pack-id>`. Restoring a revision recovers Packs v2 files. It does not by itself change pack id, timestamp selection, `pack.version`, `origin`, or signatures. The Pack file layout stays `docs/reference/packs2.md`. How Studio stores working copies stays `requirements/ARCHITECTURE.md`.
-- **`curbcheck` path fields + defaults + CLI docs** is its own story: [CHK-07](epics/01-pack-editor/stories/CHK-07-curbcheck-workspace.md). Decided 2026-10-29 by danielfl. Runtime reads product `curbpack.json` (`packs_dir` / `claims_dir` / `results_dir` per [workspace.md](../reference/workspace.md)); stdout + `-j`/`-o`; **defaults factory** (`curbcheck --defaults` → JSON on stdout; same Python function Studio calls when creating `curbpack.json`). Connection to SYS-03: the create dialog must not invent a second default document. `--packs` / `--requirements` are optional comma-separated **id lists of what this run checks**; paths still come from `curbpack.json`. [curbcheck-cli.md](../reference/curbcheck-cli.md) and existing curbcheck/package tests are updated in that story.
-- **Studio Check / Review ↔ new curbcheck** follows CHK-07: [CHK-08](epics/01-pack-editor/stories/CHK-08-studio-check-review-curbcheck.md). Placeholder until CHK-07 is done; then expand GWT so Check/Review call the shared Python API (no second path scheme). Noted 2026-10-29.
-- The development container (build and start with Make, same build in CI) is draft [EP-12](epics/12-development-environment/EPIC.md). It is not a pilot requirement.
-- Aslak's old `extends` is **not automatically equivalent** to a simple dependency. Before introducing Pack inheritance or silent overrides, establish whether the real need is an explicit `requires` dependency. A narrowly configured **Check** could, for example, verify that a required Pack ID/version is present in `curbpack.json`. This is an idea, **not an approved new Packs v2 field or implemented Check**. Passing such a Check verifies only that configured condition, not overall legal compliance.
-- Claims/Discovery, Checks, Compile and Review require their own user journeys, stories and derived Requirements. Existing PoC2 functions are references; these stories are not fabricated here.
-- The long-term specification quality goal is that an independent developer or local-model-assisted agent can reconstruct **equivalent observable application behavior**, validated by the same acceptance and regression tests. Identical source code is neither necessary nor guaranteed. Do not treat this as a pilot feature request.
+Packs v2 defines the meaning and persistent structure of Pack, Requirement, Claim, signatures and related records.
+
+**Contract direction:**
+
+`packs2.md` (human-approved specification) → Pydantic implementation → generated JSON Schema.
+
+Pydantic is not an independent normative authority. Any mismatch must be resolved against the approved Packs v2 contract. Contract changes require explicit human approval.
+
+The architecture documents must not redefine Packs v2 fields or semantics.
+
+## 2. Target architecture — EP-02
+
+EP-02 establishes the target architecture for Curbpack.
+
+`docs/agile/epics/02-modularize-studio/CURBPACK_ARCHITECTURE.md` is the **approved detailed target**, and `docs/arch/ARCHITECTURE.md` is its normative system-level entry point. They describe one architecture. Existing subsystem documents are subordinate to these boundaries and the Packs v2 contract. Their historical versions remain in Git.
+
+The approved design is:
+
+- **Curbpack Studio:** A modular monolith with a thin application shell.
+- **Subsystem ownership:** Each functional area owns its backend operations, REST endpoints and UI where applicable.
+- **Backend:** Business logic is independent of HTTP and UI.
+- **REST:** Thin subsystem-owned routers using explicit validated contracts.
+- **UI:** Thin TypeScript pages that invoke backend operations.
+- **Curbcheck:** Independently usable execution system with Python API and CLI.
+- **Shared models:** Pydantic implementations of the human-approved persistent contracts.
+
+EP-02 migrates existing functionality to the approved architecture while preserving observable behavior. Architecture migration is not permission to remove functionality or redesign workflows.
+
+Do not introduce additional frameworks, layers or empty packages merely to match an illustrative directory tree.
+
+## 3. Standalone tools — EP-09
+
+EP-09 must conform to the architecture established by EP-02.
+
+Standalone **CLI interfaces remain a goal** where useful. CLI and REST interfaces must reuse the same backend operations instead of implementing separate business logic.
+
+Independent GUI applications are no longer required.
+
+Curbcheck remains independently executable. Studio integrates Curbcheck through its public Python API without duplicating the Check engine.
+
+EP-09 does not establish an alternative application architecture, HTTP ownership model or persistent data contract.
+
+## 4. Pack identity, exchange and traceability — EP-11
+
+The revised **EP-11 — Pack identity, exchange and traceability** supersedes the former Pack version lifecycle epic and its retired stories.
+
+The scope VR-00 and VL-00 through VL-06 is reported complete (2026-11-19).
+
+Agreed principles:
+
+- Pack and Requirement identities are namespace-qualified. Packs with the same `pack_id` but different namespaces may coexist and be selected in one product.
+- One active, editable copy per qualified Pack identity `(namespace, pack_id)` in the workspace. Curbpack does not keep a parallel version catalog as its own history. Git holds the history of committed content. Curbpack performs no automatic Git operations.
+- `origin` records declared provenance; it is not automatically verified lineage. It references the latest explicitly accepted source at Take Ownership or Update, not every source of copied fields. Do not add `sources[]` or silently rewrite `origin`.
+- Editing a Pack from another namespace requires explicit Take Ownership of a new local Pack copy. The accepting organization owns the result and uses its own namespace; selective cross-namespace field transfer uses Compare.
+- `draft` / `reviewed` status is independent of signing.
+- Embedded signatures and trusted signed Git commits are supported verification mechanisms.
+- Signature validity must be reported explicitly. Signing does not imply approval or compliance.
+- Export is non-blocking and independent of signing or publication.
+- A Claim binds to the exact Requirement identity and payload digest.
+- Curbcheck executes configured Checks even when a Requirement binding is stale or missing; the discrepancy is reported separately.
+- Run Results and Review preserve the information needed to identify and resolve historical Requirements, Claims and Check results.
+- Local Git history may be used to recover exact historical objects by identity and digest. A claimed `origin` is checked against the identified local source when available, otherwise a user-selected source; missing/unverifiable origins are reported without blocking Import or Update.
+
+Any corresponding changes to Packs v2 and workspace configuration must be explicitly incorporated into `docs/reference/packs2.md` and `docs/reference/workspace.md`.
+
+The previously proposed persistent `has_update` queue, separate Publish lifecycle and SQLite version index are not current EP-11 requirements.
+
+Packs v2 files remain the system of record. Git provides repository history. Curbpack does not impose branch, commit, stash or push workflows; optional Git automation may be added separately.
+
+## 5. Export and Import
+
+EP-01's completed **PE-11 — Export Pack** established directory export for the pilot.
+
+EP-11's **VL-02 — Import and export Pack ZIP** extends that functionality. Its accepted requirements take precedence for the new exchange workflow.
+
+A Pack ZIP represents the existing Packs v2 directory content. No separate exchange manifest or alternative Pack schema is introduced.
+
+Export does not require a signed Pack or individually signed Requirements. Import preserves the received Pack content, identity, origin and signatures, subject to the validation and collision rules defined by VL-02.
+
+Imported Packs enter the existing Requirements workflow. Cross-namespace modifications follow VL-01 ownership rules.
+
+The former requirement for a separate Publish operation is not part of the new workflow.
+
+## 6. Existing pilot decisions retained
+
+These decisions describe established behavior and remain applicable unless explicitly superseded by accepted later work.
+
+### Pack Editor
+
+- The application start page displays the available tools.
+- Pack Editor has two navigation levels: a Pack list and each Pack's Sections / Sources list.
+- The Pack list identifies the Pack, regulatory document and adapter.
+- The Sections view retains source-level Extract and Edit actions.
+- Add Source belongs to the Sections view.
+- The existing source editor, extraction workflow, Requirement editor, comparison and signing capabilities must be preserved.
+- An adapter supplies document-specific extraction behavior. No additional Packs v2 field or mandatory YAML format is implied.
+
+### Extraction and review
+
+- Extract uses the selected source and adapter.
+- Extraction is additive: it proposes new Requirements and uses Compare for identified overlaps; absent results never remove existing or locally authored Requirements.
+- Users explicitly review and apply or discard differences, including field-level Compare decisions.
+- Unchanged Requirement content and unrelated fields are preserved.
+- Requirements retain traceability to their original regulatory documents, editions and supporting passages.
+- Changes to signed payloads require renewed signing.
+- The improved form-based Compare workflow is specified by VL-03.
+
+### Workspace
+
+- One selected repository is the primary product-workspace context.
+- Product workspace configuration belongs in `curbpack.json`.
+- Studio application configuration belongs in `curbpack-studio.json`.
+- The established directory concepts include Packs, Claims, Run Results and Review Reports.
+- `docs/reference/workspace.md` remains authoritative for concrete configuration fields and path resolution until amended by an accepted contract change.
+- New namespace and identity requirements from VL-00 must be incorporated into that document. Persisted Extract/Discovery jobs and feedback are normal repository files; only disposable caches need not be retained. Studio may show current Git clean/dirty/unavailable status without performing Git operations.
+
+### Human responsibility
+
+Curbpack evaluates configured technical checks and provides evidence for human review. It does not issue conformity assessments or CE decisions.
+
+Signature validity, review status, technical Check outcomes and organizational release decisions are distinct facts. The organization controls who may approve, sign and distribute; Curbpack verifies technical facts rather than organizational mandates. Run Results and Review Reports are immutable historical snapshots.
+
+## 7. Implementation sequence
+
+Previously agreed implementation sequence (historical plan):
+
+1. Reconcile the open backlog and architecture documents with these decisions.
+2. Implement VR-00 — signature verification.
+3. Implement VL-00 — namespace, origin and status contracts.
+4. Continue EP-02 — behavior-preserving architecture migration. EP-02 does not implement EP-11 behavior.
+5. Implement VL-01–VL-06 under the placement rule in EP-11: target component ownership, headless backend, and Pydantic models of the approved Packs v2 contracts; new pages in TypeScript; the existing HTTP server as a thin adapter until FastAPI is introduced. Existing Python pages change only where required to expose that functionality. No new business logic in Python pages.
+6. Complete remaining EP-09 standalone CLI work.
+
+**Current checkpoint (2026-11-19):** EP-11 VR-00/VL-00–VL-06 and EP-02 stages 0–3 are reported complete. Pause EP-02 before stage 4; prioritize packaging and end-to-end verification for the next pilot. EP-15 Update Pack remains a draft, not authorized implementation.
+
+**EP-15 (draft):** Update Pack will compare BASE/LOCAL/NEW, reuse field-level Compare and explicit Apply, and identify affected Requirements/Claims without automatic rebinding or Check execution. Exact Requirement digests and `match`/`stale`/`missing` remain authoritative; metadata-only or Discovery-hint changes may be suggested for explicit rebind without substantive Claim re-review. Upstream removals are resolved per Requirement (keep/remove), with Claims unchanged automatically. Historical reports are never rewritten. A future bulk replace option is not part of the initial Update workflow.
+
+Independent epics may proceed when their own prerequisites are satisfied.
+
+Security defects and confirmed blockers are handled according to their severity rather than deferred solely because of this ordering.
+
+## 8. Open questions
+
+The following remain undecided and must not be resolved implicitly by coding agents:
+
+- The exact path format of the one active, editable copy per `(namespace, pack_id)`.
+- The precise semantics of source rows versus adapter-enumerated legal sections where current behavior does not already establish them.
+- Whether one Extract operation should support multiple sections.
+- Public repository visibility and authorization for remote publication.
+
+These questions do not authorize new features. Git workflow automation, organizational authorization enforcement and a separate release-policy evaluator are deferred, not required for the current pilot.
+
+## 9. Deferred ideas
+
+- A general standalone Pack/directory comparison tool.
+- Pack inheritance, `extends`, or automatic merging between Pack identities.
+- An optional version index if a concrete performance or query requirement later justifies it.
+- Additional standalone UI applications.
+
+Deferred ideas require separate approval and are not acceptance criteria for current stories.
+
+## 10. Change discipline
+
+When a new decision replaces an earlier one:
+
+1. Record the decision and its rationale here.
+2. Update the affected normative contract or architecture document.
+3. Reconcile only open epics, stories, requirements and tests that govern future work.
+4. Preserve completed stories as historical records.
+5. Do not change product code merely to reconcile documentation.
+
+**One authoritative contract per responsibility. No competing architecture specifications. No inferred requirements from historical stories.**

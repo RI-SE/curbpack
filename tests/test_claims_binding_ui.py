@@ -54,7 +54,7 @@ class BindHelpersTest(unittest.TestCase):
         private, public = generate_keypair()
         claim = build_claim(
             claim_id="claim-a",
-            requirement_id="REQ-A",
+            requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": "docs/a.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -122,7 +122,11 @@ class ClaimsBindingUiTest(unittest.TestCase):
                 finished = _get(base + "/discover?job=" + found.group(1))
                 self.assertIn(">OK<", finished)
                 self.assertNotIn("Open claims", finished)
-                self.assertNotIn(">Close<", finished)
+                without_config = finished.replace(
+                    '<button type="button" id="config-all-close">Close</button>',
+                    "",
+                )
+                self.assertNotIn(">Close<", without_config)
                 self.assertNotIn("Use path", finished)
                 self.assertNotIn(">Edit<", finished)
                 self.assertIn(
@@ -280,6 +284,7 @@ def _seed_two_requirements(root: Path) -> None:
             {
                 "id": requirement_id,
                 "pack_id": pack_id,
+                "namespace": draft_pack()["namespace"],
                 "source": {
                     "framework": "EU",
                     "instrument": "CRA",

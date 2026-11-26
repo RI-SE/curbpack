@@ -245,7 +245,7 @@ class PublishPackTest(unittest.TestCase):
         self.assertEqual(_snapshot(destination), before)
         claim = build_claim(
             claim_id="risk-assessment-exists",
-            requirement_id=point3["id"],
+            requirement={"id": point3["id"], "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": "docs/annex-vii/risk_assessment.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/annex-vii/risk_assessment.md"]}}],
@@ -367,4 +367,18 @@ class PublishPackTest(unittest.TestCase):
             _sample_proposals(),
             draft_pack(),
             at=at,
+        )
+
+
+class WorkspaceBackendTest(unittest.TestCase):
+    def test_workspace_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.workspace import publish_pack as kept
+        from studio.pack.impl.workspace import publish_pack as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/workspace.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
         )

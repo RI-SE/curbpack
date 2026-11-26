@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from checks.defaults import created_curbpack
-from checks.run import claims_dir, packs_dir, reports_dir, results_dir
+from curbcheck.api import claims_dir, packs_dir, reports_dir, results_dir
 from common.errors import ModelError
 from common.jsonio import read_json, write_json
 from common.validate import validate_curbpack_config
@@ -97,7 +97,7 @@ def pack_display_name(repo: Path, pack_id: str) -> str:
     config = validate_curbpack_config(read_json(path))
     if pack_id not in config["packs"]:
         return pack_id
-    from checks.run import _pack_version_dir, packs_dir
+    from curbcheck.api import _pack_version_dir, packs_dir
     from common.store import load_pack_directory
 
     try:
@@ -119,7 +119,7 @@ def repo_pack_requirements(repo: Path, pack_id: str) -> list[dict]:
     config = validate_curbpack_config(read_json(path))
     if pack_id not in config["packs"]:
         return []
-    from checks.run import _pack_version_dir
+    from curbcheck.api import _pack_version_dir
     from common.store import load_pack_directory
 
     directory = _pack_version_dir(packs_dir(repo, config), pack_id)

@@ -2,7 +2,9 @@
 
 **Status:** Draft. Not authorization to implement.
 **Epic:** [EP-09 Start each Packs v2 tool on its own](../EPIC.md)
-**Depends on:** TL-04 (curbcheck alone), CHK-06 packaging baseline.
+**Depends on:** EP-02 Curbcheck extraction, TL-04, CHK-06 packaging baseline and an explicit review of the Packs v2 Check registry contract.
+
+**Decision status:** Proposed Check implementation redesign, **not** authorized by EP-09 CLI decisions. Keep the current subprocess/registered-check behavior unless this separate design is accepted. No new Studio Check implementation or HTTP server.
 
 **As a curbcheck maintainer**, I want each Check family to be an ordinary Python module that curbcheck discovers and can list, so that adding `node` / `git` / a future family is one module plus its tests — not a second copy in `available_checks.json`, `_HANDLERS`, and `checks/bin/`.
 
@@ -126,7 +128,7 @@ Acceptance tests are derived **only** from these criteria. An AI implementing th
 
 ## Stop if
 
-- Discovery would need to import `app`, `pilot_app`, or another tool’s UI to list or run Checks.
+- Discovery would need to import `Studio, FastAPI or another tool’s UI to list or run Checks.
 - Making R4 green requires changing Packs v2 or weakening an existing Check assertion to “unavailable” when the family is present.
 - The only way to list Checks is to reintroduce a second hand-edited allowlist that can drift from the modules.
 

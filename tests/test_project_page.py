@@ -13,8 +13,8 @@ from pathlib import Path
 from app.project_selector import ensure_repos_populated
 from app.server import Workspace, make_handler
 from common.jsonio import read_json, write_json
-from discovery.door import created_curbpack, open_repo_id
-from discovery.repos import load_repos
+from discovery.door import created_curbpack, open_repo_id, set_open_repo
+from discovery.repos import add_repo, load_repos, save_repos
 
 
 class ProjectPageTest(unittest.TestCase):
@@ -50,8 +50,124 @@ class ProjectPageTest(unittest.TestCase):
                 )
 
                 self.assertEqual(open_repo_id(workspace), str(repos[0]["id"]))
-                self.assertIn("Pack Editor", cover)
-                self.assertIn("Change Project", cover)
+                self.assertIn("<h1>Curbpack Studio</h1>", cover)
+                self.assertIn("author packs from law text", cover)
+                self.assertIn('href="/home">Start</a>', cover)
+                self.assertLess(
+                    cover.index('href="/home">Start</a>'),
+                    cover.index('href="/project">Change-Project</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/project">Change-Project</a>'),
+                    cover.index('href="/requirements">Pack-Editor</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/requirements">Pack-Editor</a>'),
+                    cover.index('href="/discover">Discovery &amp; Claims</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/discover">Discovery &amp; Claims</a>'),
+                    cover.index('href="/check">Verification-Workflow</a>'),
+                )
+                self.assertIn('href="/requirements">Pack Editor</a>', cover)
+                self.assertIn('href="/check">Verification Workflow</a>', cover)
+                self.assertNotIn('>Home</a>', cover)
+                self.assertNotIn('>Discover</a>', cover)
+                self.assertIn('src="/icons/workflow.jpg"', cover)
+                self.assertIn("Change-Project", cover)
+                self.assertLess(cover.index("</header>"), cover.index('class="config-panel"'))
+                self.assertLess(cover.index('class="config-panel"'), cover.index("<h1>Curbpack Studio</h1>"))
+                self.assertLess(cover.index('class="config-panel"'), cover.index("Verification Workflow"))
+                self.assertIn("Extract requirements from law or source material", cover)
+                self.assertIn("Find candidate evidence in the product", cover)
+                self.assertIn("review the result, and remediate", cover)
+                self.assertNotIn("Check — authoritative pack", cover)
+                self.assertNotIn("Review — write and sign", cover)
+                self.assertNotIn('href="/review">Review</a>', cover)
+                self.assertIn("Current Project", cover)
+                self.assertIn('id="config-all-open">demo-product</button>', cover)
+                self.assertNotIn("Show Configuration", cover)
+                compact, _, dialog = cover.partition('<dialog id="config-all"')
+                for label in (
+                    "Current Configuration",
+                    "Packs directory",
+                    "Claims directory",
+                    "Results directory",
+                    "Reports directory",
+                ):
+                    self.assertNotIn(label, compact)
+                    self.assertIn(label, dialog)
+                self.assertIn("curbpack/packs", cover)
+                self.assertIn("curbpack/claims", cover)
+                self.assertIn(".curbpack", cover)
+                self.assertIn("curbpack/reports", cover)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_selecting_a_repo_without_curbpack_opens_the_config_editor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+            workspace.mkdir()
+            fresh = workspace / "fresh-product"
+            fresh.mkdir()
+            data = load_repos(workspace)
+            add_repo(workspace, data, name="Fresh", path=str(fresh))
+            save_repos(workspace, data)
+            repo_id = str(data["repos"][-1]["id"])
+
+            httpd = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                make_handler(Workspace(workspace)),
+            )
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _post(
+                    base + "/project",
+                    {"action": "select", "repo_id": repo_id},
+                )
+                self.assertEqual(open_repo_id(workspace), repo_id)
+                self.assertFalse((fresh / "curbpack.json").exists())
+                self.assertIn("Create curbpack.json", page)
+                self.assertIn('name="packs_dir"', page)
+                self.assertIn('value="curbpack/packs"', page)
+                self.assertIn('value="curbpack/claims"', page)
+                self.assertIn('value=".curbpack"', page)
+                self.assertIn('value="curbpack/reports"', page)
+                self.assertNotIn("<h1>Curbpack Studio</h1>", page)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+
+    def test_invalid_curbpack_still_shows_registered_projects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "workspace"
+            workspace.mkdir()
+            demo = workspace / "demo-product"
+            demo.mkdir()
+            config = created_curbpack()
+            config["unsigned_requirements"] = "reject"
+            write_json(demo / "curbpack.json", config)
+            data = load_repos(workspace)
+            add_repo(workspace, data, name="demo-product", path=str(demo))
+            save_repos(workspace, data)
+            set_open_repo(workspace, str(data["repos"][-1]["id"]))
+
+            httpd = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                make_handler(Workspace(workspace)),
+            )
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            try:
+                page = _get(base + "/")
+                self.assertIn("Registered projects", page)
+                self.assertIn("demo-product", page)
+                self.assertIn("unsigned_requirements", page)
+                self.assertIn("curbpack/packs", page)
             finally:
                 httpd.shutdown()
                 httpd.server_close()

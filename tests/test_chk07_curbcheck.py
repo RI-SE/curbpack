@@ -43,7 +43,7 @@ class DefaultsFactoryTest(unittest.TestCase):
         self.assertEqual(document["claims_dir"], "curbpack/claims")
         self.assertEqual(document["results_dir"], ".curbpack")
         self.assertEqual(document["reports_dir"], "curbpack/reports")
-        self.assertEqual(document["unsigned_requirements"], "reject")
+        self.assertNotIn("unsigned_requirements", document)
         self.assertNotIn("exclude_requirements", document)
         self.assertNotIn("requirements", document)
 
@@ -95,7 +95,7 @@ def _passing_repo() -> tuple[tempfile.TemporaryDirectory, Path]:
         repo / "curbpack" / "claims",
         build_claim(
             claim_id="claim-risk",
-            requirement_id="CRA-ANNEX-VII-RISK",
+            requirement={"id": "CRA-ANNEX-VII-RISK", "namespace": "RISE/Example", "pack_id": "example"},
             source="documents",
             args={"path": "docs/a.md"},
             checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -251,7 +251,7 @@ class IdListFlagsTest(unittest.TestCase):
             repo / "curbpack" / "claims",
             build_claim(
                 claim_id="claim-other",
-                requirement_id="OTHER-REQ",
+                requirement={"id": "OTHER-REQ", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/a.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],

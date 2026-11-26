@@ -72,7 +72,7 @@ class ExtractJobTest(unittest.TestCase):
 
     def test_done_job_writes_a_new_copy_and_moves_progress(self):
         seen: list[float] = []
-        from requirements import jobs as jobs_module
+        from studio.pack.impl import jobs as jobs_module
 
         real = jobs_module.extract_section
 
@@ -80,7 +80,7 @@ class ExtractJobTest(unittest.TestCase):
             seen.append(self.read_job(self.jobs, "done-1")["progress"])
             return real(*args, **kwargs)
 
-        with patch("requirements.jobs.extract_section", spy):
+        with patch("studio.pack.impl.jobs.extract_section", spy):
             self.start_extract_job(
                 self.jobs,
                 job_id="done-1",
@@ -161,7 +161,7 @@ class ExtractJobTest(unittest.TestCase):
                 time.sleep(0.01)
             raise AssertionError("abort was not requested")
 
-        with patch("requirements.jobs.extract_section", hold):
+        with patch("studio.pack.impl.jobs.extract_section", hold):
             self.start_extract_job(
                 self.jobs,
                 job_id="abort-1",
@@ -250,3 +250,14 @@ def _fake_model_complete(prompt: str, settings: dict) -> str:
             ]
         }
     )
+
+
+class JobsBackendTest(unittest.TestCase):
+    def test_extract_jobs_live_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.jobs import start_extract_job as kept
+        from studio.pack.impl.jobs import start_extract_job as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn("studio/pack/impl/jobs.py", inspect.getsourcefile(backend).replace("\\", "/"))

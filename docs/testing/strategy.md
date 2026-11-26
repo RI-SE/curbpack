@@ -1,12 +1,12 @@
 # Verification strategy
 
-This suite verifies seven carried claims against one prepared repository. The runner is `curbcheck` with `--repo` and `-o`, as [README.md](README.md) states. Pack and claim directories come from `curbpack.json` (`packs_dir` / `claims_dir`). It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`. `--packs` is an optional comma-separated id list, not a directory.
+This suite verifies the claims checked into the pinned reference product against one prepared repository. The runner is `curbcheck` with `--repo` and `-o`, as [README.md](README.md) states. Pack and claim directories come from `curbpack.json` (`packs_dir` / `claims_dir`). It does not read `.curbpack.json` or `CURBPACK_PACKS_DIR`. `--packs` is an optional comma-separated id list, not a directory.
 
 Start every verification assignment with [Test setup](procedures/README.md): `make start-verification-run`, then `source tmp/verification-run.sh`. Do not start in a suite file.
 
 ## System under test
 
-The system under test is that runner and the Packs v2 packs it loads from the Studio fixture on the reference-product clone. The reference product is test input: the Glucose Log tree at the commit in `tests/cyberready-test-product.pin`, after R1, plus the `curbpack.json` and `curbpack/claims/` files the procedure adds.
+The system under test is that runner and the Packs v2 packs it loads from the reference-product clone. The reference product is test input: the Glucose Log tree at the commit in `tests/cyberready-test-product.pin`, after R1, including the `curbpack.json` that commit already contains.
 
 A passing check is not a legal conformity determination.
 

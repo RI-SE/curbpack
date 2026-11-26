@@ -69,7 +69,7 @@ class DiscoverLayoutTest(unittest.TestCase):
                 repo / "curbpack" / "claims",
                 build_claim(
                     claim_id="claim-a",
-                    requirement_id="REQ-A",
+                    requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                     source="documents",
                     args={"path": "docs/a.md"},
                     checks=[{"check": "exist", "args": {"paths": ["docs/a.md"]}}],
@@ -93,15 +93,23 @@ class DiscoverLayoutTest(unittest.TestCase):
                 self.assertNotIn("Hunt settings", discover)
                 self.assertNotIn("The selected repo", discover)
                 self.assertIn('class="config-panel"', discover)
-                self.assertIn("Current Configuration", discover)
-                self.assertLess(discover.index("Current Configuration"), discover.index("<table>"))
-                self.assertLess(discover.index("Packs directory"), discover.index("<table>"))
-                self.assertLess(discover.index("Claims directory"), discover.index("<table>"))
-                self.assertNotIn("Results directory", discover)
-                self.assertNotIn("Reports directory", discover)
+                self.assertIn('id="config-all-open"', discover)
+                self.assertNotIn("Show Configuration", discover)
+                self.assertIn("Change-Project", discover)
+                compact, _, dialog = discover.partition('<dialog id="config-all"')
+                self.assertNotIn("Current Configuration", compact)
+                self.assertNotIn("Packs directory", compact)
+                self.assertNotIn("Claims directory", compact)
+                self.assertNotIn("Results directory", compact)
+                self.assertNotIn("Reports directory", compact)
+                self.assertIn("Current Configuration", dialog)
+                self.assertIn("Packs directory", dialog)
+                self.assertIn("Claims directory", dialog)
+                self.assertIn("Results directory", dialog)
+                self.assertIn("Reports directory", dialog)
                 self.assertNotIn(">curbpack.json <code>", discover)
-                self.assertIn("Change Project", discover)
-                self.assertIn("Project <strong>", discover)
+                self.assertIn("Change-Project", discover)
+                self.assertIn('id="config-all-open"', discover)
                 self.assertNotIn('class="repo-picker"', discover)
                 self.assertNotIn(">Add repo<", discover)
                 self.assertNotIn('id="add-repo-open"', discover)
@@ -115,6 +123,7 @@ class DiscoverLayoutTest(unittest.TestCase):
                     discover.index(">Limit</th>"),
                 )
                 self.assertLess(discover.index(">Limit</th>"), discover.index(">Actions</th>"))
+                self.assertIn('name="assess_limit" form="discover-cra-xml-baseline" value="20"', discover)
                 self.assertNotIn("Working copy", discover)
                 self.assertNotIn("2026-10-13T143000Z", discover)
                 self.assertNotIn("Published · 0.1.0", discover)
@@ -178,8 +187,8 @@ class DiscoverLayoutTest(unittest.TestCase):
                 self.assertEqual(saved["description"], "Evidence for A.")
 
                 product = _get(base + "/discover/repo")
-                self.assertIn("Change Project", product)
-                self.assertIn("Project <strong>", product)
+                self.assertIn("Change-Project", product)
+                self.assertIn('id="config-all-open"', product)
                 self.assertNotIn('class="repo-picker"', product)
                 self.assertNotIn(">Add repo<", product)
                 self.assertNotIn('class="copy-select"', product)

@@ -52,14 +52,15 @@ The product team chooses a published collection by pack id. The version they are
 
 ### 2.1 Pack
 
-Pack is **metadata only**. Membership is `requirement.pack_id → pack.id`.
+Pack is **metadata only**. Membership is `requirement.pack_id → pack.id`. Identity is `(namespace, id)` for a Pack and `(namespace, pack_id, id)` for a Requirement. `version` is a separate release fact.
 
 ```json
 {
   "id": "house-policy",
   "name": "House Policy Example",
   "version": "0.1.0",
-  "assurance_class": "structural_draft",
+  "namespace": "RISE/House Policy Example",
+  "status": "draft",
   "description": "…",
   "jurisdiction": "EU",
   "source": {
@@ -95,6 +96,8 @@ The Check definitions own their args schemas. A Claim contains `checks[]`, each 
 {
   "id": "CRA-ANNEX-VII-RISK",
   "pack_id": "cra-baseline",
+  "namespace": "RISE/CRA Annex VII draft structure (informational)",
+  "status": "draft",
   "remediation_hint": "Populate a product-specific risk assessment (no placeholders).",
   "source": {
     "framework": "EU",
@@ -159,9 +162,13 @@ The Check definitions own their args schemas. A Claim contains `checks[]`, each 
 | `references[].law_text` | Verbatim passage. The requirement's meaning is this text plus the properties extracted from it. |
 | `note` | Optional human comment. Omit the key when there is nothing to say. `check` does not read it. Not a second law text, and not `applicability`. |
 | `discovery_hints` | Candidate-discovery hints. Part of the signed payload. See §2.7. `check` does not read them. |
-| `origin` | Optional. Omit on the publisher's requirement. Set when a local working copy is created from a published version, not when `discovery_hints` is later edited. `pack` and `version` name that published version. Included in the digest. Change `version` only when a newer published version is actually taken in and accepted. |
+| `origin` | Optional. Omit on the publisher's requirement. Set when a local working copy is created from a published version, not when `discovery_hints` is later edited. Included in the digest. A present origin may name `namespace`, and `requirement` when the source is a Requirement. Do not add those keys to an origin that does not already carry them. |
+| `origin.namespace` | Optional. Namespace of the source object. |
 | `origin.pack` | Id of the published pack, the same id as `pack.id`. |
 | `origin.version` | That pack's `version` at the release that was taken in. Not a Git commit and not a content hash. |
+| `origin.requirement` | Optional. Id of the source Requirement. Omit on a Pack origin. |
+| `namespace` | Namespace of the containing Pack. A Requirement uses the same value as its Pack. |
+| `status` | `draft` or `reviewed`. The publisher's declared review state. A missing key is `draft`. This is not the signature status `valid`, `invalid`, or `unsigned`. Signing does not change it. |
 | `signed` | Required on a published requirement. Omitted on a local draft. Present when an approved local version uses this seal. The publisher's signature verifies only the publisher's bytes. See §2.6. |
 
 There is no `description` and no `expected` on the requirement. The meaning is `law_text` and the properties extracted from it. "Draft suitable for human review" is not a requirement field. There is no `severity` on the requirement. There is no `statement`, no `limitations`, and no `mandatory` or `verification` flag. There is no `source_digest`.
@@ -184,7 +191,7 @@ Owns the configuration Studio and curbcheck need for this repository: which coll
 
 `packs` lists pack ids. It does not list versions. The version the team is using is `version` on the local `pack.json` for that id, the file Curbpack loads for the id. Keeping that file (in git, or in the air-gapped pack directory) is what makes the choice reproducible without a network. A newer publication is visible only when its `pack.json` has reached the environment. Nothing fetches it on its own. Compare that file's `version` with the version the team is already using, and with `origin.version` on each local requirement. Those are different facts.
 
-On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with that pack's Requirement files as the other `*.json` files in that same version directory. A Claim is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`, one new file per run. A review report is `<reports_dir>/review-report_<UTC>.json`. Field meanings and the full created-file example, including the required `unsigned_requirements` key, are [workspace.md](workspace.md) §2.2–§2.3.
+On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-version>/pack.json`, with that pack's Requirement files as the other `*.json` files in that same version directory. A Claim is `<claims_dir>/<claim-id>.json`. A run-result JSON, when one is requested, is `<results_dir>/run-result_<UTC>.json`, one new file per run. A review report that is not a Studio Check is `<reports_dir>/review-report_<UTC>.json`. A Studio Check writes `review-report_<UTC>.json`, `review-report_<UTC>.items.json`, and `remedy-report_<UTC>.json` in that Check's directory under `results_dir`. Field meanings and the full created-file example are [workspace.md](workspace.md) §2.2–§2.3. The report fields are [outputs.md](outputs.md).
 
 ```json
 {
@@ -201,7 +208,7 @@ On disk, relative to each path field: a pack is `<packs_dir>/<pack-id>/<pack-ver
   "claims_dir": "curbpack/claims",
   "results_dir": ".curbpack",
   "reports_dir": "curbpack/reports",
-  "unsigned_requirements": "reject"
+  "namespace_base": "RISE"
 }
 ```
 
@@ -248,6 +255,9 @@ The same Claim JSON object is used for saving, editing, publishing, checking, si
 | --- | --- |
 | `id` | Stable Claim identity within the product's Claim collection. |
 | `requirement_id` | The one Requirement this Claim supports. |
+| `namespace` | Required. Namespace of the Requirement this Claim was assessed against. Part of the signed payload. |
+| `pack_id` | Required. Pack id of that Requirement. Part of the signed payload. |
+| `requirement_digest` | Required. Version digest of that Requirement payload at bind time. Part of the signed payload. |
 | `source` | Source adapter identifier, such as `documents` or `git`. |
 | `args` | Source-specific arguments identifying the evidence and, where applicable, the regions supporting the Claim. |
 | `description` | The human rationale explaining how the identified evidence supports the Requirement. |
@@ -255,12 +265,15 @@ The same Claim JSON object is used for saving, editing, publishing, checking, si
 | `checks` | Zero or more `{ "check": <id>, "args": <object> }` entries, defined in §2.5. |
 | `signed` | Optional Claim signature (§2.6). |
 
-A file-backed Claim with two Checks:
+A file-backed Claim with two Checks. `requirement_digest` below is the shape of the field. A stored Claim uses `version_digest` of the Requirement it names.
 
 ```json
 {
   "id": "claim-house-security-md",
   "requirement_id": "HOUSE-SECURITY-REPORTING",
+  "namespace": "RISE/House Policy Example",
+  "pack_id": "house-policy",
+  "requirement_digest": "f7e03eb876b5251db1b1458180fa7525e8dda063db2fb702298d96e5aa9054ca",
   "source": "git",
   "args": {
     "path": "SECURITY.md"
@@ -316,7 +329,7 @@ A Claim with one or more schema-valid Checks may be saved, published and tested 
 
 Human approval is recorded by signing the Claim after reviewing the evidence and its configured Checks.
 
-A Claim signature covers the Claim JSON, including `source`, source `args`, `description` and `checks`. It does not automatically seal the external evidence artefact's contents.
+A Claim signature covers the Claim JSON, including `source`, source `args`, `description`, `checks`, `namespace`, `pack_id`, and `requirement_digest`. A Claim includes those three binding fields. It does not automatically seal the external evidence artefact's contents.
 
 A subsequent Check failure indicates that a monitored condition may no longer hold and that the Claim may need human reassessment. It neither silently revokes the signature nor automatically establishes non-compliance.
 
@@ -324,7 +337,7 @@ Editing a signed Claim changes its digest and requires renewed approval and sign
 
 **Field boundaries**
 
-Legal text, `discovery_hints` and `remediation_hint` remain on the Requirement.
+Legal text, `discovery_hints` and `remediation_hint` remain on the Requirement. A failed Check result may carry a separate optional `remediation_hint` written by the Check tool. That string is defined with the run result in [Outputs](outputs.md#check-results). It is not this Requirement field, and it is not part of the Requirement or Claim digest.
 
 `expected`, `remediation`, `settlement`, `retired`, retrieval scores, model rationales and Useful/Poor votes are not Claim fields. Operational Discovery feedback remains separate from the signed Claim.
 
@@ -416,7 +429,7 @@ Same `signed` shape (shown inside its enclosing object):
 | `name` | Signer display name. Must match the certificate that verifies. Covered by the signature. |
 | `signature` | Seal bytes. Excluded from the corresponding object digest. |
 
-**Version digest:** for a Requirement, Claim or Review Report, canonical JSON of the **entire object** with its whole `signed` block removed. Thus a Claim digest includes the Claim-level `source` and `args`, `description`, `severity`, every entry of `checks[]` and each Check's `args`. A changed payload is a new version. A new `signed.at` alone does not change this digest.
+**Version digest:** for a Requirement, Claim, review report, review items, or remedy report, canonical JSON of the **entire object** with its whole `signed` block removed. Thus a Claim digest includes the Claim-level `source` and `args`, `description`, `severity`, every entry of `checks[]` and each Check's `args`. A changed payload is a new version. A new `signed.at` alone does not change this digest.
 
 **Signature input:** the applicable version digest, plus `name`, plus `at`. Sign with the signer's certificate. Write base64 into `signed.signature`. Verification uses the trusted certificate for `name`. A publisher signature verifies only a payload whose bytes are the publisher's, which means no `origin` and no local edit to a publisher Requirement. It does not verify a modified working copy. An unsigned Claim can still be evaluated; a Check pass is not a signature.
 
@@ -426,20 +439,33 @@ Same `signed` shape (shown inside its enclosing object):
 
 DSSE and Sigstore are not a prerequisite. The seal is the `signed` block in this section. A later change to either of them needs a requirement from the party who relies on the signature, a test that verification still works with no network, a dependency analysis, and a fixture for the migration.
 
-A signed Git commit does not write the `signed` block. When `signed` is present, the reading shows that block. When `signed` is absent and the requirement's bytes are in a signed Git commit, the reading shows a Git commit: the signing key, the time stated on that commit, that commit as the version, and whether the commit signature verifies. When neither exists, the requirement is an unsigned draft, not an approved requirement version. The same reading applies to a claim and to the pack. `discovery_hints` has no seal of its own; it is inside the requirement payload. Git records the history of the files. It is not a signature chain, not a version graph, and not a merge. Nothing joins RISE's signature to a later local signature, and nothing merges an upstream release into a working copy. SourceSafe, ClearCase, and a copied folder have no commit to consult. A verified signed Git commit authenticates its recorded content; whether its signer was authorized to approve a particular Claim remains an organisational responsibility. It is not a substitute for reading the Claim and its Check results.
+A signed Git commit does not write the `signed` block. The reading is one result. `status` is `valid`, `invalid`, or `unsigned`. `method` is `object`, `git`, or `none`. The result also names the signer, the version, and the reason when there is one.
 
-There is no separate signing document, no `approved_for_pilot_use` decision on the seal, and no reviewer role field. The person who judges that the claims are sufficient signs the review report (`review-sign`). That signature is not the requirement seal. The report uses the same `signed` shape. Its version digest is the report with `signed` removed.
+An object `signed` block is read first. Git is not consulted when that block is present, whether the block verifies or not. A block that verifies is `valid` with method `object`. A block that does not verify stays `invalid` with method `object`.
 
-The signed report includes the run result (§3.1), the signature-status appendix for Claims evaluated or included in the report, and the reviewer's decision in their own words. A person may accept the material, ask for a change, or hand the question to whoever the organisation holds responsible. Those are examples of what the words can say. Curbpack does not route them, assign them, or decide that the signer was authorized to decide. The organisation does. The decision text is inside the version digest, so the five facts below are how the signature is read.
+When no `signed` block is present, Git is local only. There is no fetch. Trust is a good signature, `%G?` = `G`. The signer is `%GS`, never the author or committer. `version` is that commit id. The commit is the latest one that touches the object. An older signed commit does not count when a later commit touches the object.
 
-**Reading a signature.** For a requirement, a claim, a review report, or a Git commit used as a seal, show these five facts and nothing else in their place:
+| Situation | status | method |
+| --- | --- | --- |
+| No repository, no commit that touches the object, or `%G?` is `N` | `unsigned` | `none` |
+| `%G?` is not `G` | `invalid` | `git` |
+| `%G?` is `G` and the current bytes differ | `invalid` | `git` |
+| `%G?` is `G`, the signer is `%GS`, and the current bytes match | `valid` | `git` |
+
+A Requirement matches when the worktree file equals the blob in that commit. A Pack matches when every file in the directory digest, including dotfiles, has the same bytes in that commit. `pack.json` is compared after `signed.signature` is cleared. An extra or missing digest file is a mismatch. When neither an object signature nor an applicable Git signature exists, `status` is `unsigned` and `method` is `none`. The object is an unsigned draft, not an approved version. The same reading applies to a claim and to the pack. `discovery_hints` has no seal of its own; it is inside the requirement payload. Git records the history of the files. It is not a signature chain, not a version graph, and not a merge. Nothing joins RISE's signature to a later local signature, and nothing merges an upstream release into a working copy. SourceSafe, ClearCase, and a copied folder have no commit to consult. A verified signed Git commit authenticates its recorded content; whether its signer was authorized to approve a particular Claim remains an organisational responsibility. It is not a substitute for reading the Claim and its Check results.
+
+There is no separate signing document, no `approved_for_pilot_use` decision on the seal, and no reviewer role field. The person who judges that the claims are sufficient signs the review report (`review-sign`) and the review items. The person who finishes the remediation signs the remedy report. Those signatures are not the requirement seal and not the Claim seal. Each uses the same `signed` shape. Its version digest is that object with `signed` removed. Reading uses `what` `review report`, `what` `review items`, or `what` `remedy report`.
+
+The signed report includes the run result (§3.1), the signature-status appendix for Claims evaluated or included in the report, any per-deviation `assessments` recorded on that report, and the reviewer's decision in their own words. The signed review items are the per-check decisions. The signed remedy report is the remediation account: the items, the history, the round notes, and any acknowledged Check outside the original deviations. It does not replace the review report. A person may accept the material, ask for a change, or hand the question to whoever the organisation holds responsible. Those are examples of what the words can say. Curbpack does not route them, assign them, or decide that the signer was authorized to decide. The organisation does. The decision text is inside the version digest, so the five facts below are how the signature is read.
+
+**Reading a signature.** For a requirement, a claim, a review report, the review items, a remedy report, or a Git commit used as a seal, show these five facts and nothing else in their place:
 
 | Shown | Source |
 | --- | --- |
-| What was signed | The object: a requirement, a claim, the review report, or a Git commit. The pack directory seal is read the same way; what it covers is the directory digest. |
+| What was signed | The object: a requirement, a claim, the review report, the review items, the remedy report, or a Git commit. The pack directory seal is read the same way; what it covers is the directory digest. |
 | Who | The identity the signature binds to. On a `signed` block that is `name`, and it must be the identity on the certificate that verifies. On a signed Git commit it is the signing key. The Git author string is not that identity. |
 | When | The stated time. On a `signed` block that is `at` (UTC). On a signed Git commit it is the time stated on that commit. That commit time is not a separate cryptographically verified signing timestamp. |
-| Which version | The exact content the signature covers: the version digest. For a requirement, claim, or report that is the canonical JSON with the whole `signed` block removed. The signature is over that digest plus `name` plus `at`. This is not `pack.version` and not `origin.version`. For a Git commit it is that commit. For the pack directory it is the directory digest. |
+| Which version | The exact content the signature covers: the version digest. For a requirement, claim, review report, review items, or remedy report that is the canonical JSON with the whole `signed` block removed. The signature is over that digest plus `name` plus `at`. This is not `pack.version` and not `origin.version`. For a Git commit it is that commit. For the pack directory it is the directory digest. |
 | Verifiable | Yes, if the trusted certificate for that identity verifies the signature over that digest, `name`, and `at`. Otherwise the reason, which is one of the following. |
 
 Not verifiable, and why:
@@ -456,7 +482,7 @@ Kalle's requirement, after his hint edit, reads as: a requirement; Kalle; `2026-
 
 RISE publishes `cra-baseline` with `pack.version` `"1.0.0"`. The requirement has no `origin`. RISE signs it. The product team chooses that collection: `curbpack.json` lists `cra-baseline`, and their local `pack.json` says `"1.0.0"`. Fetching or importing those files does not alter them. Offline, this is the copy they already have. No network is required to read it.
 
-They create a working copy of the requirement. `origin` is set at that moment to `{ "pack": "cra-baseline", "version": "1.0.0" }`. The hints are still the ones RISE published. The copy is unsigned. It is a draft. RISE's signature does not cover it. RISE's file is unchanged. Approving the draft seals it. That sealed payload is the approved local version.
+They create a working copy of the requirement. `origin` is set at that moment to `{ "namespace": "RISE/CRA baseline", "pack": "cra-baseline", "version": "1.0.0", "requirement": "CRA-ANNEX-VII-RISK" }`. The hints are still the ones RISE published. The copy is unsigned. It is a draft. RISE's signature does not cover it. RISE's file is unchanged. Approving the draft seals it. That sealed payload is the approved local version.
 
 Kalle later changes `discovery_hints`. `origin` stays `"1.0.0"`. He approves the edit and signs that payload. `signed.name` is Kalle. Git records the edit. His signature does not extend RISE's, and nothing syncs the copy back to RISE.
 

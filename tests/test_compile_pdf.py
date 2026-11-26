@@ -20,17 +20,20 @@ ROOT = Path(__file__).resolve().parents[1]
 def report_fixture(*, long=False):
     passage = 'Åtgärder för säkerhet: läs och granska <källa> & underlag.'
     requirement = {
-        'id': 'REQ-A', 'pack_id': 'house',
+        'id': 'REQ-A', 'pack_id': 'house', 'namespace': 'RISE/house',
         'source': {'framework': 'test', 'instrument': 'Security policy',
                    'identifier': 'POL-1', 'language': 'sv', 'url': 'https://example.test/policy'},
         'references': [{'nr': 1, 'locator': '2.1', 'law_text': (passage + ' ') * (230 if long else 1)}],
         'strength': 'MUST', 'remediation_hint': 'Document the security process.',
     }
     claims, rows = [], []
+    bound = version_digest(requirement)
     for index, status in enumerate(('pass', 'fail', 'skipped')):
         paths = [f'docs/{"long-path-" * (18 if long else 1)}{n}-säkerhet.md' for n in range(9 if long else 2)]
         claim = {
             'id': f'claim-{index}', 'requirement_id': 'REQ-A',
+            'namespace': requirement['namespace'], 'pack_id': requirement['pack_id'],
+            'requirement_digest': bound,
             'source': 'documents', 'args': {'path': paths[0]},
             'description': f'Reviewed evidence {index}: <b>literal text</b> & rationale.',
             'checks': [{'check': 'exist', 'args': {'paths': paths}}],
@@ -83,9 +86,15 @@ class CompilePdfTest(unittest.TestCase):
             self.assertIn(expected, main)
         for technical_value in ('Product commit', 'worktree',
                                 'digest', 'Check arguments', 'https://', 'REQ-A',
-                                'claim-0', 'No trusted certificate available.',
+                                'No trusted certificate available.',
                                 report['run_result']['commit'], version_digest(report)):
             self.assertNotIn(technical_value, main)
+        summary, findings = main.split('Review findings', 1)
+        self.assertNotIn('claim-0', summary)
+        self.assertIn('Passing checks', findings)
+        self.assertLess(findings.index('Outstanding deviations requiring correction'), findings.index('Accepted deviations'))
+        self.assertLess(findings.index('Accepted deviations'), findings.index('Passing checks'))
+        self.assertLess(findings.index('Passing checks'), findings.index('claim-0'))
         self.assertIn('Reason reported by the checker', main)
         self.assertIn('Evidence missing', main)
         self.assertIn('Changes since the run', main)
@@ -201,7 +210,11 @@ class CompilePdfTest(unittest.TestCase):
         second_requirement['id'] = 'REQ-B'
         report['requirements'].append(second_requirement)
         second_claim = copy.deepcopy(report['claims'][0])
-        second_claim.update(id='claim-b', requirement_id='REQ-B')
+        second_claim.update(
+            id='claim-b',
+            requirement_id='REQ-B',
+            requirement_digest=version_digest(second_requirement),
+        )
         second_claim['checks'].append({'check': 'exist', 'args': {'paths': ['second.md']}})
         report['claims'].insert(1, second_claim)
         report['run_result']['claims'].insert(1, {
@@ -220,6 +233,57 @@ class CompilePdfTest(unittest.TestCase):
         self.assertIn('PASS [1]', second_group)
         self.assertIn('second.md', second_group)
 
+    def test_a_passing_check_still_reports_stale_and_missing_bindings(self):
+        """VL-04. The PDF keeps Check status pass and still shows the stored binding."""
+        report = report_fixture()
+        report['claims'] = report['claims'][:2]
+        report['run_result']['claims'] = report['run_result']['claims'][:2]
+        report['appendix'] = report['appendix'][:2]
+        bindings = (
+            {
+                'binding': 'stale',
+                'namespace': 'RISE/Stale Pack',
+                'pack_id': 'stale-pack',
+                'requirement_id': 'REQ-STALE',
+                'requirement_digest': 'recorded-stale-digest',
+                'actual_digest': 'actual-stale-digest',
+            },
+            {
+                'binding': 'missing',
+                'namespace': 'RISE/Missing Pack',
+                'pack_id': 'missing-pack',
+                'requirement_id': 'REQ-MISSING',
+                'requirement_digest': 'recorded-missing-digest',
+            },
+        )
+        for row, binding in zip(report['run_result']['claims'], bindings):
+            row['status'] = 'pass'
+            row['checks'][0]['status'] = 'pass'
+            row['checks'][0].pop('detail', None)
+            row.update(binding)
+        self.save(report)
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = self.text().replace('\n', ' ')
+        self.assertIn('All recorded checks passed', text)
+        self.assertIn('binding stale', text)
+        self.assertIn('RISE/Stale Pack', text)
+        self.assertIn('stale-pack', text)
+        self.assertIn('REQ-STALE', text)
+        self.assertIn('recorded-stale-digest', text)
+        self.assertIn('actual-stale-digest', text)
+        self.assertIn('binding missing', text)
+        self.assertIn('RISE/Missing Pack', text)
+        self.assertIn('missing-pack', text)
+        self.assertIn('REQ-MISSING', text)
+        self.assertIn('recorded-missing-digest', text)
+        self.assertNotIn('Check failed', text)
+        findings = text.split('Review findings', 1)[1].split('Appendix A', 1)[0]
+        self.assertIn('binding stale', findings)
+        self.assertIn('actual-stale-digest', findings)
+        self.assertIn('binding missing', findings)
+        self.assertNotIn('actual-stale-digest', findings[findings.index('binding missing'):])
+
     def test_empty_run_is_not_described_as_success(self):
         report = report_fixture()
         for key in ('claims', 'requirements', 'appendix'):
@@ -229,6 +293,24 @@ class CompilePdfTest(unittest.TestCase):
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('No Checks executed', self.text())
+
+    def test_pdf_renderer_lives_in_the_compile_backend(self):
+        import inspect
+
+        from compile.pdf import compile_pdf as entry
+        from studio.compile.impl.pdf import compile_pdf as backend
+
+        self.assertIs(entry, backend)
+        self.assertIn('studio/compile/impl/', inspect.getsourcefile(backend).replace('\\', '/'))
+
+    def test_pdf_command_lives_in_the_compile_backend(self):
+        import inspect
+
+        from compile.cli import main as entry
+        from studio.compile.cli import main as backend
+
+        self.assertIs(entry, backend)
+        self.assertIn('studio/compile/cli.py', inspect.getsourcefile(backend).replace('\\', '/'))
 
 
 if __name__ == '__main__':

@@ -22,8 +22,8 @@ from checks.run import reports_dir, results_dir
 from claims.bind import build_claim, write_claim
 from common.canonical import version_digest
 from common.jsonio import read_json, write_json
-from common.store import save_pack, save_requirement
-from common.validate import validate_curbpack_config
+from common.store import load_requirement, save_pack, save_requirement
+from common.validate import validate_curbpack_config, validate_requirement
 from discovery.door import created_curbpack, set_open_repo
 from discovery.repos import add_repo, load_repos, save_repos
 from requirements.extract.pipeline import draft_pack
@@ -57,18 +57,12 @@ class ReviewDocumentListsTest(unittest.TestCase):
                 self.assertIn('value="claims/here"', page)
                 self.assertIn('value="runs/out"', page)
                 self.assertIn('value="signed/reports"', page)
-                runs = _section(page, "run-results")
-                reports = _section(page, "review-reports")
-                self.assertIn("Run result", runs)
-                self.assertIn(one.name, runs)
-                self.assertIn(two.name, runs)
-                self.assertNotIn(first.name, runs)
-                self.assertNotIn(second.name, runs)
-                self.assertIn("Review report", reports)
-                self.assertIn(first.name, reports)
-                self.assertIn(second.name, reports)
-                self.assertNotIn(one.name, reports)
-                self.assertNotIn(two.name, reports)
+                self.assertNotIn("<h2>Run results</h2>", page)
+                self.assertNotIn("<h2>Review reports</h2>", page)
+                self.assertIn(two.name, page)
+                self.assertNotIn(one.name, page)
+                self.assertNotIn(first.name, page)
+                self.assertNotIn(second.name, page)
                 self.assertNotIn("claim-one", page)
                 self.assertNotIn("claim-two", page)
                 self.assertEqual(_files(repo), before)
@@ -159,8 +153,8 @@ class ReviewDocumentListsTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
                 self.assertIn("blocked-results", page)
-                runs = _section(page, "run-results")
-                self.assertNotIn(report.name, runs)
+                self.assertNotIn("<h2>Run results</h2>", page)
+                self.assertNotIn(report.name, page)
 
     def test_an_unusable_reports_directory_is_named_and_results_are_not_its_fallback(self):
         """REV-03 scenario 40. REV-R02."""
@@ -174,8 +168,7 @@ class ReviewDocumentListsTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _get(base + "/review?repo=alpha")
                 self.assertIn("blocked-reports", page)
-                reports = _section(page, "review-reports")
-                self.assertNotIn(run.name, reports)
+                self.assertNotIn("<h2>Review reports</h2>", page)
                 self.assertEqual(_files(repo), before)
 
     def test_no_run_result_is_an_empty_state_and_not_a_passing_review(self):
@@ -225,7 +218,7 @@ class ReviewDocumentListsTest(unittest.TestCase):
             write_claim(repo / "kept" / "claims", _exist_claim("claim-readme", "CRA-PURPOSE", "README.md"))
             with _serve(workspace) as base:
                 check = _post(base + "/check", {"repo_id": "widget", "action": "check"})
-                run = next((repo / "runs" / "out").glob("run-result_*.json"))
+                run = next((repo / "runs" / "out").glob("run-result_*/run-result.json"))
                 self.assertIn("/review?", check)
                 self.assertIn("repo=widget", check)
                 self.assertIn(urllib.parse.quote(str(run.resolve()), safe=""), check)
@@ -277,19 +270,13 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             self.assertEqual(page.count('data-requirement="REQ-SHARED"'), 1)
-            self.assertIn("left-note", page)
-            self.assertIn("right-note", page)
-            self.assertNotIn('data-requirement="left-note"', page)
-            self.assertNotIn('data-requirement="right-note"', page)
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
-            summary = _summary(page, "REQ-SHARED")
-            self.assertIn("REQ-SHARED", summary)
-            self.assertIn("verifiable", summary)
-            self.assertIn("Result pass", summary)
-            self.assertTrue(summary.startswith("<summary><a "))
-            self.assertTrue(summary.endswith("</a>"))
-            closed_href = urllib.parse.unquote(html.unescape(re.search(r'href="([^"]+)"', summary).group(1)))
-            self.assertIn("expanded=REQ-SHARED", closed_href)
+            queue = page.split('<table class="review-queue">', 1)[1]
+            self.assertIn('data-claim="left-note"', queue)
+            self.assertIn('data-claim="right-note"', queue)
+            self.assertIn(">Passed</option>", queue)
+            self.assertIn(">Must be fixed</option>", queue)
+            self.assertNotIn(">Retire</option>", queue)
+            self.assertIn("<table class=\"review-queue\">", page)
             self.assertEqual(_files(repo), before)
 
     def test_unresolved_claims_stay_expanded_without_an_invented_requirement(self):
@@ -309,12 +296,63 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", next((repo / "runs" / "out").glob("run-result_*.json")))
             group = _details(page, "Unresolved Claims")
-            self.assertIn(" open", group[: group.index(">") + 1])
+            passed = page.split('data-approved="1"', 1)[1]
             self.assertIn("kept detail", group)
-            self.assertIn("NOT-A-REQ", group)
+            self.assertIn("claim-missing", group)
+            self.assertNotIn("stray-note", group)
+            self.assertIn("stray-note", passed)
+            self.assertIn(">Passed</option>", passed)
+            self.assertIn('data-requirement="Unresolved Claims"', passed)
             self.assertNotIn('data-requirement="NOT-A-REQ"', page)
             self.assertNotIn('data-requirement="claim-missing"', page)
             self.assertNotIn("the repository passes", page)
+
+    def test_review_shows_binding_signature_and_check_outcome_separately(self):
+        """VL-04 GWT-08. The page reads the stored Claim row and does not decide the binding."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
+            _pack(repo, "REQ-SHARED")
+            requirement = load_requirement(
+                repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"] / "REQ-SHARED.json"
+            )
+            claim = build_claim(
+                claim_id="kept-note",
+                requirement=requirement,
+                source="documents",
+                args={"path": "kept.md"},
+                checks=[{"check": "exist", "args": {"paths": ["kept.md"]}}],
+                description="The file is the reviewed evidence.",
+            )
+            write_claim(repo / "kept" / "claims", claim)
+            run = _matching_run(repo, [claim])
+            row = run["claims"][0]
+            row["namespace"] = claim["namespace"]
+            row["pack_id"] = claim["pack_id"]
+            row["requirement_id"] = claim["requirement_id"]
+            row["requirement_digest"] = claim["requirement_digest"]
+            row["binding"] = "missing"
+            self.assertEqual(claim["requirement_digest"], version_digest(requirement))
+            path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(path, run)
+            with _serve(workspace) as base:
+                page = _open_run(base, "alpha", path)
+            group = _details(page, "REQ-SHARED")
+            passed = page.split('data-approved="1"', 1)[1]
+            self.assertIn('data-binding="missing"', group)
+            self.assertIn("The Requirement this Claim names was not loaded for this run.", group)
+            self.assertNotIn("The Check status is unchanged.", group)
+            missing = group.split('data-binding="missing"', 1)[1].split("</button>", 1)[0]
+            self.assertIn('d="M18 6 6 18"', missing)
+            self.assertIn("Binding missing", missing)
+            self.assertNotIn('data-status="pass"', group)
+            self.assertIn('data-status="pass"', passed)
+            self.assertNotIn('class="check pass"', group)
+            self.assertIn('class="check pass"', passed)
+            self.assertNotIn('data-claim-seal', group)
+            self.assertIn('data-claim-seal="Unsigned"', page)
+            self.assertNotIn('data-status="missing"', group)
+            self.assertNotIn('data-binding="pass"', group)
+            self.assertNotIn('data-binding="match"', group)
 
     def test_fail_opens_and_skipped_stays_distinct(self):
         """REV-03 scenarios 13 and 14. REV-R04."""
@@ -337,18 +375,16 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             failed_group = _details(page, "REQ-FAIL")
-            self.assertIn(" open", failed_group[: failed_group.index(">") + 1])
-            self.assertIn("pill-bad", failed_group)
-            self.assertIn('data-status="fail" class="pill-bad"', failed_group)
-            self.assertIn('<span data-status="pass">pass</span>', failed_group)
+            self.assertIn('class="check fail"', failed_group)
+            self.assertIn('data-status="fail"', failed_group)
             self.assertIn("broke here", failed_group)
+            self.assertNotIn('class="check skipped"', failed_group)
             skipped_group = _details(page, "REQ-SKIP")
-            self.assertIn(" open", skipped_group[: skipped_group.index(">") + 1])
             self.assertIn("left out", skipped_group)
-            self.assertNotIn("pill-bad", skipped_group)
-            self.assertNotIn("pill-ok", skipped_group)
+            self.assertIn('class="check skipped"', skipped_group)
+            self.assertNotIn('class="check fail"', skipped_group)
+            self.assertNotIn('class="check pass"', skipped_group)
             self.assertIn("skipped", skipped_group)
-            self.assertNotIn("Result pass", _summary(page, "REQ-SKIP"))
 
     def test_expanded_query_closes_a_failed_requirement_and_writes_nothing(self):
         """REV-03 scenario 15. REV-R04. Scenario 16 is later."""
@@ -366,14 +402,9 @@ class ReviewGroupingTest(unittest.TestCase):
             before = _files(repo)
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
-                self.assertIn("expanded=", page)
-                open_href = urllib.parse.unquote(
-                    html.unescape(re.search(r'data-requirement="REQ-FAIL" open><summary><a href="([^"]+)"', page).group(1))
-                )
-                self.assertTrue(open_href.endswith("expanded=") or "expanded=&" in open_href)
-                self.assertNotIn("REQ-FAIL", open_href.split("expanded=", 1)[1])
                 closed = _open_run(base, "alpha", path, expanded="")
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-FAIL"[^>]*\bopen\b', closed))
+            self.assertIn("broke here", _details(page, "REQ-FAIL"))
+            self.assertIn("broke here", _details(closed, "REQ-FAIL"))
             self.assertEqual(_files(repo), before)
 
     def test_digest_match_and_change_keep_the_recorded_result(self):
@@ -392,18 +423,17 @@ class ReviewGroupingTest(unittest.TestCase):
             write_json(path, run)
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
-            same_group = _details(page, "REQ-SAME")
-            self.assertIn("The Claim is unchanged since the Check run.", same_group)
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SAME"[^>]*\bopen\b', page))
-            moved_group = _details(page, "REQ-MOVED")
-            self.assertIn(" open", moved_group[: moved_group.index(">") + 1])
-            self.assertIn("Claim changed since Check", moved_group)
-            self.assertIn("A new curbcheck run is required.", moved_group)
+            self.assertIn('data-requirement="REQ-SAME"', page)
+            queue = page.split('<table class="review-queue">', 1)[1]
+            self.assertIn('data-claim="same-note"', queue)
+            self.assertIn("Claim changed since Check", page)
+            self.assertIn("A new curbcheck run is required.", page)
             self.assertIn(
                 "The previous Requirement relationship cannot be established from the raw run result.",
-                moved_group,
+                page,
             )
-            self.assertIn('data-status="pass"', moved_group)
+            self.assertIn('data-requirement="REQ-MOVED"', page)
+            self.assertNotIn('data-status="fail"', page)
 
     def test_open_claim_shows_every_recorded_check_and_the_run_header(self):
         """REV-03 scenarios 7 and 23. REV-R03 and REV-R04."""
@@ -434,20 +464,25 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-SHARED")
-            self.assertIn("exist", group)
+            passed = page.split('data-approved="1"', 1)[1]
+            self.assertIn("exist", passed)
             self.assertIn("contents", group)
             self.assertIn("one.md", group)
-            self.assertIn("two.md", group)
+            self.assertIn("one.md", passed)
             self.assertIn("short file", group)
-            self.assertIn('data-check="exist"', group)
+            self.assertIn('data-check="exist"', passed)
             self.assertIn('data-check="contents"', group)
+            self.assertNotIn('data-check="exist"', group)
+            recorded = page.split("<h4>Checks</h4>", 1)[1]
+            self.assertIn("two.md", recorded)
             header = page[page.index('data-run-header'): page.index("</section>", page.index("data-run-header"))]
             self.assertIn("curbcheck", header)
             self.assertIn("0.0.1a", header)
             self.assertIn("abc123", header)
             self.assertIn("dirty", header)
-            self.assertIn("cra-baseline", header)
-            self.assertIn(draft_pack()["version"], header)
+            packs = page[page.index("data-packs"): page.index("</section>", page.index("data-packs"))]
+            self.assertIn("cra-baseline", packs)
+            self.assertIn(draft_pack()["version"], packs)
             self.assertIn(html.escape(worktree_sentence(run)), page)
             self.assertNotIn('data-check="worktree"', page)
             self.assertNotIn('data-status="dirty"', group)
@@ -543,9 +578,10 @@ class ReviewSealSummaryTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            summary = _summary(page, "REQ-SHARED")
-            self.assertIn("Unsigned", summary)
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
+            self.assertIn('data-requirement="REQ-SHARED"', page)
+            self.assertIn(">Passed</option>", page)
+            self.assertIn('data-seal-label="Unsigned"', page)
+            self.assertIn("Unsigned", page)
             pack_dir = repo / "tree" / "packs" / "cra-baseline" / draft_pack()["version"]
             requirement = _requirement("REQ-SHARED")
             from common.keystore import load_or_create_key
@@ -557,10 +593,10 @@ class ReviewSealSummaryTest(unittest.TestCase):
             save_requirement(pack_dir, sealed)
             with _serve(workspace) as base:
                 opened = _open_run(base, "alpha", run_path)
-            self.assertIn(" open", _details(opened, "REQ-SHARED")[: _details(opened, "REQ-SHARED").index(">") + 1])
-            self.assertIn("Invalid seal", _summary(opened, "REQ-SHARED"))
-            self.assertNotIn("Untrusted signer", _summary(opened, "REQ-SHARED"))
-            self.assertIn("verifiable", _summary(opened, "REQ-SHARED"))
+            self.assertIn('data-requirement="REQ-SHARED"', opened)
+            self.assertIn('data-seal-label="Invalid seal"', opened)
+            self.assertNotIn("Untrusted signer", opened)
+            self.assertIn("verifiable", opened)
 
     def test_missing_signed_block_uses_a_git_seal_before_unsigned(self):
         """REV-03 scenario 19. REV-R07."""
@@ -585,21 +621,20 @@ class ReviewSealSummaryTest(unittest.TestCase):
             with _serve(workspace) as base:
                 raw = _open_run(base, "alpha", run_path)
                 sealed_report = _open_report(base, "alpha", report_path)
-            summary = _summary(raw, "REQ-SHARED")
-            self.assertIn("who CLAIM-KEY", summary)
-            self.assertIn("Git commit", summary)
-            self.assertIn("verifiable yes", summary)
-            self.assertIn(reading["version"], summary)
-            self.assertNotIn("who Author Name", summary)
-            self.assertNotIn("who abc123", summary)
-            self.assertNotIn('data-seal-label="Unsigned"', summary)
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', raw))
-            report_outside = sealed_report.split("<details", 1)[0]
-            self.assertIn("who CLAIM-KEY", report_outside)
-            self.assertIn("Git commit", report_outside)
-            self.assertIn("verifiable yes", report_outside)
-            self.assertIn(reading["version"], report_outside)
-            self.assertNotIn("who Author Name", report_outside)
+            self.assertIn('data-requirement="REQ-SHARED"', raw)
+            seals = raw.split('<section data-secondary>', 1)[1]
+            self.assertIn("who CLAIM-KEY", seals)
+            self.assertIn("Git commit", seals)
+            self.assertIn("verifiable yes", seals)
+            self.assertIn(reading["version"], seals)
+            self.assertNotIn("who Author Name", seals)
+            self.assertNotIn("who abc123", seals)
+            self.assertNotIn('data-seal-label="Unsigned"', seals)
+            self.assertIn("who CLAIM-KEY", sealed_report)
+            self.assertIn("Git commit", sealed_report)
+            self.assertIn("verifiable yes", sealed_report)
+            self.assertIn(reading["version"], sealed_report)
+            self.assertNotIn("who Author Name", sealed_report)
             self.assertNotIn('data-report-seal="Unsigned"', sealed_report)
             self.assertIn("Still the decision.", sealed_report)
 
@@ -619,12 +654,12 @@ class ReviewSealSummaryTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            summary = _summary(page, "REQ-SHARED")
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-SHARED"[^>]*\bopen\b', page))
-            self.assertIn("Ada Reviewer", summary)
-            self.assertIn("claim", summary)
-            self.assertIn("verifiable", summary)
-            self.assertIn("same-note", summary)
+            self.assertIn('data-requirement="REQ-SHARED"', page)
+            seals = page.split('<section data-secondary>', 1)[1]
+            self.assertIn("Ada Reviewer", seals)
+            self.assertIn("claim", seals)
+            self.assertIn("verifiable", seals)
+            self.assertIn("same-note", seals)
 
     def test_report_invalid_seal_opens_every_requirement(self):
         """REV-03 scenario 36. REV-R07."""
@@ -647,8 +682,8 @@ class ReviewSealSummaryTest(unittest.TestCase):
             write_report(path, sealed)
             with _serve(workspace) as base:
                 page = _open_report(base, "alpha", path)
-            self.assertIn(" open", _details(page, "REQ-A")[: _details(page, "REQ-A").index(">") + 1])
-            self.assertIn(" open", _details(page, "REQ-B")[: _details(page, "REQ-B").index(">") + 1])
+            self.assertIn('data-requirement="REQ-A"', page)
+            self.assertIn('data-requirement="REQ-B"', page)
             self.assertIn('data-report-seal="Invalid seal"', page)
             self.assertIn("Still the decision.", page)
             self.assertNotIn("approval", page.lower())
@@ -667,7 +702,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             probes = [{"kind": "placeholder"}]
             claim = build_claim(
                 claim_id="paths-note",
-                requirement_id="REQ-SHARED",
+                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"paths": ["docs/one.md", "docs/two.md"]},
                 checks=[
@@ -691,13 +726,14 @@ class ReviewPathAdapterTest(unittest.TestCase):
                     {
                         "id": "paths-note",
                         "digest": version_digest(claim),
-                        "status": "pass",
+                        "status": "fail",
                         "checks": [
                             {
                                 "index": 0,
                                 "check": "exist",
                                 "args": {"paths": ["docs/one.md", "docs/two.md"]},
-                                "status": "pass",
+                                "status": "fail",
+                                "detail": "one is missing a heading",
                             },
                             {
                                 "index": 1,
@@ -758,11 +794,10 @@ class ReviewPathAdapterTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            group = _details(page, "REQ-SHARED")
-            self.assertIn(" open", group[: group.index(">") + 1])
-            self.assertIn('data-path-state="missing"', page)
-            self.assertIn("gone.md", page)
-            self.assertIn('data-status="pass"', group)
+            self.assertIn('data-requirement="REQ-SHARED"', page)
+            self.assertIn(">Passed</option>", page)
+            self.assertIn("Path gone.md is missing in the working tree now.", page)
+            self.assertNotIn('data-status="fail"', page)
 
     def test_dep_ban_and_unknown_checks_have_no_file_links(self):
         """REV-03 scenarios 25 and 26. REV-R08."""
@@ -771,7 +806,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = build_claim(
                 claim_id="mixed-note",
-                requirement_id="REQ-SHARED",
+                requirement={"id": "REQ-SHARED", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"package": "left-pad"},
                 checks=[
@@ -840,7 +875,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             self.assertIn('data-dep-ban="left-pad"', page)
             self.assertIn("1.0.0", page)
             self.assertIn("2.0.0", page)
-            mystery = plain.split('data-check="mystery"', 1)[1].split("</li>", 1)[0]
+            mystery = plain.split('data-check="mystery"', 1)[1].split('data-check="', 1)[0]
             self.assertNotIn("file=", mystery)
             self.assertNotIn("file=guessed.md", plain)
             self.assertNotIn("file=also-guessed.md", plain)
@@ -850,6 +885,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             self.assertIn("mystery", page)
             self.assertIn("custom detail", page)
             self.assertIn("guessed.md", mystery)
+            self.assertIn("also-guessed.md", mystery)
 
     def test_file_outside_the_repository_is_invalid_and_unread(self):
         """REV-03 scenario 24 confinement. REV-R08."""
@@ -885,6 +921,7 @@ class ReviewPathAdapterTest(unittest.TestCase):
             self.assertNotIn("SECRET_OUTSIDE_MARKER", traversal)
             self.assertIn(str(run_path.resolve()), page)
             self.assertIn('data-requirement="REQ-SHARED"', page)
+            self.assertIn(">Passed</option>", page)
 
 
 class ReviewEditAndRediscoverTest(unittest.TestCase):
@@ -895,10 +932,14 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = _exist_claim("edit-note", "REQ-SHARED", "edit.md")
             write_claim(repo / "kept" / "claims", claim)
-            _matching_run(repo, [claim])
+            run = _matching_run(repo, [claim])
+            run["claims"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["status"] = "fail"
+            run["claims"][0]["checks"][0]["detail"] = "needs an edit"
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
+            write_json(run_path, run)
             with _serve(workspace) as base:
-                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                page = _open_run(base, "alpha", run_path, expanded="REQ-SHARED", mode="remediation")
                 claims = _get(
                     base
                     + "/claims?repo_id=alpha&return_to="
@@ -909,11 +950,19 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                         safe="",
                     )
                 )
-            self.assertIn(">Edit</a>", page)
-            self.assertIn('data-edit-check="0"', page)
-            self.assertIn("return_to=", page.replace("&amp;", "&"))
-            self.assertNotIn('name="check"', page)
+            self.assertNotIn(">Edit</a>", page)
+            self.assertIn('data-check-dialog="check-update-edit-note"', page)
+            self.assertIn('aria-label="fail"', page)
+            self.assertIn("Exists</button>", page)
+            self.assertNotIn("Exists · fail", page)
+            self.assertIn(">Update</button>", page)
+            self.assertIn(">Cancel</button>", page)
+            self.assertIn('class="check-kind"', page)
+            self.assertIn('name="claim_id" value="edit-note"', page)
+            self.assertIn('name="edit_index"', page)
+            self.assertIn('name="return_to" value="/review?repo=alpha', page)
             self.assertNotIn('name="args"', page)
+            self.assertNotIn('name="checks"', page)
             self.assertIn('id="claim-edit-note"', claims)
             self.assertIn("exist", html.unescape(claims))
             self.assertIn("edit.md", html.unescape(claims))
@@ -922,8 +971,10 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             changed = _exist_claim("edit-note", "REQ-SHARED", "other.md")
             write_claim(repo / "kept" / "claims", changed)
             with _serve(workspace) as base:
-                unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED")
+                unsafe = _open_run(base, "alpha", run_path, expanded="REQ-SHARED", mode="remediation")
             self.assertNotIn(">Edit</a>", unsafe)
+            self.assertNotIn(">Update</button>", unsafe)
+            self.assertNotIn("data-check-dialog", unsafe)
             self.assertIn("cannot be matched safely", unsafe)
 
     def test_claims_editor_save_returns_to_review_and_leaves_run_bytes(self):
@@ -968,14 +1019,14 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                 "A new curbcheck run is required for a new run result, and then a new review report.",
                 page,
             )
-            self.assertIn("expanded=REQ-SHARED", page.replace("&amp;", "&"))
+            self.assertIn(run_path.name, page)
             self.assertEqual(run_path.read_bytes(), run_before)
             current = json.loads((repo / "kept" / "claims" / "round-note.json").read_text(encoding="utf-8"))
             self.assertNotIn("signed", current)
             self.assertIn("changed.md", json.dumps(current))
 
     def test_rediscover_button_text_and_dialog(self):
-        """REV-03 scenario 32 open/close. REV-R09."""
+        """A missing file is check remediation, not a Discover link."""
         with tempfile.TemporaryDirectory() as tmp:
             workspace, repo = _workspace("Alpha", Path(tmp) / "alpha")
             _pack(repo, "REQ-SHARED")
@@ -998,7 +1049,7 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                                 "check": "exist",
                                 "args": {"paths": ["fail.md"]},
                                 "status": "fail",
-                                "detail": "missing file",
+                                "detail": "fail.md is absent",
                             }
                         ],
                     }
@@ -1010,8 +1061,14 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
             run_before = run_path.read_bytes()
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", run_path)
-            self.assertIn(">Re-Discover</button>", page)
-            self.assertIn("Re-Discover —", page)
+            self.assertIn(
+                "Find the file first. Re-discover the Claim if that does not work.",
+                page,
+            )
+            self.assertIn('aria-label="Check remediation"', page)
+            self.assertNotIn(">Re-Discover</a>", page)
+            self.assertNotIn(">Re-Discover</button>", page)
+            self.assertNotIn('class="review-discover"', page)
             self.assertEqual((repo / "kept" / "claims" / "fail-note.json").read_bytes(), claim_before)
             self.assertEqual(run_path.read_bytes(), run_before)
 
@@ -1111,9 +1168,10 @@ class ReviewEditAndRediscoverTest(unittest.TestCase):
                 review = _get(
                     base
                     + "/review?repo=sample-product&source=cra-xml-vii"
-                    + "&timestamp=2026-10-14T080000Z&report="
+                    + "&timestamp=2026-10-14T080000Z&mode=remediation&report="
                     + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
+                self.assertIn('class="review-discover"', review)
                 self.assertIn(">Re-Discover</button>", review)
                 self.assertIn("return_to=", review.replace("&amp;", "&"))
                 iframe = re.search(r'src="([^"]*return_to[^"]*)"', review)
@@ -1172,23 +1230,41 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                     base + "/review/compile",
                     {"repo_id": "alpha", "result": str(run_path.resolve())},
                 )
-                first = sorted(reports.glob("review-report_*.json"))
+                self.assertEqual(list(reports.glob("review-report_*.json")), [])
+                self.assertEqual(run_path.read_bytes(), run_before)
+                self.assertIn("<h1>Check</h1>", page)
+                _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
+                )
+                first = sorted(
+                    path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+                )
                 self.assertEqual(len(first), 1)
                 first_bytes = first[0].read_bytes()
                 loaded = read_json(first[0])
                 self.assertEqual(loaded["run_result"], read_json(run_path))
                 self.assertNotIn("decision", loaded)
-                self.assertNotIn("signed", loaded)
+                self.assertIn("signed", loaded)
                 self.assertEqual(run_path.read_bytes(), run_before)
                 _post(
                     base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
                 )
-            later = sorted(reports.glob("review-report_*.json"))
-            self.assertEqual(len(later), 2)
+            later = sorted(
+                path for path in reports.glob("review-report_*.json") if not path.name.endswith(".items.json")
+            )
+            self.assertEqual(len(later), 1)
             self.assertEqual(later[0].read_bytes(), first_bytes)
             self.assertEqual(run_path.read_bytes(), run_before)
-            self.assertIn("Report compiled.", page)
 
     def test_compile_stops_when_a_claim_is_missing_or_digest_differs(self):
         """REV-03 scenario 34. REV-R10."""
@@ -1221,7 +1297,9 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 )
             self.assertEqual(list(reports.glob("review-report_*.json")), [])
             self.assertIn("gap-note", mismatched)
-            self.assertNotIn("other.md", mismatched)
+            self.assertIn("The Claim file has changed since this Check run.", mismatched)
+            self.assertIn("The current Check cannot be matched safely.", mismatched)
+            self.assertIn('data-path="other.md"', mismatched)
             self.assertNotIn(json.dumps(changed, ensure_ascii=False), mismatched)
             self.assertEqual(run_path.read_bytes(), run_before)
 
@@ -1247,21 +1325,36 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
             run_path = next((repo / "runs" / "out").glob("run-result_*.json"))
             write_json(run_path, run)
             with _serve(workspace) as base:
-                _post(
-                    base + "/review/compile",
-                    {"repo_id": "alpha", "result": str(run_path.resolve())},
-                )
-                report_path = sorted((repo / "signed" / "reports").glob("review-report_*.json"))[-1]
                 decided = _post(
-                    base + "/review",
+                    base + "/review/compile",
                     {
                         "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
+                        "result": str(run_path.resolve()),
                         "decision": "Please fix the missing file before approval.",
                     },
                 )
-                self.assertIn("Decision saved.", decided)
-                self.assertIn("Please fix the missing file before approval.", decided)
+                self.assertEqual(list((repo / "signed" / "reports").glob("review-report_*.json")), [])
+                self.assertIn("<h1>Check</h1>", decided)
+                kept = _get(
+                    base
+                    + "/review?repo=alpha&resume=1&result="
+                    + urllib.parse.quote(str(run_path.resolve()), safe="")
+                )
+                self.assertIn("Please fix the missing file before approval.", kept)
+                sealed_page = _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "decision": "Please fix the missing file before approval.",
+                        "name": "Ada Reviewer",
+                    },
+                )
+                report_path = sorted(
+                    path
+                    for path in (repo / "signed" / "reports").glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                )[-1]
                 stored = read_json(report_path)
                 self.assertEqual(
                     stored["decision"],
@@ -1271,19 +1364,14 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 self.assertEqual(stored["run_result"]["claims"][0]["checks"][0]["status"], "fail")
                 self.assertEqual(stored["run_result"]["claims"][1]["status"], "skipped")
                 self.assertEqual(stored["run_result"]["claims"][1]["checks"][0]["status"], "skipped")
-                sealed_page = _post(
-                    base + "/review/sign",
-                    {
-                        "repo_id": "alpha",
-                        "report": str(report_path.resolve()),
-                        "name": "Ada Reviewer",
-                    },
+                opened = _get(
+                    base + "/review?repo=alpha&report=" + urllib.parse.quote(str(report_path.resolve()), safe="")
                 )
-            self.assertIn("Report sealed.", sealed_page)
-            self.assertNotIn("became pass", sealed_page.lower())
-            self.assertNotIn("decision became", sealed_page.lower())
-            self.assertIn('data-status="fail"', sealed_page)
-            self.assertIn('data-status="skipped"', sealed_page)
+            self.assertIn("<h1>Check</h1>", sealed_page)
+            self.assertNotIn("became pass", opened.lower())
+            self.assertNotIn("decision became", opened.lower())
+            self.assertIn('data-status="fail"', opened)
+            self.assertIn('data-status="skipped"', opened)
             sealed = read_json(report_path)
             reading = read_report_signature(sealed, trust_store(Path(tmp) / "keys"))
             self.assertTrue(reading["verifiable"])
@@ -1313,16 +1401,13 @@ class ReviewCompiledReportTest(unittest.TestCase):
             report_before = path.read_bytes()
             with _serve(workspace) as base:
                 page = _open_report(base, "alpha", path)
-            self.assertIn('data-requirement="R-old"', page)
             self.assertNotIn('data-requirement="R-new"', page)
-            old_group = _details(page, "R-old")
-            self.assertIn(" open", old_group[: old_group.index(">") + 1])
-            self.assertIn("The current relationship changed.", old_group)
-            self.assertIn("Claim changed since Check", old_group)
-            self.assertIn("A new curbcheck run is required.", old_group)
+            self.assertIn('data-requirement="R-old"', page)
+            self.assertIn("The current relationship changed.", page)
+            self.assertIn("Claim changed since Check", page)
+            self.assertIn("A new curbcheck run is required.", page)
             self.assertIn("Decision for the old report.", page)
-            self.assertIn("note.md", old_group)
-            self.assertNotIn("R-new", old_group)
+            self.assertNotIn('data-requirement="R-new"', page)
             self.assertIn("Signature appendix", page)
             self.assertIn("moved-note", page[page.index("Signature appendix") :])
             self.assertIn("R-old", page[page.index("Signature appendix") :])
@@ -1336,7 +1421,7 @@ class ReviewCompiledReportTest(unittest.TestCase):
             _pack(repo, "REQ-SHARED")
             claim = build_claim(
                 claim_id="checked-note",
-                requirement_id="REQ-SHARED",
+                requirement=validate_requirement(_requirement("REQ-SHARED")),
                 source="documents",
                 args={"path": "one.md"},
                 checks=[
@@ -1384,7 +1469,8 @@ class ReviewCompiledReportTest(unittest.TestCase):
             self.assertIn("0.0.1a", header)
             self.assertIn("abc123", header)
             self.assertIn("dirty", header)
-            self.assertIn("cra-baseline", header)
+            packs = page[page.index("data-packs") : page.index("</section>", page.index("data-packs"))]
+            self.assertIn("cra-baseline", packs)
             self.assertIn(html.escape(worktree_sentence(report["run_result"])), page)
             self.assertIn(NOT_A_LEGAL_CONCLUSION, page)
             self.assertIn(NO_CRA_FIELD, page)
@@ -1421,16 +1507,16 @@ class ReviewCompiledReportTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_report(base, "alpha", path)
                 closed = _open_report(base, "alpha", path, expanded="")
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-PASS"[^>]*\bopen\b', page))
-            self.assertIn("The Claim is unchanged since the Check run.", _details(page, "REQ-PASS"))
-            self.assertIn(" open", _details(page, "REQ-FAIL")[: _details(page, "REQ-FAIL").index(">") + 1])
-            self.assertIn("pill-bad", _details(page, "REQ-FAIL"))
-            self.assertIn(" open", _details(page, "REQ-SKIP")[: _details(page, "REQ-SKIP").index(">") + 1])
-            self.assertNotIn("pill-bad", _details(page, "REQ-SKIP"))
-            self.assertNotIn("pill-ok", _details(page, "REQ-SKIP"))
-            self.assertNotIn("Result pass", _summary(page, "REQ-SKIP"))
-            self.assertIn("Claim changed since Check", _details(page, "REQ-MOVED"))
-            self.assertIsNone(re.search(r'<details[^>]*data-requirement="REQ-FAIL"[^>]*\bopen\b', closed))
+            self.assertIn('data-requirement="REQ-PASS"', page)
+            self.assertIn(">Passed</option>", _details(page, "REQ-PASS"))
+            self.assertIn('class="check fail"', _details(page, "REQ-FAIL"))
+            self.assertIn("broke here", _details(page, "REQ-FAIL"))
+            self.assertIn('class="check skipped"', _details(page, "REQ-SKIP"))
+            self.assertNotIn('class="check fail"', _details(page, "REQ-SKIP"))
+            self.assertNotIn('class="check pass"', _details(page, "REQ-SKIP"))
+            self.assertIn("Claim changed since Check", page)
+            self.assertIn('data-requirement="REQ-MOVED"', page)
+            self.assertIn("broke here", _details(closed, "REQ-FAIL"))
 
     def test_signed_compiled_report_shows_seal_and_not_approval(self):
         """REV-03 scenario 37. REV-R06."""
@@ -1557,9 +1643,10 @@ def _run(claim_id: str) -> dict:
 
 
 def _report(claim_id: str, decision: str) -> dict:
+    requirement = _requirement("CRA-PURPOSE")
     claim = build_claim(
         claim_id=claim_id,
-        requirement_id="CRA-PURPOSE",
+        requirement=requirement,
         source="documents",
         args={"path": "README.md"},
         checks=[{"check": "exist", "args": {"paths": ["README.md"]}}],
@@ -1580,7 +1667,7 @@ def _report(claim_id: str, decision: str) -> dict:
                 }
             ],
         },
-        requirements=[_requirement("CRA-PURPOSE")],
+        requirements=[requirement],
         claims=[claim],
     )
     return record_decision(report, decision)
@@ -1590,6 +1677,7 @@ def _requirement(requirement_id: str) -> dict:
     return {
         "id": requirement_id,
         "pack_id": "cra-baseline",
+        "namespace": "RISE/CRA baseline",
         "source": {
             "framework": "EU",
             "instrument": "CRA",
@@ -1604,7 +1692,7 @@ def _requirement(requirement_id: str) -> dict:
 def _exist_claim(claim_id: str, requirement_id: str, path: str) -> dict:
     return build_claim(
         claim_id=claim_id,
-        requirement_id=requirement_id,
+        requirement=validate_requirement(_requirement(requirement_id)),
         source="documents",
         args={"path": path},
         checks=[{"check": "exist", "args": {"paths": [path]}}],
@@ -1683,10 +1771,12 @@ def _matching_run(repo: Path, claims: list[dict], *, commit: str = "abc123", wor
     return run
 
 
-def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None) -> str:
+def _open_run(base: str, repo_id: str, path: Path, expanded: str | None = None, mode: str | None = None) -> str:
     url = base + "/review?repo=" + repo_id + "&result=" + urllib.parse.quote(str(path.resolve()), safe="")
     if expanded is not None:
         url += "&expanded=" + urllib.parse.quote(expanded, safe="")
+    if mode:
+        url += "&mode=" + urllib.parse.quote(mode, safe="")
     return _get(url)
 
 
@@ -1757,7 +1847,7 @@ def _compiled(
         if requirement["id"] in seen:
             continue
         seen.add(requirement["id"])
-        unique.append(requirement)
+        unique.append(validate_requirement(requirement))
     report = compile_report(run_result=run, requirements=unique, claims=claims, repo=repo)
     if decision:
         report = record_decision(report, decision)
@@ -1765,35 +1855,27 @@ def _compiled(
 
 
 def _details(page: str, requirement_id: str) -> str:
-    marker = f'data-requirement="{requirement_id}"'
-    attr = page.index(marker)
-    start = page.rindex("<details", 0, attr)
-    depth = 0
-    i = start
-    while i < len(page):
-        if page.startswith("<details", i):
-            depth += 1
-            i += 8
-            continue
-        if page.startswith("</details>", i):
-            depth -= 1
-            if depth == 0:
-                return page[start:i]
-            i += 10
-            continue
-        i += 1
-    raise AssertionError(f"unclosed details for {requirement_id}")
+    marker = f'<tbody data-requirement="{requirement_id}"'
+    start = page.index(marker)
+    end = page.index("</tbody>", start)
+    return page[start:end]
 
 
 def _summary(page: str, requirement_id: str) -> str:
-    group = _details(page, requirement_id)
-    start = group.index("<summary>")
-    end = group.index("</summary>")
-    return group[start:end]
+    return _details(page, requirement_id)
 
 
 def _files(root: Path) -> list[str]:
-    return sorted(path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file())
+    """Product files. Review workspaces under .curbpack/tmp are not product files."""
+    found = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith(".curbpack/tmp/"):
+            continue
+        found.append(relative)
+    return sorted(found)
 
 
 def _section(page: str, kind: str) -> str:
@@ -1863,9 +1945,22 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
     product = root / "product"
     claims_dir = product / "curbpack" / "claims"
     claims_dir.mkdir(parents=True, exist_ok=True)
+    recorded_requirement = {
+        "id": "REQ-A",
+        "pack_id": "cra-xml-baseline",
+        "namespace": "RISE/cra-xml extract",
+        "source": {
+            "framework": "EU",
+            "instrument": "CRA",
+            "identifier": "CELEX:32024R2847",
+            "language": "en",
+            "url": "https://example.invalid/cra",
+        },
+        "references": [{"nr": 1, "locator": "VII.3", "law_text": "law passage for A"}],
+    }
     claim = build_claim(
         claim_id="claim-old",
-        requirement_id="REQ-A",
+        requirement=recorded_requirement,
         source="documents",
         args={"path": "docs/risk-a.md"},
         checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
@@ -1902,20 +1997,7 @@ def _review_discover_fixture(root: Path) -> tuple[Path, Path, Path, dict]:
     write_json(run_path, run)
     report = compile_report(
         run_result=run,
-        requirements=[
-            {
-                "id": "REQ-A",
-                "pack_id": "cra-xml-baseline",
-                "source": {
-                    "framework": "EU",
-                    "instrument": "CRA",
-                    "identifier": "CELEX:32024R2847",
-                    "language": "en",
-                    "url": "https://example.invalid/cra",
-                },
-                "references": [{"nr": 1, "locator": "VII.3", "law_text": "law passage for A"}],
-            }
-        ],
+        requirements=[recorded_requirement],
         claims=[claim],
         repo=product,
     )

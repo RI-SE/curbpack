@@ -73,8 +73,10 @@ A previous passing result does not say that a later tree still passes. A previou
 
 Compile packages the run that happened so another person can read it without re-running Check. The embedded Requirements and Claims are copies bound to that run. Compile does not write them back to the live files.
 
+Review can mark any Check on that run as Retire and must give a reason. The Check status in the result stays what the runner recorded. Creating the report does not edit the Claim. Signing does, and only when the report's `remove_retired_checks` is true: the named Checks are removed, a Claim that still has a Check is signed again, and a Claim with none left is deleted. The copy inside the report stays. `false` records the decision and leaves the Claim files unchanged.
+
 The reviewer can still run Check against the commit the team points at. Opening the report is not that run.
 
-For a failed Claim, Review can open Discovery for that one Requirement while the failed row stays visible. The person adds one or more new Claims and, after confirming the replacement, retires the old Claim. Nothing is retargeted automatically. The record is the visible Check rows, the Claim files, and the free-text `decision`.
+For a failed Claim, Review can open Discovery for that one Requirement while the failed row stays visible. The person adds one or more new Claims and, after confirming the replacement, deletes the old Claim in Claims Editor. That deletion is immediate and is not the Retire disposition on the report. Nothing is retargeted automatically. The record is the visible Check rows, the Claim files, and the free-text `decision`.
 
 The report rejects keys that would turn it into a compliance verdict, including `compliant` and `meets_cra`.

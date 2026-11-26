@@ -226,3 +226,17 @@ class ApplyConsolidationTest(unittest.TestCase):
     def _pair_in(self, stamp: str, *, sign_second: bool = False):
         self.copy = create_extraction_copy(self.root, "cra-baseline", draft_pack(), at=stamp)
         return self._pair(sign_second=sign_second)
+
+
+class ConsolidateBackendTest(unittest.TestCase):
+    def test_consolidate_lives_in_the_pack_backend(self):
+        import inspect
+
+        from requirements.consolidate import suggest_consolidations as kept
+        from studio.pack.impl.consolidate import suggest_consolidations as backend
+
+        self.assertIs(backend, kept)
+        self.assertIn(
+            "studio/pack/impl/consolidate.py",
+            inspect.getsourcefile(backend).replace("\\", "/"),
+        )

@@ -29,7 +29,7 @@ class ReviewCoverageUiTest(unittest.TestCase):
             product = root / "product"
             passed = build_claim(
                 claim_id="claim-a",
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/risk-a.md"},
                 checks=[{"check": "exist", "args": {"paths": ["docs/risk-a.md"]}}],
@@ -37,7 +37,7 @@ class ReviewCoverageUiTest(unittest.TestCase):
             )
             failed = build_claim(
                 claim_id="claim-b",
-                requirement_id="REQ-A",
+                requirement={"id": "REQ-A", "namespace": "RISE/Example", "pack_id": "example"},
                 source="documents",
                 args={"path": "docs/risk-b.md"},
                 checks=[
