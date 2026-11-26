@@ -148,7 +148,7 @@ Check
   -> the next Check can take that report in
 ```
 
-A Check started from an open remediation is stored apart from **Checks performed** and does not become its own row. The next full Check from the Check page is a new row. That review can take in the latest signed remediation: unchanged underlag fills the signed decision, and the history is shown either way. Taking it in does not set `decision` from the history.
+A Check started from an open remediation is stored apart from **Checks performed** and does not become its own row. The next full Check from the Check page is a new row. That review can take in the latest signed remediation: unchanged checked material fills the signed decision, and the history is shown either way. Taking it in does not set `decision` from the history.
 
 `review_item` is defined in [Studio-internal](../reference/studio-internal.md). Paths are in [Workspace](../reference/workspace.md). The page walkthrough is [Reviewing](reviewers.md).
 
@@ -166,7 +166,7 @@ A passing Check does not by itself sign a Claim. Find and a rebound Claim are si
 
 Run Check again on the new tree. That is a new row.
 
-The earlier signed review and the new run are two snapshots. Technical details say `same run: yes` or `same run: no. This saved report is an older run.` Do not describe the older report as the current run. The previous signed file stays. A decision is filled in again only when the new review takes in a remediation report and the underlag is unchanged.
+The earlier signed review and the new run are two snapshots. Technical details say `same run: yes` or `same run: no. This saved report is an older run.` Do not describe the older report as the current run. The previous signed file stays. A decision is filled in again only when the new review takes in a remediation report and the checked material is unchanged.
 
 ## 9. Next: run the Check where the repository changes
 

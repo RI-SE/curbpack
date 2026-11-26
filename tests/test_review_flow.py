@@ -9,7 +9,7 @@ import urllib.parse
 from pathlib import Path
 
 from claims.bind import build_claim, write_claim
-from common.jsonio import read_json
+from common.jsonio import read_json, write_json
 from common.store import load_requirement
 from requirements.extract.pipeline import draft_pack
 from tests.test_rev03_review import _get, _pack, _post, _post_redirect, _serve, _workspace
@@ -111,17 +111,44 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                     {"repo_id": "alpha", "action": "check", "return_to": "/review"},
                 )
                 again = _get(base + nxt)
-                self.assertNotIn("Recorded from the remediation page.", again)
-                self.assertIn("Take in the remediation report?", again)
-                self.assertIn(">Take in the report</a>", again)
-                self.assertIn(">Keep the new decisions</a>", again)
+                review = again.split('id="reuse-report"', 1)[0]
+                self.assertNotIn("Recorded from the remediation page.", review)
+                self.assertIn("Recorded from the remediation page.", again)
+                self.assertIn(
+                    "Reuse unresolved review item decisions, history, and comments from the latest remediation report?",
+                    again,
+                )
+                self.assertNotIn("Continue this review or start over?", again)
+                second = _get(base + nxt)
+                second_review = second.split('id="reuse-report"', 1)[0]
+                self.assertNotIn("Recorded from the remediation page.", second_review)
+                self.assertIn(
+                    "Reuse unresolved review item decisions, history, and comments from the latest remediation report?",
+                    second,
+                )
+                self.assertNotIn("Continue this review or start over?", second)
+                self.assertIn("latest remediation report", again)
+                self.assertIn(">Preview Latest Remediation Report</button>", again)
+                self.assertIn('id="reuse-report"', again)
+                self.assertIn("<h1>Remediation report</h1>", again)
+                self.assertNotIn(">Preview Latest Remediation Report</a>", again)
+                self.assertIn(">Reuse Review item Decisions</a>", again)
+                self.assertIn(">Start Fresh from check result</a>", again)
                 self.assertNotIn('data-action="retire"', again)
-                reused = _get(base + _href(again, "Take in the report"))
+                reused = _get(base + _href(again, "Reuse Review item Decisions"))
                 self.assertNotIn("Recorded from the remediation page.", reused)
-                self.assertNotIn("Take in the remediation report?", reused)
-                kept = _get(base + _href(again, "Keep the new decisions"))
+                self.assertNotIn("Reuse unresolved review item decisions", reused)
+                kept = _get(base + _href(again, "Start Fresh from check result"))
                 self.assertNotIn("Recorded from the remediation page.", kept)
-                self.assertNotIn("Take in the remediation report?", kept)
+                self.assertNotIn("Remediation history", kept)
+                self.assertNotIn("Reuse unresolved review item decisions", kept)
+                saved_items = Path(urllib.parse.unquote(re.search(r"result=([^&]+)", nxt).group(1))).parent / "review_items.json"
+                saved_document = read_json(saved_items)
+                saved_document["work_saved"] = True
+                write_json(saved_items, saved_document)
+                saved_page = _get(base + nxt)
+                self.assertIn("Continue this review or start over?", saved_page)
+                self.assertNotIn("Reuse unresolved review item decisions", saved_page)
                 table = _get(base + "/check?repo=alpha")
                 self.assertIn("<th>Check Result</th>", table)
                 self.assertIn("<th>Review</th>", table)

@@ -40,7 +40,7 @@ The Run Result records `commit` and `worktree`. File `size` and `mtime` are not 
 
 Reusing a decision fills `decision` only. `remediation_history` is shown from the remediation file and does not set `decision`.
 
-A decision is reusable when `key` matches, `requirement_digest` matches, and the underlag below is unchanged. A value the comparison needs, and which is missing on either side, yields false. The stored decision and history remain.
+A decision is reusable when `key` matches, `requirement_digest` matches, and the checked material below is unchanged. A value the comparison needs, and which is missing on either side, yields false. The stored decision and history remain.
 
 - Clean to clean compares the Check's relevant file content between the two Git commits. Paths are `provenance.files` when that list exists, otherwise the paths in the Check arguments. A Check with no such paths depends on the commit. The same content reuses the decision. A path added, removed, or changed opens only that item.
 - When either side is `dirty_git`, compare `path`, `size`, and `mtime` with `same_file_metadata`. The worktree is not read again.

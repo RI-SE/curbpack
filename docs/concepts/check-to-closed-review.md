@@ -38,7 +38,7 @@ Niklas signerar. Resultatet är 3 Passed, 1 Accepted, 0 Must fix. Ett problem ä
 
 ### Senare Checkar – beslutet ligger kvar
 
-Nästa Check kan åter ta in den senaste signerade remedieringen. Oförändrat underlag fyller det signerade beslutet, även det förberedda `accepted`. Historiken visas oavsett valet. **Keep the new decisions** lämnar de beslut den nya körningen fyllde i.
+Nästa Check kan åter ta in den senaste signerade remedieringen. Oförändrat underlag fyller det signerade beslutet, även det förberedda `accepted`. **Start Fresh from check result** lämnar den nya körningens beslut och tar inte med remedieringens historik, kommentarer eller pensionerade kontroller.
 
 När Lisa färdigställer dokumentet och Olle checkar in ändringen ger den fjärde Checken pass. Underlaget är nytt, så det tidigare `accepted` återanvänds inte. De tre andra kan fortfarande återanvändas om deras underlag står stilla.
 

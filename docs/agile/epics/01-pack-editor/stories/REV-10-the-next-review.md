@@ -3,7 +3,7 @@
 **Status:** DONE, 2026-11-26. Evidence and completed plan: `impl/REV-10.md`.
 **Epic:** [EP-01 Complete Functional Pilot](../EPIC.md).
 
-As a reviewer, I want the next Check to be a new review that can take in the signed remediation, so an unchanged underlag keeps its decision and a changed underlag does not.
+As a reviewer, I want the next Check to be a new review that can take in the signed remediation, so unchanged checked material keeps its decision and changed checked material does not.
 
 ## Acceptance
 
@@ -17,10 +17,10 @@ It does not replace the signed review or the remedy report.
 ### NEXT-02 — Take in the remedy
 
 Given the new review is offered the remediation report,
-when the underlag is unchanged,
+when the checked material is unchanged,
 then the signed `decision` is filled in, including a prepared `accepted`,
 and `remediation_history` is not copied into that decision.
-When the underlag changed, that decision is not reused. A pass on the changed underlag records the transition and suggests `pass`.
+When the checked material changed, that decision is not reused. A pass on the changed material records the transition and suggests `pass`.
 The history stays visible either way.
 Keep the new decisions leaves the decisions the new run filled in, and stores the history on the items.
 

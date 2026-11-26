@@ -260,7 +260,7 @@ class ReviewStartTest(unittest.TestCase):
             },
         ).decode()
         self.assertNotIn("A review of this Check run is already started.", continued)
-        self.assertNotIn("Take in the remediation report?", continued)
+        self.assertNotIn("Reuse unresolved review item decisions", continued)
 
     def test_history_is_a_column_only_when_an_item_has_history(self):
         from studio.review.impl.items import check_digest
@@ -810,6 +810,60 @@ def _run_for(claim: dict, *, status: str, detail: str) -> dict:
             }
         ],
     }
+
+
+class ReviewPdfTest(unittest.TestCase):
+    def test_a_signed_review_offers_generate_pdf_and_leaves_the_report_unchanged(self):
+        import urllib.request
+
+        with tempfile_workspace() as (workspace, repo):
+            _pack(repo, "REQ-SHARED")
+            claim = _exist_claim("pdf-note", "REQ-SHARED", "pdf.md")
+            write_claim(repo / "kept" / "claims", claim)
+            run = _matching_run(repo, [claim])
+            directory = repo / "runs" / "out" / "run-result_20260102T000000Z"
+            directory.mkdir()
+            run_path = directory / "run-result.json"
+            write_json(run_path, run)
+            with _serve(workspace) as base:
+                signed = _post(
+                    base + "/review/compile",
+                    {
+                        "repo_id": "alpha",
+                        "result": str(run_path.resolve()),
+                        "name": "Ada Reviewer",
+                    },
+                )
+                self.assertIn("<h1>Check</h1>", signed)
+                page = _get(
+                    base + "/review?repo=alpha&result=" + urllib.parse.quote(str(run_path.resolve()), safe="")
+                )
+                self.assertIn("The signed decisions are read-only.", page)
+                self.assertNotIn("Review report is not generated yet.", page)
+                self.assertIn(">Generate PDF</button>", page)
+                report_path = next(
+                    path
+                    for path in directory.glob("review-report_*.json")
+                    if not path.name.endswith(".items.json")
+                )
+                before = report_path.read_bytes()
+                request = urllib.request.Request(
+                    base + "/review/report-pdf",
+                    data=urllib.parse.urlencode(
+                        {"repo_id": "alpha", "result": str(run_path.resolve())}
+                    ).encode("utf-8"),
+                    method="POST",
+                )
+                with urllib.request.urlopen(request) as response:
+                    pdf = response.read()
+                self.assertTrue(pdf.startswith(b"%PDF"))
+                self.assertEqual(report_path.read_bytes(), before)
+                self.assertTrue(report_path.with_suffix(".pdf").is_file())
+                again = _get(
+                    base + "/review?repo=alpha&result=" + urllib.parse.quote(str(run_path.resolve()), safe="")
+                )
+                self.assertIn("Review report PDF", again)
+                self.assertNotIn(">Generate PDF</button>", again)
 
 
 class tempfile_workspace:

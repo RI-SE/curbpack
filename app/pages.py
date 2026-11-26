@@ -314,6 +314,8 @@ dialog.run-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75r
 .review-board button.comment-mark.has-comment{border-color:transparent;background:transparent}
 .review-board button.comment-mark .doc-icon{display:block;margin:auto}
 .review-board dialog.comment-editor,.review-board dialog.binding-note,.review-board dialog.review-choice{border:1px solid var(--line);border-radius:10px;padding:1rem;max-width:32rem}
+.review-board dialog#reuse-review{max-width:40rem}
+.review-board dialog#reuse-report{max-width:52rem;width:92vw;max-height:80vh;overflow:auto}
 .review-board dialog.review-choice .btn, .review-board dialog.review-choice button{margin:0 .35rem .35rem 0}
 .review-board dialog.review-choice .btn{margin:0 .35rem .35rem 0}
 .review-board dialog.binding-note p{margin:.4rem 0}

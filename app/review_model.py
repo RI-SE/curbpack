@@ -729,6 +729,41 @@ def _remedy_save_marker(form: dict) -> dict:
     return marker
 
 
+def review_report_pdf(ws: Workspace, query: dict) -> tuple[str, bytes, str]:
+    """The review PDF beside the signed report. Generate it once, and leave the JSON unchanged."""
+    from app.server import _registered_repo_path, _requested_dated, _sync_open_repo
+    from common.validate import validate_curbpack_config
+    from studio.check.check_model import _newest_signed
+    from studio.review.impl.items import check_directory
+
+    repo_id = _sync_open_repo(ws, query)
+    if not repo_id:
+        raise ModelError("review", "repo", "a chosen repository")
+    repo = _registered_repo_path(ws, repo_id)
+    config = validate_curbpack_config(read_json(repo / "curbpack.json"))
+    requested = (query.get("result") or [""])[0]
+    status, run_path = _requested_dated(results_dir(repo, config), requested, "run-result")
+    if status != "ok":
+        raise ModelError("review report", "path", "a check in this repository")
+    directory = check_directory(Path(run_path))
+    if directory is None:
+        raise ModelError("review report", "path", "a check directory")
+    report_path = _newest_signed(directory, "review-report.json", "review-report_*.json")
+    if report_path is None:
+        raise ModelError("review report", "pdf", "a signed review report for this check")
+    pdf_path = report_path.with_suffix(".pdf")
+    if not pdf_path.is_file():
+        try:
+            from studio.compile.impl.pdf import compile_pdf
+        except ImportError as exc:
+            raise ModelError("review report", "pdf", "the PDF renderer is not installed") from exc
+        sealed = report_path.read_bytes()
+        compile_pdf(report_path, pdf_path)
+        if report_path.read_bytes() != sealed:
+            raise ModelError("review report", "pdf", "the signed report stays unchanged")
+    return "pdf", pdf_path.read_bytes(), pdf_path.name
+
+
 def remedy_report_response(ws: Workspace, query: dict) -> tuple[str, bytes, str]:
     """The Markdown report, or its PDF when format=pdf. Both stay inside the Check directory."""
     from urllib.parse import quote

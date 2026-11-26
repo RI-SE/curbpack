@@ -3,7 +3,7 @@
 **Status:** DONE, 2026-11-26. Evidence and completed plan: `impl/REV-06.md`.
 **Epic:** [EP-01 Complete Functional Pilot](../EPIC.md).
 
-As a reviewer, I want one decision per Check, tied to the underlag that was checked, so a later review can reuse that decision only when the underlag is the same.
+As a reviewer, I want one decision per Check, tied to the material that was checked, so a later review can reuse that decision only when that material is the same.
 
 `review_item` is defined in [Studio-internal](../../../../reference/studio-internal.md). The November 2026 split plan named this story. The behavior below is what the code does.
 
@@ -30,7 +30,7 @@ Opening the review copies those values onto `provenance.files`.
 ### ITEM-03 — Reuse fills the decision only
 
 Given a stored decision and a new item with the same `key` and the same `requirement_digest`,
-when the underlag is unchanged,
+when the checked material is unchanged,
 then the new item receives that `decision` and does not receive `remediation_history`.
 Clean commits compare the Check's file content. A dirty side compares `path`, `size`, and `mtime`.
 When a value the comparison needs is missing, the decision is not reused. The stored decision and history remain.
