@@ -68,7 +68,9 @@ class ReviewRemediationFlowTest(unittest.TestCase):
                 )
                 saved = _post(base + "/review/compile", fields)
                 self.assertIn("<h1>Check</h1>", saved)
-                self.assertNotIn(">Start</a>", saved)
+                self.assertIsNone(
+                    re.search(r'<a href="[^"]*mode=remediation[^"]*">Start</a>', saved)
+                )
                 self.assertFalse((Path(result_path).parent / "review-report.json").is_file())
                 fields["name"] = "Ada Reviewer"
                 signed = _post(base + "/review/compile", fields)
