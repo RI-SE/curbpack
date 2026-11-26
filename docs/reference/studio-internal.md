@@ -83,7 +83,7 @@ A missing key is omitted. Unknown keys are invalid.
 
 `comment` is the note on this item. It is not a history entry. On the remediation copy it is the current note and may be replaced or cleared.
 
-`remediation_history` is the sequence of actions recorded for this item, earliest first. Each entry has `date`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `remediation`, the non-empty text of what was done. An action has `action` (`retire` or `rebind`) or `transition`. `old_check_digest` is optional. The key is omitted when the sequence is empty.
+`remediation_history` is the sequence of actions recorded for this item, earliest first. Each entry has `date`, UTC `YYYY-MM-DDTHH:MM:SSZ`, and `remediation`, the non-empty text of what was done. `action` is `retire`, `rebind`, or `retarget` when the entry is that action. `transition` records an outcome change, such as `must_fix -> pass`. `old_check_digest` is the previous `check_digest` when the Check configuration changed. `name` is the person recorded for that change. A key that does not apply is omitted. The `remediation_history` key is omitted when the sequence is empty.
 
 `priority` is an integer from 1 to 10. 1 is the most urgent.
 
@@ -93,3 +93,22 @@ A missing key is omitted. Unknown keys are invalid.
 - `must_fix` is the decision that the deficiencies are to be corrected. `priority` and `assessed_at` have the same form as for `accepted`. `comment` may be omitted.
 
 A provenance key the run does not have is omitted. `decision`, `priority`, `comment`, and `remediation_history` are kept.
+
+## review_items.json
+
+The working file is `review_items.json` in the Studio Check directory. It is one object. `items` is the list of `review_item`. Save writes the decisions into `items` and the reviewer's words for the whole review into `notes`. It does not write a report and does not change a signature.
+
+Sign sets `review_locked` to `true` and leaves the working decisions in place. The sealed copy is a separate file, `review-report_<stamp>.items.json`, defined in [Outputs](outputs.md). Reading that seal uses `what` `review items`. Remediation edits the working file. On that copy `decision` is the recommendation and does not replace the sealed decision.
+
+A missing key is omitted. The file may also carry:
+
+| Key | Meaning |
+| --- | --- |
+| `remedy` | `true` once remediation has started. |
+| `remedy_notes` | The round's words. |
+| `remedy_locked` | `true` after Sign Off. |
+| `remedy_revoked` | Revocations. Each entry has `report`, `name`, and `at`. The sealed file named by `report` stays. |
+| `outside` | Acknowledged Checks outside the original deviations. The entry shape is the remedy report's `outside` entry. Sign Off copies this list into the remedy report when it is non-empty. |
+| `projected_runs` | Names of the full Check runs recorded for this round. Sign Off copies them to `full_checks`. |
+
+`pending_outside` is the warning the page is still asking about. `studio_snapshot` is the Claim bytes Rollback restores. Neither is copied into the signed remedy.

@@ -10,7 +10,8 @@ flowchart LR
     R --> C["Claim"]
     C --> K["Check"]
     K --> V["Review"]
-``` 
+    V --> RR["Remediation"]
+```
 *Figure 1. Curbpack's core concepts and their relationships.*
 
 
@@ -18,7 +19,8 @@ flowchart LR
 - **Requirements** describe what must be fulfilled, together with guidance on where to look for evidence in a repository and what to look for. 
 - **Claims** connect those Requirements to evidence in a product repository.
 - **Checks** monitor the Claims as the product changes.
-- **Review** is where a person examines the results and decides what they mean.
+- **Review** is where a person examines the results of a check and decides what they mean and takes decision on required actions. A review results in a review report with deviations found, suggested actions and remedy suggestions.
+- **Remediation** is where a person goes through the prioritized list of deviations, fixes them and produces a final remediation report.
 
 Curbpack automates parts of this work, but it does not decide whether a product is compliant or certified.
 
@@ -100,7 +102,7 @@ The purpose of automation is therefore not to replace review. It is to make prev
 
 Curbpack consists of two main programs:
 
-- **Curbpack Studio** is the human-facing application for working with Packs, Requirements, Discovery, Claims, Check results, and Review.
+- **Curbpack Studio** is the human-facing application for working with Packs, Requirements, Discovery, Claims, Check results, and Review & Remediation.
 - **curbcheck** performs the repeatable checks. It can be run from Studio or directly from a shell or CI/CD pipeline.
 
 A useful way to think about the division is:
@@ -116,14 +118,13 @@ flowchart LR
         C["Claim"]
     end
 
-    subgraph CC["curbcheck"]
+    subgraph RV["Verification Workflow"]
         direction LR
         K["Check"]
-    end
-
-    subgraph RV["Review"]
-        direction LR
         V["Review result"]
+        RR["Remediate"]
+        V-->RR
+        RR-->V
     end
 
     R --> C
@@ -135,12 +136,11 @@ flowchart LR
     APACKS["Authored Pack"] -->|"import"| P
     style PE fill:#fff3bf,stroke:#d6a500,stroke-width:2px
     style DC fill:#fff3bf,stroke:#d6a500,stroke-width:2px
-    style CC fill:#fff3bf,stroke:#d6a500,stroke-width:2px
     style RV fill:#fff3bf,stroke:#d6a500,stroke-width:2px
 
     classDef concept fill:#f3f4f6,stroke:#6b7280,color:#111827
 ```
-*Figure 3. Curbpack tools and the concepts they operate on.*
+*Figure 3. Curbpack tools and workflow overview.*
 
 Studio helps people prepare and review the information. `curbcheck` performs the deterministic checking.
 
@@ -152,10 +152,14 @@ flowchart TD
     A["Change product"] --> B["Run curbcheck"]
     B --> C{"Claims still hold?"}
     C -->|Yes| D["Continue development"]
-    C -->|No| E["Inspect what changed"]
-    E --> F["Update evidence or Claim"]
+    C -->|No| E["Inspect what changed (Review)"]
+    E --> F["Update evidence or Claim (Remediate)"]
     F --> B
-`Figure 4. The recurring Curbpack development cycle. 
+    style B fill:#fff3bf,stroke:#d6a500,stroke-width:2px
+    style E fill:#fff3bf,stroke:#d6a500,stroke-width:2px
+    style F fill:#fff3bf,stroke:#d6a500,stroke-width:2px
+```
+Figure 4. The recurring Curbpack development cycle.
 
 Creating or changing Requirements and discovering new evidence are activities you return to when they are needed.
 
@@ -184,7 +188,7 @@ Studio installation settings live in `~/.curbpack/curbpack-studio.json`. A produ
 | Goal | Read |
 | --- | --- |
 | Install and start Studio | [Install](user-guides/install.md) |
-| Walk Pack Editor, Discovery & Claims, Check, and Review | [Getting started](user-guides/getting-started.md) |
+| Walk Pack Editor, Discovery & Claims, Check, Review, and Remediation | [Getting started](user-guides/getting-started.md) |
 | Use Studio on a product repository | [Developer guide](user-guides/developers.md) |
 | Run the same Check outside the browser | [CI/CD](user-guides/ci-cd.md) |
 | Test this repository (Studio and curbcheck) | [Development](development/README.md) · [Testing curbcheck](testing/README.md) |

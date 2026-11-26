@@ -1,9 +1,12 @@
 # REV-05 — Management summary with technical appendices
 
-**Status:** Authorized by Daniel, 2026-10-29. Resume from `plan/REV-05.md`. The renderer, its tests and the outputs note are already in the working tree and are not committed. Keep them and finish verification.
+**Status:** DONE, 2026-11-26. Evidence and completed plan: `impl/REV-05.md`.
 **Epic:** [EP-01 Complete Functional Pilot](../EPIC.md).
+**Related:** [REV-04](REV-04-compile-pdf.md).
 
-As a management reader, I want the PDF to explain what needs attention in plain language, with technical details in appendix tables, so I can understand the recorded result before consulting engineering detail.
+As a management reader, I want the PDF of a saved review report to explain what needs attention in plain language, with technical details in appendix tables, so I can understand the recorded result before consulting engineering detail.
+
+The renderer is `studio/compile/impl/pdf.py`. `compile-pdf.py` calls it through `compile/pdf.py`. It reads one saved review report and writes one new PDF. It does not read a remedy report, and it does not read `action` `retire` on a `review_item`.
 
 ## Acceptance
 
@@ -11,45 +14,41 @@ As a management reader, I want the PDF to explain what needs attention in plain 
 
 Given a saved review report,
 when its PDF is rendered,
-then the opening identifies the checker and a compact saved revision when recorded, and explains the scope, counts of evidence assertions and automated checks, and what needs human follow-up,
-and avoids full hashes, raw JSON arguments, source URLs, certificate diagnostics and Git terminology in that opening,
-and describes uncommitted changes in plain language when the recorded worktree is dirty,
-and preserves the distinction between technical outcomes and a human/legal conclusion.
+then the opening is headed Management summary, names the checker and a compact saved revision when one is recorded, and states the counts of evidence assertions and automated checks,
+and keeps the full commit, the word worktree, digests, raw check arguments, source URLs and certificate reasons out of that opening,
+and says the checked files included uncommitted changes when the recorded worktree is dirty,
+and states that the export prepares evidence for human review and is not a conformity assessment.
 
-### MGMT-02 — Follow-up and recorded decision
+### MGMT-02 — Follow-up, findings and the recorded decision
 
-Given failed or skipped results,
+Given failed or skipped Checks,
 when the opening is rendered,
-then it identifies the affected recorded assertions in understandable text and references the corresponding appendix section,
-and recommends reviewing the evidence and check configuration, correcting the cause, and checking again,
+then it names how many automated checks need follow-up, lists the recorded assertions that need attention, and points at the appendix item,
+and tells the reader to review the evidence and the check configuration, address the cause, and run the checks again,
 and does not invent product risk, ownership, deadlines, compliance, or a reviewer decision.
-A separate Review findings section presents each failed/skipped assertion with the checker's recorded reason and neutral human-review questions before the technical appendices.
-Changes since the run, unresolved current evidence and independent signature verification are explicitly described as not assessed, rather than reported as zero or verified.
-The appendix starts its detailed evidence section with a compact row per Claim and its Requirement, outcomes and detail reference.
-Given all Checks passed or no Checks executed,
-then the summary accurately distinguishes those cases.
-Given a recorded reviewer decision and recorded signature gaps,
-then the opening shows the decision and explains the gaps separately from automated outcomes, with details in the appendix.
+A failed Check whose assessment `disposition` is `retire` is counted as retired, not as an outstanding correction. The recorded result stays in the report. A Check that was retired later by remediation `action` `retire` is not what this count reads.
+Review findings follow the summary, before the appendices, in this order: outstanding deviations requiring correction, accepted deviations, retired checks, and passing checks. A finding shows the checker's recorded reason. A passing Check whose stored binding is `stale` or `missing` is still shown, and its Check status stays `pass`.
+The findings state that changes since the run, unresolved current evidence, and independent signature verification are not assessed.
+Given every Check passed, the summary says all recorded checks passed and that human review is still required.
+Given no Checks executed, the summary says there is no successful check result to review.
+Given a recorded reviewer decision, the opening shows that text. Given none, it says no reviewer decision was recorded. Signature gaps are counted separately from automated outcomes, with the reasons in Appendix C.
 
 ### MGMT-03 — Technical appendix tables
 
 Given the same report,
 when the appendix is rendered,
-then run metadata and loaded Pack versions/digests, embedded Requirements and source passages, embedded Claims and evidence addresses, indexed Check arguments/outcomes/details, recorded signature metadata and appendix reasons remain available,
-and technical records are arranged in readable tables with repeated headers, wrapping, and page splitting,
-and the source objects and historical grouping remain unchanged.
+then it starts on a new page, headed Appendix A — Run and source records, and continues with Appendix B — Requirements, evidence and checks and Appendix C — Approval and signature records,
+and those tables keep run metadata, loaded Pack versions and digests, embedded Requirements and source passages, embedded Claims and evidence, indexed Check arguments and outcomes, and the recorded signature reasons,
+and a table repeats its header and can split a long row across pages,
+and the source objects and their historical grouping are unchanged.
 
 ### MGMT-04 — Readable output and preserved inputs
 
-Given the actual 13-Claim/19-Check example and a multi-page Unicode/long-text fixture,
-when new PDFs are generated,
-then the main report is readable in black and white without controls,
-and technical content follows an explicit page break into labelled appendices,
-and visual inspection confirms that tables, long text, headers and page footers do not overlap or clip.
-Existing preservation and validation behavior from REV-04 continues to hold.
+Given a report with long Unicode text,
+when a new PDF is generated,
+then the text is present, every page is numbered, and the file has no annotation controls.
+An existing PDF at the output path is left unchanged, and so is the source JSON. A missing report, a report that does not validate, or a missing output directory writes no PDF.
 
 ## Boundaries
 
-English presentation remains consistent with the existing report. The executive summary uses deterministic wording and recorded assertions, not generated interpretations. A long assertion may be shortened for the follow-up table, with its complete text retained in the appendix. No new persistent fields, model calls, or trust verification is introduced. New PDFs use a new filename; previous PDFs and source JSON remain intact.
-
-The user supplied a Copilot review-layout suggestion on 2026-10-29. It informed the summary/findings/appendix structure. Its proposed tick-box decisions and new live-comparison or verification counts are not introduced: the report decision remains free text and the export reads only recorded historical data.
+English presentation. The summary uses the recorded report, not a generated interpretation. A long assertion may be shortened in the follow-up table; the appendix keeps the recorded text. No new persistent fields, model calls, or trust verification. The command is `python3 compile-pdf.py --report <report.json> --out <report.pdf>`.

@@ -2,7 +2,7 @@
 
 This guide is for product teams using Studio on their own repository. To develop Curbpack itself, see [Development](../development/README.md).
 
-[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, and Review. This guide gives the longer procedure on a real product repository. For the downloaded program, see [Install](install.md).
+[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, Review, and Remediation. This guide gives the longer procedure on a real product repository. For the downloaded program, see [Install](install.md).
 
 You can rerun Discovery, Claim edits, or Check without repeating Extract.
 
