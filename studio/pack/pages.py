@@ -89,6 +89,7 @@ def documents_page(model: dict) -> bytes:
     )
     config_dialog = _curbpack_dialog(model) if repo_id else ""
     body = f"""
+{model.get("format_prompt") or ""}
 <h1>Pack Sources</h1>
 <p class="muted">Pack Sources reads the Packs named in this repository's curbpack.json.
 Change project from the top bar.</p>
@@ -1473,6 +1474,7 @@ if (fields) {
         ],
     }
     body = f"""
+{model.get("format_prompt") or ""}
 <p class="muted"><a href="/requirements">Pack Sources</a>
  · <a href="{html.escape(str(model.get("list_href") or "/requirements/copy"))}">Requirements list</a></p>
 <div class="req-head">

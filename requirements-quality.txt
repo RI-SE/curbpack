@@ -1,0 +1,21 @@
+-r requirements-dev.txt
+
+# Complexity and maintainability
+radon==6.0.1
+complexipy==9.0.0
+
+# Linting, duplication, dead code, typing, and docstring coverage
+ruff==0.17.6
+pylint==4.1.4
+vulture==2.16
+mypy==2.4.1
+interrogate==1.7.0
+
+# Security, secrets, and dependency auditing
+bandit==1.9.4
+semgrep==1.187.0
+detect-secrets==1.5.0
+pip-audit==2.10.1
+
+# Python module boundaries
+import-linter==2.17

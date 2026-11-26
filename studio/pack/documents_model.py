@@ -94,7 +94,37 @@ def _documents_model(ws: Workspace, query: dict) -> dict:
                         "repo_id": repo_id,
                     }
                 )
+    from urllib.parse import quote
+
+    from studio.format_prompt import compatibility_forms
+
+    candidates = []
+    if repo_id and curbpack_file and Path(curbpack_file).is_file():
+        candidates.append(
+            {
+                "path": Path(curbpack_file),
+                "kind": "curbpack",
+                "fields": {"repo": repo_id},
+                "label": "curbpack.json",
+            }
+        )
+    for item in documents:
+        if item.get("missing"):
+            continue
+        pack_id = str(item.get("id") or "")
+        candidates.append(
+            {
+                "path": Path(item["pack_dir"]) / "pack.json",
+                "kind": "pack",
+                "fields": {"repo": repo_id, "pack": pack_id},
+                "label": f"{pack_id}/pack.json",
+            }
+        )
     return {
+        "format_prompt": compatibility_forms(
+            candidates,
+            next_path=f"/requirements?repo={quote(repo_id)}" if repo_id else "/requirements",
+        ),
         "documents": documents,
         "repos": repos,
         "repo_id": repo_id,
@@ -186,6 +216,8 @@ def _save_curbpack_form(repo: Path, form: dict) -> None:
         loaded = read_json(path)
         if isinstance(loaded, dict) and "requirements" in loaded and not exclude:
             document["requirements"] = loaded["requirements"]
+        if isinstance(loaded, dict) and loaded.get("format_version") == 1:
+            document["format_version"] = 1
     if exclude:
         document["exclude_requirements"] = exclude
         document.pop("requirements", None)

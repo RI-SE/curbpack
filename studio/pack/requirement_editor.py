@@ -55,7 +55,30 @@ def _editor_model(ws: Workspace, requirement_id: str, query: dict) -> dict:
             try_open = True
             try_job = None
     try_document = load_try_result(ws.root / "jobs", requirement_id, try_repo) if try_repo else None
+    from urllib.parse import quote, urlencode
+
+    from studio.format_prompt import compatibility_form
+
+    next_pairs = []
+    for key in ("repo", "pack", "timestamp"):
+        value = (query.get(key) or [""])[0].strip()
+        if value:
+            next_pairs.append((key, value))
+    next_path = "/requirements/requirement/" + quote(requirement_id, safe="")
+    if next_pairs:
+        next_path += "?" + urlencode(next_pairs)
     return {
+        "format_prompt": compatibility_form(
+            directory / f"{requirement_id}.json",
+            "requirement",
+            next_path=next_path,
+            fields={
+                "repo": (query.get("repo") or [""])[0].strip(),
+                "pack": (query.get("pack") or [""])[0].strip(),
+                "requirement": requirement_id,
+                "timestamp": (query.get("timestamp") or [""])[0].strip(),
+            },
+        ),
         "requirement": requirement,
         "expected_digest": version_digest(requirement),
         "reading": read_signature(requirement, trust, what="requirement"),
