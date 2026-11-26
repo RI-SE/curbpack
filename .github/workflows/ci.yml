@@ -26,7 +26,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             artifact: curbpack-studio-linux-x64
-          - os: macos-14
+          - os: macos-15
             artifact: curbpack-studio-macos-arm64
           - os: windows-latest
             artifact: curbpack-studio-windows-x64
@@ -94,7 +94,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             artifact: curbcheck-linux-x64
-          - os: macos-14
+          - os: macos-15
             artifact: curbcheck-macos-arm64
           - os: windows-latest
             artifact: curbcheck-windows-x64
