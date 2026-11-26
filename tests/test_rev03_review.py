@@ -296,10 +296,13 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", next((repo / "runs" / "out").glob("run-result_*.json")))
             group = _details(page, "Unresolved Claims")
+            passed = page.split('data-approved="1"', 1)[1]
             self.assertIn("kept detail", group)
             self.assertIn("claim-missing", group)
-            self.assertIn("stray-note", group)
-            self.assertIn(">Passed</option>", group)
+            self.assertNotIn("stray-note", group)
+            self.assertIn("stray-note", passed)
+            self.assertIn(">Passed</option>", passed)
+            self.assertIn('data-requirement="Unresolved Claims"', passed)
             self.assertNotIn('data-requirement="NOT-A-REQ"', page)
             self.assertNotIn('data-requirement="claim-missing"', page)
             self.assertNotIn("the repository passes", page)
@@ -334,14 +337,17 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-SHARED")
+            passed = page.split('data-approved="1"', 1)[1]
             self.assertIn('data-binding="missing"', group)
             self.assertIn("The Requirement this Claim names was not loaded for this run.", group)
             self.assertNotIn("The Check status is unchanged.", group)
             missing = group.split('data-binding="missing"', 1)[1].split("</button>", 1)[0]
             self.assertIn('d="M18 6 6 18"', missing)
             self.assertIn("Binding missing", missing)
-            self.assertIn('data-status="pass"', group)
-            self.assertIn('class="check pass"', group)
+            self.assertNotIn('data-status="pass"', group)
+            self.assertIn('data-status="pass"', passed)
+            self.assertNotIn('class="check pass"', group)
+            self.assertIn('class="check pass"', passed)
             self.assertNotIn('data-claim-seal', group)
             self.assertIn('data-claim-seal="Unsigned"', page)
             self.assertNotIn('data-status="missing"', group)
@@ -458,13 +464,17 @@ class ReviewGroupingTest(unittest.TestCase):
             with _serve(workspace) as base:
                 page = _open_run(base, "alpha", path)
             group = _details(page, "REQ-SHARED")
-            self.assertIn("exist", group)
+            passed = page.split('data-approved="1"', 1)[1]
+            self.assertIn("exist", passed)
             self.assertIn("contents", group)
             self.assertIn("one.md", group)
-            self.assertIn("two.md", group)
+            self.assertIn("one.md", passed)
             self.assertIn("short file", group)
-            self.assertIn('data-check="exist"', group)
+            self.assertIn('data-check="exist"', passed)
             self.assertIn('data-check="contents"', group)
+            self.assertNotIn('data-check="exist"', group)
+            recorded = page.split("<h4>Checks</h4>", 1)[1]
+            self.assertIn("two.md", recorded)
             header = page[page.index('data-run-header'): page.index("</section>", page.index("data-run-header"))]
             self.assertIn("curbcheck", header)
             self.assertIn("0.0.1a", header)
@@ -1287,7 +1297,9 @@ class ReviewCompileDecisionSealTest(unittest.TestCase):
                 )
             self.assertEqual(list(reports.glob("review-report_*.json")), [])
             self.assertIn("gap-note", mismatched)
-            self.assertNotIn("other.md", mismatched)
+            self.assertIn("The Claim file has changed since this Check run.", mismatched)
+            self.assertIn("The current Check cannot be matched safely.", mismatched)
+            self.assertIn('data-path="other.md"', mismatched)
             self.assertNotIn(json.dumps(changed, ensure_ascii=False), mismatched)
             self.assertEqual(run_path.read_bytes(), run_before)
 

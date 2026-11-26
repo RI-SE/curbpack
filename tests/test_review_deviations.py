@@ -294,7 +294,7 @@ class DeviationAssessmentTest(unittest.TestCase):
         claim = _claim(requirement)
         plain = compile_report(run_result=_run(claim), requirements=[requirement], claims=[claim])
         decided = record_decision(plain, "First reading.")
-        private, _public = generate_keypair()
+        private, public = generate_keypair()
         rejected = _assessment(claim, 9, "accept", "This Check was not recorded.")
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "review-report_20261120T120000Z.json"
@@ -307,19 +307,32 @@ class DeviationAssessmentTest(unittest.TestCase):
                     assessments=[rejected],
                 )
             self.assertEqual(path.read_bytes(), before)
-            unsigned = Path(tmp) / "review-report_20261120T120001Z.json"
-            write_report(unsigned, plain)
-            unsigned_before = unsigned.read_bytes()
+            rejected_sign = Path(tmp) / "review-report_20261120T120001Z.json"
+            write_report(rejected_sign, plain)
+            rejected_before = rejected_sign.read_bytes()
             with self.assertRaises(ModelError):
                 save_report_signature(
-                    unsigned,
+                    rejected_sign,
                     name="Ada Reviewer",
                     private_key=private,
                     at="2026-11-20T12:00:00Z",
-                    assessments=[_assessment(claim, 0, "must_fix", "Add docs/a.md.")],
+                    assessments=[_assessment(claim, 9, "accept", "This Check was not recorded.")],
                 )
-            self.assertEqual(unsigned.read_bytes(), unsigned_before)
-            self.assertNotIn("assessments", load_report(unsigned))
+            self.assertEqual(rejected_sign.read_bytes(), rejected_before)
+            self.assertNotIn("assessments", load_report(rejected_sign))
+            unsigned = Path(tmp) / "review-report_20261120T120002Z.json"
+            write_report(unsigned, plain)
+            signed = save_report_signature(
+                unsigned,
+                name="Ada Reviewer",
+                private_key=private,
+                at="2026-11-20T12:00:00Z",
+                assessments=[_assessment(claim, 0, "must_fix", "Add docs/a.md.")],
+            )
+            self.assertNotIn("decision", signed)
+            self.assertEqual(signed["assessments"][0]["text"], "Add docs/a.md.")
+            reading = read_report_signature(load_report(unsigned), {"Ada Reviewer": public})
+            self.assertTrue(reading["verifiable"])
 
     def test_assessments_are_not_accepted_for_a_different_run(self):
         requirement = _requirement()
@@ -625,11 +638,7 @@ class RerunChecksTest(unittest.TestCase):
             self.assertIn("result=", location)
             self.assertNotIn("/check?", location)
             self.assertEqual(existing.read_bytes(), before)
-            created = [
-                path
-                for path in (repo / "runs" / "out").glob("run-result_*.json")
-                if path != existing
-            ]
+            created = sorted((repo / "runs" / "out").glob("run-result_*/run-result.json"))
             self.assertEqual(len(created), 1)
             result = read_json(created[0])
             self.assertEqual(len(result["claims"]), 1)
