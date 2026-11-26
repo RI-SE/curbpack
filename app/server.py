@@ -162,6 +162,10 @@ _VENDOR = {
         ROOT / "app" / "icons" / "curbpack-icon.svg",
         "image/svg+xml",
     ),
+    "/icons/workflow.jpg": (
+        ROOT / "app" / "icons" / "workflow.jpg",
+        "image/jpeg",
+    ),
 }
 _PROJECT_ALLOWED = frozenset({"/project"})
 DEFAULT_WORKSPACE = default_workspace()

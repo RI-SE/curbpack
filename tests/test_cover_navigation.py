@@ -101,8 +101,16 @@ class CoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
+                self.assertLess(
+                    cover.index('href="/home">Start</a>'),
+                    cover.index('href="/project">Change-Project</a>'),
+                )
                 self.assertIn("Pack-Editor", cover)
                 self.assertIn('href="/requirements">Pack-Editor</a>', cover)
+                self.assertIn('href="/discover">Discovery &amp; Claims</a>', cover)
+                self.assertIn('href="/check">Verification-Workflow</a>', cover)
+                self.assertNotIn(">Discover</a>", cover)
+                self.assertNotIn(">Home</a>", cover)
                 for href in ("/discover", "/check"):
                     self.assertIn(f'href="{href}"', cover)
                 self.assertNotIn('href="/review"', cover)

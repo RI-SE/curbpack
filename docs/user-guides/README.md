@@ -3,7 +3,7 @@
 | Guide | What it shows |
 | --- | --- |
 | [Install](install.md) | Start Curbpack Studio from the downloaded program. |
-| [Getting started](getting-started.md) | The reference product: Pack Editor, Discovery & Claims, Check, a signed review, and remediation through Sign Off. |
+| [Getting started](getting-started.md) | The reference product from Start: Pack Editor, Discovery & Claims, and Verification Workflow through a signed review and Sign Off. |
 | [Developer guide](developers.md) | A product repository: select a Pack, bind Claims, run Check, compile, sign. |
 | [CI/CD](ci-cd.md) | The same Check in a pipeline. Studio's own GitHub workflows are a separate pipeline. |
 | [Reviewers](reviewers.md) | Check, the signed review, and remediation through Sign Off. |

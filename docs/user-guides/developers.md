@@ -2,7 +2,7 @@
 
 This guide is for product teams using Studio on their own repository. To develop Curbpack itself, see [Development](../development/README.md).
 
-[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, Check, Review, and Remediation. This guide gives the longer procedure on a real product repository. For the downloaded program, see [Install](install.md).
+[Getting started](getting-started.md) is the first pass through Pack Editor, Discovery & Claims, and Verification Workflow. That last area is the Check page, then Review and Remediation. This guide gives the longer procedure on a real product repository. For the downloaded program, see [Install](install.md).
 
 You can rerun Discovery, Claim edits, or Check without repeating Extract.
 
@@ -54,7 +54,7 @@ In Studio, choose the product repository with **Repo**. Check, Discovery, Compil
 
 ## 3. Run the first Check
 
-In Curbpack Studio, open **Check** (`/check`), choose the product under **Repo**, and click **Check**.
+In Curbpack Studio, open **Verification-Workflow** in the menu (`/check`). The page is headed **Check**. Choose the product under **Repo**, and click **Check**.
 
 From a terminal:
 

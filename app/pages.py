@@ -28,6 +28,11 @@ button.link:hover{color:#115e59}
 form.inline{display:inline}
 button.secondary{background:#fff;color:var(--ink);border:1px solid #cbd5e1}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+figure.workflow{margin:.75rem 0 0}
+figure.workflow img{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px}
+.start-steps dt{margin:.9rem 0 .15rem}
+.start-steps dt:first-child{margin-top:0}
+.start-steps dd{margin:0;color:var(--muted)}
 .muted{color:var(--muted)}
 .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:.6rem .75rem;border-radius:8px}
 .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;padding:.6rem .75rem;border-radius:8px}
@@ -343,10 +348,10 @@ def page(
 <span><span class="name-curbpack">Curbpack</span> <span class="name-studio">Studio</span></span>
 </a>
 <nav>
+<a href="/home">Start</a>
 <a href="/project">Change-Project</a>
-<a href="/home">Home</a>
 <a href="/requirements">Pack-Editor</a>
-<a href="/discover">Discover</a>
+<a href="/discover">Discovery &amp; Claims</a>
 <a href="/check">Verification-Workflow</a>
 {crumb_html}
 </nav>

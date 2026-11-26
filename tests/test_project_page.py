@@ -52,11 +52,36 @@ class ProjectPageTest(unittest.TestCase):
                 self.assertEqual(open_repo_id(workspace), str(repos[0]["id"]))
                 self.assertIn("<h1>Curbpack Studio</h1>", cover)
                 self.assertIn("author packs from law text", cover)
-                self.assertIn('href="/home">Home</a>', cover)
+                self.assertIn('href="/home">Start</a>', cover)
+                self.assertLess(
+                    cover.index('href="/home">Start</a>'),
+                    cover.index('href="/project">Change-Project</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/project">Change-Project</a>'),
+                    cover.index('href="/requirements">Pack-Editor</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/requirements">Pack-Editor</a>'),
+                    cover.index('href="/discover">Discovery &amp; Claims</a>'),
+                )
+                self.assertLess(
+                    cover.index('href="/discover">Discovery &amp; Claims</a>'),
+                    cover.index('href="/check">Verification-Workflow</a>'),
+                )
+                self.assertIn('href="/requirements">Pack Editor</a>', cover)
+                self.assertIn('href="/check">Verification Workflow</a>', cover)
+                self.assertNotIn('>Home</a>', cover)
+                self.assertNotIn('>Discover</a>', cover)
+                self.assertIn('src="/icons/workflow.jpg"', cover)
                 self.assertIn("Change-Project", cover)
                 self.assertLess(cover.index("</header>"), cover.index('class="config-panel"'))
                 self.assertLess(cover.index('class="config-panel"'), cover.index("<h1>Curbpack Studio</h1>"))
-                self.assertLess(cover.index('class="config-panel"'), cover.index("Check — authoritative pack"))
+                self.assertLess(cover.index('class="config-panel"'), cover.index("Verification Workflow"))
+                self.assertIn("Extract requirements from law or source material", cover)
+                self.assertIn("Find candidate evidence in the product", cover)
+                self.assertIn("review the result, and remediate", cover)
+                self.assertNotIn("Check — authoritative pack", cover)
                 self.assertNotIn("Review — write and sign", cover)
                 self.assertNotIn('href="/review">Review</a>', cover)
                 self.assertIn("Current Project", cover)

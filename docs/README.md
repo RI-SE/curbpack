@@ -163,7 +163,7 @@ Figure 4. The recurring Curbpack development cycle.
 
 Creating or changing Requirements and discovering new evidence are activities you return to when they are needed.
 
-The Curbpack Studio cover page at `http://127.0.0.1:8770` provides access to these activities. They all operate on one selected product repository.
+**Start** is the first item in the Studio menu. At `http://127.0.0.1:8770/home` it shows the workflow diagram above and links **Pack Editor**, **Discovery & Claims**, and **Verification Workflow**. The menu uses those same areas, with **Pack-Editor** and **Verification-Workflow** as the short labels. Check, review, and remediation are that third area: review and remediation open from a Check result, not as their own menu items. Every area operates on one selected product repository.
 
 
 The repository's `curbpack.json` tells Curbpack where to find the Packs, Claims, results, reports, and search hints used for that product.
@@ -188,7 +188,7 @@ Studio installation settings live in `~/.curbpack/curbpack-studio.json`. A produ
 | Goal | Read |
 | --- | --- |
 | Install and start Studio | [Install](user-guides/install.md) |
-| Walk Pack Editor, Discovery & Claims, Check, Review, and Remediation | [Getting started](user-guides/getting-started.md) |
+| Walk Start: Pack Editor, Discovery & Claims, and Verification Workflow | [Getting started](user-guides/getting-started.md) |
 | Use Studio on a product repository | [Developer guide](user-guides/developers.md) |
 | Run the same Check outside the browser | [CI/CD](user-guides/ci-cd.md) |
 | Test this repository (Studio and curbcheck) | [Development](development/README.md) · [Testing curbcheck](testing/README.md) |

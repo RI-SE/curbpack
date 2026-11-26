@@ -30,15 +30,13 @@ Do not edit anything yet. The point of the first run is to establish the known b
 
 ## 2. Open the repository in Curbpack Studio
 
-Open the Curbpack Studio cover page and choose the cloned `cyberready-test-product` repository.
+Open **Start**. It is the first item in the menu. Choose the cloned `cyberready-test-product` repository if it is not already the open project.
 
-The cover links Pack Editor, Discovery & Claims, and Check. Review and Remediation are opened from a row under **Checks performed**, not from the cover.
+Start shows the workflow diagram and links three areas. The menu uses the same names: **Pack-Editor**, **Discovery & Claims**, and **Verification-Workflow**.
 
-1. **Pack Editor** — inspect the Packs and Requirements.
-2. **Discovery & Claims** — inspect how product evidence is connected to Requirements.
-3. **Check** — evaluate the Checks defined by the Claims.
-4. **Review** — record a decision for the failed Check and **Sign**.
-5. **Remediation** — open that signed review, restore the evidence, **Re-check**, and **Sign Off**.
+1. **Pack Editor** — inspect the Packs and Requirements. A pack comes from law or other source material, or from an imported authored pack.
+2. **Discovery & Claims** — inspect how product evidence is connected to Requirements. A claim records the evidence and the checks to run.
+3. **Verification Workflow** — the page is headed **Check**. Evaluate the Checks defined by the Claims, review the result, and remediate what failed. Review and Remediation open from a row under **Checks performed**, not from Start or the menu.
 
 You do not need to create or extract a new Pack for this walkthrough. The reference product is already prepared.
 
@@ -57,7 +55,7 @@ Pack
 
 A Requirement describes what must be fulfilled. The Pack makes a reusable set of Requirements available to products.
 
-Return to the Studio cover page when you have seen where the Requirements come from.
+Return to **Start** when you have seen where the Requirements come from.
 
 ## 4. Inspect the Claims and evidence
 
@@ -80,7 +78,7 @@ Do not change the Claim yet.
 
 ## 5. Run the baseline Check
 
-Open **Check** and run the prepared Check against the reference product.
+Open **Verification-Workflow** in the menu, or **Verification Workflow** on Start. The page is headed **Check**. Run the prepared Check against the reference product.
 
 The first run should show the prepared baseline. Read a few rows and identify:
 
@@ -111,7 +109,7 @@ rm SECURITY.md
 
 Nothing about the Requirement or Claim has changed. Only the product evidence has changed. The committed copy is still in Git. You put that copy back in a later step. Do not run `git restore .`. That can discard other work in the tree.
 
-Run **Check** again in Studio.
+On **Verification-Workflow**, run **Check** again.
 
 Find the row associated with the missing `SECURITY.md` evidence. Compare it with the baseline result from the previous run. Follow the failed row back through the model:
 

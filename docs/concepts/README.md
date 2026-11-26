@@ -34,7 +34,7 @@ The run result records **what those questions observed**.
 
 Review records **what a person decided** about that run. Sign locks those decisions. Remediation is the later work on the same Check, and Sign Off seals that account without changing the signed decisions. Neither seal signs the Requirement or the Claim.
 
-The activities can be repeated independently. A product change is a new Check run. A new sealed Requirement can be followed by a new Discovery. Neither of those restarts Extract. The cover links each area and does not order them.
+The activities can be repeated independently. A product change is a new Check run. A new sealed Requirement can be followed by a new Discovery. Neither of those restarts Extract. **Start** shows the workflow and links Pack Editor, Discovery & Claims, and Verification Workflow. Opening one does not require the others.
 
 ## Main concepts
 

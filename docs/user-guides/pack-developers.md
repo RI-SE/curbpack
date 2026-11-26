@@ -10,7 +10,7 @@ Start Curbpack Studio and choose the repository where you want to create and mai
 
 This may be a shared repository containing Packs used by several products, or a product repository that maintains its own Packs.
 
-Open **Pack Editor** from the Studio cover page.
+Open **Pack Editor** from **Start**, or **Pack-Editor** in the menu.
 
 ## 2. Create a Pack
 

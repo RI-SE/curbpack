@@ -4,7 +4,7 @@ This guide is for anyone reading a Studio result: QA, security, compliance, buye
 
 A round has three parts. **Check** writes a result. **Review** records a decision for each deviation and **Sign** locks those decisions. **Remediation** is the work that follows a signed review. **Sign Off** locks that work and writes a remediation report. A signed review and a signed remediation both open read-only.
 
-Start on **Check** (`/check`). The table **Checks performed** has one row per Check, newest first. A re-check made while a remediation is open updates that remediation and does not add a row.
+Open **Verification-Workflow** in the menu (`/check`). The page is headed **Check**. The table **Checks performed** has one row per Check, newest first. A re-check made while a remediation is open updates that remediation and does not add a row.
 
 | Column | What you do |
 | --- | --- |

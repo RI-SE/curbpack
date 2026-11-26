@@ -172,7 +172,14 @@ class HomeAndDiscoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 home = _get(base + "/")
-                self.assertIn(">Home</a>", home)
+                self.assertLess(
+                    home.index('href="/home">Start</a>'),
+                    home.index('href="/project">Change-Project</a>'),
+                )
+                self.assertIn('href="/discover">Discovery &amp; Claims</a>', home)
+                self.assertIn('href="/check">Verification-Workflow</a>', home)
+                self.assertNotIn('>Home</a>', home)
+                self.assertNotIn('>Discover</a>', home)
                 self.assertIn("Change-Project", home)
                 self.assertIn("Registered projects", home)
                 self.assertIn("Choose the product repository", home)
