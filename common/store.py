@@ -25,6 +25,48 @@ def upgrade_format_0_to_1(document: dict) -> dict:
     return upgraded
 
 
+PRODUCTION_FORMAT_STEPS = ((0, 1, upgrade_format_0_to_1),)
+
+
+def apply_format_chain(document: dict, steps, *, floor: int = 0) -> dict:
+    """Run one function per version, in order. A gap or a version below the floor is rejected.
+
+    This does not write. Production passes PRODUCTION_FORMAT_STEPS. A test may pass
+    its own steps; those steps are not registered here.
+    """
+    if not isinstance(document, dict):
+        raise ModelError("document", "format_version", "object")
+    version = document["format_version"] if "format_version" in document else 0
+    if type(version) is not int:
+        raise ModelError("document", "format_version", "an integer version this chain can read")
+    if version < floor or version < 0:
+        raise ModelError("document", "format_version", "a version at or above the floor")
+    by_source: dict[int, tuple[int, object]] = {}
+    for source, destination, function in steps:
+        if type(source) is not int or destination != source + 1 or source in by_source:
+            raise ModelError("document", "format_version", "the next step, with no gap")
+        by_source[source] = (destination, function)
+    if not by_source:
+        return dict(document)
+    highest = max(destination for destination, _function in by_source.values())
+    if version > highest or version < min(by_source):
+        raise ModelError("document", "format_version", "a version this chain can read")
+    cursor = version
+    while cursor < highest:
+        found = by_source.get(cursor)
+        if found is None:
+            raise ModelError("document", "format_version", "the next step, with no gap")
+        cursor = found[0]
+    current = dict(document)
+    while version < highest:
+        destination, function = by_source[version]
+        current = function(current)
+        if not isinstance(current, dict) or current.get("format_version") != destination:
+            raise ModelError("document", "format_version", "the version that step returns")
+        version = destination
+    return current
+
+
 def stamp_saved_document(document: dict) -> dict:
     """Put format_version 1 on the validated document that save writes."""
     document["format_version"] = CURRENT_FORMAT_VERSION
@@ -37,9 +79,9 @@ def read_format_document(document: dict, object_name: str) -> tuple[dict, int, i
     A missing format_version is version 0. This does not write.
     """
     validate_format_version(document, object_name)
-    if "format_version" not in document:
-        return upgrade_format_0_to_1(document), 0, CURRENT_FORMAT_VERSION
-    return dict(document), document["format_version"], CURRENT_FORMAT_VERSION
+    read_version = 0 if "format_version" not in document else document["format_version"]
+    upgraded = apply_format_chain(document, PRODUCTION_FORMAT_STEPS)
+    return upgraded, read_version, CURRENT_FORMAT_VERSION
 
 
 def _safe_id(value: str, object_name: str) -> str:
