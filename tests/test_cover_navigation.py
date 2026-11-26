@@ -31,7 +31,7 @@ class CoverNavigationTest(unittest.TestCase):
             try:
                 project = _get(base + "/")
                 self.assertIn("Curbpack Studio", project)
-                self.assertIn("Change Project", project)
+                self.assertIn("Change-Project", project)
                 self.assertIn("Registered projects", project)
                 self.assertIn('href="/project"', project)
                 self.assertNotIn("Developer", project)
@@ -101,10 +101,11 @@ class CoverNavigationTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
-                self.assertIn("Pack Editor", cover)
-                self.assertIn('href="/requirements">Pack Editor</a>', cover)
-                for href in ("/discover", "/check", "/review"):
+                self.assertIn("Pack-Editor", cover)
+                self.assertIn('href="/requirements">Pack-Editor</a>', cover)
+                for href in ("/discover", "/check"):
                     self.assertIn(f'href="{href}"', cover)
+                self.assertNotIn('href="/review"', cover)
                 listed = _get(base + "/requirements")
                 self.assertIn("<h1>Pack Sources</h1>", listed)
                 self.assertIn("<th>Pack Name</th>", listed)

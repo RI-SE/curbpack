@@ -22,10 +22,9 @@ The pilot workflow: author packs from law text → create claims in your product
 check regularly → review the result and fix what failed.</p>
 {_flash(message, error)}
 <div class="card">
-<p><a href="/requirements">Pack Editor</a></p>
+<p><a href="/requirements">Pack-Editor</a></p>
 <p><a href="/discover">Discovery &amp; Claims — find candidates, configure checks, create Claims</a></p>
 <p><a href="/check">Check — authoritative pack via curbpack.json</a></p>
-<p><a href="/review">Review — write and sign a report</a></p>
 </div>
 """
     return page("Curbpack Studio", body, banner=panel)

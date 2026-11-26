@@ -122,7 +122,7 @@ class DiscoverClaimsUiTest(unittest.TestCase):
         page = requirement_page(model).decode()
         self.assertNotIn(">Useful</th>", overview)
         self.assertNotIn(">Poor</th>", overview)
-        self.assertIn('href="/review"', page)
+        self.assertNotIn('href="/review"', page)
         self.assertNotIn(">Review <span", page)
         self.assertNotIn(">Useful</button>", page)
         self.assertNotIn(">Poor</button>", page)

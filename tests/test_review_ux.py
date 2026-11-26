@@ -60,7 +60,7 @@ class ReviewStartTest(unittest.TestCase):
             self.assertIn("<h1>Review</h1>", page)
             self.assertNotIn('class="review-process"', page)
             self.assertIn("No previous Check result has been chosen.", page)
-            self.assertIn('go to the <a href="/check">Check</a> tab', page)
+            self.assertIn('go to the <a href="/check">Verification-Workflow</a> tab', page)
             self.assertIn("review the latest Check result", page)
             self.assertNotIn("Nothing is opened until you choose a Check run.", page)
             self.assertNotIn("Review the latest run", page)

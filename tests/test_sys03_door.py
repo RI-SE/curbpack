@@ -672,7 +672,7 @@ class CheckIoTest(unittest.TestCase):
                 _post(base + "/project", {"repo_id": "widget", "action": "select"})
                 self.assertEqual(open_repo_id(workspace), "widget")
                 page = _get(base + "/")
-                self.assertIn("Pack Editor", page)
+                self.assertIn("Pack-Editor", page)
                 sources = _get(base + "/requirements")
                 self.assertIn("widget", sources.lower())
                 project = _get(base + "/project")

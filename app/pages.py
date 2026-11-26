@@ -343,12 +343,11 @@ def page(
 <span><span class="name-curbpack">Curbpack</span> <span class="name-studio">Studio</span></span>
 </a>
 <nav>
-<a href="/project">Change Project</a>
+<a href="/project">Change-Project</a>
 <a href="/home">Home</a>
-<a href="/requirements">Pack Editor</a>
+<a href="/requirements">Pack-Editor</a>
 <a href="/discover">Discover</a>
-<a href="/check">Check</a>
-<a href="/review">Review</a>
+<a href="/check">Verification-Workflow</a>
 {crumb_html}
 </nav>
 </header>

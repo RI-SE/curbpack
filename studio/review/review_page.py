@@ -2946,7 +2946,7 @@ def _compile_refusal_html(door: dict) -> str:
 def _unchosen_run(door: dict) -> str:
     latest = str(door.get("latest_result") or "")
     repo = str(door.get("repo_id") or "")
-    check = '<a href="/check">Check</a>'
+    check = '<a href="/check">Verification-Workflow</a>'
     if not latest or not repo:
         return (
             "<p>No previous Check result has been chosen. "

@@ -27,7 +27,7 @@ class UiSmokeTest(unittest.TestCase):
             base = f"http://127.0.0.1:{httpd.server_address[1]}"
             try:
                 cover = _get(base + "/")
-                self.assertIn("Pack Editor", cover)
+                self.assertIn("Pack-Editor", cover)
                 self.assertNotIn("No review report.", cover)
                 self.assertIn("Discover", cover)
                 self.assertNotIn("Developer", cover)
