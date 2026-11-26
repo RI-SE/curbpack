@@ -136,7 +136,7 @@ class ClaimsTest(unittest.TestCase):
                 }
             )
 
-    def test_stored_single_check_file_is_rewritten_as_checks(self):
+    def test_stored_single_check_file_loads_as_checks_and_is_not_rewritten(self):
         from common.jsonio import read_json, write_json
         from common.store import load_claim
 
@@ -155,13 +155,17 @@ class ClaimsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / f"{legacy['id']}.json"
             write_json(path, legacy)
+            before = path.read_bytes()
             loaded = load_claim(path)
             stored = read_json(path)
+            self.assertEqual(path.read_bytes(), before)
         self.assertEqual(loaded["args"], {"path": "CHANGELOG.md"})
         self.assertEqual(loaded["checks"][0]["check"], "contents")
         self.assertEqual(loaded["checks"][0]["args"]["probes"][0]["kind"], "words")
-        self.assertNotIn("check", stored)
-        self.assertEqual(stored["source"], "documents")
+        self.assertEqual(stored["check"], "contents")
+        self.assertNotIn("source", stored)
+        self.assertEqual(loaded["source"], "documents")
+        self.assertEqual(loaded["format_version"], 1)
         self.assertEqual(loaded["namespace"], "RISE/Example")
         self.assertEqual(loaded["pack_id"], "example")
         self.assertEqual(loaded["requirement_digest"], "recorded-digest")

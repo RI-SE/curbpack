@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from common.canonical import version_digest
+from common.canonical import version_digest, without_format_version
 
 UNRESOLVED = "Unresolved Claims"
 UNCHANGED = "The Claim is unchanged since the Check run."
@@ -29,7 +29,10 @@ BYTES_CHANGED = "The current bytes are not the digest that was signed"
 def same_run(report: dict, run_result: dict) -> bool:
     if not isinstance(report, dict) or not isinstance(run_result, dict):
         return False
-    return report.get("run_result") == run_result
+    stored = report.get("run_result")
+    if not isinstance(stored, dict):
+        return False
+    return without_format_version(stored) == without_format_version(run_result)
 
 
 def unchecked_requirement_ids(selected_ids: list[str], report: dict) -> list[str]:

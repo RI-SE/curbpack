@@ -43,6 +43,7 @@ CREATED_SEARCH_HINTS = {
 ALLOWED_CURBPACK_KEYS = [
     "claims_dir",
     "exclude_requirements",
+    "format_version",
     "namespace_base",
     "packs",
     "packs_dir",

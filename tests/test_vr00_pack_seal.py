@@ -62,15 +62,50 @@ class PackSealTest(unittest.TestCase):
         save_requirement(root, signed)
         self.assertFalse(read_pack_seal(root, trust)["verifiable"])
 
+    def test_adding_format_version_to_an_unversioned_pack_keeps_the_seal(self):
+        private, public = generate_keypair()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        requirement = _requirement()
+        requirement["status"] = "draft"
+        write_json(
+            root / "pack.json",
+            {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack", "status": "draft"},
+        )
+        write_json(root / "REQ-A.json", requirement)
+        seal_pack_directory(root, name="Ada", private_key=private, at="2026-11-11T12:00:00Z")
+        trust = {"Ada": public}
+        before = pack_directory_digest(root)
+        self.assertTrue(read_pack_seal(root, trust)["verifiable"])
+        self.assertNotIn("format_version", (root / "REQ-A.json").read_text(encoding="utf-8"))
+        save_requirement(root, load_requirement(root / "REQ-A.json"))
+        saved = load_requirement(root / "REQ-A.json")
+        self.assertEqual(saved.pop("format_version"), 1)
+        self.assertEqual(saved, requirement)
+        self.assertEqual(pack_directory_digest(root), before)
+        self.assertTrue(read_pack_seal(root, trust)["verifiable"])
+
+    def test_a_versioned_requirement_with_an_extra_newline_changes_the_digest(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        save_pack(root, {"id": "pack", "name": "pack", "version": "1", "namespace": "RISE/pack"})
+        save_requirement(root, _requirement())
+        before = pack_directory_digest(root)
+        path = root / "REQ-A.json"
+        path.write_bytes(path.read_bytes() + b"\n")
+        self.assertNotEqual(pack_directory_digest(root), before)
+
     def test_adding_format_version_keeps_the_pack_seal(self):
         root, trust = self._sealed_copy()
         pack = load_pack(root / "pack.json", sealed=True)
-        pack_before = {key: value for key, value in pack.items()}
+        pack_before = {key: value for key, value in pack.items() if key != "format_version"}
         pack["format_version"] = 1
         save_pack(root, pack, sealed=True)
         for name in ("REQ-A.json", "REQ-B.json"):
             requirement = load_requirement(root / name)
-            before = {key: value for key, value in requirement.items()}
+            before = {key: value for key, value in requirement.items() if key != "format_version"}
             requirement["format_version"] = 1
             save_requirement(root, requirement)
             saved = load_requirement(root / name)

@@ -872,8 +872,13 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
 
     from app.server import _now, _registered_repo_path, _sync_open_repo
     from common.keystore import load_or_create_key
-    from common.jsonio import write_json
-    from studio.review.impl.items import load_items, remedy_report_path, sign_remedy_document, write_items
+    from studio.review.impl.items import (
+        load_items,
+        remedy_report_path,
+        save_remedy_report,
+        sign_remedy_document,
+        write_items,
+    )
 
     repo_id = _sync_open_repo(ws, form)
     if not repo_id:
@@ -932,7 +937,7 @@ def _create_remedy(ws: Workspace, form: dict) -> str:
         reference=reference,
         full_checks=full_checks,
     )
-    write_json(target, sealed)
+    save_remedy_report(target, sealed)
     from studio.review.impl.remedy_report import publish_remedy_reading
 
     publish_remedy_reading(sealed, run, target)

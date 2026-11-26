@@ -10,10 +10,11 @@ digest in this process is the same bytes:
   the SHA-256 hex of that file's bytes. `pack.json` is included with
   `signed.signature` cleared to an empty string, `format_version` removed, and
   then re-encoded with the same canonical JSON. Every other file keeps its raw
-  bytes when `format_version` is absent. A file that has the key is hashed as
-  `dump_text` of the same object with that key removed, using the newline
-  sequence already in that file, which matches the bytes written before the
-  key was added. Every file is included, including dotfiles.
+  bytes when `format_version` is absent. A file whose bytes are exactly
+  `dump_text` of an object that has the key is hashed as `dump_text` of that
+  object with the key removed, using the file's newline sequence. That matches
+  the bytes written before the key was added. Any other bytes are hashed as
+  stored. Every file is included, including dotfiles.
 """
 
 from __future__ import annotations
@@ -61,12 +62,12 @@ def pack_json_bytes_for_digest(doc: dict) -> bytes:
 
 
 def _bytes_ignoring_format_version(path: Path) -> bytes:
-    """Raw bytes, unless the file is a JSON object that carries `format_version`.
+    """Raw bytes, unless the file is exactly the pretty JSON of an object with `format_version`.
 
-    A file without the key keeps today's hash. A file with the key is hashed as
-    `dump_text` of the same object with the key removed. Text-mode writers on
-    Windows store that pretty JSON with CRLF, so the hash uses the newline
-    sequence already in the file.
+    A file without the key keeps today's hash. A clean `dump_text` file that has
+    the key is hashed as `dump_text` of the same object with the key removed,
+    using that file's newline sequence. Any other bytes, including a trailing
+    newline added later, stay in the hash.
     """
     data = path.read_bytes()
     try:
@@ -75,10 +76,13 @@ def _bytes_ignoring_format_version(path: Path) -> bytes:
         return data
     if not isinstance(parsed, dict) or "format_version" not in parsed:
         return data
-    text = dump_text(without_format_version(parsed))
-    if b"\r\n" in data:
-        text = text.replace("\n", "\r\n")
-    return text.encode("utf-8")
+    stripped = dump_text(without_format_version(parsed)).encode("utf-8")
+    as_written = dump_text(parsed).encode("utf-8")
+    if data == as_written:
+        return stripped
+    if data == as_written.replace(b"\n", b"\r\n"):
+        return stripped.replace(b"\n", b"\r\n")
+    return data
 
 
 def pack_directory_digest(root: Path) -> str:

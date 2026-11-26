@@ -154,15 +154,34 @@ def record_dirty_files(repo: Path, run_path: Path, run: dict) -> Path | None:
     if target.is_file():
         return target
     target.parent.mkdir(parents=True, exist_ok=True)
-    write_json(target, {"checks": capture_run_files(repo, run)})
+    save_run_files(target, {"checks": capture_run_files(repo, run)})
     return target
+
+
+def read_run_files(path: Path) -> tuple[dict, int, int]:
+    from common.store import read_format_document
+
+    document = read_json(path)
+    if not isinstance(document, dict) or not isinstance(document.get("checks"), list):
+        raise ModelError("run files", "checks", "a list")
+    return read_format_document(document, "run files")
+
+
+def save_run_files(path: Path, document: dict) -> Path:
+    from common.store import read_format_document, stamp_saved_document
+
+    if not isinstance(document, dict) or not isinstance(document.get("checks"), list):
+        raise ModelError("run files", "checks", "a list")
+    read_format_document(document, "run files")
+    write_json(path, stamp_saved_document(document))
+    return path
 
 
 def load_files_sidecar(temp_dir: Path, run_name: str) -> dict[tuple, list[dict]]:
     path = files_sidecar_path(temp_dir, run_name)
     if not path.is_file():
         return {}
-    document = read_json(path)
+    document, _read_version, _current_version = read_run_files(path)
     found: dict[tuple, list[dict]] = {}
     for row in document.get("checks") or []:
         if not isinstance(row, dict):
@@ -263,14 +282,31 @@ def merge_items(existing: list[dict], new_items: list[dict]) -> list[dict]:
     return merged
 
 
-def load_items(path: Path) -> list[dict]:
-    if not path.is_file():
-        return []
+def read_review_items(path: Path) -> tuple[dict, int, int]:
+    from common.store import read_format_document
+
     document = read_json(path)
     rows = document.get("items") if isinstance(document, dict) else None
     if not isinstance(rows, list):
         raise ModelError("review_items", "items", "a list")
-    return [row for row in rows if isinstance(row, dict)]
+    return read_format_document(document, "review_items")
+
+
+def load_items(path: Path) -> list[dict]:
+    if not path.is_file():
+        return []
+    document, _read_version, _current_version = read_review_items(path)
+    return [row for row in document["items"] if isinstance(row, dict)]
+
+
+def save_review_items(path: Path, document: dict) -> None:
+    from common.store import read_format_document, stamp_saved_document
+
+    rows = document.get("items") if isinstance(document, dict) else None
+    if not isinstance(rows, list):
+        raise ModelError("review_items", "items", "a list")
+    read_format_document(document, "review_items")
+    write_json(path, stamp_saved_document(document))
 
 
 def write_items(path: Path, items: list[dict], *, signed: dict | None = None, marker: dict | None = None) -> None:
@@ -301,9 +337,12 @@ def write_items(path: Path, items: list[dict], *, signed: dict | None = None, ma
                 kept.pop(key, None)
             else:
                 kept[key] = value
+    from common.store import CURRENT_FORMAT_VERSION
+
     document: dict = {"items": items, **kept}
     if signed is not None:
         document["signed"] = signed
+    document["format_version"] = CURRENT_FORMAT_VERSION
     write_json(path, document)
 
 
@@ -995,6 +1034,30 @@ def sign_remedy_document(
     if full_checks is not None:
         document["full_checks"] = [name for name in full_checks if isinstance(name, str) and name]
     return sign_object(document, name=name, private_key=private_key, at=at)
+
+
+def read_remedy_report(path: Path) -> tuple[dict, int, int]:
+    from common.store import read_format_document
+
+    document = read_json(path)
+    if not isinstance(document, dict):
+        raise ModelError("remedy report", "(root)", "object")
+    return read_format_document(document, "remedy report")
+
+
+def load_remedy_report(path: Path) -> dict:
+    document, _read_version, _current_version = read_remedy_report(path)
+    return document
+
+
+def save_remedy_report(path: Path, document: dict) -> Path:
+    from common.store import read_format_document, stamp_saved_document
+
+    if not isinstance(document, dict):
+        raise ModelError("remedy report", "(root)", "object")
+    read_format_document(document, "remedy report")
+    write_json(path, stamp_saved_document(document))
+    return path
 
 
 def summarize_review(items: list[dict]) -> str:
