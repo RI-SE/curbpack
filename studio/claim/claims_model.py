@@ -105,7 +105,28 @@ def _claims_model(ws: Workspace, query: dict) -> dict:
         ]
         if len(ids) == 1:
             prefill_source = ids[0]
+    from urllib.parse import quote
+
+    from studio.format_prompt import compatibility_forms
+
+    repo_id = str(door.get("repo_id") or "")
+    candidates = []
+    if claims_dir is not None and repo_id:
+        for claim in claims:
+            claim_id = str(claim.get("id") or "")
+            candidates.append(
+                {
+                    "path": claims_dir / f"{claim_id}.json",
+                    "kind": "claim",
+                    "fields": {"repo": repo_id, "claim": claim_id},
+                    "label": f"{claim_id}.json",
+                }
+            )
     return {
+        "format_prompt": compatibility_forms(
+            candidates,
+            next_path=f"/claims?repo={quote(repo_id)}" if repo_id else "/claims",
+        ),
         "claims": rows,
         "requirement_ids": known_ids,
         "rebind_requirements": rebind_requirements,

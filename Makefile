@@ -62,3 +62,21 @@ package-studio:
 
 package-curbcheck:
 	$(PYTHON) scripts/build/package_curbcheck.py
+
+### QUALITY CHECKS ###
+QUALITY_VENV := .venv-quality
+QUALITY_PYTHON := $(QUALITY_VENV)/bin/python
+
+.PHONY: quality-tools quality-check
+
+$(QUALITY_PYTHON):
+	$(PYTHON) -m venv $(QUALITY_VENV)
+
+$(QUALITY_VENV)/.installed: requirements-quality.txt $(QUALITY_PYTHON)
+	$(QUALITY_PYTHON) -m pip install -r requirements-quality.txt
+	touch $@
+
+quality-tools: $(QUALITY_VENV)/.installed
+
+quality-check: quality-tools
+	$(QUALITY_PYTHON) scripts/ci/checks/quality.py

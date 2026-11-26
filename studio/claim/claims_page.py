@@ -125,6 +125,7 @@ def claims_page(model: dict, message: str = "", error: str = "") -> bytes:
         show=("config", "packs", "claims"),
     )
     body = f"""
+{model.get("format_prompt") or ""}
 <h1>Claim editor</h1>
 <p class="muted">Edit, sign, or retire Claims already in the product repo.
 New Claims come from <a href="/discover">Discovery &amp; Claims</a>.

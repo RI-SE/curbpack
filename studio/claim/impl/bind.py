@@ -241,6 +241,18 @@ def _source_path(args: dict) -> str:
 
 
 def write_claim(directory: Path, claim: dict) -> Path:
+    from common.jsonio import read_json, write_json
+    from common.store import _safe_id
+    from common.validate import validate_claim
+
+    checked = validate_claim(claim)
+    path = directory / f"{_safe_id(checked['id'], 'claim')}.json"
+    if path.is_file():
+        stored = read_json(path)
+        if isinstance(stored, dict) and "format_version" not in stored:
+            checked.pop("format_version", None)
+            write_json(path, checked)
+            return path
     return save_claim(directory, claim)
 
 

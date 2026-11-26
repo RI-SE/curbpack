@@ -14,7 +14,14 @@ from common.canonical import pack_directory_digest, version_digest
 from common.errors import ModelError
 from common.jsonio import write_json
 from common.signing import read_digest, sign_object, signed_block
-from common.store import load_pack, load_requirement, save_pack, save_requirement
+from common.store import (
+    CURRENT_FORMAT_VERSION,
+    load_pack,
+    load_requirement,
+    read_requirement,
+    save_pack,
+    save_requirement,
+)
 from common.validate import validate_pack, validate_requirement
 
 EDITABLE = {
@@ -63,14 +70,20 @@ def assign_reference_numbers(references: list[dict]) -> list[dict]:
 def save_working_requirement(directory: Path, requirement: dict, *, expected_digest: str) -> Path:
     _refuse_published_directory(directory)
     path = directory / f"{requirement['id']}.json"
+    read_version = CURRENT_FORMAT_VERSION
     if path.is_file():
-        existing = load_requirement(path)
+        existing, read_version, _current = read_requirement(path)
         if version_digest(existing) != expected_digest:
             raise ModelError(
                 f"requirement {requirement.get('id', '?')}",
                 "version",
                 "the digest read before this save",
             )
+    if read_version < CURRENT_FORMAT_VERSION:
+        checked = validate_requirement(requirement)
+        checked.pop("format_version", None)
+        write_json(path, checked)
+        return path
     return save_requirement(directory, requirement)
 
 
