@@ -3,10 +3,12 @@
     python3 adapter-studio/server.py
 
 Page one picks an adapter and a URL, the same pairing as Add Pack Source,
-then calls chart_run. Each later page is one extract step, 00 through 04.
-Step 04 is the pack editor's requirements page.
+then calls chart_run. Each later page is one extract step, 00 through 05.
+Step 05 is the pack editor's requirements page.
 A click on a 01 cut hands a prompt to Cursor through its prompt deeplink.
 Steps 02 and 03 call the model the first time those pages open, then cache the result.
+Step 04 asks the same local model for verification suggestions and shows them
+in one column. Those suggestions stay in this run.
 """
 
 from __future__ import annotations
@@ -40,6 +42,10 @@ from requirements.extract.chart import chart_run
 from requirements.extract.formex.text import collapse_ws, element_text, local_tag
 
 HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+from verification import propose_verification, suggestion_text, verification_inputs
+
 RUNS = HERE / "runs"
 INBOX = HERE / "inbox"
 HOST = "127.0.0.1"
@@ -53,10 +59,12 @@ STEPS = (
     ("01", "Atomize"),
     ("02", "Interpret"),
     ("03", "Discovery hints"),
-    ("04", "Assemble"),
+    ("04", "Verification hints"),
+    ("05", "Assemble"),
 )
 _STEPS_LOCK = threading.Lock()
 _STEP_THREADS: dict[str, threading.Thread] = {}
+_VERIFICATION_THREADS: dict[str, threading.Thread] = {}
 
 
 def choices() -> list[dict]:
@@ -248,6 +256,7 @@ button { margin-top: 1rem; font: inherit; padding: 0.4rem 0.9rem; }
 .atoms th { position: sticky; top: 0; background: #fff; z-index: 1; }
 .atoms td.point, .atoms td.letter { width: 2.2rem; white-space: nowrap; }
 .atoms td.prior, .atoms th.prior { background: #eeeae4; }
+.atoms td { white-space: pre-wrap; }
 .atoms tr.drop td { background: #ffe08a; text-decoration: line-through; }
 .atoms tr.cut { cursor: pointer; }
 .section { display: block; margin: 0; padding: .45rem .7rem; cursor: pointer; }
@@ -307,7 +316,7 @@ def _form(error: str = "") -> bytes:
     body = f"""
 <p>Choose an adapter. The URL is filled in from the adapter, the same pair as Add Pack Source.
 An empty URL uses the saved package. A Formex URL is fetched again.
-After the run there is one page per step, 00 Structure through 04 Assemble.</p>
+After the run there is one page per step, 00 Structure through 05 Assemble.</p>
 {error_html}
 <form method="post" action="/run">
   <label for="adapter">Adapter</label>
@@ -739,7 +748,8 @@ def _waiting(name: str, state: dict) -> str:
         )
     return (
         '<meta http-equiv="refresh" content="3">'
-        "<p>Steps 02 and 03 call the model. The page reloads when the answer is ready.</p>"
+        "<p>Step 02 calls the interpret prompt. Step 03 then calls the discovery-hints prompt. "
+        "The page reloads when both answers are in.</p>"
     )
 
 
@@ -821,6 +831,132 @@ def _hints_inner(name: str, state: dict) -> str:
     )
 
 
+def _store_verification(name: str, payload: dict) -> None:
+    with _STEPS_LOCK:
+        current = _read_steps(name) or {}
+        current["verification"] = payload
+        _write_steps(name, current)
+
+
+def _keep_verification_row(name: str, row: dict) -> None:
+    with _STEPS_LOCK:
+        current = _read_steps(name) or {}
+        stored = current.get("verification") if isinstance(current.get("verification"), dict) else {}
+        rows = [
+            item
+            for item in (stored.get("rows") or [])
+            if isinstance(item, dict) and item.get("locus") != row.get("locus")
+        ]
+        rows.append(row)
+        stored["rows"] = rows
+        stored["status"] = "running"
+        current["verification"] = stored
+        _write_steps(name, current)
+
+
+def _fail_verification(name: str, error: str) -> None:
+    with _STEPS_LOCK:
+        current = _read_steps(name) or {}
+        stored = current.get("verification") if isinstance(current.get("verification"), dict) else {}
+        stored["status"] = "failed"
+        stored["error"] = error
+        current["verification"] = stored
+        _write_steps(name, current)
+
+
+def _run_verification(name: str) -> None:
+    """Ask the local model for one suggestion per atomic requirement."""
+    try:
+        state = _read_steps(name) or {}
+        provisions = [
+            {"locus": item["locus"], "law_text": item["law_text"]} for item in _provisions(name)
+        ]
+        items = verification_inputs(provisions, state.get("interpret") or [])
+        _store_verification(
+            name,
+            {"status": "running", "error": "", "rows": [], "total": len(items)},
+        )
+        rows = propose_verification(items, on_row=lambda row: _keep_verification_row(name, row))
+        _store_verification(name, {"status": "done", "error": "", "rows": rows, "total": len(items)})
+    except Exception as exc:
+        _fail_verification(name, str(exc) or exc.__class__.__name__)
+
+
+def _ensure_verification(name: str, *, again: bool = False) -> dict:
+    with _STEPS_LOCK:
+        current = _read_steps(name) or {}
+        stored = current.get("verification") if isinstance(current.get("verification"), dict) else None
+        running = _VERIFICATION_THREADS.get(name)
+        alive = running is not None and running.is_alive()
+        if again and not alive:
+            current.pop("verification", None)
+            _write_steps(name, current)
+            stored = None
+        if stored and stored.get("status") in ("done", "failed") and not (again and not alive):
+            return stored
+        if stored and stored.get("status") == "running" and alive:
+            return stored
+        current["verification"] = {"status": "running", "error": "", "rows": []}
+        _write_steps(name, current)
+        thread = threading.Thread(target=_run_verification, args=(name,), daemon=True)
+        _VERIFICATION_THREADS[name] = thread
+        thread.start()
+        return current["verification"]
+
+
+def _verification_inner(name: str, state: dict) -> str:
+    proposals = [row for row in (state.get("interpret") or []) if isinstance(row, dict)]
+    hint_rows = [row for row in (state.get("hints") or []) if isinstance(row, dict)]
+    earlier = _interpret_headers(proposals)
+    hint_headers = _hint_headers(hint_rows)
+    stored = state.get("verification") if isinstance(state.get("verification"), dict) else {}
+    by_locus = {str(row.get("locus") or ""): row for row in proposals}
+    by_hint = {str(row.get("locus") or ""): row for row in hint_rows}
+    by_suggestion = {
+        str(row.get("locus") or ""): row
+        for row in (stored.get("rows") or [])
+        if isinstance(row, dict)
+    }
+    document, snapshot = _load(name)
+    rows = blocks(document, snapshot)
+    for row in rows:
+        proposal = by_locus.get(row["locus"]) or {}
+        hints = by_hint.get(row["locus"]) or {}
+        detail = hints.get("discovery_hints") if isinstance(hints.get("discovery_hints"), dict) else {}
+        row["added"] = [str(proposal.get(key) or "") for key in earlier]
+        row["added"] += [_hint_cell(detail, key) for key in hint_headers]
+        row["added"].append(suggestion_text(by_suggestion.get(row["locus"]) or {}))
+    columns = (
+        [(header, True) for header in earlier]
+        + [(header, True) for header in hint_headers]
+        + [("verification", False)]
+    )
+    table = _atoms_table(rows, columns) if rows else "<p>No atoms.</p>"
+    notice = ""
+    if stored.get("status") == "failed":
+        notice = (
+            f'<p class="error">{_escape(str(stored.get("error") or "The step failed."))}</p>'
+            f'<p><a href="/chart/{_escape(name)}/04?again=1">Run verification again</a></p>'
+        )
+    elif stored.get("status") != "done":
+        written = len(stored.get("rows") or [])
+        total = stored.get("total")
+        progress = f"{written} of {total}" if isinstance(total, int) else str(written)
+        notice = (
+            '<meta http-equiv="refresh" content="3">'
+            f"<p>Verification suggestions written for {progress}. "
+            "Each cell appears when that requirement's reply arrives.</p>"
+        )
+    return (
+        notice
+        + "<p>Same requirement rows as 03. Grey columns are existing data. "
+        "The white column contains AI-generated suggestions for how the requirement "
+        "could be verified and what evidence could be retained. "
+        "These suggestions do not determine compliance.</p>"
+        f'<article class="chart">{table}</article>'
+    )
+
+
 def _pack_banner(name: str, code: str, lead: str) -> str:
     adapter, url = _run_context(name)
     return (
@@ -875,7 +1011,7 @@ def _assemble_page(name: str, state: dict) -> bytes:
             },
         }
     )
-    banner = _pack_banner(name, "04", "<p>The list below is the pack editor's requirements view.</p>")
+    banner = _pack_banner(name, "05", "<p>The list below is the pack editor's requirements view.</p>")
     html = document.decode("utf-8").replace("<body><main>\n", "<body><main>\n" + banner, 1)
     return html.encode("utf-8")
 
@@ -895,11 +1031,11 @@ def _requirement_page(chart: str, requirement_id: str) -> bytes:
     document = editor_page(
         {
             "requirement": requirement,
-            "list_href": f"/chart/{chart}/04",
+            "list_href": f"/chart/{chart}/05",
             "pack_id": requirement.get("pack_id") or "",
         }
     )
-    banner = _pack_banner(chart, "04", "")
+    banner = _pack_banner(chart, "05", "")
     html = document.decode("utf-8").replace("<body><main>\n", "<body><main>\n" + banner, 1)
     return html.encode("utf-8")
 
@@ -910,13 +1046,17 @@ def _step_page(name: str, code: str, *, again: bool = False) -> bytes:
         return _frame(name, code, _sections_inner(name))
     if code == "01":
         return _frame(name, code, _structure_inner(name))
-    state = _ensure_steps(name, again=again)
+    state = _ensure_steps(name, again=again and code != "04")
     if state.get("status") != "done":
         return _frame(name, code, _waiting(name, state))
     if code == "02":
         return _frame(name, code, _interpret_inner(name, state))
     if code == "03":
         return _frame(name, code, _hints_inner(name, state))
+    if code == "04":
+        shown = dict(state)
+        shown["verification"] = _ensure_verification(name, again=again)
+        return _frame(name, code, _verification_inner(name, shown))
     return _assemble_page(name, state)
 
 

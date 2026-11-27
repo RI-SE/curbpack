@@ -1,0 +1,66 @@
+You are proposing verification methods and evidence hints for an atomic cybersecurity requirement extracted from legislation.
+
+ORIGINAL SOURCE TEXT:
+
+{source_text}
+
+ATOMIC REQUIREMENT:
+
+{atom}
+
+SOURCE LOCATION:
+
+{locator}
+
+TASK:
+
+1. State the verification objective using only the normative meaning of the supplied requirement.
+2. Propose practical methods that could be used to verify the requirement.
+3. For each method, state exactly which property of the atomic requirement it verifies.
+4. Identify concrete evidence that could be produced or inspected.
+5. State any additional assumptions needed by a proposed verification method.
+
+STRICT TRACEABILITY RULES:
+
+- The supplied source text is the only source of normative obligations.
+- Do not add, strengthen, narrow, or reinterpret the legal requirement.
+- Do not silently introduce cybersecurity best practices as legal requirements.
+- Do not introduce thresholds, timing requirements, mandatory fields, interfaces, configurations, behaviours, or technologies unless they are present in the source text.
+- Examples introduced by phrases such as "including", "such as", or "including but not limited to" are not individually mandatory.
+- Verification methods are proposals, not additional requirements.
+- A method may use concrete test stimuli, tools, observations, or implementation-specific examples.
+- If a method depends on something absent from the requirement, record it in additional_assumption.
+- If that assumption is unnecessary, omit the method instead.
+- Evidence hints describe artefacts that could demonstrate a verification activity or result. They must not claim that evidence already exists.
+- Do not determine whether the product complies.
+
+Before returning the result, inspect every generated statement in:
+- verification_objective
+- verification_methods
+- evidence_hints
+- verification_assumptions
+
+For each statement ask:
+
+"Is this property present in the original requirement, logically necessary to verify it, or merely common cybersecurity practice?"
+
+Remove unnecessary criteria derived only from common practice.
+
+Return valid JSON only, using exactly this structure:
+
+{
+  "verification_objective": "<property that must be demonstrated>",
+  "verification_methods": [
+    {
+      "method": "<proposed verification activity>",
+      "verifies": "<specific property of the atomic requirement>",
+      "additional_assumption": null
+    }
+  ],
+  "evidence_hints": [
+    "<possible evidence produced or inspected>"
+  ],
+  "verification_assumptions": [
+    "<interpretation or assumption, if required>"
+  ]
+}
