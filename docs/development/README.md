@@ -76,3 +76,4 @@ The root [`action.yml`](../../action.yml) provides `uses: RI-SE/curbpack@<releas
 | Document | Purpose |
 | --- | --- |
 | [Official XML sources](xml-sources.md) | Obtain, refresh, and verify the pinned CRA and NIS2 Formex XML. |
+| [Adding a regulation adapter](regulation-adapter.md) | Where an adapter lives, and how a text fixture differs from a Formex package. One page per adapter is linked from there. |

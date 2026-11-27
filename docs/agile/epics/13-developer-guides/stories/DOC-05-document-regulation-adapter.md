@@ -13,7 +13,7 @@ This story writes the guide and corrects the sentences that still describe adapt
 ### Write only
 
 - one new guide under `docs/development/`
-- the adapter sections of `requirements/ARCHITECTURE.md` that disagree with `requirements/extract/adapter.py`
+- the adapter sections of `requirements/ARCHITECTURE.md` that disagree with `requirements/extract/adapter.py`. That edit keeps the two shapes and the `adapter.json` fields. It does not catalog regulations. The pages under `docs/development/adapters/` do that.
 - `docs/development/xml-sources.md`, where a command or path would send the reader to a tree this repository does not use
 - the EP-13 story table, if the guide's path is not yet named there
 
@@ -40,13 +40,13 @@ This story writes the guide and corrects the sentences that still describe adapt
 #### DOC5-R03 — The architecture text matches the loader
 
 **Given** `requirements/extract/adapter.py` and `requirements/ARCHITECTURE.md`  
-**When** the adapter field list and the confirmed-adapter section are read after this story  
-**Then** a ready Formex section is not described as requiring `sections[].fixture`  
-**And** the NIS2 adapter is not described as an empty stub or as `adapter.yml`  
-**And** Medtech is still described as a stub, at `requirements/extract/adapters/medtech/adapter.json`  
-**And** every required-field sentence in that architecture section is true of `load_adapter`.
+**When** the adapter field list is read after this story  
+**Then** a ready text section requires `sections[].fixture`, and a ready Formex section does not  
+**And** `source_format` and `formex_package` are the Formex fields  
+**And** the architecture does not name individual regulations or their ready sections  
+**And** every required-field sentence in that section is true of `load_adapter`.
 
-`requirements/ARCHITECTURE.md` §4.1.1 currently says `sections[].fixture` is required when `ready` is true. `load_adapter` requires `fixture` for a ready text section. A Formex section can be `ready` without `fixture`. The guide and the architecture section record that split. They do not keep the single rule that the Formex adapters already violate.
+The regulation pages are `docs/development/adapters/`. The architecture is the shapes and the fields.
 
 #### DOC5-R04 — NIST in this repository is not an adapter
 
@@ -69,7 +69,7 @@ This story writes the guide and corrects the sentences that still describe adapt
 - DOC5-R01 through DOC5-R05 hold.
 - No adapter directory was added.
 - Packs v2 files are unchanged.
-- The story was not done by copying `requirements/ARCHITECTURE.md` §4.1.2 forward. That section still describes `adapters/nis/adapter.yml` as an empty stub.
+- The story was not done by copying a regulation catalog into `requirements/ARCHITECTURE.md`.
 
 ### Out of scope
 
