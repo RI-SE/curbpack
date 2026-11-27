@@ -48,155 +48,111 @@ The current repository supports selected Pack directories, Extract outputs, edit
 
 ## 4. Extract: deterministic preparation and LLM proposals
 
-Stages 00–01 parse controlled legal source into **disposable** sections and provisions. Stages 02 and 03 propose Requirement interpretation and discovery hints; stage 04 assembles **unsigned Packs v2 Requirements**, validates, and writes them as the new dated working copy's Requirements. Stage 04 is *not* an acceptance gate requiring `decisions.json`, nor is there a later `accept_assembled` transfer to overwrite an earlier copy. Never run a model in stages 00–01 or 04. Stages remain callable independently for development and tests, but the product's full Extract command produces a new dated working copy.
+Stages 00–01 parse a controlled legal source into **disposable** sections and provisions. Stages 02 and 03 propose Requirement interpretation and discovery hints; stage 04 assembles **unsigned Packs v2 Requirements** and validates them. Stage 04 is not an acceptance gate, and nothing later copies those drafts over an earlier Pack. Never run a model in stages 00–01 or 04. Stages remain callable independently for development and tests.
+
+A product Extract of one section replaces that section's extract slot. It does not modify an existing Pack working copy. `extract_section` without a slot still allocates a dated working copy.
 
 | Stage | Input | Output | Properties |
 | --- | --- | --- | --- |
-| 00 Structure | Controlled source and adapter | Section list / optional split text | Deterministic, adapter-specific |
-| 01 Atomize | Selected, ready section | Provision list with `locus`, `law_text` | Deterministic, no editor for cuts |
+| 00 Structure | Adapter | Section list. A Formex adapter also returns a package inventory | Deterministic |
+| 01 Atomize | One ready, in-scope section | Provisions with `locus` and `law_text`, plus diagnostics | Deterministic, no editor for cuts |
 | 02 Interpret | Provisions, guidance, model settings | Proposed `id`, `locator`, `note`, optional five properties | LLM, validate count/loci/fields |
 | 03 Discovery hints | Provisions, guidance, model settings | Proposed Packs v2 `discovery_hints` | LLM, validate count/loci/shape |
-| 04 Assemble | Stage 01 passages, validated proposal fields, adapter metadata | Unsigned Requirement JSON objects, plus explicit diagnostics for invalid/incomplete proposals | Deterministic for fixed inputs; never overwrites earlier work |
+| 04 Assemble | Stage 01 passages, validated proposal fields, adapter metadata | Unsigned Requirement JSON objects, plus explicit diagnostics for invalid or incomplete proposals | Deterministic for fixed inputs; does not modify an existing Pack working copy |
 
-**Important changed contract:** old Extract stage 04 assembled *only* entries accepted in `decisions.json`. Now stage 04 builds **drafts from validated proposals**, with relevant source passage, and exposes any incomplete/unusable proposals as errors or exclusions that remain visible in run diagnostics. It must not silently pretend all propositions are correct. Human review happens on saved Requirement drafts in the selected working copy.
+Stage 04 builds drafts from validated proposals, keeps the source passage, and reports incomplete or unusable proposals as exclusions in the run diagnostics. It must not silently pretend every proposal is correct. Human review happens on the saved Requirement drafts.
 
 ### 4.1 Regulation adapter
 
-An adapter is a set of files for a regulation, not a plugin framework. The developer uses a high-capability coding agent if useful to create/adjust regulation-specific deterministic splitting and atomizing. The developer verifies readable sections/provisions JSON against official text in a separate browser tab. Errors in cuts and source hierarchy are fixed in adapter code/configuration and retested; not patched via UI or `decisions.json`. Source version and language must be explicit; no LLM is required for segmentation.
+An adapter is a set of files for a regulation, not a plugin framework. The developer uses a high-capability coding agent if useful to create/adjust regulation-specific deterministic splitting and atomizing. The developer verifies readable sections/provisions JSON against official text in a separate browser tab. Errors in cuts and source hierarchy are fixed in adapter code or configuration and retested. They are not patched in the UI. Language is an explicit `source` field. The adapter does not carry an edition. No model is required for the cut.
+
+The loader accepts two shapes.
+
+A **text** adapter has no `source_format`. A ready section points at a fixture file. The text cutter reads that file. Which cuts the cutter makes is that regulation's code, not a field in `adapter.json`. A document that fits neither shape needs its own cutter. That is more code, not a new `adapter.json` field.
+
+A **Formex** adapter has `source_format` `formex` and `formex_package`, a path relative to the adapter directory. The directory must exist and open as one DOC package. A ready section has no fixture. The section id is one the Formex cutter already understands: an article id taken from the article number in the body, or an annex id that is the roman numeral of that annex in DOC order.
+
+Which regulations exist, and which of their sections are ready, is not part of this contract. Those pages live under `docs/development/adapters/`.
 
 ### 4.1.1 `adapter.json`
 
 | Field | Type | Required | Why it exists |
 | --- | --- | --- | --- |
-| `id` | string | yes | Directory name and the id stages print when they refuse a stub. |
-| `status` | string | yes | `partial` or `stub`. A stub has no extraction. |
+| `id` | string | yes | The id the loader and the stages print. The directory name is that same id. |
+| `status` | string | yes | `partial` or `stub`. Any other value is refused. A stub has no extraction. |
 | `pack_id` | string | yes, unless `status` is `stub` | Copied onto every Requirement as `pack_id`. |
 | `source` | object | yes, unless `status` is `stub` | Copied onto every Requirement as `source`. |
 | `source.framework` | string | yes | Packs v2 `source.framework`. |
 | `source.instrument` | string | yes | Packs v2 `source.instrument`. |
-| `source.identifier` | string | yes | Act id a person looked up, such as `CELEX:32024R2847`. |
+| `source.identifier` | string | yes | Act id a person looked up. |
 | `source.language` | string | yes | Language of `law_text`. |
-| `source.url` | string | yes | The one address the passages were cut from. |
+| `source.url` | string | yes | The address the passages were cut from. |
+| `source_format` | string | when the cutter is Formex | `formex`. Absent means text. |
+| `formex_package` | string | when `source_format` is `formex` | Path of the DOC package, relative to the adapter directory. The directory must exist and open. |
 | `sections` | array | yes | The sections this adapter knows. Empty for a stub. |
-| `sections[].id` | string | yes | Section id. For CRA annexes this is the roman numeral, such as `VII`. |
-| `sections[].title` | string | no | Human title, so a reviewer can tell the sections apart. |
+| `sections[].id` | string | yes | Section id, unique in the adapter. The id the cutter is called with. |
+| `sections[].title` | string | no | Human title. The loader does not read it. |
 | `sections[].in_scope` | boolean | yes | Selected for stages 01–04. |
-| `sections[].ready` | boolean | yes | The fixture and the atomize procedure for this section exist. Guidance and experiment settings are not part of this flag. |
-| `sections[].fixture` | string | yes when `ready` is true | Path of the controlled section text, relative to the adapter directory. |
+| `sections[].ready` | boolean | yes | The controlled source and the cutter for this section exist. Guidance and experiment settings are not part of this flag. |
+| `sections[].fixture` | string | when `ready` is true and the adapter is text | Path of the controlled section text, relative to the adapter directory. The file must exist. |
 
-`source` has no `edition`. The edition is set or corrected when the person reviews the saved Requirement; the adapter never fabricates it.
+`source` has no `edition`. The loader refuses the key. The edition is set or corrected when the person reviews the saved Requirement.
 
-There is no field for repo hunt globs. PoC1 `maps/defaults.yml` carries `exclude_path_globs` and `prefer_path_globs`. Those are `curbpack.json` `hunt` fields. Assemble does not copy them.
+There is no field for repository hunt globs. Those are `curbpack.json` hunt fields. Assemble does not copy them.
 
-### 4.1.2 Confirmed adapters
+A stub has `id`, `status`, and `sections`. Asking it for provisions is refused. Stage 00 still lists its sections. There is no flag that runs extraction on a stub.
 
-**CRA** (`poc/components/transform/adapters/cra/adapter.yml`), status partial.
+### 4.1.2 Section list (disposable)
 
-\- Section `VII` is ready and in scope. The working fixture is `fixtures/annex_vii.txt` in PoC1 and `poc2/requirements/extract/data/annex_vii.txt` in the current PoC2 code. The contract path is the adapter `fixture`.
-
-\- Sections `II`, `V`, and `VIII` are in scope and not ready. They have no completed extraction.
-
-\- Sections `I`, `III`, `IV`, and `VI` are not in scope and not ready.
-
-\- The splitter cuts a full dump on lines `ANNEX \<roman>`. Text before the first annex is section `_body`. It is not in scope and it is not atomized. `_body` is not an `adapter.json` section; stage 00 adds it only when a dump was split.
-
-\- The atomizer cuts CRA-style parts, numbered points, and lettered clauses, and it drops EUR-Lex footnote tails. That procedure is the CRA adapter's. It is not a general regulation parser.
-
-**NIS2** (`adapters/nis/adapter.yml`) is a stub. `sections` is empty. Its note says no transform is defined.
-
-**Medtech** (`adapters/medtech/adapter.yml`) is a stub. `sections` is empty. Its note says the current medtech material is file and structure gates, not atomized standard text. There is no fixture, prompt, or prior approved mapping.
-
-A stub adapter refuses stages 01–04. Stage 00 lists its sections (none, for these two) and does not atomize. Passing the existing pressure-test flag (`--allow-stub` on the PoC1 steps) runs the stage anyway. That run is not support.
-
-### CRA stage 00 and stage 01 procedures
-
-Stage 00 with a dump calls the CRA splitter. The observable result is one section per `ANNEX \<roman>` heading, plus `_body` when any text precedes the first annex. Each annex id is the roman numeral.
-
-Stage 00 without a dump does not split. It returns the `sections` array.
-
-Stage 01 calls the CRA atomizer on one section's text. The observable result:
-
-\- One provision per numbered point, and one provision per lettered clause under a point.
-
-\- `locus` is the point (`3`), the point and letter (`1(a)`), or the part, point, and letter when the annex has a `Part` heading (`II-4(b)`). A repeated locus gets a `\~` suffix and a count, as the current atomizer does.
-
-\- `law_text` is the passage after the atomizer collapses whitespace, wraps lines at 78 characters, and, for a lettered clause, puts the parent preamble on the line above the clause.
-
-\- Footnote tails of the form `(n)` followed by an OJ line are removed.
-
-\- The atomizer does not record character offsets. `locus` is the source position the later stages use.
-
-The code is the procedure. This file does not restate the regular expressions.
-
-### 4.1.3 Section list (disposable)
-
-Disposable output of stage 00. JSON:
+Disposable output of stage 00. Stage 00 does not split a source dump. It returns the adapter's `sections`.
 
 ```json
-
 {
-
-&#x20; "sections": [
-
-&#x20;   {
-
-&#x20;     "id": "VII",
-
-&#x20;     "in_scope": true,
-
-&#x20;     "ready": true,
-
-&#x20;     "text_file": "fixtures/annex_vii.txt"
-
-&#x20;   }
-
-&#x20; ]
-
+  "sections": [
+    {
+      "id": "1",
+      "in_scope": true,
+      "ready": true,
+      "text_file": "section.txt"
+    }
+  ]
 }
-
 ```
 
 | Field | Type | Required | Why it exists |
 | --- | --- | --- | --- |
 | `id` | string | yes | The section id stage 01 is called with. |
-| `in_scope` | boolean | yes | Whether this run treats the section as selected. Copied from the adapter. `_body` and an annex that the dump contained but the adapter does not list are `false`. |
-| `ready` | boolean | yes | Whether stage 01 may run. Copied from the adapter. An unlisted annex is `false`. |
-| `text_file` | string | when the run has text for this section | Where the reviewer reads the section. A fixture path is relative to the adapter. A dump split writes the cut under the work directory, and this path points there. |
+| `in_scope` | boolean | yes | Copied from the adapter. |
+| `ready` | boolean | yes | Copied from the adapter. |
+| `text_file` | string | when the section has a fixture | The fixture path, relative to the adapter directory. A Formex section has none. |
 
-The title stays on the adapter. Stage 01 does not read `in_scope` from this file. The caller passes a section id, and stage 01 reads `in_scope` and `ready` from `adapter.json`.
+The title stays on the adapter. The caller passes a section id, and stage 01 reads `in_scope` and `ready` from `adapter.json`.
 
-A dump split writes the cut text under the work directory. PoC1 writes it into `adapters/\<id>/fixtures/annexes/`. That mixes a generated cut with controlled source. The contract keeps the cut in the work directory. Replacing an adapter fixture with a cut is a deliberate change of the controlled source.
+When the adapter is Formex and the package directory is passed, stage 00 also returns `source_format` `formex` and `inventory`: `language`, `legal_value`, `title`, `unit_count`, `units`, and `diagnostics`.
 
-### 4.1.4 Provision (disposable)
+A fixture is the controlled source. Replacing it is a deliberate change of that source.
+
+### 4.1.3 Provision (disposable)
 
 One disposable JSON object for stages 01, 02, and 03. Stage 01 creates it. Stages 02 and 03 add fields to the same object. There is not a separate atom file, identity file, and search file.
 
 ```json
-
 {
-
-&#x20; "provisions": [
-
-&#x20;   {
-
-&#x20;     "locus": "3",
-
-&#x20;     "law_text": "an assessment of the cybersecurity risks …"
-
-&#x20;   }
-
-&#x20; ]
-
+  "provisions": [
+    {
+      "locus": "3",
+      "law_text": "the passage"
+    }
+  ]
 }
-
 ```
 
-The file is one section's provisions. The section id is the call argument and the work-directory name, so it is not repeated on every row.
+Stage 01 returns one object for the section: `section_id`, `kind`, `file`, `provisions`, and `diagnostics`. `section_id` is not repeated on every provision. `diagnostics` lists units the cutter did not emit. A Formex table is reported there, and its cells are not provisions.
 
 | Field | Type | Required | Written by | Why it exists |
 | --- | --- | --- | --- | --- |
 | `locus` | string | yes | 01 | Position of this provision inside the section. Stage 02, stage 03, and assembly use it. Unique within the section. |
-| `law_text` | string | yes | 01 | The passage, as the atomizer emitted it. Assemble copies it to `references[].law_text` . |
+| `law_text` | string | yes | 01 | The passage, as the cutter emitted it. Assemble copies it to `references[].law_text`. |
 | `id` | string | no | 02,  | Proposed Requirement `id`. |
 | `locator` | string | no | 02,  | Proposed `references[].locator`. |
 | `note` | string | no | 02,  | Packs v2 `note`. Omit the key when there is nothing to say. |
@@ -205,7 +161,7 @@ The file is one section's provisions. The section id is the call argument and th
 | `applicability` | string | no | 02,  | The "where" clause in this `law_text`. |
 | `exceptions` | string | no | 02,  | The exception written in this `law_text`. |
 | `scope` | string | no | 02,  | The enumeration written in this `law_text`. |
-| `discovery_hints` | object | no | 03,  | Packs v2 `discovery_hints`. The shape is fixed by `packs2.md` §2.7 and checked by `poc2/common/validate.py`. |
+| `discovery_hints` | object | no | 03 | Packs v2 `discovery_hints`. The shape is fixed by `packs2.md` §2.7 and checked by `common/validate.py`. |
 
 `discovery_hints` fields, all optional, at least the keys that have values:
 
@@ -216,44 +172,30 @@ The file is one section's provisions. The section id is the call argument and th
 | `sources` | non-empty array of `{ "source": string, "args"?: object }` | Where a hunt may look. `args` is omitted when that source id needs nothing. |
 | `expected_evidence` | non-empty string array | What kind of artifact is sought. |
 
-PoC1 stores this under `search`, and its `sources` entries are strings (`documents`, `git`, `requirements`). A proposal uses the Packs v2 shape. When reusing a PoC1 search entry, each string becomes `{ "source": "\<that string>" }`. `packs2.md` does not fix the list of source ids, so `requirements` may be copied as a source id. The current discovery walk does not read `source` or `args`.
+A proposal uses the Packs v2 shape. `packs2.md` does not fix the list of source ids. The current discovery walk does not read `source` or `args`.
 
-The provision has no `part`, `parent_point`, `claim`, or `search`. The CRA atomizer still uses part and parent point to build `locus`. The PoC1 claim slug is not copied. PoC1 `maps/claims.yml` `id` values (`vii-3`, `vii-1a`) are not Requirement ids.
+The provision has no `part`, `parent_point`, `claim`, or `search`. The cutter may use those notions while it builds `locus`. They are not fields.
 
-`poc2/common/validate.py` checks `strength` against `MUST` / `SHOULD` / `MAY` and checks that the other four properties are non-empty strings. It does not check that the words appear in `law_text`. The pointability rule is the one in `packs2.md`. Annex VII point 3 does not contain "shall", so its Requirement has no `strength`. The current CRA maps and the PoC1 interpret prompt do not set these five properties.
+`common/validate.py` checks `strength` against `MUST`, `SHOULD`, or `MAY`, and checks that the other four properties are non-empty strings. It does not check that the words appear in `law_text`. The pointability rule is the one in `packs2.md`. Omit the key when the words are not in that provision's `law_text`.
 
-### 4.1.5 LLM note (diagnostic)
+### 4.1.4 LLM note (diagnostic)
 
 Present on the provision diagnostics only when a model ran. A parser-only developer run has no model note.
 
 ```json
-
 {
-
-&#x20; "llm": [
-
-&#x20;   {
-
-&#x20;     "stage": "interpret",
-
-&#x20;     "strategy": "single_call",
-
-&#x20;     "model": "qwen3-coder:30b",
-
-&#x20;     "temperature": 0.2,
-
-&#x20;     "endpoint": "http\://127.0.0.1:11434",
-
-&#x20;     "prompt": "prompts/interpret.txt",
-
-&#x20;     "prompt_sha256": "<64 lowercase hex characters>"
-
-&#x20;   }
-
-&#x20; ]
-
+  "llm": [
+    {
+      "stage": "interpret",
+      "strategy": "single_call",
+      "model": "qwen3-coder:30b",
+      "temperature": 0.2,
+      "endpoint": "http://127.0.0.1:11434",
+      "prompt": "prompts/interpret.txt",
+      "prompt_sha256": "<64 lowercase hex characters>"
+    }
+  ]
 }
-
 ```
 
 One entry per model call. A producer that calls the model more than once appends one entry per call, in call order. Those entries share `stage` and `strategy`. There is no separate run object: the provision file is the run, and the list is the calls.
@@ -262,9 +204,9 @@ One entry per model call. A producer that calls the model more than once appends
 | --- | --- | --- | --- |
 | `stage` | `interpret` or `discovery_hints` | yes | Which stage's producer made this call, when both stages wrote one file. |
 | `strategy` | `single_call`, `multi_prompt`, or `propose_critique_revise` | yes | Which producer implementation ran. The call list does not show this: two calls can be two stages, two prompts, or a revise loop. The same value is repeated on each call from that invocation so the list stays flat. |
-| `model` | string | yes | The model name requested for this call. PoC1's default is `qwen3-coder:30b`. |
-| `temperature` | number | yes | Sent for this call. PoC1 sends `0.2`. |
-| `endpoint` | string | yes | PoC1's default is `http\://127.0.0.1:11434`. The model name alone does not say which server answered. |
+| `model` | string | yes | The model name requested for this call. The default is `qwen3-coder:30b`. |
+| `temperature` | number | yes | Sent for this call. The default is `0.2`. |
+| `endpoint` | string | yes | The default is `http://127.0.0.1:11434`. The model name alone does not say which server answered. |
 | `prompt` | string | yes | Path of the guidance file for this call, as the caller passed it. The default is the adapter's `prompts/interpret.txt` or `prompts/discovery_hints.txt`. |
 | `prompt_sha256` | string | yes | Lowercase hex SHA-256 of that file's UTF-8 bytes. The path can later point at different text; the hash is the guidance that was sent. The prompt body is not copied onto the note. |
 | `max_rounds` | integer | only when `strategy` is `propose_critique_revise` | The bound the caller set. Absent for the other two strategies. The number of entries is not this bound when the loop stops early. |
@@ -273,11 +215,11 @@ The call does not send a seed. The note does not include the raw response, a cri
 
 ### 4.2 Stage interfaces, proposal validation and model settings
 
-Each stage is a direct Python callable and runs without the web server. Caller supplies adapter id, section id, source/provision path and work location where relevant; jobs forward typed arguments rather than hard-coded CLI strings. Unsupported or stub adapters refuse extraction, not successful empty output. The pressure-test option, if retained, is developer-only and never enabled by the product UI.
+Each stage is a direct Python callable and runs without the web server. The caller supplies the adapter, the section id, and the work location where relevant. A stub refuses extraction. It does not return an empty success.
 
-**00:** validate unique section IDs, Boolean scope/readiness, existing fixture for ready sections; full-dump splitter may add `_body` but never silently places that text in scope.
+**00:** unique section ids, boolean `in_scope` and `ready`, a fixture file for each ready text section, and a DOC package that opens for a Formex adapter. Stage 00 does not split a source dump.
 
-**01:** nonempty and unique `locus` strings with nonempty `law_text`; fail explicitly if no operable text. The CRA adapter preserves numbered and lettered clauses and parent preamble as specified above. A developer changes adapter code to correct mistakes.
+**01:** nonempty and unique `locus` strings with nonempty `law_text`. A stub, or a section that is not ready or not in scope, is refused. The cutter is the text cutter or the Formex cutter for that adapter. A developer changes that code to correct a cut.
 
 **02:** producer receives the exact provision list and rendered guidance. Require exactly one result per input locus, no missing, duplicate or invented loci. Allowed result fields: `locus`, `id`, `locator`, `note`, `strength`, `responsible`, `applicability`, `exceptions`, `scope`. Reject legacy `claim`, top-level `search`, and unexpected fields. Strength is `MUST`, `SHOULD` or `MAY` only when supportable by source text; the validator checks enum/shape, not semantic truth. Source passage is never replaced by the model. Interpret outputs are **draft proposals**, not approved decisions.
 
@@ -285,7 +227,7 @@ Each stage is a direct Python callable and runs without the web server. Caller s
 
 **04:** deterministically combines validated stage 02/03 proposals with adapter `pack_id` and `source` and the stage 01 passages: `references[]` starts with `nr:1`, source `locator`, and `law_text`. Omit `signed`, `origin`, top-level `law_text`, `claim`, `search`, `locus`. Validate each draft. A missing required id/locator or invalid object is reported and never saved as a valid Requirement; the run must visibly report incomplete coverage rather than silently dropping loci. The normal full Extract creates a new dated working copy, not a modification to an earlier one.
 
-| Proposal argument | Default from existing PoC1/PoC2 design |
+| Proposal argument | Default |
 | --- | --- |
 | `strategy` | `single_call` |
 | `model` | `qwen3-coder:30b` |
@@ -298,7 +240,7 @@ Strategies: `single_call` (one call); `multi_prompt` (several prompts/models and
 
 ### 4.3 Re-running extraction
 
-Re-running the same or changed parser/LLM **always** creates a new dated working copy. This replaces the old `decisions.json` replay/clean-rebuild semantics. Deterministic parser reruns can validate structure without model calls, but they are developer actions; they do not reconstruct saved, human-edited Requirements. No approved Requirement is recreated from `decisions.json`; existing working copies remain intact. An optional comparison of fresh output with previous work is **Compare** (§6), not Extract's own replay mechanism.
+Re-running Extract for a section replaces that section's extract slot. The previous slot is not kept. An existing Pack working copy is left as it is. Extract does not replay `decisions.json` and does not rebuild a saved Requirement from an earlier run. Compare (§6) is how two copies are read.
 
 ## 5. Requirements Editor and signing
 
@@ -365,7 +307,7 @@ This table is a **functional preservation checklist**, not permission to keep Po
 | PoC1 capability | Target decision |
 | --- | --- |
 | Registered documents, adapter/batch listing, source URL | Keep as Pack/adapter catalog and dated working-copy selection. |
-| CRA regulation-specific splitter and atomizer | Keep deterministically in adapter, with controlled fixture and developer-inspected JSON. |
+| Regulation-specific cutter and controlled fixture | Keep. The cutter is code for that document. The developer checks the provisions against the official text. |
 | Batch extraction and progress modal with Abort/log | Keep, now create a new dated copy per Extract run. |
 | View all extracted loci/passages and proposals | Keep as review/context; actual accepted data lives in Requirement JSON. |
 | Edit requirement text, notes, hints and save | Keep; extend to **all** Packs v2 fields and multiple references without losing unsubmitted fields. |
