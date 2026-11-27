@@ -2,10 +2,12 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-quality/
 venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+/quality-report.json
 *.egg-info/
 
 # Local secrets and credentials
