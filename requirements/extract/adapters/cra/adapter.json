@@ -13,8 +13,9 @@
     {
       "id": "I",
       "title": "Essential cybersecurity requirements",
-      "in_scope": false,
-      "ready": false
+      "in_scope": true,
+      "ready": true,
+      "fixture": "../../data/annex_i.txt"
     },
     {
       "id": "II",

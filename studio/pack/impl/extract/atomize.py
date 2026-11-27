@@ -80,19 +80,28 @@ def strip_trailing_footnotes(text: str, chart=None) -> str:
 
 
 def split_parts(text: str) -> list[tuple[str | None, str]]:
+    _leading, parts = _part_spans(text)
+    return [(part_id, body) for part_id, _heading, body in parts]
+
+
+def _part_spans(text: str) -> tuple[str, list[tuple[str | None, str, str]]]:
+    """Return title text before the first Part, then ``(part id, heading, body)``."""
     matches = list(PART_RE.finditer(text))
     if not matches:
-        return [(None, text)]
-    out: list[tuple[str | None, str]] = []
+        return "", [(None, "", text)]
+    out: list[tuple[str | None, str, str]] = []
     preamble = text[: matches[0].start()].strip()
+    leading = ""
     if preamble and (INT_POINT_RE.search(preamble) or PAREN_POINT_RE.search(preamble)):
-        out.append((None, preamble))
+        out.append((None, "", preamble))
+    else:
+        leading = preamble
     for i, match in enumerate(matches):
         part_id = match.group(2).upper()
         start = match.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        out.append((part_id, text[start:end].strip()))
-    return out
+        out.append((part_id, match.group(0).strip(), text[start:end].strip()))
+    return leading, out
 
 
 def split_marker_blocks(body: str, pattern: re.Pattern[str]) -> list[tuple[str, str]]:
@@ -130,15 +139,47 @@ _HEADING_LINE = re.compile(
 )
 
 
+def _uncover_preamble(preamble: str, chart) -> None:
+    """Record a title or a governing sentence that is not itself a point."""
+    if chart is None:
+        return
+    headings: list[str] = []
+    rest: list[str] = []
+    for line in preamble.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if _HEADING_LINE.fullmatch(stripped):
+            headings.append(stripped)
+        else:
+            rest.append(stripped)
+    for line in headings:
+        chart.uncovered(line, reason="heading")
+    prose = "\n".join(rest).strip()
+    if prose:
+        chart.uncovered(prose, reason="text before points")
+
+
+def _mark_preamble(body: str, pattern: re.Pattern[str], chart) -> None:
+    if chart is None:
+        return
+    match = pattern.search(body)
+    if match is None or match.start() == 0:
+        return
+    _uncover_preamble(body[: match.start()], chart)
+
+
 def split_top_points(body: str, chart=None) -> list[tuple[str, str]]:
     body = strip_trailing_footnotes(body, chart=chart)
     if INT_POINT_RE.search(body):
         blocks = split_marker_blocks(body, INT_POINT_RE)
         if blocks:
+            _mark_preamble(body, INT_POINT_RE, chart)
             return blocks
     if PAREN_POINT_RE.search(body) and not looks_like_footnote_annex(body):
         blocks = split_marker_blocks(body, PAREN_POINT_RE)
         if blocks:
+            _mark_preamble(body, PAREN_POINT_RE, chart)
             return [(num, strip_trailing_footnotes(text, chart=chart)) for num, text in blocks]
     cleaned = strip_trailing_footnotes(body, chart=chart)
     lines = []
@@ -208,7 +249,12 @@ def atomize(raw: str, chart=None) -> list[dict]:
     text = normalize_annex(raw, chart=chart)
     atoms: list[dict] = []
     seen: set[str] = set()
-    for part, part_body in split_parts(text):
+    leading, parts = _part_spans(text)
+    if leading.strip():
+        _uncover_preamble(leading, chart)
+    for part, heading, part_body in parts:
+        if chart is not None and heading.strip():
+            chart.uncovered(heading.strip(), reason="heading")
         for num, body in split_top_points(part_body, chart=chart):
             for sub_num, sub_body in expand_subpoints(num, body):
                 preamble, children = split_lettered(sub_body)
