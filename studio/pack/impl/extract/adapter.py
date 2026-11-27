@@ -120,16 +120,19 @@ def section_text(adapter_dir: Path, adapter: dict, section_id: str) -> str:
     return file_path.read_text(encoding="utf-8")
 
 
-def section_provisions(adapter_dir: Path, adapter: dict, section_id: str) -> dict:
+def section_provisions(adapter_dir: Path, adapter: dict, section_id: str, chart=None) -> dict:
     """Deterministic provisions for one ready section."""
     _ready_section(adapter_dir, adapter, section_id)
     if is_formex_adapter(adapter):
         package_dir = formex_package_dir(adapter_dir, adapter)
-        return extract_section_provisions(package_dir, section_id)
+        return extract_section_provisions(package_dir, section_id, chart=chart)
     from requirements.extract.atomize import atomize
 
     text = section_text(adapter_dir, adapter, section_id)
-    provisions = [{"locus": item["locus"], "law_text": item["law_text"]} for item in atomize(text)]
+    provisions = [
+        {"locus": item["locus"], "law_text": item["law_text"]}
+        for item in atomize(text, chart=chart)
+    ]
     return {
         "section_id": section_id,
         "kind": "text_fixture",

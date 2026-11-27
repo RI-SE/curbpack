@@ -21,7 +21,7 @@ def wrap_law(text: str, width: int = 78) -> str:
     )
 
 
-def extract_section_provisions(directory: Path, section_id: str) -> dict:
+def extract_section_provisions(directory: Path, section_id: str, chart=None) -> dict:
     """Return provisions + diagnostics for one package section id.
 
     Annex sections use roman ids (``VII``). Article sections use ``Art.13``.
@@ -38,7 +38,7 @@ def extract_section_provisions(directory: Path, section_id: str) -> dict:
         article = _find_article(root, article_no)
         if article is None:
             raise ModelError(directory.name, "ARTICLE", f"Art.{article_no}")
-        provisions = _provisions_from_article(article, article_no)
+        provisions = _provisions_from_article(article, article_no, chart=chart)
         return {
             "section_id": section_id,
             "kind": "article",
@@ -61,14 +61,18 @@ def extract_section_provisions(directory: Path, section_id: str) -> dict:
         raise ModelError(directory.name, section_id, part.get("reason") or "unsupported")
     root = ET.parse(part["file"]).getroot()
     diagnostics = []
-    if any(local_tag(node.tag) == "TBL" for node in root.iter()):
+    tables = [node for node in root.iter() if local_tag(node.tag) == "TBL"]
+    if tables:
         diagnostics.append(
             {
                 "unit_id": f"Annex.{section_id}/TBL",
                 "reason": "annex contains <TBL>; table cells are not emitted as provisions",
             }
         )
-    provisions = _provisions_from_annex(root)
+        if chart is not None:
+            for table in tables:
+                chart.uncovered(element_text(table, chart=chart), reason="TBL")
+    provisions = _provisions_from_annex(root, chart=chart)
     return {
         "section_id": section_id,
         "kind": "annex",
@@ -90,13 +94,15 @@ def _find_article(root: ET.Element, article_no: str) -> ET.Element | None:
     return None
 
 
-def _provisions_from_article(article: ET.Element, article_no: str) -> list[dict]:
+def _provisions_from_article(article: ET.Element, article_no: str, chart=None) -> list[dict]:
     provisions: list[dict] = []
     paragraphs = [child for child in list(article) if local_tag(child.tag) == "PARAG"]
     if not paragraphs:
-        text = element_text(article)
+        text = element_text(article, chart=chart)
         if text:
             provisions.append({"locus": article_no, "law_text": wrap_law(text)})
+            if chart is not None:
+                chart.own(text, locus=article_no, parent=None)
         return provisions
     for parag in paragraphs:
         para_no = _para_number(parag)
@@ -104,10 +110,12 @@ def _provisions_from_article(article: ET.Element, article_no: str) -> list[dict]
         # Prefer leaf list items under the paragraph when present.
         items = _top_list_items(parag)
         if items:
-            preamble = _preamble_before_list(parag)
+            preamble = _preamble_before_list(parag, chart=chart)
+            if chart is not None and preamble:
+                chart.own(preamble, locus=locus, parent=article_no)
             for item in items:
                 letter = _normalize_letter(_marker(item))
-                item_text = _item_body(item)
+                item_text = _item_body(item, chart=chart)
                 if letter:
                     item_locus = (
                         f"{article_no}({para_no})({letter})"
@@ -128,12 +136,21 @@ def _provisions_from_article(article: ET.Element, article_no: str) -> list[dict]
                         else locus
                     )
                     provisions.append({"locus": item_locus, "law_text": wrap_law(item_text)})
+                if chart is not None and item_text:
+                    chart.own(item_text, locus=item_locus, parent=locus)
+            if chart is not None:
+                rest = _after_list_in(parag, chart=chart)
+                if rest:
+                    chart.uncovered(rest, reason="text after list")
             continue
-        provisions.append({"locus": locus, "law_text": wrap_law(_paragraph_body(parag))})
+        body = _paragraph_body(parag, chart=chart)
+        provisions.append({"locus": locus, "law_text": wrap_law(body)})
+        if chart is not None and body:
+            chart.own(body, locus=locus, parent=article_no)
     return _unique_loci(provisions)
 
 
-def _provisions_from_annex(root: ET.Element) -> list[dict]:
+def _provisions_from_annex(root: ET.Element, chart=None) -> list[dict]:
     """Emit one provision per lettered clause, or per numbered point without letters.
 
     Matches the CRA text atomizer's Annex VII grain: parents with children are
@@ -163,26 +180,37 @@ def _provisions_from_annex(root: ET.Element) -> list[dict]:
     provisions: list[dict] = []
     for lst in top_lists:
         for item in [child for child in list(lst) if local_tag(child.tag) == "ITEM"]:
-            provisions.extend(_provisions_from_annex_item(item))
+            provisions.extend(_provisions_from_annex_item(item, chart=chart))
     return _unique_loci(provisions)
 
 
-def _provisions_from_annex_item(item: ET.Element) -> list[dict]:
+def _provisions_from_annex_item(item: ET.Element, chart=None) -> list[dict]:
     marker = _marker(item)
     point = _normalize_point(marker)
-    preamble = _item_intro(item)
+    preamble = _item_intro(item, chart=chart)
     child_items = _nested_alpha_items(item)
     if child_items:
+        if chart is not None and preamble:
+            chart.own(preamble, locus=point or marker, parent=None)
         out = []
         for child in child_items:
             letter = _normalize_letter(_marker(child))
-            body = _item_body(child)
+            body = _item_body(child, chart=chart)
             law = f"{preamble}\n({letter}) {body}" if preamble else f"({letter}) {body}"
-            out.append({"locus": f"{point}({letter})", "law_text": wrap_law(law)})
+            locus = f"{point}({letter})"
+            out.append({"locus": locus, "law_text": wrap_law(law)})
+            if chart is not None and body:
+                chart.own(body, locus=locus, parent=point or None)
+        if chart is not None:
+            rest = _after_list_in(item, chart=chart)
+            if rest:
+                chart.uncovered(rest, reason="text after list")
         return out
     if not point:
         return []
-    return [{"locus": point, "law_text": wrap_law(preamble or _item_body(item))}]
+    if chart is not None and preamble:
+        chart.own(preamble, locus=point, parent=None)
+    return [{"locus": point, "law_text": wrap_law(preamble)}]
 
 
 def _nested_alpha_items(item: ET.Element) -> list[ET.Element]:
@@ -215,29 +243,29 @@ def _nested_alpha_items(item: ET.Element) -> list[ET.Element]:
     return nested
 
 
-def _item_intro(item: ET.Element) -> str:
+def _item_intro(item: ET.Element, chart=None) -> str:
     """Point body text without copying ``NO.P`` numbering into ``law_text``.
 
     Locators keep the point number (``3``, ``1(a)``). The Formex ``NO.P``
     marker must not be duplicated inside the passage.
     """
-    return _item_body(item)
+    return _item_body(item, chart=chart)
 
 
-def _item_body(item: ET.Element) -> str:
+def _item_body(item: ET.Element, chart=None) -> str:
     np = item.find("NP")
     if np is None:
-        return element_text(item)
+        return element_text(item, chart=chart)
     txt = np.find("TXT")
     if txt is not None:
-        return element_text(txt)
+        return element_text(txt, chart=chart)
     # Fall back without NO.P marker.
     parts = []
     for child in list(np):
         if local_tag(child.tag) == "NO.P":
             continue
-        parts.append(element_text(child))
-    return collapse_ws(" ".join(parts)) or element_text(np)
+        parts.append(element_text(child, chart=chart))
+    return collapse_ws(" ".join(parts)) or element_text(np, chart=chart)
 
 
 def _marker(item: ET.Element) -> str:
@@ -276,7 +304,7 @@ def _top_list_items(parag: ET.Element) -> list[ET.Element]:
     return []
 
 
-def _preamble_before_list(parag: ET.Element) -> str:
+def _preamble_before_list(parag: ET.Element, chart=None) -> str:
     chunks = []
     for child in list(parag):
         if local_tag(child.tag) == "LIST":
@@ -284,32 +312,55 @@ def _preamble_before_list(parag: ET.Element) -> str:
         if local_tag(child.tag) == "NO.PARAG":
             continue
         if local_tag(child.tag) == "ALINEA":
-            chunks.append(_alinea_preamble(child))
+            chunks.append(_alinea_preamble(child, chart=chart))
             if any(local_tag(node.tag) == "LIST" for node in child.iter()):
                 break
     return collapse_ws(" ".join(chunk for chunk in chunks if chunk))
 
 
-def _alinea_preamble(alinea: ET.Element) -> str:
+def _alinea_preamble(alinea: ET.Element, chart=None) -> str:
     parts: list[str] = []
     if alinea.text:
         parts.append(alinea.text)
     for child in list(alinea):
         if local_tag(child.tag) == "LIST":
             break
-        parts.append(element_text(child))
+        parts.append(element_text(child, chart=chart))
         if child.tail:
             parts.append(child.tail)
     return collapse_ws("".join(parts))
 
 
-def _paragraph_body(parag: ET.Element) -> str:
+def _paragraph_body(parag: ET.Element, chart=None) -> str:
     chunks = []
     for child in list(parag):
         if local_tag(child.tag) == "NO.PARAG":
             continue
-        chunks.append(element_text(child))
-    return collapse_ws(" ".join(chunks)) or element_text(parag)
+        chunks.append(element_text(child, chart=chart))
+    return collapse_ws(" ".join(chunks)) or element_text(parag, chart=chart)
+
+
+def _after_list_in(node: ET.Element, chart=None) -> str:
+    """Visible text that follows the first list under ``node``."""
+    chunks: list[str] = []
+
+    def walk(current: ET.Element) -> None:
+        seen = False
+        for child in list(current):
+            if local_tag(child.tag) == "LIST":
+                seen = True
+                if child.tail:
+                    chunks.append(child.tail)
+                continue
+            if seen:
+                chunks.append(element_text(child, chart=chart))
+                if child.tail:
+                    chunks.append(child.tail)
+                continue
+            walk(child)
+
+    walk(node)
+    return collapse_ws("".join(chunks))
 
 
 def _parent_map(root: ET.Element) -> dict[int, ET.Element]:

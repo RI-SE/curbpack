@@ -27,11 +27,13 @@ def wrap_law(text: str, width: int = 78) -> str:
     return textwrap.fill(text, width=width, break_long_words=False, break_on_hyphens=False)
 
 
-def normalize_annex(raw: str) -> str:
+def normalize_annex(raw: str, chart=None) -> str:
     """Flatten EUR-Lex HTML dumps and keep a single annex body."""
     raw = raw.replace("\t", " ").replace("\xa0", " ")
     heads = list(re.finditer(r"(?m)^ANNEX\s+[IVXLCDM]+\s*$", raw))
     if len(heads) >= 2:
+        if chart is not None:
+            chart.uncovered(raw[heads[1].start() :], reason="text after next ANNEX")
         raw = raw[: heads[1].start()]
     lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in raw.splitlines()]
     merged: list[str] = []
@@ -56,7 +58,7 @@ def normalize_annex(raw: str) -> str:
     return raw.strip() + "\n"
 
 
-def strip_trailing_footnotes(text: str) -> str:
+def strip_trailing_footnotes(text: str, chart=None) -> str:
     """Drop EUR-Lex footnote tails like '(1)\\nOJ L, …'."""
     lines = text.splitlines()
     cut = len(lines)
@@ -70,6 +72,10 @@ def strip_trailing_footnotes(text: str) -> str:
             if i > 0 and re.fullmatch(r"\(\d+\)", lines[i - 1].strip()):
                 cut = i - 1
                 break
+    if chart is not None and cut < len(lines):
+        dropped = "\n".join(lines[cut:]).strip()
+        if dropped:
+            chart.uncovered(dropped, reason="footnote tail")
     return "\n".join(lines[:cut]).strip()
 
 
@@ -117,8 +123,15 @@ def looks_like_footnote_annex(body: str) -> bool:
     return substantive == 0
 
 
-def split_top_points(body: str) -> list[tuple[str, str]]:
-    body = strip_trailing_footnotes(body)
+_HEADING_LINE = re.compile(
+    r"ANNEX\s+[IVXLCDM]+|SIMPLIFIED EU DECLARATION OF CONFORMITY|"
+    r"EU DECLARATION OF CONFORMITY|ESSENTIAL CYBERSECURITY REQUIREMENTS",
+    re.I,
+)
+
+
+def split_top_points(body: str, chart=None) -> list[tuple[str, str]]:
+    body = strip_trailing_footnotes(body, chart=chart)
     if INT_POINT_RE.search(body):
         blocks = split_marker_blocks(body, INT_POINT_RE)
         if blocks:
@@ -126,17 +139,18 @@ def split_top_points(body: str) -> list[tuple[str, str]]:
     if PAREN_POINT_RE.search(body) and not looks_like_footnote_annex(body):
         blocks = split_marker_blocks(body, PAREN_POINT_RE)
         if blocks:
-            return [(num, strip_trailing_footnotes(text)) for num, text in blocks]
-    cleaned = strip_trailing_footnotes(body)
-    lines = [
-        ln
-        for ln in cleaned.splitlines()
-        if ln.strip()
-        and not re.fullmatch(r"ANNEX\s+[IVXLCDM]+", ln.strip(), flags=re.I)
-        and not re.fullmatch(r"SIMPLIFIED EU DECLARATION OF CONFORMITY", ln.strip(), flags=re.I)
-        and not re.fullmatch(r"EU DECLARATION OF CONFORMITY", ln.strip(), flags=re.I)
-        and not re.fullmatch(r"ESSENTIAL CYBERSECURITY REQUIREMENTS", ln.strip(), flags=re.I)
-    ]
+            return [(num, strip_trailing_footnotes(text, chart=chart)) for num, text in blocks]
+    cleaned = strip_trailing_footnotes(body, chart=chart)
+    lines = []
+    for ln in cleaned.splitlines():
+        stripped = ln.strip()
+        if not stripped:
+            continue
+        if _HEADING_LINE.fullmatch(stripped):
+            if chart is not None:
+                chart.uncovered(stripped, reason="heading")
+            continue
+        lines.append(ln)
     prose = "\n".join(lines).strip()
     if prose:
         return [("1", prose)]
@@ -190,15 +204,18 @@ def locus_for(part: str | None, num: str, letter: str | None = None) -> str:
     return base
 
 
-def atomize(raw: str) -> list[dict]:
-    text = normalize_annex(raw)
+def atomize(raw: str, chart=None) -> list[dict]:
+    text = normalize_annex(raw, chart=chart)
     atoms: list[dict] = []
     seen: set[str] = set()
     for part, part_body in split_parts(text):
-        for num, body in split_top_points(part_body):
+        for num, body in split_top_points(part_body, chart=chart):
             for sub_num, sub_body in expand_subpoints(num, body):
                 preamble, children = split_lettered(sub_body)
+                parent = locus_for(part, sub_num)
                 if children:
+                    if chart is not None and preamble:
+                        chart.own(preamble, locus=parent, parent=part)
                     for letter, clause in children:
                         loc = locus_for(part, sub_num, letter)
                         if loc in seen:
@@ -212,17 +229,22 @@ def atomize(raw: str) -> list[dict]:
                                 "law_text": build_law_text(preamble, letter, clause),
                             }
                         )
+                        if chart is not None and clause:
+                            chart.own(clause, locus=loc, parent=parent)
                 else:
                     loc = locus_for(part, sub_num)
                     if loc in seen:
                         loc = f"{loc}~{len(seen)}"
                     seen.add(loc)
+                    kept = preamble
                     atoms.append(
                         {
                             "locus": loc,
                             "part": part,
                             "parent_point": sub_num,
-                            "law_text": build_law_text("", None, preamble),
+                            "law_text": build_law_text("", None, kept),
                         }
                     )
+                    if chart is not None and kept:
+                        chart.own(kept, locus=loc, parent=part)
     return atoms
